@@ -1,0 +1,67 @@
+
+{
+    "appName": "نظام إدارة المبيعات",
+    "loading": "جاري التحميل...",
+    "login": {
+      "title": "تسجيل الدخول",
+      "emailLabel": "البريد الإلكتروني",
+      "passwordLabel": "كلمة المرور",
+      "submitButton": "دخول",
+      "submitButtonLoading": "جاري الدخول...",
+      "registerPrompt": "ليس لديك حساب؟",
+      "registerLink": "إنشاء حساب جديد"
+    },
+    "register": {
+      "title": "إنشاء حساب جديد",
+      "nameLabel": "الاسم",
+      "emailLabel": "البريد الإلكتروني",
+      "passwordLabel": "كلمة المرور",
+      "confirmPasswordLabel": "تأكيد كلمة المرور",
+      "submitButton": "تسجيل",
+      "submitButtonLoading": "جاري التسجيل...",
+      "loginPrompt": "لديك حساب بالفعل؟",
+      "loginLink": "تسجيل الدخول"
+    },
+    "navigation": {
+      "home": "الرئيسية",
+      "dashboard": "لوحة التحكم",
+      "clients": "العملاء",
+      "suppliers": "الموردون",
+      "products": "المنتجات",
+      "purchases": "المشتريات",
+      "sales": "المبيعات",
+      "logout": "تسجيل الخروج",
+      "welcome": "مرحباً، {{name}}!" 
+    },
+    "errors": {
+      "unexpected": "حدث خطأ غير متوقع.",
+      "requiredField": "هذا الحقل مطلوب.",
+      "invalidEmail": "صيغة البريد الإلكتروني غير صحيحة.",
+      "passwordMismatch": "كلمتا المرور غير متطابقتين.",
+      "networkError": "خطأ في الشبكة، يرجى المحاولة مرة أخرى."
+
+    },
+     "clients": {
+          "pageTitle": "إدارة العملاء",
+          "addClient": "إضافة عميل جديد",
+          "editClient": "تعديل بيانات العميل",
+          "deleteClientConfirm": "هل أنت متأكد من حذف هذا العميل؟",
+          "deleteSuccess": "تم حذف العميل بنجاح.",
+          "saveSuccess": "تم حفظ بيانات العميل بنجاح.",
+          "name": "اسم العميل",
+          "email": "البريد الإلكتروني",
+          "phone": "رقم الهاتف",
+          "address": "العنوان",
+          "actions": "الإجراءات",
+          "noClients": "لا يوجد عملاء لعرضهم."
+     },
+     "common": {
+         "save": "حفظ",
+         "cancel": "إلغاء",
+         "delete": "حذف",
+         "edit": "تعديل",
+         "view": "عرض",
+         "search": "بحث...",
+         "close": "إغلاق"
+     }
+  }

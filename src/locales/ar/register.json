@@ -1,0 +1,11 @@
+{
+    "title": "إنشاء حساب جديد",
+    "nameLabel": "الاسم",
+    "emailLabel": "البريد الإلكتروني",
+    "passwordLabel": "كلمة المرور",
+    "confirmPasswordLabel": "تأكيد كلمة المرور",
+    "submitButton": "تسجيل",
+    "submitButtonLoading": "جاري التسجيل...",
+    "loginPrompt": "لديك حساب بالفعل؟",
+    "loginLink": "تسجيل الدخول"
+}

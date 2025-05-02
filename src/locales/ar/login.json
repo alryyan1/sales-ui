@@ -1,0 +1,10 @@
+{
+    "title": "تسجيل الدخول",
+    "emailLabel": "البريد الإلكتروني",
+    "passwordLabel": "كلمة المرور",
+    "submitButton": "دخول",
+    "submitButtonLoading": "جاري الدخول...",
+    "registerPrompt": "ليس لديك حساب؟",
+    "registerLink": "إنشاء حساب جديد",
+    "loginFailed": "فشل تسجيل الدخول. يرجى التحقق من بريدك الإلكتروني وكلمة المرور."   
+  }
