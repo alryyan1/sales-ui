@@ -17,6 +17,8 @@ import PurchasesListPage from "./pages/PurchasesListPage";
 import AddPurchasePage from "./pages/AddPurchasePage";
 import PurchaseDetailsPage from "./pages/PurchaseDetailsPage";
 import SalesListPage from "./pages/SalesListPage";
+import AddSalePage from "./pages/AddSalePage";
+import SaleDetailsPage from "./pages/SaleDetailsPage";
 // ... (other imports: initializeCsrfToken, theme, i18n, CssBaseline, ThemeProvider)
 
 const router = createBrowserRouter([
@@ -38,6 +40,16 @@ const router = createBrowserRouter([
           { path: "clients", element: <ClientsPage /> }, // سيتم تعديله
           { path: "suppliers", element: <SuppliersPage /> }, // <-- Add this route
           { path: "products", element: <ProductsPage /> },
+
+          // ... dashboard, clients, suppliers, products, purchases ...
+          {
+            path: "sales", // Base path for sales
+            children: [
+              { index: true, element: <SalesListPage /> },
+              { path: 'add', element: <AddSalePage /> }, // Add later
+              { path: ':id', element: <SaleDetailsPage /> }, // Add later
+            ],
+          },
 
           // --- Purchase Routes ---
           {
@@ -64,20 +76,7 @@ const router = createBrowserRouter([
               },
             ],
           }, // Route for list page
-          {
-            element: <ProtectedRoute />,
-            children: [
-                // ... dashboard, clients, suppliers, products, purchases ...
-                {
-                    path: 'sales', // Base path for sales
-                    children: [
-                        { index: true, element: <SalesListPage /> },
-                        // { path: 'add', element: <AddSalePage /> }, // Add later
-                        // { path: ':id', element: <SaleDetailsPage /> }, // Add later
-                    ]
-                },
-            ],
-        },
+
           // ... other protected routes
         ],
       },

@@ -27,14 +27,17 @@ import Chip from '@mui/material/Chip';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import DeleteIcon from '@mui/icons-material/Delete';
 
+// Day.js
+import dayjs from 'dayjs';
+
 // Services and Types
-import saleService, { Sale, PaginatedResponse } from '../services/saleService'; // Use sale service
+import saleService, { Sale } from '../services/saleService'; // Use sale service
 import ConfirmationDialog from '../components/common/ConfirmationDialog'; // Reusable dialog
+import { PaginatedResponse } from '@/services/clientService';
+import { formatNumber } from '@/constants';
 
 // Helper to format currency
-const formatCurrency = (value: string | number | null | undefined) => { /* ... (same as before) ... */ };
 // Helper to format date string
-const formatDate = (dateString: string | null | undefined) => { /* ... (same as before) ... */ };
 
 const SalesListPage: React.FC = () => {
     const { t } = useTranslation(['sales', 'common', 'clients']); // Load namespaces
@@ -141,7 +144,7 @@ const SalesListPage: React.FC = () => {
                              <TableBody>
                                  {salesResponse.data.map((sale) => (
                                      <TableRow key={sale.id} hover className="dark:text-gray-100">
-                                         <TableCell className="dark:text-gray-100">{formatDate(sale.sale_date)}</TableCell>
+                                         <TableCell className="dark:text-gray-100">{dayjs(sale.sale_date).format('YYYY-MM-DD')}</TableCell>
                                          <TableCell className="dark:text-gray-100">{sale.invoice_number || '---'}</TableCell>
                                          <TableCell className="dark:text-gray-100">{sale.client_name || t('common:n/a')}</TableCell>
                                          <TableCell align="center">
@@ -151,9 +154,9 @@ const SalesListPage: React.FC = () => {
                                                  color={sale.status === 'completed' ? 'success' : sale.status === 'pending' ? 'warning' : sale.status === 'draft' ? 'info' : 'default'}
                                              />
                                          </TableCell>
-                                         <TableCell align="right" className="dark:text-gray-100">{formatCurrency(sale.total_amount)}</TableCell>
-                                         <TableCell align="right" className="dark:text-gray-100">{formatCurrency(sale.paid_amount)}</TableCell>
-                                         <TableCell align="right" className="dark:text-gray-100">{formatCurrency(sale.due_amount)}</TableCell>
+                                         <TableCell align="right" className="dark:text-gray-100">{sale.total_amount}</TableCell>
+                                         <TableCell align="right" className="dark:text-gray-100">{formatNumber(sale.paid_amount)}</TableCell>
+                                         <TableCell align="right" className="dark:text-gray-100">{formatNumber(sale.due_amount)}</TableCell>
                                          <TableCell align="center">
                                              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
                                                 <Tooltip title={t('common:view') || ''}>

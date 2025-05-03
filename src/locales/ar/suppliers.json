@@ -1,8 +1,9 @@
+
 {
     "pageTitle": "إدارة الموردين",
     "addSupplier": "إضافة مورد جديد",
     "editSupplier": "تعديل بيانات المورد",
-    "deleteConfirm": "هل أنت متأكد من حذف هذا المورد؟ قد يؤثر هذا على سجلات المشتريات المرتبطة.",
+    "deleteConfirm": "هل أنت متأكد من حذف هذا المورد؟", 
     "deleteSuccess": "تم حذف المورد بنجاح.",
     "saveSuccess": "تم حفظ بيانات المورد بنجاح.",
     "name": "اسم المورد/الشركة",
@@ -11,5 +12,12 @@
     "phone": "رقم الهاتف",
     "address": "العنوان",
     "noSuppliers": "لا يوجد موردون لعرضهم.",
-    "searchPlaceholder": "ابحث بالاسم أو البريد أو المسؤول..."
+    "searchPlaceholder": "ابحث بالاسم أو المسؤول أو البريد...", 
+    "selectSupplierPlaceholder": "اختر موردًا...", 
+    "namePlaceholder": "مثال: شركة النور للتوريدات", 
+    "contactPersonPlaceholder": "مثال: أحمد علي", 
+    "emailPlaceholder": "supplier@email.com",
+    "phonePlaceholder": "مثال: 9661XXXXXXXX",
+    "addressPlaceholder": "مثال: المنطقة الصناعية، جدة...",
+    "typeToSearch": "اكتب للبحث عن موردين..." 
 }

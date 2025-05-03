@@ -1,3 +1,4 @@
+
 {
     "pageTitle": "إدارة العملاء",
     "addClient": "إضافة عميل جديد",
@@ -10,6 +11,11 @@
     "phone": "رقم الهاتف",
     "address": "العنوان",
     "noClients": "لا يوجد عملاء لعرضهم.",
-    "id": "الكود",
-    "searchPlaceholder": "ابحث عن عميل بالاسم أو البريد الإلكتروني..."
+    "searchPlaceholder": "ابحث بالاسم أو البريد أو الهاتف...", 
+    "selectClientPlaceholder": "اختر عميلاً...", 
+    "namePlaceholder": "مثال: شركة الأمل للتجارة", 
+    "emailPlaceholder": "example@company.com", 
+    "phonePlaceholder": "مثال: 9665XXXXXXXX", 
+    "addressPlaceholder": "مثال: شارع الملك فهد، الرياض...", 
+    "typeToSearch": "اكتب للبحث عن عملاء..." 
 }

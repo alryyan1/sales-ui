@@ -13,6 +13,7 @@ import SupplierAr from './locales/ar/suppliers.json';
 import productsAr from './locales/ar/products.json';
 import purchasesAr from './locales/ar/purchases.json';
 import salesAr from './locales/ar/sales.json';
+import dashboardAr from './locales/ar/dashboard.json';
 // ... استيراد ملفات أخرى
 
 // --- تعريف الموارد ---
@@ -29,6 +30,7 @@ const resources = {
     products:productsAr,
     purchases:purchasesAr,
     sales:salesAr,
+    dashboard:dashboardAr,
     // ... namespaces أخرى
   },
   // يمكنك إضافة لغات أخرى هنا بنفس الهيكل
@@ -48,7 +50,8 @@ export const namespaces = [
     'login',
     'register',
     'clients',
-    'suppliers'
+    'suppliers',
+    'dashboard',
     // ... أسماء namespaces أخرى
 ];
 

@@ -152,6 +152,11 @@ const RootLayout: React.FC = () => {
                     {/* <-- Add Link */}
                     {t("navigation:purchases")} {/* Make sure key exists */}
                   </Button>
+                  <Button component={RouterLink} to="/sales" color="inherit">
+                    {" "}
+                    {/* <-- Add Link */}
+                    {t("navigation:sales")} {/* Make sure key exists */}
+                  </Button>
                   <Button component={RouterLink} to="/clients" color="inherit">
                     {t("navigation:clients")}
                   </Button>

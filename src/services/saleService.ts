@@ -1,6 +1,6 @@
 // src/services/saleService.ts
 import apiClient, { getValidationErrors, getErrorMessage, ApiErrorResponse } from '../lib/axios';
-import { AxiosError } from 'axios';
+import axios, { AxiosError } from 'axios';
 // Assuming PaginatedResponse is defined/exported from clientService or a shared types file
 import { PaginatedResponse } from './clientService'; // Or adjust import path
 import { Product } from './productService';
@@ -99,6 +99,7 @@ const saleService = {
         }
     },
 
+    
     /**
      * Create a new sale.
      */
@@ -109,8 +110,9 @@ const saleService = {
             return response.data.sale; // Adjust if needed
         } catch (error) {
             console.error('Error creating sale:', error);
+            
             // Important: Handle 422 specifically for stock errors if needed
-             if (axios.isAxiosError(error) && error.response?.status === 422) {
+             if (isAxiosError(error) && error.response?.status === 422) {
                  console.warn("Validation error during sale creation (could be stock related):", error.response.data);
              }
             throw error; // Rethrow for component handling
@@ -140,7 +142,7 @@ const saleService = {
 };
 
 // Add axios check function if not globally available or imported from axios.ts
-function axios.isAxiosError(error: unknown): error is AxiosError<ApiErrorResponse> {
+function isAxiosError(error: unknown): error is AxiosError<ApiErrorResponse> {
   return (error as AxiosError).isAxiosError === true;
 }
 

@@ -1,41 +1,55 @@
 // src/components/clients/ClientFormModal.tsx
-import React, { useEffect, useState } from 'react'; // Import useState for serverError
-import { useForm, SubmitHandler, Controller } from 'react-hook-form';
+import React, { useEffect, useState } from 'react';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
+import * as z from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
-// MUI Components
-import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
-import CircularProgress from '@mui/material/CircularProgress';
-import Alert from '@mui/material/Alert';
-import Grid from '@mui/material/Grid';
-import IconButton from '@mui/material/IconButton';
-import CloseIcon from '@mui/icons-material/Close'; // MUI Close Icon
+// shadcn/ui & Lucide Icons
+import { Button } from "@/components/ui/button";
+import {
+    Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogClose
+} from "@/components/ui/dialog";
+import {
+    Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, AlertCircle } from 'lucide-react';
+// No Alert component added via shadcn add initially, use styled div or add it
+// import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 
 // Services and Types
-import clientService, { Client, ClientFormData } from '../../services/clientService'; // Adjust path as needed
+import clientService, { Client, ClientFormData } from '../../services/clientService'; // Adjust path
 
-// Props definition
+// --- Zod Schema for Validation ---
+const clientFormSchema = z.object({
+    name: z.string().min(1, { message: "validation:required" }),
+    // Email: optional, but if present, must be valid email format
+    email: z.string()
+            .email({ message: "validation:email" })
+            .nullable()
+            .or(z.literal('')) // Allow empty string from input, treat as null/undefined later
+            .optional(),
+    phone: z.string().nullable().optional(), // Optional string
+    address: z.string().nullable().optional(), // Optional string
+});
+
+// Infer TypeScript type from the Zod schema
+type ClientFormValues = z.infer<typeof clientFormSchema>;
+
+// --- Component Props ---
 interface ClientFormModalProps {
-    isOpen: boolean; // Changed from 'open' to 'isOpen' for clarity if preferred
+    isOpen: boolean;
     onClose: () => void;
     clientToEdit: Client | null;
     onSaveSuccess: () => void;
 }
 
-// Type for validation errors (can be more specific if needed)
-interface ClientValidationErrors {
-    name?: string[];
-    email?: string[];
-    phone?: string[];
-    address?: string[];
-    [key: string]: string[] | undefined; // Index signature for flexibility
-}
-
+// --- Component Definition ---
 const ClientFormModal: React.FC<ClientFormModalProps> = ({
     isOpen,
     onClose,
@@ -45,256 +59,216 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
     const { t } = useTranslation(['clients', 'common', 'validation']);
     const isEditMode = Boolean(clientToEdit);
 
-    // --- React Hook Form Setup ---
-    const {
-        handleSubmit,
-        reset,
-        control,
-        formState: { errors, isSubmitting },
-        setError, // <-- Get setError to manually set errors from API
-    } = useForm<ClientFormData>({
-        defaultValues: {
-            name: '', email: '', phone: '', address: '',
+    // State for general API errors
+    const [serverError, setServerError] = useState<string | null>(null);
+
+    // --- React Hook Form Setup with Zod ---
+    const form = useForm<ClientFormValues>({
+        resolver: zodResolver(clientFormSchema),
+        defaultValues: { // Match schema expectations
+            name: '',
+            email: '', // Zod handles nullable/optional/empty string
+            phone: '',
+            address: '',
         },
-        // resolver: zodResolver(clientSchema), // Optional: Add schema validation
     });
 
-    // --- State for general API errors ---
-    const [serverError, setServerError] = useState<string | null>(null);
+    const { handleSubmit, control, reset, formState: { isSubmitting }, setError } = form;
 
     // --- Effect to Populate/Reset Form ---
     useEffect(() => {
-        // Only reset if the modal is actually open
         if (isOpen) {
+            setServerError(null); // Clear server errors on open
             if (isEditMode && clientToEdit) {
-                reset({ // Populate with existing data
+                // Populate form with existing data
+                reset({
                     name: clientToEdit.name || '',
-                    email: clientToEdit.email || '',
+                    email: clientToEdit.email || '', // Use empty string for null from API
                     phone: clientToEdit.phone || '',
                     address: clientToEdit.address || '',
                 });
             } else {
-                reset(); // Reset to default values for adding
+                // Reset to default values for adding
+                reset();
             }
-            // Clear previous server errors when modal opens/mode changes
-            setServerError(null);
         }
-    }, [isOpen, isEditMode, clientToEdit, reset]); // Dependencies
+    }, [isOpen, isEditMode, clientToEdit, reset]);
 
+    // --- Form Submission Handler ---
+    const onSubmit: SubmitHandler<ClientFormValues> = async (data) => {
+        setServerError(null);
+        console.log('Submitting client data:', data);
 
-    // --- Submission Handler ---
-    const onSubmit: SubmitHandler<ClientFormData> = async (data) => {
-        setServerError(null); // Clear previous server error
-
-        // Prepare data (handle nulls for empty strings if backend expects null)
-        const dataToSend: Partial<ClientFormData> = {};
-        Object.entries(data).forEach(([key, value]) => {
-             dataToSend[key as keyof ClientFormData] = value === '' ? null : value;
-         });
+        // Prepare data for API (ensure empty strings become null if API expects null)
+        const dataToSend = {
+            ...data,
+            email: data.email || null,
+            phone: data.phone || null,
+            address: data.address || null,
+        };
 
         try {
+            let savedClient: Client;
             if (isEditMode && clientToEdit) {
-                console.log('Updating client:', clientToEdit.id, dataToSend);
-                await clientService.updateClient(clientToEdit.id, dataToSend);
+                savedClient = await clientService.updateClient(clientToEdit.id, dataToSend);
             } else {
-                console.log('Creating client:', dataToSend);
-                await clientService.createClient(dataToSend as ClientFormData);
+                savedClient = await clientService.createClient(dataToSend);
             }
-            onSaveSuccess(); // Call parent callback on success
+            console.log('Save successful:', savedClient);
+
+            // Show success toast using Sonner
+            toast.success(t('common:success'), {
+                description: t(isEditMode ? 'clients:saveSuccess' : 'clients:saveSuccess'),
+                duration: 3000,
+            });
+
+            onSaveSuccess(); // Call parent callback
+            onClose(); // Close the modal
+
         } catch (err) {
-            console.error("Failed to save client (RHF+MUI):", err);
-            const apiErrors = clientService.getValidationErrors(err);
+            console.error("Failed to save client:", err);
             const generalError = clientService.getErrorMessage(err);
+            const apiErrors = clientService.getValidationErrors(err);
 
+            // Show error toast using Sonner
+            toast.error(t('common:error'), {
+                description: generalError,
+                duration: 5000,
+            });
+
+            // Display general error within the modal
+            setServerError(generalError);
+
+            // Map API validation errors back to form fields
             if (apiErrors) {
-                // Option 1: Display combined validation errors in the general alert
-                 const errorMessages = Object.values(apiErrors).flat().join('. ');
-                 setServerError(`${t('validation:checkFields') || 'Please check the fields below.'} ${errorMessages}`); // Add prefix
-
-                 // Option 2: Manually set errors for each field in RHF state
-                 Object.entries(apiErrors).forEach(([field, messages]) => {
-                     // Ensure the field name exists in ClientFormData before setting error
-                     if (field in ({} as ClientFormData)) { // Basic check
-                         setError(field as keyof ClientFormData, {
+                Object.entries(apiErrors).forEach(([field, messages]) => {
+                    if (field in ({} as ClientFormValues)) {
+                        setError(field as keyof ClientFormValues, {
                             type: 'server',
-                            message: messages[0] // Show first error message from server
-                         });
-                     } else {
-                        console.warn(`API returned error for unknown field: ${field}`);
-                     }
-                 });
-                 // You might still want a general error message even if setting field errors
-                 // setServerError(t('validation:checkFields') || 'Please check the fields below.');
-
-            } else {
-                // Show general non-validation error
-                setServerError(generalError);
+                            message: messages[0] // Show first server error
+                        });
+                    }
+                });
+                 // Optionally update general error message
+                 setServerError(t('validation:checkFields'));
             }
         }
-         // isSubmitting is automatically handled by RHF
-    };
-
-    // --- Safe Close Handler ---
-    const handleClose = () => {
-        if (!isSubmitting) { // Prevent closing while submitting
-            onClose();
-        }
+        // isSubmitting automatically handled by RHF
     };
 
     // --- Render Modal ---
-    // Don't render if not open (improves performance slightly)
-    if (!isOpen) {
-        return null;
-    }
+    if (!isOpen) return null;
 
     return (
-        <Dialog
-            open={isOpen} // Use the prop directly
-            onClose={handleClose} // Use the safe close handler
-            fullWidth
-            maxWidth="sm"
-            disableEscapeKey={isSubmitting} // Prevent closing with ESC key during submission
-            // Styling using sx prop
-            sx={{ '& .MuiDialog-paper': { borderRadius: '8px' } }} // Example: rounded corners via sx
-        >
-            <DialogTitle sx={{ py: 2, px: 3 }} className="flex justify-between items-center"> {/* Use sx/tailwind */}
-                {isEditMode ? t('clients:editClient') : t('clients:addClient')}
-                <IconButton aria-label="close" onClick={handleClose} disabled={isSubmitting} sx={{p: 1}}>
-                    <CloseIcon />
-                </IconButton>
-            </DialogTitle>
+        // shadcn Dialog component
+        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <DialogContent className="sm:max-w-xl p-0"> {/* Adjusted max-width, remove default padding */}
+                <Form {...form}>
+                    {/* Standard form tag for RHF */}
+                    <form onSubmit={handleSubmit(onSubmit)} noValidate>
+                        {/* Dialog Header */}
+                        <DialogHeader className="p-6 pb-4 border-b dark:border-gray-700">
+                            <DialogTitle className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                                {isEditMode ? t('clients:editClient') : t('clients:addClient')}
+                            </DialogTitle>
+                             {/* Removed description, title is usually enough */}
+                        </DialogHeader>
 
-            {/* Form element is crucial for RHF's handleSubmit */}
-            <form onSubmit={handleSubmit(onSubmit)} noValidate>
-                <DialogContent dividers sx={{ px: 3, py: 2 }}> {/* MUI standard padding + dividers */}
+                        {/* Scrollable Content Area */}
+                        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                            {/* General Server Error Alert (Using styled div as Alert might not be added) */}
+                            {serverError && !isSubmitting && (
+                                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 rounded mb-4 dark:bg-red-900 dark:text-red-200 dark:border-red-600" role="alert">
+                                    <div className="flex items-center">
+                                         <AlertCircle className="h-4 w-4 me-2" />
+                                         <p>{serverError}</p>
+                                    </div>
+                                </div>
+                                // Or if you added Alert component:
+                                // <Alert variant="destructive" className="mb-4">
+                                //     <AlertCircle className="h-4 w-4" />
+                                //     <AlertTitle>{t('common:error')}</AlertTitle>
+                                //     <AlertDescription>{serverError}</AlertDescription>
+                                // </Alert>
+                            )}
 
-                    {/* General Server Error Alert */}
-                    {serverError && (
-                        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setServerError(null)}> {/* Optional close button on alert */}
-                            {serverError}
-                        </Alert>
-                    )}
+                            {/* Grid layout for fields using Tailwind */}
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                {/* Name Field */}
+                                <FormField
+                                    control={control}
+                                    name="name"
+                                    render={({ field }) => (
+                                        <FormItem className="sm:col-span-2"> {/* Span full width */}
+                                            <FormLabel>{t('clients:name')} <span className="text-red-500">*</span></FormLabel>
+                                            <FormControl>
+                                                <Input placeholder={t('clients:namePlaceholder')} {...field} disabled={isSubmitting} />
+                                            </FormControl>
+                                            <FormMessage /> {/* Displays Zod/RHF validation error */}
+                                        </FormItem>
+                                    )}
+                                />
 
-                    <Grid container gap={2}> {/* MUI Grid for consistent spacing */}
+                                {/* Email Field */}
+                                <FormField
+                                    control={control}
+                                    name="email"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>{t('clients:email')}</FormLabel>
+                                            <FormControl>
+                                                <Input type="email" placeholder={t('clients:emailPlaceholder')} {...field} value={field.value ?? ''} disabled={isSubmitting} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
 
-                        {/* Name Field */}
-                        <Grid item xs={12} >
-                            <Controller
-                                name="name"
-                                control={control}
-                                rules={{ required: t('validation:required') || true }}
-                                render={({ field, fieldState: { error } }) => (
-                                    <TextField
-                                        {...field}
-                                        autoFocus={!isEditMode} // Autofocus only when adding
-                                        margin="dense"
-                                        label={`${t('clients:name')} *`} // Add asterisk via label
-                                        type="text"
-                                        fullWidth
-                                        variant="outlined"
-                                        error={!!error || !!(errors as ClientValidationErrors)?.name} // Check RHF and manual errors
-                                        helperText={error?.message || (errors as ClientValidationErrors)?.name?.[0] || ' '}
-                                        disabled={isSubmitting}
-                                    />
-                                )}
-                            />
-                        </Grid>
+                                {/* Phone Field */}
+                                <FormField
+                                    control={control}
+                                    name="phone"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>{t('clients:phone')}</FormLabel>
+                                            <FormControl>
+                                                <Input type="tel" placeholder={t('clients:phonePlaceholder')} {...field} value={field.value ?? ''} disabled={isSubmitting} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
 
-                        {/* Email Field */}
-                        <Grid item xs={12} sm={6}>
-                            <Controller
-                                name="email"
-                                control={control}
-                                rules={{
-                                    pattern: { // Example RHF email pattern validation
-                                        value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                                        message: t('validation:email') || 'Invalid email address'
-                                    }
-                                }}
-                                render={({ field, fieldState: { error } }) => (
-                                     <TextField
-                                        {...field}
-                                        margin="dense"
-                                        label={t('clients:email')}
-                                        type="email"
-                                        fullWidth
-                                        variant="outlined"
-                                        error={!!error || !!(errors as ClientValidationErrors)?.email}
-                                        helperText={error?.message || (errors as ClientValidationErrors)?.email?.[0] || ' '}
-                                        disabled={isSubmitting}
-                                    />
-                                )}
-                             />
-                        </Grid>
+                                {/* Address Field */}
+                                <FormField
+                                    control={control}
+                                    name="address"
+                                    render={({ field }) => (
+                                        <FormItem className="sm:col-span-2"> {/* Span full width */}
+                                            <FormLabel>{t('clients:address')}</FormLabel>
+                                            <FormControl>
+                                                <Textarea placeholder={t('clients:addressPlaceholder')} className="resize-y min-h-[80px]" {...field} value={field.value ?? ''} disabled={isSubmitting} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div> {/* End Grid */}
+                        </div> {/* End Scrollable Content */}
 
-                        {/* Phone Field */}
-                        <Grid item xs={12} sm={6}>
-                             <Controller
-                                name="phone"
-                                control={control}
-                                render={({ field, fieldState: { error } }) => (
-                                     <TextField
-                                        {...field}
-                                        margin="dense"
-                                        label={t('clients:phone')}
-                                        type="tel"
-                                        fullWidth
-                                        variant="outlined"
-                                        error={!!error || !!(errors as ClientValidationErrors)?.phone}
-                                        helperText={error?.message || (errors as ClientValidationErrors)?.phone?.[0] || ' '}
-                                        disabled={isSubmitting}
-                                    />
-                                )}
-                             />
-                        </Grid>
-
-                        {/* Address Field */}
-                        <Grid item xs={12}>
-                            <Controller
-                                name="address"
-                                control={control}
-                                render={({ field, fieldState: { error } }) => (
-                                     <TextField
-                                        {...field}
-                                        margin="dense"
-                                        label={t('clients:address')}
-                                        type="text"
-                                        fullWidth
-                                        variant="outlined"
-                                        multiline
-                                        rows={3}
-                                        error={!!error || !!(errors as ClientValidationErrors)?.address}
-                                        helperText={error?.message || (errors as ClientValidationErrors)?.address?.[0] || ' '}
-                                        disabled={isSubmitting}
-                                    />
-                                )}
-                             />
-                        </Grid>
-
-                    </Grid>
-                </DialogContent>
-
-                <DialogActions sx={{ px: 3, pb: 2, pt: 2 }} className="gap-2"> {/* Adjust padding/gap */}
-                    <Button
-                        onClick={handleClose}
-                        // variant="outlined" // Different style for cancel
-                        color="inherit" // Use inherit or secondary
-                        disabled={isSubmitting}
-                        className="dark:text-gray-300 dark:border-gray-500 dark:hover:bg-gray-700" // Example dark mode tailwind
-                    >
-                        {t('common:cancel')}
-                    </Button>
-                    <Button
-                        type="submit"
-                        variant="contained"
-                        color="primary"
-                        disabled={isSubmitting}
-                        startIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : null}
-                    >
-                        {t('common:save')}
-                    </Button>
-                </DialogActions>
-            </form>
+                        {/* Dialog Footer with Actions */}
+                        <DialogFooter className="p-6 pt-4 border-t dark:border-gray-700">
+                            <DialogClose asChild>
+                                <Button type="button" variant="ghost" disabled={isSubmitting}>{t('common:cancel')}</Button>
+                            </DialogClose>
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+                                {t('common:save')}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
         </Dialog>
     );
 };
