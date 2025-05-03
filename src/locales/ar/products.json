@@ -1,0 +1,19 @@
+{
+    "pageTitle": "إدارة المنتجات والمخزون",
+    "addProduct": "إضافة منتج جديد",
+    "editProduct": "تعديل بيانات المنتج",
+    "deleteConfirm": "هل أنت متأكد من حذف هذا المنتج؟ لا يمكن التراجع عن هذا الإجراء وقد يؤثر على سجلات المبيعات والمشتريات.",
+    "deleteSuccess": "تم حذف المنتج بنجاح.",
+    "saveSuccess": "تم حفظ بيانات المنتج بنجاح.",
+    "sku": "SKU / الباركود",
+    "name": "اسم المنتج",
+    "description": "الوصف",
+    "purchasePrice": "سعر الشراء",
+    "salePrice": "سعر البيع",
+    "stockQuantity": "الكمية بالمخزون",
+    "stockAlertLevel": "حد تنبيه المخزون",
+    "unit": "الوحدة",
+    "noProducts": "لا يوجد منتجات لعرضها.",
+    "searchPlaceholder": "ابحث بالاسم أو SKU...",
+    "lowStockAlert": "مخزون منخفض"
+}

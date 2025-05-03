@@ -17,15 +17,13 @@ const theme = createTheme({
   },
   palette: {
     // يمكنك تخصيص الألوان الأساسية والثانوية
-    // primary: {
-    //   main: '#556cd6',
-    // },
-    // secondary: {
-    //   main: '#19857b',
-    // },
-    // error: {
-    //   main: red.A400,
-    // },
+    primary: {
+      main: '#556cd6',
+    },
+    secondary: {
+      main: '#19857b',
+    },
+  
   },
   // ... أي تخصيصات أخرى للـ theme
 }, arEG); // <-- تمرير اللغة العربية لدعم مكونات MUI الداخلية مثل DatePicker

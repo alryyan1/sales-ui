@@ -9,6 +9,10 @@ import navigationAR from './locales/ar/navigation.json';
 import loginAR from './locales/ar/login.json';
 import registerAR from './locales/ar/register.json';
 import clientsAR from './locales/ar/clients.json';
+import SupplierAr from './locales/ar/suppliers.json';
+import productsAr from './locales/ar/products.json';
+import purchasesAr from './locales/ar/purchases.json';
+import salesAr from './locales/ar/sales.json';
 // ... استيراد ملفات أخرى
 
 // --- تعريف الموارد ---
@@ -21,6 +25,10 @@ const resources = {
     login: loginAR, // Namespace: login
     register: registerAR, // Namespace: register
     clients: clientsAR, // Namespace: clients
+    suppliers:SupplierAr,
+    products:productsAr,
+    purchases:purchasesAr,
+    sales:salesAr,
     // ... namespaces أخرى
   },
   // يمكنك إضافة لغات أخرى هنا بنفس الهيكل
@@ -40,6 +48,7 @@ export const namespaces = [
     'login',
     'register',
     'clients',
+    'suppliers'
     // ... أسماء namespaces أخرى
 ];
 

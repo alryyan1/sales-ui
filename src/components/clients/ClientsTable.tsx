@@ -53,6 +53,7 @@ const ClientsTable: React.FC<ClientsTableProps> = ({ clients, onEdit, onDelete, 
                 <TableHead sx={{ backgroundColor: 'action.hover' }}> {/* Header background color */}
                     <TableRow>
                         {/* Define table headers using translations */}
+                        <TableCell align="left">{t('clients:id')}</TableCell>
                         <TableCell>{t('clients:name')}</TableCell>
                         <TableCell align="left">{t('clients:email')}</TableCell>
                         <TableCell align="left">{t('clients:phone')}</TableCell>
@@ -67,6 +68,7 @@ const ClientsTable: React.FC<ClientsTableProps> = ({ clients, onEdit, onDelete, 
                             sx={{ '&:last-child td, &:last-child th': { border: 0 }, '&:hover': { backgroundColor: 'action.selected' } }} // Styling for rows
                         >
                             {/* Client Data Cells */}
+                            <TableCell align="left">{client.id || '---'}</TableCell> {/* Handle null values */}
                             <TableCell component="th" scope="row">
                                 {client.name}
                             </TableCell>

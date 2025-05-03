@@ -6,6 +6,8 @@ import { RouterProvider } from "react-router-dom";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import './i18n'; // <--- تأكد من وجود هذا الاستيراد هنا
+import { LocalizationProvider } from "@mui/x-date-pickers"; // Import LocalizationProvider
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns"; // Import AdapterDateFns
 
 // استيراد الإعدادات المخصصة
 import theme from "./theme"; // استيراد Theme الـ MUI المخصص (مع RTL)
@@ -25,9 +27,12 @@ if (!rootElement) {
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
+    <LocalizationProvider dateAdapter={AdapterDateFns} >
+
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <RouterProvider router={router} />
     </ThemeProvider>
+    </LocalizationProvider>
   </React.StrictMode>
 );

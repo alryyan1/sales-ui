@@ -22,3 +22,5 @@ export const imagesUrl = `${schema}://${host}/${projectFolder}/public/`;
         .join("")
     );
   }
+
+  
