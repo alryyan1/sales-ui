@@ -1,12 +1,12 @@
 
 {
-    "pageTitle": "إدارة الموردين",
+    "pageTitle": "إدارة المنتجات",
     "addSupplier": "إضافة مورد جديد",
     "editSupplier": "تعديل بيانات المورد",
     "deleteConfirm": "هل أنت متأكد من حذف هذا المورد؟", 
     "deleteSuccess": "تم حذف المورد بنجاح.",
     "saveSuccess": "تم حفظ بيانات المورد بنجاح.",
-    "name": "اسم المورد/الشركة",
+    "name": "اسم المنتج ",
     "contactPerson": "اسم المسؤول",
     "email": "البريد الإلكتروني",
     "phone": "رقم الهاتف",
@@ -14,10 +14,24 @@
     "noSuppliers": "لا يوجد موردون لعرضهم.",
     "searchPlaceholder": "ابحث بالاسم أو المسؤول أو البريد...", 
     "selectSupplierPlaceholder": "اختر موردًا...", 
-    "namePlaceholder": "مثال: شركة النور للتوريدات", 
+    "productNamePlaceholder": "اسم المنتج",
+    "productDescriptionPlaceholder": "وصف المنتج",
     "contactPersonPlaceholder": "مثال: أحمد علي", 
     "emailPlaceholder": "supplier@email.com",
     "phonePlaceholder": "مثال: 9661XXXXXXXX",
     "addressPlaceholder": "مثال: المنطقة الصناعية، جدة...",
-    "typeToSearch": "اكتب للبحث عن موردين..." 
+    "typeToSearch": "اكتب للبحث عن منتجات..." ,
+    "stockQuantity": "كمية المخزون",
+    "salePrice": "سعر البيع",
+    "purchasePrice": "سعر الشراء",
+    "editProduct": "تعديل بيانات المنتج",
+    "addProduct": "إضافة منتج جديد",
+    "namePlaceholderProduct": "مثال: منتج 1",
+    "skuPlaceholder": "مثال: SKU12345",
+    "stockAlertLevel": "مستوى تنبيه المخزون",
+    "stockAlertDescription": "عندما يصل المخزون إلى هذا المستوى، سيتم تنبيهك.",
+    "descriptionPlaceholder": "مثال: هذا منتج رائع.",
+    "cancel": "إلغاء",
+    "save": "حفظ"
+    
 }

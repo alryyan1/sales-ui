@@ -1,0 +1,21 @@
+{
+    "salesReportTitle": "تقرير المبيعات",
+    "purchaseReportTitle": "تقرير المشتريات",
+    "inventoryReportTitle": "تقرير المخزون",
+    "profitLossReportTitle": "تقرير الأرباح والخسائر",
+    "filters": "مرشحات البحث",
+    "results": "النتائج",
+    "allClients": "كل العملاء",
+    "allSuppliers": "كل الموردين",
+    "allUsers": "كل المستخدمين",
+    "allStatuses": "كل الحالات",
+    "generateReport": "إنشاء التقرير",
+    "applyFilters": "تطبيق المرشحات",
+    "exportCSV": "تصدير CSV",
+    "printReport": "طباعة التقرير",
+    "totalSales": "إجمالي المبيعات",
+    "totalPurchases": "إجمالي المشتريات",
+    "totalProfit": "إجمالي الربح",
+    "dateRange": "نطاق التاريخ",
+    "purchasesReportTitle": "تقرير المشتريات"
+  }

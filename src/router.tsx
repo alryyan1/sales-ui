@@ -17,8 +17,11 @@ import PurchasesListPage from "./pages/PurchasesListPage";
 import AddPurchasePage from "./pages/AddPurchasePage";
 import PurchaseDetailsPage from "./pages/PurchaseDetailsPage";
 import SalesListPage from "./pages/SalesListPage";
-import AddSalePage from "./pages/AddSalePage";
+import AddSalePage from "./pages/SaleFormPage";
 import SaleDetailsPage from "./pages/SaleDetailsPage";
+import SaleFormPage from "./pages/SaleFormPage";
+import SalesReportPage from "./pages/reports/SalesReportPage";
+import PurchaseReportPage from "./pages/reports/PurchaseReportPage";
 // ... (other imports: initializeCsrfToken, theme, i18n, CssBaseline, ThemeProvider)
 
 const router = createBrowserRouter([
@@ -46,8 +49,20 @@ const router = createBrowserRouter([
             path: "sales", // Base path for sales
             children: [
               { index: true, element: <SalesListPage /> },
-              { path: 'add', element: <AddSalePage /> }, // Add later
-              { path: ':id', element: <SaleDetailsPage /> }, // Add later
+              { path: "add", element: <AddSalePage /> }, // Add later
+              { path: ":id", element: <SaleDetailsPage /> }, // Add later
+              { path: ":id/edit", element: <SaleFormPage /> }, // <-- Route for editing, points to the same form page
+            ],
+          },
+          // --- Add report routes ---
+          {
+            path: "reports",
+            children: [
+              {
+                path: "sales",
+                element: <SalesReportPage />,
+              },
+              { path: 'purchases', element: <PurchaseReportPage /> }
             ],
           },
 

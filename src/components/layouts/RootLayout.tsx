@@ -20,9 +20,18 @@ import CircularProgress from "@mui/material/CircularProgress";
 import IconButton from "@mui/material/IconButton"; // اختياري: لاستخدام أيقونة لتسجيل الخروج مثلاً
 import MenuIcon from "@mui/icons-material/Menu"; // مثال لأيقونة قائمة (للتطوير المستقبلي)
 import LogoutIcon from "@mui/icons-material/Logout"; // أيقونة تسجيل الخروج
-
+// If using Dropdown:
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 // استيراد خدمة المصادقة ونوع المستخدم
 import authService, { User } from "../../services/authService";
+import { FileText } from "lucide-react";
 
 // --- تعريف نوع السياق الذي سيتم تمريره عبر Outlet ---
 // هذا يساعد المكونات الفرعية في الحصول على الأنواع الصحيحة عند استخدام useOutletContext
@@ -163,6 +172,42 @@ const RootLayout: React.FC = () => {
                   <Button component={RouterLink} to="/products" color="inherit">
                     {t("navigation:products")}
                   </Button>
+                  {/* --- Reports Link/Menu --- */}
+                  {/* Option 1: Direct Link (if only one report for now) */}
+               
+
+                  {/* Option 2: Dropdown Menu (using shadcn example) */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        className="text-white hover:bg-white/10"
+                      >
+                        <FileText className="me-2 h-4 w-4" />{" "}
+                        {t("navigation:reports")}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>
+                        {t("navigation:availableReports")}
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <RouterLink to="/reports/sales">
+                          {t("reports:salesReportTitle")}
+                        </RouterLink>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem >
+                        {" "}
+                        <RouterLink to="/reports/purchases">
+                          {t("reports:purchasesReportTitle")}
+                        </RouterLink>
+                    
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  {/* --- End Reports Link/Menu --- */}
+
                   <Button
                     component={RouterLink}
                     to="/suppliers"
@@ -174,6 +219,7 @@ const RootLayout: React.FC = () => {
                     {/* Make sure key exists in navigation.json */}
                   </Button>
                   {/* Logout Button */}
+
                   <Button
                     color="inherit"
                     onClick={handleLogout}

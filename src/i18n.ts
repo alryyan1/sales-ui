@@ -14,6 +14,7 @@ import productsAr from './locales/ar/products.json';
 import purchasesAr from './locales/ar/purchases.json';
 import salesAr from './locales/ar/sales.json';
 import dashboardAr from './locales/ar/dashboard.json';
+import reportAr from './locales/ar/reports.json';
 // ... استيراد ملفات أخرى
 
 // --- تعريف الموارد ---
@@ -31,6 +32,7 @@ const resources = {
     purchases:purchasesAr,
     sales:salesAr,
     dashboard:dashboardAr,
+    reports:reportAr,
     // ... namespaces أخرى
   },
   // يمكنك إضافة لغات أخرى هنا بنفس الهيكل
@@ -52,6 +54,7 @@ export const namespaces = [
     'clients',
     'suppliers',
     'dashboard',
+    'reports',
     // ... أسماء namespaces أخرى
 ];
 

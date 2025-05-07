@@ -43,5 +43,11 @@
     "remove": "إزالة",
     "grandTotal": "المجموع الكلي",
     "submitPurchase": "حفظ عملية الشراء",
-    "errorItemsRequired": "يجب إضافة منتج واحد على الأقل."
+    "errorItemsRequired": "يجب إضافة منتج واحد على الأقل.",
+    "batchNumber": "رقم الدفعة",
+    "batchNumberPlaceholder": "رقم الدفعة (اختياري)",
+    "expiryDate": "تاريخ انتهاء الصلاحية",
+    "expiryDatePlaceholder": "تاريخ انتهاء الصلاحية (اختياري)",
+    "intendedSalePrice": "سعر البيع المقصود"
+    
 }

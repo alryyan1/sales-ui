@@ -7,5 +7,7 @@
     "purchases": "المشتريات",
     "sales": "المبيعات",
     "logout": "تسجيل الخروج",
-    "welcome": "مرحباً، {{name}}!"
+    "welcome": "مرحباً، {{name}}!",
+    "availableReports": "التقارير المتاحة",
+    "reports": "التقارير"
   }

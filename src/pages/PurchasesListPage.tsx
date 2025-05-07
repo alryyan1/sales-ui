@@ -30,6 +30,8 @@ import DeleteIcon from '@mui/icons-material/Delete'; // Delete icon (if allowed)
 // Services and Types
 import purchaseService, { Purchase, PaginatedResponse } from '../services/purchaseService'; // Use purchase service
 import ConfirmationDialog from '../components/common/ConfirmationDialog'; // Reusable dialog
+import dayjs from 'dayjs';
+import { Tab } from '@mui/material';
 
 // Helper to format currency
 const formatCurrency = (value: string | number | null | undefined) => {
@@ -139,6 +141,7 @@ const PurchasesListPage: React.FC = () => {
                          <Table sx={{ minWidth: 650 }} aria-label={t('purchases:listTitle')}>
                              <TableHead sx={{ backgroundColor: 'action.hover' }}>
                                  <TableRow>
+                                     <TableCell>{t('purchases:id')}</TableCell>
                                      <TableCell>{t('purchases:date')}</TableCell>
                                      <TableCell>{t('purchases:reference')}</TableCell>
                                      <TableCell>{t('purchases:supplier')}</TableCell>
@@ -150,7 +153,8 @@ const PurchasesListPage: React.FC = () => {
                              <TableBody>
                                  {purchasesResponse.data.map((purchase) => (
                                      <TableRow key={purchase.id} hover>
-                                         <TableCell>{purchase.purchase_date}</TableCell>
+                                        <TableCell >{purchase.id}</TableCell>
+                                         <TableCell>{dayjs(purchase.purchase_date).format('YYYY-MM-DD')}</TableCell>
                                          <TableCell>{purchase.reference_number || '---'}</TableCell>
                                          <TableCell>{purchase.supplier_name || t('common:n/a')}</TableCell> {/* Handle possible null supplier */}
                                          <TableCell align="center">

@@ -43,21 +43,9 @@ const productFormSchema = z.object({
     // Description: string, nullable, optional
     description: z.string().nullable().optional(),
     // Purchase Price: preprocess empty string to undefined, then coerce to number, must be >= 0
-    purchase_price: z.preprocess(
-        (val) => (val === "" ? undefined : val),
-        z.coerce // Attempts conversion to number
-         .number({ invalid_type_error: "validation:invalidNumber" })
-         .min(0, { message: "validation:minZero" }) // Ensure non-negative
-         .optional() // Allow undefined if not provided initially
-    ).default(0), // Default to 0 if validation passes but value is undefined
+  // Default to 0 if validation passes but value is undefined
     // Sale Price: Same validation as purchase price
-    sale_price: z.preprocess(
-        (val) => (val === "" ? undefined : val),
-        z.coerce
-         .number({ invalid_type_error: "validation:invalidNumber" })
-         .min(0, { message: "validation:minZero" })
-         .optional()
-    ).default(0),
+
     // Stock Quantity: Preprocess, coerce to integer, must be >= 0
     stock_quantity: z.preprocess(
         (val) => (val === "" ? undefined : val),
@@ -110,8 +98,6 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
             name: '',
             sku: '', // Will become null if empty string is submitted, handled by schema/onSubmit logic
             description: '', // Will become null if empty string is submitted
-            purchase_price: 0,
-            sale_price: 0,
             stock_quantity: 0,
             stock_alert_level: null, // Default to null explicitly
         },
@@ -131,8 +117,6 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     name: productToEdit.name || '',
                     sku: productToEdit.sku || '', // Keep as string for input
                     description: productToEdit.description || '', // Keep as string for input
-                    purchase_price: Number(productToEdit.purchase_price) || 0, // Convert string from API to number
-                    sale_price: Number(productToEdit.sale_price) || 0,
                     stock_quantity: Number(productToEdit.stock_quantity) || 0,
                     stock_alert_level: productToEdit.stock_alert_level === null ? null : Number(productToEdit.stock_alert_level), // Handle null explicitly
                 });
@@ -155,6 +139,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
             ...data,
             sku: data.sku || null,
             description: data.description || null,
+            stock_alert_level:data.stock_alert_level  ?? null
             // stock_alert_level is already potentially null from Zod schema
         };
 
@@ -245,7 +230,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                                     render={({ field }) => (
                                         <FormItem className="md:col-span-2">
                                             <FormLabel>{t('products:name')} <span className="text-red-500">*</span></FormLabel>
-                                            <FormControl><Input placeholder={t('products:namePlaceholder') || 'e.g., Gaming Laptop X'} {...field} disabled={isSubmitting} /></FormControl>
+                                            <FormControl><Input placeholder={t('products:productNamePlaceholder') || 'e.g., Gaming Laptop X'} {...field} disabled={isSubmitting} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -277,37 +262,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                                     )}
                                 />
 
-                                 {/* Purchase Price Field */}
-                                 <FormField
-                                    control={control}
-                                    name="purchase_price"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>{t('products:purchasePrice')} <span className="text-red-500">*</span></FormLabel>
-                                            <FormControl>
-                                                <Input type="number" min="0" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} disabled={isSubmitting} />
-                                                {/* TODO: Add currency adornment if desired */}
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                 {/* Sale Price Field */}
-                                 <FormField
-                                    control={control}
-                                    name="sale_price"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>{t('products:salePrice')} <span className="text-red-500">*</span></FormLabel>
-                                            <FormControl>
-                                                <Input type="number" min="0" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} disabled={isSubmitting} />
-                                                 {/* TODO: Add currency adornment if desired */}
-                                           </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                              
 
                                 {/* Stock Alert Level Field */}
                                 <FormField

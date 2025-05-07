@@ -60,8 +60,6 @@ const ProductsTable: React.FC<ProductsTableProps> = ({ products, onEdit, onDelet
                         {/* Add product specific keys */}
                         <TableCell>{t('products:sku')}</TableCell>
                         <TableCell>{t('products:name')}</TableCell>
-                        <TableCell align="right">{t('products:purchasePrice')}</TableCell>
-                        <TableCell align="right">{t('products:salePrice')}</TableCell>
                         <TableCell align="center">{t('products:stockQuantity')}</TableCell>
                         {/* <TableCell>{t('products:unit')}</TableCell> */}
                         <TableCell align="center">{t('common:actions')}</TableCell>
@@ -74,8 +72,6 @@ const ProductsTable: React.FC<ProductsTableProps> = ({ products, onEdit, onDelet
                             <TableRow key={product.id} hover>
                                 <TableCell>{product.sku || '---'}</TableCell>
                                 <TableCell component="th" scope="row">{product.name}</TableCell>
-                                <TableCell align="right">{formatCurrency(product.purchase_price)}</TableCell>
-                                <TableCell align="right">{formatCurrency(product.sale_price)}</TableCell>
                                 <TableCell align="center">
                                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         {product.stock_quantity}

@@ -17,5 +17,6 @@
     "emailPlaceholder": "example@company.com", 
     "phonePlaceholder": "مثال: 9665XXXXXXXX", 
     "addressPlaceholder": "مثال: شارع الملك فهد، الرياض...", 
-    "typeToSearch": "اكتب للبحث عن عملاء..." 
+    "typeToSearch": "اكتب للبحث عن عملاء..." ,
+    "client": "عميل"
 }
