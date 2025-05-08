@@ -17,5 +17,22 @@
     "totalPurchases": "إجمالي المشتريات",
     "totalProfit": "إجمالي الربح",
     "dateRange": "نطاق التاريخ",
-    "purchasesReportTitle": "تقرير المشتريات"
+    "purchasesReportTitle": "تقرير المشتريات",
+    "reportInventoryTitle": "تقرير المخزون",
+    "showLowStockOnly": "عرض المخزون المنخفض فقط",
+    "showOutOfStockOnly": "عرض المخزون غير المتوفر فقط",
+    "batchDetailsFor" : "تفاصيل الدفعة لـ",
+    "batchNumber": "رقم الدفعة",
+    "remainingQty": "الكمية المتبقية",
+    "profitLossSummary": "ملخص الأرباح والخسائر",
+    "totalIncome": "إجمالي الدخل",
+    "totalExpenses": "إجمالي النفقات",
+    "netProfit": "صافي الربح",
+    "netLoss": "صافي الخسارة",
+    "totalRevenue": "إجمالي الإيرادات",
+    "totalCOGS": "إجمالي تكلفة البضائع المباعة",
+    "grossProfit": "الربح الإجمالي",
+    "forPeriod": "للفترة من"
+  
+
   }

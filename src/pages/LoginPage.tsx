@@ -19,7 +19,7 @@ import Alert from '@mui/material/Alert'; // لعرض رسائل الخطأ
 
 // استيراد خدمة المصادقة والسياق
 import authService from '../services/authService';
-import { useAuth } from '../components/layouts/RootLayout'; // Hook السياق
+import { useAuth } from '@/context/AuthContext';
 
 const LoginPage: React.FC = () => {
     const { t } = useTranslation('login');
@@ -60,7 +60,7 @@ const LoginPage: React.FC = () => {
             // Call the updated login service function
             const authResponse = await authService.login({ email, password });
             // On success, call the handler from RootLayout context with the user object
-            handleLoginSuccess(authResponse.user);
+            handleLoginSuccess(authResponse);
         } catch (err) {
             console.error("Login failed:", err);
             setError(authService.getErrorMessage(err));

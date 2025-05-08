@@ -19,10 +19,13 @@ import clientService, { Client, PaginatedResponse } from '../services/clientServ
 import ClientsTable from '../components/clients/ClientsTable';         // Assuming this is ready
 import ClientFormModal from '../components/clients/ClientFormModal'; // The hybrid modal
 import ConfirmationDialog from '../components/common/ConfirmationDialog'; // The reusable dialog
+import { useAuthorization } from '@/hooks/useAuthorization';
+import { PlusIcon } from 'lucide-react';
 
 const ClientsPage: React.FC = () => {
     // Translations - Load namespaces needed
     const { t } = useTranslation(['clients', 'common', 'validation']);
+    const { can } = useAuthorization(); // <-- Get the 'can' function
 
     // --- State Management ---
     const [clientsResponse, setClientsResponse] = useState<PaginatedResponse<Client> | null>(null);
@@ -147,15 +150,13 @@ const ClientsPage: React.FC = () => {
                 <Typography variant="h4" component="h1" className="text-gray-800 dark:text-gray-100 font-semibold">
                     {t('clients:pageTitle')}
                 </Typography>
-                <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() => openModal()}
-                    // Add Tailwind classes for specific overrides if needed:
-                    // className="px-4 py-2 bg-blue-600 ..."
-                >
-                    {t('clients:addClient')}
-                </Button>
+                {/* Conditionally render Add button */}
+                {can('create-clients') && (
+                     <Button onClick={() => openModal()} /* ... other props ... */ >
+                        <PlusIcon className="h-5 w-5 me-2" />
+                        {t('clients:addClient')}
+                    </Button>
+                )}
             </Box>
 
             {/* Loading State */}
@@ -179,8 +180,8 @@ const ClientsPage: React.FC = () => {
                     {/* --- Clients Table --- */}
                     <ClientsTable
                         clients={clientsResponse.data}
-                        onEdit={openModal}
-                        onDelete={openConfirmDialog} // Open confirmation dialog
+                        onEdit={can('edit-clients') ? openModal : undefined} // Pass handler only if allowed
+                        onDelete={can('delete-clients') ? openConfirmDialog : undefined} // Pass handler only if allowed
                         isLoading={isDeleting} // Pass deleting state to potentially disable actions in table
                     />
 

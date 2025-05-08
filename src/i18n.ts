@@ -15,6 +15,9 @@ import purchasesAr from './locales/ar/purchases.json';
 import salesAr from './locales/ar/sales.json';
 import dashboardAr from './locales/ar/dashboard.json';
 import reportAr from './locales/ar/reports.json';
+import usersAR from './locales/ar/users.json';     // <-- Import
+import rolesAR from './locales/ar/roles.json';       // <-- Import
+import profileAr from './locales/ar/profile.json'; // <-- Import
 // ... استيراد ملفات أخرى
 
 // --- تعريف الموارد ---
@@ -33,6 +36,9 @@ const resources = {
     sales:salesAr,
     dashboard:dashboardAr,
     reports:reportAr,
+    users:usersAR, // <-- Add this line
+    roles:rolesAR, // <-- Add this line
+    profile:profileAr, // <-- Add this line
     // ... namespaces أخرى
   },
   // يمكنك إضافة لغات أخرى هنا بنفس الهيكل
@@ -55,6 +61,9 @@ export const namespaces = [
     'suppliers',
     'dashboard',
     'reports',
+    'users', // <-- Add namespace
+    'roles', // <-- Add namespace
+    'profile', // <-- Add namespace
     // ... أسماء namespaces أخرى
 ];
 

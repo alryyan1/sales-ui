@@ -9,5 +9,8 @@
     "logout": "تسجيل الخروج",
     "welcome": "مرحباً، {{name}}!",
     "availableReports": "التقارير المتاحة",
-    "reports": "التقارير"
+    "reports": "التقارير",
+    "profile": "الملف الشخصي",
+    "settings": "الإعدادات",
+    "users": "المستخدمون"
   }

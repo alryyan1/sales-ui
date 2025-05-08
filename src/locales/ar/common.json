@@ -26,10 +26,14 @@
     "pickDate": "اختر تاريخاً",
     "back": "رجوع",
     "n/a": "غير متوفر",
+    "confirm": "تأكيد",
+    "recordedBy": "تم تسجيله بواسطة",
+    "create": "إنشاء",
+    "update": "تحديث",
+    "saveChanges": "حفظ التغييرات", 
+    "confirmDeleteTitle": "تأكيد الحذف",
     "page": "صفحة",
     "previous": "السابق",
     "next": "التالي",
-    "confirmDeleteTitle": "تأكيد الحذف",
-    "confirm": "تأكيد",
-    "recordedBy": "تم تسجيله بواسطة"
+    "paginationSummary": "عرض {{from}} إلى {{to}} من إجمالي {{total}} سجلات"
   }

@@ -10,27 +10,28 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper'; // Container for the table
-import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip'; // To show hints on icons
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 
 // MUI Icons
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
 
 // Import the Client type from clientService
 import { Client } from '../../services/clientService'; // Adjust the path as needed
+import { Edit, Trash2 } from 'lucide-react';
+import { Button } from '../ui/button';
 
 // Define the props the component will receive
 interface ClientsTableProps {
     clients: Client[]; // Array of clients to display
-    onEdit: (client: Client) => void; // Function to call when edit button is clicked
-    onDelete: (id: number) => void; // Function to call when delete button is clicked
+    onEdit: (client: Client | null) => void | undefined; // Function to call when edit button is clicked
+    onDelete: (id: number) => void | undefined; // Function to call when delete button is clicked
     isLoading?: boolean; // Optional loading state for skeleton/indicator
+    canEdit?: boolean; // <-- New prop
+    canDelete?: boolean; // 
 }
 
-const ClientsTable: React.FC<ClientsTableProps> = ({ clients, onEdit, onDelete, isLoading = false }) => {
+const ClientsTable: React.FC<ClientsTableProps> = ({ clients, onEdit, onDelete, isLoading = false , canEdit = false, canDelete = false}) => {
     const { t } = useTranslation(['clients', 'common']); // Load necessary namespaces
 
     // Handle case where there are no clients to display
@@ -80,28 +81,22 @@ const ClientsTable: React.FC<ClientsTableProps> = ({ clients, onEdit, onDelete, 
                             <TableCell align="center">
                                 <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
                                     {/* Edit Button */}
-                                    <Tooltip title={t('common:edit') || ''}> {/* Ensure title is not undefined */}
-                                        <IconButton
-                                            aria-label={t('common:edit') || 'Edit'}
-                                            color="primary"
-                                            size="small" // Make icons slightly smaller
-                                            onClick={() => onEdit(client)} // Call onEdit prop with client data
-                                        >
-                                            <EditIcon fontSize="small"/>
-                                        </IconButton>
-                                    </Tooltip>
-
-                                    {/* Delete Button */}
-                                     <Tooltip title={t('common:delete') || ''}>
-                                        <IconButton
-                                            aria-label={t('common:delete') || 'Delete'}
-                                            color="error" // Use error color for delete
-                                            size="small"
-                                            onClick={() => onDelete(client.id)} // Call onDelete prop with client id
-                                        >
-                                            <DeleteIcon fontSize="small" />
-                                        </IconButton>
-                                    </Tooltip>
+                                   {/* Conditionally render Edit button */}
+                            {canEdit && onEdit && (
+                                <Tooltip title={t('common:edit') || ''}>
+                                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(client)} disabled={isLoading}>
+                                        <Edit className="h-4 w-4" />
+                                    </Button>
+                                </Tooltip>
+                            )}
+                             {/* Conditionally render Delete button */}
+                            {canDelete && onDelete && (
+                                 <Tooltip title={t('common:delete') || ''}>
+                                     <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600 hover:text-red-700" onClick={() => onDelete(client.id)} disabled={isLoading}>
+                                         <Trash2 className="h-4 w-4" />
+                                     </Button>
+                                 </Tooltip>
+                            )}
                                 </Box>
                             </TableCell>
                         </TableRow>

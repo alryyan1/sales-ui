@@ -1,0 +1,18 @@
+{
+    "pageTitle": "الملف الشخصي وإعدادات الحساب",
+    "detailsTitle": "تعديل بيانات الملف الشخصي",
+    "detailsDesc": "قم بتحديث اسمك وعنوان بريدك الإلكتروني.",
+    "nameLabel": "الاسم الكامل",
+    "emailLabel": "البريد الإلكتروني",
+    "updateSuccess": "تم تحديث ملفك الشخصي بنجاح.",
+    "updateError": "فشل تحديث الملف الشخصي.",
+  
+    "passwordTitle": "تغيير كلمة المرور",
+    "passwordDesc": "قم بتحديث كلمة المرور الخاصة بك. تأكد من استخدام كلمة مرور قوية.",
+    "currentPasswordLabel": "كلمة المرور الحالية",
+    "newPasswordLabel": "كلمة المرور الجديدة",
+    "confirmPasswordLabel": "تأكيد كلمة المرور الجديدة",
+    "updatePasswordButton": "تحديث كلمة المرور",
+    "passwordUpdateSuccess": "تم تحديث كلمة المرور بنجاح.",
+    "passwordUpdateError": "فشل تحديث كلمة المرور."
+  }

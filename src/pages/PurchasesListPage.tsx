@@ -103,7 +103,7 @@ const PurchasesListPage: React.FC = () => {
     // --- Navigation Handler ---
     const handleViewDetails = (id: number) => {
         // Navigate to a dedicated page for purchase details (implement later)
-        navigate(`/purchases/${id}`);
+        navigate(`/purchases/${id}/edit`);
         // Or open a details modal
     };
 

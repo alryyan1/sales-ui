@@ -1,189 +1,114 @@
-// src/components/layouts/RootLayout.tsx
-import React, { useState, useEffect, useCallback } from "react";
-import {
-  Outlet,
-  Link as RouterLink,
-  useNavigate,
-  useLocation,
-  useOutletContext,
-} from "react-router-dom";
+import { Outlet, Link as RouterLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 // استيراد مكونات MUI الأساسية
 import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
-import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
 import Container from "@mui/material/Container";
-import CircularProgress from "@mui/material/CircularProgress";
-import IconButton from "@mui/material/IconButton"; // اختياري: لاستخدام أيقونة لتسجيل الخروج مثلاً
-import MenuIcon from "@mui/icons-material/Menu"; // مثال لأيقونة قائمة (للتطوير المستقبلي)
 import LogoutIcon from "@mui/icons-material/Logout"; // أيقونة تسجيل الخروج
 // If using Dropdown:
+
+// استيراد خدمة المصادقة ونوع المستخدم
+import { FileText, Loader2 } from "lucide-react";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { useAuthorization } from "@/hooks/useAuthorization";
+import { Toaster } from "../ui/sonner";
+import { Button } from "../ui/button";
 import {
   DropdownMenu,
+  DropdownMenuTrigger,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-// استيراد خدمة المصادقة ونوع المستخدم
-import authService, { User } from "../../services/authService";
-import { FileText } from "lucide-react";
-
-// --- تعريف نوع السياق الذي سيتم تمريره عبر Outlet ---
-// هذا يساعد المكونات الفرعية في الحصول على الأنواع الصحيحة عند استخدام useOutletContext
-type AuthContextType = {
-  user: User | null;
-  isLoading: boolean;
-  handleLoginSuccess: (user: User) => void;
-  handleRegisterSuccess: (user: User) => void;
-};
-
-// --- Hook مخصص للوصول السهل إلى سياق المصادقة من المكونات الفرعية ---
-// eslint-disable-next-line react-refresh/only-export-components
-export function useAuth() {
-  return useOutletContext<AuthContextType>();
-}
-// -------------------------------------------------------------
-// src/components/layouts/RootLayout.tsx
-
-// ... useAuth hook (no change needed) ...
+  DropdownMenuItem,
+} from "@radix-ui/react-dropdown-menu";
+import { t } from "i18next";
 
 const RootLayout: React.FC = () => {
   const { t } = useTranslation(["navigation", "common", "login", "register"]); // Load necessary namespaces
-  const [user, setUser] = useState<User | null>(null);
-  // isLoading now represents checking if the token (if any) is valid
-  const [isLoading, setIsLoading] = useState(true);
-  const navigate = useNavigate();
-  // location is not strictly needed in handlers anymore if token is global
-  // const location = useLocation();
-
-  // --- Check Auth Status (Token Verification) ---
-  const checkAuthStatus = useCallback(async () => {
-    console.log("RootLayout: Checking authentication status (token)...");
-    setIsLoading(true); // Start loading indicator
-    try {
-      const currentUser = await authService.getCurrentUser(); // Checks token & verifies with API
-      setUser(currentUser); // currentUser will be null if token invalid or missing
-      console.log("RootLayout: User status updated", currentUser);
-    } catch (error) {
-      // Should not happen if getCurrentUser returns null on error, but handle just in case
-      console.error("RootLayout: Error during auth check", error);
-      setUser(null);
-    } finally {
-      console.log("RootLayout: Finished auth check (token).");
-      setIsLoading(false); // Finish loading
-    }
-  }, []); // No dependencies, runs once or when manually called
-
-  useEffect(() => {
-    checkAuthStatus(); // Check on initial mount
-  }, [checkAuthStatus]);
-
-  // --- Logout Handler ---
-  const handleLogout = async () => {
-    console.log("RootLayout: Logging out...");
-    await authService.logout(); // Service handles token removal & API call
-    setUser(null); // Clear user state
-    navigate("/login"); // Redirect to login
-    console.log("RootLayout: Logout complete.");
-  };
-
-  // --- Login/Register Success Handlers ---
-  // These now primarily just update the user state, token is stored by service
-  const handleLoginSuccess = (loggedInUser: User) => {
-    console.log("RootLayout: Login successful", loggedInUser);
-    setUser(loggedInUser);
-    // Redirect to dashboard (or intended destination if you pass it)
-    navigate("/dashboard", { replace: true });
-  };
-
-  const handleRegisterSuccess = (registeredUser: User) => {
-    console.log("RootLayout: Registration successful", registeredUser);
-    setUser(registeredUser);
-    navigate("/dashboard", { replace: true });
-  };
+  const { isLoading, user, handleLogout } = useAuth();
+  const { can, hasRole } = useAuthorization();
 
   // --- Loading State ---
   // Display loader ONLY during the initial check
-  if (isLoading && user === null) {
-    // Avoid full screen loader on simple navigation if user is already known
+  // Show global loader only during the initial check
+  if (isLoading) {
     return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "100vh",
-        }}
-      >
-        <CircularProgress />
-      </Box>
+      <div className="flex justify-center items-center h-screen dark:bg-gray-950">
+        <Loader2 className="h-10 w-10 animate-spin text-blue-600 dark:text-blue-400" />
+      </div>
     );
   }
 
   // --- Render Layout ---
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-      <AppBar position="static">
-        <Container maxWidth="xl">
-          <Toolbar disableGutters>
-            {/* ... (App Title) ... */}
-            <Typography component={RouterLink} to="/" /* ... sx props ... */>
-              {t("common:appName")}
-            </Typography>
+    <div className="flex flex-col min-h-screen dark:bg-gray-950">
+      <Toaster richColors position="bottom-center" theme="system" />
+      {/* Example Header using shadcn Buttons */}
+      <header className="sticky top-0 z-40 w-full border-b bg-background dark:bg-gray-900 dark:border-gray-700">
+        <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">
+          {/* App Title/Logo */}
+          <RouterLink to="/" className="font-bold text-lg">
+            {t("common:appName")}
+          </RouterLink>
 
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              {user ? ( // Check user state
-                <>
-                  {/* Welcome message, Dashboard, Clients links */}
-                  <Typography
-                    sx={{ display: { xs: "none", sm: "block" }, mr: 1 }}
-                  >
-                    {t("navigation:welcome", { name: user.name })}
-                  </Typography>
-                  <Button
-                    component={RouterLink}
-                    to="/dashboard"
-                    color="inherit"
-                  >
+          {/* Navigation */}
+          <nav className="flex items-center space-x-1 md:space-x-2 lg:space-x-4">
+            {user ? (
+              <>
+                {/* Always show Dashboard maybe? */}
+                <Button variant="ghost" asChild>
+                  <RouterLink to="/dashboard">
                     {t("navigation:dashboard")}
-                  </Button>
-                  <Button
-                    component={RouterLink}
-                    to="/purchases"
-                    color="inherit"
-                  >
-                    {" "}
-                    {/* <-- Add Link */}
-                    {t("navigation:purchases")} {/* Make sure key exists */}
-                  </Button>
-                  <Button component={RouterLink} to="/sales" color="inherit">
-                    {" "}
-                    {/* <-- Add Link */}
-                    {t("navigation:sales")} {/* Make sure key exists */}
-                  </Button>
-                  <Button component={RouterLink} to="/clients" color="inherit">
-                    {t("navigation:clients")}
-                  </Button>
-                  <Button component={RouterLink} to="/products" color="inherit">
-                    {t("navigation:products")}
-                  </Button>
-                  {/* --- Reports Link/Menu --- */}
-                  {/* Option 1: Direct Link (if only one report for now) */}
-               
+                  </RouterLink>
+                </Button>
 
-                  {/* Option 2: Dropdown Menu (using shadcn example) */}
+                {can("view-clients") && (
+                  <Button variant="ghost" asChild>
+                    <RouterLink to="/clients">
+                      {t("navigation:clients")}
+                    </RouterLink>
+                  </Button>
+                )}
+                {can("view-suppliers") && (
+                  <Button variant="ghost" asChild>
+                    <RouterLink to="/suppliers">
+                      {t("navigation:suppliers")}
+                    </RouterLink>
+                  </Button>
+                )}
+                {can("view-products") && (
+                  <Button variant="ghost" asChild>
+                    <RouterLink to="/products">
+                      {t("navigation:products")}
+                    </RouterLink>
+                  </Button>
+                )}
+                {can("view-purchases") && (
+                  <Button variant="ghost" asChild>
+                    <RouterLink to="/purchases">
+                      {t("navigation:purchases")}
+                    </RouterLink>
+                  </Button>
+                )}
+                {can("view-sales") && (
+                  <Button variant="ghost" asChild>
+                    <RouterLink to="/sales">{t("navigation:sales")}</RouterLink>
+                  </Button>
+                )}
+
+                {/* Example Dropdown for Reports (Needs DropdownMenu component) */}
+                {can("view-reports") && (
+                  // Replace with DropdownMenu if implemented
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
                         className="text-white hover:bg-white/10"
                       >
-                        <FileText className="me-2 h-4 w-4" />{" "}
+                        <FileText className="me-2 h-4 w-4" />
                         {t("navigation:reports")}
                       </Button>
                     </DropdownMenuTrigger>
@@ -197,79 +122,78 @@ const RootLayout: React.FC = () => {
                           {t("reports:salesReportTitle")}
                         </RouterLink>
                       </DropdownMenuItem>
-                      <DropdownMenuItem >
-                        {" "}
+                      <DropdownMenuItem>
+                        
                         <RouterLink to="/reports/purchases">
                           {t("reports:purchasesReportTitle")}
                         </RouterLink>
-                    
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        
+                        <RouterLink to="/reports/inventory">
+                          {t("reports:reportInventoryTitle")}
+                        </RouterLink>
+                     
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        
+                        <RouterLink to="/reports/profit-loss">
+                          {t("reports:profitLossReportTitle")}
+                        </RouterLink>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
+                 
                   </DropdownMenu>
-                  {/* --- End Reports Link/Menu --- */}
+                )}
 
-                  <Button
-                    component={RouterLink}
-                    to="/suppliers"
-                    color="inherit"
-                  >
-                    {" "}
-                    {/* <-- Add Link */}
-                    {t("navigation:suppliers")}{" "}
-                    {/* Make sure key exists in navigation.json */}
+                {/* --- Admin Links --- */}
+                {hasRole("admin") && (
+                  <Button variant="ghost" asChild>
+                    <RouterLink to="/admin/users">
+                      {t("navigation:users")}
+                    </RouterLink>
                   </Button>
-                  {/* Logout Button */}
+                  // Add link for /admin/roles later if needed
+                )}
+                {/* --- End Admin Links --- */}
 
-                  <Button
-                    color="inherit"
-                    onClick={handleLogout}
-                    startIcon={<LogoutIcon />}
-                  >
-                    {t("navigation:logout")}
-                  </Button>
-                </>
-              ) : (
-                <>
-                  {/* Login/Register Links */}
-                  <Button component={RouterLink} to="/login" color="inherit">
-                    {t("login:title")}
-                  </Button>
-                  <Button component={RouterLink} to="/register" color="inherit">
-                    {t("register:title")}
-                  </Button>
-                </>
-              )}
-            </Box>
-          </Toolbar>
-        </Container>
-      </AppBar>
+                {/* Profile/Logout */}
+                <Button variant="ghost" asChild>
+                  <RouterLink to="/profile">
+                    {t("navigation:profile")}
+                  </RouterLink>
+                </Button>
 
-      <Container
-        component="main"
-        maxWidth="xl"
-        sx={{ mt: 4, mb: 4, flexGrow: 1 }}
-      >
-        {/* Pass updated handlers and state to children */}
-        <Outlet
-          context={
-            {
-              user,
-              isLoading,
-              handleLoginSuccess,
-              handleRegisterSuccess,
-            } satisfies AuthContextType
-          }
-        />
-      </Container>
+                <Button variant="outline" size="sm" onClick={handleLogout}>
+                  {t("navigation:logout")}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" asChild>
+                  <RouterLink to="/login">{t("navigation:login")}</RouterLink>
+                </Button>
+                <Button variant="default" asChild>
+                  <RouterLink to="/register">
+                    {t("navigation:register")}
+                  </RouterLink>
+                </Button>
+              </>
+            )}
+          </nav>
+        </div>
+      </header>
 
-      {/* ... (Footer) ... */}
-      <Box
-        component="footer"
-        sx={{ bgcolor: "background.paper", p: 2, mt: "auto" }}
-      >
-        {/* ... (Copyright text using t('common:appName')) ... */}
-      </Box>
-    </Box>
+      {/* Main Content Area */}
+      <main className="flex-grow container mx-auto px-4 py-6 md:py-8">
+        <Outlet />
+      </main>
+
+      {/* Footer */}
+      <footer className="p-4 text-center text-xs text-muted-foreground dark:bg-gray-800">
+        © {new Date().getFullYear()} {t("common:appName")}
+      </footer>
+    </div>
   );
 };
 

@@ -19,7 +19,7 @@ import Alert from '@mui/material/Alert';
 
 // Auth Service and Context
 import authService, { User, RegisterCredentials } from '../services/authService'; // Ensure RegisterCredentials is defined or imported
-import { useAuth } from '../components/layouts/RootLayout';
+import { useAuth } from '../context/AuthContext'; // Adjust import path as needed
 
 // Type for validation errors specific to this form
 interface RegistrationErrors {

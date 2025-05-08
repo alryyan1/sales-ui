@@ -3,7 +3,7 @@ import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 
 // استيراد Hook السياق للوصول إلى حالة المصادقة
-import { useAuth } from './RootLayout'; // تأكد من أن المسار صحيح
+import { useAuth } from './../../context/AuthContext'; // تأكد من أن المسار صحيح
 
 // استيراد مكونات MUI للتحميل
 import CircularProgress from '@mui/material/CircularProgress';

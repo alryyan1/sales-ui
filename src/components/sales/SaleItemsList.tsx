@@ -67,9 +67,9 @@ export const SaleItemsList: React.FC<SaleItemsListProps> = ({
                 <SaleItemRow
                     key={item.id} // RHF provides stable id
                     index={index}
+                    loadingAllProducts={loadingProducts}
                     remove={remove}
-                    products={products}
-                    loadingProducts={loadingProducts}
+                    allProducts={products}
                     productSearchInput={productSearchInput}
                     onProductSearchInputChange={onProductSearchInputChange}
                     isSubmitting={isSubmitting}
