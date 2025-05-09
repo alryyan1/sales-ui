@@ -1,0 +1,18 @@
+{
+  "pageTitle": "إعدادات النظام",
+  "appSettingsTitle": "الإعدادات العامة للتطبيق",
+  "appSettingsDesc": "قم بتعديل الإعدادات الأساسية لنظام إدارة المبيعات.",
+  "companyName": "اسم الشركة/المؤسسة",
+  "companyAddress": "عنوان الشركة",
+  "companyPhone": "هاتف الشركة",
+  "companyEmail": "البريد الإلكتروني للشركة",
+  "companyLogoUrl": "رابط شعار الشركة (URL)",
+  "currencySymbol": "رمز العملة *",
+  "dateFormat": "صيغة التاريخ",
+  "dateFormatDesc": "مثال: YYYY-MM-DD, DD/MM/YYYY",
+  "lowStockThreshold": "حد تنبيه المخزون العام",
+  "invoicePrefix": "بادئة الفواتير",
+  "poPrefix": "بادئة طلبات الشراء",
+  "updateSuccess": "تم حفظ الإعدادات بنجاح.",
+  "updateError": "فشل حفظ الإعدادات."
+}

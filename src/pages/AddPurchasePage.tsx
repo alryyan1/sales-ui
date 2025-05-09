@@ -188,7 +188,7 @@ const PurchaseFormPage: React.FC = () => {
         setLoadingSuppliers(false);
       }
     },
-    [t, isEditMode, selectedSupplier]
+    [t, selectedSupplier]
   ); // Added dependencies
 
   const fetchProducts = useCallback(
@@ -209,7 +209,7 @@ const PurchaseFormPage: React.FC = () => {
         setLoadingProducts(false);
       }
     },
-    [t, isEditMode]
+    []
   ); // Added dependencies
 
   // --- Debounce Effects ---
@@ -224,7 +224,10 @@ const PurchaseFormPage: React.FC = () => {
     };
   }, [supplierSearchInput]);
   useEffect(() => {
-    fetchSuppliers(debouncedSupplierSearch);
+    if(debouncedSupplierSearch !=''){
+
+      fetchSuppliers(debouncedSupplierSearch);
+    }
   }, [debouncedSupplierSearch, fetchSuppliers]);
   useEffect(() => {
     if (productDebounceRef.current) clearTimeout(productDebounceRef.current);
@@ -255,6 +258,7 @@ const PurchaseFormPage: React.FC = () => {
               .getSupplier(existingPurchase.supplier_id)
               .catch(() => null)
           : null;
+
         const productIds = existingPurchase.items.map(
           (item) => item.product_id
         );
@@ -307,7 +311,7 @@ const PurchaseFormPage: React.FC = () => {
       } catch (err) {
         console.error("Failed to load purchase data:", err);
         const errorMsg = purchaseService.getErrorMessage(err);
-        setError(errorMsg);
+        setError("root", { type: "manual", message: errorMsg });
         toast.error(t("common:error"), { description: errorMsg });
         navigate("/purchases"); // Redirect if purchase not found
       } finally {
@@ -328,8 +332,6 @@ const PurchaseFormPage: React.FC = () => {
     reset,
     navigate,
     t,
-    fetchSuppliers,
-    fetchProducts,
   ]); // Added fetchSuppliers/fetchProducts
 
   // --- Form Submission ---

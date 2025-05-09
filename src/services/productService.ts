@@ -3,6 +3,7 @@ import apiClient, { getValidationErrors, getErrorMessage, ApiErrorResponse } fro
 import { AxiosError } from 'axios';
 // Assuming PaginatedResponse is defined/exported from clientService or a shared types file
 import { PaginatedResponse } from './clientService'; // Or adjust import path
+import { Category } from './CategoryService';
 
 // --- Interfaces ---
 
@@ -16,9 +17,11 @@ export interface Product {
     stock_quantity: number; // Integer
     stock_alert_level: number | null; // Integer or null
     // unit?: string | null;
-    // category?: any; // Define Category interface if needed
+    category?: Category; // Define Category interface if needed
     created_at: string;
     updated_at: string;
+    category_id?: number | null; // Optional if not included in resource
+    category_name?: string | null; // Optional if included by resource
       // Optional accessors that might be added by backend ProductResource
       latest_purchase_cost?: string | number | null;
       suggested_sale_price?: string | number | null;
@@ -118,7 +121,7 @@ const productService = {
 
              // Assumes backend endpoint like GET /api/products/by-ids?ids[]=1&ids[]=2
              // You might need to adjust the endpoint or use a POST request if the URL gets too long
-             const response = await apiClient.get<{ data: Product[] }>(`/products/by-ids?${params.toString()}`);
+             const response = await apiClient.get<{ data: Product[] }>(`/product/by-ids?${params.toString()}`);
              console.log('getProductsByIds response:', response.data.data);
              return response.data.data ?? response.data;
          } catch (error) {

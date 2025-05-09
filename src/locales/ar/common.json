@@ -28,12 +28,14 @@
     "n/a": "غير متوفر",
     "confirm": "تأكيد",
     "recordedBy": "تم تسجيله بواسطة",
-    "create": "إنشاء",
-    "update": "تحديث",
     "saveChanges": "حفظ التغييرات", 
     "confirmDeleteTitle": "تأكيد الحذف",
     "page": "صفحة",
     "previous": "السابق",
     "next": "التالي",
-    "paginationSummary": "عرض {{from}} إلى {{to}} من إجمالي {{total}} سجلات"
+    "paginationSummary": "عرض {{from}} إلى {{to}} من إجمالي {{total}} سجلات",
+    "create": "إنشاء",
+    "update": "تحديث",
+    "role": "صلاحية",
+    "date": "تاريخ"
   }

@@ -1,12 +1,33 @@
 
 {
-    "roles": "الصلاحيات", 
     "assignRoles": "تعيين الصلاحيات",
     "assignRolesDesc": "حدد الصلاحيات التي سيتم منحها لهذا المستخدم.",
-    "fetchError": "فشل تحميل قائمة الصلاحيات.",
     "roleRequired": "يجب تحديد صلاحية واحدة على الأقل.", 
     "admin": "مدير النظام", 
     "salesperson": "مندوب مبيعات",
-    "inventory_manager": "مدير المخزون"
+    "inventory_manager": "مدير المخزون",
+
+  "manageTitle": "إدارة الصلاحيات والمجموعات",
+  "addRole": "إضافة صلاحية جديدة",
+  "editRole": "تعديل الصلاحية",
+  "deleteConfirm": "هل أنت متأكد من حذف هذه الصلاحية؟ سيتم إزالتها من جميع المستخدمين.",
+  "deleteSuccess": "تم حذف الصلاحية بنجاح.",
+  "createSuccess": "تم إنشاء الصلاحية بنجاح.",
+  "updateSuccess": "تم تحديث الصلاحية بنجاح.",
+  "fetchError": "فشل تحميل قائمة الصلاحيات.",
+  "fetchSingleError": "فشل تحميل بيانات الصلاحية.",
+  "deleteError": "فشل حذف الصلاحية.",
+  "saveError": "فشل حفظ الصلاحية.",
+  "roleName": "اسم الصلاحية",
+  "roleNamePlaceholder": "مثال: مدير مبيعات",
+  "permissionsCount": "عدد الأذونات",
+  "usersCount": "عدد المستخدمين",
+  "assignPermissions": "تعيين الأذونات",
+  "assignPermissionsDesc": "حدد الأذونات الممنوحة لهذه الصلاحية.",
+  "noRoles": "لا توجد صلاحيات لعرضها.",
+  "roleInUseError": "لا يمكن حذف الصلاحية. يوجد مستخدمون معينون لهذه الصلاحية.",
+  "cannotDeleteAdminRole": "لا يمكن حذف صلاحية مدير النظام.",
+  "cannotEditAdminRole": "لا يمكن تعديل صلاحية مدير النظام.",
+  "roles": "الصلاحيات" 
     
   }

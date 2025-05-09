@@ -32,6 +32,11 @@
     "stockAlertDescription": "عندما يصل المخزون إلى هذا المستوى، سيتم تنبيهك.",
     "descriptionPlaceholder": "مثال: هذا منتج رائع.",
     "cancel": "إلغاء",
-    "save": "حفظ"
+    "save": "حفظ",
+    "lowStockAlert": "تنبيه المخزون المنخفض",
+    "product": "المنتج",
+    "selectCategoryPlaceholder": "اختر تصنيفًا...",
+    "noCategory": "لا يوجد تصنيفات لعرضها.",
+    "category": "التصنيف"
     
 }

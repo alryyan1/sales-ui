@@ -1,316 +1,486 @@
 // src/components/products/ProductFormModal.tsx
-import React, { useEffect, useState } from 'react';
-import { useForm, SubmitHandler } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-import * as z from 'zod'; // Import Zod
-import { zodResolver } from '@hookform/resolvers/zod'; // Import Zod resolver
-import { toast } from "sonner"; // Import Sonner's toast function
-import { Loader2 } from 'lucide-react'; // Loading spinner icon
+import React, { useEffect, useState, useCallback } from "react";
+import { useForm, SubmitHandler, Controller } from "react-hook-form";
+import { useTranslation } from "react-i18next";
+import * as z from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
-// shadcn/ui Components
+// shadcn/ui & Lucide Icons
 import { Button } from "@/components/ui/button";
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription, // Optional
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogClose, // Use for cancel/close buttons
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
 } from "@/components/ui/dialog";
 import {
-    Form,
-    FormControl,
-    FormDescription, // Optional
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage, // Displays validation errors
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Loader2, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Assuming you added shadcn Alert
 
 // Services and Types
-import productService, { Product } from '../../services/productService'; // Adjust path as needed
+import productService, {
+  Product,
+  ProductFormData,
+} from "../../services/productService"; // Adjust path
+import categoryService, { Category } from "@/services/CategoryService";
 
-// --- Zod Schema for Validation ---
-// Defines the structure and validation rules for the form data.
+// --- Zod Schema for Validation (Prices Removed, Category Added) ---
 const productFormSchema = z.object({
-    // Name: required string, min 1 char
-    name: z.string().min(1, { message: "validation:required" }),
-    // SKU: string, nullable, optional (can be empty, null, or undefined)
-    sku: z.string().nullable().optional(),
-    // Description: string, nullable, optional
-    description: z.string().nullable().optional(),
-    // Purchase Price: preprocess empty string to undefined, then coerce to number, must be >= 0
-  // Default to 0 if validation passes but value is undefined
-    // Sale Price: Same validation as purchase price
-
-    // Stock Quantity: Preprocess, coerce to integer, must be >= 0
-    stock_quantity: z.preprocess(
-        (val) => (val === "" ? undefined : val),
-        z.coerce
-         .number({ invalid_type_error: "validation:invalidInteger" })
-         .int({ message: "validation:invalidInteger" })
-         .min(0, { message: "validation:minZero" })
-         .optional()
-    ).default(0),
-    // Stock Alert Level: Preprocess, coerce to integer, must be >= 0, nullable, optional
-    stock_alert_level: z.preprocess(
-        (val) => (val === "" ? undefined : val),
-        z.coerce
-         .number({ invalid_type_error: "validation:invalidInteger" })
-         .int({ message: "validation:invalidInteger" })
-         .min(0, { message: "validation:minZero" })
-         .nullable() // Allow explicit null
-         .optional() // Allow undefined
-    ),
+  name: z.string().min(1, { message: "validation:required" }),
+  sku: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  category_id: z.preprocess(
+    // Convert empty string or "0" to null for optional number
+    (val) => (val === "" || val === "0" || val === 0 ? null : val),
+    z
+      .number()
+      .positive({ message: "validation:selectCategory" })
+      .nullable()
+      .optional() // Category is optional
+  ),
+  stock_quantity: z
+    .preprocess(
+      (val) => (val === "" ? undefined : val),
+      z.coerce
+        .number({ invalid_type_error: "validation:invalidInteger" })
+        .int({ message: "validation:invalidInteger" })
+        .min(0, { message: "validation:minZero" })
+    )
+    .default(0), // Default to 0 if not provided or empty after preprocess
+  stock_alert_level: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.coerce
+      .number({ invalid_type_error: "validation:invalidInteger" })
+      .int({ message: "validation:invalidInteger" })
+      .min(0, { message: "validation:minZero" })
+      .nullable()
+      .optional()
+  ),
 });
 
-// Infer the TypeScript type from the Zod schema for type safety
 type ProductFormValues = z.infer<typeof productFormSchema>;
 
 // --- Component Props ---
 interface ProductFormModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    productToEdit: Product | null;
-    onSaveSuccess: () => void;
+  isOpen: boolean;
+  onClose: () => void;
+  productToEdit: Product | null;
+  onSaveSuccess: (product: Product) => void; // Callback with saved/created product
 }
 
 // --- Component Definition ---
 const ProductFormModal: React.FC<ProductFormModalProps> = ({
-    isOpen,
-    onClose,
-    productToEdit,
-    onSaveSuccess
+  isOpen,
+  onClose,
+  productToEdit,
+  onSaveSuccess,
 }) => {
-    const { t } = useTranslation(['products', 'common', 'validation']); // Load necessary translation namespaces
-    const isEditMode = Boolean(productToEdit);
+  const { t } = useTranslation([
+    "products",
+    "common",
+    "validation",
+    "categories",
+  ]);
+  const isEditMode = Boolean(productToEdit);
 
-    // State for general API error messages (not field-specific validation)
-    const [serverError, setServerError] = useState<string | null>(null);
+  // State for categories dropdown and general API errors
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [serverError, setServerError] = useState<string | null>(null);
 
-    // --- React Hook Form Setup with Zod ---
-    const form = useForm<ProductFormValues>({
-        resolver: zodResolver(productFormSchema), // Use the Zod resolver
-        defaultValues: { // Initialize based on expected types after Zod processing
-            name: '',
-            sku: '', // Will become null if empty string is submitted, handled by schema/onSubmit logic
-            description: '', // Will become null if empty string is submitted
-            stock_quantity: 0,
-            stock_alert_level: null, // Default to null explicitly
-        },
-    });
+  // --- React Hook Form Setup ---
+  const form = useForm<ProductFormValues>({
+    resolver: zodResolver(productFormSchema),
+    defaultValues: {
+      name: "",
+      sku: "",
+      description: "",
+      category_id: null, // Default to null (no category)
+      stock_quantity: 0,
+      stock_alert_level: null, // Default to null or a number like 10
+    },
+  });
+  const {
+    handleSubmit,
+    control,
+    reset,
+    formState: { isSubmitting, errors },
+    setError,
+  } = form;
 
-    const { handleSubmit, control, reset, formState: { isSubmitting }, setError } = form;
+  // --- Fetch Categories for Dropdown ---
+  const fetchCategoriesForSelect = useCallback(async () => {
+    setLoadingCategories(true);
+    try {
+      const data = await categoryService.getCategories(
+        1,
+        9999,
+        "",
+        false,
+        true
+      ); // Fetch all flat for select
+      setCategories(data as Category[]);
+    } catch (error) {
+      console.error("Error fetching categories for product form:", error);
+      toast.error(t("common:error"), {
+        description: categoryService.getErrorMessage(
+          error,
+          t("categories:fetchError")
+        ),
+      });
+    } finally {
+      setLoadingCategories(false);
+    }
+  }, [t]);
 
-    // --- Effect to Populate/Reset Form ---
-    useEffect(() => {
-        if (isOpen) {
-            console.log("Product Modal opened. Edit mode:", isEditMode, "Product:", productToEdit);
-            setServerError(null); // Clear previous server errors on open
-            if (isEditMode && productToEdit) {
-                // Populate form with data from productToEdit
-                // Ensure data types match the form expectations (numbers for Zod number type)
-                reset({
-                    name: productToEdit.name || '',
-                    sku: productToEdit.sku || '', // Keep as string for input
-                    description: productToEdit.description || '', // Keep as string for input
-                    stock_quantity: Number(productToEdit.stock_quantity) || 0,
-                    stock_alert_level: productToEdit.stock_alert_level === null ? null : Number(productToEdit.stock_alert_level), // Handle null explicitly
-                });
-            } else {
-                // Reset to default values defined in useForm for adding
-                reset();
-            }
-        }
-    }, [isOpen, isEditMode, productToEdit, reset]);
+  // --- Effect to Populate/Reset Form and Fetch Categories ---
+  useEffect(() => {
+    if (isOpen) {
+      setServerError(null); // Clear previous server errors
+      fetchCategoriesForSelect(); // Fetch categories when modal opens
 
+      if (isEditMode && productToEdit) {
+        reset({
+          name: productToEdit.name || "",
+          sku: productToEdit.sku || "",
+          description: productToEdit.description || "",
+          category_id: productToEdit.category_id || null, // Use product's category_id
+          stock_quantity: Number(productToEdit.stock_quantity) || 0,
+          stock_alert_level:
+            productToEdit.stock_alert_level === null
+              ? null
+              : Number(productToEdit.stock_alert_level),
+        });
+      } else {
+        // Reset to defaults for adding
+        reset({
+          name: "",
+          sku: "",
+          description: "",
+          category_id: null,
+          stock_quantity: 0,
+          stock_alert_level: 10, // Example default alert level
+        });
+      }
+    }
+  }, [isOpen, isEditMode, productToEdit, reset, fetchCategoriesForSelect]); // Added fetchCategoriesForSelect
 
-    // --- Form Submission Handler ---
-    const onSubmit: SubmitHandler<ProductFormValues> = async (data) => {
-        setServerError(null); // Clear previous API error messages
-        console.log('Submitting validated data:', data);
+  // --- Form Submission Handler ---
+  const onSubmit: SubmitHandler<ProductFormValues> = async (data) => {
+    setServerError(null);
+    console.log("Submitting product data:", data);
 
-        // Prepare data for API (Zod schema already handled coercion to numbers/nulls)
-        // Ensure optional empty strings become null if API expects null
-        const dataToSend = {
-            ...data,
-            sku: data.sku || null,
-            description: data.description || null,
-            stock_alert_level:data.stock_alert_level  ?? null
-            // stock_alert_level is already potentially null from Zod schema
-        };
-
-        try {
-            let savedProduct: Product;
-            if (isEditMode && productToEdit) {
-                // Call update service
-                savedProduct = await productService.updateProduct(productToEdit.id, dataToSend);
-            } else {
-                // Call create service
-                // Cast dataToSend to ensure all fields are present if API requires them
-                savedProduct = await productService.createProduct(dataToSend as Required<typeof dataToSend>);
-            }
-            console.log('Save successful:', savedProduct);
-
-            // Show success toast using Sonner
-            toast.success(t('common:success'), {
-                description: t(isEditMode ? 'products:saveSuccess' : 'products:saveSuccess'),
-                duration: 3000, // Auto-close after 3 seconds
-            });
-
-            onSaveSuccess(); // Call parent callback (e.g., refetch data)
-            onClose(); // Close the modal
-
-        } catch (err) {
-            console.error("Failed to save product:", err);
-            const generalError = productService.getErrorMessage(err);
-            const apiErrors = productService.getValidationErrors(err);
-
-            // Show error toast using Sonner
-            toast.error(t('common:error'), {
-                description: generalError, // Display the main error message
-                duration: 5000,
-            });
-
-            // Set general server error for display within the modal (optional)
-            setServerError(generalError);
-
-            // Map API validation errors back to the form fields if they exist
-            if (apiErrors) {
-                Object.entries(apiErrors).forEach(([field, messages]) => {
-                    // Check if the field name is valid for our form type
-                    if (field in ({} as ProductFormValues)) {
-                        setError(field as keyof ProductFormValues, {
-                            type: 'server',
-                            message: messages[0] // Show the first error message from the server
-                        });
-                    }
-                });
-            }
-        }
-        // isSubmitting is automatically handled by RHF and its promise resolution
+    // Ensure category_id is null if not selected, or a number
+    const dataToSend: ProductFormData = {
+      ...data,
+      sku: data.sku || null,
+      description: data.description || null,
+      category_id: data.category_id ? Number(data.category_id) : null,
+      stock_quantity: Number(data.stock_quantity), // Ensure number
+      stock_alert_level:
+        data.stock_alert_level !== null && data.stock_alert_level !== undefined
+          ? Number(data.stock_alert_level)
+          : null,
     };
 
-    // --- Render Modal ---
-    return (
-        // Dialog controlled by isOpen prop, onClose triggered by DialogClose or overlay click
-        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="sm:max-w-3xl p-0"> {/* Use larger width for product form */}
-                {/* Form integrates with RHF */}
-                <Form {...form}>
-                    {/* Use standard form tag for submission */}
-                    <form onSubmit={handleSubmit(onSubmit)} noValidate>
-                        {/* Header */}
-                        <DialogHeader className="p-6 pb-4 border-b dark:border-gray-700">
-                            <DialogTitle className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                                {isEditMode ? t('products:editProduct') : t('products:addProduct')}
-                            </DialogTitle>
-                            {/* Optional Description */}
-                            {/* <DialogDescription>{t('products:formDescription')}</DialogDescription> */}
-                        </DialogHeader>
+    try {
+      let savedProduct: Product;
+      if (isEditMode && productToEdit) {
+        savedProduct = await productService.updateProduct(
+          productToEdit.id,
+          dataToSend
+        );
+      } else {
+        savedProduct = await productService.createProduct(dataToSend);
+      }
+      console.log("Save successful:", savedProduct);
 
-                        {/* Scrollable Content Area */}
-                        <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
-                             {/* General Server Error Alert */}
-                            {serverError && (
-                                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 rounded dark:bg-red-900 dark:text-red-200 dark:border-red-600" role="alert">
-                                    <p>{serverError}</p>
-                                </div>
-                            )}
+      toast.success(t("common:success"), {
+        description: t(
+          isEditMode ? "products:updateSuccess" : "products:createSuccess"
+        ), // Add keys
+        duration: 3000,
+      });
 
-                            {/* Grid Layout for Fields */}
-                            <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2">
-                                {/* Name Field - Span full width */}
-                                <FormField
-                                    control={control}
-                                    name="name"
-                                    render={({ field }) => (
-                                        <FormItem className="md:col-span-2">
-                                            <FormLabel>{t('products:name')} <span className="text-red-500">*</span></FormLabel>
-                                            <FormControl><Input placeholder={t('products:productNamePlaceholder') || 'e.g., Gaming Laptop X'} {...field} disabled={isSubmitting} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+      onSaveSuccess(savedProduct); // Callback to parent
+      onClose(); // Close the modal
+    } catch (err) {
+      console.error("Failed to save product:", err);
+      const generalError = productService.getErrorMessage(err);
+      const apiErrors = productService.getValidationErrors(err);
 
-                                {/* SKU Field */}
-                                <FormField
-                                    control={control}
-                                    name="sku"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>{t('products:sku')}</FormLabel>
-                                            <FormControl><Input placeholder={t('products:skuPlaceholder') || 'e.g., GLX-001'} {...field} value={field.value ?? ''} disabled={isSubmitting} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+      toast.error(t("common:error"), {
+        description: generalError,
+        duration: 5000,
+      });
+      setServerError(generalError);
 
-                                {/* Stock Quantity Field */}
-                                <FormField
-                                    control={control}
-                                    name="stock_quantity"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>{t('products:stockQuantity')} <span className="text-red-500">*</span></FormLabel>
-                                            <FormControl><Input type="number" min="0" step="1" placeholder="0" {...field} value={field.value ?? ''} disabled={isSubmitting} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+      if (apiErrors) {
+        Object.entries(apiErrors).forEach(([field, messages]) => {
+          if (field in ({} as ProductFormValues)) {
+            setError(field as keyof ProductFormValues, {
+              type: "server",
+              message: messages[0],
+            });
+          }
+        });
+        setServerError(t("validation:checkFields"));
+      }
+    }
+  };
 
-                              
+  // --- Render Modal ---
+  if (!isOpen) return null;
 
-                                {/* Stock Alert Level Field */}
-                                <FormField
-                                    control={control}
-                                    name="stock_alert_level"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>{t('products:stockAlertLevel')}</FormLabel>
-                                            <FormControl>
-                                                <Input type="number" min="0" step="1" placeholder="10" {...field} value={field.value ?? ''} disabled={isSubmitting} />
-                                            </FormControl>
-                                             <FormDescription>{t('products:stockAlertDescription')}</FormDescription> {/* Add key */}
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-2xl p-0">
+        {" "}
+        {/* Adjusted width for more fields */}
+        <Form {...form}>
+          <form onSubmit={handleSubmit(onSubmit)} noValidate>
+            <DialogHeader className="p-6 pb-4 border-b dark:border-gray-700">
+              <DialogTitle className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                {isEditMode
+                  ? t("products:editProduct")
+                  : t("products:addProduct")}
+              </DialogTitle>
+            </DialogHeader>
 
-                                {/* Description Field - Span full width */}
-                                <FormField
-                                    control={control}
-                                    name="description"
-                                    render={({ field }) => (
-                                        <FormItem className="md:col-span-2">
-                                            <FormLabel>{t('products:description')}</FormLabel>
-                                            <FormControl><Textarea placeholder={t('products:descriptionPlaceholder') || 'Details about the product...'} className="resize-y min-h-[100px]" {...field} value={field.value ?? ''} disabled={isSubmitting} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-                        </div>
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              {/* General Server Error Alert */}
+              {serverError && !isSubmitting && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>{t("common:error")}</AlertTitle>
+                  <AlertDescription>{serverError}</AlertDescription>
+                </Alert>
+              )}
 
-                        {/* Footer with Action Buttons */}
-                        <DialogFooter className="p-6 pt-4 border-t dark:border-gray-700">
-                            {/* DialogClose automatically triggers onOpenChange(false) */}
-                            <DialogClose asChild>
-                                <Button type="button" variant="ghost" disabled={isSubmitting}>{t('common:cancel')}</Button>
-                            </DialogClose>
-                            <Button type="submit" disabled={isSubmitting}>
-                                {isSubmitting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-                                {t('common:save')}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
-            </DialogContent>
-        </Dialog>
-    );
+              {/* Grid layout for fields */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {/* Name Field */}
+                <FormField
+                  control={control}
+                  name="name"
+                  render={({ field, fieldState }) => (
+                    <FormItem className="sm:col-span-2">
+                      <FormLabel>
+                        {t("products:name")}{" "}
+                        <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder={t("products:namePlaceholder")}
+                          {...field}
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage>
+                        {fieldState.error?.message
+                          ? t(fieldState.error.message)
+                          : null}
+                      </FormMessage>
+                    </FormItem>
+                  )}
+                />
+
+                {/* SKU Field */}
+                <FormField
+                  control={control}
+                  name="sku"
+                  render={({ field, fieldState }) => (
+                    <FormItem>
+                      <FormLabel>{t("products:sku")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder={t("products:skuPlaceholder")}
+                          {...field}
+                          value={field.value ?? ""}
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage>
+                        {fieldState.error?.message
+                          ? t(fieldState.error.message)
+                          : null}
+                      </FormMessage>
+                    </FormItem>
+                  )}
+                />
+
+                {/* Category Select */}
+                <FormField
+                  control={control}
+                  name="category_id"
+                  render={({ field, fieldState }) => (
+                    <FormItem>
+                      <FormLabel>{t("products:category")}</FormLabel>{" "}
+                      {/* Add key */}
+                      <Select
+                        onValueChange={(value) =>
+                          field.onChange(value ? Number(value) : null)
+                        }
+                        value={field.value ? String(field.value) : ""} // Value needs to be string for Select
+                        disabled={isSubmitting || loadingCategories}
+                      >
+                        <FormControl>
+                          <SelectTrigger disabled={loadingCategories}>
+                            <SelectValue
+                              placeholder={
+                                loadingCategories
+                                  ? t("common:loading") + "..."
+                                  : t("products:selectCategoryPlaceholder")
+                              }
+                            />{" "}
+                            {/* Add key */}
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value=" ">
+                            {t("products:noCategory")}
+                          </SelectItem>{" "}
+                          {/* Add key */}
+                          {categories.map((cat) => (
+                            <SelectItem key={cat.id} value={String(cat.id)}>
+                              {cat.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage>
+                        {fieldState.error?.message
+                          ? t(fieldState.error.message, {
+                              field: t("products:category"),
+                            } as any)
+                          : null}
+                      </FormMessage>
+                    </FormItem>
+                  )}
+                />
+
+                {/* Stock Quantity Field */}
+                <FormField
+                  control={control}
+                  name="stock_quantity"
+                  render={({ field, fieldState }) => (
+                    <FormItem>
+                      <FormLabel>
+                        {t("products:stockQuantity")}{" "}
+                        <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="1"
+                          placeholder={t("products:stockPlaceholder")}
+                          {...field}
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage>
+                        {fieldState.error?.message
+                          ? t(fieldState.error.message)
+                          : null}
+                      </FormMessage>
+                    </FormItem>
+                  )}
+                />
+
+                {/* Stock Alert Level Field */}
+                <FormField
+                  control={control}
+                  name="stock_alert_level"
+                  render={({ field, fieldState }) => (
+                    <FormItem>
+                      <FormLabel>{t("products:stockAlertLevel")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="1"
+                          placeholder={t("products:stockAlertPlaceholder")}
+                          {...field}
+                          value={field.value ?? ""}
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage>
+                        {fieldState.error?.message
+                          ? t(fieldState.error.message)
+                          : null}
+                      </FormMessage>
+                    </FormItem>
+                  )}
+                />
+
+                {/* Description Field */}
+                <FormField
+                  control={control}
+                  name="description"
+                  render={({ field, fieldState }) => (
+                    <FormItem className="sm:col-span-2">
+                      <FormLabel>{t("products:description")}</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder={t("products:descriptionPlaceholder")}
+                          className="resize-y min-h-[100px]"
+                          {...field}
+                          value={field.value ?? ""}
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage>
+                        {fieldState.error?.message
+                          ? t(fieldState.error.message)
+                          : null}
+                      </FormMessage>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+            <DialogFooter className="p-6 pt-4 border-t dark:border-gray-700">
+              <DialogClose asChild>
+                <Button type="button" variant="ghost" disabled={isSubmitting}>
+                  {t("common:cancel")}
+                </Button>
+              </DialogClose>
+              <Button type="submit" disabled={isSubmitting}>
+                {" "}
+                {isSubmitting && (
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
+                )}{" "}
+                {isEditMode ? t("common:update") : t("common:create")}{" "}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
 };
 
 export default ProductFormModal;

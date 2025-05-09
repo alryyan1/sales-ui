@@ -18,6 +18,10 @@ import reportAr from './locales/ar/reports.json';
 import usersAR from './locales/ar/users.json';     // <-- Import
 import rolesAR from './locales/ar/roles.json';       // <-- Import
 import profileAr from './locales/ar/profile.json'; // <-- Import
+import permissionsAR from './locales/ar/permissions.json'; // <-- Import
+import inventortAr from './locales/ar/inventory.json'; // <-- Import
+import categoryAr from './locales/ar/categories.json'; // <-- Import
+import settingsAr from './locales/ar/settings.json'; // <-- Import
 // ... استيراد ملفات أخرى
 
 // --- تعريف الموارد ---
@@ -39,6 +43,13 @@ const resources = {
     users:usersAR, // <-- Add this line
     roles:rolesAR, // <-- Add this line
     profile:profileAr, // <-- Add this line
+    permissions:permissionsAR, // <-- Add this line
+    inventory:inventortAr, // <-- Add this line
+    categories:categoryAr, // <-- Add this line
+    settings:settingsAr, // <-- Add this line
+
+
+    
     // ... namespaces أخرى
   },
   // يمكنك إضافة لغات أخرى هنا بنفس الهيكل
@@ -64,6 +75,10 @@ export const namespaces = [
     'users', // <-- Add namespace
     'roles', // <-- Add namespace
     'profile', // <-- Add namespace
+    'permissions', // <-- Add namespace
+    'inventory', // <-- Add namespace
+    'categories', // <-- Add namespace
+    'settings', // <-- Add namespace
     // ... أسماء namespaces أخرى
 ];
 

@@ -550,7 +550,7 @@ const PurchaseReportPage: React.FC = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => navigate(`/purchases/${purchase.id}`)}
+                        onClick={() => navigate(`/purchases/${purchase.id}/edit`)}
                       >
                         {t("common:view")}
                       </Button>{" "}

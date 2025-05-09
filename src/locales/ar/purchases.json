@@ -48,6 +48,8 @@
     "batchNumberPlaceholder": "رقم الدفعة (اختياري)",
     "expiryDate": "تاريخ انتهاء الصلاحية",
     "expiryDatePlaceholder": "تاريخ انتهاء الصلاحية (اختياري)",
-    "intendedSalePrice": "سعر البيع المقصود"
+    "intendedSalePrice": "سعر البيع المقصود",
+    "editPurchaseTitle": "تعديل عملية الشراء",
+    "id": "المعرف"
     
 }

@@ -1,200 +1,257 @@
-import { Outlet, Link as RouterLink } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+// src/components/layouts/RootLayout.tsx
+import React from 'react';
+import { Outlet, Link as RouterLink, NavLink } from 'react-router-dom'; // Use NavLink for active styling
+import { useAuth } from '@/context/AuthContext';
+import { useAuthorization } from '@/hooks/useAuthorization';
+import { useTranslation } from 'react-i18next';
+import { cn } from "@/lib/utils"; // For conditional classes
 
-// استيراد مكونات MUI الأساسية
-import AppBar from "@mui/material/AppBar";
-import Toolbar from "@mui/material/Toolbar";
-import Typography from "@mui/material/Typography";
-import Box from "@mui/material/Box";
-import Container from "@mui/material/Container";
-import LogoutIcon from "@mui/icons-material/Logout"; // أيقونة تسجيل الخروج
-// If using Dropdown:
-
-// استيراد خدمة المصادقة ونوع المستخدم
-import { FileText, Loader2 } from "lucide-react";
-import { AuthProvider, useAuth } from "@/context/AuthContext";
-import { useAuthorization } from "@/hooks/useAuthorization";
-import { Toaster } from "../ui/sonner";
-import { Button } from "../ui/button";
+// shadcn/ui & Lucide Icons
+import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuItem,
-} from "@radix-ui/react-dropdown-menu";
-import { t } from "i18next";
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Example for User menu trigger
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"; // Example for mobile menu
+import { Toaster } from 'sonner';
+import {
+    LayoutDashboard, Box, Users, Building, ShoppingCart, CircleDollarSign, LogOut, UserCircle,
+    ChevronDown, Menu, Settings, FileText, UserCog, ShieldCheck, // Icons
+    Loader2
+} from 'lucide-react';
 
+// --- Navigation Link Item Component (Helper for styling active links) ---
+interface NavLinkItemProps {
+    to: string;
+    icon?: React.ElementType; // Lucide icon component
+    children: React.ReactNode;
+    className?: string;
+    onClick?: () => void; // For closing mobile sheet
+}
+const NavLinkItem: React.FC<NavLinkItemProps> = ({ to, icon: Icon, children, className, onClick }) => (
+     <NavLink
+        to={to}
+        onClick={onClick}
+        className={({ isActive }) => cn(
+            "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground dark:hover:bg-gray-800",
+            isActive ? "bg-accent text-accent-foreground dark:bg-gray-700" : "text-muted-foreground dark:text-gray-400",
+            className
+        )}
+    >
+        {Icon && <Icon className="h-4 w-4" />}
+        {children}
+    </NavLink>
+);
+
+
+// --- Main RootLayout ---
 const RootLayout: React.FC = () => {
-  const { t } = useTranslation(["navigation", "common", "login", "register"]); // Load necessary namespaces
-  const { isLoading, user, handleLogout } = useAuth();
-  const { can, hasRole } = useAuthorization();
+    const { t } = useTranslation(['navigation', 'common', 'reports', 'users', 'roles']);
+    const { user, isLoading } = useAuth(); // Only need user and isLoading here now
+    const { handleLogout, can, hasRole, isAdmin } = useAuthorization(); // Get auth checks and logout from hook
+    const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false); // State for mobile sheet
 
-  // --- Loading State ---
-  // Display loader ONLY during the initial check
-  // Show global loader only during the initial check
-  if (isLoading) {
+    // Show full-page loader during initial context loading
+    if (isLoading) {
+        return ( <div className="flex justify-center items-center h-screen dark:bg-gray-950"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div> );
+    }
+
+    // Define Navigation Items (can be moved to a separate config file)
+    const navItems = [
+        { to: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard, permission: null }, // Always show dashboard?
+        { to: "/clients", labelKey: "clients", icon: Users, permission: "view-clients" },
+        { to: "/suppliers", labelKey: "suppliers", icon: Building, permission: "view-suppliers" },
+        { to: "/products", labelKey: "products", icon: Box, permission: "view-products" },
+        { to: "/purchases", labelKey: "purchases", icon: ShoppingCart, permission: "view-purchases" },
+        { to: "/inventory/adjustments", labelKey: "adjustments", icon: ShoppingCart, permission: "adjust-stock" },
+        { to: "/sales", labelKey: "sales", icon: CircleDollarSign, permission: "view-sales" },
+    ];
+
+    const reportItems = [
+         { to: "/reports/sales", labelKey: "salesReportTitle", permission: "view-reports"},
+         { to: "/reports/purchases", labelKey: "purchaseReportTitle", permission: "view-reports"},
+         { to: "/reports/inventory", labelKey: "inventoryReportTitle", permission: "view-reports"},
+         { to: "/reports/profit-loss", labelKey: "profitLossReportTitle", permission: "view-reports"}, // Add if implemented
+    ];
+
+    const adminItems = [
+         { to: "/admin/users", labelKey: "users", permission: "manage-users"},
+         { to: "/admin/roles", labelKey: "roles", permission: "manage-roles"},
+         { to: "/admin/categories", labelKey: "categories", permission: "manage-categories"},
+         { to: "/admin/settings", labelKey: "settings", permission: "manage-settings"},
+    ];
+
+    // Filter items based on permissions
+    const visibleNavItems = navItems.filter(item => item.permission === null || can(item.permission));
+    const canViewAnyReport = reportItems.some(item => can(item.permission)); // Check if user can view *any* report
+    const visibleReportItems = reportItems.filter(item => can(item.permission));
+    const canManageAdmin = adminItems.some(item => can(item.permission)); // Check if user can access *any* admin function shown
+    const visibleAdminItems = adminItems.filter(item => can(item.permission));
+
+
     return (
-      <div className="flex justify-center items-center h-screen dark:bg-gray-950">
-        <Loader2 className="h-10 w-10 animate-spin text-blue-600 dark:text-blue-400" />
-      </div>
-    );
-  }
+        <div className="flex flex-col min-h-screen dark:bg-gray-950">
+            <Toaster richColors position="bottom-center" theme="system" />
 
-  // --- Render Layout ---
-  return (
-    <div className="flex flex-col min-h-screen dark:bg-gray-950">
-      <Toaster richColors position="bottom-center" theme="system" />
-      {/* Example Header using shadcn Buttons */}
-      <header className="sticky top-0 z-40 w-full border-b bg-background dark:bg-gray-900 dark:border-gray-700">
-        <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">
-          {/* App Title/Logo */}
-          <RouterLink to="/" className="font-bold text-lg">
-            {t("common:appName")}
-          </RouterLink>
+            {/* Header */}
+            <header className="sticky top-0 z-40 w-full border-b bg-background dark:bg-gray-900 dark:border-gray-700">
+                <div className="container flex h-16 items-center px-4 sm:px-6 lg:px-8">
+                    {/* Mobile Menu Trigger */}
+                     <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                        <SheetTrigger asChild>
+                            <Button variant="outline" size="icon" className="sm:hidden me-4">
+                                <Menu className="h-5 w-5" />
+                                <span className="sr-only">Open main menu</span>
+                            </Button>
+                        </SheetTrigger>
+                        <SheetContent side="right" className="sm:hidden"> {/* Changed side to right for RTL maybe? Adjust as needed */}
+                            <nav className="grid gap-4 text-lg font-medium pt-6">
+                                {visibleNavItems.map(item => (
+                                     <NavLinkItem key={item.to} to={item.to} icon={item.icon} onClick={() => setMobileMenuOpen(false)}>
+                                         {t(`navigation:${item.labelKey}`)}
+                                     </NavLinkItem>
+                                ))}
+                                 {/* Reports Dropdown (Mobile) */}
+                                {canViewAnyReport && (
+                                     <div className="mt-2">
+                                         <h4 className="mb-1 rounded-md px-2 py-1 text-sm font-semibold text-muted-foreground">{t('navigation:reports')}</h4>
+                                         {visibleReportItems.map(item => (
+                                              <NavLinkItem key={item.to} to={item.to} onClick={() => setMobileMenuOpen(false)} className="ps-6">
+                                                  {t(`reports:${item.labelKey}`)}
+                                              </NavLinkItem>
+                                         ))}
+                                     </div>
+                                )}
+                                {/* Admin Dropdown (Mobile) */}
+                                {canManageAdmin && (
+                                    <div className="mt-2">
+                                        <h4 className="mb-1 rounded-md px-2 py-1 text-sm font-semibold text-muted-foreground">{t('navigation:admin')}</h4>
+                                        {visibleAdminItems.map(item => (
+                                             <NavLinkItem key={item.to} to={item.to} onClick={() => setMobileMenuOpen(false)} className="ps-6">
+                                                 {t(`navigation:${item.labelKey}`)}
+                                             </NavLinkItem>
+                                        ))}
+                                    </div>
+                                )}
+                            </nav>
+                        </SheetContent>
+                     </Sheet>
 
-          {/* Navigation */}
-          <nav className="flex items-center space-x-1 md:space-x-2 lg:space-x-4">
-            {user ? (
-              <>
-                {/* Always show Dashboard maybe? */}
-                <Button variant="ghost" asChild>
-                  <RouterLink to="/dashboard">
-                    {t("navigation:dashboard")}
-                  </RouterLink>
-                </Button>
 
-                {can("view-clients") && (
-                  <Button variant="ghost" asChild>
-                    <RouterLink to="/clients">
-                      {t("navigation:clients")}
+                    {/* App Title/Logo */}
+                    <RouterLink to="/" className="font-bold text-lg me-6 flex-shrink-0">
+                         {t('common:appName')}
                     </RouterLink>
-                  </Button>
-                )}
-                {can("view-suppliers") && (
-                  <Button variant="ghost" asChild>
-                    <RouterLink to="/suppliers">
-                      {t("navigation:suppliers")}
-                    </RouterLink>
-                  </Button>
-                )}
-                {can("view-products") && (
-                  <Button variant="ghost" asChild>
-                    <RouterLink to="/products">
-                      {t("navigation:products")}
-                    </RouterLink>
-                  </Button>
-                )}
-                {can("view-purchases") && (
-                  <Button variant="ghost" asChild>
-                    <RouterLink to="/purchases">
-                      {t("navigation:purchases")}
-                    </RouterLink>
-                  </Button>
-                )}
-                {can("view-sales") && (
-                  <Button variant="ghost" asChild>
-                    <RouterLink to="/sales">{t("navigation:sales")}</RouterLink>
-                  </Button>
-                )}
 
-                {/* Example Dropdown for Reports (Needs DropdownMenu component) */}
-                {can("view-reports") && (
-                  // Replace with DropdownMenu if implemented
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        className="text-white hover:bg-white/10"
-                      >
-                        <FileText className="me-2 h-4 w-4" />
-                        {t("navigation:reports")}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>
-                        {t("navigation:availableReports")}
-                      </DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <RouterLink to="/reports/sales">
-                          {t("reports:salesReportTitle")}
-                        </RouterLink>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        
-                        <RouterLink to="/reports/purchases">
-                          {t("reports:purchasesReportTitle")}
-                        </RouterLink>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        
-                        <RouterLink to="/reports/inventory">
-                          {t("reports:reportInventoryTitle")}
-                        </RouterLink>
-                     
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        
-                        <RouterLink to="/reports/profit-loss">
-                          {t("reports:profitLossReportTitle")}
-                        </RouterLink>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                 
-                  </DropdownMenu>
-                )}
+                    {/* Desktop Navigation */}
+                    <nav className="hidden sm:flex items-center gap-1 text-sm lg:gap-2 flex-grow">
+                        {visibleNavItems.map(item => (
+                            <Button key={item.to} variant="ghost" size="sm" asChild className="text-muted-foreground dark:text-gray-400 hover:text-primary dark:hover:text-white">
+                                <RouterLink to={item.to}>{t(`navigation:${item.labelKey}`)}</RouterLink>
+                            </Button>
+                        ))}
 
-                {/* --- Admin Links --- */}
-                {hasRole("admin") && (
-                  <Button variant="ghost" asChild>
-                    <RouterLink to="/admin/users">
-                      {t("navigation:users")}
-                    </RouterLink>
-                  </Button>
-                  // Add link for /admin/roles later if needed
-                )}
-                {/* --- End Admin Links --- */}
+                         {/* Reports Dropdown (Desktop) */}
+                         {canViewAnyReport && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="text-muted-foreground dark:text-gray-400 hover:text-primary dark:hover:text-white">
+                                        {t('navigation:reports')} <ChevronDown className="ms-1 h-4 w-4 opacity-70"/>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start">
+                                    {/* <DropdownMenuLabel>{t('navigation:availableReports')}</DropdownMenuLabel>
+                                    <DropdownMenuSeparator /> */}
+                                    {visibleReportItems.map(item => (
+                                         <DropdownMenuItem key={item.to} asChild>
+                                             <RouterLink to={item.to}>{t(`reports:${item.labelKey}`)}</RouterLink>
+                                         </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                         )}
 
-                {/* Profile/Logout */}
-                <Button variant="ghost" asChild>
-                  <RouterLink to="/profile">
-                    {t("navigation:profile")}
-                  </RouterLink>
-                </Button>
+                         {/* Admin Dropdown (Desktop) */}
+                         {canManageAdmin && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="text-muted-foreground dark:text-gray-400 hover:text-primary dark:hover:text-white">
+                                        {t('navigation:admin')} <ChevronDown className="ms-1 h-4 w-4 opacity-70"/>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start">
+                                    {/* <DropdownMenuLabel>{t('navigation:adminTools')}</DropdownMenuLabel>
+                                    <DropdownMenuSeparator /> */}
+                                     {visibleAdminItems.map(item => (
+                                         <DropdownMenuItem key={item.to} asChild>
+                                             <RouterLink to={item.to}>{t(`navigation:${item.labelKey}`)}</RouterLink>
+                                         </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                         )}
+                    </nav>
 
-                <Button variant="outline" size="sm" onClick={handleLogout}>
-                  {t("navigation:logout")}
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button variant="ghost" asChild>
-                  <RouterLink to="/login">{t("navigation:login")}</RouterLink>
-                </Button>
-                <Button variant="default" asChild>
-                  <RouterLink to="/register">
-                    {t("navigation:register")}
-                  </RouterLink>
-                </Button>
-              </>
-            )}
-          </nav>
+                    {/* User Menu / Login */}
+                    <div className="flex items-center gap-2 ms-auto">
+                        {user ? (
+                             <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                                        <Avatar className="h-8 w-8">
+                                            {/* Add user image logic later if available */}
+                                            {/* <AvatarImage src="/avatars/01.png" alt={user.name} /> */}
+                                            <AvatarFallback>{user.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                                        </Avatar>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="w-56" align="end" forceMount>
+                                    <DropdownMenuLabel className="font-normal">
+                                        <div className="flex flex-col space-y-1">
+                                            <p className="text-sm font-medium leading-none">{user.name}</p>
+                                            <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                                        </div>
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem asChild>
+                                        <RouterLink to="/profile"><UserCircle className="me-2 h-4 w-4"/>{t('navigation:profile')}</RouterLink>
+                                    </DropdownMenuItem>
+                                    {/* Add settings link if needed */}
+                                    {/* {can('manage-settings') && <DropdownMenuItem asChild><RouterLink to="/settings"><Settings className="me-2 h-4 w-4"/>{t('navigation:settings')}</RouterLink></DropdownMenuItem>} */}
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/50">
+                                        <LogOut className="me-2 h-4 w-4"/>{t('navigation:logout')}
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        ) : (
+                            <>
+                                <Button variant="ghost" size="sm" asChild><RouterLink to="/login">{t('navigation:login')}</RouterLink></Button>
+                                <Button size="sm" asChild><RouterLink to="/register">{t('navigation:register')}</RouterLink></Button>
+                            </>
+                        )}
+                    </div>
+                </div>
+            </header>
+
+            {/* Main Content Area */}
+            <main className="flex-grow container mx-auto px-4 py-6 md:py-8">
+                 <Outlet /> {/* Renders the matched route component */}
+            </main>
+
+            {/* Footer */}
+             <footer className="p-4 text-center text-xs text-muted-foreground dark:bg-gray-800 border-t dark:border-gray-700">
+                 © {new Date().getFullYear()} {t('common:appName')}
+             </footer>
         </div>
-      </header>
-
-      {/* Main Content Area */}
-      <main className="flex-grow container mx-auto px-4 py-6 md:py-8">
-        <Outlet />
-      </main>
-
-      {/* Footer */}
-      <footer className="p-4 text-center text-xs text-muted-foreground dark:bg-gray-800">
-        © {new Date().getFullYear()} {t("common:appName")}
-      </footer>
-    </div>
-  );
+     );
 };
 
 export default RootLayout;
+// Don't forget to export useAuth from AuthContext.tsx
+// Export NavLinkItem if used elsewhere

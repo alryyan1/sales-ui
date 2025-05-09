@@ -54,5 +54,7 @@
     "submitSale": "حفظ عملية البيع",
     "errorItemsRequired": "يجب إضافة منتج واحد على الأقل.",
     "errorPaidExceedsTotal": "المبلغ المدفوع لا يمكن أن يتجاوز المبلغ الإجمالي." ,
-    "selectBatch": "اختر الدفعة"
+    "selectBatch": "اختر الدفعة",
+    "selectBatchPlaceholder": "ابحث أو اختر دفعة...",
+    "id": "المعرف"
 }
