@@ -79,6 +79,9 @@ export interface UpdateSaleData {
     }>;
 }
 
+export interface ReturnableSaleItem extends SaleItem { // Extends SaleItem
+    max_returnable_quantity: number;
+}
 
 // --- Service Object ---
 const saleService = {
@@ -186,6 +189,19 @@ const saleService = {
                  throw new Error(getErrorMessage(error, 'Deleting sales records is not allowed.'));
             }
             // Rethrow other errors
+            throw error;
+        }
+    },
+  /**
+     * Get items from an original sale that are eligible for return.
+     */
+    getReturnableItems: async (originalSaleId: number): Promise<ReturnableSaleItem[]> => {
+        try {
+            // Backend returns a flat array of SaleItem resources with an added 'max_returnable_quantity' field
+            const response = await apiClient.get<{ data: ReturnableSaleItem[] }>(`/sales/${originalSaleId}/returnable-items`);
+            return response.data.data ?? response.data; // Handle if 'data' wrapper is present or not
+        } catch (error) {
+            console.error(`Error fetching returnable items for sale ${originalSaleId}:`, error);
             throw error;
         }
     },

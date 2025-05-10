@@ -70,6 +70,7 @@ const RootLayout: React.FC = () => {
         { to: "/purchases", labelKey: "purchases", icon: ShoppingCart, permission: "view-purchases" },
         { to: "/inventory/adjustments", labelKey: "adjustments", icon: ShoppingCart, permission: "adjust-stock" },
         { to: "/sales", labelKey: "sales", icon: CircleDollarSign, permission: "view-sales" },
+        { to: "/sales/returns", labelKey: "salesReturns", icon: CircleDollarSign, permission: "view-returns" },
     ];
 
     const reportItems = [

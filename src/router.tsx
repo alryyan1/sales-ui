@@ -30,6 +30,10 @@ import StockAdjustmentsListPage from "./components/inventory/StockAdjustmentsLis
 import StockAdjustmentFormModal from "./components/inventory/StockAdjustmentFormModal";
 import CategoriesListPage from "./pages/admin/CategoriesListPage";
 import SettingsPage from "./pages/admin/SettingsPage";
+import AddSaleReturnPage from "./pages/sales/AddSaleReturnPage";
+import SaleDetailsPage from "./pages/SaleDetailsPage";
+import SaleReturnDetailsPage from "./pages/sales/SaleReturnDetailsPage";
+import SaleReturnsListPage from "./pages/sales/SaleReturnsListPage";
 // ... other page imports
 
 // --- Admin Route Guard Component ---
@@ -96,7 +100,17 @@ const router = createBrowserRouter([
               { index: true, element: <SalesListPage /> },
               { path: "add", element: <SaleFormPage /> },
               { path: ":id/edit", element: <SaleFormPage /> }, // Edit Sale
-              // { path: ':id', element: <SaleDetailsPage /> }, // Details
+                 // --- Routes for Sale Returns ---
+              // Option A: Generic add return page, ID passed via state
+              { path: 'return/add', element: <AddSaleReturnPage /> },
+
+              // Option B: Add return page linked to an original sale via URL
+              // { path: ':originalSaleIdParam/return/add', element: <AddSaleReturnPage /> },
+
+              // Optional: Route to view details of a specific sale return
+              { path: 'returns', element: <SaleReturnsListPage /> },
+              { path: 'returns/:returnId', element: <SaleReturnDetailsPage /> },
+              { path: ':id', element: <SaleDetailsPage /> }, // Details
             ],
           },
           {

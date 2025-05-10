@@ -37,5 +37,7 @@
     "create": "إنشاء",
     "update": "تحديث",
     "role": "صلاحية",
-    "date": "تاريخ"
+    "date": "تاريخ",
+    "selectDate": "اختر تاريخ",
+    "recordedDate": "تاريخ التسجيل"
   }
