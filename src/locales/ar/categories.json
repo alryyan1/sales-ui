@@ -22,5 +22,6 @@
   "subcategoriesCount": "عدد التصنيفات الفرعية",
   "errorSelfParent": "لا يمكن أن يكون التصنيف أبًا لنفسه.",
   "errorHasProducts": "لا يمكن حذف التصنيف. هناك منتجات معينة له.",
-  "errorHasSubcategories": "لا يمكن حذف التصنيف. لديه تصنيفات فرعية."
+  "errorHasSubcategories": "لا يمكن حذف التصنيف. لديه تصنيفات فرعية.",
+  "searchPlaceholder":"البحث"
 }

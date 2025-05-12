@@ -22,6 +22,7 @@ import permissionsAR from './locales/ar/permissions.json'; // <-- Import
 import inventortAr from './locales/ar/inventory.json'; // <-- Import
 import categoryAr from './locales/ar/categories.json'; // <-- Import
 import settingsAr from './locales/ar/settings.json'; // <-- Import
+import paymentMethodsAr from './locales/ar/paymentMethods.json'; // <-- Import
 // ... استيراد ملفات أخرى
 
 // --- تعريف الموارد ---
@@ -47,6 +48,7 @@ const resources = {
     inventory:inventortAr, // <-- Add this line
     categories:categoryAr, // <-- Add this line
     settings:settingsAr, // <-- Add this line
+    paymentMethods:paymentMethodsAr
 
 
     
@@ -79,6 +81,7 @@ export const namespaces = [
     'inventory', // <-- Add namespace
     'categories', // <-- Add namespace
     'settings', // <-- Add namespace
+    'paymentMethods'
     // ... أسماء namespaces أخرى
 ];
 

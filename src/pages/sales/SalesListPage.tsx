@@ -32,10 +32,11 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import dayjs from "dayjs";
 
 // Services and Types
-import saleService, { Sale } from "../services/saleService"; // Use sale service
-import ConfirmationDialog from "../components/common/ConfirmationDialog"; // Reusable dialog
+import saleService, { Sale } from "../../services/saleService"; // Use sale service
+import ConfirmationDialog from "../../components/common/ConfirmationDialog"; // Reusable dialog
 import { PaginatedResponse } from "@/services/clientService";
-import { formatNumber } from "@/constants";
+import { formatCurrency, formatNumber } from "@/constants";
+import { useSettings } from "@/context/SettingsContext";
 
 // Helper to format currency
 // Helper to format date string
@@ -44,7 +45,14 @@ const SalesListPage: React.FC = () => {
   const { t } = useTranslation(["sales", "common", "clients"]); // Load namespaces
   const navigate = useNavigate();
   const location = useLocation(); // Get the current location
-
+  const {settings,fetchSettings} = useSettings()
+  // Fetch settings on load
+  useEffect(() => {
+    const fetchData = async () => {
+      await fetchSettings();
+    };
+    fetchData();
+  }, [fetchSettings]);
   // --- State for Highlight ---
   const [highlightedRowId, setHighlightedRowId] = useState<number | null>(null);
   const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Ref for timeout
@@ -231,14 +239,14 @@ const openConfirmDialog = (id: number) => {
       {/* Loading / Error States */}
       {isLoading && (
         <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
-          {" "}
-          <CircularProgress />{" "}
+          
+          <CircularProgress />
           <Typography
             sx={{ ml: 2 }}
             className="text-gray-600 dark:text-gray-400"
           >
             {t("common:loading")}
-          </Typography>{" "}
+          </Typography>
         </Box>
       )}
       {!isLoading && error && (
@@ -272,7 +280,7 @@ const openConfirmDialog = (id: number) => {
                   </TableCell>
                   <TableCell className="dark:text-gray-300">
                     {t("clients:client")}
-                  </TableCell>{" "}
+                  </TableCell>
                   {/* Use client namespace */}
                   <TableCell align="center" className="dark:text-gray-300">
                     {t("sales:status")}
@@ -285,7 +293,7 @@ const openConfirmDialog = (id: number) => {
                   </TableCell>
                   {/* <TableCell align="right" className="dark:text-gray-300">
                     {t("sales:dueAmount")}
-                  </TableCell>{" "} */}
+                  </TableCell> */}
                   {/* Add key */}
                   <TableCell align="center" className="dark:text-gray-300">
                     {t("common:actions")}
@@ -337,8 +345,8 @@ const openConfirmDialog = (id: number) => {
                           }
                         />
                       </TableCell>
-                      <TableCell align="right" className="dark:text-gray-100">
-                        {sale.total_amount}
+                      <TableCell align="right" className="dark:text-gray-100 ">
+                        {formatCurrency(sale.total_amount,'en-US',settings.currency_symbol)}
                       </TableCell>
                       <TableCell align="right" className="dark:text-gray-100">
                         {formatNumber(sale.paid_amount)}
@@ -357,7 +365,7 @@ const openConfirmDialog = (id: number) => {
                           {/* --- Edit Button --- */}
                           <Tooltip title={t("common:edit") || ""}>
                             <span>
-                              {" "}
+                              
                               {/* Span might be needed if button can be disabled */}
                               <IconButton
                                 aria-label={t("common:edit") || "Edit"}
@@ -398,7 +406,7 @@ const openConfirmDialog = (id: number) => {
             <Box
               sx={{ display: "flex", justifyContent: "center", p: 2, mt: 3 }}
             >
-              {" "}
+              
               <Pagination
                 count={salesResponse.last_page}
                 page={currentPage}
@@ -408,7 +416,7 @@ const openConfirmDialog = (id: number) => {
                 showFirstButton
                 showLastButton
                 disabled={isLoading || isDeleting}
-              />{" "}
+              />
             </Box>
           )}
           {/* No Sales Message */}
@@ -419,7 +427,7 @@ const openConfirmDialog = (id: number) => {
             >
               {t("sales:noSales")}
             </Typography>
-          )}{" "}
+          )}
           {/* Add key */}
         </Box>
       )}

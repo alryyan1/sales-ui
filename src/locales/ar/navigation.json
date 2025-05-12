@@ -20,5 +20,8 @@
     "roles": "الصلاحيات",
     "adjustments": "التعديلات",
     "categories": "التصنيفات",
-    "salesReturns": "مرتجع المبيعات"
+    "salesReturns": "مرتجع المبيعات",
+    "inventoryRequest": "طلبات الجرد",
+    "requisitions": "طلبات المخزن",
+    "inventoryLog": "سجل الجرد"
   }

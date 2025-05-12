@@ -7,6 +7,7 @@ import { toast } from "sonner";
 // MUI Components (or shadcn/Tailwind equivalents)
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
+import CardContent from "@mui/material/CardContent"; // Added import
 import Paper from "@mui/material/Paper";
 import Grid from "@mui/material/Grid";
 import Divider from "@mui/material/Divider";
@@ -26,11 +27,15 @@ import IconButton from "@mui/material/IconButton";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
 // Services and Types
-import saleService, { Sale } from "../services/saleService"; // Import Sale type and service
+import saleService, { Sale } from "../../services/saleService"; // Import Sale type and service
 import dayjs from "dayjs";
-import { formatNumber } from "@/constants";
+import { formatCurrency, formatDate, formatNumber } from "@/constants";
 import { useAuthorization } from "@/hooks/useAuthorization";
-import { UndoIcon } from "lucide-react";
+import { Banknote, CircleDollarSign, CreditCard, History, UndoIcon } from "lucide-react";
+import { CardTitle } from "@/components/ui/card";
+import { TableHeader } from "@/components/ui/table";
+import { Card, CardHeader } from "@mui/material";
+import { Separator } from "@/components/ui/separator";
 
 // Helpers (Assuming these exist and are imported)
 
@@ -76,7 +81,15 @@ const SaleDetailsPage: React.FC = () => {
   const canCreateReturn =
     sale?.status === "completed" && can("create-sale-returns"); // Example condition
   // --- Render Logic ---
-
+ const getPaymentMethodIcon = (method: string) => {
+        switch (method.toLowerCase()) {
+            case 'cash': return <Banknote className="h-4 w-4 text-green-600" />;
+            case 'visa':
+            case 'mastercard': return <CreditCard className="h-4 w-4 text-blue-600" />;
+            case 'bank_transfer': return <History className="h-4 w-4 text-purple-600" />; // Or another icon
+            default: return <CircleDollarSign  className="h-4 w-4 text-muted-foreground" />;
+        }
+    };
   if (isLoading) {
     return (
       <Box
@@ -88,9 +101,9 @@ const SaleDetailsPage: React.FC = () => {
           p: 3,
         }}
       >
-        {" "}
-        <CircularProgress />{" "}
-        <Typography sx={{ ml: 2 }}>{t("common:loading")}</Typography>{" "}
+        
+        <CircularProgress />
+        <Typography sx={{ ml: 2 }}>{t("common:loading")}</Typography>
       </Box>
     );
   }
@@ -98,16 +111,16 @@ const SaleDetailsPage: React.FC = () => {
   if (error) {
     return (
       <Box sx={{ p: 3 }}>
-        {" "}
+        
         <Alert severity="error" sx={{ my: 2 }}>
           {error}
-        </Alert>{" "}
+        </Alert>
         <Button
           startIcon={<ArrowBackIcon />}
           onClick={() => navigate("/sales")}
         >
           {t("sales:backToList")}
-        </Button>{" "}
+        </Button>
       </Box>
     ); // Add key
   }
@@ -115,14 +128,14 @@ const SaleDetailsPage: React.FC = () => {
   if (!sale) {
     return (
       <Box sx={{ p: 3 }}>
-        {" "}
-        <Typography>{t("sales:notFound")}</Typography>{" "}
+        
+        <Typography>{t("sales:notFound")}</Typography>
         <Button
           startIcon={<ArrowBackIcon />}
           onClick={() => navigate("/sales")}
         >
           {t("sales:backToList")}
-        </Button>{" "}
+        </Button>
       </Box>
     ); // Add key
   }
@@ -362,76 +375,78 @@ const SaleDetailsPage: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
+            {/* --- Payments Section --- */}
+            <Card className="dark:bg-gray-800 mb-6 dark:border-gray-700">
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="text-gray-800 dark:text-gray-100">{t('sales:paymentsMadeTitle')}</CardTitle> {/* Add key */}
+                    {/* Optional: Add Payment Button if not fully paid and allowed */}
+                    {/* {sale.due_amount && Number(sale.due_amount) > 0 && can('add-sale-payment') && (
+                        <Button size="sm" onClick={() => navigate(`/sales/${sale.id}/add-payment`)}>
+                            <PlusCircle className="me-2 h-4 w-4"/> {t('sales:addPaymentButton')}
+                        </Button>
+                    )} */}
+                </CardHeader>
+                <CardContent className="p-0">
+                    {sale.payments && sale.payments.length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <table className="w-full border-collapse border border-gray-200 dark:border-gray-700 text-center">
+                            <thead className="bg-gray-100 dark:bg-gray-800">
+                              <tr>
+                              <th className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300">{t('sales:paymentDate')}</th>
+                              <th className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300">{t('sales:paymentMethod')}</th>
+                              <th className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300">{t('sales:paymentAmount')}</th>
+                              <th className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300">{t('sales:paymentReference')}</th>
+                              <th className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300">{t('common:recordedBy')}</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sale.payments.map((payment) => (
+                              <tr key={payment.id} className="border-t border-gray-200 dark:border-gray-700">
+                                <td className="px-4 py-2 text-sm text-gray-800 dark:text-gray-100">{formatDate(payment.payment_date)}</td>
+                                <td className="px-4 py-2 text-sm text-gray-800 dark:text-gray-100">
+                                <div className="flex items-center justify-center gap-2">
+                                  {getPaymentMethodIcon(payment.method)}
+                                  {t(`paymentMethods:${payment.method}`, { defaultValue: payment.method })}
+                                </div>
+                                </td>
+                                <td className="px-4 py-2 text-sm text-gray-800 dark:text-gray-100">{formatCurrency(payment.amount)}</td>
+                                <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">{payment.reference_number || '---'}</td>
+                                <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">{payment.user_name || t('common:n/a')}</td>
+                              </tr>
+                              ))}
+                            </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <p className="p-4 text-sm text-muted-foreground dark:text-gray-400">{t('sales:noPaymentsRecorded')}</p> 
+                    )}
+                </CardContent>
+            </Card>
+            {/* --- End Payments Section --- */}
 
-      {/* Totals Section */}
-      <Box
-        sx={{ mt: 3, p: 2, backgroundColor: "grey.100" }}
-        className="dark:bg-gray-700 rounded"
-      >
-        <Grid container spacing={1} justifyContent="flex-end">
-          <Grid item xs={6} sm={4} md={3}>
-            <Typography
-              variant="body1"
-              align="right"
-              className="dark:text-gray-200"
-            >
-              {t("sales:grandTotal")}:
-            </Typography>
-          </Grid>
-          <Grid item xs={6} sm={3} md={2}>
-            <Typography
-              variant="body1"
-              align="right"
-              fontWeight="bold"
-              className="dark:text-gray-100"
-            >
-              {formatNumber(sale.total_amount)}
-            </Typography>
-          </Grid>
-        </Grid>
-        <Grid container spacing={1} justifyContent="flex-end" sx={{ mt: 1 }}>
-          <Grid item xs={6} sm={4} md={3}>
-            <Typography
-              variant="body1"
-              align="right"
-              className="dark:text-gray-200"
-            >
-              {t("sales:paidAmountLabel")}:
-            </Typography>
-          </Grid>
-          <Grid item xs={6} sm={3} md={2}>
-            <Typography
-              variant="body1"
-              align="right"
-              fontWeight="medium"
-              className="dark:text-gray-100"
-            >
-              {formatNumber(sale.paid_amount)}
-            </Typography>
-          </Grid>
-        </Grid>
-        <Grid container spacing={1} justifyContent="flex-end" sx={{ mt: 1 }}>
-          <Grid item xs={6} sm={4} md={3}>
-            <Typography
-              variant="h6"
-              align="right"
-              className="dark:text-gray-100"
-            >
-              {t("sales:dueAmount")}:
-            </Typography>
-          </Grid>
-          <Grid item xs={6} sm={3} md={2}>
-            <Typography
-              variant="h6"
-              align="right"
-              fontWeight="bold"
-              className="dark:text-gray-100"
-            >
-              {formatNumber(sale.due_amount)}
-            </Typography>
-          </Grid>
-        </Grid>
-      </Box>
+       {/* Totals Section (remains the same, uses sale.total_amount, sale.paid_amount, sale.due_amount) */}
+             <div className="flex justify-end mt-6">
+                <Card className="w-full max-w-sm dark:bg-gray-800 dark:border-gray-700">
+                    <CardContent className="p-4 space-y-2">
+                         <div className="flex justify-between items-center">
+                             <Typography variant="body1" className="dark:text-gray-300">{t('sales:grandTotal')}:</Typography>
+                             <Typography variant="body1" fontWeight="bold" className="dark:text-gray-100">{formatCurrency(sale.total_amount)}</Typography>
+                         </div>
+                         <div className="flex justify-between items-center">
+                             <Typography variant="body1" className="dark:text-gray-300">{t('sales:totalPaid')}:</Typography>
+                             <Typography variant="body1" fontWeight="medium" className="dark:text-gray-100">{formatCurrency(sale.paid_amount)}</Typography>
+                         </div>
+                         <Separator className="my-1 dark:bg-gray-700"/>
+                         <div className="flex justify-between items-center">
+                             <Typography variant="h6" component="p" className="font-semibold dark:text-gray-100">{t('sales:amountDue')}:</Typography>
+                             <Typography variant="h6" component="p" className={`font-bold ${Number(sale.due_amount) > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                                {formatCurrency(sale.due_amount)}
+                            </Typography>
+                         </div>
+                    </CardContent>
+                </Card>
+             </div>
+        
     </Box>
   );
 };

@@ -3,7 +3,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
-import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import "./i18n"; // <--- تأكد من وجود هذا الاستيراد هنا
 import { LocalizationProvider } from "@mui/x-date-pickers"; // Import LocalizationProvider
@@ -14,6 +13,8 @@ import theme from "./theme"; // استيراد Theme الـ MUI المخصص (م
 import "./index.css"; // استيراد CSS العام (اختياري)
 import router from "./router";
 import { SettingsProvider } from "./context/SettingsContext";
+import { ThemeProvider as TailwindTheme } from "./context/ThemeContext";
+import { ThemeProvider } from "@mui/material";
 
 console.log("main.tsx: Initializing application...");
 
@@ -29,12 +30,14 @@ if (!rootElement) {
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <SettingsProvider>
+      <TailwindTheme  defaultTheme="system" storageKey="app-ui-theme">
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
           <RouterProvider router={router} />
         </ThemeProvider>
       </LocalizationProvider>
+      </TailwindTheme>
     </SettingsProvider>
   </React.StrictMode>
 );

@@ -103,7 +103,18 @@
     "originalPricePerUnit": "السعر الأصلي للوحدة",
     "totalReturnedValueForItem": "إجمالي القيمة المرتجعة للمنتج",
     "noItemsInReturn": "لا توجد منتجات في المرتجع",
-    "invalidReturnId": "رقم مرتجع غير صالح"
+    "invalidReturnId": "رقم مرتجع غير صالح",
+    "paymentsSectionTitle": "قسم المدفوعات",
+    "noPaymentsAdded": "لم يتم إضافة أي مدفوعات.",
+    "addPaymentMethod": "إضافة طريقة دفع",
+    "paymentMethod": "طريقة الدفع",
+    "selectPaymentMethodPlaceholder": "اختر طريقة دفع",
+    "paymentAmount": "مبلغ الدفع",
+    "paymentDate": "تاريخ الدفع",
+    "paymentReference": "رقم المرجع",
+    "paymentReferencePlaceholder": "أدخل رقم المرجع",
+    "noPaymentsRecorded" : "لا توجد مدفوعات مسجلة.",
+    "totalPaid": "إجمالي المدفوع"  
 
 
 }

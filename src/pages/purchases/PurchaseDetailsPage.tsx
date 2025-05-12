@@ -28,25 +28,15 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 // import { ArrowLeft } from 'lucide-react';
 
 // Services and Types
-import purchaseService, { Purchase } from '../services/purchaseService'; // Import Purchase type
+import purchaseService, { Purchase } from '../../services/purchaseService'; // Import Purchase type
+import { formatCurrency } from '@/constants';
+import { formatDate } from 'date-fns';
+import dayjs from 'dayjs';
 
 // Helper to format currency
-const formatCurrency = (value: string | number | null | undefined) => {
-    const number = Number(value);
-    if (isNaN(number)) return '---';
-    return `$${number.toFixed(2)}`; // Basic formatting
-};
 
-// Helper to format date string
-const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return '---';
-    try {
-        // Assuming dateString is YYYY-MM-DD
-        return new Date(dateString + 'T00:00:00').toLocaleDateString(); // Adjust locale/options as needed
-    } catch (e) {
-        return dateString; // Return original if parsing fails
-    }
-};
+
+
 
 
 const PurchaseDetailsPage: React.FC = () => {
@@ -150,7 +140,7 @@ const PurchaseDetailsPage: React.FC = () => {
                      </Grid>
                      <Grid item xs={12} sm={6} md={4}>
                          <Typography variant="overline" color="text.secondary">{t('purchases:purchaseDate')}</Typography>
-                         <Typography variant="body1" fontWeight="medium">{formatDate(purchase.purchase_date)}</Typography>
+                         <Typography variant="body1" fontWeight="medium">{dayjs(purchase.purchase_date).format('YYYY-MM-DD')}</Typography>
                      </Grid>
                      <Grid item xs={12} sm={6} md={4}>
                          <Typography variant="overline" color="text.secondary">{t('purchases:reference')}</Typography>
@@ -172,7 +162,7 @@ const PurchaseDetailsPage: React.FC = () => {
                       </Grid>
                       <Grid item xs={12} sm={6} md={4}>
                           <Typography variant="overline" color="text.secondary">{t('common:recordedDate')}</Typography> {/* Add key */}
-                          <Typography variant="body1" fontWeight="medium">{formatDate(purchase.created_at)}</Typography>
+                          <Typography variant="body1" fontWeight="medium">{dayjs(purchase.created_at).format('YYYY-MM-DD')}</Typography>
                       </Grid>
                       {purchase.notes && (
                           <Grid item xs={12}>

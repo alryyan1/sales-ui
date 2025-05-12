@@ -23,26 +23,43 @@ export interface SaleItem {
     product?: Product; // Optional: Full product details if loaded
 }
 
-// Matches SaleResource structure from Laravel
+
+// Interface for a single Payment (matches PaymentResource)
+export interface Payment {
+    id: number;
+    sale_id: number;
+    user_id: number | null;
+    user_name?: string; // If eager loaded
+    method: 'cash' | 'visa' | 'mastercard' | 'bank_transfer' | 'mada' | 'other' | 'store_credit'; // Match your enum
+    amount: string | number; // Comes as string from API (decimal), number after parsing
+    payment_date: string; // YYYY-MM-DD
+    reference_number: string | null;
+    notes: string | null;
+    created_at: string;
+}
+
+// Update Sale interface to include payments
 export interface Sale {
     id: number;
     client_id: number | null;
     client_name?: string;
-    user_id: number | null;
+    user_id: number | null; // User who made the sale
     user_name?: string;
-    sale_date: string; // Format YYYY-MM-DD from API Resource
+    sale_date: string;
     invoice_number: string | null;
     status: 'completed' | 'pending' | 'draft' | 'cancelled';
     total_amount: string | number;
-    paid_amount: string | number;
-    due_amount?: number | string; // Calculated field from backend resource might be string or number
+    paid_amount: string | number; // This is the sum of payments
+    due_amount?: number | string;
     notes: string | null;
     created_at: string;
     updated_at?: string;
-    items?: SaleItem[]; // Array of items, included if eager loaded (e.g., on show/update)
-    client?: Client; // Optional: Full client details if loaded
-    user?: User;     // Optional: Full user details if loaded
+    items?: SaleItem[];
+    payments?: Payment[]; // <-- Array of payments
+    client?: Client;
+    user?: User; // User who made the sale
 }
+
 
 // Data structure for creating a new sale (matches backend validation requirements)
 export interface CreateSaleData {

@@ -24,6 +24,7 @@ import {
     ChevronDown, Menu, Settings, FileText, UserCog, ShieldCheck, // Icons
     Loader2
 } from 'lucide-react';
+import { ThemeToggle } from '../layout/ThemeToggle';
 
 // --- Navigation Link Item Component (Helper for styling active links) ---
 interface NavLinkItemProps {
@@ -78,6 +79,7 @@ const RootLayout: React.FC = () => {
          { to: "/reports/purchases", labelKey: "purchaseReportTitle", permission: "view-reports"},
          { to: "/reports/inventory", labelKey: "inventoryReportTitle", permission: "view-reports"},
          { to: "/reports/profit-loss", labelKey: "profitLossReportTitle", permission: "view-reports"}, // Add if implemented
+         { to: "/reports/inventory-log", labelKey: "inventoryLog", permission: "view-reports"},
     ];
 
     const adminItems = [
@@ -85,6 +87,8 @@ const RootLayout: React.FC = () => {
          { to: "/admin/roles", labelKey: "roles", permission: "manage-roles"},
          { to: "/admin/categories", labelKey: "categories", permission: "manage-categories"},
          { to: "/admin/settings", labelKey: "settings", permission: "manage-settings"},
+         { to: "/admin/inventory/requisitions/request", labelKey: "inventoryRequest", permission: "view-all-stock-requisitions"},
+         { to: "/admin/inventory/requisitions", labelKey: "requisitions", permission: "view-all-stock-requisitions"},
     ];
 
     // Filter items based on permissions
@@ -200,6 +204,7 @@ const RootLayout: React.FC = () => {
 
                     {/* User Menu / Login */}
                     <div className="flex items-center gap-2 ms-auto">
+                        <ThemeToggle />
                         {user ? (
                              <DropdownMenu>
                                 <DropdownMenuTrigger asChild>

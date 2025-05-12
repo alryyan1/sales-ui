@@ -16,8 +16,8 @@ import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 
 // Import Child Components (Refactored Structure)
-import { SaleHeaderFormSection } from "../components/sales/SaleHeaderFormSection"; // Assuming refactor
-import { SaleItemsList } from "../components/sales/SaleItemsList"; // Assuming refactor
+import { SaleHeaderFormSection } from "../../components/sales/SaleHeaderFormSection"; // Assuming refactor
+import { SaleItemsList } from "../../components/sales/SaleItemsList"; // Assuming refactor
 
 // shadcn/ui & Lucide Icons (Only those needed for page shell/totals/submit)
 import { Button } from "@/components/ui/button";
@@ -31,79 +31,14 @@ import saleService, {
   Sale,
   CreateSaleData,
   SaleItem,
-} from "../services/saleService";
-import clientService, { Client } from "../services/clientService";
-import productService, { Product } from "../services/productService";
+} from "../../services/saleService";
+import clientService, { Client } from "../../services/clientService";
+import productService, { Product } from "../../services/productService";
 import { formatNumber } from "@/constants"; // Your number formatting helper
 import apiClient from "@/lib/axios";
+import { SalePaymentsSection } from "@/components/sales/SalePaymentsSection";
+import { SaleTotalsDisplay } from "@/components/sales/SaleTotalsDisplay";
 
-
-
-// --- Zod Schema Definition (with item ID for edits) ---
-const saleItemSchema = z.object({
-  id: z.number().nullable().optional(),
-  product_id: z
-    .number({ required_error: "validation:required" })
-    .positive({ message: "validation:selectProduct" }),
-  product: z.custom<Product>().optional(),
-  quantity: z.coerce
-    .number({ invalid_type_error: "validation:invalidInteger" })
-    .int({ message: "validation:invalidInteger" })
-    .min(1, { message: "validation:minQuantity" }),
-  unit_price: z
-    .preprocess(
-      (val) => (val === "" ? undefined : val),
-      z.coerce
-        .number({ invalid_type_error: "validation:invalidPrice" })
-        .min(0, { message: "validation:minZero" })
-    )
-    .default(0),
-  available_stock: z.number().optional(),
-});
-
-const saleFormSchema = z
-  .object({
-    client_id: z
-      .number({ required_error: "validation:required" })
-      .positive({ message: "validation:selectClient" }),
-    sale_date: z.date({
-      required_error: "validation:required",
-      invalid_type_error: "validation:invalidDate",
-    }),
-    status: z.enum(["completed", "pending", "draft", "cancelled"], {
-      required_error: "validation:required",
-    }),
-    invoice_number: z.string().nullable().optional(),
-    paid_amount: z
-      .preprocess(
-        (val) => (val === "" ? undefined : val),
-        z.coerce
-          .number({ invalid_type_error: "validation:invalidNumber" })
-          .min(0, { message: "validation:minZero" })
-      )
-      .default(0),
-    notes: z.string().nullable().optional(),
-    items: z
-      .array(saleItemSchema)
-      .min(1, { message: "sales:errorItemsRequired" }),
-  })
-  .refine(
-    (data) => {
-      const total = data.items.reduce(
-        (sum, item) =>
-          sum + (Number(item.quantity) || 0) * (Number(item.unit_price) || 0),
-        0
-      );
-      // Ensure paid amount is not negative and not more than total
-      return data.paid_amount >= 0 && data.paid_amount <= total;
-    },
-    {
-      message: "sales:errorPaidExceedsTotal", // Use appropriate message key
-      path: ["paid_amount"],
-    }
-  );
-
-type SaleFormValues = z.infer<typeof saleFormSchema>;
 
 // --- Component ---
 const SaleFormPage: React.FC = () => {
@@ -114,9 +49,104 @@ const SaleFormPage: React.FC = () => {
     "clients",
     "products",
   ]);
+  const saleItemSchema = z.object({
+  id: z.number().nullable().optional(),
+
+  product_id: z
+    .number({ required_error: t("validation:required") })
+    .positive({ message: t("validation:selectProduct") }),
+  purchase_item_id: z.number().nullable().optional(),
+  product: z.custom<Product>().optional(),
+  quantity: z.coerce
+    .number({ invalid_type_error: t("validation:invalidInteger") })
+    .int({ message: t("validation:invalidInteger") })
+    .min(1, { message: t("validation:minQuantity") }),
+  unit_price: z
+    .preprocess(
+      (val) => (val === "" ? undefined : val),
+      z.coerce
+        .number({ invalid_type_error: t("validation:invalidPrice") })
+        .min(0, { message: t("validation:minZero") })
+    )
+    .default(0),
+  available_stock: z.number().optional(),
+});
+
+const paymentItemSchema = z.object({
+  method: z.enum([
+    "cash",
+    "visa",
+    "mastercard",
+    "bank_transfer",
+    "mada",
+    "other",
+    "store_credit",
+  ]),
+  amount: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.coerce
+      .number({
+        required_error: t("validation:required"),
+        invalid_type_error: t("validation:invalidNumber"),
+      })
+      .min(0.01, {
+        message: t("validation:minPaymentAmount"),
+      })
+  ),
+  payment_date: z.date({
+    required_error: t("validation:required"),
+    invalid_type_error: t("validation:invalidDate"),
+  }),
+  referance_number: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+});
+
+const saleFormSchema = z
+  .object({
+    client_id: z
+      .number({ required_error: t("validation:required") })
+      .positive({ message: t("validation:selectClient") }),
+    sale_date: z.date({
+      required_error: t("validation:required"),
+      invalid_type_error: t("validation:invalidDate"),
+    }),
+    status: z.enum(["completed", "pending", "draft", "cancelled"], {
+      required_error: t("validation:required"),
+    }),
+    invoice_number: z.string().nullable().optional(),
+    notes: z.string().nullable().optional(),
+    items: z
+      .array(saleItemSchema)
+      .min(1, { message: t("sales:errorItemsRequired") }),
+    payments: z.array(paymentItemSchema).optional(),
+  })
+  .refine(
+    (data) => {
+      const totalSaleAmount = data.items.reduce(
+        (sum, item) =>
+          sum + (Number(item.quantity) || 0) * (Number(item.unit_price) || 0),
+        0
+      );
+      const totalPaidAmount =
+        data.payments?.reduce(
+          (sum, payment) => sum + (Number(payment.amount) || 0),
+          0
+        ) ?? 0;
+      return totalPaidAmount <= totalSaleAmount;
+    },
+    {
+      message: t("sales:errorPaidExceedsTotal"),
+      path: ["payments"],
+    }
+  );
+
+  type SaleItemFormValues = z.infer<typeof saleItemSchema>; // <-- THIS IS THE CORRECT TYPE
+
+type SaleFormValues = z.infer<typeof saleFormSchema>;
+type PaymentItemFormValues = z.infer<typeof paymentItemSchema>;
   const navigate = useNavigate();
   const { id: saleIdParam } = useParams<{ id?: string }>();
-  
+
   const saleId = saleIdParam ? Number(saleIdParam) : null;
   const isEditMode = Boolean(saleId);
 
@@ -141,37 +171,55 @@ const SaleFormPage: React.FC = () => {
   // --- React Hook Form ---
   const formMethods = useForm<SaleFormValues>({
     // Use formMethods for FormProvider
-   resolver:zodResolver(saleFormSchema),
-  
+    resolver: zodResolver(saleFormSchema),
+
     defaultValues: {
-      client_id: undefined,
+      client_id: selectedClient?.id,
       sale_date: new Date(),
       status: "completed",
       invoice_number: "",
       notes: "",
-     paid_amount:0,
       items: [],
+      payments: [],
     },
   });
   const {
     handleSubmit,
     reset,
-    formState: { isSubmitting },
+    formState: { isSubmitting, errors },
     watch,
+    setValue,
     setError,
     control,
   } = formMethods;
 
-  // Watch for total calculations
+
+
   const watchedItems = useWatch({ control, name: "items" });
-  const watchedPaidAmount = useWatch({ control, name: "paid_amount" });
+  const watchedPayments = useWatch({ control, name: "payments" });
+
   const grandTotal =
     watchedItems?.reduce(
-      (total, item) =>
-        total + (Number(item?.quantity) || 0) * (Number(item?.unit_price) || 0),
+      (sum, item) =>
+        sum + (Number(item?.quantity) || 0) * (Number(item?.unit_price) || 0),
       0
     ) ?? 0;
-  const amountDue = grandTotal - (Number(watchedPaidAmount) || 0);
+  const totalPaid =
+    watchedPayments?.reduce(
+      (sum, payment) => sum + (Number(payment?.amount) || 0),
+      0
+    ) ?? 0;
+  const amountDue = grandTotal - totalPaid;
+  // Predefined payment methods (can also be fetched from API if configurable)
+  const paymentMethodOptions = [
+    { value: "cash", labelKey: "paymentMethods:cash" },
+    { value: "visa", labelKey: "paymentMethods:visa" },
+    { value: "mastercard", labelKey: "paymentMethods:mastercard" },
+    { value: "bank_transfer", labelKey: "paymentMethods:bank_transfer" },
+    { value: "mada", labelKey: "paymentMethods:mada" },
+    { value: "store_credit", labelKey: "paymentMethods:store_credit" },
+    { value: "other", labelKey: "paymentMethods:other" },
+  ];
 
   // --- Data Fetching Callbacks ---
   const fetchClients = useCallback(
@@ -201,6 +249,18 @@ const SaleFormPage: React.FC = () => {
     },
     [t]
   );
+
+  const fetchDefaultCleint = () => {
+    clientService.getClient(1).then((data) => {
+      console.log(data, "one client");
+      setSelectedClient(data);
+      setValue("client_id", data.id);
+    });
+  };
+
+  useEffect(() => {
+    fetchDefaultCleint();
+  }, []);
 
   const fetchProducts = useCallback(
     async (search: string) => {
@@ -297,7 +357,6 @@ const SaleFormPage: React.FC = () => {
             : new Date(),
           status: existingSale.status,
           invoice_number: existingSale.invoice_number || "",
-          paid_amount: Number(existingSale.paid_amount) || 0,
           notes: existingSale.notes || "",
           items: existingSale.items.map((item) => ({
             id: item.id,
@@ -309,7 +368,10 @@ const SaleFormPage: React.FC = () => {
           })),
         });
       } catch (err) {
-        /* ... (error handling) ... */
+        console.error("Error loading sale data:", err);
+        setServerError(
+          t("sales:errorLoadingSale") || "Could not load sale details."
+        );
       } finally {
         setLoadingData(false);
       }
@@ -319,52 +381,98 @@ const SaleFormPage: React.FC = () => {
     else setLoadingData(false);
   }, [isEditMode, saleId, reset, navigate, t]); // Dependencies
 
-  // --- Form Submission ---
-  const onSubmit: SubmitHandler<SaleFormValues> = async (data) => {
-    setServerError(null);
-    // Paid amount validation handled by Zod refine
+// --- Form Submission (COMPLETE IMPLEMENTATION) ---
+const onSubmit: SubmitHandler<SaleFormValues> = async (data) => {
+  setServerError(null); // Clear previous server errors
+  console.log(data, "form data");
+  // Data is already validated by Zod at this point, including the refine check.
+  // The `data` object here matches `SaleFormValues`.
 
-    const apiData: CreateSaleData | any = {
-      ...data,
+  // Prepare data for the API (CreateSaleData or UpdateSaleData)
+  const apiItems = data.items.map(item => ({
+      id: isEditMode && item.id ? item.id : undefined, // Include item ID only if editing and item exists
+      product_id: item.product_id,
+      purchase_item_id: item.purchase_item_id ?? null, // Send selected batch ID
+      quantity: Number(item.quantity),
+      unit_price: Number(item.unit_price),
+  }));
+
+  const apiPayments = data.payments?.map(p => ({
+      id: isEditMode && p.id ? p.id : undefined, // Include payment ID only if editing and payment exists
+      method: p.method,
+      amount: Number(p.amount),
+      payment_date: format(p.payment_date as Date, "yyyy-MM-dd"), // Format date
+      reference_number: p.reference_number || null,
+      notes: p.notes || null,
+  })) || []; // Ensure it's an empty array if no payments
+
+  const apiDataPayload = {
+      client_id: data.client_id,
       sale_date: format(data.sale_date as Date, "yyyy-MM-dd"),
-      paid_amount: Number(data.paid_amount),
-      items: data.items.map((item) => ({
-        id: item.id, // Include ID for updates
-        product_id: item.product_id,
-        quantity: Number(item.quantity),
-        unit_price: Number(item.unit_price),
-      })),
-    };
-    console.log(
-      `Submitting ${isEditMode ? "Update" : "Create"} Sale:`,
-      apiData
-    );
-    try {
+      status: data.status,
+      invoice_number: data.invoice_number || null,
+      notes: data.notes || null,
+      items: apiItems,
+      payments: apiPayments,
+      // The backend SaleController will calculate total_amount and paid_amount based on items and payments
+  };
+
+  console.log(`Submitting ${isEditMode ? 'Update' : 'Create'} Sale to API:`, apiDataPayload);
+
+  try {
       let savedSale: Sale;
-            if (isEditMode && saleId) {
-                savedSale = await saleService.updateSale(saleId, apiData); // Use update service
-            } else {
-                savedSale = await saleService.createSale(apiData);
-            }
-      toast.success(t("common:success"), {
-        description: t("sales:saveSuccess"),
-      });
-      // --- Navigate back with state ---
-      navigate("/sales", {
-        replace: true, // Optional: replace edit page in history
-        state: { updatedSaleId: savedSale.id }, // Pass the ID
-      });
-    } catch (err) {
-      console.error(`Failed to ${isEditMode ? "update" : "create"} sale:`, err);
+      if (isEditMode && saleId) {
+          // Ensure your UpdateSaleData type and backend update method can handle
+          // adding/updating/removing items and payments.
+          // This usually involves more complex logic than a simple PUT.
+          savedSale = await saleService.updateSale(saleId, apiDataPayload as UpdateSaleData);
+      } else {
+          savedSale = await saleService.createSale(apiDataPayload as CreateSaleData);
+      }
+
+      toast.success(t("common:success"), { description: t("sales:saveSuccess") });
+      navigate("/sales", { state: { updatedSaleId: savedSale.id } }); // Pass ID for potential highlight
+
+  } catch (err) {
+      console.error(`Failed to ${isEditMode ? 'update' : 'create'} sale:`, err);
       const generalError = saleService.getErrorMessage(err);
       const apiErrors = saleService.getValidationErrors(err);
+
       toast.error(t("common:error"), { description: generalError });
-      setServerError(generalError);
+      setServerError(generalError); // Display a general error message at the top of the form
+
+      // Map API validation errors back to RHF fields for specific error messages
       if (apiErrors) {
-        /* ... map errors using setError ... */
+          Object.entries(apiErrors).forEach(([key, messages]) => {
+              // Handle top-level errors
+              if (key in ({} as SaleFormValues)) {
+                  setError(key as keyof SaleFormValues, { type: 'server', message: messages[0] });
+              }
+
+              // Handle nested item errors (e.g., "items.0.quantity": ["Insufficient stock..."])
+              const itemMatch = key.match(/^items\.(\d+)\.(.+)$/);
+              if (itemMatch) {
+                  const [, index, fieldName] = itemMatch;
+                  const fieldToSetErrorOnItem = (fieldName === 'quantity' || key.includes('stock'))
+                      ? `items.${index}.quantity` // Point stock errors to quantity field
+                      : `items.${index}.${fieldName as keyof SaleItemFormValues}`;
+                  setError(fieldToSetErrorOnItem as any, { type: 'server', message: messages[0] });
+              }
+
+              // Handle nested payment errors (e.g., "payments.0.amount": ["Invalid amount..."])
+              const paymentMatch = key.match(/^payments\.(\d+)\.(.+)$/);
+              if (paymentMatch) {
+                  const [, index, fieldName] = paymentMatch;
+                  setError(`payments.${index}.${fieldName as keyof PaymentItemFormValues}`, { type: 'server', message: messages[0] });
+              }
+          });
+           // If there were field-specific errors, also set a general hint
+          if (Object.keys(apiErrors).length > 0) {
+               setServerError(t('validation:checkFields'));
+          }
       }
-    }
-  };
+  }
+};
 
   // --- Render Logic ---
   // 1. Display Full Page Loader ONLY when fetching existing Sale data in Edit Mode
@@ -445,10 +553,9 @@ const SaleFormPage: React.FC = () => {
                 clientSearchInput={clientSearchInput}
                 onClientSearchInputChange={setClientSearchInput}
                 isSubmitting={isSubmitting}
-                selectedClient={selectedClient} // Pass selected client object for display
-                onClientSelect={setSelectedClient} // Pass handler to update selected client
+                selectedClient={selectedClient}
+                onClientSelect={setSelectedClient}
               />
-
               <Separator className="my-6" />
 
               {/* Render Items List Component */}
@@ -462,18 +569,18 @@ const SaleFormPage: React.FC = () => {
               />
 
               <Separator className="my-6" />
-
+              {/* --- Render Payments Section --- */}
+              <SalePaymentsSection
+                isSubmitting={isSubmitting}
+                grandTotal={grandTotal} // Pass grandTotal for auto-fill logic
+              />
               {/* Totals Display */}
-              <div className="flex justify-end mb-2">
-                <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-                  {t("sales:grandTotal")}: {formatNumber(grandTotal)}
-                </p>
-              </div>
-              <div className="flex justify-end mb-6">
-                <p className="text-md text-gray-600 dark:text-gray-300">
-                  {t("sales:amountDue")}: {formatNumber(amountDue)}
-                </p>
-              </div>
+              {/* --- Render Totals Display --- */}
+              <SaleTotalsDisplay
+                grandTotal={grandTotal}
+                totalPaid={totalPaid}
+                amountDue={amountDue}
+              />
 
               {/* Submit Button */}
               <div className="flex justify-end">

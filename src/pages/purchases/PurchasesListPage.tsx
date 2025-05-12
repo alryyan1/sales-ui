@@ -28,8 +28,8 @@ import VisibilityIcon from '@mui/icons-material/Visibility'; // View details ico
 import DeleteIcon from '@mui/icons-material/Delete'; // Delete icon (if allowed)
 
 // Services and Types
-import purchaseService, { Purchase, PaginatedResponse } from '../services/purchaseService'; // Use purchase service
-import ConfirmationDialog from '../components/common/ConfirmationDialog'; // Reusable dialog
+import purchaseService, { Purchase, PaginatedResponse } from '../../services/purchaseService'; // Use purchase service
+import ConfirmationDialog from '../../components/common/ConfirmationDialog'; // Reusable dialog
 import dayjs from 'dayjs';
 import { Tab } from '@mui/material';
 

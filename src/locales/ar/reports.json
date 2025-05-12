@@ -32,7 +32,12 @@
     "totalRevenue": "إجمالي الإيرادات",
     "totalCOGS": "إجمالي تكلفة البضائع المباعة",
     "grossProfit": "الربح الإجمالي",
-    "forPeriod": "للفترة من"
+    "forPeriod": "للفترة من",
+    "purchasedQuantity": "الكمية المشتراة","allProducts": "كل المنتجات",
+    "allTypes": "كل الأنواع",
+    "user": "المستخدم",
+    "inventoryLog": "سجل المخزون"
+    
   
 
   }

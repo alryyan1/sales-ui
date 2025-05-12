@@ -122,8 +122,8 @@ const CategoriesListPage: React.FC = () => {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>{t('categories:nameLabel')}</TableHead>
-                                    <TableHead>{t('categories:parentCategoryLabel')}</TableHead>
+                                    <TableHead className="text-center">{t('categories:nameLabel')}</TableHead>
+                                    <TableHead className="text-center">{t('categories:parentCategoryLabel')}</TableHead>
                                     <TableHead className="text-center">{t('products:productsCount')}</TableHead> {/* Add key */}
                                     <TableHead className="text-center">{t('common:actions')}</TableHead>
                                 </TableRow>
@@ -138,8 +138,8 @@ const CategoriesListPage: React.FC = () => {
                                 )}
                                 {categoriesResponse.data.map((category) => (
                                     <TableRow key={category.id}>
-                                        <TableCell className="font-medium">{category.name}</TableCell>
-                                        <TableCell>{allCategoriesFlat.find(c=>c.id === category.parent_id)?.name || '---'}</TableCell>
+                                        <TableCell className="font-medium text-center">{category.name}</TableCell>
+                                        <TableCell className="text-center">{allCategoriesFlat.find(c => c.id === category.parent_id)?.name || '---'}</TableCell>
                                         <TableCell className="text-center">{category.products_count ?? 0}</TableCell>
                                         <TableCell className="text-center">
                                              <div className="flex justify-center items-center gap-1">
@@ -153,7 +153,23 @@ const CategoriesListPage: React.FC = () => {
                         </Table>
                     </CardContent>
                 </Card>
-                 {categoriesResponse.last_page > 1 && ( '/* ... Pagination ... */' )}
+                 {categoriesResponse.last_page > 1 && (
+                     <div className="flex justify-center mt-4">
+                         <Button
+                             onClick={() => handlePageChange(currentPage - 1)}
+                             disabled={currentPage === 1}
+                         >
+                             {t('common:previous')}
+                         </Button>
+                         <span className="mx-4">{`${t('common:page')} ${currentPage} ${t('common:of')} ${categoriesResponse.last_page}`}</span>
+                         <Button
+                             onClick={() => handlePageChange(currentPage + 1)}
+                             disabled={currentPage === categoriesResponse.last_page}
+                         >
+                             {t('common:next')}
+                         </Button>
+                     </div>
+                 )}
                 </>
             )}
              <CategoryFormModal isOpen={isModalOpen} onClose={closeModal} categoryToEdit={editingCategory} onSaveSuccess={handleSaveSuccess} allCategories={allCategoriesFlat} loadingCategories={loadingFlatCategories}/>

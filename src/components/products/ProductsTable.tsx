@@ -3,12 +3,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 // MUI Components
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
@@ -23,6 +18,9 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber'; // For low stoc
 
 // Import Product type
 import { Product } from '../../services/productService'; // Adjust path
+import { Table, TableBody, TableCell, TableHeader, TableRow } from '../ui/table';
+import { Card } from '../ui/card';
+import { CardContent } from '@mui/material';
 
 // Component Props
 interface ProductsTableProps {
@@ -53,9 +51,10 @@ const ProductsTable: React.FC<ProductsTableProps> = ({ products, onEdit, onDelet
     }
 
     return (
-        <TableContainer component={Paper} elevation={1} sx={{ mt: 2 }}>
-            <Table sx={{ minWidth: 750 }} aria-label={t('products:pageTitle')}> {/* Add key */}
-                <TableHead sx={{ backgroundColor: 'action.hover' }}>
+        <Card >
+            <CardContent>
+                <Table  aria-label={t('products:pageTitle')}> {/* Add key */}
+                <TableHeader >
                     <TableRow>
                         {/* Add product specific keys */}
                         <TableCell>{t('products:sku')}</TableCell>
@@ -64,14 +63,14 @@ const ProductsTable: React.FC<ProductsTableProps> = ({ products, onEdit, onDelet
                         {/* <TableCell>{t('products:unit')}</TableCell> */}
                         <TableCell align="center">{t('common:actions')}</TableCell>
                     </TableRow>
-                </TableHead>
+                </TableHeader>
                 <TableBody>
                     {products.map((product) => {
                         const isLowStock = product.stock_alert_level !== null && product.stock_quantity <= product.stock_alert_level;
                         return (
                             <TableRow key={product.id} hover>
                                 <TableCell>{product.sku || '---'}</TableCell>
-                                <TableCell component="th" scope="row">{product.name}</TableCell>
+                                <TableCell  scope="row">{product.name}</TableCell>
                                 <TableCell align="center">
                                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         {product.stock_quantity}
@@ -106,7 +105,8 @@ const ProductsTable: React.FC<ProductsTableProps> = ({ products, onEdit, onDelet
                     })}
                 </TableBody>
             </Table>
-        </TableContainer>
+            </CardContent>
+        </Card>
     );
 };
 

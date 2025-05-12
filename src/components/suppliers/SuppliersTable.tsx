@@ -44,61 +44,61 @@ const SuppliersTable: React.FC<SuppliersTableProps> = ({ suppliers, onEdit, onDe
     return (
         <TableContainer component={Paper} elevation={1} sx={{ mt: 2 }}> {/* Use subtle elevation */}
             <Table sx={{ minWidth: 650 }} aria-label={t('suppliers:pageTitle')}> {/* Add pageTitle key */}
-                <TableHead sx={{ backgroundColor: 'action.hover' }}>
-                    <TableRow>
-                        <TableCell>{t('suppliers:name')}</TableCell> {/* Add name key */}
-                        <TableCell>{t('suppliers:contactPerson')}</TableCell> {/* Add contactPerson key */}
-                        <TableCell>{t('suppliers:email')}</TableCell>
-                        <TableCell>{t('suppliers:phone')}</TableCell>
-                        <TableCell align="center">{t('common:actions')}</TableCell>
-                    </TableRow>
-                </TableHead>
-                <TableBody>
-                    {suppliers.map((supplier) => (
-                        <TableRow
-                            key={supplier.id}
-                            hover // Add hover effect
-                            sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                        >
-                            <TableCell component="th" scope="row">
-                                {supplier.name}
-                            </TableCell>
-                            <TableCell>{supplier.contact_person || '---'}</TableCell>
-                            <TableCell>{supplier.email || '---'}</TableCell>
-                            <TableCell>{supplier.phone || '---'}</TableCell>
-                            <TableCell align="center">
-                                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}> {/* Reduce gap */}
-                                    <Tooltip title={t('common:edit') || ''}>
-                                        <span> {/* Span needed for tooltip when button is disabled */}
-                                            <IconButton
-                                                aria-label={t('common:edit') || 'Edit'}
-                                                color="primary"
-                                                size="small"
-                                                onClick={() => onEdit(supplier)}
-                                                disabled={isLoading} // Disable if parent is processing delete
-                                            >
-                                                <EditIcon fontSize="small"/>
-                                            </IconButton>
-                                        </span>
-                                    </Tooltip>
-                                    <Tooltip title={t('common:delete') || ''}>
-                                         <span>
-                                            <IconButton
-                                                aria-label={t('common:delete') || 'Delete'}
-                                                color="error"
-                                                size="small"
-                                                onClick={() => onDelete(supplier.id)}
-                                                disabled={isLoading}
-                                            >
-                                                <DeleteIcon fontSize="small" />
-                                            </IconButton>
-                                        </span>
-                                    </Tooltip>
-                                </Box>
-                            </TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
+            <TableHead sx={{ backgroundColor: 'action.hover' }}>
+                <TableRow>
+                <TableCell align="center">{t('suppliers:name')}</TableCell> {/* Add name key */}
+                <TableCell align="center">{t('suppliers:contactPerson')}</TableCell> {/* Add contactPerson key */}
+                <TableCell align="center">{t('suppliers:email')}</TableCell>
+                <TableCell align="center">{t('suppliers:phone')}</TableCell>
+                <TableCell align="center">{t('common:actions')}</TableCell>
+                </TableRow>
+            </TableHead>
+            <TableBody>
+                {suppliers.map((supplier) => (
+                <TableRow
+                    key={supplier.id}
+                    hover // Add hover effect
+                    sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                >
+                    <TableCell align="center" component="th" scope="row">
+                    {supplier.name}
+                    </TableCell>
+                    <TableCell align="center">{supplier.contact_person || '---'}</TableCell>
+                    <TableCell align="center">{supplier.email || '---'}</TableCell>
+                    <TableCell align="center">{supplier.phone || '---'}</TableCell>
+                    <TableCell align="center">
+                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}> {/* Reduce gap */}
+                        <Tooltip title={t('common:edit') || ''}>
+                        <span> {/* Span needed for tooltip when button is disabled */}
+                            <IconButton
+                            aria-label={t('common:edit') || 'Edit'}
+                            color="primary"
+                            size="small"
+                            onClick={() => onEdit(supplier)}
+                            disabled={isLoading} // Disable if parent is processing delete
+                            >
+                            <EditIcon fontSize="small"/>
+                            </IconButton>
+                        </span>
+                        </Tooltip>
+                        <Tooltip title={t('common:delete') || ''}>
+                         <span>
+                            <IconButton
+                            aria-label={t('common:delete') || 'Delete'}
+                            color="error"
+                            size="small"
+                            onClick={() => onDelete(supplier.id)}
+                            disabled={isLoading}
+                            >
+                            <DeleteIcon fontSize="small" />
+                            </IconButton>
+                        </span>
+                        </Tooltip>
+                    </Box>
+                    </TableCell>
+                </TableRow>
+                ))}
+            </TableBody>
             </Table>
         </TableContainer>
     );

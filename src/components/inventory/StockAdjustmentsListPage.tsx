@@ -50,7 +50,11 @@ const StockAdjustmentsListPage: React.FC = () => {
     useEffect(() => { fetchAdjustments(currentPage /*, currentProductId, etc. */); }, [fetchAdjustments, currentPage /*, currentProductId */]);
 
     // --- Handlers ---
-    const handlePageChange = (newPage: number) => { '/* ... update searchParams ... */ '};
+    const handlePageChange = (newPage: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('page', newPage.toString());
+        navigate({ search: params.toString() });
+    };
     // Add filter handlers if implementing filters
 
 
@@ -72,7 +76,11 @@ const StockAdjustmentsListPage: React.FC = () => {
             {/* Add Filter Card Here if needed */}
 
             {/* Loading / Error States */}
-            {isLoading && ( '/* ... Loader ... */' )}
+            {isLoading && (
+                <div className="flex justify-center items-center py-10">
+                    <Loader2 className="animate-spin h-6 w-6 text-gray-500" />
+                </div>
+            )}
             {!isLoading && error && ( <Alert variant={'destructive'} >{error}</Alert> )}
 
             {/* Adjustments Table */}

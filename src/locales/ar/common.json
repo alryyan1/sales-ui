@@ -39,5 +39,18 @@
     "role": "صلاحية",
     "date": "تاريخ",
     "selectDate": "اختر تاريخ",
-    "recordedDate": "تاريخ التسجيل"
+    "recordedDate": "تاريخ التسجيل",
+  "remove": "حذف",
+  "notes": "ملاحظات",
+  "status": "الحالة",
+  "clear": "مسح",
+  "filter": "تصفية",
+  "user": "المستخدم",
+  "notesOrReason": "الملاحظات/السبب",
+  "themeToggle": {
+    "label": "تبديل السمة",
+    "light": "فاتح",
+    "dark": "داكن",
+    "system": "النظام"
+  }
   }

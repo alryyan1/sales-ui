@@ -37,6 +37,10 @@
     "product": "المنتج",
     "selectCategoryPlaceholder": "اختر تصنيفًا...",
     "noCategory": "لا يوجد تصنيفات لعرضها.",
-    "category": "التصنيف"
+    "category": "التصنيف",
+    "noProducts": "لا يوجد منتجات لعرضها.",
+    "namePlaceholder": "اسم العنصر",
+    "productsCount": "عدد المنتجات",
+    "selectProductPlaceholder": "اختر منتجًا..."
     
 }

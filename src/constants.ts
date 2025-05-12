@@ -98,7 +98,7 @@ export const formatCurrency = (
         console.warn("formatCurrency received a non-numeric value:", value);
         return '---';
     }
-
+    console.log(currencyCode)
     const defaultOptions: Intl.NumberFormatOptions = {
         style: 'currency',
         currency: currencyCode,

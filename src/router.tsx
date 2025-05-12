@@ -10,9 +10,9 @@ import DashboardPage from "./pages/DashboardPage";
 import ClientsPage from "./pages/ClientsPage";
 import SuppliersPage from "./pages/SuppliersPage";
 import ProductsPage from "./pages/ProductsPage";
-import PurchasesListPage from "./pages/PurchasesListPage";
-import SaleFormPage from "./pages/SaleFormPage";
-import SalesListPage from "./pages/SalesListPage";
+import PurchasesListPage from "./pages/purchases/PurchasesListPage";
+import SaleFormPage from "./pages/sales/SaleFormPage";
+import SalesListPage from "./pages/sales/SalesListPage";
 import ProfilePage from "./pages/ProfilePage"; // Assuming created
 import SalesReportPage from "./pages/reports/SalesReportPage";
 import PurchaseReportPage from "./pages/reports/PurchaseReportPage"; // Assuming created
@@ -31,9 +31,14 @@ import StockAdjustmentFormModal from "./components/inventory/StockAdjustmentForm
 import CategoriesListPage from "./pages/admin/CategoriesListPage";
 import SettingsPage from "./pages/admin/SettingsPage";
 import AddSaleReturnPage from "./pages/sales/AddSaleReturnPage";
-import SaleDetailsPage from "./pages/SaleDetailsPage";
+import SaleDetailsPage from "./pages/sales/SaleDetailsPage";
 import SaleReturnDetailsPage from "./pages/sales/SaleReturnDetailsPage";
 import SaleReturnsListPage from "./pages/sales/SaleReturnsListPage";
+import RequestStockPage from "./pages/inventory/RequestStockPage";
+import ManageStockRequisitionsListPage from "./pages/inventory/ManageStockRequisitionsListPage";
+import ProcessRequisitionPage from "./components/admin/inventory/ProcessRequisitionPage";
+import InventoryLogPage from "./pages/reports/InventoryLogPage";
+import PurchaseDetailsPage from "./pages/purchases/PurchaseDetailsPage";
 // ... other page imports
 
 // --- Admin Route Guard Component ---
@@ -91,7 +96,7 @@ const router = createBrowserRouter([
               { index: true, element: <PurchasesListPage /> },
               { path: "add", element: <PurchaseFormPage /> },
               { path: ":id/edit", element: <PurchaseFormPage /> }, // Edit Purchase
-              // { path: ':id', element: <PurchaseDetailsPage /> }, // Details
+              { path: ':id', element: <PurchaseDetailsPage /> }, // Details
             ],
           },
           {
@@ -100,24 +105,23 @@ const router = createBrowserRouter([
               { index: true, element: <SalesListPage /> },
               { path: "add", element: <SaleFormPage /> },
               { path: ":id/edit", element: <SaleFormPage /> }, // Edit Sale
-                 // --- Routes for Sale Returns ---
+              // --- Routes for Sale Returns ---
               // Option A: Generic add return page, ID passed via state
-              { path: 'return/add', element: <AddSaleReturnPage /> },
+              { path: "return/add", element: <AddSaleReturnPage /> },
 
               // Option B: Add return page linked to an original sale via URL
               // { path: ':originalSaleIdParam/return/add', element: <AddSaleReturnPage /> },
 
               // Optional: Route to view details of a specific sale return
-              { path: 'returns', element: <SaleReturnsListPage /> },
-              { path: 'returns/:returnId', element: <SaleReturnDetailsPage /> },
-              { path: ':id', element: <SaleDetailsPage /> }, // Details
+              { path: "returns", element: <SaleReturnsListPage /> },
+              { path: "returns/:returnId", element: <SaleReturnDetailsPage /> },
+              { path: ":id", element: <SaleDetailsPage /> }, // Details
             ],
           },
           {
-            path: "inventory/adjustments",
+            path: "inventory",
             children: [
-              { index: true, element: <StockAdjustmentsListPage /> },
-              // { path: ':id', element: <SaleDetailsPage /> }, // Details
+              { path: "adjustments", element: <StockAdjustmentsListPage /> },
             ],
           },
           {
@@ -127,6 +131,9 @@ const router = createBrowserRouter([
               { path: "purchases", element: <PurchaseReportPage /> },
               { path: "inventory", element: <InventoryReportPage /> },
               { path: "profit-loss", element: <ProfitLossReportPage /> },
+              {
+                path:'inventory-log', element: <InventoryLogPage />
+              }
             ],
           },
 
@@ -143,7 +150,25 @@ const router = createBrowserRouter([
               { path: "users", element: <UsersListPage /> }, // User management
               { path: "roles", element: <RolesListPage /> }, // Add later for role management
               { path: "categories", element: <CategoriesListPage /> },
-              { path: "settings", element: <SettingsPage/> },
+              { path: "settings", element: <SettingsPage /> },
+              {
+                path: "inventory",
+                children: [
+                  {
+                    path: "requisitions/request",
+                    element: <RequestStockPage />,
+                  },
+                  {
+                    path: "requisitions",
+                    element: <ManageStockRequisitionsListPage />,
+                  },
+                  ///admin/inventory/requisitions/:requisitionId/process)
+                  {
+                    path: "requisitions/:requisitionId/process",
+                    element: <ProcessRequisitionPage />,
+                  },
+                ],
+              },
             ],
           },
         ],

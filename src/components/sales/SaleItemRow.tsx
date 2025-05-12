@@ -95,11 +95,11 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
   // Watch fields for this item row
   const currentProductId = watch(`items.${index}.product_id`);
   const selectedBatchId = watch(`items.${index}.purchase_item_id`);
+  console.log(selectedBatchId,"selectedBatchId");
   const quantity = watch(`items.${index}.quantity`);
   const unitPrice = watch(`items.${index}.unit_price`); // Price might be set by batch or editable
   const itemTotal = (Number(quantity) || 0) * (Number(unitPrice) || 0);
   const stockForSelectedBatch = watch(`items.${index}.available_stock`); // Stock of the selected batch
-
   // Fetch available batches when a product_id is selected or changes
   useEffect(() => {
     const fetchBatches = async (productId: number) => {

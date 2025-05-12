@@ -85,7 +85,13 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
                     address: supplierToEdit.address || '',
                 });
             } else {
-                reset(); // Reset to defaults for adding
+                reset({ // Match schema
+            name: '',
+            contact_person: '', // Handles nullable/optional/empty string
+            email: '',
+            phone: '',
+            address: '',
+        }); // Reset to defaults for adding
             }
         }
     }, [isOpen, isEditMode, supplierToEdit, reset]);
