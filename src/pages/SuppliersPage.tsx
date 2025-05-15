@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 // MUI Components
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import Pagination from '@mui/material/Pagination'; // MUI Pagination
@@ -22,11 +21,13 @@ import supplierService, { Supplier, PaginatedResponse } from '../services/suppli
 import SuppliersTable from '../components/suppliers/SuppliersTable';     // Your suppliers table component
 import SupplierFormModal from '../components/suppliers/SupplierFormModal'; // Your supplier form modal component
 import ConfirmationDialog from '../components/common/ConfirmationDialog'; // Reusable confirmation dialog
+import { Button } from '@/components/ui/button';
+import { useAuthorization } from '@/hooks/useAuthorization';
 
 const SuppliersPage: React.FC = () => {
     // Load necessary translation namespaces
     const { t } = useTranslation(['suppliers', 'common', 'validation']);
-
+    const { can } = useAuthorization(); // Assuming you have a hook for permissions
     // --- State Management ---
     const [suppliersResponse, setSuppliersResponse] = useState<PaginatedResponse<Supplier> | null>(null);
     const [isLoading, setIsLoading] = useState(true); // Loading supplier list
@@ -169,9 +170,13 @@ const SuppliersPage: React.FC = () => {
                 <Typography variant="h4" component="h1" className="text-gray-800 dark:text-gray-100 font-semibold">
                     {t('suppliers:pageTitle')}
                 </Typography>
-                <Button variant="contained" startIcon={<AddIcon />} onClick={() => openModal()}>
+                {can('create-suppliers') && <Button
+                  
+                    onClick={() => openModal()}
+                >
+                    <AddIcon className="mr-2" />
                     {t('suppliers:addSupplier')}
-                </Button>
+                </Button>}
             </Box>
 
              {/* Search Input */}

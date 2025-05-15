@@ -21,11 +21,15 @@ import ClientFormModal from '../components/clients/ClientFormModal'; // The hybr
 import ConfirmationDialog from '../components/common/ConfirmationDialog'; // The reusable dialog
 import { useAuthorization } from '@/hooks/useAuthorization';
 import { PlusIcon } from 'lucide-react';
+import { ca, is } from 'date-fns/locale';
 
 const ClientsPage: React.FC = () => {
     // Translations - Load namespaces needed
     const { t } = useTranslation(['clients', 'common', 'validation']);
-    const { can } = useAuthorization(); // <-- Get the 'can' function
+    const { can ,isAdmin} = useAuthorization(); // <-- Get the 'can' function
+    console.log(isAdmin(),'isAdmin');
+    console.log(can('create-clients'),'can create clients');
+    console.log(can('edit-clients'),'can edit clients');
 
     // --- State Management ---
     const [clientsResponse, setClientsResponse] = useState<PaginatedResponse<Client> | null>(null);
@@ -147,16 +151,20 @@ const ClientsPage: React.FC = () => {
         <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }} className="dark:bg-gray-900 min-h-screen">
             {/* Header */}
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: 'center', mb: 3, gap: 2 }}>
-                <Typography variant="h4" component="h1" className="text-gray-800 dark:text-gray-100 font-semibold">
+                <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
                     {t('clients:pageTitle')}
-                </Typography>
+                </h1>
                 {/* Conditionally render Add button */}
                 {can('create-clients') && (
-                     <Button onClick={() => openModal()} /* ... other props ... */ >
-                        <PlusIcon className="h-5 w-5 me-2" />
+                    <button
+                        onClick={() => openModal()}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 dark:bg-blue-500 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                    >
+                        <PlusIcon className="h-5 w-5" />
                         {t('clients:addClient')}
-                    </Button>
+                    </button>
                 )}
+                
             </Box>
 
             {/* Loading State */}
@@ -180,8 +188,10 @@ const ClientsPage: React.FC = () => {
                     {/* --- Clients Table --- */}
                     <ClientsTable
                         clients={clientsResponse.data}
-                        onEdit={can('edit-clients') ? openModal : undefined} // Pass handler only if allowed
-                        onDelete={can('delete-clients') ? openConfirmDialog : undefined} // Pass handler only if allowed
+                        canDelete={can('delete-clients')} // Pass permission check
+                        canEdit ={can('edit-clients')} // Pass permission check
+                        onEdit={openModal } // Pass handler only if allowed
+                        onDelete={ openConfirmDialog } // Pass handler only if allowed
                         isLoading={isDeleting} // Pass deleting state to potentially disable actions in table
                     />
 

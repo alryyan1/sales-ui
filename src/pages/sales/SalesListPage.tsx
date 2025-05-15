@@ -11,14 +11,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
 import Pagination from "@mui/material/Pagination";
 import AddIcon from "@mui/icons-material/Add";
-import Snackbar from "@mui/material/Snackbar";
 import Paper from "@mui/material/Paper";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
 import Chip from "@mui/material/Chip";
@@ -26,17 +19,25 @@ import EditIcon from "@mui/icons-material/Edit"; // <-- Import Edit Icon
 
 // Icons
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import DeleteIcon from "@mui/icons-material/Delete";
 
 // Day.js
 import dayjs from "dayjs";
 
 // Services and Types
 import saleService, { Sale } from "../../services/saleService"; // Use sale service
-import ConfirmationDialog from "../../components/common/ConfirmationDialog"; // Reusable dialog
 import { PaginatedResponse } from "@/services/clientService";
 import { formatCurrency, formatNumber } from "@/constants";
 import { useSettings } from "@/context/SettingsContext";
+import { useAuthorization } from "@/hooks/useAuthorization";
+import { Card } from "@/components/ui/card";
+import { CardContent } from "@mui/material";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 // Helper to format currency
 // Helper to format date string
@@ -45,7 +46,7 @@ const SalesListPage: React.FC = () => {
   const { t } = useTranslation(["sales", "common", "clients"]); // Load namespaces
   const navigate = useNavigate();
   const location = useLocation(); // Get the current location
-  const {settings,fetchSettings} = useSettings()
+  const { settings, fetchSettings } = useSettings();
   // Fetch settings on load
   useEffect(() => {
     const fetchData = async () => {
@@ -66,16 +67,10 @@ const SalesListPage: React.FC = () => {
   // Add state for filters (search, status, dates) if needed
 
   // Deletion State
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [saleToDeleteId, setSaleToDeleteId] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Notification State
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
-    "success"
-  );
+ 
   const handleEditSale = (id: number) => {
     navigate(`/sales/${id}/edit`); // <-- Navigate to the EDIT route
   };
@@ -88,11 +83,11 @@ const SalesListPage: React.FC = () => {
 
     // Check if state contains the updated ID from navigation
     const updatedId = location.state?.updatedSaleId;
-    console.log(updatedId,'updatedId')
+    console.log(updatedId, "updatedId");
     if (updatedId && typeof updatedId === "number") {
-      console.log(`Highlighting Sale ID:  ${updatedId}`, );
+      console.log(`Highlighting Sale ID:  ${updatedId}`);
       setHighlightedRowId(updatedId);
-    //   alert(`Highlighting Sale ID:${updatedId}` ); // Debugging alert
+      //   alert(`Highlighting Sale ID:${updatedId}` ); // Debugging alert
 
       // Set a timer to remove the highlight after a few seconds
       highlightTimeoutRef.current = setTimeout(() => {
@@ -131,61 +126,6 @@ const SalesListPage: React.FC = () => {
     fetchSales(currentPage);
   }, [fetchSales, currentPage]);
 
-   // --- Notification Handlers (Implemented) ---
-   const showSnackbar = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'success') => {
-    setSnackbarMessage(message);
-    setSnackbarSeverity(type);
-    setSnackbarOpen(true); // Open the snackbar
-};
-
-const handleSnackbarClose = (event?: React.SyntheticEvent | Event, reason?: string) => {
-    // Prevent closing if user clicks away (optional)
-    if (reason === 'clickaway') {
-        return;
-    }
-    setSnackbarOpen(false); // Close the snackbar
-    // Optionally reset message after close transition finishes?
-    // setTimeout(() => setSnackbarMessage(''), 300);
-};
-const closeConfirmDialog = () => {
-    console.log("Closing confirm dialog.");
-    // Prevent closing if a delete operation is currently in progress
-    if (isDeleting) return;
-    setIsConfirmOpen(false);
-    // It's good practice to clear the ID slightly after closing,
-    // allowing fade-out animations if the dialog has them.
-    setTimeout(() => {
-         setSaleToDeleteId(null);
-    }, 300); // Adjust delay if needed
-};
-
-// --- Deletion Handlers (Implemented open/close) ---
-const openConfirmDialog = (id: number) => {
-    console.log(`Opening confirm dialog for Sale ID: ${id}`);
-    setSaleToDeleteId(id); // Set the ID of the sale to potentially delete
-    setIsConfirmOpen(true); // Open the dialog
-};
-
-  const handleDeleteConfirm = async () => {
-    if (!saleToDeleteId) return;
-    setIsDeleting(true);
-    try {
-      await saleService.deleteSale(saleToDeleteId); // Use saleService
-      showSnackbar(t("sales:deleteSuccess"), "success"); // Add key
-      closeConfirmDialog();
-      // Refetch logic
-      if (salesResponse && salesResponse.data.length === 1 && currentPage > 1) {
-        setCurrentPage((prev) => prev - 1);
-      } else {
-        fetchSales(currentPage);
-      }
-    } catch (err) {
-      showSnackbar(saleService.getErrorMessage(err), "error");
-      closeConfirmDialog();
-    } finally {
-      setIsDeleting(false);
-    }
-  };
 
   // --- Pagination Handler ---
   const handlePageChange = (
@@ -239,7 +179,6 @@ const openConfirmDialog = (id: number) => {
       {/* Loading / Error States */}
       {isLoading && (
         <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
-          
           <CircularProgress />
           <Typography
             sx={{ ml: 2 }}
@@ -257,49 +196,27 @@ const openConfirmDialog = (id: number) => {
 
       {/* Content Area: Table and Pagination */}
       {!isLoading && !error && salesResponse && (
-        <Box sx={{ mt: 2 }}>
-          <TableContainer
-            component={Paper}
-            elevation={1}
-            className="dark:bg-gray-800"
-          >
-            <Table sx={{ minWidth: 700 }} aria-label={t("sales:listTitle")}>
-              <TableHead
-                sx={{ backgroundColor: "action.hover" }}
-                className="dark:bg-gray-700"
-              >
+        <Card>
+          <CardContent>
+            <Table aria-label={t("sales:listTitle")}>
+              <TableHeader>
                 <TableRow>
                   {/* Add appropriate table headers */}
-                  <TableCell className="dark:text-gray-300">
-                    {t("sales:id")}
-                  </TableCell> <TableCell className="dark:text-gray-300">
-                    {t("sales:date")}
-                  </TableCell>
-                  <TableCell className="dark:text-gray-300">
-                    {t("sales:invoice")}
-                  </TableCell>
-                  <TableCell className="dark:text-gray-300">
-                    {t("clients:client")}
-                  </TableCell>
+                  <TableCell>{t("sales:id")}</TableCell>
+                  <TableCell>{t("sales:date")}</TableCell>
+                  <TableCell>{t("sales:invoice")}</TableCell>
+                  <TableCell>{t("clients:client")}</TableCell>
                   {/* Use client namespace */}
-                  <TableCell align="center" className="dark:text-gray-300">
-                    {t("sales:status")}
-                  </TableCell>
-                  <TableCell align="right" className="dark:text-gray-300">
-                    {t("sales:totalAmount")}
-                  </TableCell>
-                  <TableCell align="right" className="dark:text-gray-300">
-                    {t("sales:paidAmount")}
-                  </TableCell>
-                  {/* <TableCell align="right" className="dark:text-gray-300">
+                  <TableCell align="center">{t("sales:status")}</TableCell>
+                  <TableCell align="right">{t("sales:totalAmount")}</TableCell>
+                  <TableCell align="right">{t("sales:paidAmount")}</TableCell>
+                  {/* <TableCell align="right" >
                     {t("sales:dueAmount")}
                   </TableCell> */}
                   {/* Add key */}
-                  <TableCell align="center" className="dark:text-gray-300">
-                    {t("common:actions")}
-                  </TableCell>
+                  <TableCell align="center">{t("common:actions")}</TableCell>
                 </TableRow>
-              </TableHead>
+              </TableHeader>
               <TableBody>
                 {salesResponse.data.map((sale) => {
                   const isHighlighted = sale.id === highlightedRowId;
@@ -309,25 +226,20 @@ const openConfirmDialog = (id: number) => {
                       sx={{
                         transition: "background-color 0.5s ease-out", // Smooth transition
                         backgroundColor: isHighlighted
-                          ? (theme)=>theme.palette.primary.light// Example MUI theme color
+                          ? (theme) => theme.palette.primary.light // Example MUI theme color
                           : "inherit", // Example MUI theme color
                         // Or use theme-agnostic color:
                         // backgroundColor: isHighlighted ? '#e6ffed' : 'inherit',
                       }}
                       key={sale.id}
                       hover
-                      className="dark:text-gray-100"
                     >
-                        <TableCell className="dark:text-gray-100">
-                            {sale.id}
-                        </TableCell>
-                      <TableCell className="dark:text-gray-100">
+                      <TableCell>{sale.id}</TableCell>
+                      <TableCell>
                         {dayjs(sale.sale_date).format("YYYY-MM-DD")}
                       </TableCell>
-                      <TableCell className="dark:text-gray-100">
-                        {sale.invoice_number || "---"}
-                      </TableCell>
-                      <TableCell className="dark:text-gray-100">
+                      <TableCell>{sale.invoice_number || "---"}</TableCell>
+                      <TableCell>
                         {sale.client_name || t("common:n/a")}
                       </TableCell>
                       <TableCell align="center">
@@ -345,13 +257,17 @@ const openConfirmDialog = (id: number) => {
                           }
                         />
                       </TableCell>
-                      <TableCell align="right" className="dark:text-gray-100 ">
-                        {formatCurrency(sale.total_amount,'en-US',settings.currency_symbol)}
+                      <TableCell align="right">
+                        {formatCurrency(
+                          sale.total_amount,
+                          "en-US",
+                          settings?.currency_symbol
+                        )}
                       </TableCell>
-                      <TableCell align="right" className="dark:text-gray-100">
+                      <TableCell align="right">
                         {formatNumber(sale.paid_amount)}
                       </TableCell>
-                      {/* <TableCell align="right" className="dark:text-gray-100">
+                      {/* <TableCell align="right" >
                         {formatNumber(sale.due_amount)}
                       </TableCell> */}
                       <TableCell align="center">
@@ -365,7 +281,6 @@ const openConfirmDialog = (id: number) => {
                           {/* --- Edit Button --- */}
                           <Tooltip title={t("common:edit") || ""}>
                             <span>
-                              
                               {/* Span might be needed if button can be disabled */}
                               <IconButton
                                 aria-label={t("common:edit") || "Edit"}
@@ -385,10 +300,7 @@ const openConfirmDialog = (id: number) => {
                               size="small"
                               onClick={() => handleViewDetails(sale.id)}
                             >
-                              <VisibilityIcon
-                                fontSize="small"
-                                className="dark:text-gray-300"
-                              />
+                              <VisibilityIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
                           {/* Optional: Delete button if allowed */}
@@ -400,13 +312,16 @@ const openConfirmDialog = (id: number) => {
                 })}
               </TableBody>
             </Table>
-          </TableContainer>
+          </CardContent>
+        </Card>
+      )}
+      {salesResponse && (
+        <>
           {/* Pagination */}
           {salesResponse.last_page > 1 && (
             <Box
               sx={{ display: "flex", justifyContent: "center", p: 2, mt: 3 }}
             >
-              
               <Pagination
                 count={salesResponse.last_page}
                 page={currentPage}
@@ -429,29 +344,8 @@ const openConfirmDialog = (id: number) => {
             </Typography>
           )}
           {/* Add key */}
-        </Box>
+        </>
       )}
-
-      {/* --- Confirmation Dialog (if delete is enabled) --- */}
-      {/* <ConfirmationDialog open={isConfirmOpen} onClose={closeConfirmDialog} onConfirm={handleDeleteConfirm} title={t('common:confirmDeleteTitle')} message={t('sales:deleteConfirm')} confirmText={t('common:delete')} cancelText={t('common:cancel')} isLoading={isDeleting} /> */}
-
-      {/* --- Snackbar --- */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={5000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert
-          key={snackbarMessage}
-          onClose={handleSnackbarClose}
-          severity={snackbarSeverity}
-          variant="filled"
-          sx={{ width: "100%" }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

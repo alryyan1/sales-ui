@@ -1,6 +1,6 @@
 // src/services/roleService.ts
-import apiClient, { getValidationErrors, getErrorMessage, ApiErrorResponse } from '../lib/axios';
-import axios, { isAxiosError } from 'axios';
+import apiClient, { getValidationErrors, getErrorMessage } from '../lib/axios';
+import axios from 'axios';
 import { PaginatedResponse } from './clientService'; // Assuming shared type
 import { Role } from './userService'; // Assuming Role type is here or move it to a shared types file
 

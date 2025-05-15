@@ -141,7 +141,14 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
       toast.error(t("common:error"), { description: generalError });
       setServerError(generalError);
       if (apiErrors) {
-        /* ... map apiErrors using setError (e.g., for 'name' if editable/creating) ... */
+        if (apiErrors) {
+          Object.entries(apiErrors).forEach(([field, message]) => {
+            setError(field as keyof RoleFormValues, {
+              type: "manual",
+              message: t(`validation:${message}`, { defaultValue: message }),
+            });
+          });
+        }
       }
     }
   };
@@ -152,7 +159,6 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-lg p-0">
-        {" "}
         {/* Width suitable for role form */}
         <Form {...form}>
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -163,9 +169,13 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
             </DialogHeader>
 
             <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-              {serverError &&
-                !isSubmitting &&
-                "/* ... Alert for serverError ... */"}
+              {serverError && !isSubmitting && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>{t("common:error")}</AlertTitle>
+                  <AlertDescription>{serverError}</AlertDescription>
+                </Alert>
+              )}
 
               {/* Role Name Field (Readonly in edit mode usually) */}
               <FormField

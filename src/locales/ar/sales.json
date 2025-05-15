@@ -114,7 +114,14 @@
     "paymentReference": "رقم المرجع",
     "paymentReferencePlaceholder": "أدخل رقم المرجع",
     "noPaymentsRecorded" : "لا توجد مدفوعات مسجلة.",
-    "totalPaid": "إجمالي المدفوع"  
+    "totalPaid": "إجمالي المدفوع",
+    "paymentsMadeTitle": "المدفوعات"  ,
+    "printInvoice": "طباعة الفاتورة",
+    "invoiceGenerating": "جاري إنشاء الفاتورة...",
+    "errorFetchingThermalReceipt": "خطأ في جلب الإيصال الحراري",
+    "thermalReceiptTitle": "إيصال حراري",
+    "errorLoadingPdfPreview": "خطأ في تحميل المعاينة",
+    "printThermalReceipt": "طباعة الإيصال الحراري"
 
 
 }

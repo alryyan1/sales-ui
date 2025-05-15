@@ -3,13 +3,11 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 // MUI Components
-import TableContainer from '@mui/material/TableContainer';
 import Paper from '@mui/material/Paper';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import Chip from '@mui/material/Chip'; // For stock status
 
 // MUI Icons
 import EditIcon from '@mui/icons-material/Edit';
@@ -30,13 +28,6 @@ interface ProductsTableProps {
     isLoading?: boolean;
 }
 
-// Helper to format currency (replace with a more robust library like Intl.NumberFormat if needed)
-const formatCurrency = (value: string | number | null | undefined) => {
-    const number = Number(value);
-    if (isNaN(number)) return '---';
-    // Adjust formatting based on your locale/currency needs
-    return `$${number.toFixed(2)}`;
-};
 
 
 const ProductsTable: React.FC<ProductsTableProps> = ({ products, onEdit, onDelete, isLoading = false }) => {
@@ -68,7 +59,7 @@ const ProductsTable: React.FC<ProductsTableProps> = ({ products, onEdit, onDelet
                     {products.map((product) => {
                         const isLowStock = product.stock_alert_level !== null && product.stock_quantity <= product.stock_alert_level;
                         return (
-                            <TableRow key={product.id} hover>
+                            <TableRow key={product.id} >
                                 <TableCell>{product.sku || '---'}</TableCell>
                                 <TableCell  scope="row">{product.name}</TableCell>
                                 <TableCell align="center">

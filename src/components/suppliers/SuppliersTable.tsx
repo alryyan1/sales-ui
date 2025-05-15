@@ -1,107 +1,136 @@
 // src/components/suppliers/SuppliersTable.tsx
-import React from 'react';
-import { useTranslation } from 'react-i18next';
+import React from "react";
+import { useTranslation } from "react-i18next";
 
 // MUI Components
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Paper from '@mui/material/Paper';
-import IconButton from '@mui/material/IconButton';
-import Tooltip from '@mui/material/Tooltip';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography'; // For empty state message
+import TableContainer from "@mui/material/TableContainer";
+import Typography from "@mui/material/Typography"; // For empty state message
 
 // MUI Icons
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 // Import Supplier type
-import { Supplier } from '../../services/supplierService'; // Adjust path
+import { Supplier } from "../../services/supplierService"; // Adjust path
+import { Card, CardContent } from "../ui/card";
+// import { Box, CardContent, IconButton, Paper, Tooltip } from "@mui/material";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
+import { useAuthorization } from "@/hooks/useAuthorization";
+import { Box, IconButton, Paper, Tooltip } from "@mui/material";
 
 // Component Props
 interface SuppliersTableProps {
-    suppliers: Supplier[];
-    onEdit: (supplier: Supplier) => void;
-    onDelete: (id: number) => void;
-    isLoading?: boolean; // For potential row disabling during delete
+  suppliers: Supplier[];
+  onEdit: (supplier: Supplier) => void;
+  onDelete: (id: number) => void;
+  isLoading?: boolean; // For potential row disabling during delete
 }
 
-const SuppliersTable: React.FC<SuppliersTableProps> = ({ suppliers, onEdit, onDelete, isLoading = false }) => {
-    const { t } = useTranslation(['suppliers', 'common']); // Load namespaces
-
-    if (suppliers.length === 0) {
-        return (
-            <Paper sx={{ p: 3, textAlign: 'center', mt: 2 }}>
-                <Typography variant="body1">{t('suppliers:noSuppliers')}</Typography> {/* Add noSuppliers key */}
-            </Paper>
-        );
-    }
-
+const SuppliersTable: React.FC<SuppliersTableProps> = ({
+  suppliers,
+  onEdit,
+  onDelete,
+  isLoading = false,
+}) => {
+  const { t } = useTranslation(["suppliers", "common"]); // Load namespaces
+  const { can, isAdmin } = useAuthorization();
+  if (suppliers.length === 0) {
     return (
-        <TableContainer component={Paper} elevation={1} sx={{ mt: 2 }}> {/* Use subtle elevation */}
-            <Table sx={{ minWidth: 650 }} aria-label={t('suppliers:pageTitle')}> {/* Add pageTitle key */}
-            <TableHead sx={{ backgroundColor: 'action.hover' }}>
-                <TableRow>
-                <TableCell align="center">{t('suppliers:name')}</TableCell> {/* Add name key */}
-                <TableCell align="center">{t('suppliers:contactPerson')}</TableCell> {/* Add contactPerson key */}
-                <TableCell align="center">{t('suppliers:email')}</TableCell>
-                <TableCell align="center">{t('suppliers:phone')}</TableCell>
-                <TableCell align="center">{t('common:actions')}</TableCell>
-                </TableRow>
-            </TableHead>
-            <TableBody>
-                {suppliers.map((supplier) => (
-                <TableRow
-                    key={supplier.id}
-                    hover // Add hover effect
-                    sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                >
-                    <TableCell align="center" component="th" scope="row">
-                    {supplier.name}
-                    </TableCell>
-                    <TableCell align="center">{supplier.contact_person || '---'}</TableCell>
-                    <TableCell align="center">{supplier.email || '---'}</TableCell>
-                    <TableCell align="center">{supplier.phone || '---'}</TableCell>
-                    <TableCell align="center">
-                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}> {/* Reduce gap */}
-                        <Tooltip title={t('common:edit') || ''}>
-                        <span> {/* Span needed for tooltip when button is disabled */}
-                            <IconButton
-                            aria-label={t('common:edit') || 'Edit'}
+      <Paper sx={{ p: 3, textAlign: "center", mt: 2 }}>
+        <Typography variant="body1">{t("suppliers:noSuppliers")}</Typography>{" "}
+        {/* Add noSuppliers key */}
+      </Paper>
+    );
+  }
+
+  return (
+    <Card>
+      {/* Use subtle elevation */}
+      <CardContent>
+        <Table aria-label={t("suppliers:pageTitle")}>
+          {/* Add pageTitle key */}
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-center" align="center">
+                {t("suppliers:name")}
+              </TableHead>
+              <TableHead className="text-center">
+                {t("suppliers:contactPerson")}
+              </TableHead>
+              <TableHead className="text-center">
+                {t("suppliers:email")}
+              </TableHead>
+              <TableHead className="text-center">
+                {t("suppliers:phone")}
+              </TableHead>
+              <TableHead className="text-center">
+                {t("common:actions")}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {suppliers.map((supplier) => (
+              <TableRow key={supplier.id}>
+                <TableCell align="center" scope="row">
+                  {supplier.name}
+                </TableCell>
+                <TableCell align="center">
+                  {supplier.contact_person || "---"}
+                </TableCell>
+                <TableCell align="center">{supplier.email || "---"}</TableCell>
+                <TableCell align="center">{supplier.phone || "---"}</TableCell>
+                <TableCell align="center">
+                  <Box
+                    sx={{ display: "flex", justifyContent: "center", gap: 0.5 }}
+                  >
+                    {/* Reduce gap */}
+                    {can("edit-suppliers") && (
+                      <Tooltip title={t("common:edit") || ""}>
+                        <span>
+                          {/* Span needed for tooltip when button is disabled */}
+                          <IconButton
+                            aria-label={t("common:edit") || "Edit"}
                             color="primary"
                             size="small"
                             onClick={() => onEdit(supplier)}
                             disabled={isLoading} // Disable if parent is processing delete
-                            >
-                            <EditIcon fontSize="small"/>
-                            </IconButton>
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
                         </span>
-                        </Tooltip>
-                        <Tooltip title={t('common:delete') || ''}>
-                         <span>
-                            <IconButton
-                            aria-label={t('common:delete') || 'Delete'}
+                      </Tooltip>
+                    )}
+                    {can("delete-suppliers") && (
+                      <Tooltip title={t("common:delete") || ""}>
+                        <span>
+                          <IconButton
+                            aria-label={t("common:delete") || "Delete"}
                             color="error"
                             size="small"
                             onClick={() => onDelete(supplier.id)}
                             disabled={isLoading}
-                            >
+                          >
                             <DeleteIcon fontSize="small" />
-                            </IconButton>
+                          </IconButton>
                         </span>
-                        </Tooltip>
-                    </Box>
-                    </TableCell>
-                </TableRow>
-                ))}
-            </TableBody>
-            </Table>
-        </TableContainer>
-    );
+                      </Tooltip>
+                    )}
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
 };
 
 export default SuppliersTable;

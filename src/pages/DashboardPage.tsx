@@ -23,19 +23,9 @@ import {
 
 // API Client & Error Helpers
 import apiClient, { getErrorMessage } from '@/lib/axios'; // Adjust path as needed
+import { formatCurrency, formatNumber } from '@/constants';
 
-// Helper functions
-const formatCurrency = (value: number | null | undefined, decimals = 2, currencySymbol = '$') => {
-    if (value === null || value === undefined) return '---';
-    const number = Number(value);
-    if (isNaN(number)) return '---';
-    return `${currencySymbol}${number.toFixed(decimals)}`;
-};
 
-const formatNumber = (value: number | null | undefined) => {
-    if (value === null || value === undefined) return '0';
-    return Number(value).toLocaleString(); // Simple number format
-};
 
 // --- Types (Ensure these match your backend response) ---
 interface SalesSummary {

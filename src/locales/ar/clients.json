@@ -18,5 +18,6 @@
     "phonePlaceholder": "مثال: 9665XXXXXXXX", 
     "addressPlaceholder": "مثال: شارع الملك فهد، الرياض...", 
     "typeToSearch": "اكتب للبحث عن عملاء..." ,
-    "client": "عميل"
+    "client": "عميل",
+    "id": "رقم العميل"
 }

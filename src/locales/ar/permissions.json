@@ -25,5 +25,17 @@
     "viewProfitLossReport": "عرض تقرير الأرباح والخسائر", 
     "manage-users": "إدارة المستخدمين (إضافة/تعديل/حذف)",
     "manage-roles": "إدارة الصلاحيات والأذونات",
-    "manage-settings": "إدارة إعدادات النظام"
+    "manage-settings": "إدارة إعدادات النظام",
+    
+       
+            "view-stock-adjustments": "عرض تعديلات المخزون",
+            "view-categories": "عرض الفئات",
+            "create-categories": "إضافة فئات جديدة",
+            "manage-categories": "إدارة الفئات",
+            "view-settings": "عرض الإعدادات",
+            "update-settings": "تحديث الإعدادات",
+            "request-stock": "طلب المخزون",
+            "view-own-stock-requisitions": "عرض طلبات المخزون الخاصة",
+            "view-all-stock-requisitions": "عرض جميع طلبات المخزون",
+            "process-stock-requisitions": "معالجة طلبات المخزون"
   }

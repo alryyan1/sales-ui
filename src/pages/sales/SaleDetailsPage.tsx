@@ -7,20 +7,12 @@ import { toast } from "sonner";
 // MUI Components (or shadcn/Tailwind equivalents)
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import CardContent from "@mui/material/CardContent"; // Added import
 import Paper from "@mui/material/Paper";
 import Grid from "@mui/material/Grid";
 import Divider from "@mui/material/Divider";
 import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
-import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
 import IconButton from "@mui/material/IconButton";
 
 // Icons
@@ -31,11 +23,27 @@ import saleService, { Sale } from "../../services/saleService"; // Import Sale t
 import dayjs from "dayjs";
 import { formatCurrency, formatDate, formatNumber } from "@/constants";
 import { useAuthorization } from "@/hooks/useAuthorization";
-import { Banknote, CircleDollarSign, CreditCard, History, UndoIcon } from "lucide-react";
-import { CardTitle } from "@/components/ui/card";
-import { TableHeader } from "@/components/ui/table";
-import { Card, CardHeader } from "@mui/material";
+import {
+  Banknote,
+  CircleDollarSign,
+  CreditCard,
+  History,
+  Loader2,
+  Printer,
+  UndoIcon,
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import apiClient from "@/lib/axios";
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Helpers (Assuming these exist and are imported)
 
@@ -48,7 +56,35 @@ const SaleDetailsPage: React.FC = () => {
   const [sale, setSale] = useState<Sale | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // --- State for Thermal PDF Modal ---
+    const [isThermalModalOpen, setIsThermalModalOpen] = useState(false);
+    const [thermalPdfUrl, setThermalPdfUrl] = useState<string | null>(null);
+    const [loadingThermalPdf, setLoadingThermalPdf] = useState(false);
 
+    // ... existing fetchDetails useEffect ...
+
+
+    const handleShowThermalReceipt = async () => {
+        if (!sale) return;
+        setLoadingThermalPdf(true);
+        setThermalPdfUrl(null); // Clear previous
+        setIsThermalModalOpen(true); // Open modal immediately to show loader
+
+        try {
+            const response = await apiClient.get(`/sales/${sale.id}/thermal-invoice-pdf`, {
+                responseType: 'blob', // <-- Important: Fetch as Blob
+            });
+            const file = new Blob([response.data], { type: 'application/pdf' });
+            const fileURL = URL.createObjectURL(file);
+            setThermalPdfUrl(fileURL);
+        } catch (error) {
+            console.error("Error fetching thermal receipt:", error);
+            toast.error(t('common:error'), { description: t('sales:errorFetchingThermalReceipt') }); // Add key
+            setIsThermalModalOpen(false); // Close modal on error
+        } finally {
+            setLoadingThermalPdf(false);
+        }
+    };
   useEffect(() => {
     const fetchSaleDetails = async (saleId: number) => {
       setIsLoading(true);
@@ -77,19 +113,33 @@ const SaleDetailsPage: React.FC = () => {
       setIsLoading(false);
     }
   }, [id, t]); // Dependency array
+  const handlePrintInvoice = () => {
+    if (!sale) return;
+    // VITE_API_BASE_URL should be like http://localhost:8000 or http://localhost/sales-api
+    const pdfUrl = `${import.meta.env.VITE_API_BASE_URL}/sales/${
+      sale.id
+    }/invoice-pdf`;
+    window.open(pdfUrl, "_blank"); // Open PDF in a new tab
+    toast.info(t("sales:invoiceGenerating")); // Add key
+  };
+
   // Determine if a return can be created for this sale
   const canCreateReturn =
     sale?.status === "completed" && can("create-sale-returns"); // Example condition
   // --- Render Logic ---
- const getPaymentMethodIcon = (method: string) => {
-        switch (method.toLowerCase()) {
-            case 'cash': return <Banknote className="h-4 w-4 text-green-600" />;
-            case 'visa':
-            case 'mastercard': return <CreditCard className="h-4 w-4 text-blue-600" />;
-            case 'bank_transfer': return <History className="h-4 w-4 text-purple-600" />; // Or another icon
-            default: return <CircleDollarSign  className="h-4 w-4 text-muted-foreground" />;
-        }
-    };
+  const getPaymentMethodIcon = (method: string) => {
+    switch (method.toLowerCase()) {
+      case "cash":
+        return <Banknote className="h-4 w-4 text-green-600" />;
+      case "visa":
+      case "mastercard":
+        return <CreditCard className="h-4 w-4 text-blue-600" />;
+      case "bank_transfer":
+        return <History className="h-4 w-4 text-purple-600" />; // Or another icon
+      default:
+        return <CircleDollarSign className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
   if (isLoading) {
     return (
       <Box
@@ -101,7 +151,6 @@ const SaleDetailsPage: React.FC = () => {
           p: 3,
         }}
       >
-        
         <CircularProgress />
         <Typography sx={{ ml: 2 }}>{t("common:loading")}</Typography>
       </Box>
@@ -111,14 +160,11 @@ const SaleDetailsPage: React.FC = () => {
   if (error) {
     return (
       <Box sx={{ p: 3 }}>
-        
         <Alert severity="error" sx={{ my: 2 }}>
           {error}
         </Alert>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate("/sales")}
-        >
+        <Button onClick={() => navigate("/sales")}>
+          <ArrowBackIcon className="mr-2" />
           {t("sales:backToList")}
         </Button>
       </Box>
@@ -128,12 +174,9 @@ const SaleDetailsPage: React.FC = () => {
   if (!sale) {
     return (
       <Box sx={{ p: 3 }}>
-        
         <Typography>{t("sales:notFound")}</Typography>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate("/sales")}
-        >
+        <Button onClick={() => navigate("/sales")}>
+          <ArrowBackIcon className="mr-2" />
           {t("sales:backToList")}
         </Button>
       </Box>
@@ -142,7 +185,7 @@ const SaleDetailsPage: React.FC = () => {
 
   // Display Sale Details
   return (
-    <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }} className="dark:bg-gray-950 pb-10">
+    <Box>
       {/* Back Button & Title */}
       <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
         <IconButton
@@ -150,15 +193,28 @@ const SaleDetailsPage: React.FC = () => {
           sx={{ mr: 1 }}
           aria-label={t("common:back") || "Back"}
         >
-          <ArrowBackIcon className="dark:text-gray-300" />
+          <ArrowBackIcon className="" />
         </IconButton>
-        <Typography
-          variant="h4"
-          component="h1"
-          className="text-gray-800 dark:text-gray-100 font-semibold"
-        >
+        <Typography variant="h4" component="h1" className="  font-semibold">
           {t("sales:detailsTitle")} #{sale.id} {/* Add key */}
         </Typography>
+   
+          <Card>
+            <CardContent>
+              <div className="flex flex-row justify-between items-center w-[450px]">
+                {sale && sale.status !== "draft" && (
+                  <Button onClick={handlePrintInvoice}>
+                    <Printer className="me-2 h-4 w-4" />
+                    {t("sales:printInvoice")}
+                  </Button>
+                )}
+                <Button  size="sm" onClick={handleShowThermalReceipt}>
+                  <Printer className="me-2 h-4 w-4" />
+                  {t('sales:printThermalReceipt')}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         {/* Maybe add a Print button here later */}
         {/* <Button variant="outlined" size="small" sx={{ ml: 'auto' }}>Print</Button> */}
         {/* --- Create Return Button --- */}
@@ -183,270 +239,304 @@ const SaleDetailsPage: React.FC = () => {
       </Box>
 
       {/* Main Details Card */}
-      <Paper
-        sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}
-        elevation={2}
-        className="dark:bg-gray-800"
-      >
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={6} md={4}>
-            <Typography
-              variant="overline"
-              color="text.secondary"
-              className="dark:text-gray-400"
-            >
-              {t("clients:client")}
-            </Typography>
-            <Typography
-              variant="body1"
-              fontWeight="medium"
-              className="dark:text-gray-100"
-            >
-              {sale.client_name || t("common:n/a")}
-            </Typography>
-          </Grid>
-          <Grid item xs={12} sm={6} md={4}>
-            <Typography
-              variant="overline"
-              color="text.secondary"
-              className="dark:text-gray-400"
-            >
-              {t("sales:saleDate")}
-            </Typography>
-            <Typography
-              variant="body1"
-              fontWeight="medium"
-              className="dark:text-gray-100"
-            >
-              {dayjs(sale?.sale_date).format("YYYY-MM-DD")}
-            </Typography>
-          </Grid>
-          <Grid item xs={12} sm={6} md={4}>
-            <Typography
-              variant="overline"
-              color="text.secondary"
-              className="dark:text-gray-400"
-            >
-              {t("sales:invoice")}
-            </Typography>
-            <Typography
-              variant="body1"
-              fontWeight="medium"
-              className="dark:text-gray-100"
-            >
-              {sale.invoice_number || "---"}
-            </Typography>
-          </Grid>
-          <Grid item xs={12} sm={6} md={4}>
-            <Typography
-              variant="overline"
-              color="text.secondary"
-              className="dark:text-gray-400"
-            >
-              {t("sales:status")}
-            </Typography>
-            <Box sx={{ mt: 0.5 }}>
-              <Chip
-                label={t(`sales:status_${sale?.status}`)}
-                size="small"
-                color={
-                  sale?.status === "completed"
-                    ? "success"
-                    : sale?.status === "pending"
-                    ? "warning"
-                    : sale?.status === "draft"
-                    ? "info"
-                    : "default"
-                }
-              />
-            </Box>
-          </Grid>
-          <Grid item xs={12} sm={6} md={4}>
-            <Typography
-              variant="overline"
-              color="text.secondary"
-              className="dark:text-gray-400"
-            >
-              {t("common:recordedBy")}
-            </Typography>
-            <Typography
-              variant="body1"
-              fontWeight="medium"
-              className="dark:text-gray-100"
-            >
-              {sale.user_name || t("common:n/a")}
-            </Typography>
-          </Grid>
-          <Grid item xs={12} sm={6} md={4}>
-            <Typography
-              variant="overline"
-              color="text.secondary"
-              className="dark:text-gray-400"
-            >
-              {t("common:recordedDate")}
-            </Typography>
-            <Typography
-              variant="body1"
-              fontWeight="medium"
-              className="dark:text-gray-100"
-            >
-              {dayjs(sale.created_at).format("YYYY-MM-DD")}
-            </Typography>
-          </Grid>
-          {sale.notes && (
-            <Grid item xs={12}>
+      <Card>
+        <CardContent>
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6} md={4}>
               <Typography
                 variant="overline"
                 color="text.secondary"
-                className="dark:text-gray-400"
+                className=""
               >
-                {t("sales:notesLabel")}
+                {t("clients:client")}
               </Typography>
-              <Typography
-                variant="body2"
-                sx={{ whiteSpace: "pre-wrap", mt: 0.5 }}
-                className="dark:text-gray-200"
-              >
-                {sale.notes}
+              <Typography variant="body1" fontWeight="medium" className="">
+                {sale.client_name || t("common:n/a")}
               </Typography>
             </Grid>
-          )}
-        </Grid>
-      </Paper>
+            <Grid item xs={12} sm={6} md={4}>
+              <Typography
+                variant="overline"
+                color="text.secondary"
+                className=""
+              >
+                {t("sales:saleDate")}
+              </Typography>
+              <Typography variant="body1" fontWeight="medium" className="">
+                {dayjs(sale?.sale_date).format("YYYY-MM-DD")}
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <Typography
+                variant="overline"
+                color="text.secondary"
+                className=""
+              >
+                {t("sales:invoice")}
+              </Typography>
+              <Typography variant="body1" fontWeight="medium" className="">
+                {sale.invoice_number || "---"}
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <Typography
+                variant="overline"
+                color="text.secondary"
+                className=""
+              >
+                {t("sales:status")}
+              </Typography>
+              <Box sx={{ mt: 0.5 }}>
+                <Chip
+                  label={t(`sales:status_${sale?.status}`)}
+                  size="small"
+                  color={
+                    sale?.status === "completed"
+                      ? "success"
+                      : sale?.status === "pending"
+                      ? "warning"
+                      : sale?.status === "draft"
+                      ? "info"
+                      : "default"
+                  }
+                />
+              </Box>
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <Typography
+                variant="overline"
+                color="text.secondary"
+                className=""
+              >
+                {t("common:recordedBy")}
+              </Typography>
+              <Typography variant="body1" fontWeight="medium" className="">
+                {sale.user_name || t("common:n/a")}
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <Typography
+                variant="overline"
+                color="text.secondary"
+                className=""
+              >
+                {t("common:recordedDate")}
+              </Typography>
+              <Typography variant="body1" fontWeight="medium" className="">
+                {dayjs(sale.created_at).format("YYYY-MM-DD")}
+              </Typography>
+            </Grid>
+            {sale.notes && (
+              <Grid item xs={12}>
+                <Typography
+                  variant="overline"
+                  color="text.secondary"
+                  className=""
+                >
+                  {t("sales:notesLabel")}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{ whiteSpace: "pre-wrap", mt: 0.5 }}
+                  className="dark:text-gray-200"
+                >
+                  {sale.notes}
+                </Typography>
+              </Grid>
+            )}
+          </Grid>
+        </CardContent>
+      </Card>
 
       {/* Items Table */}
-      <Typography
-        variant="h6"
-        component="h2"
-        sx={{ mb: 2 }}
-        className="text-gray-800 dark:text-gray-100"
-      >
+      <Typography variant="h6" component="h2" sx={{ mb: 2 }} className=" ">
         {t("sales:itemsSectionTitle")}
       </Typography>
-      <TableContainer
-        component={Paper}
-        elevation={1}
-        className="dark:bg-gray-800"
-      >
-        <Table size="small">
-          <TableHead
-            sx={{ backgroundColor: "action.hover" }}
-            className="dark:bg-gray-700"
-          >
-            <TableRow>
-              <TableCell className="dark:text-gray-300">
-                {t("sales:product")}
-              </TableCell>
-              <TableCell className="dark:text-gray-300">
-                {t("products:sku")}
-              </TableCell>
-              <TableCell align="right" className="dark:text-gray-300">
-                {t("sales:quantity")}
-              </TableCell>
-              <TableCell align="right" className="dark:text-gray-300">
-                {t("sales:unitPrice")}
-              </TableCell>
-              <TableCell align="right" className="dark:text-gray-300">
-                {t("sales:totalPrice")}
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {sale.items?.map((item) => (
-              <TableRow key={item.id} hover>
-                <TableCell className="dark:text-gray-100">
-                  {item.product_name ||
-                    `(${t("common:product")} ID: ${item.product_id})`}
+      <Card className="mb-2">
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableCell className="">{t("sales:product")}</TableCell>
+                <TableCell className="">{t("products:sku")}</TableCell>
+                <TableCell align="right" className="">
+                  {t("sales:quantity")}
                 </TableCell>
-                <TableCell className="dark:text-gray-100">
-                  {item.product_sku || "---"}
+                <TableCell align="right" className="">
+                  {t("sales:unitPrice")}
                 </TableCell>
-                <TableCell align="right" className="dark:text-gray-100">
-                  {item.quantity}
-                </TableCell>
-                <TableCell align="right" className="dark:text-gray-100">
-                  {formatNumber(item.unit_price)}
-                </TableCell>
-                <TableCell align="right" className="dark:text-gray-100">
-                  {formatNumber(item.total_price)}
+                <TableCell align="right" className="">
+                  {t("sales:totalPrice")}
                 </TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-            {/* --- Payments Section --- */}
-            <Card className="dark:bg-gray-800 mb-6 dark:border-gray-700">
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle className="text-gray-800 dark:text-gray-100">{t('sales:paymentsMadeTitle')}</CardTitle> {/* Add key */}
-                    {/* Optional: Add Payment Button if not fully paid and allowed */}
-                    {/* {sale.due_amount && Number(sale.due_amount) > 0 && can('add-sale-payment') && (
+            </TableHeader>
+            <TableBody>
+              {sale.items?.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell className="">
+                    {item.product_name ||
+                      `(${t("common:product")} ID: ${item.product_id})`}
+                  </TableCell>
+                  <TableCell className="">
+                    {item.product_sku || "---"}
+                  </TableCell>
+                  <TableCell align="right" className="">
+                    {item.quantity}
+                  </TableCell>
+                  <TableCell align="right" className="">
+                    {formatNumber(item.unit_price)}
+                  </TableCell>
+                  <TableCell align="right" className="">
+                    {formatNumber(item.total_price)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+      {/* --- Payments Section --- */}
+      <Card className="dark:bg-gray-800 mb-6 dark:border-gray-700">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className=" ">{t("sales:paymentsMadeTitle")}</CardTitle>{" "}
+          {/* Add key */}
+          {/* Optional: Add Payment Button if not fully paid and allowed */}
+          {/* {sale.due_amount && Number(sale.due_amount) > 0 && can('add-sale-payment') && (
                         <Button size="sm" onClick={() => navigate(`/sales/${sale.id}/add-payment`)}>
                             <PlusCircle className="me-2 h-4 w-4"/> {t('sales:addPaymentButton')}
                         </Button>
                     )} */}
-                </CardHeader>
-                <CardContent className="p-0">
-                    {sale.payments && sale.payments.length > 0 ? (
-                        <div className="overflow-x-auto">
-                            <table className="w-full border-collapse border border-gray-200 dark:border-gray-700 text-center">
-                            <thead className="bg-gray-100 dark:bg-gray-800">
-                              <tr>
-                              <th className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300">{t('sales:paymentDate')}</th>
-                              <th className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300">{t('sales:paymentMethod')}</th>
-                              <th className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300">{t('sales:paymentAmount')}</th>
-                              <th className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300">{t('sales:paymentReference')}</th>
-                              <th className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300">{t('common:recordedBy')}</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {sale.payments.map((payment) => (
-                              <tr key={payment.id} className="border-t border-gray-200 dark:border-gray-700">
-                                <td className="px-4 py-2 text-sm text-gray-800 dark:text-gray-100">{formatDate(payment.payment_date)}</td>
-                                <td className="px-4 py-2 text-sm text-gray-800 dark:text-gray-100">
-                                <div className="flex items-center justify-center gap-2">
-                                  {getPaymentMethodIcon(payment.method)}
-                                  {t(`paymentMethods:${payment.method}`, { defaultValue: payment.method })}
-                                </div>
-                                </td>
-                                <td className="px-4 py-2 text-sm text-gray-800 dark:text-gray-100">{formatCurrency(payment.amount)}</td>
-                                <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">{payment.reference_number || '---'}</td>
-                                <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">{payment.user_name || t('common:n/a')}</td>
-                              </tr>
-                              ))}
-                            </tbody>
-                            </table>
-                        </div>
-                    ) : (
-                        <p className="p-4 text-sm text-muted-foreground dark:text-gray-400">{t('sales:noPaymentsRecorded')}</p> 
-                    )}
-                </CardContent>
-            </Card>
-            {/* --- End Payments Section --- */}
+        </CardHeader>
+        <CardContent className="p-0">
+          {sale.payments && sale.payments.length > 0 ? (
+            <div className="overflow-x-auto">
+                <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableCell>
+                    {t("sales:paymentDate")}
+                    </TableCell>
+                    <TableCell>
+                    {t("sales:paymentMethod")}
+                    </TableCell>
+                    <TableCell>
+                    {t("sales:paymentAmount")}
+                    </TableCell>
+                    <TableCell>
+                    {t("sales:paymentReference")}
+                    </TableCell>
+                    <TableCell>
+                    {t("common:recordedBy")}
+                  </TableCell>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sale.payments.map((payment) => (
+                  <TableRow key={payment.id}>
+                    <TableCell className="text-sm">
+                    {formatDate(payment.payment_date)}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                    <div className="flex items-center gap-2">
+                      {getPaymentMethodIcon(payment.method)}
+                      {t(`paymentMethods:${payment.method}`, {
+                      defaultValue: payment.method,
+                      })}
+                    </div>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                    {formatCurrency(payment.amount)}
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-600">
+                    {payment.reference_number || "---"}
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-600">
+                    {payment.user_name || t("common:n/a")}
+                    </TableCell>
+                  </TableRow>
+                  ))}
+                </TableBody>
+                </Table>
+            </div>
+          ) : (
+            <p className="p-4 text-sm text-muted-foreground ">
+              {t("sales:noPaymentsRecorded")}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+      {/* --- End Payments Section --- */}
 
-       {/* Totals Section (remains the same, uses sale.total_amount, sale.paid_amount, sale.due_amount) */}
-             <div className="flex justify-end mt-6">
-                <Card className="w-full max-w-sm dark:bg-gray-800 dark:border-gray-700">
-                    <CardContent className="p-4 space-y-2">
-                         <div className="flex justify-between items-center">
-                             <Typography variant="body1" className="dark:text-gray-300">{t('sales:grandTotal')}:</Typography>
-                             <Typography variant="body1" fontWeight="bold" className="dark:text-gray-100">{formatCurrency(sale.total_amount)}</Typography>
-                         </div>
-                         <div className="flex justify-between items-center">
-                             <Typography variant="body1" className="dark:text-gray-300">{t('sales:totalPaid')}:</Typography>
-                             <Typography variant="body1" fontWeight="medium" className="dark:text-gray-100">{formatCurrency(sale.paid_amount)}</Typography>
-                         </div>
-                         <Separator className="my-1 dark:bg-gray-700"/>
-                         <div className="flex justify-between items-center">
-                             <Typography variant="h6" component="p" className="font-semibold dark:text-gray-100">{t('sales:amountDue')}:</Typography>
-                             <Typography variant="h6" component="p" className={`font-bold ${Number(sale.due_amount) > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                                {formatCurrency(sale.due_amount)}
-                            </Typography>
-                         </div>
-                    </CardContent>
-                </Card>
-             </div>
-        
+      {/* Totals Section (remains the same, uses sale.total_amount, sale.paid_amount, sale.due_amount) */}
+      <div className="flex justify-end mt-6">
+        <Card className="w-full max-w-sm dark:bg-gray-800 dark:border-gray-700">
+          <CardContent className="p-4 space-y-2">
+            <div className="flex justify-between items-center">
+              <Typography variant="body1" className="">
+                {t("sales:grandTotal")}:
+              </Typography>
+              <Typography variant="body1" fontWeight="bold" className="">
+                {formatCurrency(sale.total_amount)}
+              </Typography>
+            </div>
+            <div className="flex justify-between items-center">
+              <Typography variant="body1" className="">
+                {t("sales:totalPaid")}:
+              </Typography>
+              <Typography variant="body1" fontWeight="medium" className="">
+                {formatCurrency(sale.paid_amount)}
+              </Typography>
+            </div>
+            <Separator className="my-1 dark:bg-gray-700" />
+            <div className="flex justify-between items-center">
+              <Typography variant="h6" component="p" className="font-semibold ">
+                {t("sales:amountDue")}:
+              </Typography>
+              <Typography
+                variant="h6"
+                component="p"
+                className={`font-bold ${
+                  Number(sale.due_amount) > 0
+                    ? "text-red-600 dark:text-red-400"
+                    : "text-green-600 dark:text-green-400"
+                }`}
+              >
+                {formatCurrency(sale.due_amount)}
+              </Typography>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+         {/* --- Thermal PDF Modal --- */}
+            <Dialog open={isThermalModalOpen} onOpenChange={setIsThermalModalOpen}>
+                <DialogContent className="sm:max-w-[350px] md:max-w-[450px] p-0 aspect-[80/200] overflow-hidden dark:bg-gray-800"> {/* Adjust width/aspect ratio */}
+                    <DialogHeader className="p-4 border-b dark:border-gray-700">
+                        <DialogTitle>{t('sales:thermalReceiptTitle')}</DialogTitle> {/* Add key */}
+                         <DialogClose onClick={() => { if (thermalPdfUrl) URL.revokeObjectURL(thermalPdfUrl); }} /> {/* Revoke URL on close */}
+                    </DialogHeader>
+                    <div className="p-2 h-[calc(100%-60px)]"> {/* Adjust height based on header */}
+                        {loadingThermalPdf && (
+                            <div className="flex justify-center items-center h-full">
+                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                            </div>
+                        )}
+                        {thermalPdfUrl && !loadingThermalPdf && (
+                            <iframe
+                                src={thermalPdfUrl}
+                                title={t('sales:thermalReceiptTitle')}
+                                className="w-full h-full border-0"
+                            />
+                            // Or use <embed>
+                            // <embed src={thermalPdfUrl} type="application/pdf" width="100%" height="100%" />
+                        )}
+                        {!loadingThermalPdf && !thermalPdfUrl && !error && ( // Handle case where PDF couldn't load but no network error
+                            <div className="flex justify-center items-center h-full text-muted-foreground">
+                                {t('sales:errorLoadingPdfPreview')} {/* Add key */}
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
     </Box>
   );
 };

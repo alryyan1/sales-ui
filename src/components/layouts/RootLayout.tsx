@@ -2,7 +2,7 @@
 import React from 'react';
 import { Outlet, Link as RouterLink, NavLink } from 'react-router-dom'; // Use NavLink for active styling
 import { useAuth } from '@/context/AuthContext';
-import { useAuthorization } from '@/hooks/useAuthorization';
+import { PermissionName, useAuthorization } from '@/hooks/useAuthorization';
 import { useTranslation } from 'react-i18next';
 import { cn } from "@/lib/utils"; // For conditional classes
 
@@ -16,12 +16,12 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Example for User menu trigger
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"; // Example for User menu trigger
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"; // Example for mobile menu
 import { Toaster } from 'sonner';
 import {
     LayoutDashboard, Box, Users, Building, ShoppingCart, CircleDollarSign, LogOut, UserCircle,
-    ChevronDown, Menu, Settings, FileText, UserCog, ShieldCheck, // Icons
+    ChevronDown, Menu,  // Icons
     Loader2
 } from 'lucide-react';
 import { ThemeToggle } from '../layout/ThemeToggle';
@@ -54,7 +54,8 @@ const NavLinkItem: React.FC<NavLinkItemProps> = ({ to, icon: Icon, children, cla
 const RootLayout: React.FC = () => {
     const { t } = useTranslation(['navigation', 'common', 'reports', 'users', 'roles']);
     const { user, isLoading } = useAuth(); // Only need user and isLoading here now
-    const { handleLogout, can, hasRole, isAdmin } = useAuthorization(); // Get auth checks and logout from hook
+    const {  can } = useAuthorization(); // Get auth checks and logout from hook
+    const {handleLogout} = useAuth()
     const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false); // State for mobile sheet
 
     // Show full-page loader during initial context loading
@@ -63,7 +64,14 @@ const RootLayout: React.FC = () => {
     }
 
     // Define Navigation Items (can be moved to a separate config file)
-    const navItems = [
+    interface NavItem {
+        to: string;
+        labelKey: string;
+        icon?: React.ElementType;
+        permission: PermissionName | null;
+    }
+
+    const navItems: NavItem[] = [
         { to: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard, permission: null }, // Always show dashboard?
         { to: "/clients", labelKey: "clients", icon: Users, permission: "view-clients" },
         { to: "/suppliers", labelKey: "suppliers", icon: Building, permission: "view-suppliers" },
@@ -74,7 +82,13 @@ const RootLayout: React.FC = () => {
         { to: "/sales/returns", labelKey: "salesReturns", icon: CircleDollarSign, permission: "view-returns" },
     ];
 
-    const reportItems = [
+    interface ReportItem {
+        to: string;
+        labelKey: string;
+        permission: PermissionName;
+    }
+
+    const reportItems: ReportItem[] = [
          { to: "/reports/sales", labelKey: "salesReportTitle", permission: "view-reports"},
          { to: "/reports/purchases", labelKey: "purchaseReportTitle", permission: "view-reports"},
          { to: "/reports/inventory", labelKey: "inventoryReportTitle", permission: "view-reports"},
@@ -82,7 +96,13 @@ const RootLayout: React.FC = () => {
          { to: "/reports/inventory-log", labelKey: "inventoryLog", permission: "view-reports"},
     ];
 
-    const adminItems = [
+    interface AdminItem {
+        to: string;
+        labelKey: string;
+        permission: PermissionName;
+    }
+
+    const adminItems: AdminItem[] = [
          { to: "/admin/users", labelKey: "users", permission: "manage-users"},
          { to: "/admin/roles", labelKey: "roles", permission: "manage-roles"},
          { to: "/admin/categories", labelKey: "categories", permission: "manage-categories"},

@@ -1,19 +1,55 @@
 // src/hooks/useAuthorization.ts
 
 import { useAuth } from "@/context/AuthContext";
+ /**
+     * Checks if the current user has a specific permission.
+     * @param permissionName The name of the permission to check.
+     * @returns True if the user has the permission, false otherwise.
+     */
+    export type PermissionName = 
 
+        'create-sale-returns'
+        | 'view-clients'
+        | 'manage-settings'
+        | 'create-clients'
+        | 'edit-clients'
+        | 'delete-clients'
+        | 'view-suppliers'
+        | 'create-suppliers'
+        | 'edit-suppliers'
+        | 'delete-suppliers'
+        | 'view-products'
+        | 'view-returns'
+        | 'create-products'
+        | 'edit-products'
+        | 'delete-products'
+        | 'view-purchases'
+        | 'create-purchases'
+        | 'view-sales'
+        | 'create-sales'
+        | 'view-reports'
+        | 'manage-users'
+        | 'manage-roles'
+        | 'view-stock-adjustments'
+        | 'adjust-stock'
+        | 'view-categories'
+        | 'create-categories'
+        | 'manage-categories'
+        | 'view-settings'
+        | 'update-settings'
+        | 'request-stock'
+        | 'view-own-stock-requisitions'
+        | 'view-all-stock-requisitions'
+        | 'process-stock-requisitions';
 /**
  * Custom hook providing utility functions for checking user roles and permissions.
  */
 export const useAuthorization = () => {
     const { user, roles = [], permissions = [] } = useAuth(); // Get user, roles, permissions from context
 
-    /**
-     * Checks if the current user has a specific permission.
-     * @param permissionName The name of the permission to check.
-     * @returns True if the user has the permission, false otherwise.
-     */
-    const can = (permissionName: string): boolean => {
+   
+
+    const can = (permissionName: PermissionName): boolean => {
         if (!user || !permissionName) return false; // Not logged in or no permission specified
         // Admins typically bypass explicit permission checks (depends on your backend setup)
         if (roles.includes('admin')) {

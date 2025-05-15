@@ -9,7 +9,6 @@ import {
   useEffect,
   useState,
 } from "react";
-import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 type AuthContextType = {
   user: User | null;
@@ -42,7 +41,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [permissions, setPermissions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
-  const { t } = useTranslation(); // Needed if used within handlers
 
   const clearAuthState = () => {
     setUser(null);

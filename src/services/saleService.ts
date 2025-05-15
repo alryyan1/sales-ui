@@ -119,7 +119,8 @@ const saleService = {
         status: string = '',
         startDate: string = '',
         endDate: string = '',
-        limit: number = 15
+        limit: number = 15,
+        clientId: number | null = null,
     ): Promise<PaginatedResponse<Sale>> => {
         try {
             const params = new URLSearchParams();
@@ -129,6 +130,7 @@ const saleService = {
             if (status) params.append('status', status);
             if (startDate) params.append('start_date', startDate);
             if (endDate) params.append('end_date', endDate);
+            if (clientId) params.append('client_id', clientId.toString());
 
             const response = await apiClient.get<PaginatedResponse<Sale>>(`/sales?${params.toString()}`);
             console.log('getSales response:', response.data);

@@ -101,9 +101,23 @@ const UsersListPage: React.FC = () => {
              <div className="mb-4 max-w-sm"><Input placeholder={t('users:searchPlaceholder')} value={searchTerm} onChange={handleSearchChange} startIcon={<Search className="h-4 w-4 text-muted-foreground" />}/></div> {/* Add startIcon to Input if supported */}
 
 
-            {/* Loading / Error */}
-           {isLoading && (' /* ... Loader ... */' )}
-            {!isLoading && error && ( '/* ... Error Alert ... */' )}
+        {/* Loading / Error */}
+        {isLoading && (
+            <div className="flex justify-center items-center py-4">
+                <Loader2 className="animate-spin h-6 w-6 text-gray-500" />
+            </div>
+        )}
+        {!isLoading && error && (
+            <Alert variant="destructive">
+                <div className="flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5" />
+                    <div>
+                        <AlertTitle>{t('common:error')}</AlertTitle>
+                        <AlertDescription>{error}</AlertDescription>
+                    </div>
+                </div>
+            </Alert>
+        )}
 
             {/* User Table */}
             {!isLoading && !error && usersResponse && (
@@ -113,9 +127,9 @@ const UsersListPage: React.FC = () => {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>{t('users:nameLabel')}</TableHead>
-                                    <TableHead>{t('users:emailLabel')}</TableHead>
-                                    <TableHead>{t('roles:roles')}</TableHead> {/* Use roles namespace */}
+                                    <TableHead className="text-center">{t('users:nameLabel')}</TableHead>
+                                    <TableHead className="text-center">{t('users:emailLabel')}</TableHead>
+                                    <TableHead className="text-center">{t('roles:roles')}</TableHead> {/* Use roles namespace */}
                                     <TableHead className="text-center">{t('common:actions')}</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -123,10 +137,10 @@ const UsersListPage: React.FC = () => {
                                 {usersResponse.data.length === 0 && ( '/* ... No Results Row ... */' )}
                                 {usersResponse.data.map((user) => (
                                     <TableRow key={user.id}>
-                                        <TableCell className="font-medium">{user.name}</TableCell>
-                                        <TableCell>{user.email}</TableCell>
-                                        <TableCell>
-                                            <div className="flex flex-wrap gap-1">
+                                        <TableCell className="font-medium text-center">{user.name}</TableCell>
+                                        <TableCell className="text-center">{user.email}</TableCell>
+                                        <TableCell className="text-center">
+                                            <div className="flex flex-wrap justify-center gap-1">
                                                  {(user.roles ?? []).map(roleName => (
                                                      <Badge key={roleName} variant="secondary">{t(`roles:${roleName}`, { defaultValue: roleName })}</Badge>
                                                  ))}
@@ -141,6 +155,8 @@ const UsersListPage: React.FC = () => {
                                         </TableCell>
                                     </TableRow>
                                 ))}
+                           
+                                
                             </TableBody>
                         </Table>
                     </CardContent>

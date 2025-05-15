@@ -1,31 +1,26 @@
 // src/pages/admin/RolesListPage.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
 // shadcn/ui & Lucide Icons
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Pagination } from '@/components/ui/pagination'; // Assuming pagination component
-import { Loader2, AlertCircle, ArrowLeft, Plus, Edit, Trash2 } from 'lucide-react';
 
 // Services and Types
-import roleService, { RoleWithPermissions, Permission, PaginatedResponse } from '../../services/roleService'; // Adjust path
+import roleService, { RoleWithPermissions, Permission } from '../../services/roleService'; // Adjust path
 import { useAuthorization } from '@/hooks/useAuthorization';
 
 // Custom Components
 import ConfirmationDialog from '../../components/common/ConfirmationDialog'; // Adjust path
 import RoleFormModal from '@/components/admin/users/roles/RoleFormModal';
+import { PaginatedResponse } from '@/services/clientService';
+import { Edit, Loader2, Plus, Trash2 } from 'lucide-react';
 
 // --- Component ---
 const RolesListPage: React.FC = () => {
     const { t } = useTranslation(['roles', 'common', 'permissions']);
-    const navigate = useNavigate();
     const { can } = useAuthorization(); // Permission checks
 
     // --- State ---
@@ -69,10 +64,9 @@ const RolesListPage: React.FC = () => {
     useEffect(() => { fetchPermissions(); }, [fetchPermissions]);
 
     // --- Handlers ---
-    const handlePageChange = (newPage: number) => { setCurrentPage(newPage); };
     const openModal = (role: RoleWithPermissions | null = null) => { setEditingRole(role); setIsModalOpen(true); };
     const closeModal = () => { setIsModalOpen(false); setEditingRole(null); };
-    const handleSaveSuccess = (savedRole: RoleWithPermissions) => { closeModal(); fetchRoles(currentPage); }; // Refetch roles list
+    const handleSaveSuccess = () => { closeModal(); fetchRoles(currentPage); }; // Refetch roles list
     const openConfirmDialog = (id: number) => { setRoleToDeleteId(id); setIsConfirmOpen(true); };
     const closeConfirmDialog = () => { if (!isDeleting) { setIsConfirmOpen(false); setTimeout(() => setRoleToDeleteId(null), 300); } };
     const handleDeleteConfirm = async () => {
@@ -99,8 +93,16 @@ const RolesListPage: React.FC = () => {
             </div>
 
              {/* Loading / Error */}
-             {(isLoading || loadingPermissions) && ( '/* ... Loader ... */ ')}
-             {!isLoading && error && ( '/* ... Error Alert ... */' )}
+             {(isLoading || loadingPermissions) && (
+                 <div className="flex justify-center items-center">
+                 <Loader2 className="animate-spin h-6 w-6 text-gray-500 dark:text-gray-400" />
+                 </div>
+             )}
+             {!isLoading && error && (
+                 <div className="alert alert-error">
+                     <span>{error}</span>
+                 </div>
+             )}
 
              {/* Roles Table */}
              {!isLoading && !error && rolesResponse && (
@@ -117,7 +119,13 @@ const RolesListPage: React.FC = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                 {rolesResponse.data.length === 0 && ( '/* ... No Results Row ... */' )}
+                                 {rolesResponse.data.length === 0 && (
+                                     <TableRow>
+                                         <TableCell colSpan={4} className="text-center">
+                                             {t('roles:noResults')}
+                                         </TableCell>
+                                     </TableRow>
+                                 )}
                                 {rolesResponse.data.map((role) => (
                                     <TableRow key={role.id}>
                                         <TableCell className="font-medium">{t(`roles:${role.name}`, { defaultValue: role.name })}</TableCell>
@@ -138,7 +146,23 @@ const RolesListPage: React.FC = () => {
                     </CardContent>
                 </Card>
                  {/* Pagination */}
-                 {rolesResponse.last_page > 1 && ( '/* ... Pagination Component ... */' )}
+                 {rolesResponse.last_page > 1 && (
+                     <div className="flex justify-center mt-4">
+                         <Button
+                             onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                             disabled={currentPage === 1}
+                         >
+                             {t('common:previous')}
+                         </Button>
+                         <span className="mx-4">{t('common:page')} {currentPage} {t('common:of')} {rolesResponse.last_page}</span>
+                         <Button
+                             onClick={() => setCurrentPage((prev) => Math.min(prev + 1, rolesResponse.last_page))}
+                             disabled={currentPage === rolesResponse.last_page}
+                         >
+                             {t('common:next')}
+                         </Button>
+                     </div>
+                 )}
                 </>
             )}
 

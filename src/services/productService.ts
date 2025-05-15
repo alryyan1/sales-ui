@@ -25,7 +25,8 @@ export interface Product {
       // Optional accessors that might be added by backend ProductResource
       latest_purchase_cost?: string | number | null;
       suggested_sale_price?: string | number | null;
-      available_batches?: any[]; // If you add this t
+      total_stock:number;
+      available_batches?: { batch_id: number; quantity: number; expiry_date?: string }[]; // Replace 'any[]' with a specific type
 }
 
 // Data type for creating/updating - matches form fields before potential conversion

@@ -118,3 +118,21 @@
     @apply bg-background text-foreground;
   }
 }
+
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeInUp {
+  animation-name: fadeInUp;
+  animation-fill-mode: both; /* Keeps the element in its final state after animation */
+  /* animation-duration: 0.6s; */ /* Set default duration or use Tailwind duration classes with animation-delay */
+}

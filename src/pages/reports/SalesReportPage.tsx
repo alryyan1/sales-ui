@@ -55,6 +55,7 @@ import {
   Search,
   AlertCircle,
   ArrowLeft,
+  FileText,
 } from "lucide-react";
 
 // Services and Types
@@ -102,7 +103,7 @@ const SalesReportPage: React.FC = () => {
   ]);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams(); // To manage filters in URL
-
+ 
   // --- State ---
   const [reportData, setReportData] = useState<PaginatedResponse<Sale> | null>(
     null
@@ -137,7 +138,7 @@ const SalesReportPage: React.FC = () => {
     try {
       // Fetch *all* clients for the filter dropdown (consider performance for huge lists)
       // Alternatively, use an async combobox like in SaleFormPage
-      const response = await clientService.getClients(1, "", 9999); // Fetch all for select
+      const response = await clientService.getClients(); // Fetch all for select
       setClients(response.data);
     } catch (err) {
       toast.error(t("common:error"), {
@@ -231,10 +232,12 @@ const SalesReportPage: React.FC = () => {
     console.log("Applying filters:", data);
     // Update URL search parameters, which triggers the useEffect to refetch
     const newParams = new URLSearchParams();
-    if (data.startDate)
+    if (data.startDate) {
       newParams.set("startDate", format(data.startDate, "yyyy-MM-dd"));
-    if (data.endDate)
+    }
+    if (data.endDate) {
       newParams.set("endDate", format(data.endDate, "yyyy-MM-dd"));
+    }
     if (data.clientId) newParams.set("clientId", data.clientId);
     // if (data.userId) newParams.set('userId', data.userId);
     if (data.status) newParams.set("status", data.status);
@@ -261,6 +264,43 @@ const SalesReportPage: React.FC = () => {
     setSearchParams(newParams); // Update URL, triggers useEffect
   };
 
+  const handleDownloadPdf = () => {
+    // Get current filter values from the form
+    const currentFilterValues = watch(); // Gets all current form values
+
+    const params = new URLSearchParams();
+    if (currentFilterValues.startDate) {
+      params.append(
+        "start_date",
+        format(currentFilterValues.startDate, "yyyy-MM-dd")
+      );
+    }
+    if (currentFilterValues.endDate) {
+      params.append(
+        "end_date",
+        format(currentFilterValues.endDate, "yyyy-MM-dd")
+      );
+    }
+    if (currentFilterValues.clientId) {
+      params.append("client_id", String(currentFilterValues.clientId));
+    }
+    if (currentFilterValues.status) {
+      params.append("status", currentFilterValues.status);
+    }
+    // Add other filters (userId, etc.) if they are part of your P/L report
+
+    // Construct the full URL to the PDF download endpoint
+    // VITE_API_BASE_URL should be like http://localhost:8000 or http://localhost/sales-api
+    const pdfUrl = `${
+      import.meta.env.VITE_API_BASE_URL
+    }/reports/sales/pdf?${params.toString()}`;
+
+    // Open the URL in a new tab to trigger the download
+    // The browser will handle the 'Content-Disposition: attachment' header
+    window.open(pdfUrl, "_blank");
+
+    toast.info(t("reports:pdfDownloadStarting")); // Add key
+  };
   // --- Render Page ---
   return (
     <div className="p-4 md:p-6 lg:p-8 dark:bg-gray-950 min-h-screen pb-10">
@@ -293,10 +333,10 @@ const SalesReportPage: React.FC = () => {
                   name="startDate"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      {" "}
-                      <FormLabel>{t("common:startDate")}</FormLabel>{" "}
+                      
+                      <FormLabel>{t("common:startDate")}</FormLabel>
                       <Popover>
-                        {" "}
+                        
                         <PopoverTrigger asChild>
                           <FormControl>
                             <Button
@@ -306,13 +346,13 @@ const SalesReportPage: React.FC = () => {
                                 !field.value && "text-muted-foreground"
                               )}
                             >
-                              {" "}
-                              <CalendarIcon className="me-2 h-4 w-4" />{" "}
+                              
+                              <CalendarIcon className="me-2 h-4 w-4" />
                               {field.value ? (
                                 format(field.value, "PPP")
                               ) : (
                                 <span>{t("common:pickDate")}</span>
-                              )}{" "}
+                              )}
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
@@ -323,9 +363,9 @@ const SalesReportPage: React.FC = () => {
                             onSelect={field.onChange}
                             initialFocus
                           />
-                        </PopoverContent>{" "}
-                      </Popover>{" "}
-                      <FormMessage />{" "}
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -335,10 +375,10 @@ const SalesReportPage: React.FC = () => {
                   name="endDate"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      {" "}
-                      <FormLabel>{t("common:endDate")}</FormLabel>{" "}
+                      
+                      <FormLabel>{t("common:endDate")}</FormLabel>
                       <Popover>
-                        {" "}
+                        
                         <PopoverTrigger asChild>
                           <FormControl>
                             <Button
@@ -348,13 +388,13 @@ const SalesReportPage: React.FC = () => {
                                 !field.value && "text-muted-foreground"
                               )}
                             >
-                              {" "}
-                              <CalendarIcon className="me-2 h-4 w-4" />{" "}
+                              
+                              <CalendarIcon className="me-2 h-4 w-4" />
                               {field.value ? (
                                 format(field.value, "PPP")
                               ) : (
                                 <span>{t("common:pickDate")}</span>
-                              )}{" "}
+                              )}
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
@@ -365,9 +405,9 @@ const SalesReportPage: React.FC = () => {
                             onSelect={field.onChange}
                             initialFocus
                           />
-                        </PopoverContent>{" "}
-                      </Popover>{" "}
-                      <FormMessage />{" "}
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -377,37 +417,37 @@ const SalesReportPage: React.FC = () => {
                   name="clientId"
                   render={({ field }) => (
                     <FormItem>
-                      {" "}
-                      <FormLabel>{t("clients:client")}</FormLabel>{" "}
+                      
+                      <FormLabel>{t("clients:client")}</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value ?? ""}
                         disabled={loadingClients || form.formState.isSubmitting}
                       >
-                        {" "}
+                        
                         <FormControl>
                           <SelectTrigger>
-                            {" "}
+                            
                             <SelectValue
                               placeholder={
                                 t("reports:allClients") || "All Clients"
                               }
-                            />{" "}
+                            />
                           </SelectTrigger>
-                        </FormControl>{" "}
+                        </FormControl>
                         <SelectContent>
-                          {" "}
+                          
                           <SelectItem value="all">
                             {t("reports:allClients") || "All Clients"}
-                          </SelectItem>{" "}
+                          </SelectItem>
                           {clients.map((c) => (
                             <SelectItem key={c.id} value={String(c.id)}>
                               {c.name}
                             </SelectItem>
-                          ))}{" "}
-                        </SelectContent>{" "}
-                      </Select>{" "}
-                      <FormMessage />{" "}
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -417,29 +457,29 @@ const SalesReportPage: React.FC = () => {
                   name="status"
                   render={({ field }) => (
                     <FormItem>
-                      {" "}
-                      <FormLabel>{t("sales:status")}</FormLabel>{" "}
+                      
+                      <FormLabel>{t("sales:status")}</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value ?? ""}
                         disabled={form.formState.isSubmitting}
                       >
-                        {" "}
+                        
                         <FormControl>
                           <SelectTrigger>
-                            {" "}
+                            
                             <SelectValue
                               placeholder={
                                 t("reports:allStatuses") || "All Statuses"
                               }
-                            />{" "}
+                            />
                           </SelectTrigger>
-                        </FormControl>{" "}
+                        </FormControl>
                         <SelectContent>
-                          {" "}
+                          
                           <SelectItem value="All">
                             {t("reports:allStatuses") || "All Statuses"}
-                          </SelectItem>{" "}
+                          </SelectItem>
                           <SelectItem value="completed">
                             {t("sales:status_completed")}
                           </SelectItem>
@@ -451,10 +491,10 @@ const SalesReportPage: React.FC = () => {
                           </SelectItem>
                           <SelectItem value="cancelled">
                             {t("sales:status_cancelled")}
-                          </SelectItem>{" "}
-                        </SelectContent>{" "}
-                      </Select>{" "}
-                      <FormMessage />{" "}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -486,6 +526,17 @@ const SalesReportPage: React.FC = () => {
           </Form>
         </CardContent>
       </Card>
+      {/* Download PDF Button (could be near results or filter section) */}
+      {!isLoading &&
+        reportData &&
+        reportData.data.length > 0 && ( // Show only if there's data
+          <div className="mt-4 mb-6 flex justify-end">
+            <Button onClick={handleDownloadPdf} variant="outline">
+              <FileText className="me-2 h-4 w-4" /> {/* Example Icon */}
+              {t("reports:downloadPDF")} {/* Add key */}
+            </Button>
+          </div>
+        )}
 
       {/* Report Results Section */}
       {isLoading && (
@@ -510,20 +561,28 @@ const SalesReportPage: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t("sales:date")}</TableHead>
-                    <TableHead>{t("sales:invoice")}</TableHead>
-                    <TableHead>{t("clients:client")}</TableHead>
-                    <TableHead>{t("common:recordedBy")}</TableHead>
+                    <TableHead className="text-center">
+                      {t("sales:date")}
+                    </TableHead>
+                    <TableHead className="text-center">
+                      {t("sales:invoice")}
+                    </TableHead>
+                    <TableHead className="text-center">
+                      {t("clients:client")}
+                    </TableHead>
+                    <TableHead className="text-center">
+                      {t("common:recordedBy")}
+                    </TableHead>
                     <TableHead className="text-center">
                       {t("sales:status")}
                     </TableHead>
-                    <TableHead className="text-right">
+                    <TableHead className="text-center">
                       {t("sales:totalAmount")}
                     </TableHead>
-                    <TableHead className="text-right">
+                    <TableHead className="text-center">
                       {t("sales:paidAmount")}
                     </TableHead>
-                    <TableHead className="text-right">
+                    <TableHead className="text-center">
                       {t("sales:dueAmount")}
                     </TableHead>
                     <TableHead className="text-center">
@@ -544,14 +603,18 @@ const SalesReportPage: React.FC = () => {
                   )}
                   {reportData.data.map((sale) => (
                     <TableRow key={sale.id}>
-                      <TableCell>
+                      <TableCell className="text-center">
                         {dayjs(sale.sale_date).format("YYYY-MM-DD")}
                       </TableCell>
-                      <TableCell>{sale.invoice_number || "---"}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-center">
+                        {sale.invoice_number || "---"}
+                      </TableCell>
+                      <TableCell className="text-center">
                         {sale.client_name || t("common:n/a")}
                       </TableCell>
-                      <TableCell>{sale.user_name || t("common:n/a")}</TableCell>
+                      <TableCell className="text-center">
+                        {sale.user_name || t("common:n/a")}
+                      </TableCell>
                       <TableCell className="text-center">
                         <Chip
                           label={t(`sales:status_${sale.status}`)}
@@ -567,13 +630,13 @@ const SalesReportPage: React.FC = () => {
                           }
                         />
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-center">
                         {formatNumber(sale.total_amount)}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-center">
                         {formatNumber(sale.paid_amount)}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-center">
                         {formatNumber(sale.due_amount)}
                       </TableCell>
                       <TableCell className="text-center">
