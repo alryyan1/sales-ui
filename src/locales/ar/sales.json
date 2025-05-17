@@ -139,7 +139,8 @@
     "lastReceiptTitle": "الإيصال الأخير",
     "summaryForUser": "ملخص المبيعات للمستخدم",
     "paymentsByMethodToday": "المدفوعات حسب الطريقة اليوم",
-    "loadingClients": "جاري تحميل العملاء..."
+    "loadingClients": "جاري تحميل العملاء...",
+    "loadingSales": "جاري تحميل المبيعات..."
 
 
 

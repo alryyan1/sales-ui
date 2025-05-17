@@ -95,6 +95,8 @@ const RootLayout: React.FC = () => {
          { to: "/reports/inventory", labelKey: "inventoryReportTitle", permission: "view-reports"},
          { to: "/reports/profit-loss", labelKey: "profitLossReportTitle", permission: "view-reports"}, // Add if implemented
          { to: "/reports/inventory-log", labelKey: "inventoryLog", permission: "view-reports"},
+         { to: "/reports/near-expiry", labelKey: "nearExpiry", permission: "view-reports"},
+         { to: "/reports/monthly-revenue", labelKey: "monthlyRevenue", permission: "view-reports"},
     ];
 
     interface AdminItem {

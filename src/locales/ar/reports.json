@@ -37,7 +37,22 @@
     "allTypes": "كل الأنواع",
     "user": "المستخدم",
     "inventoryLog": "سجل المخزون",
-    "downloadPDF": "تنزيل PDF"
+    "downloadPDF": "تنزيل PDF",
+    "nearExpiry": "قريب من انتهاء الصلاحية",
+    "daysThreshold": "عدد الأيام",
+    "nearExpiryReportTitle": "تقرير قريب من انتهاء الصلاحية",
+    "daysToExpiry": "عدد الأيام حتى انتهاء الصلاحية",
+    "noNearExpiryItems": "لا توجد عناصر قريبة من انتهاء الصلاحية",
+    "monthlyRevenueReportTitle": "تقرير الإيرادات الشهرية",
+    "monthSummaryFor": "ملخص الشهر لـ",
+    "totalRevenueMonth": "إجمالي الإيرادات لهذا الشهر",
+    "totalPaymentsByMethodMonth": "إجمالي المدفوعات حسب الطريقة لهذا الشهر",
+    "noPaymentsForPeriod": "لا توجد مدفوعات لهذه الفترة",
+    "dailyBreakdown": "تفصيل يومي",
+    "dailyRevenue": "إيرادات يومية",
+    "dailyTotalPayments": "إجمالي المدفوعات اليومية",
+    "selectMonthYearPrompt": "يرجى اختيار الشهر والسنة",
+    "monthlyRevenue": "الإيرادات الشهرية"
     
   
 

@@ -53,6 +53,10 @@
   "errorFetchingData": "خطأ في جلب البيانات",
   "updateSale": "تحديث عملية البيع",
   "createSale": "إنشاء عملية بيع",
+  "loadingSale": "جاري تحميل عملية البيع...",
+  "days": "أيام",
+  "year": "سنة",
+  "month": "شهر",
   "themeToggle": {
     "label": "تبديل السمة",
     "light": "فاتح",

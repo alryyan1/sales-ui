@@ -212,7 +212,7 @@ const handlePrintLastReceipt = async () => {
             {/* --- Print Last Receipt Button --- */}
             <Button
                 variant="outline"
-                className="w-full flex justify-center items-center"
+                className="w-full flex justify-center items-center bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700"
                 onClick={handlePrintLastReceipt}
                 disabled={disabled || loadingLastReceipt}
             >
@@ -226,7 +226,12 @@ const handlePrintLastReceipt = async () => {
      {/* Button to Open Summary Dialog */}
             <Dialog open={isSummaryDialogOpen} onOpenChange={setIsSummaryDialogOpen}>
                 <DialogTrigger asChild>
-                    <Button variant="outline" className="w-full" onClick={handleOpenSummaryDialog} disabled={disabled}>
+                    <Button
+                        variant="outline"
+                        className="w-full bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        onClick={handleOpenSummaryDialog}
+                        disabled={disabled}
+                    >
                         <BarChart2 className="me-2 h-4 w-4 rtl:ms-2 rtl:me-0" />
                     </Button>
                 </DialogTrigger>

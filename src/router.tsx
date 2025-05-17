@@ -40,6 +40,8 @@ import ProcessRequisitionPage from "./components/admin/inventory/ProcessRequisit
 import InventoryLogPage from "./pages/reports/InventoryLogPage";
 import PurchaseDetailsPage from "./pages/purchases/PurchaseDetailsPage";
 import SalesTerminalPage from "./pages/sales/SalesTerminalPage";
+import NearExpiryReportPage from "./components/reports/NearExpiryReportPage";
+import MonthlyRevenueReportPage from "./components/reports/MonthlyRevenueReportPage";
 // ... other page imports
 
 // --- Admin Route Guard Component ---
@@ -133,6 +135,12 @@ const router = createBrowserRouter([
               { path: "purchases", element: <PurchaseReportPage /> },
               { path: "inventory", element: <InventoryReportPage /> },
               { path: "profit-loss", element: <ProfitLossReportPage /> },
+              {
+                path:"near-expiry", element:<NearExpiryReportPage/>
+              },
+              {
+                path:"monthly-revenue",element:<MonthlyRevenueReportPage/>
+              },
               {
                 path:'inventory-log', element: <InventoryLogPage />
               }
