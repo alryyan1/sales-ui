@@ -50,6 +50,15 @@
     "expiryDatePlaceholder": "تاريخ انتهاء الصلاحية (اختياري)",
     "intendedSalePrice": "سعر البيع المقصود",
     "editPurchaseTitle": "تعديل عملية الشراء",
-    "id": "المعرف"
-    
+    "id": "المعرف",
+    "totalSellableUnitsInRow": "إجمالي الوحدات القابلة للبيع في الصف",
+    "totalCostForItem": "التكلفة الإجمالية للعنصر",
+    "quantityStocking": "كمية التخزين",
+    "unitCostStocking": "تكلفة الوحدة للتخزين",
+    "totalSellableUnits": "إجمالي الوحدات القابلة للبيع",
+    "intendedSalePricePerSellable": "سعر البيع المقصود لكل وحدة قابلة للبيع",
+    "itemTotalCost": "إجمالي تكلفة العنصر",
+    "costPerUnit": "التكلفة لكل وحدة",
+    "intendedSalePricePerUnit": "سعر البيع المقصود لكل وحدة"
+
 }

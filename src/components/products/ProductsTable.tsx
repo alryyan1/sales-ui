@@ -48,8 +48,12 @@ const ProductsTable: React.FC<ProductsTableProps> = ({ products, onEdit, onDelet
                 <TableHeader >
                     <TableRow>
                         {/* Add product specific keys */}
+                        <TableCell>{t('products:id')}</TableCell>
                         <TableCell>{t('products:sku')}</TableCell>
                         <TableCell>{t('products:name')}</TableCell>
+                        <TableCell>{t('products:sellableUnitName')}</TableCell>
+                        <TableCell>{t('products:unitsPerStockingUnit')}</TableCell>
+                        <TableCell>{t('products:stockingUnitName')}</TableCell>
                         <TableCell align="center">{t('products:stockQuantity')}</TableCell>
                         {/* <TableCell>{t('products:unit')}</TableCell> */}
                         <TableCell align="center">{t('common:actions')}</TableCell>
@@ -60,8 +64,12 @@ const ProductsTable: React.FC<ProductsTableProps> = ({ products, onEdit, onDelet
                         const isLowStock = product.stock_alert_level !== null && product.stock_quantity <= product.stock_alert_level;
                         return (
                             <TableRow key={product.id} >
+                                <TableCell>{product.id}</TableCell>
                                 <TableCell>{product.sku || '---'}</TableCell>
                                 <TableCell  scope="row">{product.name}</TableCell>
+                                <TableCell>{product.sellable_unit_name || '---'}</TableCell>
+                                <TableCell>{product.units_per_stocking_unit || '---'}</TableCell>
+                                <TableCell>{product.stocking_unit_name || '---'}</TableCell>
                                 <TableCell align="center">
                                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         {product.stock_quantity}

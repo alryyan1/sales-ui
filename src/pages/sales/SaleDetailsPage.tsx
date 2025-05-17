@@ -509,12 +509,13 @@ const SaleDetailsPage: React.FC = () => {
       </div>
          {/* --- Thermal PDF Modal --- */}
             <Dialog open={isThermalModalOpen} onOpenChange={setIsThermalModalOpen}>
-                <DialogContent className="sm:max-w-[350px] md:max-w-[450px] p-0 aspect-[80/200] overflow-hidden dark:bg-gray-800"> {/* Adjust width/aspect ratio */}
+                <DialogContent className="sm:max-w-[350px] md:max-w-[450px] p-0 aspect-[80/100] overflow-hidden dark:bg-gray-800"> {/* Adjust width/aspect ratio */}
                     <DialogHeader className="p-4 border-b dark:border-gray-700">
                         <DialogTitle>{t('sales:thermalReceiptTitle')}</DialogTitle> {/* Add key */}
                          <DialogClose onClick={() => { if (thermalPdfUrl) URL.revokeObjectURL(thermalPdfUrl); }} /> {/* Revoke URL on close */}
-                    </DialogHeader>
-                    <div className="p-2 h-[calc(100%-60px)]"> {/* Adjust height based on header */}
+                    </DialogHeader> 
+                    <div className="p-2 h-[calc(100%-60px)] "> {/* Adjust height based on header */}
+                      <p>i</p>
                         {loadingThermalPdf && (
                             <div className="flex justify-center items-center h-full">
                                 <Loader2 className="h-8 w-8 animate-spin text-primary" />

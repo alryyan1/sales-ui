@@ -121,7 +121,26 @@
     "errorFetchingThermalReceipt": "خطأ في جلب الإيصال الحراري",
     "thermalReceiptTitle": "إيصال حراري",
     "errorLoadingPdfPreview": "خطأ في تحميل المعاينة",
-    "printThermalReceipt": "طباعة الإيصال الحراري"
+    "printThermalReceipt": "طباعة الإيصال الحراري",
+    "quantityPerSellable": "الكمية لكل منتج قابل للبيع",
+    "unitPricePerSellable": "سعر الوحدة لكل منتج قابل للبيع",
+    "selectSaleOrCreateNew": "اختر عملية بيع أو أنشئ واحدة جديدة",
+    "newSaleButton": "إنشاء عملية بيع جديدة",
+    "noSalesToday": "لا توجد مبيعات اليوم",
+    "editSaleTitle": "تعديل عملية البيع",
+    "newSaleTitle": "إنشاء عملية بيع جديدة",
+    "saleIdCap": "رقم عملية البيع",
+    "todaysSales": "مبيعات اليوم",
+    "todaysActivity": "نشاط اليوم",
+    "totalSalesToday": "إجمالي المبيعات اليوم",
+    "salesCountToday": "عدد المبيعات اليوم",
+    "errorFetchingSummary": "خطأ في جلب ملخص المبيعات",
+    "errorPrintingLastReceipt": "خطأ في طباعة الإيصال الأخير",
+    "lastReceiptTitle": "الإيصال الأخير",
+    "summaryForUser": "ملخص المبيعات للمستخدم",
+    "paymentsByMethodToday": "المدفوعات حسب الطريقة اليوم",
+    "loadingClients": "جاري تحميل العملاء..."
+
 
 
 }

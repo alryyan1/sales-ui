@@ -1,11 +1,10 @@
 // src/components/products/ProductFormModal.tsx
 import React, { useEffect, useState, useCallback } from "react";
-import { useForm, SubmitHandler, Controller } from "react-hook-form";
+import { useForm, SubmitHandler } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
 // shadcn/ui & Lucide Icons
 import { Button } from "@/components/ui/button";
@@ -46,40 +45,8 @@ import productService, {
 import categoryService, { Category } from "@/services/CategoryService";
 
 // --- Zod Schema for Validation (Prices Removed, Category Added) ---
-const productFormSchema = z.object({
-  name: z.string().min(1, { message: "validation:required" }),
-  sku: z.string().nullable().optional(),
-  description: z.string().nullable().optional(),
-  category_id: z.preprocess(
-    // Convert empty string or "0" to null for optional number
-    (val) => (val === "" || val === "0" || val === 0 ? null : val),
-    z
-      .number()
-      .positive({ message: "validation:selectCategory" })
-      .nullable()
-      .optional() // Category is optional
-  ),
-  stock_quantity: z
-    .preprocess(
-      (val) => (val === "" ? undefined : val),
-      z.coerce
-        .number({ invalid_type_error: "validation:invalidInteger" })
-        .int({ message: "validation:invalidInteger" })
-        .min(0, { message: "validation:minZero" })
-    )
-    .default(0), // Default to 0 if not provided or empty after preprocess
-  stock_alert_level: z.preprocess(
-    (val) => (val === "" ? undefined : val),
-    z.coerce
-      .number({ invalid_type_error: "validation:invalidInteger" })
-      .int({ message: "validation:invalidInteger" })
-      .min(0, { message: "validation:minZero" })
-      .nullable()
-      .optional()
-  ),
-});
+// --- Zod Schema for Product Form (Updated) ---
 
-type ProductFormValues = z.infer<typeof productFormSchema>;
 
 // --- Component Props ---
 interface ProductFormModalProps {
@@ -102,6 +69,34 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     "validation",
     "categories",
   ]);
+
+const productFormSchema = z.object({
+    name: z.string().min(1, { message: t("validation:required") }),
+    sku: z.string().nullable().optional(),
+    description: z.string().nullable().optional(),
+  category_id: z.preprocess(
+    // Convert empty string or "0" to null for optional number
+    (val) => (val === "" || val === "0" || val === 0 ? null : val),
+    z
+      .number()
+      .positive({ message: t("validation:selectCategory") })
+      .nullable()
+      .optional() // Category is optional
+  ),    // New Unit Fields
+    stocking_unit_name: z.string().min(1, {message: t("validation:required")}).optional().default("Unit"), // Default if you want one
+    sellable_unit_name: z.string().min(1, {message: t("validation:required")}).optional().default("Piece"), // Default
+    units_per_stocking_unit: z.preprocess(
+        (val) => (val === "" || Number(val) === 0 ? 1 : val), // Default to 1 if empty or 0
+        z.coerce.number().int().min(1, { message: t("validation:minOne") })
+    ).default(1),
+    // stock_quantity represents initial total SELLABLE units when creating
+    stock_quantity: z.coerce.number({invalid_type_error: t("validation:invalidInteger")}).int().min(0).default(0),
+    stock_alert_level: z.coerce.number().int().min(0).nullable().optional(),
+});
+type ProductFormValues = z.infer<typeof productFormSchema>;
+
+
+
   const isEditMode = Boolean(productToEdit);
 
   // State for categories dropdown and general API errors
@@ -116,15 +111,19 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       name: "",
       sku: "",
       description: "",
+      stocking_unit_name: "", // Default value
+      sellable_unit_name: "", // Default value
+      units_per_stocking_unit: 1, // Default to 1
       category_id: null, // Default to null (no category)
       stock_quantity: 0,
-      stock_alert_level: null, // Default to null or a number like 10
+      stock_alert_level: 10, // Default to null or a number like 10
     },
   });
   const {
     handleSubmit,
     control,
     reset,
+    watch,
     formState: { isSubmitting, errors },
     setError,
   } = form;
@@ -165,6 +164,9 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           name: productToEdit.name || "",
           sku: productToEdit.sku || "",
           description: productToEdit.description || "",
+          stocking_unit_name: productToEdit.stocking_unit_name || "Unit",
+          sellable_unit_name: productToEdit.sellable_unit_name || "Piece",
+          units_per_stocking_unit:productToEdit.units_per_stocking_unit || 1,
           category_id: productToEdit.category_id || null, // Use product's category_id
           stock_quantity: Number(productToEdit.stock_quantity) || 0,
           stock_alert_level:
@@ -179,6 +181,9 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           sku: "",
           description: "",
           category_id: null,
+          stocking_unit_name: "", // Default value
+          sellable_unit_name: "", // Default value
+          units_per_stocking_unit: 1, // Default to 1
           stock_quantity: 0,
           stock_alert_level: 10, // Example default alert level
         });
@@ -196,6 +201,10 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       ...data,
       sku: data.sku || null,
       description: data.description || null,
+      stocking_unit_name: data.stocking_unit_name,
+      sellable_unit_name: data.sellable_unit_name ,
+      units_per_stocking_unit: data.units_per_stocking_unit || 1,
+
       category_id: data.category_id ? Number(data.category_id) : null,
       stock_quantity: Number(data.stock_quantity), // Ensure number
       stock_alert_level:
@@ -218,7 +227,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
       toast.success(t("common:success"), {
         description: t(
-          isEditMode ? "products:updateSuccess" : "products:createSuccess"
+          isEditMode ? t("products:updateSuccess") : t("products:createSuccess")
         ), // Add keys
         duration: 3000,
       });
@@ -256,7 +265,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-2xl p-0">
-        {" "}
+        
         {/* Adjusted width for more fields */}
         <Form {...form}>
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -279,30 +288,31 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
               )}
 
               {/* Grid layout for fields */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {/* Name Field */}
                 <FormField
                   control={control}
                   name="name"
                   render={({ field, fieldState }) => (
-                    <FormItem className="sm:col-span-2">
-                      <FormLabel>
-                        {t("products:name")}{" "}
-                        <span className="text-red-500">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder={t("products:namePlaceholder")}
-                          {...field}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <FormMessage>
-                        {fieldState.error?.message
-                          ? t(fieldState.error.message)
-                          : null}
-                      </FormMessage>
-                    </FormItem>
+                  <FormItem className="sm:col-span-2">
+                    <FormLabel className="text-gray-900 dark:text-gray-100">
+                    {t("products:name")}
+                    <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <FormControl>
+                    <Input
+                      className="bg-white dark:bg-gray-900 dark:text-gray-100"
+                      placeholder={t("products:namePlaceholder")}
+                      {...field}
+                      disabled={isSubmitting}
+                    />
+                    </FormControl>
+                    <FormMessage>
+                    {fieldState.error?.message
+                      ? t(fieldState.error.message)
+                      : null}
+                    </FormMessage>
+                  </FormItem>
                   )}
                 />
 
@@ -311,22 +321,23 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   control={control}
                   name="sku"
                   render={({ field, fieldState }) => (
-                    <FormItem>
-                      <FormLabel>{t("products:sku")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder={t("products:skuPlaceholder")}
-                          {...field}
-                          value={field.value ?? ""}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <FormMessage>
-                        {fieldState.error?.message
-                          ? t(fieldState.error.message)
-                          : null}
-                      </FormMessage>
-                    </FormItem>
+                  <FormItem>
+                    <FormLabel className="text-gray-900 dark:text-gray-100">{t("products:sku")}</FormLabel>
+                    <FormControl>
+                    <Input
+                      className="bg-white dark:bg-gray-900 dark:text-gray-100"
+                      placeholder={t("products:skuPlaceholder")}
+                      {...field}
+                      value={field.value ?? ""}
+                      disabled={isSubmitting}
+                    />
+                    </FormControl>
+                    <FormMessage>
+                    {fieldState.error?.message
+                      ? t(fieldState.error.message)
+                      : null}
+                    </FormMessage>
+                  </FormItem>
                   )}
                 />
 
@@ -335,104 +346,209 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   control={control}
                   name="category_id"
                   render={({ field, fieldState }) => (
-                    <FormItem>
-                      <FormLabel>{t("products:category")}</FormLabel>{" "}
-                      {/* Add key */}
-                      <Select
-                        onValueChange={(value) =>
-                          field.onChange(value ? Number(value) : null)
-                        }
-                        value={field.value ? String(field.value) : ""} // Value needs to be string for Select
-                        disabled={isSubmitting || loadingCategories}
+                  <FormItem>
+                    <FormLabel className="text-gray-900 dark:text-gray-100">{t("products:category")}</FormLabel>
+                    <Select
+                    onValueChange={(value) =>
+                      field.onChange(value ? Number(value) : null)
+                    }
+                    value={field.value ? String(field.value) : ""}
+                    disabled={isSubmitting || loadingCategories}
+                    >
+                    <FormControl>
+                      <SelectTrigger
+                      className="bg-white dark:bg-gray-900 dark:text-gray-100"
+                      disabled={loadingCategories}
                       >
-                        <FormControl>
-                          <SelectTrigger disabled={loadingCategories}>
-                            <SelectValue
-                              placeholder={
-                                loadingCategories
-                                  ? t("common:loading") + "..."
-                                  : t("products:selectCategoryPlaceholder")
-                              }
-                            />{" "}
-                            {/* Add key */}
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value=" ">
-                            {t("products:noCategory")}
-                          </SelectItem>{" "}
-                          {/* Add key */}
-                          {categories.map((cat) => (
-                            <SelectItem key={cat.id} value={String(cat.id)}>
-                              {cat.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage>
-                        {fieldState.error?.message
-                          ? t(fieldState.error.message, {
-                              field: t("products:category"),
-                            } as any)
-                          : null}
-                      </FormMessage>
-                    </FormItem>
+                      <SelectValue
+                        placeholder={
+                        loadingCategories
+                          ? t("common:loading") + "..."
+                          : t("products:selectCategoryPlaceholder")
+                        }
+                      />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="bg-white dark:bg-gray-900 dark:text-gray-100">
+                      <SelectItem value=" ">
+                      {t("products:noCategory")}
+                      </SelectItem>
+                      {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={String(cat.id)}>
+                        {cat.name}
+                      </SelectItem>
+                      ))}
+                    </SelectContent>
+                    </Select>
+                    <FormMessage>
+                    {fieldState.error?.message
+                      ? t(fieldState.error.message, {
+                        field: t("products:category"),
+                      } as any)
+                      : null}
+                    </FormMessage>
+                  </FormItem>
+                  )}
+                />
+
+                {/* Stocking Unit Name */}
+                <FormField
+                  control={control}
+                  name="stocking_unit_name"
+                  render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-900 dark:text-gray-100">
+                    {t("products:stockingUnitName")}
+                    <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <FormControl>
+                    <Input
+                      className="bg-white dark:bg-gray-900 dark:text-gray-100"
+                      placeholder={t("products:stockingUnitPlaceholder") || "e.g., Box, Carton"}
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                  )}
+                />
+
+                {/* Sellable Unit Name */}
+                <FormField
+                  control={control}
+                  name="sellable_unit_name"
+                  render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-900 dark:text-gray-100">
+                    {t("products:sellableUnitName")}
+                    <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <FormControl>
+                    <Input
+                      className="bg-white dark:bg-gray-900 dark:text-gray-100"
+                      placeholder={t("products:sellableUnitPlaceholder") || "e.g., Piece, Item"}
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                  )}
+                />
+
+                {/* Units Per Stocking Unit */}
+                <FormField
+                  control={control}
+                  name="units_per_stocking_unit"
+                  render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-900 dark:text-gray-100">
+                    {t("products:unitsPerStockingUnit")}
+                    <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <FormControl>
+                    <Input
+                      className="bg-white dark:bg-gray-900 dark:text-gray-100"
+                      type="number"
+                      min="1"
+                      step="1"
+                      placeholder="1"
+                      {...field}
+                    />
+                    </FormControl>
+                    <FormDescription className="text-gray-600 dark:text-gray-400">
+                    {t("products:unitsPerStockingUnitDesc")}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                  )}
+                />
+
+                {/* Initial Stock Quantity (Sellable Units) */}
+                <FormField
+                  control={control}
+                  name="stock_quantity"
+                  render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-900 dark:text-gray-100">
+                    {t("products:initialStockQuantity")}
+                    <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <FormControl>
+                    <Input
+                      className="bg-white dark:bg-gray-900 dark:text-gray-100"
+                      type="number"
+                      min="0"
+                      step="1"
+                      {...field}
+                    />
+                    </FormControl>
+                    <FormDescription className="text-gray-600 dark:text-gray-400">
+                    {t("products:initialStockDesc", {
+                      unit: watch("sellable_unit_name") || t("products:sellableUnitDefault"),
+                    })}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
                   )}
                 />
 
                 {/* Stock Quantity Field */}
-                <FormField
+                {/* <FormField
                   control={control}
                   name="stock_quantity"
                   render={({ field, fieldState }) => (
-                    <FormItem>
-                      <FormLabel>
-                        {t("products:stockQuantity")}{" "}
-                        <span className="text-red-500">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="1"
-                          placeholder={t("products:stockPlaceholder")}
-                          {...field}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <FormMessage>
-                        {fieldState.error?.message
-                          ? t(fieldState.error.message)
-                          : null}
-                      </FormMessage>
-                    </FormItem>
+                  <FormItem>
+                    <FormLabel className="text-gray-900 dark:text-gray-100">
+                    {t("products:stockQuantity")}
+                    <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <FormControl>
+                    <Input
+                      className="bg-white dark:bg-gray-900 dark:text-gray-100"
+                      type="number"
+                      min="0"
+                      step="1"
+                      placeholder={t("products:stockPlaceholder")}
+                      {...field}
+                      disabled={isSubmitting}
+                    />
+                    </FormControl>
+                    <FormMessage>
+                    {fieldState.error?.message
+                      ? t(fieldState.error.message)
+                      : null}
+                    </FormMessage>
+                  </FormItem>
                   )}
-                />
+                /> */}
 
                 {/* Stock Alert Level Field */}
                 <FormField
                   control={control}
                   name="stock_alert_level"
                   render={({ field, fieldState }) => (
-                    <FormItem>
-                      <FormLabel>{t("products:stockAlertLevel")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="1"
-                          placeholder={t("products:stockAlertPlaceholder")}
-                          {...field}
-                          value={field.value ?? ""}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <FormMessage>
-                        {fieldState.error?.message
-                          ? t(fieldState.error.message)
-                          : null}
-                      </FormMessage>
-                    </FormItem>
+                  <FormItem>
+                    <FormLabel className="text-gray-900 dark:text-gray-100">{t("products:stockAlertLevel")}</FormLabel>
+                    <FormControl>
+                    <Input
+                      className="bg-white dark:bg-gray-900 dark:text-gray-100"
+                      type="number"
+                      min="0"
+                      step="1"
+                      placeholder={t("products:stockAlertPlaceholder")}
+                      {...field}
+                      value={field.value ?? ""}
+                      disabled={isSubmitting}
+                    />
+                    </FormControl>
+                    <FormMessage>
+                    {fieldState.error?.message
+                      ? t(fieldState.error.message)
+                      : null}
+                    </FormMessage>
+                  </FormItem>
                   )}
                 />
 
@@ -441,26 +557,26 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   control={control}
                   name="description"
                   render={({ field, fieldState }) => (
-                    <FormItem className="sm:col-span-2">
-                      <FormLabel>{t("products:description")}</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder={t("products:descriptionPlaceholder")}
-                          className="resize-y min-h-[100px]"
-                          {...field}
-                          value={field.value ?? ""}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <FormMessage>
-                        {fieldState.error?.message
-                          ? t(fieldState.error.message)
-                          : null}
-                      </FormMessage>
-                    </FormItem>
+                  <FormItem className="sm:col-span-2">
+                    <FormLabel className="text-gray-900 dark:text-gray-100">{t("products:description")}</FormLabel>
+                    <FormControl>
+                    <Textarea
+                      className="resize-y min-h-[100px] bg-white dark:bg-gray-900 dark:text-gray-100"
+                      placeholder={t("products:descriptionPlaceholder")}
+                      {...field}
+                      value={field.value ?? ""}
+                      disabled={isSubmitting}
+                    />
+                    </FormControl>
+                    <FormMessage>
+                    {fieldState.error?.message
+                      ? t(fieldState.error.message)
+                      : null}
+                    </FormMessage>
+                  </FormItem>
                   )}
                 />
-              </div>
+                </div>
             </div>
             <DialogFooter className="p-6 pt-4 border-t dark:border-gray-700">
               <DialogClose asChild>
@@ -469,11 +585,11 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 </Button>
               </DialogClose>
               <Button type="submit" disabled={isSubmitting}>
-                {" "}
-                {isSubmitting && (
+                
+                {isSubmitting && ( 
                   <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                )}{" "}
-                {isEditMode ? t("common:update") : t("common:create")}{" "}
+                )}
+                {isEditMode ? t("common:update") : t("common:create")}
               </Button>
             </DialogFooter>
           </form>

@@ -41,6 +41,23 @@
     "noProducts": "لا يوجد منتجات لعرضها.",
     "namePlaceholder": "اسم العنصر",
     "productsCount": "عدد المنتجات",
-    "selectProductPlaceholder": "اختر منتجًا..."
+    "selectProductPlaceholder": "اختر منتجًا...",
+    "stockingUnitPlaceholder": "وحدة التخزين",
+    "sellableUnitPlaceholder": "وحدة البيع",
+    "stockingUnitName": "اسم وحدة التخزين",
+    "unitsPerStockingUnit": "عدد الوحدات في وحدة التخزين",
+    "initialStockDesc": "الكمية الأولية في المخزون، مثال: 100",
+    "initialStockQuantity": "الكمية الأولية في المخزون",
+    "initialStockDescription": "الكمية الأولية في المخزون، مثال: 100",
+    "unitsPerStockingUnitDesc": "عدد الوحدات في وحدة التخزين، مثال: 10",
+    "sellableUnitName": "اسم وحدة البيع",
+    "updateSuccess": "تم تحديث بيانات المنتج بنجاح.",
+    "createSuccess": "تم إنشاء المنتج بنجاح.",
+    "suggestedSalePricePerSellableUnit": "سعر البيع المقترح لكل وحدة بيع",
+    "suggestedSalePricePerStockingUnit": "سعر البيع المقترح لكل وحدة تخزين",
+    "latestCostPerSellableUnit": "آخر تكلفة لكل وحدة بيع",
+    "totalStock": "إجمالي المخزون",
+    "sellableUnits": "وحدات البيع"
+
     
 }

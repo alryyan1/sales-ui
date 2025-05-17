@@ -1,102 +1,130 @@
 // src/services/saleService.ts
 import apiClient, { getValidationErrors, getErrorMessage, ApiErrorResponse } from '../lib/axios';
-import axios, { AxiosError } from 'axios';
+import { AxiosError } from 'axios';
+
 // Assuming PaginatedResponse is defined/exported from clientService or a shared types file
 import { PaginatedResponse } from './clientService'; // Or adjust import path
-import { Product } from './productService'; // For sale item details
-import { Client } from './clientService';   // For sale header details
-import { User } from './authService';     // For sale header details
 
-// --- Interfaces ---
+// Import related entity types
+import { Product } from './productService';
+import { Client } from './clientService';
+import { User } from './authService';
+import { PurchaseItem as BatchType } from './purchaseService'; // Batch is a PurchaseItem
 
-// Matches SaleItemResource structure from Laravel
-export interface SaleItem {
-    id: number;
-    sale_id: number; // Often included by backend resource
-    product_id: number;
-    product_name?: string; // Included if eager loaded
-    product_sku?: string;  // Included if eager loaded
-    quantity: number;
-    unit_price: string | number; // Allow string/number flexibility from API/form
-    total_price: string | number; // Allow string/number flexibility
-    // created_at?: string;
-    product?: Product; // Optional: Full product details if loaded
-}
+// --- Interfaces for Sales Module ---
 
-
-// Interface for a single Payment (matches PaymentResource)
 export interface Payment {
-    id: number;
-    sale_id: number;
-    user_id: number | null;
-    user_name?: string; // If eager loaded
-    method: 'cash' | 'visa' | 'mastercard' | 'bank_transfer' | 'mada' | 'other' | 'store_credit'; // Match your enum
-    amount: string | number; // Comes as string from API (decimal), number after parsing
+    id?: number; // Optional for new payments
+    sale_id?: number; // Backend usually sets this
+    user_id?: number | null;
+    user_name?: string;
+    method: 'cash' | 'visa' | 'mastercard' | 'bank_transfer' | 'mada' | 'other' | 'store_credit';
+    amount: string | number; // String from form, number for API
     payment_date: string; // YYYY-MM-DD
-    reference_number: string | null;
-    notes: string | null;
-    created_at: string;
+    reference_number?: string | null;
+    notes?: string | null;
+    created_at?: string;
 }
 
-// Update Sale interface to include payments
+export interface SaleItem {
+    id?: number; // Optional for new items
+    sale_id?: number;
+    product_id: number;
+    product_name?: string;
+    product_sku?: string;
+    product?: Product; // Full product for UI state
+
+    purchase_item_id?: number | null; // ID of the batch it was sold from
+    batch_number_sold?: string | null; // Copied from batch for display
+    purchaseItemBatch?: Pick<BatchType, 'id' | 'batch_number' | 'unit_cost' | 'expiry_date' | 'remaining_quantity'>; // For COGS and display
+
+    quantity: number;
+    unit_price: string | number;
+    total_price?: string | number; // Usually calculated by backend/resource
+    // available_stock from batch was a temporary UI field, not usually part of SaleItem model
+    created_at?: string;
+    updated_at?: string;
+}
+
 export interface Sale {
     id: number;
     client_id: number | null;
     client_name?: string;
-    user_id: number | null; // User who made the sale
+    client?: Client; // Full client object if loaded
+
+    user_id: number | null;
     user_name?: string;
-    sale_date: string;
+    user?: User; // Full user object if loaded
+
+    sale_date: string; // YYYY-MM-DD
     invoice_number: string | null;
     status: 'completed' | 'pending' | 'draft' | 'cancelled';
     total_amount: string | number;
-    paid_amount: string | number; // This is the sum of payments
-    due_amount?: number | string;
+    paid_amount: string | number; // Sum of payments
+    due_amount?: string | number;  // Calculated (total_amount - paid_amount)
+
     notes: string | null;
     created_at: string;
     updated_at?: string;
+
     items?: SaleItem[];
-    payments?: Payment[]; // <-- Array of payments
-    client?: Client;
-    user?: User; // User who made the sale
+    payments?: Payment[];
 }
 
-
-// Data structure for creating a new sale (matches backend validation requirements)
+// Data for creating a new sale
 export interface CreateSaleData {
-    client_id: number;
-    sale_date: string; // Format YYYY-MM-DD expected by backend
+    client_id: number | null; // Allow null if client is optional for POS
+    sale_date: string; // YYYY-MM-DD
     invoice_number?: string | null;
     status: 'completed' | 'pending' | 'draft' | 'cancelled';
-    paid_amount: number | string; // Backend validation handles numeric
     notes?: string | null;
     items: Array<{
-        // No 'id' for creating new items
         product_id: number;
-        quantity: number; // Backend validation expects integer
-        unit_price: number | string; // Backend validation handles numeric
-    }>;
-}
-
-// Data structure for updating an existing sale (includes item IDs)
-export interface UpdateSaleData {
-    // Include fields that can be updated in the header
-    client_id?: number;
-    sale_date?: string; // Format YYYY-MM-DD
-    invoice_number?: string | null;
-    status?: 'completed' | 'pending' | 'draft' | 'cancelled';
-    paid_amount?: number | string;
-    notes?: string | null;
-    // Items array includes existing item IDs for updates/deletions
-    items: Array<{
-        id?: number | null; // ID of existing item to update, null/missing for new item
-        product_id: number;
+        purchase_item_id?: number | null; // If specific batch is selected
         quantity: number;
         unit_price: number | string;
-        // _destroy?: boolean; // Alternative way to mark for deletion if backend supports it
+    }>;
+    payments?: Array<{ // Optional payments array on creation
+        method: string;
+        amount: number | string;
+        payment_date: string; // YYYY-MM-DD
+        reference_number?: string | null;
+        notes?: string | null;
     }>;
 }
 
-export interface ReturnableSaleItem extends SaleItem { // Extends SaleItem
+// Data for updating an existing sale (more complex if items/payments are mutable)
+export interface UpdateSaleData {
+    // Header fields
+    client_id?: number | null;
+    sale_date?: string;
+    invoice_number?: string | null;
+    status?: 'completed' | 'pending' | 'draft' | 'cancelled';
+    notes?: string | null;
+    // Item and payment updates are complex and often handled by separate endpoints
+    // or require careful backend logic to diff and manage stock/payments.
+    // For simplicity, this might only allow header updates, or send full items/payments for backend to diff.
+    items?: Array<{ // If sending items for update
+        id?: number | null; // For existing items
+        product_id: number;
+        purchase_item_id?: number | null;
+        quantity: number;
+        unit_price: number | string;
+        _destroy?: boolean; // Common pattern for marking items for deletion
+    }>;
+    payments?: Array<{ // If sending payments for update
+        id?: number | null; // For existing payments
+        method: string;
+        amount: number | string;
+        payment_date: string;
+        reference_number?: string | null;
+        notes?: string | null;
+        _destroy?: boolean;
+    }>;
+}
+
+// For items eligible for return
+export interface ReturnableSaleItem extends SaleItem {
     max_returnable_quantity: number;
 }
 
@@ -105,13 +133,6 @@ const saleService = {
 
     /**
      * Get paginated list of sales.
-     * @param page Page number.
-     * @param search Search term (e.g., invoice number, client name).
-     * @param status Filter by sale status.
-     * @param startDate Filter by start date (YYYY-MM-DD).
-     * @param endDate Filter by end date (YYYY-MM-DD).
-     * @param limit Items per page.
-     * @returns Promise resolving to paginated sales data.
      */
     getSales: async (
         page: number = 1,
@@ -120,7 +141,9 @@ const saleService = {
         startDate: string = '',
         endDate: string = '',
         limit: number = 15,
-        clientId: number | null = null,
+        clientId?: number | null, // Optional client filter
+        todayOnly?: boolean,      // For SalesTerminalPage
+        forCurrentUser?: number | null, // For SalesTerminalPage (user_id)
     ): Promise<PaginatedResponse<Sale>> => {
         try {
             const params = new URLSearchParams();
@@ -131,6 +154,9 @@ const saleService = {
             if (startDate) params.append('start_date', startDate);
             if (endDate) params.append('end_date', endDate);
             if (clientId) params.append('client_id', clientId.toString());
+            if (todayOnly) params.append('today_only', 'true');
+            if (forCurrentUser) params.append('user_id', forCurrentUser.toString());
+
 
             const response = await apiClient.get<PaginatedResponse<Sale>>(`/sales?${params.toString()}`);
             console.log('getSales response:', response.data);
@@ -142,13 +168,17 @@ const saleService = {
     },
 
     /**
-     * Get a single sale by ID (usually includes items).
+     * Get a single sale by ID.
+     * Backend should eager load: client, user, items.product, items.purchaseItemBatch, payments.user
      */
     getSale: async (id: number): Promise<Sale> => {
         try {
-            // Assuming API returns { sale: { ... } } and eager loads relations
-            const response = await apiClient.get<{ sale: Sale }>(`/sales/${id}`);
-            return response.data.sale; // Adjust if response structure differs
+            const response = await apiClient.get<{ sale: Sale } | Sale>(`/sales/${id}`);
+             // Check if 'sale' key exists (common pattern) or if data is the sale object directly
+            if ('sale' in response.data) {
+                return response.data.sale;
+            }
+            return response.data as Sale;
         } catch (error) {
             console.error(`Error fetching sale ${id}:`, error);
             throw error;
@@ -160,81 +190,99 @@ const saleService = {
      */
     createSale: async (saleData: CreateSaleData): Promise<Sale> => {
         try {
-            // Assuming API returns { sale: { ... } } after successful creation
-            const response = await apiClient.post<{ sale: Sale }>('/sales', saleData);
-            return response.data.sale; // Adjust if needed
+            const response = await apiClient.post<{ sale: Sale } | Sale>('/sales', saleData);
+            if ('sale' in response.data) {
+                return response.data.sale;
+            }
+            return response.data as Sale;
         } catch (error) {
             console.error('Error creating sale:', error);
-            // Check specifically for stock/validation errors if needed
             if (isAxiosError(error) && error.response?.status === 422) {
-                console.warn("Validation error during sale creation (check stock?):", error.response.data);
+                console.warn("Validation error (check stock?):", error.response.data);
             }
-            throw error; // Rethrow for component/form handling
+            throw error;
         }
     },
 
     /**
      * Update an existing sale.
-     * NOTE: Ensure the backend '/sales/{sale}' PUT/PATCH route is enabled and implemented.
+     * Backend logic for this can be very complex if item/payment changes affect stock/totals.
+     * A simplified version might only update header fields.
      */
     updateSale: async (id: number, saleData: UpdateSaleData): Promise<Sale> => {
         try {
-            // Assuming API returns { sale: { ... } } after successful update
-            const response = await apiClient.put<{ sale: Sale }>(`/sales/${id}`, saleData);
-            return response.data.sale; // Adjust if needed
+            const response = await apiClient.put<{ sale: Sale } | Sale>(`/sales/${id}`, saleData);
+            if ('sale' in response.data) {
+                return response.data.sale;
+            }
+            return response.data as Sale;
         } catch (error) {
             console.error(`Error updating sale ${id}:`, error);
-             if (axios.isAxiosError(error) && error.response?.status === 422) {
-                 console.warn(`Validation error during sale update (check stock?):`, error.response.data);
-             }
+            if (isAxiosError(error) && error.response?.status === 422) {
+                console.warn("Validation error during sale update (check stock?):", error.response.data);
+            }
+            throw error;
+        }
+    },
+
+    /**
+     * Add a payment to an existing sale.
+     */
+    addPaymentToSale: async (saleId: number, paymentData: Omit<Payment, 'id' | 'sale_id' | 'user_name' | 'created_at'>): Promise<Sale> => {
+        try {
+            // Assumes backend returns the updated Sale object with all its payments
+            const response = await apiClient.post<{ sale: Sale } | Sale>(`/sales/${saleId}/payments`, paymentData);
+            if ('sale' in response.data) {
+                return response.data.sale;
+            }
+            return response.data as Sale;
+        } catch (error) {
+            console.error(`Error adding payment to sale ${saleId}:`, error);
             throw error;
         }
     },
 
 
     /**
-     * Delete a sale (if allowed by backend).
+     * Delete a sale (generally not recommended for completed sales).
      */
     deleteSale: async (id: number): Promise<void> => {
         try {
-            // Note: Backend controller might return 403 Forbidden or handle stock reversal
             await apiClient.delete(`/sales/${id}`);
         } catch (error) {
             console.error(`Error deleting sale ${id}:`, error);
-            // Provide more specific feedback for forbidden deletions
             if (isAxiosError(error) && error.response?.status === 403) {
-                 console.warn("Deletion forbidden by server policy.");
-                 // Throw a new error with a translated message
                  throw new Error(getErrorMessage(error, 'Deleting sales records is not allowed.'));
             }
-            // Rethrow other errors
             throw error;
         }
     },
-  /**
+
+    /**
      * Get items from an original sale that are eligible for return.
      */
     getReturnableItems: async (originalSaleId: number): Promise<ReturnableSaleItem[]> => {
         try {
-            // Backend returns a flat array of SaleItem resources with an added 'max_returnable_quantity' field
-            const response = await apiClient.get<{ data: ReturnableSaleItem[] }>(`/sales/${originalSaleId}/returnable-items`);
-            return response.data.data ?? response.data; // Handle if 'data' wrapper is present or not
+            const response = await apiClient.get<{ data: ReturnableSaleItem[] } | ReturnableSaleItem[]>(`/sales/${originalSaleId}/returnable-items`);
+            if ('data' in response.data) { // Check if response has a 'data' wrapper
+                return response.data.data;
+            }
+            return response.data as ReturnableSaleItem[];
         } catch (error) {
             console.error(`Error fetching returnable items for sale ${originalSaleId}:`, error);
             throw error;
         }
     },
 
-    // --- Error Helpers (Imported from axios.ts) ---
+    // --- Error Helpers ---
     getValidationErrors,
     getErrorMessage,
 };
 
-// Re-usable Axios error check function (define or import)
+// Re-usable Axios error check function
 function isAxiosError(error: unknown): error is AxiosError<ApiErrorResponse> {
   return (error as AxiosError).isAxiosError === true;
 }
-
 
 export default saleService;
 
@@ -242,6 +290,8 @@ export default saleService;
 export type {
     SaleItem as SaleItemType,
     Sale as SaleType,
+    Payment as PaymentType,
     CreateSaleData as CreateSaleDataType,
-    UpdateSaleData as UpdateSaleDataType
+    UpdateSaleData as UpdateSaleDataType,
+    ReturnableSaleItem as ReturnableSaleItemType
 };

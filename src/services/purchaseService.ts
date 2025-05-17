@@ -2,9 +2,7 @@
 import apiClient, {
   getValidationErrors,
   getErrorMessage,
-  ApiErrorResponse,
 } from "../lib/axios";
-import axios, { AxiosError } from "axios";
 // Assuming PaginatedResponse is defined/exported from clientService or a shared types file
 import { PaginatedResponse } from "./clientService";
 import { Product } from "./productService"; // For purchase item details
@@ -14,20 +12,21 @@ import { Supplier } from "./supplierService"; // For purchase header details
 
 // Matches PurchaseItemResource structure
 
+
 export interface PurchaseItem {
-  // This is what GET /purchases/{id} item might look like
-  id: number;
-  product_id: number;
-  product_name?: string;
-  product_sku?: string;
-  batch_number: string | null; // New
-  quantity: number;
-  unit_cost: string | number; // This is the COST PRICE
-  total_cost: string | number;
-  sale_price: string | number | null; // Intended SALE PRICE for this batch
-  expiry_date: string | null; // Format YYYY-MM-DD
-  remaining_quantity?: number; // From backend if available
-  product?: Product;
+    id: number;
+    product_id: number;
+    product_name?: string;
+    product_sku?: string;
+    batch_number: string | null;
+    quantity: number; // Original quantity in STOCKING units
+    remaining_quantity: number; // Quantity remaining in SELLABLE units
+    unit_cost: string | number; // Cost per STOCKING unit
+    cost_per_sellable_unit: string | number; // New: Cost per SELLABLE unit (calculated by backend)
+    total_cost: string | number; // Original total cost (quantity_stocking * unit_cost_stocking)
+    sale_price: string | number | null; // Intended sale price per SELLABLE unit for this batch
+    expiry_date: string | null; // Format YYYY-MM-DD
+    product?: Product; // Optional full product details
 }
 
 // Data structure for updating an existing purchase
@@ -220,5 +219,5 @@ export type {
 };
 
 // Re-exporting AxiosError might be useful if components need it
-import { AxiosError as GlobalAxiosError } from "axios";
+import axios, { AxiosError as GlobalAxiosError } from "axios";
 export type { GlobalAxiosError };

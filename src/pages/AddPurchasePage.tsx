@@ -12,7 +12,6 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
-import { cn } from "@/lib/utils";
 
 // Import Child Components
 import { PurchaseHeaderFormSection } from "../components/purchases/PurchaseHeaderFormSection";
@@ -23,11 +22,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, Save, ArrowLeft, AlertCircle } from "lucide-react";
+import { Loader2, ArrowLeft, AlertCircle } from "lucide-react";
 
 // Services and Types
 import purchaseService, {
-  Purchase,
   CreatePurchaseData,
   UpdatePurchaseData,
 } from "../services/purchaseService";
@@ -42,7 +40,9 @@ const purchaseItemSchema = z.object({
   product_id: z
     .number({ required_error: "validation:required" })
     .positive({ message: "validation:selectProduct" }),
+    
   product: z.custom<Product>().optional(), // For UI state only
+  // cost_per_sellable_unit:z.number({required_error:"validation:required"}).positive({message:"validation:required"}),
   batch_number: z
     .string()
     .max(100, { message: "validation:maxLengthHundred" })
@@ -60,6 +60,8 @@ const purchaseItemSchema = z.object({
         .min(0, { message: "validation:minZero" })
     )
     .default(0),
+    total_sellable_units_display: z.number().optional(),
+    cost_per_sellable_unit_display: z.number().optional(),
   sale_price: z.preprocess(
     (val) => (val === "" ? undefined : val),
     z.coerce
@@ -92,7 +94,7 @@ const purchaseFormSchema = z.object({
     .min(1, { message: "purchases:errorItemsRequired" }),
 });
 
-type PurchaseFormValues = z.infer<typeof purchaseFormSchema>;
+export type PurchaseFormValues = z.infer<typeof purchaseFormSchema>;
 
 // --- Component ---
 const PurchaseFormPage: React.FC = () => {
@@ -145,6 +147,7 @@ const PurchaseFormPage: React.FC = () => {
           sale_price: null,
           expiry_date: null,
           product: undefined,
+          
         },
       ],
     },
@@ -156,8 +159,9 @@ const PurchaseFormPage: React.FC = () => {
     watch,
     setError,
     control,
+    formState: { errors },
   } = formMethods;
-
+  console.log(errors,'errors')
   const watchedItems = useWatch({ control, name: "items" });
   const grandTotal =
     watchedItems?.reduce(
@@ -459,7 +463,8 @@ const PurchaseFormPage: React.FC = () => {
                 isSubmitting={isSubmitting}
               />
               <Separator className="my-6" />
-
+          
+   
               {/* Totals Display */}
               <div className="flex justify-end mb-6">
                 <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">

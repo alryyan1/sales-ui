@@ -79,6 +79,7 @@ const RootLayout: React.FC = () => {
         { to: "/purchases", labelKey: "purchases", icon: ShoppingCart, permission: "view-purchases" },
         { to: "/inventory/adjustments", labelKey: "adjustments", icon: ShoppingCart, permission: "adjust-stock" },
         { to: "/sales", labelKey: "sales", icon: CircleDollarSign, permission: "view-sales" },
+        { to: "/sales/pos", labelKey: "pos", icon: CircleDollarSign, permission: "view-sales" },
         { to: "/sales/returns", labelKey: "salesReturns", icon: CircleDollarSign, permission: "view-returns" },
     ];
 
@@ -169,7 +170,7 @@ const RootLayout: React.FC = () => {
 
 
                     {/* App Title/Logo */}
-                    <RouterLink to="/" className="font-bold text-lg me-6 flex-shrink-0">
+                    <RouterLink to="/" className="font-bold text-lg me-6 flex-shrink-0 dark:text-white">
                          {t('common:appName')}
                     </RouterLink>
 

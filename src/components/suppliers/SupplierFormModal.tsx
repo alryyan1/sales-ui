@@ -190,7 +190,7 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-xl p-0">
-        {" "}
+        
         {/* Standard modal width */}
         <Form {...form}>
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -225,10 +225,10 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
               name="name"
               render={({ field }) => (
                 <FormItem className="sm:col-span-2">
-                  {" "}
+                  
                   {/* Span full width */}
-                  <FormLabel>
-                {t("suppliers:name")}{" "}
+                  <FormLabel className="dark:text-white">
+                {t("suppliers:name")}
                 <span className="text-red-500">*</span>
                   </FormLabel>
                   <FormControl>
@@ -250,7 +250,7 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
               name="contact_person"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("suppliers:contactPerson")}</FormLabel>
+                  <FormLabel className="dark:text-white">{t("suppliers:contactPerson")}</FormLabel>
                   <FormControl>
                 <Input
                   placeholder={t("suppliers:contactPersonPlaceholder")}
@@ -271,7 +271,7 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("suppliers:email")}</FormLabel>
+                  <FormLabel className="dark:text-white">{t("suppliers:email")}</FormLabel>
                   <FormControl>
                 <Input
                   type="email"
@@ -293,7 +293,7 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
               name="phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("suppliers:phone")}</FormLabel>
+                  <FormLabel className="dark:text-white">{t("suppliers:phone")}</FormLabel>
                   <FormControl>
                 <Input
                   type="tel"
@@ -315,9 +315,9 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
               name="address"
               render={({ field }) => (
                 <FormItem className="sm:col-span-2">
-                  {" "}
+                  
                   {/* Span full width */}
-                  <FormLabel>{t("suppliers:address")}</FormLabel>
+                  <FormLabel className="dark:text-white">{t("suppliers:address")}</FormLabel>
                   <FormControl>
                 <Textarea
                   placeholder={t("suppliers:addressPlaceholder")}
@@ -332,9 +332,9 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
               )}
             />
             {/* Add website/notes fields here similarly if needed */}
-              </div>{" "}
+              </div>
               {/* End Grid */}
-            </div>{" "}
+            </div>
             {/* End Scrollable Content */}
             {/* Dialog Footer */}
             <DialogFooter className="p-6 pt-4 border-t dark:border-gray-700">

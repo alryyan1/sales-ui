@@ -39,6 +39,7 @@ import ManageStockRequisitionsListPage from "./pages/inventory/ManageStockRequis
 import ProcessRequisitionPage from "./components/admin/inventory/ProcessRequisitionPage";
 import InventoryLogPage from "./pages/reports/InventoryLogPage";
 import PurchaseDetailsPage from "./pages/purchases/PurchaseDetailsPage";
+import SalesTerminalPage from "./pages/sales/SalesTerminalPage";
 // ... other page imports
 
 // --- Admin Route Guard Component ---
@@ -104,6 +105,7 @@ const router = createBrowserRouter([
             children: [
               { index: true, element: <SalesListPage /> },
               { path: "add", element: <SaleFormPage /> },
+              { path: "pos", element: <SalesTerminalPage /> },
               { path: ":id/edit", element: <SaleFormPage /> }, // Edit Sale
               // --- Routes for Sale Returns ---
               // Option A: Generic add return page, ID passed via state

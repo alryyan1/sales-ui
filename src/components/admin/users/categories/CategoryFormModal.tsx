@@ -146,121 +146,125 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-lg p-0">
         <Form {...form}>
-          <form onSubmit={handleSubmit(onSubmit)} noValidate>
-            <DialogHeader className="p-6 pb-4 border-b">
-              <DialogTitle>
-                {isEditMode
-                  ? t("categories:editCategory")
-                  : t("categories:addCategory")}
+            <form onSubmit={handleSubmit(onSubmit)} noValidate>
+            <DialogHeader className="p-6 pb-4 border-b dark:border-zinc-700">
+              <DialogTitle className="dark:text-white">
+              {isEditMode
+                ? t("categories:editCategory")
+                : t("categories:addCategory")}
               </DialogTitle>
             </DialogHeader>
             <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-              <div className="alert alert-error">
+              {serverError && (
+              <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 dark:border-red-400 dark:bg-red-950 dark:text-red-200">
                 <AlertCircle className="me-2 h-5 w-5" />
                 <span>{serverError}</span>
               </div>
+              )}
               <FormField
-                control={control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    {" "}
-                    <FormLabel>
-                      {t("categories:nameLabel")}{" "}
-                      <span className="text-red-500">*</span>
-                    </FormLabel>{" "}
-                    <FormControl>
-                      <Input {...field} disabled={isSubmitting} />
-                    </FormControl>{" "}
-                    <FormMessage />{" "}
-                  </FormItem>
-                )}
+              control={control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                <FormLabel className="dark:text-white">
+                  {t("categories:nameLabel")}
+                  <span className="text-red-500">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                  {...field}
+                  disabled={isSubmitting}
+                  className="dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-700"
+                  />
+                </FormControl>
+                <FormMessage className="dark:text-red-300" />
+                </FormItem>
+              )}
               />
               <FormField
-                control={control}
-                name="parent_id"
-                render={({ field }) => (
-                  <FormItem>
-                    {" "}
-                    <FormLabel>
-                      {t("categories:parentCategoryLabel")}
-                    </FormLabel>{" "}
-                    {/* Add key */}
-                    <Select
-                      onValueChange={(value) =>
-                        field.onChange(value ? Number(value) : null)
-                      }
-                      value={field.value ? String(field.value) : ""}
-                      disabled={isSubmitting || loadingCategories}
+              control={control}
+              name="parent_id"
+              render={({ field }) => (
+                <FormItem>
+                <FormLabel className="dark:text-white">
+                  {t("categories:parentCategoryLabel")}
+                </FormLabel>
+                <Select
+                  onValueChange={(value) =>
+                  field.onChange(value ? Number(value) : null)
+                  }
+                  value={field.value ? String(field.value) : ""}
+                  disabled={isSubmitting || loadingCategories}
+                >
+                  <FormControl>
+                  <SelectTrigger className="dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-700">
+                    <SelectValue
+                    placeholder={t(
+                      "categories:selectParentPlaceholder"
+                    )}
+                    className="dark:text-zinc-400"
+                    />
+                  </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="dark:bg-zinc-900 dark:text-zinc-100">
+                  <SelectItem value=" " className="dark:text-zinc-100">
+                    {t("categories:noParent")}
+                  </SelectItem>
+                  {allCategories
+                    .filter(
+                    (cat) =>
+                      !categoryToEdit || cat.id !== categoryToEdit.id
+                    )
+                    .map((cat) => (
+                    <SelectItem
+                      key={cat.id}
+                      value={String(cat.id)}
+                      className="dark:bg-zinc-900 dark:text-zinc-100"
                     >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue
-                            placeholder={t(
-                              "categories:selectParentPlaceholder"
-                            )}
-                          />
-                        </SelectTrigger>
-                      </FormControl>{" "}
-                      {/* Add key */}
-                      <SelectContent>
-                        <SelectItem value=" ">
-                          {t("categories:noParent")}
-                        </SelectItem>{" "}
-                        {/* Add key */}
-                        {allCategories
-                          .filter(
-                            (cat) =>
-                              !categoryToEdit || cat.id !== categoryToEdit.id
-                          ) // Prevent self-parenting
-                          .map((cat) => (
-                            <SelectItem key={cat.id} value={String(cat.id)}>
-                              {cat.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>{" "}
-                    <FormMessage />
-                  </FormItem>
-                )}
+                      {cat.name}
+                    </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage className="dark:text-red-300" />
+                </FormItem>
+              )}
               />
               <FormField
-                control={control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    {" "}
-                    <FormLabel>
-                      {t("categories:descriptionLabel")}
-                    </FormLabel>{" "}
-                    <FormControl>
-                      <Textarea
-                        className="resize-y min-h-[80px]"
-                        {...field}
-                        value={field.value ?? ""}
-                        disabled={isSubmitting}
-                      />
-                    </FormControl>{" "}
-                    <FormMessage />{" "}
-                  </FormItem>
-                )}
+              control={control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                <FormLabel className="dark:text-white">
+                  {t("categories:descriptionLabel")}
+                </FormLabel>
+                <FormControl>
+                  <Textarea
+                  className="resize-y min-h-[80px] dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-700"
+                  {...field}
+                  value={field.value ?? ""}
+                  disabled={isSubmitting}
+                  />
+                </FormControl>
+                <FormMessage className="dark:text-red-300" />
+                </FormItem>
+              )}
               />
             </div>
-            <DialogFooter className="p-6 pt-4 border-t">
+            <DialogFooter className="p-6 pt-4 border-t dark:border-zinc-700">
               <DialogClose asChild>
-                <Button type="button" variant="ghost" disabled={isSubmitting}>
-                  {t("common:cancel")}
-                </Button>
+              <Button type="button" variant="ghost" disabled={isSubmitting} className="dark:text-zinc-200">
+                {t("common:cancel")}
+              </Button>
               </DialogClose>
-              <Button type="submit" disabled={isSubmitting}>
-                {" "}
-                {isSubmitting && (
-                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                )}{" "}
-                {isEditMode ? t("common:update") : t("common:create")}{" "}
+              <Button type="submit" disabled={isSubmitting} className="dark:text-white">
+              {isSubmitting && (
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
+              )}
+              {isEditMode ? t("common:update") : t("common:create")}
               </Button>
             </DialogFooter>
-          </form>
+            </form>
         </Form>
       </DialogContent>
     </Dialog>

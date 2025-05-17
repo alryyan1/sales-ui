@@ -30,7 +30,7 @@ const NotFoundPage: React.FC = () => {
       </Typography>
       <Typography variant="body1" sx={{ mb: 4, color: 'text.secondary' }}>
         {/* نص من الترجمة */}
-        يبدو أنك заблудились (ضللت الطريق). الصفحة التي تبحث عنها غير متاحة.
+        يبدو أنك  (ضللت الطريق). الصفحة التي تبحث عنها غير متاحة.
       </Typography>
       <Button
         variant="contained"

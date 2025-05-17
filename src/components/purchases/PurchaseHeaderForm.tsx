@@ -1,6 +1,6 @@
 // src/components/purchases/PurchaseHeaderForm.tsx
 import React, { useState } from "react";
-import { useFormContext, Controller } from "react-hook-form";
+import { useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -84,7 +84,7 @@ export const PurchaseHeaderForm: React.FC<PurchaseHeaderFormProps> = ({
         render={({ field }) => (
           <FormItem className="flex flex-col md:col-span-2">
             <FormLabel>
-              {t("purchases:selectSupplier")}{" "}
+              {t("purchases:selectSupplier")}
               <span className="text-red-500">*</span>
             </FormLabel>
             <Popover
@@ -124,7 +124,7 @@ export const PurchaseHeaderForm: React.FC<PurchaseHeaderFormProps> = ({
                   <CommandList>
                     {loadingSuppliers && (
                       <div className="p-2 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />{" "}
+                        <Loader2 className="h-4 w-4 animate-spin" />
                         {t("common:loading")}...
                       </div>
                     )}
@@ -153,7 +153,7 @@ export const PurchaseHeaderForm: React.FC<PurchaseHeaderFormProps> = ({
                               onSupplierSearchInputChange("");
                             }}
                           >
-                            {" "}
+                            
                             <Check
                               className={cn(
                                 "me-2 h-4 w-4",
@@ -161,10 +161,10 @@ export const PurchaseHeaderForm: React.FC<PurchaseHeaderFormProps> = ({
                                   ? "opacity-100"
                                   : "opacity-0"
                               )}
-                            />{" "}
-                            {supplier.name}{" "}
+                            />
+                            {supplier.name}
                           </CommandItem>
-                        ))}{" "}
+                        ))}
                       </CommandGroup>
                     )}
                   </CommandList>
@@ -181,13 +181,13 @@ export const PurchaseHeaderForm: React.FC<PurchaseHeaderFormProps> = ({
         name="purchase_date"
         render={({ field }) => (
           <FormItem className="flex flex-col">
-            {" "}
+            
             <FormLabel>
-              {t("purchases:purchaseDate")}{" "}
+              {t("purchases:purchaseDate")}
               <span className="text-red-500">*</span>
-            </FormLabel>{" "}
+            </FormLabel>
             <Popover>
-              {" "}
+              
               <PopoverTrigger asChild>
                 <FormControl>
                   <Button
@@ -198,13 +198,13 @@ export const PurchaseHeaderForm: React.FC<PurchaseHeaderFormProps> = ({
                       !field.value && "text-muted-foreground"
                     )}
                   >
-                    {" "}
-                    <CalendarIcon className="me-2 h-4 w-4" />{" "}
+                    
+                    <CalendarIcon className="me-2 h-4 w-4" />
                     {field.value ? (
                       format(field.value, "PPP")
                     ) : (
                       <span>{t("common:pickDate")}</span>
-                    )}{" "}
+                    )}
                   </Button>
                 </FormControl>
               </PopoverTrigger>
@@ -220,9 +220,9 @@ export const PurchaseHeaderForm: React.FC<PurchaseHeaderFormProps> = ({
                   }
                   initialFocus
                 />
-              </PopoverContent>{" "}
-            </Popover>{" "}
-            <FormMessage />{" "}
+              </PopoverContent>
+            </Popover>
+            <FormMessage />
           </FormItem>
         )}
       />
@@ -232,11 +232,11 @@ export const PurchaseHeaderForm: React.FC<PurchaseHeaderFormProps> = ({
         name="status"
         render={({ field }) => (
           <FormItem>
-            {" "}
+            
             <FormLabel>
-              {t("purchases:statusLabel")}{" "}
+              {t("purchases:statusLabel")}
               <span className="text-red-500">*</span>
-            </FormLabel>{" "}
+            </FormLabel>
             <Select
               onValueChange={field.onChange}
               defaultValue={field.value}
@@ -244,10 +244,10 @@ export const PurchaseHeaderForm: React.FC<PurchaseHeaderFormProps> = ({
             >
               <FormControl>
                 <SelectTrigger>
-                  {" "}
+                  
                   <SelectValue
                     placeholder={t("purchases:selectStatusPlaceholder")}
-                  />{" "}
+                  />
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
@@ -261,8 +261,8 @@ export const PurchaseHeaderForm: React.FC<PurchaseHeaderFormProps> = ({
                   {t("purchases:status_received")}
                 </SelectItem>
               </SelectContent>
-            </Select>{" "}
-            <FormMessage />{" "}
+            </Select>
+            <FormMessage />
           </FormItem>
         )}
       />

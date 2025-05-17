@@ -5,12 +5,8 @@ import { useTranslation } from 'react-i18next';
 // MUI Components (Import necessary components)
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import Button from '@mui/material/Button';
-import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import Pagination from '@mui/material/Pagination'; // MUI Pagination
-import AddIcon from '@mui/icons-material/Add';
-import Snackbar from '@mui/material/Snackbar'; // MUI Snackbar
 
 // Services and Types
 import clientService, { Client, PaginatedResponse } from '../services/clientService'; // Adjust path if needed
@@ -21,7 +17,7 @@ import ClientFormModal from '../components/clients/ClientFormModal'; // The hybr
 import ConfirmationDialog from '../components/common/ConfirmationDialog'; // The reusable dialog
 import { useAuthorization } from '@/hooks/useAuthorization';
 import { PlusIcon } from 'lucide-react';
-import { ca, is } from 'date-fns/locale';
+import { CircularProgress } from '@mui/material';
 
 const ClientsPage: React.FC = () => {
     // Translations - Load namespaces needed
@@ -46,10 +42,7 @@ const ClientsPage: React.FC = () => {
     const [clientToDeleteId, setClientToDeleteId] = useState<number | null>(null); // ID of client to delete
     const [isDeleting, setIsDeleting] = useState(false); // Loading state for delete operation
 
-    // Notification State
-    const [snackbarOpen, setSnackbarOpen] = useState(false);
-    const [snackbarMessage, setSnackbarMessage] = useState('');
-    const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
+   
 
     // --- Data Fetching ---
     const fetchClients = useCallback(async (page: number) => {
@@ -70,19 +63,8 @@ const ClientsPage: React.FC = () => {
         fetchClients(currentPage);
     }, [fetchClients, currentPage]);
 
-    // --- Notification Handlers ---
-    const showSnackbar = (message: string, type: 'success' | 'error') => {
-        setSnackbarMessage(message);
-        setSnackbarSeverity(type);
-        setSnackbarOpen(true);
-    };
 
-    const handleSnackbarClose = (event?: React.SyntheticEvent | Event, reason?: string) => {
-        if (reason === 'clickaway') {
-            return;
-        }
-        setSnackbarOpen(false);
-    };
+
 
     // --- Modal Handlers ---
     const openModal = (client: Client | null = null) => {
@@ -96,9 +78,7 @@ const ClientsPage: React.FC = () => {
     };
 
     const handleSaveSuccess = () => {
-        const messageKey = editingClient ? 'clients:saveSuccess' : 'clients:saveSuccess'; // Differentiate later if needed
         closeModal();
-        showSnackbar(t(messageKey), 'success');
         const pageToFetch = editingClient ? currentPage : 1;
         fetchClients(pageToFetch);
         if (!editingClient) setCurrentPage(1);
@@ -123,7 +103,6 @@ const ClientsPage: React.FC = () => {
 
         try {
             await clientService.deleteClient(clientToDeleteId);
-            showSnackbar(t('clients:deleteSuccess'), 'success');
             closeConfirmDialog(); // Close confirmation dialog on success
 
             // Smart refetch/pagination adjustment
@@ -132,8 +111,7 @@ const ClientsPage: React.FC = () => {
             } else {
                 fetchClients(currentPage);
             }
-        } catch (err) {
-            showSnackbar(clientService.getErrorMessage(err), 'error');
+        } catch (e) {
             // Keep dialog open on error? Or close? Closing for now.
             closeConfirmDialog();
         } finally {
@@ -240,19 +218,7 @@ const ClientsPage: React.FC = () => {
                 isLoading={isDeleting}
             />
 
-            {/* --- MUI Snackbar for Notifications --- */}
-            <Snackbar
-                open={snackbarOpen}
-                autoHideDuration={5000} // 5 seconds
-                onClose={handleSnackbarClose}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} // Position
-            >
-                {/* Wrap Alert in Snackbar for styling and close functionality */}
-                {/* Added key={snackbarMessage} to force re-render Alert when message changes */}
-                <Alert key={snackbarMessage} onClose={handleSnackbarClose} severity={snackbarSeverity} variant="filled" sx={{ width: '100%' }}>
-                    {snackbarMessage}
-                </Alert>
-            </Snackbar>
+         
 
         </Box> // End main page container
     );

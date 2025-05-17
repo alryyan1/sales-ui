@@ -40,6 +40,9 @@
     "date": "تاريخ",
     "selectDate": "اختر تاريخ",
     "recordedDate": "تاريخ التسجيل",
+    "unitDefault": "الوحدة الافتراضية",
+    "pieceDefault": "قطعة افتراضية",
+
   "remove": "حذف",
   "notes": "ملاحظات",
   "status": "الحالة",
@@ -47,10 +50,14 @@
   "filter": "تصفية",
   "user": "المستخدم",
   "notesOrReason": "الملاحظات/السبب",
+  "errorFetchingData": "خطأ في جلب البيانات",
+  "updateSale": "تحديث عملية البيع",
+  "createSale": "إنشاء عملية بيع",
   "themeToggle": {
     "label": "تبديل السمة",
     "light": "فاتح",
     "dark": "داكن",
     "system": "النظام"
-  }
+  },
+  "loadingSales": "جاري تحميل المبيعات..."
   }

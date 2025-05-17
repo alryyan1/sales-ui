@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   useForm,
-  useFieldArray,
   useWatch,
   FormProvider,
   SubmitHandler,
@@ -31,6 +30,7 @@ import saleService, {
   Sale,
   CreateSaleData,
   SaleItem,
+  UpdateSaleData,
 } from "../../services/saleService";
 import clientService, { Client } from "../../services/clientService";
 import productService, { Product } from "../../services/productService";
@@ -463,7 +463,7 @@ const onSubmit: SubmitHandler<SaleFormValues> = async (data) => {
               const paymentMatch = key.match(/^payments\.(\d+)\.(.+)$/);
               if (paymentMatch) {
                   const [, index, fieldName] = paymentMatch;
-                  setError(`payments.${index}.${fieldName as keyof PaymentItemFormValues}`, { type: 'server', message: messages[0] });
+                  setError(`payments.${index}.${fieldName as keyof PaymentItemFormValue}`, { type: 'server', message: messages[0] });
               }
           });
            // If there were field-specific errors, also set a general hint
@@ -563,6 +563,7 @@ const onSubmit: SubmitHandler<SaleFormValues> = async (data) => {
                 products={products}
                 loadingProducts={loadingProducts}
                 productSearchInput={productSearchInput}
+                
                 onProductSearchInputChange={setProductSearchInput}
                 isSubmitting={isSubmitting}
                 // No need to pass control, errors etc. thanks to FormProvider

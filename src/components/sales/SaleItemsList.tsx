@@ -70,8 +70,8 @@ export const SaleItemsList: React.FC<SaleItemsListProps> = ({
                     loadingAllProducts={loadingProducts}
                     remove={remove}
                     allProducts={products}
-                    productSearchInput={productSearchInput}
-                    onProductSearchInputChange={onProductSearchInputChange}
+                    productSearchInputForRow={productSearchInput}   
+                    onProductSearchInputChangeForRow={onProductSearchInputChange}
                     isSubmitting={isSubmitting}
                     itemCount={fields.length}
                 />

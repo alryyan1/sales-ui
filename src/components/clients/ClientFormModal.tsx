@@ -20,7 +20,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -35,25 +34,9 @@ import { Loader2, AlertCircle } from "lucide-react";
 // Services and Types
 import clientService, {
   Client,
-  ClientFormData,
 } from "../../services/clientService"; // Adjust path
 
-// --- Zod Schema for Validation ---
-const clientFormSchema = z.object({
-  name: z.string().min(1, { message: "validation:required" }),
-  // Email: optional, but if present, must be valid email format
-  email: z
-    .string()
-    .email({ message: "validation:email" })
-    .nullable()
-    .or(z.literal("")) // Allow empty string from input, treat as null/undefined later
-    .optional(),
-  phone: z.string().nullable().optional(), // Optional string
-  address: z.string().nullable().optional(), // Optional string
-});
 
-// Infer TypeScript type from the Zod schema
-type ClientFormValues = z.infer<typeof clientFormSchema>;
 
 // --- Component Props ---
 interface ClientFormModalProps {
@@ -72,7 +55,22 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
 }) => {
   const { t } = useTranslation(["clients", "common", "validation"]);
   const isEditMode = Boolean(clientToEdit);
+// --- Zod Schema for Validation ---
+const clientFormSchema = z.object({
+  name: z.string().min(1, { message: t("validation:required") }),
+  // Email: optional, but if present, must be valid email format
+  email: z
+    .string()
+    .email({ message:t( "validation:email") })
+    .nullable()
+    .or(z.literal("")) // Allow empty string from input, treat as null/undefined later
+    .optional(),
+  phone: z.string().nullable().optional(), // Optional string
+  address: z.string().nullable().optional(), // Optional string
+});
 
+// Infer TypeScript type from the Zod schema
+type ClientFormValues = z.infer<typeof clientFormSchema>;
   // State for general API errors
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -194,144 +192,136 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
     // shadcn Dialog component
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-xl p-0">
-        {" "}
+        
         {/* Adjusted max-width, remove default padding */}
         <Form {...form}>
           {/* Standard form tag for RHF */}
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
             {/* Dialog Header */}
-            <DialogHeader className="p-6 pb-4 border-b dark:border-gray-700">
+            <DialogHeader className="p-6 pb-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
               <DialogTitle className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                {isEditMode ? t("clients:editClient") : t("clients:addClient")}
+          {isEditMode ? t("clients:editClient") : t("clients:addClient")}
               </DialogTitle>
-              {/* Removed description, title is usually enough */}
             </DialogHeader>
             {/* Scrollable Content Area */}
-            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto bg-white dark:bg-gray-900">
               {/* General Server Error Alert (Using styled div as Alert might not be added) */}
               {serverError && !isSubmitting && (
-                <div
-                  className="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 rounded mb-4 dark:bg-red-900 dark:text-red-200 dark:border-red-600"
-                  role="alert"
-                >
-                  <div className="flex items-center">
-                    <AlertCircle className="h-4 w-4 me-2" />
-                    <p>{serverError}</p>
-                  </div>
-                </div>
-                // Or if you added Alert component:
-                // <Alert variant="destructive" className="mb-4">
-                //     <AlertCircle className="h-4 w-4" />
-                //     <AlertTitle>{t('common:error')}</AlertTitle>
-                //     <AlertDescription>{serverError}</AlertDescription>
-                // </Alert>
+          <div
+            className="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 rounded mb-4 dark:bg-red-900 dark:text-red-200 dark:border-red-600"
+            role="alert"
+          >
+            <div className="flex items-center">
+              <AlertCircle className="h-4 w-4 me-2" />
+              <p>{serverError}</p>
+            </div>
+          </div>
               )}
               {/* Grid layout for fields using Tailwind */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {/* Name Field */}
-                <FormField
-                  control={control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem className="sm:col-span-2">
-                      {" "}
-                      {/* Span full width */}
-                      <FormLabel>
-                        {t("clients:name")}{" "}
-                        <span className="text-red-500">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder={t("clients:namePlaceholder")}
-                          {...field}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <FormMessage /> {/* Displays Zod/RHF validation error */}
-                    </FormItem>
-                  )}
-                />
+          {/* Name Field */}
+          <FormField
+            control={control}
+            name="name"
+            render={({ field }) => (
+              <FormItem className="sm:col-span-2">
+                <FormLabel className="text-gray-900 dark:text-gray-100">
+            {t("clients:name")}
+            <span className="text-red-500">*</span>
+                </FormLabel>
+                <FormControl>
+            <Input
+              placeholder={t("clients:namePlaceholder")}
+              {...field}
+              disabled={isSubmitting}
+              className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-700 placeholder-gray-400 dark:placeholder-gray-500"
+            />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-                {/* Email Field */}
-                <FormField
-                  control={control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("clients:email")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="email"
-                          placeholder={t("clients:emailPlaceholder")}
-                          {...field}
-                          value={field.value ?? ""}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+          {/* Email Field */}
+          <FormField
+            control={control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-gray-900 dark:text-gray-100">{t("clients:email")}</FormLabel>
+                <FormControl>
+            <Input
+              type="email"
+              placeholder={t("clients:emailPlaceholder")}
+              {...field}
+              value={field.value ?? ""}
+              disabled={isSubmitting}
+              className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-700 placeholder-gray-400 dark:placeholder-gray-500"
+            />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-                {/* Phone Field */}
-                <FormField
-                  control={control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("clients:phone")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="tel"
-                          placeholder={t("clients:phonePlaceholder")}
-                          {...field}
-                          value={field.value ?? ""}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+          {/* Phone Field */}
+          <FormField
+            control={control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-gray-900 dark:text-gray-100">{t("clients:phone")}</FormLabel>
+                <FormControl>
+            <Input
+              type="tel"
+              placeholder={t("clients:phonePlaceholder")}
+              {...field}
+              value={field.value ?? ""}
+              disabled={isSubmitting}
+              className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-700 placeholder-gray-400 dark:placeholder-gray-500"
+            />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-                {/* Address Field */}
-                <FormField
-                  control={control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem className="sm:col-span-2">
-                      {" "}
-                      {/* Span full width */}
-                      <FormLabel>{t("clients:address")}</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder={t("clients:addressPlaceholder")}
-                          className="resize-y min-h-[80px]"
-                          {...field}
-                          value={field.value ?? ""}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>{" "}
+          {/* Address Field */}
+          <FormField
+            control={control}
+            name="address"
+            render={({ field }) => (
+              <FormItem className="sm:col-span-2">
+                <FormLabel className="text-gray-900 dark:text-gray-100">{t("clients:address")}</FormLabel>
+                <FormControl>
+            <Textarea
+              placeholder={t("clients:addressPlaceholder")}
+              className="resize-y min-h-[80px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-700 placeholder-gray-400 dark:placeholder-gray-500"
+              {...field}
+              value={field.value ?? ""}
+              disabled={isSubmitting}
+            />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+              </div>
               {/* End Grid */}
-            </div>{" "}
+            </div>
             {/* End Scrollable Content */}
             {/* Dialog Footer with Actions */}
-            <DialogFooter className="p-6 pt-4 border-t dark:border-gray-700">
+            <DialogFooter className="p-6 pt-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
               <DialogClose asChild>
-                <Button type="button" variant="ghost" disabled={isSubmitting}>
-                  {t("common:cancel")}
-                </Button>
+          <Button type="button" variant="ghost" disabled={isSubmitting}>
+            {t("common:cancel")}
+          </Button>
               </DialogClose>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && (
-                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                )}
-                {t("common:save")}
+          {isSubmitting && (
+            <Loader2 className="me-2 h-4 w-4 animate-spin" />
+          )}
+          {t("common:save")}
               </Button>
             </DialogFooter>
           </form>

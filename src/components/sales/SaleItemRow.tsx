@@ -1,8 +1,9 @@
-// src/components/sales/SaleItemRow.tsx (or inline in SaleFormPage)
-import React, { useState, useEffect, } from "react";
-import { useFormContext, } from "react-hook-form";
+// src/components/sales/SaleItemRow.tsx
+import React, { useState, useEffect, useCallback } from "react";
+import { useFormContext, Controller, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns"; // For formatting dates
 import { toast } from "sonner";
 
 // shadcn/ui & Lucide Icons
@@ -29,44 +30,51 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-
 import {
   Loader2,
   Check,
   ChevronsUpDown,
   Trash2,
+  PackageSearch,
 } from "lucide-react";
 
 // Types
 import { Product } from "../../services/productService";
-import { PurchaseItem } from "../../services/purchaseService"; // Assuming PurchaseItem type is exported
-import { formatNumber } from "@/constants";
+import { PurchaseItem as BatchType } from "../../services/purchaseService"; // Batch is essentially a PurchaseItem record
+import { formatNumber, formatCurrency, formatDate } from "@/constants"; // Your formatter
 import apiClient from "@/lib/axios"; // For direct API call for batches
-import dayjs from "dayjs";
-import { all } from "axios";
 
 interface SaleItemRowProps {
   index: number;
-  remove: (index: number) => void;
-  // Product search props (passed from parent SaleFormPage)
-  allProducts: Product[]; // Full list of products for initial selection (or searched list)
-  loadingAllProducts: boolean;
-  productSearchInput: string;
-  onProductSearchInputChange: (value: string) => void;
-  isSubmitting: boolean;
-  itemCount: number;
+  remove: (index: number) => void; // Function from useFieldArray to remove this item
+  // Product search props (passed from parent SaleFormPage -> SaleItemsList)
+  allProducts: Product[]; // List of products to search from (parent manages this list)
+  loadingAllProducts: boolean; // Loading state for the parent's product search
+  productSearchInputForRow: string; // Search input specific to *this row's* product combobox trigger (if needed)
+  onProductSearchInputChangeForRow: (value: string) => void; // Handler to update parent's search term
+  isSubmitting: boolean; // Form submission state from parent
+  itemCount: number; // Total number of items, to disable remove on last item
 }
 
-// Zod schema for one item in the Sale form
-
+// This type should match the 'item' structure within SaleFormPage's Zod schema for 'items' array
+type SaleItemFormValues = {
+  id?: number | null;
+  product_id: number | null; // Allow null for unselected
+  product?: Product; // Full selected product object for display & unit info
+  purchase_item_id?: number | null; // Selected Batch ID
+  batch_number_display?: string | null; // For displaying selected batch info in trigger
+  quantity: number | string; // RHF might handle as string initially
+  unit_price: number | string; // RHF might handle as string initially
+  available_stock?: number; // Remaining quantity of the SELECTED BATCH (in sellable units)
+};
 
 export const SaleItemRow: React.FC<SaleItemRowProps> = ({
   index,
   remove,
   allProducts,
   loadingAllProducts,
-  productSearchInput,
-  onProductSearchInputChange,
+  productSearchInputForRow, // Use this if each row has independent search
+  onProductSearchInputChangeForRow,
   isSubmitting,
   itemCount,
 }) => {
@@ -84,44 +92,34 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
     getFieldState,
     formState: { errors },
     clearErrors,
-  } = useFormContext();
-  console.log(allProducts,"allProducts");
-  // State for this row's product and batch selection
+  } = useFormContext<any>(); // Use 'any' or the full form type
+
+  // Local state for this row's popovers and fetched batches
   const [productPopoverOpen, setProductPopoverOpen] = useState(false);
   const [batchPopoverOpen, setBatchPopoverOpen] = useState(false);
-  const [availableBatches, setAvailableBatches] = useState<PurchaseItem[]>([]);
+  const [availableBatches, setAvailableBatches] = useState<BatchType[]>([]);
   const [loadingBatches, setLoadingBatches] = useState(false);
 
-  // Watch fields for this item row
+  // Watch fields specific to this item row
   const currentProductId = watch(`items.${index}.product_id`);
-  const selectedBatchId = watch(`items.${index}.purchase_item_id`);
-  console.log(selectedBatchId,"selectedBatchId");
+  const selectedProductForDisplay = watch(`items.${index}.product`) as
+    | Product
+    | undefined;
   const quantity = watch(`items.${index}.quantity`);
-  const unitPrice = watch(`items.${index}.unit_price`); // Price might be set by batch or editable
+  const unitPrice = watch(`items.${index}.unit_price`);
   const itemTotal = (Number(quantity) || 0) * (Number(unitPrice) || 0);
-  const stockForSelectedBatch = watch(`items.${index}.available_stock`); // Stock of the selected batch
-  // Fetch available batches when a product_id is selected or changes
+  const stockForSelectedBatch = watch(`items.${index}.available_stock`);
+
+  // Fetch available batches when currentProductId changes
   useEffect(() => {
     const fetchBatches = async (productId: number) => {
-      if (!productId) {
-        setAvailableBatches([]);
-        setValue(`items.${index}.purchase_item_id`, null); // Clear selected batch
-        setValue(`items.${index}.unit_price`, 0); // Clear price
-        setValue(`items.${index}.available_stock`, undefined);
-        setValue(`items.${index}.batch_number_display`, null);
-        return;
-      }
       setLoadingBatches(true);
+      setAvailableBatches([]); // Clear previous batches
       try {
-        // Adjust API endpoint as needed
-        const response = await apiClient.get<{ data: PurchaseItem[] }>(
+        const response = await apiClient.get<{ data: BatchType[] }>(
           `/products/${productId}/available-batches`
         );
-        setAvailableBatches(response.data.data ?? response.data); // Handle both {data:[]} and []
-        console.log(
-          `Batches for product ${productId}:`,
-          response.data.data ?? response.data
-        );
+        setAvailableBatches(response.data.data ?? response.data);
       } catch (error) {
         toast.error(t("common:error"), {
           description: t("sales:errorFetchingBatches"),
@@ -135,56 +133,89 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
     if (currentProductId && currentProductId !== 0) {
       fetchBatches(currentProductId);
     } else {
-      setAvailableBatches([]); // Clear batches if no product selected
+      setAvailableBatches([]); // Clear if no product or product ID is 0/null
     }
-  }, [currentProductId, index, setValue, t]);
+    // When product changes, reset batch selection and related fields
+    setValue(`items.${index}.purchase_item_id`, null);
+    setValue(`items.${index}.batch_number_display`, null);
+    setValue(
+      `items.${index}.available_stock`,
+      selectedProductForDisplay?.stock_quantity
+    ); // Default to total product stock initially
+  }, [
+    currentProductId,
+    index,
+    setValue,
+    t,
+    selectedProductForDisplay?.stock_quantity,
+  ]);
 
   const handleProductSelect = (product: Product) => {
     setValue(`items.${index}.product_id`, product.id, { shouldValidate: true });
-    setValue(`items.${index}.product`, product); // Store full product for display
-    setValue(`items.${index}.purchase_item_id`, null); // Reset batch selection
+    setValue(`items.${index}.product`, product); // Store full product object
+    // Unit price logic depends on your business rule:
+    // 1. From Product's suggested_sale_price (if available)
+    // 2. Calculated from Product's latest_purchase_cost + markup
+    // 3. Or wait for batch selection to set it from batch.sale_price
+    const suggestedPrice = product.suggested_sale_price
+      ? Number(product.suggested_sale_price)
+      : product.latest_purchase_cost && product.units_per_stocking_unit
+      ? (Number(product.latest_purchase_cost) /
+          product.units_per_stocking_unit) *
+        1.25
+      : 0; // Example fallback
     setValue(
       `items.${index}.unit_price`,
-      Number(product.suggested_sale_price) || 0
-    ); // Suggest price
-    setValue(`items.${index}.available_stock`, undefined); // Will be set by batch
-    setValue(`items.${index}.batch_number_display`, null);
-    clearErrors(`items.${index}.product_id`); // Clear previous validation error
+      Number(suggestedPrice.toFixed(2)) || 0
+    );
+    clearErrors(`items.${index}.product_id`);
     setProductPopoverOpen(false);
-    // onProductSearchInputChange(''); // Optionally clear parent search
+    // onProductSearchInputChangeForRow(''); // Let parent decide if search should be cleared globally or per row
   };
 
-  const handleBatchSelect = (batch: PurchaseItem | null) => {
+  const handleBatchSelect = (batch: BatchType | null) => {
     if (batch) {
       setValue(`items.${index}.purchase_item_id`, batch.id, {
         shouldValidate: true,
       });
+      // Prioritize batch's specific sale price, then product's suggested, then fallback
+      const batchSalePrice = batch.sale_price ? Number(batch.sale_price) : null;
+      const productSuggestedPrice =
+        selectedProductForDisplay?.suggested_sale_price
+          ? Number(selectedProductForDisplay.suggested_sale_price)
+          : null;
       setValue(
         `items.${index}.unit_price`,
-        Number(batch.sale_price) ||
-          Number(watch(`items.${index}.product`)?.suggested_sale_price) ||
-          0,
+        batchSalePrice ?? productSuggestedPrice ?? 0,
         { shouldValidate: true }
       );
       setValue(`items.${index}.available_stock`, batch.remaining_quantity);
       setValue(
         `items.${index}.batch_number_display`,
         `${batch.batch_number || t("common:n/a")} (Exp: ${
-          batch.expiry_date
-            ? dayjs(batch.expiry_date).format("YYYY-MM-DD")
-            : t("common:n/a")
+          batch.expiry_date ? formatDate(batch.expiry_date) : t("common:n/a")
         })`
       );
-      clearErrors(`items.${index}.purchase_item_id`); // Clear previous validation error
+      clearErrors(`items.${index}.purchase_item_id`);
     } else {
+      // User selected "-- Sell from Total Stock --" or cleared selection
       setValue(`items.${index}.purchase_item_id`, null);
-      setValue(`items.${index}.available_stock`, undefined);
+      setValue(
+        `items.${index}.available_stock`,
+        selectedProductForDisplay?.stock_quantity
+      ); // Revert to total product stock
       setValue(`items.${index}.batch_number_display`, null);
+      const suggestedPrice = selectedProductForDisplay?.suggested_sale_price
+        ? Number(selectedProductForDisplay.suggested_sale_price)
+        : 0;
+      setValue(`items.${index}.unit_price`, suggestedPrice, {
+        shouldValidate: true,
+      });
     }
     setBatchPopoverOpen(false);
   };
 
-  const itemRHFerrors = errors.items?.[index] ;
+  const itemRHFerrors = errors.items?.[index] as any; // For accessing nested field errors
 
   return (
     <Card className="p-4 dark:bg-gray-800 border dark:border-gray-700 relative shadow-sm">
@@ -214,7 +245,7 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
                 open={productPopoverOpen}
                 onOpenChange={(open) => {
                   setProductPopoverOpen(open);
-                  if (!open) onProductSearchInputChange("");
+                  if (!open) onProductSearchInputChangeForRow("");
                 }}
               >
                 <PopoverTrigger asChild>
@@ -228,7 +259,7 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
                         !field.value && "text-muted-foreground"
                       )}
                     >
-                      {watch(`items.${index}.product`)?.name ??
+                      {selectedProductForDisplay?.name ??
                         (field.value && field.value !== 0
                           ? `ID: ${field.value}`
                           : t("sales:selectProductPlaceholder"))}
@@ -240,9 +271,9 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
                   <Command shouldFilter={false}>
                     <CommandInput
                       placeholder={t("products:searchPlaceholder")}
-                      value={productSearchInput}
-                      onValueChange={onProductSearchInputChange}
-                    //   disabled={loadingAllProducts}
+                      value={productSearchInputForRow}
+                      onValueChange={onProductSearchInputChangeForRow}
+                      disabled={loadingAllProducts || isSubmitting}
                     />
                     <CommandList>
                       {loadingAllProducts && (
@@ -253,12 +284,12 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
                       )}
                       {!loadingAllProducts &&
                         allProducts.length === 0 &&
-                        productSearchInput && (
+                        productSearchInputForRow && (
                           <CommandEmpty>{t("common:noResults")}</CommandEmpty>
                         )}
                       {!loadingAllProducts &&
                         allProducts.length === 0 &&
-                        !productSearchInput && (
+                        !productSearchInputForRow && (
                           <CommandEmpty>
                             {t("products:typeToSearch")}
                           </CommandEmpty>
@@ -270,6 +301,15 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
                               key={product.id}
                               value={`${product.name} ${product.sku}`}
                               onSelect={() => handleProductSelect(product)}
+                              disabled={
+                                product.stock_quantity <= 0 &&
+                                !(product.id === field.value)
+                              }
+                              className={cn(
+                                product.stock_quantity <= 0 &&
+                                  !(product.id === field.value) &&
+                                  "opacity-50 cursor-not-allowed"
+                              )}
                             >
                               {" "}
                               <Check
@@ -283,6 +323,17 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
                               {product.name}{" "}
                               <span className="text-xs text-muted-foreground ml-2">
                                 ({product.sku || "No SKU"})
+                              </span>{" "}
+                              <span
+                                className={`ml-auto text-xs ${
+                                  product.stock_quantity <= 0
+                                    ? "text-red-500"
+                                    : "text-green-600"
+                                }`}
+                              >
+                                {t("inventory:currentStock")}:{" "}
+                                {formatNumber(product.stock_quantity)}{" "}
+                                {product.sellable_unit_name || ""}
                               </span>{" "}
                             </CommandItem>
                           ))}{" "}
@@ -305,10 +356,7 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
           name={`items.${index}.purchase_item_id`}
           render={({ field, fieldState }) => (
             <FormItem className="md:col-span-3 flex flex-col">
-              <FormLabel>
-                {t("sales:selectBatch")} <span className="text-red-500">*</span>
-              </FormLabel>{" "}
-              {/* Add key */}
+              <FormLabel>{t("sales:selectBatch")}*</FormLabel>
               <Popover
                 open={batchPopoverOpen}
                 onOpenChange={setBatchPopoverOpen}
@@ -322,7 +370,7 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
                         isSubmitting ||
                         loadingBatches ||
                         !currentProductId ||
-                        availableBatches.length === 0
+                        (availableBatches.length === 0 && !loadingBatches)
                       }
                       className={cn(
                         "w-full justify-between text-start",
@@ -337,29 +385,35 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
                       ) : (
                         watch(`items.${index}.batch_number_display`) ||
                         (field.value
-                          ? `Batch ID: ${field.value}`
+                          ? `${t("purchases:batchId")}: ${field.value}`
                           : t("sales:selectBatchPlaceholder"))
-                      )}{" "}
-                      {/* Add key */}
+                      )}
                       <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </FormControl>
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height] p-0">
                   <Command>
-                    {/* No search input for batches in this example, shows all available */}
                     <CommandList>
                       {loadingBatches && (
                         <CommandEmpty>{t("common:loading")}...</CommandEmpty>
                       )}
-                      {!loadingBatches && availableBatches.length === 0 && (
+                      {!loadingBatches &&
+                        availableBatches.length === 0 &&
+                        currentProductId && (
+                          <CommandEmpty>
+                            {t("sales:noBatchesAvailable")}
+                          </CommandEmpty>
+                        )}
+                      {!loadingBatches && !currentProductId && (
                         <CommandEmpty>
-                          {t("sales:noBatchesAvailable")}
+                          {t("sales:selectProductFirst")}
                         </CommandEmpty>
-                      )}{" "}
-                      {/* Add key */}
-                      {!loadingBatches && (
+                      )}
+                      {!loadingBatches && availableBatches.length > 0 && (
                         <CommandGroup>
+                          {/* Option to sell from general stock if backend supports it as fallback */}
+                          {/* <CommandItem key="total-stock-for-sale" onSelect={() => handleBatchSelect(null)}> {t('sales:sellFromTotalStock')} </CommandItem> */}
                           {availableBatches.map((batch) => (
                             <CommandItem
                               key={batch.id}
@@ -374,12 +428,22 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
                                     : "opacity-0"
                                 )}
                               />
-                              {batch.batch_number || t("common:n/a")} (Exp:{" "}
-                              {batch.expiry_date
-                                ? dayjs(batch.expiry_date).format("YYYY-MM-DD")
-                                : t("common:n/a")}
-                              , Avail: {batch.remaining_quantity}, Price:{" "}
-                              {formatNumber(batch.sale_price)})
+                              <div className="flex flex-col text-xs leading-tight">
+                                <span>
+                                  {batch.batch_number || `ID: ${batch.id}`} (Av:{" "}
+                                  {formatNumber(batch.remaining_quantity)})
+                                </span>
+                                <span className="text-muted-foreground">
+                                  Exp:{" "}
+                                  {batch.expiry_date
+                                    ? formatDate(batch.expiry_date)
+                                    : "N/A"}{" "}
+                                  | Price:{" "}
+                                  {batch.sale_price
+                                    ? formatCurrency(batch.sale_price)
+                                    : "N/A"}
+                                </span>
+                              </div>
                             </CommandItem>
                           ))}
                         </CommandGroup>
@@ -399,12 +463,14 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
           )}
         />
 
-        {/* Quantity */}
+        {/* Quantity (in Sellable Units) */}
         <FormField
           control={control}
           name={`items.${index}.quantity`}
-          render={({ field, fieldState }) => (
+          render={({ field: qtyField, fieldState: qtyFieldState }) => (
             <FormItem className="md:col-span-1">
+              {" "}
+              {/* Adjusted span for more space */}
               <FormLabel>{t("sales:quantity")}*</FormLabel>
               <FormControl>
                 <Input
@@ -412,38 +478,44 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
                   min="1"
                   step="1"
                   placeholder="1"
-                  {...field}
-                  disabled={isSubmitting || !selectedBatchId}
+                  {...qtyField}
+                  disabled={isSubmitting }
                   className={cn(
-                    (Number(field.value) >
+                    (Number(qtyField.value) >
                       (stockForSelectedBatch ?? Infinity) ||
-                      (itemRHFerrors?.quantity && !fieldState.error)) &&
+                      (itemRHFerrors?.quantity && !qtyFieldState.error)) &&
                       "border-red-500 focus-visible:ring-red-500"
                   )}
                 />
               </FormControl>
               <FormMessage>
-                {fieldState.error?.message ? t(fieldState.error.message) : null}
+                {qtyFieldState.error?.message
+                  ? t(qtyFieldState.error.message)
+                  : null}
               </FormMessage>
-              {itemRHFerrors?.quantity && !fieldState.error && (
+              {/* Server-side stock error */}
+              {itemRHFerrors?.quantity && !qtyFieldState.error && (
                 <p className="text-xs text-red-500 mt-1">
                   {itemRHFerrors.quantity.message
                     ? t(itemRHFerrors.quantity.message)
                     : t("sales:insufficientStock")}
                 </p>
               )}
-              {Number(field.value) > (stockForSelectedBatch ?? Infinity) &&
-                !fieldState.error &&
+              {/* Client-side stock warning */}
+              {Number(qtyField.value) > (stockForSelectedBatch ?? Infinity) &&
+                !qtyFieldState.error &&
                 !itemRHFerrors?.quantity && (
                   <p className="text-xs text-orange-500 mt-1">
-                    {t("sales:insufficientStock")}
+                    {t("sales:insufficientStockDetail", {
+                      available: formatNumber(stockForSelectedBatch) ?? 0,
+                    })}
                   </p>
                 )}
             </FormItem>
           )}
         />
 
-        {/* Unit Price (Potentially auto-filled by batch, but editable) */}
+        {/* Unit Price (per Sellable Unit) */}
         <FormField
           control={control}
           name={`items.${index}.unit_price`}
