@@ -605,7 +605,7 @@ const InventoryLogPage: React.FC = () => {
               </Table>
             </CardContent>
           </Card>
-          {logData.last_page > 1 && (
+          {/* {logData.last_page > 1 && (
             <Pagination className="mt-6">
               <PaginationContent>
                 <PaginationPrevious
@@ -633,7 +633,7 @@ const InventoryLogPage: React.FC = () => {
                 </PaginationNext>
               </PaginationContent>
             </Pagination>
-          )}
+          )} */}
         </>
       )}
     </div>

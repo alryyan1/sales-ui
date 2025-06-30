@@ -22,6 +22,7 @@ import { SaleWorkspace } from "../../components/sales/terminal/SaleWorkspace"; /
 import { ActionsLane } from "../../components/sales/terminal/ActionsLane";
 import { formatDate, parseISO } from "date-fns";
 import dayjs from "dayjs";
+import clientService, { Client } from "@/services/clientService";
 
 // Type for the active sale data in the workspace (can be partial for new sale)
 export type ActiveSaleDataType = Partial<Sale> & {
@@ -42,7 +43,6 @@ const SalesTerminalPage: React.FC = () => {
   const [isLoadingActiveSale, setIsLoadingActiveSale] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
-
   // --- Fetch Today's Sales for the Lane ---
   const fetchTodaySales = useCallback(async () => {
     setIsLoadingSalesList(true);
@@ -86,7 +86,7 @@ const SalesTerminalPage: React.FC = () => {
         // Prepare a blank template for a new sale
         setActiveSaleData({
           // Default values for a new sale, RHF in Workspace will handle form defaults
-          client_id: null,
+          client_id: null, // Set default client if available
           sale_date: formatDate(new Date(), "yyyy-MM-dd"), // Default to today, API expects string
           status: "pending", // Or 'draft'
           items: [],
@@ -97,6 +97,7 @@ const SalesTerminalPage: React.FC = () => {
         setIsLoadingActiveSale(true);
         try {
           const saleDetails = await saleService.getSale(saleId);
+          console.log(saleDetails,'saleDetails');
           setActiveSaleData(saleDetails);
         } catch (err) {
           const errorMsg = saleService.getErrorMessage(err);
@@ -118,7 +119,7 @@ const SalesTerminalPage: React.FC = () => {
   // --- Handle Saving/Updating a Sale from the Workspace ---
   const handleSaveSale = async (
     formData: any,
-    saleIdToUpdate?: number | null
+    saleIdToUpdate?: number | "new" | null
   ): Promise<boolean> => {
     // Returns true on success
     // formData will come from RHF in SaleWorkspace
@@ -259,6 +260,7 @@ const SalesTerminalPage: React.FC = () => {
           activeSaleId &&
           activeSaleData && (
             <SaleWorkspace
+            activeSaleData={activeSaleData}
               key={activeSaleId === "new" ? "new-sale" : activeSaleId} // Force re-mount for new sale or different sale
               initialSaleData={activeSaleData}
               isEditMode={activeSaleId !== "new"}

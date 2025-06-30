@@ -34,7 +34,7 @@ export interface Product {
       // --- Stock (always in sellable units) ---
   latest_purchase_cost?: string | number | null;
   suggested_sale_price?: string | number | null;
-  latest_cost_per_sellable_unit?: string | number | null;
+  latest_cost_per_sellable_unit:  number ;
   suggested_sale_price_per_sellable_unit?:  number | null;
   available_batches?: {
     batch_id: number;

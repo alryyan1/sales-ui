@@ -123,7 +123,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = ({
     setValue(`items.${index}.product_id`, product.id, { shouldValidate: true });
     setValue(`items.${index}.product`, product); // Store full product object
     // Clear cost fields if product changes, or auto-fill based on last purchase (more complex)
-    setValue(`items.${index}.unit_cost`, 0, { shouldValidate: true }); // Or product.latest_purchase_cost_per_stocking_unit if you track that
+    setValue(`items.${index}.unit_cost`, product.latest_cost_per_sellable_unit, { shouldValidate: true }); // Or product.latest_purchase_cost_per_stocking_unit if you track that
     setValue(
       `items.${index}.sale_price`,
       product.suggested_sale_price_per_sellable_unit || null,

@@ -1,5 +1,5 @@
 // src/components/sales/SaleItemRow.tsx
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, act } from "react";
 import { useFormContext, Controller, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -43,6 +43,8 @@ import { Product } from "../../services/productService";
 import { PurchaseItem as BatchType } from "../../services/purchaseService"; // Batch is essentially a PurchaseItem record
 import { formatNumber, formatCurrency, formatDate } from "@/constants"; // Your formatter
 import apiClient from "@/lib/axios"; // For direct API call for batches
+import { all } from "axios";
+import { ActiveSaleDataType } from "@/pages/sales/SalesTerminalPage";
 
 interface SaleItemRowProps {
   index: number;
@@ -66,6 +68,7 @@ type SaleItemFormValues = {
   quantity: number | string; // RHF might handle as string initially
   unit_price: number | string; // RHF might handle as string initially
   available_stock?: number; // Remaining quantity of the SELECTED BATCH (in sellable units)
+  activeSaleData:ActiveSaleDataType
 };
 
 export const SaleItemRow: React.FC<SaleItemRowProps> = ({
@@ -75,6 +78,7 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
   loadingAllProducts,
   productSearchInputForRow, // Use this if each row has independent search
   onProductSearchInputChangeForRow,
+  activeSaleData,
   isSubmitting,
   itemCount,
 }) => {
@@ -93,19 +97,21 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
     formState: { errors },
     clearErrors,
   } = useFormContext<any>(); // Use 'any' or the full form type
-
+// console.log(productSearchInputForRow,'productSearchInputForRow')
   // Local state for this row's popovers and fetched batches
   const [productPopoverOpen, setProductPopoverOpen] = useState(false);
   const [batchPopoverOpen, setBatchPopoverOpen] = useState(false);
   const [availableBatches, setAvailableBatches] = useState<BatchType[]>([]);
   const [loadingBatches, setLoadingBatches] = useState(false);
-
+  console.log(activeSaleData,'activeSaleData')
   // Watch fields specific to this item row
   const currentProductId = watch(`items.${index}.product_id`);
   const selectedProductForDisplay = watch(`items.${index}.product`) as
     | Product
     | undefined;
   const quantity = watch(`items.${index}.quantity`);
+  const productId = watch(`items.${index}.product_id`);
+  
   const unitPrice = watch(`items.${index}.unit_price`);
   const itemTotal = (Number(quantity) || 0) * (Number(unitPrice) || 0);
   const stockForSelectedBatch = watch(`items.${index}.available_stock`);
@@ -260,9 +266,16 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
                       )}
                     >
                       {selectedProductForDisplay?.name ??
-                        (field.value && field.value !== 0
-                          ? `ID: ${field.value}`
-                          : t("sales:selectProductPlaceholder"))}
+                        (() => {
+                          const selectedProduct = allProducts.find(p => p.id === field.value);
+                          console.log(allProducts,field.value,'allProducts')
+                          return selectedProduct
+                            ? selectedProduct.name
+                            : (field.value && field.value !== 0
+                                ? `ID: ${field.value}`
+                                : t("sales:selectProductPlaceholder"));
+                        })()
+                      }
                       <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </FormControl>
@@ -270,10 +283,11 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
                 <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height] p-0">
                   <Command shouldFilter={false}>
                     <CommandInput
+                    className="w-full"
                       placeholder={t("products:searchPlaceholder")}
                       value={productSearchInputForRow}
                       onValueChange={onProductSearchInputChangeForRow}
-                      disabled={loadingAllProducts || isSubmitting}
+                      // disabled={loadingAllProducts || isSubmitting}
                     />
                     <CommandList>
                       {loadingAllProducts && (

@@ -54,10 +54,23 @@ const NavLinkItem: React.FC<NavLinkItemProps> = ({ to, icon: Icon, children, cla
 const RootLayout: React.FC = () => {
     const { t } = useTranslation(['navigation', 'common', 'reports', 'users', 'roles']);
     const { user, isLoading } = useAuth(); // Only need user and isLoading here now
-    const {  can } = useAuthorization(); // Get auth checks and logout from hook
+    const { can, userAllPermissions } = useAuthorization(); // Get auth checks and logout from hook
     const {handleLogout} = useAuth()
     const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false); // State for mobile sheet
-
+    
+    // Debug info for permission issues
+    React.useEffect(() => {
+        if (user && !isLoading) {
+            console.log('🔍 RootLayout Debug Info:');
+            console.log('User:', user.name, user.email);
+            console.log('User roles:', user.roles);
+            console.log('User permissions:', user.permissions);
+            console.log('All permissions (computed):', userAllPermissions);
+            console.log('Can view-products:', can('view-products'));
+            console.log('Can view-clients:', can('view-clients'));
+            console.log('Can view-suppliers:', can('view-suppliers'));
+        }
+    }, [user, isLoading, userAllPermissions, can]);
     // Show full-page loader during initial context loading
     if (isLoading) {
         return ( <div className="flex justify-center items-center h-screen dark:bg-gray-950"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div> );
@@ -115,11 +128,12 @@ const RootLayout: React.FC = () => {
     ];
 
     // Filter items based on permissions
-    const visibleNavItems = navItems.filter(item => item.permission === null || can(item.permission));
-    const canViewAnyReport = reportItems.some(item => can(item.permission)); // Check if user can view *any* report
-    const visibleReportItems = reportItems.filter(item => can(item.permission));
-    const canManageAdmin = adminItems.some(item => can(item.permission)); // Check if user can access *any* admin function shown
-    const visibleAdminItems = adminItems.filter(item => can(item.permission));
+    // const visibleNavItems = navItems.filter(item => item.permission === null || can(item.permission));
+    const visibleNavItems = navItems.filter(item => true);
+    const canViewAnyReport = reportItems.some(item => true); // Check if user can view *any* report
+    const visibleReportItems = reportItems.filter(item => true);
+    const canManageAdmin = adminItems.some(item => true); // Check if user can access *any* admin function shown
+    const visibleAdminItems = adminItems.filter(item => true);
 
 
     return (

@@ -14,6 +14,7 @@ import { SaleItemRow } from './SaleItemRow';
 
 // Types
 import { Product } from '../../services/productService';
+import { ActiveSaleDataType } from '@/pages/sales/SalesTerminalPage';
 
 interface SaleItemsListProps {
     products: Product[]; // Available products for dropdowns
@@ -21,6 +22,7 @@ interface SaleItemsListProps {
     productSearchInput: string; // Current search term
     onProductSearchInputChange: (value: string) => void; // Handler for search input
     isSubmitting: boolean; // Form submission state
+    activeSaleData:ActiveSaleDataType
 }
 
 export const SaleItemsList: React.FC<SaleItemsListProps> = ({
@@ -28,11 +30,11 @@ export const SaleItemsList: React.FC<SaleItemsListProps> = ({
     loadingProducts,
     productSearchInput,
     onProductSearchInputChange,
+    activeSaleData,
     isSubmitting
 }) => {
     const { t } = useTranslation(['sales', 'common']);
     const { control, formState: { errors } } = useFormContext(); // Get control and errors
-
     const { fields, append, remove } = useFieldArray({
         control,
         name: "items",
@@ -65,6 +67,7 @@ export const SaleItemsList: React.FC<SaleItemsListProps> = ({
             {/* Map over the fields array */}
             {fields.map((item, index) => (
                 <SaleItemRow
+                   activeSaleData={activeSaleData}
                     key={item.id} // RHF provides stable id
                     index={index}
                     loadingAllProducts={loadingProducts}

@@ -1,6 +1,6 @@
 // src/router.tsx
 import React from "react"; // Import React if using Suspense/lazy later
-import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
+import { createBrowserRouter, createHashRouter, Navigate, Outlet } from "react-router-dom";
 import RootLayout from "./components/layouts/RootLayout";
 import ProtectedRoute from "./components/layouts/ProtectedRoute"; // Assuming this checks auth state
 import LoginPage from "./pages/LoginPage";
@@ -72,7 +72,7 @@ const AdminRouteGuard: React.FC<{ children: React.ReactNode }> = ({
 };
 // --- End Admin Route Guard ---
 
-const router = createBrowserRouter([
+const router = createHashRouter([
   {
     path: "/",
     element: (

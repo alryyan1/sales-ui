@@ -90,13 +90,16 @@ interface SaleWorkspaceProps {
   //isLoading prop from parent indicates parent is busy (e.g. fetching activeSaleData)
   // RHF's formState.isSubmitting handles this component's submission loading
   parentIsLoading: boolean;
+  activeSaleData?: ActiveSaleDataType; // Optional prop for parent to pass active sale data
 }
 
 export const SaleWorkspace: React.FC<SaleWorkspaceProps> = ({
   initialSaleData,
   isEditMode,
   onSave,
+
   parentIsLoading,
+  activeSaleData,
 }) => {
   const { t } = useTranslation(["sales", "common", "validation"]);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -108,7 +111,7 @@ export const SaleWorkspace: React.FC<SaleWorkspaceProps> = ({
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [clientSearchInput, setClientSearchInput] = useState("");
   const [productSearchInput, setProductSearchInput] = useState("");
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [selectedClient, setSelectedClient] = useState<Client | null>();
   // Debounce refs
   const clientDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const productDebounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -120,6 +123,7 @@ export const SaleWorkspace: React.FC<SaleWorkspaceProps> = ({
   });
   const {
     handleSubmit,
+    setValue,
     reset,
     watch,
     formState: { isSubmitting, errors },
@@ -198,6 +202,18 @@ export const SaleWorkspace: React.FC<SaleWorkspaceProps> = ({
     }
   }, [initialSaleData, isEditMode, reset]);
 
+  const fetchDefaultCleint = () => {
+    clientService.getClient(1).then((data) => {
+      console.log(data, "one client");
+      setSelectedClient(data);
+      setValue("client_id", data.id);
+      // setValue("client_id", data.id);
+    });
+  };
+
+  useEffect(() => {
+    fetchDefaultCleint();
+  }, []);
   // --- Data Fetching for Comboboxes ---
   // --- Data Fetching Callbacks ---
   const fetchClients = useCallback(
@@ -358,6 +374,7 @@ export const SaleWorkspace: React.FC<SaleWorkspaceProps> = ({
             />
             <Separator className="my-4" />
             <SaleItemsList
+              activeSaleData={activeSaleData}
               products={products}
               loadingProducts={loadingProducts}
               productSearchInput={productSearchInput}

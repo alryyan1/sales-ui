@@ -16,22 +16,73 @@ import InputAdornment from "@mui/material/InputAdornment";
 import SearchIcon from "@mui/icons-material/Search";
 
 // Services and Types
-import productService, {
-  Product,
-  PaginatedResponse,
-} from "../services/productService"; // Use product service
+import productService, { Product } from "../services/productService"; // Use product service
+
+// New type that matches the actual API response structure
+interface ProductPaginatedResponse {
+  data: ProductTableItem[];
+  links: {
+    first: string;
+    last: string;
+    prev: string | null;
+    next: string | null;
+  };
+  meta: {
+    current_page: number;
+    from: number;
+    last_page: number;
+    links: Array<{
+      url: string | null;
+      label: string;
+      active: boolean;
+    }>;
+    path: string;
+    per_page: number;
+    to: number;
+    total: number;
+  };
+}
 
 // Custom Components
-import ProductsTable from "../components/products/ProductsTable"; // Use ProductsTable
+import { ProductsTable } from "../components/products/ProductsTable"; // Use ProductsTable named export
 import ProductFormModal from "../components/products/ProductFormModal"; // Use ProductFormModal
 import ConfirmationDialog from "../components/common/ConfirmationDialog"; // Reusable confirmation dialog
 
+// Debug components
+import { useAuthorization } from "../hooks/useAuthorization";
+
+// Type that matches the actual API response structure
+type ProductTableItem = {
+  id: number;
+  name: string;
+  sku: string | null;
+  description: string | null;
+  category_id: number | null;
+  stocking_unit_name: string | null;
+  sellable_unit_name: string | null;
+  units_per_stocking_unit: number;
+  stock_quantity: number;
+  stock_alert_level: number | null;
+  created_at: string;
+  updated_at: string;
+  // Optional fields that ProductsTable expects but aren't in API response
+  available_batches?: {
+    batch_id: number;
+    quantity: number;
+    expiry_date?: string;
+  }[];
+  category_name?: string | null;
+  latest_cost_per_sellable_unit?: string | number | null;
+  suggested_sale_price_per_sellable_unit?: string | number | null;
+};
+
 const ProductsPage: React.FC = () => {
   const { t } = useTranslation(["products", "common", "validation"]);
+  const { user, userAllPermissions, can } = useAuthorization(); // Add debug info
 
   // --- State ---
   const [productsResponse, setProductsResponse] =
-    useState<PaginatedResponse<Product> | null>(null);
+    useState<ProductPaginatedResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -40,7 +91,7 @@ const ProductsPage: React.FC = () => {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null); // Use Product type
+  const [editingProduct, setEditingProduct] = useState<ProductTableItem | null>(null); // Use ProductTableItem type
 
   // Deletion State
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -48,6 +99,17 @@ const ProductsPage: React.FC = () => {
     null
   ); // Use product ID
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Snackbar State
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error";
+  }>({
+    open: false,
+    message: "",
+    severity: "success",
+  });
 
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Ref for debounce timer
 
@@ -82,7 +144,7 @@ const ProductsPage: React.FC = () => {
         page,
         search /*, sorting? */
       );
-      setProductsResponse(data);
+      setProductsResponse(data as unknown as ProductPaginatedResponse);
     } catch (err) {
       setError(productService.getErrorMessage(err));
     } finally {
@@ -97,17 +159,24 @@ const ProductsPage: React.FC = () => {
 
   // --- Notification Handlers ---
   const showSnackbar = (message: string, type: "success" | "error") => {
-    /* ... (same) ... */
+    setSnackbar({
+      open: true,
+      message,
+      severity: type,
+    });
   };
   const handleSnackbarClose = (
     event?: React.SyntheticEvent | Event,
     reason?: string
   ) => {
-    /* ... (same) ... */
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSnackbar((prev) => ({ ...prev, open: false }));
   };
 
   // --- Modal Handlers ---
-  const openModal = (product: Product | null = null) => {
+  const openModal = (product: ProductTableItem | null = null) => {
     setEditingProduct(product);
     setIsModalOpen(true);
   };
@@ -175,9 +244,29 @@ const ProductsPage: React.FC = () => {
   // --- Render ---
   return (
     <Box
-      sx={{ p: { xs: 1, sm: 2, md: 3 } }}
+      sx={{ 
+        p: { xs: 1, sm: 2, md: 3 },
+        width: '100%'
+      }}
       className="dark:bg-gray-900 min-h-screen"
     >
+      {/* Debug Info - Remove this in production */}
+      {process.env.NODE_ENV === 'development' && (
+        <Box sx={{ mb: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
+          <Typography variant="h6">Debug Info (Dev Only)</Typography>
+          <Typography variant="body2">User: {user?.name || 'Not logged in'}</Typography>
+          <Typography variant="body2">
+            Permissions: {userAllPermissions?.length || 0} total
+            {userAllPermissions?.includes('edit products') ? ' ✅ edit products' : ' ❌ edit products'}
+            {userAllPermissions?.includes('delete products') ? ' ✅ delete products' : ' ❌ delete products'}
+            {userAllPermissions?.includes('adjust stock') ? ' ✅ adjust stock' : ' ❌ adjust stock'}
+          </Typography>
+          <Typography variant="body2">
+            Can edit products: {can('edit products') ? 'Yes' : 'No'}
+          </Typography>
+        </Box>
+      )}
+
       {/* Header & Add Button */}
       <Box
         sx={{
@@ -262,24 +351,24 @@ const ProductsPage: React.FC = () => {
         <Alert severity="error" sx={{ my: 2 }}>
           {error}
         </Alert>
-      )}
-      {/* Content Area */}
+              )}
+        {/* Content Area */}
       {!isLoading && !error && productsResponse && (
         <Box sx={{ mt: 2 }}>
           <ProductsTable
-            products={productsResponse.data}
-            onEdit={openModal}
+            products={productsResponse.data as ProductTableItem[]}
+            onEdit={(product) => openModal(product as ProductTableItem)}
             onDelete={openConfirmDialog}
             isLoading={isDeleting}
           />
           {/* Pagination */}
-          {productsResponse.last_page > 1 && (
+          {productsResponse.meta.last_page > 1 && (
             <Box
               sx={{ display: "flex", justifyContent: "center", p: 2, mt: 3 }}
             >
               
               <Pagination
-                count={productsResponse.last_page}
+                count={productsResponse.meta.last_page}
                 page={currentPage}
                 onChange={handlePageChange}
                 color="primary"
@@ -305,7 +394,7 @@ const ProductsPage: React.FC = () => {
       <ProductFormModal
         isOpen={isModalOpen}
         onClose={closeModal}
-        productToEdit={editingProduct}
+        productToEdit={editingProduct as Product | null}
         onSaveSuccess={handleSaveSuccess}
       />
       <ConfirmationDialog
@@ -317,6 +406,13 @@ const ProductsPage: React.FC = () => {
         confirmText={t("common:delete")}
         cancelText={t("common:cancel")}
         isLoading={isDeleting}
+      />
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        message={snackbar.message}
       />
       {/* Add deleteConfirm key */}
     </Box>

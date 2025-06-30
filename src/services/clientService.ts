@@ -1,6 +1,5 @@
 // src/services/clientService.ts
-import apiClient, { getValidationErrors, getErrorMessage, ApiErrorResponse } from '../lib/axios'; // استيراد المثيل المهيأ ودوال المساعدة
-import { AxiosError } from 'axios';
+import apiClient, { getValidationErrors, getErrorMessage } from '../lib/axios'; // استيراد المثيل المهيأ ودوال المساعدة
 
 // 1. واجهة بيانات العميل (Client Interface)
 // يجب أن تتطابق هذه الواجهة مع الحقول التي يتم إرجاعها بواسطة ClientResource في Laravel
@@ -86,9 +85,9 @@ const clientService = {
             const response = await apiClient.post<{ client: Client }>('/clients', clientData); // قد يعيد الـ API الكائن داخل مفتاح 'client' أو مباشرة
             // تحقق من بنية الاستجابة الفعلية من الـ API الخاص بك
             // إذا كان الـ API يعيد { client: { ... } }
-             // return response.data.client;
+             return response.data.client;
              // إذا كان الـ API يعيد مباشرة { id: ..., name: ... }
-             return response.data as Client; // اضبط هذا حسب الحاجة
+             // return response.data as Client; // اضبط هذا حسب الحاجة
         } catch (error) {
             console.error('Error creating client:', error);
             throw error;
@@ -106,8 +105,8 @@ const clientService = {
             // استخدام PUT أو PATCH (apiResource في Laravel يعالج كليهما للتحديث)
             const response = await apiClient.put<{ client: Client }>(`/clients/${id}`, clientData); // أو .patch()
              // تحقق من بنية الاستجابة الفعلية
-             // return response.data.client;
-             return response.data as Client; // اضبط هذا حسب الحاجة
+             return response.data.client;
+             // return response.data as Client; // اضبط هذا حسب الحاجة
         } catch (error) {
             console.error(`Error updating client ${id}:`, error);
             throw error;
