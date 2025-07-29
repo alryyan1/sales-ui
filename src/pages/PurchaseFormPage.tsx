@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, ArrowLeft, AlertCircle } from "lucide-react";
+import { Loader2, ArrowLeft, AlertCircle, FileText } from "lucide-react";
 
 // Services and Types
 import purchaseService, {
@@ -31,6 +31,7 @@ import purchaseService, {
 } from "../services/purchaseService";
 import supplierService, { Supplier } from "../services/supplierService";
 import productService, { Product } from "../services/productService";
+import exportService from "../services/exportService";
 import { formatNumber } from "@/constants";
 import apiClient from "@/lib/axios";
 
@@ -42,7 +43,6 @@ const purchaseItemSchema = z.object({
     .positive({ message: "validation:selectProduct" }),
     
   product: z.custom<Product>().optional(), // For UI state only
-  // cost_per_sellable_unit:z.number({required_error:"validation:required"}).positive({message:"validation:required"}),
   batch_number: z
     .string()
     .max(100, { message: "validation:maxLengthHundred" })
@@ -52,16 +52,11 @@ const purchaseItemSchema = z.object({
     .number({ invalid_type_error: "validation:invalidInteger" })
     .int({ message: "validation:invalidInteger" })
     .min(1, { message: "validation:minQuantity" }),
-  unit_cost: z
-    .preprocess(
-      (val) => (val === "" ? undefined : val),
-      z.coerce
-        .number({ invalid_type_error: "validation:invalidPrice" })
-        .min(0, { message: "validation:minZero" })
-    )
-    .default(0),
-    total_sellable_units_display: z.number().optional(),
-    cost_per_sellable_unit_display: z.number().optional(),
+  unit_cost: z.coerce
+    .number({ invalid_type_error: "validation:invalidPrice" })
+    .min(0, { message: "validation:minZero" }),
+  total_sellable_units_display: z.number().optional(),
+  cost_per_sellable_unit_display: z.number().optional(),
   sale_price: z.preprocess(
     (val) => (val === "" ? undefined : val),
     z.coerce
@@ -95,6 +90,21 @@ const purchaseFormSchema = z.object({
 });
 
 export type PurchaseFormValues = z.infer<typeof purchaseFormSchema>;
+
+// Type for a single item in the PurchaseFormValues
+export type PurchaseItemFormValues = {
+  id?: number | null;
+  product_id: number;
+  product?: Product; // Full selected product object (includes UOM info)
+  batch_number?: string | null;
+  quantity: number; // Quantity of STOCKING UNITS (e.g., boxes)
+  unit_cost: number; // Cost per STOCKING UNIT (e.g., per box)
+  sale_price?: number | null; // Intended sale price PER SELLABLE UNIT
+  expiry_date?: Date | null;
+  // Display only, calculated:
+  total_sellable_units_display?: number;
+  cost_per_sellable_unit_display?: number;
+};
 
 // --- Component ---
 const PurchaseFormPage: React.FC = () => {
@@ -156,7 +166,6 @@ const PurchaseFormPage: React.FC = () => {
     handleSubmit,
     reset,
     formState: { isSubmitting },
-    watch,
     setError,
     control,
     formState: { errors },
@@ -393,7 +402,7 @@ const PurchaseFormPage: React.FC = () => {
           if (match) {
             const [, index, fieldName] = match;
             setError(
-              `items.${index}.${fieldName as keyof PurchaseItemFormValues}`,
+              `items.${index}.${fieldName}` as keyof PurchaseFormValues,
               { type: "server", message: messages[0] }
             );
           } else if (key in ({} as PurchaseFormValues)) {
@@ -408,27 +417,54 @@ const PurchaseFormPage: React.FC = () => {
     }
   };
 
+  // --- PDF Export Handler ---
+  const handleViewPdf = async () => {
+    if (!purchaseId) return;
+    
+    try {
+      await exportService.exportPurchasePdf(purchaseId);
+    } catch (err) {
+      toast.error(t("common:error"), {
+        description: err instanceof Error ? err.message : "Failed to open PDF",
+      });
+    }
+  };
+
   // --- Render Page ---
   //if (loadingData && isEditMode) { /* ... Loading Indicator for Edit Mode Initial Load ... */ }
   //if (error && isEditMode && !loadingData) { /* ... Error Alert for Edit Mode Initial Load ... */ }
 
   return (
     <div className="p-4 md:p-6 lg:p-8 dark:bg-gray-950 min-h-screen pb-10">
-      <div className="flex items-center mb-6 gap-2">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => navigate("/purchases")}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 dark:text-gray-100">
-          {isEditMode
-            ? t("purchases:editPurchaseTitle")
-            : t("purchases:addPageTitle")}{" "}
-          {/* Add key */}
-          {isEditMode && purchaseId && ` #${purchaseId}`}
-        </h1>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => navigate("/purchases")}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 dark:text-gray-100">
+            {isEditMode
+              ? t("purchases:editPurchaseTitle")
+              : t("purchases:addPageTitle")}{" "}
+            {/* Add key */}
+            {isEditMode && purchaseId && ` #${purchaseId}`}
+          </h1>
+        </div>
+        
+        {/* PDF Button - Only show in edit mode */}
+        {isEditMode && purchaseId && (
+          <Button
+            variant="outline"
+            onClick={handleViewPdf}
+            className="flex items-center gap-2"
+          >
+            <FileText className="h-4 w-4" />
+            {t("purchases:viewPdf")}
+          </Button>
+        )}
       </div>
 
       <Card className="dark:bg-gray-900">

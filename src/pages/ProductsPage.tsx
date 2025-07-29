@@ -14,9 +14,18 @@ import Snackbar from "@mui/material/Snackbar";
 import TextField from "@mui/material/TextField";
 import InputAdornment from "@mui/material/InputAdornment";
 import SearchIcon from "@mui/icons-material/Search";
+import FilterListIcon from "@mui/icons-material/FilterList";
+import PrintIcon from "@mui/icons-material/Print";
+import TableChartIcon from "@mui/icons-material/TableChart";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import Select, { SelectChangeEvent } from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
 
 // Services and Types
 import productService, { Product } from "../services/productService"; // Use product service
+import categoryService, { Category } from "../services/CategoryService"; // Import category service
+import exportService from "../services/exportService"; // Import export service
 
 // New type that matches the actual API response structure
 interface ProductPaginatedResponse {
@@ -46,10 +55,6 @@ interface ProductPaginatedResponse {
 // Custom Components
 import { ProductsTable } from "../components/products/ProductsTable"; // Use ProductsTable named export
 import ProductFormModal from "../components/products/ProductFormModal"; // Use ProductFormModal
-import ConfirmationDialog from "../components/common/ConfirmationDialog"; // Reusable confirmation dialog
-
-// Debug components
-import { useAuthorization } from "../hooks/useAuthorization";
 
 // Type that matches the actual API response structure
 type ProductTableItem = {
@@ -78,7 +83,6 @@ type ProductTableItem = {
 
 const ProductsPage: React.FC = () => {
   const { t } = useTranslation(["products", "common", "validation"]);
-  const { user, userAllPermissions, can } = useAuthorization(); // Add debug info
 
   // --- State ---
   const [productsResponse, setProductsResponse] =
@@ -88,17 +92,15 @@ const ProductsPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [showOnlyInStock, setShowOnlyInStock] = useState(false);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductTableItem | null>(null); // Use ProductTableItem type
-
-  // Deletion State
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [productToDeleteId, setProductToDeleteId] = useState<number | null>(
-    null
-  ); // Use product ID
-  const [isDeleting, setIsDeleting] = useState(false);
 
   // Snackbar State
   const [snackbar, setSnackbar] = useState<{
@@ -135,14 +137,19 @@ const ProductsPage: React.FC = () => {
   }, [searchTerm]); // Runs whenever the raw searchTerm changes
 
   // --- Data Fetching (uses debounced term) ---
-  const fetchProducts = useCallback(async (page: number, search: string) => {
+  const fetchProducts = useCallback(async (page: number, search: string, categoryId: number | null, perPage: number, inStockOnly: boolean) => {
     setIsLoading(true);
     setError(null);
     try {
       // Use the *debounced* search term for the API call
       const data = await productService.getProducts(
         page,
-        search /*, sorting? */
+        search,
+        "created_at",
+        "desc",
+        perPage,
+        categoryId,
+        inStockOnly
       );
       setProductsResponse(data as unknown as ProductPaginatedResponse);
     } catch (err) {
@@ -152,10 +159,28 @@ const ProductsPage: React.FC = () => {
     }
   }, []); // No dependencies needed here
 
-  // Effect to fetch data when page or *debounced* search term changes
+  // Fetch categories for filter dropdown
+  const fetchCategories = useCallback(async () => {
+    setLoadingCategories(true);
+    try {
+      const data = await categoryService.getCategories(1, 9999, "", false, true);
+      setCategories(data as Category[]);
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+    } finally {
+      setLoadingCategories(false);
+    }
+  }, []);
+
+  // Effect to fetch categories on component mount
   useEffect(() => {
-    fetchProducts(currentPage, debouncedSearchTerm);
-  }, [fetchProducts, currentPage, debouncedSearchTerm]); // Depend on debounced value
+    fetchCategories();
+  }, [fetchCategories]);
+
+  // Effect to fetch data when page, debounced search term, category, or rows per page changes
+  useEffect(() => {
+    fetchProducts(currentPage, debouncedSearchTerm, selectedCategory, rowsPerPage, showOnlyInStock);
+  }, [fetchProducts, currentPage, debouncedSearchTerm, selectedCategory, rowsPerPage, showOnlyInStock]);
 
   // --- Notification Handlers ---
   const showSnackbar = (message: string, type: "success" | "error") => {
@@ -190,44 +215,8 @@ const ProductsPage: React.FC = () => {
     closeModal();
     showSnackbar(t(messageKey), "success");
     const pageToFetch = editingProduct ? currentPage : 1;
-    fetchProducts(pageToFetch, debouncedSearchTerm); // Refetch
+    fetchProducts(pageToFetch, debouncedSearchTerm, selectedCategory, rowsPerPage, showOnlyInStock); // Refetch
     if (!editingProduct) setCurrentPage(1);
-  };
-
-  // --- Deletion Handlers ---
-  const openConfirmDialog = (id: number) => {
-    setProductToDeleteId(id);
-    setIsConfirmOpen(true);
-  };
-  const closeConfirmDialog = () => {
-    if (!isDeleting) {
-      setIsConfirmOpen(false);
-      setTimeout(() => setProductToDeleteId(null), 300);
-    }
-  };
-  const handleDeleteConfirm = async () => {
-    if (!productToDeleteId) return;
-    setIsDeleting(true);
-    try {
-      await productService.deleteProduct(productToDeleteId); // Use productService
-      showSnackbar(t("products:deleteSuccess"), "success"); // Add key
-      closeConfirmDialog();
-      // Smart refetch
-      if (
-        productsResponse &&
-        productsResponse.data.length === 1 &&
-        currentPage > 1
-      ) {
-        setCurrentPage((prev) => prev - 1);
-      } else {
-        fetchProducts(currentPage, debouncedSearchTerm);
-      }
-    } catch (err) {
-      showSnackbar(productService.getErrorMessage(err), "error");
-      closeConfirmDialog();
-    } finally {
-      setIsDeleting(false);
-    }
   };
 
   // --- Pagination & Search Handlers ---
@@ -240,32 +229,81 @@ const ProductsPage: React.FC = () => {
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
   };
+  const handleCategoryChange = (event: SelectChangeEvent<number | null>) => {
+    const categoryId = event.target.value as number | null;
+    setSelectedCategory(categoryId);
+    setCurrentPage(1); // Reset to page 1 when filter changes
+  };
+  const handleRowsPerPageChange = (event: SelectChangeEvent<number>) => {
+    const newRowsPerPage = event.target.value as number;
+    setRowsPerPage(newRowsPerPage);
+    setCurrentPage(1); // Reset to page 1 when rows per page changes
+  };
+  const handleStockFilterToggle = () => {
+    setShowOnlyInStock(!showOnlyInStock);
+    setCurrentPage(1); // Reset to page 1 when filter changes
+  };
+
+  const handlePrintProducts = async () => {
+    try {
+      // Pass current filters to the PDF export
+      const filters = {
+        search: debouncedSearchTerm,
+        category_id: selectedCategory,
+        in_stock_only: showOnlyInStock,
+      };
+      
+      await exportService.exportProductsPdf(filters);
+      showSnackbar(t("products:printSuccess"), "success");
+    } catch (err) {
+      showSnackbar(err instanceof Error ? err.message : "Failed to export PDF", "error");
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      // Pass current filters to the Excel export
+      const filters = {
+        search: debouncedSearchTerm,
+        category_id: selectedCategory,
+        in_stock_only: showOnlyInStock,
+      };
+      
+      await exportService.exportProductsExcel(filters);
+      showSnackbar(t("products:excelSuccess"), "success");
+    } catch (err) {
+      showSnackbar(err instanceof Error ? err.message : "Failed to export Excel", "error");
+    }
+  };
 
   // --- Render ---
   return (
-    <Box
-      sx={{ 
-        p: { xs: 1, sm: 2, md: 3 },
-        width: '100%'
-      }}
-      className="dark:bg-gray-900 min-h-screen"
-    >
-      {/* Debug Info - Remove this in production */}
-      {process.env.NODE_ENV === 'development' && (
-        <Box sx={{ mb: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
-          <Typography variant="h6">Debug Info (Dev Only)</Typography>
-          <Typography variant="body2">User: {user?.name || 'Not logged in'}</Typography>
-          <Typography variant="body2">
-            Permissions: {userAllPermissions?.length || 0} total
-            {userAllPermissions?.includes('edit products') ? ' ✅ edit products' : ' ❌ edit products'}
-            {userAllPermissions?.includes('delete products') ? ' ✅ delete products' : ' ❌ delete products'}
-            {userAllPermissions?.includes('adjust stock') ? ' ✅ adjust stock' : ' ❌ adjust stock'}
-          </Typography>
-          <Typography variant="body2">
-            Can edit products: {can('edit products') ? 'Yes' : 'No'}
-          </Typography>
-        </Box>
-      )}
+    <>
+      <style>
+        {`
+          .products-page-full-width {
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+          }
+        `}
+      </style>
+      <Box
+        className="dark:bg-gray-900 h-[calc(100vh-100px)] w-full max-w-none products-page-full-width"
+        sx={{
+          width: '100%',
+          maxWidth: 'none',
+          margin: 0,
+          padding: 0,
+          // Override any container constraints from parent layout
+          '&': {
+            maxWidth: 'none !important',
+            margin: '0 !important',
+          }
+        }}
+      >
+   
 
       {/* Header & Add Button */}
       <Box
@@ -276,6 +314,7 @@ const ProductsPage: React.FC = () => {
           alignItems: "center",
           mb: 3,
           gap: 2,
+          px: 2, // Add some horizontal padding for the header
         }}
       >
         <Typography
@@ -285,58 +324,175 @@ const ProductsPage: React.FC = () => {
         >
           {t("products:pageTitle")} {/* Add key */}
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => openModal()}
-        >
-          {t("products:addProduct")} {/* Add key */}
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant={showOnlyInStock ? "contained" : "outlined"}
+            startIcon={<FilterListIcon />}
+            onClick={handleStockFilterToggle}
+            color={showOnlyInStock ? "primary" : "inherit"}
+          >
+            {showOnlyInStock ? t("products:showAllProducts") : t("products:showInStockOnly")}
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<PrintIcon />}
+            onClick={() => handlePrintProducts()}
+          >
+            {t("products:printProducts")}
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<TableChartIcon />}
+            onClick={() => handleExportExcel()}
+          >
+            {t("products:exportExcel")}
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => openModal()}
+          >
+            {t("products:addProduct")}
+          </Button>
+        </Box>
       </Box>
-      {/* Search Input */}
-    <Box sx={{ mb: 3 }}>
-      <TextField
-        fullWidth
-        variant="outlined"
-        size="small"
-        placeholder={t("products:searchPlaceholder") || "Search Products..."}
-        value={searchTerm}
-        onChange={handleSearchChange}
-        InputProps={{
-        startAdornment: (
-          <InputAdornment position="start">
-            <SearchIcon color="action" />
-          </InputAdornment>
-        ),
-        sx: {
-          backgroundColor: (theme) =>
-            theme.palette.mode === "dark"
-            ? theme.palette.background.paper
-            : "#fff",
-          color: (theme) =>
-            theme.palette.mode === "dark"
-            ? theme.palette.text.primary
-            : "inherit",
-          "& input": {
-            color: (theme) =>
-            theme.palette.mode === "dark"
-              ? theme.palette.text.primary
-              : "inherit",
-          },
-          "& fieldset": {
-            borderColor: (theme) =>
-            theme.palette.mode === "dark"
-              ? theme.palette.grey[700]
-              : theme.palette.grey[300],
-          },
-        },
-        }}
-        className="dark:bg-gray-800 [&>div>input]:text-gray-300 dark:[&>div>input]:text-gray-100 [&>div>fieldset]:border-gray-300 dark:[&>div>fieldset]:border-gray-600"
-      />
-    </Box>
+      {/* Search and Filters */}
+      <Box sx={{ mb: 3, px: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
+          {/* Search Input */}
+          <Box sx={{ flex: { md: 2 } }}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              size="small"
+              placeholder={t("products:searchPlaceholder") || "Search Products..."}
+              value={searchTerm}
+              onChange={handleSearchChange}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+                sx: {
+                  backgroundColor: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? theme.palette.background.paper
+                      : "#fff",
+                  color: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? theme.palette.text.primary
+                      : "inherit",
+                  "& input": {
+                    color: (theme) =>
+                      theme.palette.mode === "dark"
+                        ? theme.palette.text.primary
+                        : "inherit",
+                  },
+                  "& fieldset": {
+                    borderColor: (theme) =>
+                      theme.palette.mode === "dark"
+                        ? theme.palette.grey[700]
+                        : theme.palette.grey[300],
+                  },
+                },
+              }}
+              className="dark:bg-gray-800 [&>div>input]:text-gray-300 dark:[&>div>input]:text-gray-100 [&>div>fieldset]:border-gray-300 dark:[&>div>fieldset]:border-gray-600"
+            />
+          </Box>
+
+          {/* Category Filter */}
+          <Box sx={{ flex: { md: 1 } }}>
+            <FormControl fullWidth size="small">
+              <InputLabel className="dark:text-gray-300">
+                {t("products:filterByCategory")}
+              </InputLabel>
+              <Select
+                value={selectedCategory || ""}
+                onChange={handleCategoryChange}
+                label={t("products:filterByCategory")}
+                disabled={loadingCategories}
+                sx={{
+                  backgroundColor: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? theme.palette.background.paper
+                      : "#fff",
+                  color: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? theme.palette.text.primary
+                      : "inherit",
+                  "& .MuiSelect-icon": {
+                    color: (theme) =>
+                      theme.palette.mode === "dark"
+                        ? theme.palette.text.primary
+                        : "inherit",
+                  },
+                  "& fieldset": {
+                    borderColor: (theme) =>
+                      theme.palette.mode === "dark"
+                        ? theme.palette.grey[700]
+                        : theme.palette.grey[300],
+                  },
+                }}
+              >
+                <MenuItem value="">
+                  <em>{t("products:allCategories")}</em>
+                </MenuItem>
+                {categories.map((category) => (
+                  <MenuItem key={category.id} value={category.id}>
+                    {category.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+
+          {/* Rows Per Page Filter */}
+          <Box sx={{ flex: { md: 1 } }}>
+            <FormControl fullWidth size="small">
+              <InputLabel className="dark:text-gray-300">
+                {t("products:rowsPerPage")}
+              </InputLabel>
+              <Select
+                value={rowsPerPage}
+                onChange={handleRowsPerPageChange}
+                label={t("products:rowsPerPage")}
+                sx={{
+                  backgroundColor: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? theme.palette.background.paper
+                      : "#fff",
+                  color: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? theme.palette.text.primary
+                      : "inherit",
+                  "& .MuiSelect-icon": {
+                    color: (theme) =>
+                      theme.palette.mode === "dark"
+                        ? theme.palette.text.primary
+                        : "inherit",
+                  },
+                  "& fieldset": {
+                    borderColor: (theme) =>
+                      theme.palette.mode === "dark"
+                        ? theme.palette.grey[700]
+                        : theme.palette.grey[300],
+                  },
+                }}
+              >
+                <MenuItem value={10}>10</MenuItem>
+                <MenuItem value={50}>50</MenuItem>
+                <MenuItem value={200}>200</MenuItem>
+                <MenuItem value={500}>500</MenuItem>
+                <MenuItem value={1000}>1000</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        </Box>
+      </Box>
       {/* Loading / Error States */}
       {isLoading && (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
+        <Box sx={{ display: "flex", justifyContent: "center", py: 5, px: 2 }}>
           
           <CircularProgress />
           <Typography
@@ -348,23 +504,22 @@ const ProductsPage: React.FC = () => {
         </Box>
       )}
       {!isLoading && error && (
-        <Alert severity="error" sx={{ my: 2 }}>
+        <Alert severity="error" sx={{ my: 2, mx: 2 }}>
           {error}
         </Alert>
               )}
         {/* Content Area */}
       {!isLoading && !error && productsResponse && (
-        <Box sx={{ mt: 2 }}>
+        <Box sx={{ mt: 2, width: '100%', px: 2 }}>
           <ProductsTable
             products={productsResponse.data as ProductTableItem[]}
             onEdit={(product) => openModal(product as ProductTableItem)}
-            onDelete={openConfirmDialog}
-            isLoading={isDeleting}
+            isLoading={false} // Removed isDeleting
           />
           {/* Pagination */}
           {productsResponse.meta.last_page > 1 && (
             <Box
-              sx={{ display: "flex", justifyContent: "center", p: 2, mt: 3 }}
+              sx={{ display: "flex", justifyContent: "center", p: 2, mt: 3, px: 2 }}
             >
               
               <Pagination
@@ -375,7 +530,7 @@ const ProductsPage: React.FC = () => {
                 shape="rounded"
                 showFirstButton
                 showLastButton
-                disabled={isLoading || isDeleting}
+                disabled={isLoading} // Removed isDeleting
               />
             </Box>
           )}
@@ -397,16 +552,7 @@ const ProductsPage: React.FC = () => {
         productToEdit={editingProduct as Product | null}
         onSaveSuccess={handleSaveSuccess}
       />
-      <ConfirmationDialog
-        open={isConfirmOpen}
-        onClose={closeConfirmDialog}
-        onConfirm={handleDeleteConfirm}
-        title={t("common:confirmDeleteTitle")}
-        message={t("products:deleteConfirm")}
-        confirmText={t("common:delete")}
-        cancelText={t("common:cancel")}
-        isLoading={isDeleting}
-      />
+      {/* Removed ConfirmationDialog */}
       {/* Snackbar for notifications */}
       <Snackbar
         open={snackbar.open}
@@ -416,6 +562,7 @@ const ProductsPage: React.FC = () => {
       />
       {/* Add deleteConfirm key */}
     </Box>
+    </>
   );
 };
 

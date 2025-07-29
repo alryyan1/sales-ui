@@ -8,7 +8,8 @@
     "deleteConfirm": "هل أنت متأكد من حذف سجل الشراء هذا؟", 
     "deleteSuccess": "تم حذف سجل الشراء بنجاح.",
     "saveSuccess": "تم حفظ عملية الشراء بنجاح.",
-    "date": "التاريخ",
+    "date": "تاريخ الفاتورة",
+    "createdAt": "تاريخ الإنشاء",
     "reference": "الرقم المرجعي",
     "supplier": "المورد",
     "status": "الحالة",
@@ -59,6 +60,9 @@
     "intendedSalePricePerSellable": "سعر البيع المقصود لكل وحدة قابلة للبيع",
     "itemTotalCost": "إجمالي تكلفة العنصر",
     "costPerUnit": "التكلفة لكل وحدة",
-    "intendedSalePricePerUnit": "سعر البيع المقصود لكل وحدة"
+    "intendedSalePricePerUnit": "سعر البيع المقصود لكل وحدة",
+    "viewPdf": "عرض PDF",
+
+    "selectStatus": "اختر الحالة"
 
 }

@@ -31,18 +31,15 @@ import {
 } from "@/components/ui/command";
 import { Calendar } from "@/components/ui/calendar";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Loader2,
   Check,
   ChevronsUpDown,
   Calendar as CalendarIcon,
 } from "lucide-react";
+
+// MUI Components
+import Autocomplete from "@mui/material/Autocomplete";
+import TextField from "@mui/material/TextField";
 
 // Types
 import { Supplier } from "../../services/supplierService";
@@ -56,6 +53,13 @@ interface PurchaseHeaderFormProps {
   selectedSupplier: Supplier | null; // For display in combobox trigger
   onSupplierSelect: (supplier: Supplier | null) => void; // To update parent's selectedSupplier
 }
+
+// Status options for the autocomplete
+const statusOptions = [
+  { value: "pending", label: "purchases:status_pending" },
+  { value: "ordered", label: "purchases:status_ordered" },
+  { value: "received", label: "purchases:status_received" },
+];
 
 export const PurchaseHeaderForm: React.FC<PurchaseHeaderFormProps> = ({
   suppliers,
@@ -226,42 +230,36 @@ export const PurchaseHeaderForm: React.FC<PurchaseHeaderFormProps> = ({
           </FormItem>
         )}
       />
-      {/* Status Select */}
+      {/* Status Autocomplete */}
       <FormField
         control={control}
         name="status"
-        render={({ field }) => (
+        render={({ field, fieldState }) => (
           <FormItem>
             
             <FormLabel>
               {t("purchases:statusLabel")}
               <span className="text-red-500">*</span>
             </FormLabel>
-            <Select
-              onValueChange={field.onChange}
-              defaultValue={field.value}
-              disabled={isSubmitting}
-            >
-              <FormControl>
-                <SelectTrigger>
-                  
-                  <SelectValue
+            <FormControl>
+              <Autocomplete
+                options={statusOptions}
+                getOptionLabel={(option) => t(option.label)}
+                value={statusOptions.find(option => option.value === field.value) || null}
+                onChange={(event, newValue) => {
+                  field.onChange(newValue?.value || "");
+                }}
+                disabled={isSubmitting}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
                     placeholder={t("purchases:selectStatusPlaceholder")}
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message ? t(fieldState.error.message) : ""}
                   />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                <SelectItem value="pending">
-                  {t("purchases:status_pending")}
-                </SelectItem>
-                <SelectItem value="ordered">
-                  {t("purchases:status_ordered")}
-                </SelectItem>
-                <SelectItem value="received">
-                  {t("purchases:status_received")}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+                )}
+              />
+            </FormControl>
             <FormMessage />
           </FormItem>
         )}

@@ -9,9 +9,11 @@ import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
 import Pagination from "@mui/material/Pagination";
-import AddIcon from "@mui/icons-material/Add";
-import Snackbar from "@mui/material/Snackbar";
+
 import Paper from "@mui/material/Paper";
+import TextField from "@mui/material/TextField";
+import Autocomplete from "@mui/material/Autocomplete";
+
 
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
@@ -19,16 +21,14 @@ import Chip from "@mui/material/Chip"; // To display status
 
 // Icons
 import VisibilityIcon from "@mui/icons-material/Visibility"; // View details icon
-import DeleteIcon from "@mui/icons-material/Delete"; // Delete icon (if allowed)
+import FilterListIcon from "@mui/icons-material/FilterList";
+import ClearIcon from "@mui/icons-material/Clear";
 
 // Services and Types
-import purchaseService, {
-  Purchase,
-  PaginatedResponse,
-} from "../../services/purchaseService"; // Use purchase service
-import ConfirmationDialog from "../../components/common/ConfirmationDialog"; // Reusable dialog
+import purchaseService from "../../services/purchaseService"; // Use purchase service
+import supplierService, { Supplier } from "../../services/supplierService";
 import dayjs from "dayjs";
-import { CardContent, Tab, TableHead } from "@mui/material";
+import { CardContent } from "@mui/material";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -40,6 +40,14 @@ import {
 } from "@/components/ui/table";
 import { formatCurrency } from "@/constants";
 
+// Filter interface
+interface PurchaseFilters {
+  supplier_id?: number;
+  reference_number?: string;
+  purchase_date?: string;
+  created_at?: string;
+  status?: string;
+}
 
 const PurchasesListPage: React.FC = () => {
   const { t } = useTranslation(["purchases", "common"]); // Load namespaces
@@ -47,23 +55,65 @@ const PurchasesListPage: React.FC = () => {
 
   // --- State ---
   const [purchasesResponse, setPurchasesResponse] =
-    useState<PaginatedResponse<Purchase> | null>(null);
+    useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  
+  // Filter states
+  const [filters, setFilters] = useState<PurchaseFilters>({});
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [loadingSuppliers, setLoadingSuppliers] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
-
-
+  // Status options
+  const statusOptions = [
+    { value: "pending", label: t("purchases:status_pending") },
+    { value: "ordered", label: t("purchases:status_ordered") },
+    { value: "received", label: t("purchases:status_received") },
+  ];
 
   // --- Data Fetching ---
+  const fetchSuppliers = useCallback(async () => {
+    setLoadingSuppliers(true);
+    try {
+      const response = await supplierService.getSuppliers(1, ""); // Get all suppliers for filter
+      setSuppliers(response.data || []);
+    } catch (error) {
+      console.error("Failed to fetch suppliers:", error);
+    } finally {
+      setLoadingSuppliers(false);
+    }
+  }, []);
+
   const fetchPurchases = useCallback(
-    async (page: number /*, search: string, status: string, etc. */) => {
+    async (page: number, filters: PurchaseFilters = {}) => {
       setIsLoading(true);
       setError(null);
       try {
-        const data = await purchaseService.getPurchases(
-          page /*, search, status */
-        ); // Use purchaseService
+                 // Build query parameters
+         const params = new URLSearchParams();
+         params.append('page', page.toString());
+         
+         if (filters.supplier_id) {
+           params.append('supplier_id', filters.supplier_id.toString());
+         }
+         if (filters.reference_number) {
+           params.append('reference_number', filters.reference_number);
+         }
+         if (filters.purchase_date) {
+           params.append('purchase_date', filters.purchase_date);
+         }
+         if (filters.created_at) {
+           params.append('created_at', filters.created_at);
+         }
+         if (filters.status) {
+           params.append('status', filters.status);
+         }
+
+         console.log('Filter params:', params.toString());
+
+        const data = await purchaseService.getPurchases(page, params.toString());
         setPurchasesResponse(data);
       } catch (err) {
         setError(purchaseService.getErrorMessage(err));
@@ -72,16 +122,35 @@ const PurchasesListPage: React.FC = () => {
       }
     },
     []
-  ); // Add filter states to dependency array if they affect the fetch call
+  );
 
   // Effect to fetch data
   useEffect(() => {
-    fetchPurchases(currentPage);
-  }, [fetchPurchases, currentPage]);
+    fetchPurchases(currentPage, filters);
+  }, [fetchPurchases, currentPage, filters]);
 
+  // Effect to fetch suppliers on component mount
+  useEffect(() => {
+    fetchSuppliers();
+  }, [fetchSuppliers]);
 
+  // --- Filter Handlers ---
+  const handleFilterChange = (key: keyof PurchaseFilters, value: string | number | undefined) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: value
+    }));
+    setCurrentPage(1); // Reset to first page when filters change
+  };
 
+  const clearFilters = () => {
+    setFilters({});
+    setCurrentPage(1);
+  };
 
+  const hasActiveFilters = Object.values(filters).some(value => 
+    value !== undefined && value !== null && value !== ''
+  );
 
   // --- Pagination Handler ---
   const handlePageChange = (
@@ -122,16 +191,122 @@ const PurchasesListPage: React.FC = () => {
         >
           {t("purchases:listTitle")} {/* Add key */}
         </Typography>
-        {/* Link to the Add Purchase Page */}
-        <Button asChild>
-          <RouterLink to="/purchases/add">
-            {t("purchases:addPurchase")} {/* Add key */}
-          </RouterLink>
-        </Button>
+        <Box sx={{ display: "flex", gap: 1 }}>
+          {/* Filter Toggle Button */}
+          <Button
+            variant="outline"
+            onClick={() => setShowFilters(!showFilters)}
+            startIcon={<FilterListIcon />}
+          >
+            {t("common:filters")}
+          </Button>
+          {/* Link to the Add Purchase Page */}
+          <Button asChild>
+            <RouterLink to="/purchases/add">
+              {t("purchases:addPurchase")} {/* Add key */}
+            </RouterLink>
+          </Button>
+        </Box>
       </Box>
 
-      {/* Add Filters Section Here (Optional) */}
-      {/* <Paper sx={{ p: 2, mb: 3 }}> ... Filter inputs ... </Paper> */}
+      {/* Filters Section */}
+      {showFilters && (
+        <Paper sx={{ p: 3, mb: 3 }} className="dark:bg-gray-800">
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+            <Typography variant="h6" className="text-gray-800 dark:text-gray-100">
+              {t("common:filters")}
+            </Typography>
+            {hasActiveFilters && (
+              <Button
+                variant="outline"
+                size="small"
+                onClick={clearFilters}
+                startIcon={<ClearIcon />}
+              >
+                {t("common:clearFilters")}
+              </Button>
+            )}
+          </Box>
+          
+                     <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(5, 1fr)" }, gap: 2 }}>
+             {/* Supplier Filter */}
+             <Autocomplete
+               options={suppliers}
+               getOptionLabel={(option) => option.name}
+               value={suppliers.find(s => s.id === filters.supplier_id) || null}
+               onChange={(event, newValue) => {
+                 handleFilterChange('supplier_id', newValue?.id);
+               }}
+               loading={loadingSuppliers}
+               renderInput={(params) => (
+                 <TextField
+                   {...params}
+                   label={t("purchases:supplier")}
+                   placeholder={t("purchases:selectSupplier")}
+                   size="small"
+                 />
+               )}
+             />
+
+             {/* Reference Number Filter */}
+             <TextField
+               label={t("purchases:reference")}
+               placeholder={t("purchases:referencePlaceholder")}
+               value={filters.reference_number || ''}
+               onChange={(e) => handleFilterChange('reference_number', e.target.value)}
+               size="small"
+             />
+
+             {/* Status Filter */}
+             <Autocomplete
+               options={statusOptions}
+               getOptionLabel={(option) => option.label}
+               value={statusOptions.find(s => s.value === filters.status) || null}
+               onChange={(event, newValue) => {
+                 handleFilterChange('status', newValue?.value);
+               }}
+               renderInput={(params) => (
+                 <TextField
+                   {...params}
+                   label={t("purchases:status")}
+                   placeholder={t("purchases:selectStatus")}
+                   size="small"
+                 />
+               )}
+             />
+
+             {/* Purchase Date Filter */}
+             <TextField
+               type="date"
+               label={t("purchases:date")}
+               value={filters.purchase_date || ''}
+               onChange={(e) => handleFilterChange('purchase_date', e.target.value)}
+               size="small"
+               InputLabelProps={{
+                 shrink: true,
+               }}
+               inputProps={{
+                 max: dayjs().format('YYYY-MM-DD'), // Max date is today
+               }}
+             />
+
+             {/* Created At Filter */}
+             <TextField
+               type="date"
+               label={t("purchases:createdAt")}
+               value={filters.created_at || ''}
+               onChange={(e) => handleFilterChange('created_at', e.target.value)}
+               size="small"
+               InputLabelProps={{
+                 shrink: true,
+               }}
+               inputProps={{
+                 max: dayjs().format('YYYY-MM-DD'), // Max date is today
+               }}
+             />
+           </Box>
+        </Paper>
+      )}
 
       {/* Loading / Error States */}
       {isLoading && (
@@ -157,28 +332,32 @@ const PurchasesListPage: React.FC = () => {
         <Card>
           <CardContent>
             <Table aria-label={t("purchases:listTitle")}>
-              <TableHeader>
-                <TableRow>
-                  <TableCell align="center">{t("purchases:id")}</TableCell>
-                  <TableCell align="center">{t("purchases:date")}</TableCell>
-                  <TableCell align="center">{t("purchases:reference")}</TableCell>
-                  <TableCell align="center">{t("purchases:supplier")}</TableCell>
-                  <TableCell align="center">{t("purchases:status")}</TableCell>
-                  <TableCell align="center">{t("purchases:totalAmount")}</TableCell>
-                  <TableCell align="center">{t("common:actions")}</TableCell>
-                </TableRow>
-              </TableHeader>
+                             <TableHeader>
+                 <TableRow>
+                   <TableCell align="center">{t("purchases:id")}</TableCell>
+                   <TableCell align="center">{t("purchases:date")}</TableCell>
+                   <TableCell align="center">{t("purchases:createdAt")}</TableCell>
+                   <TableCell align="center">{t("purchases:reference")}</TableCell>
+                   <TableCell align="center">{t("purchases:supplier")}</TableCell>
+                   <TableCell align="center">{t("purchases:status")}</TableCell>
+                   <TableCell align="center">{t("purchases:totalAmount")}</TableCell>
+                   <TableCell align="center">{t("common:actions")}</TableCell>
+                 </TableRow>
+               </TableHeader>
               <TableBody>
-                {purchasesResponse.data.map((purchase) => (
-                  <TableRow key={purchase.id}>
-                    <TableCell align="center">{purchase.id}</TableCell>
-                    <TableCell align="center">
-                      {dayjs(purchase.purchase_date).format("YYYY-MM-DD")}
-                    </TableCell>
-                    <TableCell align="center">{purchase.reference_number || "---"}</TableCell>
-                    <TableCell align="center">
-                      {purchase.supplier_name || t("common:n/a")}
-                    </TableCell>
+                                 {purchasesResponse.data.map((purchase) => (
+                   <TableRow key={purchase.id}>
+                     <TableCell align="center">{purchase.id}</TableCell>
+                     <TableCell align="center">
+                       {dayjs(purchase.purchase_date).format("YYYY-MM-DD")}
+                     </TableCell>
+                     <TableCell align="center">
+                       {dayjs(purchase.created_at).format("YYYY-MM-DD HH:mm")}
+                     </TableCell>
+                     <TableCell align="center">{purchase.reference_number || "---"}</TableCell>
+                     <TableCell align="center">
+                       {purchase.supplier_name || t("common:n/a")}
+                     </TableCell>
                     {/* Handle possible null supplier */}
                     <TableCell align="center">
                       <Chip
@@ -231,20 +410,20 @@ const PurchasesListPage: React.FC = () => {
           </CardContent>
 
           {/* Pagination */}
-          {purchasesResponse.last_page > 1 && (
+          {purchasesResponse?.meta?.last_page > 1 && (
             <Box
               sx={{ display: "flex", justifyContent: "center", p: 2, mt: 3 }}
             >
               
               <Pagination
-                count={purchasesResponse.last_page}
+                count={purchasesResponse.meta.last_page}
                 page={currentPage}
                 onChange={handlePageChange}
                 color="primary"
                 shape="rounded"
                 showFirstButton
                 showLastButton
-                disabled={isLoading }
+                disabled={isLoading}
               />
             </Box>
           )}

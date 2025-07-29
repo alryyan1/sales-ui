@@ -1,6 +1,6 @@
 // src/components/purchases/PurchaseHeaderFormSection.tsx
-import React, { useState } from 'react'; // Removed useEffect if not directly needed here
-import { useFormContext, Controller } from 'react-hook-form';
+import React from 'react';
+import { useFormContext } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -11,10 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Calendar } from "@/components/ui/calendar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Check, ChevronsUpDown, Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon } from 'lucide-react';
+
+// MUI Components
+import Autocomplete from "@mui/material/Autocomplete";
+import TextField from "@mui/material/TextField";
 
 // Types
 import { Supplier } from '../../services/supplierService'; // Assuming this path is correct
@@ -29,6 +31,13 @@ interface PurchaseHeaderFormSectionProps {
     onSupplierSelect: (supplier: Supplier | null) => void; // Callback to update selected supplier in parent
 }
 
+// Status options for the autocomplete
+const statusOptions = [
+    { value: "pending", label: "purchases:status_pending" },
+    { value: "ordered", label: "purchases:status_ordered" },
+    { value: "received", label: "purchases:status_received" },
+];
+
 export const PurchaseHeaderFormSection: React.FC<PurchaseHeaderFormSectionProps> = ({
     suppliers,
     loadingSuppliers,
@@ -39,82 +48,42 @@ export const PurchaseHeaderFormSection: React.FC<PurchaseHeaderFormSectionProps>
     onSupplierSelect
 }) => {
     const { t } = useTranslation(['purchases', 'common', 'suppliers', 'validation']);
-    const { control, formState: { errors } } = useFormContext(); // Get RHF control and errors
-
-    // Local state for managing the visibility of the supplier combobox popover
-    const [supplierPopoverOpen, setSupplierPopoverOpen] = useState(false);
+    const { control } = useFormContext(); // Get RHF control and errors
 
     return (
         <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-4"> {/* Responsive grid */}
-            {/* Supplier Combobox */}
+            {/* Supplier Autocomplete */}
             <FormField
                 control={control}
                 name="supplier_id" // Name in your RHF schema (e.g., AddPurchaseFormValues)
                 render={({ field, fieldState }) => ( // fieldState provides error
                     <FormItem className="flex flex-col md:col-span-2"> {/* Spans 2 columns on medium+ */}
                         <FormLabel>{t('purchases:selectSupplier')} <span className="text-red-500">*</span></FormLabel>
-                        <Popover open={supplierPopoverOpen} onOpenChange={(open) => {
-                            setSupplierPopoverOpen(open);
-                            // Reset search input when popover closes
-                            if (!open) onSupplierSearchInputChange('');
-                        }}>
-                            <PopoverTrigger asChild>
-                                <FormControl>
-                                    <Button
-                                        variant="outline"
-                                        role="combobox"
-                                        aria-expanded={supplierPopoverOpen}
-                                        disabled={loadingSuppliers || isSubmitting}
-                                        className={cn(
-                                            "w-full justify-between",
-                                            !field.value && "text-muted-foreground" // Style if no value selected
-                                        )}
-                                    >
-                                        {loadingSuppliers
-                                            ? <div className="flex items-center"><Loader2 className="me-2 h-4 w-4 animate-spin" /> {t('common:loading')}...</div>
-                                            : selectedSupplier // Use parent-managed selectedSupplier for display
-                                                ? selectedSupplier.name
-                                                : (field.value ? t('purchases:loadingSupplier') : t('purchases:selectSupplierPlaceholder')) // Fallback or placeholder
-                                        }
-                                        <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height] p-0">
-                                <Command shouldFilter={false}> {/* Server-side search */}
-                                    <CommandInput
-                                        placeholder={t('suppliers:searchPlaceholder') || 'Search supplier...'}
-                                        value={supplierSearchInput} // Controlled by parent state
-                                        onValueChange={onSupplierSearchInputChange} // Call parent handler
-                                        disabled={loadingSuppliers}
+                        <FormControl>
+                            <Autocomplete
+                                options={suppliers}
+                                getOptionLabel={(option) => option.name}
+                                value={selectedSupplier}
+                                onChange={(event, newValue) => {
+                                    field.onChange(newValue?.id || "");
+                                    onSupplierSelect(newValue);
+                                }}
+                                onInputChange={(event, newInputValue) => {
+                                    onSupplierSearchInputChange(newInputValue);
+                                }}
+                                inputValue={supplierSearchInput}
+                                loading={loadingSuppliers}
+                                disabled={isSubmitting}
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        placeholder={t('purchases:selectSupplierPlaceholder')}
+                                        error={!!fieldState.error}
+                                        helperText={fieldState.error?.message ? t(fieldState.error.message) : ""}
                                     />
-                                    <CommandList>
-                                        {loadingSuppliers && <div className='p-2 text-center text-sm text-muted-foreground flex items-center justify-center gap-2'><Loader2 className='h-4 w-4 animate-spin'/> {t('common:loading')}...</div>}
-                                        {!loadingSuppliers && suppliers.length === 0 && supplierSearchInput && <CommandEmpty>{t('common:noResults')}</CommandEmpty>}
-                                        {!loadingSuppliers && suppliers.length === 0 && !supplierSearchInput && <CommandEmpty>{t('suppliers:typeToSearch')}</CommandEmpty>}
-                                        {!loadingSuppliers && (
-                                            <CommandGroup>
-                                                {suppliers.map((supplier) => (
-                                                    <CommandItem
-                                                        key={supplier.id}
-                                                        value={supplier.name} // Value for accessibility/Command filtering (if enabled)
-                                                        onSelect={() => {
-                                                            field.onChange(supplier.id); // Update RHF with ID
-                                                            onSupplierSelect(supplier); // Update parent's selectedSupplier object
-                                                            setSupplierPopoverOpen(false); // Close popover
-                                                            onSupplierSearchInputChange(''); // Clear search input
-                                                        }}
-                                                    >
-                                                        <Check className={cn("me-2 h-4 w-4", supplier.id === field.value ? "opacity-100" : "opacity-0")} />
-                                                        {supplier.name}
-                                                    </CommandItem>
-                                                ))}
-                                            </CommandGroup>
-                                        )}
-                                    </CommandList>
-                                </Command>
-                            </PopoverContent>
-                        </Popover>
+                                )}
+                            />
+                        </FormControl>
                         <FormMessage>{fieldState.error?.message ? t(fieldState.error.message) : null}</FormMessage>
                     </FormItem>
                 )}
@@ -158,25 +127,32 @@ export const PurchaseHeaderFormSection: React.FC<PurchaseHeaderFormSectionProps>
                 )}
             />
 
-            {/* Status Select */}
+            {/* Status Autocomplete */}
             <FormField
                 control={control}
                 name="status" // Name in your RHF schema
                 render={({ field, fieldState }) => (
                     <FormItem>
                         <FormLabel>{t('purchases:statusLabel')} <span className="text-red-500">*</span></FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder={t('purchases:selectStatusPlaceholder') || "Select status"} />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                <SelectItem value="pending">{t('purchases:status_pending')}</SelectItem>
-                                <SelectItem value="ordered">{t('purchases:status_ordered')}</SelectItem>
-                                <SelectItem value="received">{t('purchases:status_received')}</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <FormControl>
+                            <Autocomplete
+                                options={statusOptions}
+                                getOptionLabel={(option) => t(option.label)}
+                                value={statusOptions.find(option => option.value === field.value) || null}
+                                onChange={(event, newValue) => {
+                                    field.onChange(newValue?.value || "");
+                                }}
+                                disabled={isSubmitting}
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        placeholder={t("purchases:selectStatusPlaceholder")}
+                                        error={!!fieldState.error}
+                                        helperText={fieldState.error?.message ? t(fieldState.error.message) : ""}
+                                    />
+                                )}
+                            />
+                        </FormControl>
                         <FormMessage>{fieldState.error?.message ? t(fieldState.error.message) : null}</FormMessage>
                     </FormItem>
                 )}

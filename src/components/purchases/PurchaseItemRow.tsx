@@ -41,7 +41,7 @@ import {
 // Types
 import { Product } from "../../services/productService"; // Assuming Product type is exported
 import { formatCurrency, formatNumber } from "@/constants"; // Your formatter
-import { PurchaseFormValues } from "@/pages/AddPurchasePage";
+import { PurchaseFormValues } from "@/pages/PurchaseFormPage";
 
 interface PurchaseItemRowProps {
   index: number;

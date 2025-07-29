@@ -92,20 +92,21 @@ const purchaseService = {
    */
   getPurchases: async (
     page: number = 1,
-    search: string = "",
-    status: string = "",
-    startDate: string = "",
-    endDate: string = "",
-    supplierId: number | null = null
+    queryParams?: string
   ): Promise<PaginatedResponse<Purchase>> => {
     try {
       const params = new URLSearchParams();
-      params.append("page", page.toString());
-      if (search) params.append("search", search);
-      if (status) params.append("status", status);
-      if (startDate) params.append("start_date", startDate);
-      if (endDate) params.append("end_date", endDate);
-      if (supplierId) params.append("supplier_id", supplierId.toString());
+      
+      // If queryParams is provided, use them directly
+      if (queryParams) {
+        const existingParams = new URLSearchParams(queryParams);
+        existingParams.forEach((value, key) => {
+          params.append(key, value);
+        });
+      } else {
+        // Only add page if no queryParams provided
+        params.append("page", page.toString());
+      }
 
       const response = await apiClient.get<PaginatedResponse<Purchase>>(
         `/purchases?${params.toString()}`

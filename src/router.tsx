@@ -21,7 +21,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 import { useAuthorization } from "./hooks/useAuthorization";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import PurchaseFormPage from "./pages/AddPurchasePage";
+import PurchaseFormPage from "./pages/PurchaseFormPage";
 import UsersListPage from "./components/admin/users/UsersListPage";
 import { AuthProvider } from "./context/AuthContext";
 import ProfitLossReportPage from "./pages/reports/ProfitLossReportPage";

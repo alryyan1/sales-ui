@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from "@/components/ui/button";
 import { PlusCircle, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Separator } from "@/components/ui/separator";
+
 
 // Child Row Component
 import { PurchaseItemRow } from './PurchaseItemRow';
@@ -56,7 +56,11 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                 <Alert variant="destructive" className="mb-4">
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>{t('common:error')}</AlertTitle>
-                    <AlertDescription>{errors.items.root.message}</AlertDescription>
+                    <AlertDescription>
+                      {typeof errors.items.root?.message === 'string' 
+                        ? errors.items.root.message 
+                        : t('common:error')}
+                    </AlertDescription>
                 </Alert>
              )}
 

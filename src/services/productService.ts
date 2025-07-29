@@ -15,6 +15,7 @@ import { Category } from "./CategoryService";
 export interface Product {
   id: number;
   name: string;
+  scientific_name: string | null;
   sku: string | null;
   description: string | null;
   // Prices/Stock come as defined by backend Resource (often string for decimals)
@@ -25,7 +26,9 @@ export interface Product {
   created_at: string;
   updated_at: string;
   // NEW/UPDATED FIELDS
+  stocking_unit_id?: number | null;
   stocking_unit_name?: string | null; // e.g., "Box", "Carton"
+  sellable_unit_id?: number | null;
   sellable_unit_name?: string | null; // e.g., "Piece", "Item"
   units_per_stocking_unit?: number | null; // e.g., 12 (pieces per box) - ensure backend default is 1
   category_id?: number | null; // Optional if not included in resource
@@ -48,11 +51,12 @@ export interface Product {
 // Zod schema/validation handles conversion/checking before sending to API if needed.
 export interface ProductFormData {
   name: string;
+  scientific_name: string | null;
   sku: string | null;
   description: string | null;
   // NEW/UPDATED FIELDS
-  stocking_unit_name?: string | null;
-  sellable_unit_name?: string | null;
+  stocking_unit_id?: number | null;
+  sellable_unit_id?: number | null;
   units_per_stocking_unit?: string | number | null; // Form might send string
   stock_quantity: string | number; // Form might use string, API expects integer
   stock_alert_level: string | number | null; // Form might use string, API expects integer/null
@@ -69,6 +73,8 @@ const productService = {
    * @param sortBy Field to sort by.
    * @param sortDirection Sort direction ('asc' or 'desc').
    * @param limit Number of items per page.
+   * @param categoryId Optional category ID to filter by.
+   * @param inStockOnly Optional filter to show only products with stock > 0.
    * @returns Promise resolving to paginated product data.
    */
   getProducts: async (
@@ -76,7 +82,9 @@ const productService = {
     search: string = "",
     sortBy: string = "created_at",
     sortDirection: "asc" | "desc" = "desc",
-    limit: number = 15 // Use the 'per_page' naming convention for Laravel's paginate
+    limit: number = 15, // Use the 'per_page' naming convention for Laravel's paginate
+    categoryId?: number | null,
+    inStockOnly?: boolean
   ): Promise<PaginatedResponse<Product>> => {
     try {
       const params = new URLSearchParams();
@@ -85,6 +93,8 @@ const productService = {
       if (search) params.append("search", search);
       if (sortBy) params.append("sort_by", sortBy);
       if (sortDirection) params.append("sort_direction", sortDirection);
+      if (categoryId) params.append("category_id", categoryId.toString());
+      if (inStockOnly) params.append("in_stock_only", "1");
 
       const response = await apiClient.get<PaginatedResponse<Product>>(
         `/products?${params.toString()}`
