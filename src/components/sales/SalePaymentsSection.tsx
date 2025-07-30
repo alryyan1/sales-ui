@@ -10,7 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // Child Row Component
 import { SalePaymentRow } from "./SalePaymentRow"; // Make sure this is correctly defined
-import { formatNumber } from "@/constants";
+import { formatNumber, preciseSum, preciseCalculation } from "@/constants";
 
 interface SalePaymentsSectionProps {
   isSubmitting: boolean;
@@ -37,12 +37,12 @@ export const SalePaymentsSection: React.FC<SalePaymentsSectionProps> = ({
   const watchedPayments = watch("payments"); // Watch the entire payments array
   const totalPaid =
     watchedPayments?.reduce(
-      (sum: number, p: any) => sum + (Number(p?.amount) || 0),
+      (sum: number, p: any) => preciseCalculation(sum, Number(p?.amount) || 0, 'add', 2),
       0
     ) ?? 0;
 
   const addPaymentLine = () => {
-    const amountDue = grandTotal - totalPaid;
+    const amountDue = preciseCalculation(grandTotal, totalPaid, 'subtract', 2);
     append({
       method: "cash", // Default method
       amount: Math.max(0.01, amountDue), // Default to remaining due, at least 0.01

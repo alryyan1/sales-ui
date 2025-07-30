@@ -32,7 +32,7 @@ import purchaseService, {
 import supplierService, { Supplier } from "../services/supplierService";
 import productService, { Product } from "../services/productService";
 import exportService from "../services/exportService";
-import { formatNumber } from "@/constants";
+import { formatNumber, preciseSum, preciseCalculation } from "@/constants";
 import apiClient from "@/lib/axios";
 
 // --- Zod Schema Definition (with item ID for edits) ---
@@ -170,7 +170,7 @@ const PurchaseFormPage: React.FC = () => {
   const grandTotal = useMemo(() => 
     watchedItems?.reduce(
       (total, item) =>
-        total + (Number(item?.quantity) || 0) * (Number(item?.unit_cost) || 0),
+        preciseCalculation(total, preciseCalculation(Number(item?.quantity) || 0, Number(item?.unit_cost) || 0, 'multiply', 2), 'add', 2),
       0
     ) ?? 0,
     [watchedItems]

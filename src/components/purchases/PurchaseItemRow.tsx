@@ -21,7 +21,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 
 // Types
 import { Product } from "../../services/productService";
-import { formatNumber } from "@/constants";
+import { formatNumber, preciseCalculation } from "@/constants";
 import { PurchaseFormValues } from "@/pages/PurchaseFormPage";
 import apiClient from "@/lib/axios";
 
@@ -86,9 +86,9 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = ({
   // Calculate display values
   const unitsPerStocking = selectedProduct?.units_per_stocking_unit || 1;
   const totalSellableUnitsDisplay =
-    (Number(quantityOfStockingUnits) || 0) * unitsPerStocking;
+    preciseCalculation(Number(quantityOfStockingUnits) || 0, unitsPerStocking, 'multiply', 2);
   const itemTotalCost =
-    (Number(quantityOfStockingUnits) || 0) * (Number(costPerStockingUnit) || 0);
+    preciseCalculation(Number(quantityOfStockingUnits) || 0, Number(costPerStockingUnit) || 0, 'multiply', 2);
 
   // Auto-focus effect for new items
   useEffect(() => {

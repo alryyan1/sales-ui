@@ -12,15 +12,76 @@ export const webUrl = `${schema}://${host}/${projectFolder}/public/`;
 export const imagesUrl = `${schema}://${host}/${projectFolder}/public/`;
 
 
-  export function formatNumber(number) {
-    return String(number).replace(/^\d+/, (number) =>
-      [...number]
-        .map(
-          (digit, index, digits) =>
-            (!index || (digits.length - index) % 3 ? "" : ",") + digit
-        )
-        .join("")
-    );
+  export function formatNumber(number: number | string | null | undefined, decimals: number = 2): string {
+    if (number === null || number === undefined) return '---';
+    
+    const numValue = Number(number);
+    if (isNaN(numValue)) {
+      console.warn("formatNumber received a non-numeric value:", number);
+      return '---';
+    }
+    
+    // Fix floating-point precision issues by rounding to specified decimals
+    const roundedNumber = Math.round(numValue * Math.pow(10, decimals)) / Math.pow(10, decimals);
+    
+    // Convert to string and split by decimal point
+    const parts = roundedNumber.toString().split('.');
+    const integerPart = parts[0];
+    const decimalPart = parts[1] || '';
+    
+    // Add commas to integer part
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    
+    // Handle decimal part
+    if (decimals === 0) {
+      return formattedInteger;
+    }
+    
+    // Pad decimal part with zeros if needed
+    const paddedDecimal = decimalPart.padEnd(decimals, '0');
+    
+    return `${formattedInteger}.${paddedDecimal}`;
+  }
+
+  /**
+   * Performs precise decimal arithmetic to avoid floating-point precision issues
+   * @param a First number
+   * @param b Second number
+   * @param operation The operation to perform ('add', 'subtract', 'multiply', 'divide')
+   * @param decimals Number of decimal places to round to (default: 2)
+   * @returns Precise calculation result
+   */
+  export function preciseCalculation(
+    a: number,
+    b: number,
+    operation: 'add' | 'subtract' | 'multiply' | 'divide',
+    decimals: number = 2
+  ): number {
+    const factor = Math.pow(10, decimals);
+    
+    switch (operation) {
+      case 'add':
+        return Math.round((a + b) * factor) / factor;
+      case 'subtract':
+        return Math.round((a - b) * factor) / factor;
+      case 'multiply':
+        return Math.round(a * b * factor) / factor;
+      case 'divide':
+        if (b === 0) throw new Error('Division by zero');
+        return Math.round((a / b) * factor) / factor;
+      default:
+        throw new Error('Invalid operation');
+    }
+  }
+
+  /**
+   * Calculates the sum of an array of numbers with precise decimal arithmetic
+   * @param numbers Array of numbers to sum
+   * @param decimals Number of decimal places to round to (default: 2)
+   * @returns Precise sum
+   */
+  export function preciseSum(numbers: number[], decimals: number = 2): number {
+    return numbers.reduce((sum, num) => preciseCalculation(sum, num, 'add', decimals), 0);
   }
 
   

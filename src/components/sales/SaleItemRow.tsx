@@ -41,7 +41,7 @@ import {
 // Types
 import { Product } from "../../services/productService";
 import { PurchaseItem as BatchType } from "../../services/purchaseService"; // Batch is essentially a PurchaseItem record
-import { formatNumber, formatCurrency, formatDate } from "@/constants"; // Your formatter
+import { formatNumber, formatCurrency, formatDate, preciseCalculation } from "@/constants"; // Your formatter
 import apiClient from "@/lib/axios"; // For direct API call for batches
 import { all } from "axios";
 import { ActiveSaleDataType } from "@/pages/sales/SalesTerminalPage";
@@ -113,7 +113,7 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
   const productId = watch(`items.${index}.product_id`);
   
   const unitPrice = watch(`items.${index}.unit_price`);
-  const itemTotal = (Number(quantity) || 0) * (Number(unitPrice) || 0);
+  const itemTotal = preciseCalculation(Number(quantity) || 0, Number(unitPrice) || 0, 'multiply', 2);
   const stockForSelectedBatch = watch(`items.${index}.available_stock`);
 
   // Fetch available batches when currentProductId changes

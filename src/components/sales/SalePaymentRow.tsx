@@ -4,6 +4,7 @@ import { useFormContext, Controller, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { preciseCalculation } from "@/constants";
 
 // shadcn/ui & Lucide Icons
 import { Button } from "@/components/ui/button";
@@ -43,7 +44,7 @@ export const SalePaymentRow: React.FC<SalePaymentRowProps> = ({
     const { control, watch, setValue, formState: { errors } } = useFormContext<any>();
 
     const currentAmount = watch(`payments.${index}.amount`);
-    const amountDueExcludingThisPayment = grandTotal - (totalPaidSoFar - (Number(currentAmount) || 0));
+    const amountDueExcludingThisPayment = preciseCalculation(grandTotal, preciseCalculation(totalPaidSoFar, Number(currentAmount) || 0, 'subtract', 2), 'subtract', 2);
 
 
     return (

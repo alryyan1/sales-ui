@@ -34,7 +34,7 @@ import saleService, {
 } from "../../services/saleService";
 import clientService, { Client } from "../../services/clientService";
 import productService, { Product } from "../../services/productService";
-import { formatNumber } from "@/constants"; // Your number formatting helper
+import { formatNumber, preciseSum, preciseCalculation } from "@/constants"; // Your number formatting helper
 import apiClient from "@/lib/axios";
 import { SalePaymentsSection } from "@/components/sales/SalePaymentsSection";
 import { SaleTotalsDisplay } from "@/components/sales/SaleTotalsDisplay";
@@ -201,15 +201,15 @@ type PaymentItemFormValues = z.infer<typeof paymentItemSchema>;
   const grandTotal =
     watchedItems?.reduce(
       (sum, item) =>
-        sum + (Number(item?.quantity) || 0) * (Number(item?.unit_price) || 0),
+        preciseCalculation(sum, preciseCalculation(Number(item?.quantity) || 0, Number(item?.unit_price) || 0, 'multiply', 2), 'add', 2),
       0
     ) ?? 0;
   const totalPaid =
     watchedPayments?.reduce(
-      (sum, payment) => sum + (Number(payment?.amount) || 0),
+      (sum, payment) => preciseCalculation(sum, Number(payment?.amount) || 0, 'add', 2),
       0
     ) ?? 0;
-  const amountDue = grandTotal - totalPaid;
+  const amountDue = preciseCalculation(grandTotal, totalPaid, 'subtract', 2);
   // Predefined payment methods (can also be fetched from API if configurable)
   const paymentMethodOptions = [
     { value: "cash", labelKey: "paymentMethods:cash" },

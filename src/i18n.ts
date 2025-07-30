@@ -24,6 +24,7 @@ import categoryAr from './locales/ar/categories.json'; // <-- Import
 import settingsAr from './locales/ar/settings.json'; // <-- Import
 import paymentMethodsAr from './locales/ar/paymentMethods.json'; // <-- Import
 import unitsAr from './locales/ar/units.json'; // <-- Import
+import posAr from './locales/ar/pos.json'; // <-- Import
 // ... استيراد ملفات أخرى
 
 // --- تعريف الموارد ---
@@ -50,7 +51,8 @@ const resources = {
     categories:categoryAr, // <-- Add this line
     settings:settingsAr, // <-- Add this line
     paymentMethods:paymentMethodsAr,
-    units:unitsAr
+    units:unitsAr,
+    pos:posAr
 
 
     
@@ -84,7 +86,8 @@ export const namespaces = [
     'categories', // <-- Add namespace
     'settings', // <-- Add namespace
     'paymentMethods',
-    'units'
+    'units',
+    'pos'
     // ... أسماء namespaces أخرى
 ];
 

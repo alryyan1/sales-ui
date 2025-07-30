@@ -1,0 +1,9 @@
+{
+    "cash": "Cash",
+    "visa": "Visa",
+    "mastercard": "Mastercard",
+    "bank_transfer": "Bank Transfer",
+    "mada": "Mada",
+    "store_credit": "Store Credit",
+    "other": "Other"
+} 
