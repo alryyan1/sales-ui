@@ -79,7 +79,7 @@ const RootLayout: React.FC = () => {
         { to: "/purchases", labelKey: "purchases", icon: ShoppingCart, permission: "view-purchases" },
         { to: "/inventory/adjustments", labelKey: "adjustments", icon: ShoppingCart, permission: "adjust-stock" },
         { to: "/sales", labelKey: "sales", icon: CircleDollarSign, permission: "view-sales" },
-        { to: "/sales/pos", labelKey: "pos", icon: CircleDollarSign, permission: "view-sales" },
+        { to: "/sales/pos-new", labelKey: "pos", icon: CircleDollarSign, permission: "view-sales" },
         { to: "/sales/returns", labelKey: "salesReturns", icon: CircleDollarSign, permission: "view-returns" },
     ];
 
@@ -271,12 +271,12 @@ const RootLayout: React.FC = () => {
             </header>
 
             {/* Main Content Area */}
-            <main className="flex-grow container mx-auto px-4 py-6 md:py-8">
+            <main className="flex-grow px-22 py-6 md:py-1">
                  <Outlet /> {/* Renders the matched route component */}
             </main>
 
             {/* Footer */}
-             <footer className="p-4 text-center text-xs text-muted-foreground dark:bg-gray-800 border-t dark:border-gray-700">
+             <footer className="p-4 text-center text-xs text-muted-foreground dark:bg-gray-800  dark:border-gray-700">
                  © {new Date().getFullYear()} {t('common:appName')}
              </footer>
         </div>

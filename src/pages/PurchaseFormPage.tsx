@@ -1,5 +1,5 @@
 // src/pages/PurchaseFormPage.tsx
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   useForm,
   FormProvider,
@@ -57,14 +57,11 @@ const purchaseItemSchema = z.object({
     .min(0, { message: "validation:minZero" }),
   total_sellable_units_display: z.number().optional(),
   cost_per_sellable_unit_display: z.number().optional(),
-  sale_price: z.preprocess(
-    (val) => (val === "" ? undefined : val),
-    z.coerce
-      .number({ invalid_type_error: "validation:invalidPrice" })
-      .min(0, { message: "validation:minZero" })
-      .nullable()
-      .optional()
-  ),
+  sale_price: z.union([
+    z.number().min(0, { message: "validation:minZero" }),
+    z.null(),
+    z.undefined()
+  ]).optional(),
   expiry_date: z
     .date({ invalid_type_error: "validation:invalidDate" })
     .nullable()
@@ -125,15 +122,14 @@ const PurchaseFormPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingData, setLoadingData] = useState(isEditMode); // Loading existing purchase
   const [loadingSuppliers, setLoadingSuppliers] = useState(false);
-  const [loadingProducts, setLoadingProducts] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   // Search States
   const [supplierSearchInput, setSupplierSearchInput] = useState("");
   const [debouncedSupplierSearch, setDebouncedSupplierSearch] = useState("");
   const supplierDebounceRef = useRef<NodeJS.Timeout | null>(null);
-  const [productSearchInput, setProductSearchInput] = useState("");
-  const [debouncedProductSearch, setDebouncedProductSearch] = useState("");
-  const productDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Track last search to prevent duplicate API calls
+  const lastSupplierSearchRef = useRef<string>("");
   // Selected objects for display
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(
     null
@@ -168,62 +164,21 @@ const PurchaseFormPage: React.FC = () => {
     formState: { isSubmitting },
     setError,
     control,
-    formState: { errors },
   } = formMethods;
-  console.log(errors,'errors')
+  // console.log(errors,'errors') // Removed to prevent infinite re-renders
   const watchedItems = useWatch({ control, name: "items" });
-  const grandTotal =
+  const grandTotal = useMemo(() => 
     watchedItems?.reduce(
       (total, item) =>
         total + (Number(item?.quantity) || 0) * (Number(item?.unit_cost) || 0),
       0
-    ) ?? 0;
+    ) ?? 0,
+    [watchedItems]
+  );
 
   // --- Data Fetching Callbacks ---
-  const fetchSuppliers = useCallback(
-    async (search: string) => {
-      if (!search && !isEditMode && suppliers.length > 0 && !selectedSupplier)
-        return; // Don't clear if already populated and no search
-      setLoadingSuppliers(true);
-      try {
-        const response = await apiClient.get<{ data: Supplier[] }>(
-          `/suppliers?search=${encodeURIComponent(
-            search
-          )}&limit=15`
-        );
-        setSuppliers(response.data.data ?? response.data);
-      } catch (error) {
-        toast.error(t("common:error"), {
-          description: supplierService.getErrorMessage(error),
-        });
-        setSuppliers([]);
-      } finally {
-        setLoadingSuppliers(false);
-      }
-    },
-    [t, selectedSupplier]
-  ); // Added dependencies
-
-  const fetchProducts = useCallback(
-    async (search: string) => {
-      if (!search && !isEditMode && products.length > 0) return;
-      setLoadingProducts(true);
-      try {
-        const response = await apiClient.get<{ data: Product[] }>(
-          `/products/autocomplete?search=${encodeURIComponent(search)}&limit=15`
-        );
-        setProducts(response.data.data ?? response.data);
-      } catch (error) {
-        toast.error(t("common:error"), {
-          description: productService.getErrorMessage(error),
-        });
-        setProducts([]);
-      } finally {
-        setLoadingProducts(false);
-      }
-    },
-    []
-  ); // Added dependencies
+  // Removed fetchSuppliers and fetchProducts to prevent infinite loops
+  // Now using inline async functions in useEffect
 
   // --- Debounce Effects ---
   useEffect(() => {
@@ -237,23 +192,29 @@ const PurchaseFormPage: React.FC = () => {
     };
   }, [supplierSearchInput]);
   useEffect(() => {
-    if(debouncedSupplierSearch !=''){
-
-      fetchSuppliers(debouncedSupplierSearch);
+    if (debouncedSupplierSearch !== '' && debouncedSupplierSearch !== lastSupplierSearchRef.current) {
+      lastSupplierSearchRef.current = debouncedSupplierSearch;
+      const searchSuppliers = async () => {
+        setLoadingSuppliers(true);
+        try {
+          const response = await apiClient.get<{ data: Supplier[] }>(
+            `/suppliers?search=${encodeURIComponent(debouncedSupplierSearch)}&limit=15`
+          );
+          setSuppliers(response.data.data ?? response.data);
+        } catch (error) {
+          toast.error(t("common:error"), {
+            description: supplierService.getErrorMessage(error),
+          });
+          setSuppliers([]);
+        } finally {
+          setLoadingSuppliers(false);
+        }
+      };
+      searchSuppliers();
     }
-  }, [debouncedSupplierSearch, fetchSuppliers]);
-  useEffect(() => {
-    if (productDebounceRef.current) clearTimeout(productDebounceRef.current);
-    productDebounceRef.current = setTimeout(() => {
-      setDebouncedProductSearch(productSearchInput);
-    }, 300);
-    return () => {
-      if (productDebounceRef.current) clearTimeout(productDebounceRef.current);
-    };
-  }, [productSearchInput]);
-  useEffect(() => {
-    fetchProducts(debouncedProductSearch);
-  }, [debouncedProductSearch, fetchProducts]);
+  }, [debouncedSupplierSearch, t]);
+  
+
 
   // --- Fetch Existing Purchase Data for Edit Mode ---
   useEffect(() => {
@@ -335,8 +296,6 @@ const PurchaseFormPage: React.FC = () => {
     if (isEditMode && purchaseId) {
       loadPurchaseData(purchaseId);
     } else {
-      fetchSuppliers(""); // Fetch initial list for add mode if search is empty
-      fetchProducts(""); // Fetch initial list for add mode if search is empty
       setLoadingData(false);
     }
   }, [
@@ -435,7 +394,7 @@ const PurchaseFormPage: React.FC = () => {
   //if (error && isEditMode && !loadingData) { /* ... Error Alert for Edit Mode Initial Load ... */ }
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 dark:bg-gray-950 min-h-screen pb-10">
+    <div className="dark:bg-gray-950 min-h-screen pb-10">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <Button
@@ -472,7 +431,7 @@ const PurchaseFormPage: React.FC = () => {
           {" "}
           {/* Pass all form methods via context */}
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
-            <CardContent className="pt-6">
+            <CardContent className="pt-1">
               {serverError && !isSubmitting && (
                 <Alert variant="destructive" className="mb-6">
                   <AlertCircle className="h-4 w-4" />
@@ -493,9 +452,6 @@ const PurchaseFormPage: React.FC = () => {
               <Separator className="my-6" />
               <PurchaseItemsList
                 products={products}
-                loadingProducts={loadingProducts}
-                productSearchInput={productSearchInput}
-                onProductSearchInputChange={setProductSearchInput}
                 isSubmitting={isSubmitting}
               />
               <Separator className="my-6" />

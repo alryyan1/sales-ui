@@ -3,11 +3,9 @@ import React from 'react';
 import { useFieldArray, useFormContext } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-// shadcn/ui & Lucide Icons
-import { Button } from "@/components/ui/button";
-import { PlusCircle, AlertCircle } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-
+// MUI Components
+import { Button, Typography, Box, Alert, AlertTitle } from '@mui/material';
+import { Add as AddIcon, Error as ErrorIcon } from '@mui/icons-material';
 
 // Child Row Component
 import { PurchaseItemRow } from './PurchaseItemRow';
@@ -17,25 +15,24 @@ import { Product } from '../../services/productService';
 
 interface PurchaseItemsListProps {
     products: Product[];
-    loadingProducts: boolean;
-    productSearchInput: string;
-    onProductSearchInputChange: (value: string) => void;
     isSubmitting: boolean;
 }
 
 export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
-    products, loadingProducts, productSearchInput, onProductSearchInputChange, isSubmitting
+    products, isSubmitting
 }) => {
     const { t } = useTranslation(['purchases', 'common']);
     const { control, formState: { errors } } = useFormContext(); // Get control and errors
 
-    const { fields, append, remove } = useFieldArray({
+    const { fields, insert, remove } = useFieldArray({
         control,
         name: "items",
     });
 
     const addItem = () => {
-        append({
+        console.log('Adding new item, current fields count:', fields.length);
+        
+        const newItem = {
             id: null, // If editing, this would be for new items
             product_id: 0, // Or null, depending on combobox handling
             batch_number: '',
@@ -44,23 +41,57 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
             sale_price: null,
             expiry_date: null,
             product: undefined, // For UI state
-        });
+        };
+        
+        // Insert at the beginning (index 0) so new items appear at the top
+        insert(0, newItem);
+        console.log('New item added at index 0, updated fields count:', fields.length + 1);
     };
 
     return (
-        <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-800 dark:text-gray-100">{t('purchases:itemsSectionTitle')}</h3>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="h6" component="h3" sx={{ 
+                    color: 'text.primary',
+                    fontWeight: 500 
+                }}>
+                    {t('purchases:itemsSectionTitle')} ({fields.length})
+                </Typography>
+
+                {/* Add Item Button - Fixed at top */}
+                <Button
+                    type="button"
+                    variant="outlined"
+                    onClick={addItem}
+                    disabled={isSubmitting}
+                    startIcon={<AddIcon />}
+                    size="medium"
+                    sx={{ 
+                        textTransform: 'none',
+                        fontSize: '0.875rem',
+                        borderColor: 'primary.main',
+                        color: 'primary.main',
+                        '&:hover': {
+                            backgroundColor: 'primary.main',
+                            color: 'white',
+                            borderColor: 'primary.main'
+                        }
+                    }}
+                >
+                    {t('purchases:addProduct')}
+                </Button>
+            </Box>
 
             {/* Display root error for items array (e.g., minimum length) */}
-            {errors.items && !Array.isArray(errors.items) && errors.items.root && ( // Check for root specifically
-                <Alert variant="destructive" className="mb-4">
-                    <AlertCircle className="h-4 w-4" />
+            {errors.items && !Array.isArray(errors.items) && errors.items.root && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                    <ErrorIcon />
                     <AlertTitle>{t('common:error')}</AlertTitle>
-                    <AlertDescription>
+                    <Typography variant="body2" sx={{ mt: 0.5 }}>
                       {typeof errors.items.root?.message === 'string' 
                         ? errors.items.root.message 
                         : t('common:error')}
-                    </AlertDescription>
+                    </Typography>
                 </Alert>
              )}
 
@@ -71,26 +102,12 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                     index={index}
                     remove={remove}
                     products={products}
-                    loadingProducts={loadingProducts}
-                    productSearchInput={productSearchInput}
-                    onProductSearchInputChange={onProductSearchInputChange}
                     isSubmitting={isSubmitting}
                     itemCount={fields.length}
+                    isNew={index === 0} // Mark the first item (top) as new
+                    shouldFocus={index === 0} // Focus the first item (newly added)
                 />
             ))}
-
-            {/* Add Item Button */}
-            <div className="mt-4">
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={addItem}
-                    disabled={isSubmitting}
-                    className="text-sm"
-                >
-                    <PlusCircle className="me-2 h-4 w-4" /> {t('purchases:addProduct')}
-                </Button>
-            </div>
-        </div>
+        </Box>
     );
 };

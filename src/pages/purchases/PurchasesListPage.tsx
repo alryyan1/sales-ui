@@ -331,35 +331,37 @@ const PurchasesListPage: React.FC = () => {
       {!isLoading && !error && purchasesResponse && (
         <Card>
           <CardContent>
-            <Table aria-label={t("purchases:listTitle")}>
+            <Table aria-label={t("purchases:listTitle")} className="text-base">
                              <TableHeader>
                  <TableRow>
-                   <TableCell align="center">{t("purchases:id")}</TableCell>
-                   <TableCell align="center">{t("purchases:date")}</TableCell>
-                   <TableCell align="center">{t("purchases:createdAt")}</TableCell>
-                   <TableCell align="center">{t("purchases:reference")}</TableCell>
-                   <TableCell align="center">{t("purchases:supplier")}</TableCell>
-                   <TableCell align="center">{t("purchases:status")}</TableCell>
-                   <TableCell align="center">{t("purchases:totalAmount")}</TableCell>
-                   <TableCell align="center">{t("common:actions")}</TableCell>
+                   <TableCell align="center" className="font-semibold text-base">{t("purchases:id")}</TableCell>
+                   <TableCell align="center" className="font-semibold text-base">{t("purchases:date")}</TableCell>
+                   <TableCell align="center" className="font-semibold text-base">{t("purchases:createdAt")}</TableCell>
+                   <TableCell align="center" className="font-semibold text-base">{t("purchases:reference")}</TableCell>
+                   <TableCell align="center" className="font-semibold text-base">{t("purchases:supplier")}</TableCell>
+                   <TableCell align="center" className="font-semibold text-base">{t("purchases:status")}</TableCell>
+                   <TableCell align="center" className="font-semibold text-base">{t("purchases:totalAmount")}</TableCell>
+                   <TableCell align="center" className="font-semibold text-base">{t("common:actions")}</TableCell>
                  </TableRow>
                </TableHeader>
               <TableBody>
                                  {purchasesResponse.data.map((purchase) => (
-                   <TableRow key={purchase.id}>
-                     <TableCell align="center">{purchase.id}</TableCell>
-                     <TableCell align="center">
+                   <TableRow key={purchase.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                     <TableCell align="center" className="text-base">{purchase.id}</TableCell>
+                     <TableCell align="center" className="text-base">
                        {dayjs(purchase.purchase_date).format("YYYY-MM-DD")}
                      </TableCell>
-                     <TableCell align="center">
+                     <TableCell align="center" className="text-base">
                        {dayjs(purchase.created_at).format("YYYY-MM-DD HH:mm")}
                      </TableCell>
-                     <TableCell align="center">{purchase.reference_number || "---"}</TableCell>
-                     <TableCell align="center">
-                       {purchase.supplier_name || t("common:n/a")}
+                     <TableCell align="center" className="text-base">{purchase.reference_number || "---"}</TableCell>
+                     <TableCell align="center" className="text-base">
+                       <span className="font-bold text-gray-900 dark:text-gray-100">
+                         {purchase.supplier_name || t("common:n/a")}
+                       </span>
                      </TableCell>
                     {/* Handle possible null supplier */}
-                    <TableCell align="center">
+                    <TableCell align="center" className="text-base">
                       <Chip
                         label={t(`purchases:status_${purchase.status}`)} // Use status_received, status_pending etc keys
                         size="small"
@@ -372,10 +374,10 @@ const PurchasesListPage: React.FC = () => {
                         }
                       />
                     </TableCell>
-                    <TableCell align="center">
+                    <TableCell align="center" className="text-base font-semibold">
                       {formatCurrency(purchase.total_amount)}
                     </TableCell>
-                    <TableCell align="center">
+                    <TableCell align="center" className="text-base">
                       <Box
                         sx={{
                           display: "flex",

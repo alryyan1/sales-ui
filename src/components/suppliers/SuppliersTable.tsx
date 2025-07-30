@@ -9,6 +9,7 @@ import Typography from "@mui/material/Typography"; // For empty state message
 // MUI Icons
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 
 // Import Supplier type
 import { Supplier } from "../../services/supplierService"; // Adjust path
@@ -30,6 +31,7 @@ interface SuppliersTableProps {
   suppliers: Supplier[];
   onEdit: (supplier: Supplier) => void;
   onDelete: (id: number) => void;
+  onViewLedger: (supplier: Supplier) => void;
   isLoading?: boolean; // For potential row disabling during delete
 }
 
@@ -37,6 +39,7 @@ const SuppliersTable: React.FC<SuppliersTableProps> = ({
   suppliers,
   onEdit,
   onDelete,
+  onViewLedger,
   isLoading = false,
 }) => {
   const { t } = useTranslation(["suppliers", "common"]); // Load namespaces
@@ -90,7 +93,20 @@ const SuppliersTable: React.FC<SuppliersTableProps> = ({
                   <Box
                     sx={{ display: "flex", justifyContent: "center", gap: 0.5 }}
                   >
-                    {/* Reduce gap */}
+                    {/* View Ledger Button */}
+                    <Tooltip title={t("suppliers:viewLedger") || ""}>
+                      <IconButton
+                        aria-label={t("suppliers:viewLedger") || "View Ledger"}
+                        color="info"
+                        size="small"
+                        onClick={() => onViewLedger(supplier)}
+                        disabled={isLoading}
+                      >
+                        <AccountBalanceIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    
+                    {/* Edit Button */}
                     {can("edit-suppliers") && (
                       <Tooltip title={t("common:edit") || ""}>
                         <span>
@@ -107,6 +123,8 @@ const SuppliersTable: React.FC<SuppliersTableProps> = ({
                         </span>
                       </Tooltip>
                     )}
+                    
+                    {/* Delete Button */}
                     {can("delete-suppliers") && (
                       <Tooltip title={t("common:delete") || ""}>
                         <span>

@@ -1,6 +1,7 @@
 // src/pages/SuppliersPage.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 
 // MUI Components
 import Box from '@mui/material/Box';
@@ -28,6 +29,7 @@ const SuppliersPage: React.FC = () => {
     // Load necessary translation namespaces
     const { t } = useTranslation(['suppliers', 'common', 'validation']);
     const { can } = useAuthorization(); // Assuming you have a hook for permissions
+    const navigate = useNavigate();
     // --- State Management ---
     const [suppliersResponse, setSuppliersResponse] = useState<PaginatedResponse<Supplier> | null>(null);
     const [isLoading, setIsLoading] = useState(true); // Loading supplier list
@@ -162,6 +164,11 @@ const SuppliersPage: React.FC = () => {
         setSearchTerm(event.target.value);
     };
 
+    // --- Ledger Handler ---
+    const handleViewLedger = (supplier: Supplier) => {
+        navigate(`/suppliers/${supplier.id}/ledger`);
+    };
+
     // --- Render Component ---
     return (
         <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }} className="dark:bg-gray-900 min-h-screen">
@@ -220,6 +227,7 @@ const SuppliersPage: React.FC = () => {
                         suppliers={suppliersResponse.data}
                         onEdit={openModal}
                         onDelete={openConfirmDialog}
+                        onViewLedger={handleViewLedger}
                         isLoading={isDeleting} // Pass deleting state
                     />
 

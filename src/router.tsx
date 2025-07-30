@@ -40,8 +40,10 @@ import ProcessRequisitionPage from "./components/admin/inventory/ProcessRequisit
 import InventoryLogPage from "./pages/reports/InventoryLogPage";
 import PurchaseDetailsPage from "./pages/purchases/PurchaseDetailsPage";
 import SalesTerminalPage from "./pages/sales/SalesTerminalPage";
+import PosPage from "./pages/PosPage";
 import NearExpiryReportPage from "./components/reports/NearExpiryReportPage";
 import MonthlyRevenueReportPage from "./components/reports/MonthlyRevenueReportPage";
+import SupplierLedgerPage from "./pages/suppliers/SupplierLedgerPage";
 // ... other page imports
 
 // --- Admin Route Guard Component ---
@@ -91,7 +93,13 @@ const router = createHashRouter([
           { path: "dashboard", element: <DashboardPage /> },
           { path: "profile", element: <ProfilePage /> },
           { path: "clients", element: <ClientsPage /> },
-          { path: "suppliers", element: <SuppliersPage /> },
+          { 
+            path: "suppliers", 
+            children: [
+              { index: true, element: <SuppliersPage /> },
+              { path: ":id/ledger", element: <SupplierLedgerPage /> },
+            ]
+          },
           { path: "products", element: <ProductsPage /> },
           {
             path: "purchases",
@@ -108,6 +116,7 @@ const router = createHashRouter([
               { index: true, element: <SalesListPage /> },
               { path: "add", element: <SaleFormPage /> },
               { path: "pos", element: <SalesTerminalPage /> },
+              { path: "pos-new", element: <PosPage /> },
               { path: ":id/edit", element: <SaleFormPage /> }, // Edit Sale
               // --- Routes for Sale Returns ---
               // Option A: Generic add return page, ID passed via state
