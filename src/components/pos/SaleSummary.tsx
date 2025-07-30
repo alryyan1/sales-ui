@@ -37,8 +37,7 @@ export const SaleSummary: React.FC<SaleSummaryProps> = ({
   const { t } = useTranslation(['pos', 'common']);
 
   const subtotal = preciseSum(items.map(item => item.total), 2);
-  const tax = preciseCalculation(subtotal, 0.15, 'multiply', 2); // 15% tax
-  const total = preciseCalculation(subtotal, tax, 'add', 2);
+  const total = subtotal; // No tax calculation
 
   return (
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -69,14 +68,7 @@ export const SaleSummary: React.FC<SaleSummaryProps> = ({
               </Typography>
             </Box>
             
-            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Typography variant="body2" color="text.secondary">
-                {t('pos:tax')} (15%)
-              </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                {formatNumber(tax)}
-              </Typography>
-            </Box>
+
             
             <Divider />
             

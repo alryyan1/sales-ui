@@ -37,5 +37,6 @@
   "createdAt": "تاريخ الإنشاء",
   "updatedAt": "تاريخ التحديث",
   "createdBy": "أنشئ بواسطة",
-  "updatedBy": "حدث بواسطة"
+  "updatedBy": "حدث بواسطة",
+  "saving": "جاري الحفظ..."
 }

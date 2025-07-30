@@ -35,7 +35,7 @@ import {
 
 // Types
 import { formatNumber, preciseSum, preciseCalculation } from "@/constants";
-import { CartItem, PaymentMethod } from "./types";
+import { CartItem, PaymentMethod, PaymentMethodData } from "./types";
 import saleService, { CreateSaleData } from "../../services/saleService";
 import clientService, { Client } from "../../services/clientService";
 
@@ -61,7 +61,17 @@ interface PaymentDialogProps {
   open: boolean;
   onClose: () => void;
   items: CartItem[];
-  onPaymentComplete: () => void;
+  onPaymentComplete: (errorMessage?: string) => void;
+  discountAmount?: number;
+  discountType?: 'percentage' | 'fixed';
+  onDiscountChange?: (amount: number, type: 'percentage' | 'fixed') => void;
+  totalPaid?: number;
+  onTotalPaidChange?: (amount: number) => void;
+  paymentMethods?: PaymentMethodData[];
+  onPaymentMethodsChange?: (paymentMethods: PaymentMethodData[]) => void;
+  // Add edit mode props
+  isEditMode?: boolean;
+  saleId?: number;
 }
 
 export const PaymentDialog: React.FC<PaymentDialogProps> = ({
@@ -69,13 +79,21 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
   onClose,
   items,
   onPaymentComplete,
+  discountAmount: externalDiscountAmount = 0,
+  discountType: externalDiscountType = 'percentage',
+  onDiscountChange,
+  onTotalPaidChange,
+  paymentMethods = [],
+  onPaymentMethodsChange,
+  isEditMode = false,
+  saleId,
 }) => {
   const { t } = useTranslation(['pos', 'common', 'paymentMethods']);
   const [paymentLines, setPaymentLines] = useState<PaymentLine[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [discountAmount, setDiscountAmount] = useState(0);
-  const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
+  const [discountAmount, setDiscountAmount] = useState(externalDiscountAmount);
+  const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>(externalDiscountType);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
@@ -90,10 +108,63 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
   // Ensure discount doesn't exceed subtotal
   const actualDiscountValue = Math.min(discountValue, subtotal);
   const afterDiscount = preciseCalculation(subtotal, actualDiscountValue, 'subtract', 2);
-  const taxAmount = preciseCalculation(afterDiscount, 0.15, 'multiply', 2); // 15% tax
-  const grandTotal = preciseCalculation(afterDiscount, taxAmount, 'add', 2); // After discount + tax
+  const grandTotal = afterDiscount; // No tax calculation
   const totalPaid = preciseSum(paymentLines.map(line => line.amount || 0), 2);
   const amountDue = preciseCalculation(grandTotal, totalPaid, 'subtract', 2);
+
+  // Initialize payment lines with existing payment methods when dialog opens
+  useEffect(() => {
+    if (open && paymentMethods.length > 0) {
+      const existingPaymentLines: PaymentLine[] = paymentMethods.map((payment, index) => ({
+        id: `existing-${index}`,
+        method: payment.method,
+        amount: payment.amount,
+        reference_number: payment.reference || '',
+      }));
+      setPaymentLines(existingPaymentLines);
+    } else if (open && paymentMethods.length === 0) {
+      // If no existing payments, start with one empty payment line
+      setPaymentLines([{
+        id: Date.now().toString(),
+        method: 'cash',
+        amount: grandTotal,
+        reference_number: '',
+      }]);
+    }
+  }, [open, paymentMethods.length, grandTotal]); // Changed dependency to paymentMethods.length
+
+  // Sync internal discount state with external changes
+  useEffect(() => {
+    if (open) {
+      setDiscountAmount(externalDiscountAmount);
+      setDiscountType(externalDiscountType);
+    }
+  }, [open, externalDiscountAmount, externalDiscountType]);
+
+  // Update external state when internal state changes
+  useEffect(() => {
+    if (onDiscountChange) {
+      onDiscountChange(discountAmount, discountType);
+    }
+  }, [discountAmount, discountType, onDiscountChange]);
+
+  useEffect(() => {
+    if (onTotalPaidChange) {
+      onTotalPaidChange(totalPaid);
+    }
+  }, [totalPaid, onTotalPaidChange]);
+
+  // Update parent's payment methods when payment lines change
+  useEffect(() => {
+    if (onPaymentMethodsChange && open) {
+      const updatedPaymentMethods: PaymentMethodData[] = paymentLines.map(line => ({
+        method: line.method,
+        amount: line.amount,
+        reference: line.reference_number || undefined,
+      }));
+      onPaymentMethodsChange(updatedPaymentMethods);
+    }
+  }, [paymentLines, onPaymentMethodsChange, open]);
 
   // Load clients for autocomplete
   useEffect(() => {
@@ -114,9 +185,9 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
     }
   }, [open]);
 
-  // Update payment amounts when discount changes
+  // Update payment amounts when discount changes (only if dialog is open)
   useEffect(() => {
-    if (paymentLines.length > 0) {
+    if (open && paymentLines.length > 0) {
       // Calculate the total amount already paid (excluding the last payment line)
       const existingPayments = paymentLines.slice(0, -1);
       const totalExistingPaid = preciseSum(existingPayments.map(line => line.amount || 0), 2);
@@ -136,7 +207,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
       });
       setPaymentLines(updatedPaymentLines);
     }
-  }, [discountAmount, discountType, grandTotal, paymentLines.length]);
+  }, [discountAmount, discountType, grandTotal, paymentLines.length, open]);
 
   const addPaymentLine = () => {
     // Calculate the total amount already paid
@@ -196,28 +267,42 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
     if (validatePayments()) {
       setIsSaving(true);
       try {
-        // Prepare sale data for database
-        const saleData: CreateSaleData = {
-          client_id: selectedClient?.id || null,
-          sale_date: new Date().toISOString().split('T')[0], // Today's date
-          status: 'completed',
-          notes: `POS Sale - ${new Date().toLocaleString()}`,
-          items: items.map(item => ({
-            product_id: item.product.id,
-            quantity: item.quantity,
-            unit_price: item.unitPrice,
-          })),
-          payments: paymentLines.map(payment => ({
-            method: payment.method,
-            amount: payment.amount,
-            payment_date: new Date().toISOString().split('T')[0],
-            reference_number: payment.reference_number || null,
-            notes: null,
-          })),
-        };
+        if (isEditMode && saleId) {
+          // Add payments to existing sale using the dedicated endpoint
+          const paymentData = {
+            payments: paymentLines.map(payment => ({
+              method: payment.method,
+              amount: payment.amount,
+              payment_date: new Date().toISOString().split('T')[0],
+              reference_number: payment.reference_number || null,
+              notes: null,
+            })),
+          };
+          
+          await saleService.addPaymentToSale(saleId, paymentData);
+        } else {
+          // Create new sale
+          const saleData: CreateSaleData = {
+            client_id: selectedClient?.id || null,
+            sale_date: new Date().toISOString().split('T')[0], // Today's date
+            status: 'completed',
+            notes: `POS Sale - ${new Date().toLocaleString()}`,
+            items: items.map(item => ({
+              product_id: item.product.id,
+              quantity: item.quantity,
+              unit_price: item.unitPrice,
+            })),
+            payments: paymentLines.map(payment => ({
+              method: payment.method,
+              amount: payment.amount,
+              payment_date: new Date().toISOString().split('T')[0],
+              reference_number: payment.reference_number || null,
+              notes: null,
+            })),
+          };
 
-        // Save to database
-        await saleService.createSale(saleData);
+          await saleService.createSale(saleData);
+        }
         
         // Call the completion callback
         onPaymentComplete();
@@ -225,9 +310,30 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
         setErrors([]);
         setDiscountAmount(0);
         setSelectedClient(null);
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Failed to save sale to database:', error);
-        setErrors(['Failed to save sale to database. Please try again.']);
+        
+        // Handle insufficient stock error
+        if (error && typeof error === 'object' && 'response' in error) {
+          const axiosError = error as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } };
+          if (axiosError.response?.data?.message) {
+            const errorMessage = axiosError.response.data.message;
+            setErrors([errorMessage]);
+            
+            // Pass error message to parent component for toast display
+            onPaymentComplete(errorMessage);
+          } else if (axiosError.response?.data?.errors) {
+            // Handle validation errors
+            const errorMessages = Object.values(axiosError.response.data.errors).flat();
+            const errorMessage = Array.isArray(errorMessages) ? errorMessages[0] : 'Validation error occurred';
+            setErrors([errorMessage]);
+            onPaymentComplete(errorMessage);
+          } else {
+            setErrors(['Failed to save sale to database. Please try again.']);
+          }
+        } else {
+          setErrors(['Failed to save sale to database. Please try again.']);
+        }
       } finally {
         setIsSaving(false);
       }
@@ -351,24 +457,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                </Typography>
              </Box>
 
-             <Box sx={{ 
-               minWidth: 120, 
-               flexShrink: 0, 
-               p: 2, 
-               borderRadius: 1, 
-               border: '1px solid #fbbf24', 
-               bgcolor: '#fffbeb',
-               display: 'flex',
-               flexDirection: 'column',
-               gap: 0.5
-             }}>
-               <Typography variant="caption" sx={{ color: '#d97706', fontWeight: 500 }}>
-                 {t('pos:tax')}
-               </Typography>
-               <Typography variant="body1" sx={{ color: '#b45309', fontWeight: 'bold' }}>
-                 {formatNumber(taxAmount)}
-               </Typography>
-             </Box>
+
 
              <Box sx={{ 
                minWidth: 120, 
@@ -588,7 +677,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
           onClick={handleCompleteSale}
           disabled={paymentLines.length === 0 || totalPaid !== grandTotal || isSaving}
         >
-          {isSaving ? t('pos:savingSale') : t('pos:completeSale')}
+          {isSaving ? t('pos:savingSale') : isEditMode ? t('pos:updateSale') : t('pos:completeSale')}
         </Button>
       </DialogActions>
     </Dialog>

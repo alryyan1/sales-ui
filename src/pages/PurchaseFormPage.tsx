@@ -236,10 +236,18 @@ const PurchaseFormPage: React.FC = () => {
         const productIds = existingPurchase.items.map(
           (item) => item.product_id
         );
-        const initialProducts =
-          productIds.length > 0
-            ? await productService.getProductsByIds(productIds).catch(() => [])
-            : [];
+        let initialProducts: Product[] = [];
+        if (productIds.length > 0) {
+          try {
+            initialProducts = await productService.getProductsByIds(productIds);
+          } catch (error) {
+            console.error("Failed to fetch products by IDs:", error);
+            initialProducts = [];
+          }
+        }
+        
+        // Ensure initialProducts is always an array
+        const safeInitialProducts = Array.isArray(initialProducts) ? initialProducts : [];
 
         if (initialSupplier)
           setSuppliers((prev) =>
@@ -250,14 +258,14 @@ const PurchaseFormPage: React.FC = () => {
         setProducts((prev) => {
           // Merge fetched products with existing to avoid duplicates
           const existingProductIds = new Set(prev.map((p) => p.id));
-          const newProducts = initialProducts.filter(
+          const newProducts = safeInitialProducts.filter(
             (p) => !existingProductIds.has(p.id)
           );
           return [...prev, ...newProducts];
         });
         setSelectedSupplier(initialSupplier);
 
-        const initialProductMap = initialProducts.reduce((map, prod) => {
+        const initialProductMap = safeInitialProducts.reduce((map, prod) => {
           map[prod.id] = prod;
           return map;
         }, {} as Record<number, Product>);

@@ -99,4 +99,36 @@ const exportService = {
   },
 };
 
+/**
+ * Generate daily sales PDF report
+ * @param date - Optional date in YYYY-MM-DD format, defaults to today
+ * @returns Promise that resolves when PDF opens in new tab
+ */
+export const generateDailySalesPdf = async (date?: string): Promise<void> => {
+  try {
+    const params = new URLSearchParams();
+    if (date) {
+      params.append('date', date);
+    }
+
+    const response = await apiClient.get(`/reports/daily-sales-pdf?${params}`, {
+      responseType: 'blob',
+    });
+
+    // Create blob URL and open in new tab
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.click();
+    
+    // Clean up the blob URL
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Failed to generate daily sales PDF:', error);
+    throw new Error('Failed to generate PDF report');
+  }
+};
+
 export default exportService; 

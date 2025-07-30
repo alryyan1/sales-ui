@@ -21,7 +21,12 @@ import {
   ArrowBack as BackIcon,
   QrCode as BarcodeIcon,
   Add as AddIcon,
+  Receipt as ReceiptIcon,
+  Calculate as CalculateIcon,
 } from "@mui/icons-material";
+
+// Lucide Icons
+import { FileText } from "lucide-react";
 
 // Types
 import { Product } from "../../services/productService";
@@ -31,9 +36,12 @@ import apiClient from "@/lib/axios";
 interface PosHeaderProps {
   onAddProduct: (product: Product) => void;
   loading: boolean;
+  onNewSale?: () => void;
+  onOpenCalculator?: () => void;
+  onGeneratePdf?: () => void;
 }
 
-export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading }) => {
+export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onNewSale, onOpenCalculator, onGeneratePdf }) => {
   const { t } = useTranslation(['pos', 'common']);
   const navigate = useNavigate();
   const [searchInput, setSearchInput] = useState("");
@@ -228,6 +236,78 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading }) =
         <Typography variant="body2" color="inherit" sx={{ ml: 3 }}>
           {t('pos:pressEnterToAdd')}
         </Typography>
+
+        {/* Calculator Button */}
+        <Button
+          variant="contained"
+          size="medium"
+          onClick={onOpenCalculator}
+          startIcon={<CalculateIcon />}
+          sx={{
+            ml: 3,
+            px: 3,
+            py: 1.5,
+            backgroundColor: 'warning.main',
+            color: 'white',
+            '&:hover': {
+              backgroundColor: 'warning.dark',
+            },
+            '&:disabled': {
+              backgroundColor: 'grey.300',
+              color: 'grey.500',
+            }
+          }}
+        >
+          {t('pos:calculator')}
+        </Button>
+
+        {/* New Sale Button */}
+        <Button
+          variant="contained"
+          size="medium"
+          onClick={onNewSale}
+          startIcon={<ReceiptIcon />}
+          sx={{
+            ml: 3,
+            px: 3,
+            py: 1.5,
+            backgroundColor: 'success.main',
+            color: 'white',
+            '&:hover': {
+              backgroundColor: 'success.dark',
+            },
+            '&:disabled': {
+              backgroundColor: 'grey.300',
+              color: 'grey.500',
+            }
+          }}
+        >
+          {t('pos:newSale')}
+        </Button>
+
+        {/* PDF Report Button */}
+        <Button
+          variant="contained"
+          size="medium"
+          onClick={onGeneratePdf}
+          startIcon={<FileText />}
+          sx={{
+            ml: 3,
+            px: 3,
+            py: 1.5,
+            backgroundColor: 'info.main',
+            color: 'white',
+            '&:hover': {
+              backgroundColor: 'info.dark',
+            },
+            '&:disabled': {
+              backgroundColor: 'grey.300',
+              color: 'grey.500',
+            }
+          }}
+        >
+          {t('pos:generatePdf')}
+        </Button>
       </Toolbar>
     </AppBar>
   );

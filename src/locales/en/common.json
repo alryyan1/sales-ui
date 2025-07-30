@@ -37,5 +37,6 @@
   "createdAt": "Created At",
   "updatedAt": "Updated At",
   "createdBy": "Created By",
-  "updatedBy": "Updated By"
+  "updatedBy": "Updated By",
+  "saving": "Saving..."
 } 

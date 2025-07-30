@@ -38,9 +38,16 @@ export interface SaleItem {
     batch_number_sold?: string | null; // Copied from batch for display
     purchaseItemBatch?: Pick<BatchType, 'id' | 'batch_number' | 'unit_cost' | 'expiry_date' | 'remaining_quantity'>; // For COGS and display
 
+    // Current stock information from the product
+    current_stock_quantity?: number;
+    stock_alert_level?: number | null;
+    earliest_expiry_date?: string | null;
+    sellable_unit_name?: string;
+
     quantity: number;
     unit_price: string | number;
     total_price?: string | number; // Usually calculated by backend/resource
+    cost_price_at_sale?: string | number; // Cost per sellable unit at sale time
     // available_stock from batch was a temporary UI field, not usually part of SaleItem model
     created_at?: string;
     updated_at?: string;
@@ -48,6 +55,7 @@ export interface SaleItem {
 
 export interface Sale {
     id: number;
+    sale_order_number?: number; // Order number for the day (1, 2, 3, etc.)
     client_id: number | null;
     client_name?: string;
     client?: Client; // Full client object if loaded
@@ -226,9 +234,9 @@ const saleService = {
     },
 
     /**
-     * Add a payment to an existing sale.
+     * Add payments to an existing sale.
      */
-    addPaymentToSale: async (saleId: number, paymentData: Omit<Payment, 'id' | 'sale_id' | 'user_name' | 'created_at'>): Promise<Sale> => {
+    addPaymentToSale: async (saleId: number, paymentData: { payments: Array<Omit<Payment, 'id' | 'sale_id' | 'user_name' | 'created_at'>> }): Promise<Sale> => {
         try {
             // Assumes backend returns the updated Sale object with all its payments
             const response = await apiClient.post<{ sale: Sale } | Sale>(`/sales/${saleId}/payments`, paymentData);

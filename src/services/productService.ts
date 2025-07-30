@@ -39,6 +39,9 @@ export interface Product {
   suggested_sale_price?: string | number | null;
   latest_cost_per_sellable_unit?: number | null;
   suggested_sale_price_per_sellable_unit?: number | null;
+  last_sale_price_per_sellable_unit?: number | null;
+  earliest_expiry_date?: string | null;
+  current_stock_quantity?: number;
   available_batches?: {
     batch_id: number;
     quantity: number;
@@ -147,18 +150,23 @@ const productService = {
       return Promise.resolve([]); // Return empty array if no IDs provided
     }
     try {
-      // Send IDs as comma-separated string or array (depends on backend implementation)
-      // Example using array format: ?ids[]=1&ids[]=2
-      const params = new URLSearchParams();
-      ids.forEach((id) => params.append("ids[]", id.toString()));
-
-      // Assumes backend endpoint like GET /api/products/by-ids?ids[]=1&ids[]=2
-      // You might need to adjust the endpoint or use a POST request if the URL gets too long
-      const response = await apiClient.get<{ data: Product[] }>(
-        `/product/by-ids?${params.toString()}`
+      // Send IDs as POST request with JSON body to ensure proper array format
+      const response = await apiClient.post<{ data: Product[] } | Product[]>(
+        `/product/by-ids`,
+        { ids: ids }
       );
-      console.log("getProductsByIds response:", response.data.data);
-      return response.data.data ?? response.data;
+      console.log("getProductsByIds response:", response.data);
+      
+      // Handle Laravel Resource Collection response
+      // ProductResource::collection() returns a collection with 'data' property
+      if (response.data && response.data.data && Array.isArray(response.data.data)) {
+        return response.data.data; // Laravel Resource Collection format
+      } else if (response.data && Array.isArray(response.data)) {
+        return response.data; // Direct array (fallback)
+      } else {
+        console.warn("Unexpected response structure from getProductsByIds:", response.data);
+        return [];
+      }
     } catch (error) {
       console.error("Error fetching products by IDs:", error);
       throw error;

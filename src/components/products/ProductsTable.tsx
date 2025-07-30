@@ -77,7 +77,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                             <TableHead className="text-center px-3 py-3">{t('products:totalStock')}</TableHead>
                             <TableHead className="hidden lg:table-cell text-center px-3 py-3">{t('products:stockAlertLevel')}</TableHead>
                             <TableHead className="hidden lg:table-cell text-right px-3 py-3">{t('products:latestCostPerSellableUnit')}</TableHead>
-                            <TableHead className="hidden lg:table-cell text-right px-3 py-3">{t('products:suggestedSalePricePerSellableUnit')}</TableHead>
+                            <TableHead className="hidden lg:table-cell text-right px-3 py-3">{t('products:lastSalePricePerSellableUnit')}</TableHead>
                             <TableHead className="text-center px-3 py-3 w-[80px]">{t('common:actions')}</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -203,7 +203,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                                         {product.latest_cost_per_sellable_unit ? formatCurrency(product.latest_cost_per_sellable_unit) : '---'}
                                     </TableCell>
                                     <TableCell className="hidden lg:table-cell text-center px-3 py-2 dark:text-gray-100 text-base">
-                                        {product.suggested_sale_price_per_sellable_unit ? formatCurrency(product.suggested_sale_price_per_sellable_unit) : '---'}
+                                        {product.last_sale_price_per_sellable_unit ? formatCurrency(product.last_sale_price_per_sellable_unit) : '---'}
                                     </TableCell>
                                     <TableCell className="text-center px-3 py-2">
                                         <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => onEdit(product)} disabled={isLoading}>
