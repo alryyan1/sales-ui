@@ -6,7 +6,6 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Icons
 import { Receipt, ChevronLeft, ChevronRight, Check } from "lucide-react";
@@ -128,8 +127,8 @@ export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
       </div>
 
       {/* Sales List */}
-      <ScrollArea className="flex-1 p-1 h-[calc(100vh-100px)]">
-        <div className="grid grid-cols-1 gap-2 p-2">
+      <div className="flex-1 p-1 overflow-hidden">
+        <div className="grid grid-cols-1 gap-2 p-2 h-full">
           {sales
             .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
             .map((sale) => (
@@ -167,7 +166,7 @@ export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
             </div>
           ))}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }; 

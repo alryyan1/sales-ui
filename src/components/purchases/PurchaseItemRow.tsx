@@ -11,10 +11,12 @@ import {
   TextField, 
   Typography, 
   Chip,
-  Box
+  Box,
+  Tooltip
 } from "@mui/material";
 import { 
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  ContentCopy as CopyIcon
 } from "@mui/icons-material";
 import Autocomplete from "@mui/material/Autocomplete";
 import CircularProgress from "@mui/material/CircularProgress";
@@ -201,6 +203,23 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = ({
     return errors[fieldPath]?.message;
   };
 
+  const handleCopySku = async (sku: string) => {
+    try {
+      await navigator.clipboard.writeText(sku);
+      // You could add a toast notification here if you have a toast system
+      console.log('SKU copied to clipboard:', sku);
+    } catch (err) {
+      console.error('Failed to copy SKU:', err);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = sku;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+  };
+
   return (
          <Card sx={{ 
        p: 0.375, 
@@ -310,6 +329,52 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = ({
               isOptionEqualToValue={(option, value) => option.id === value.id}
               noOptionsText={productSearchInput ? t("common:noResults") : t("products:typeToSearch")}
             />
+            
+            {/* SKU Display with Copy Button */}
+            {selectedProduct && selectedProduct.sku && (
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1, 
+                mt: 1,
+                p: 1,
+                bgcolor: 'grey.50',
+                borderRadius: 1,
+                border: '1px solid',
+                borderColor: 'grey.200'
+              }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                  SKU:
+                </Typography>
+                <Typography variant="caption" sx={{ 
+                  fontFamily: 'monospace',
+                  bgcolor: 'white',
+                  px: 1,
+                  py: 0.5,
+                  borderRadius: 0.5,
+                  border: '1px solid',
+                  borderColor: 'grey.300',
+                  flex: 1
+                }}>
+                  {selectedProduct.sku}
+                </Typography>
+                <Tooltip title={t("common:copy") || "Copy SKU"}>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleCopySku(selectedProduct.sku!)}
+                    sx={{ 
+                      p: 0.5,
+                      color: 'primary.main',
+                      '&:hover': {
+                        bgcolor: 'primary.50'
+                      }
+                    }}
+                  >
+                    <CopyIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            )}
           </Box>
 
           {/* Batch Number */}
@@ -422,6 +487,9 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = ({
                 (watch(`items.${index}.expiry_date`) as Date).toISOString().split('T')[0] : 
                 ""
               }
+              sx={{
+                width: '150px'
+              }}
               onChange={(e) => {
                 const dateValue = e.target.value;
                 if (dateValue) {

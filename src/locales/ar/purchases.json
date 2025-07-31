@@ -62,6 +62,8 @@
     "costPerUnit": "التكلفة لكل وحدة",
     "intendedSalePricePerUnit": "سعر البيع المقصود لكل وحدة",
     "viewPdf": "عرض PDF",
+    "exportExcel": "تصدير Excel",
+    "excelSuccess": "تم فتح ملف Excel في تبويب جديد",
 
     "selectStatus": "اختر الحالة"
 

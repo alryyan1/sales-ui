@@ -38,5 +38,12 @@
   "updatedAt": "Updated At",
   "createdBy": "Created By",
   "updatedBy": "Updated By",
-  "saving": "Saving..."
+  "saving": "Saving...",
+  "copy": "Copy",
+  "filters": "Filters",
+  "clearFilters": "Clear Filters",
+  "view": "View",
+  "n/a": "N/A",
+  "unit": "Unit",
+  "items": "Items"
 } 

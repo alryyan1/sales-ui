@@ -99,7 +99,12 @@ export const InventoryReportTable: React.FC<InventoryReportTableProps> = ({
           <TableHead className="text-right px-2 py-3">
             {t("products:suggestedSalePricePerSellableUnit")}
           </TableHead>
-          
+          <TableHead className="text-center px-2 py-3">
+            {t("reports:totalItemsPurchased")}
+          </TableHead>
+          <TableHead className="text-center px-2 py-3">
+            {t("reports:totalItemsSold")}
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -180,7 +185,16 @@ export const InventoryReportTable: React.FC<InventoryReportTableProps> = ({
                       )
                     : "---"}
                 </TableCell>
-             
+                <TableCell className="text-center px-2 py-3 dark:text-gray-100">
+                  {product.total_items_purchased !== null && product.total_items_purchased !== undefined
+                    ? formatNumber(product.total_items_purchased)
+                    : "---"}
+                </TableCell>
+                <TableCell className="text-center px-2 py-3 dark:text-gray-100">
+                  {product.total_items_sold !== null && product.total_items_sold !== undefined
+                    ? formatNumber(product.total_items_sold)
+                    : "---"}
+                </TableCell>
               </TableRow>
               {/* Collapsible Content for Batches */}
               {hasBatches && ( // Render Collapsible only if there are batches
@@ -191,7 +205,7 @@ export const InventoryReportTable: React.FC<InventoryReportTableProps> = ({
                     "bg-slate-50 dark:bg-gray-800/50 dark:border-gray-700"
                   )}
                 >
-                  <TableCell colSpan={8} className="p-0">
+                  <TableCell colSpan={10} className="p-0">
                     {" "}
                     {/* Adjusted colSpan to match new number of columns */}
                     <Collapsible

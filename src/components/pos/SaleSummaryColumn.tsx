@@ -212,22 +212,14 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
       <div className="space-y-2">
         <Button
           onClick={onProceedToPayment}
-          disabled={currentSaleItems.length === 0}
+          disabled={currentSaleItems.length === 0 || amountDue <= 0}
           className="w-full h-12 text-lg"
           size="lg"
         >
           <CreditCard className="h-5 w-5 mr-2" />
           {amountDue > 0 ? t('pos:addPayment') : t('pos:proceedToPayment')}
         </Button>
-        <Button
-          variant="outline"
-          onClick={onClearSale}
-          disabled={currentSaleItems.length === 0}
-          className="w-full"
-        >
-          <Trash2 className="h-4 w-4 mr-2" />
-          {t('pos:clearSale')}
-        </Button>
+   
       </div>
     </div>
   );

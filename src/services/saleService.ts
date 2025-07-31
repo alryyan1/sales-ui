@@ -238,6 +238,7 @@ const saleService = {
      */
     addPaymentToSale: async (saleId: number, paymentData: { payments: Array<Omit<Payment, 'id' | 'sale_id' | 'user_name' | 'created_at'>> }): Promise<Sale> => {
         try {
+            console.log('addPaymentToSale called with:', { saleId, paymentData }); // Debug log
             // Assumes backend returns the updated Sale object with all its payments
             const response = await apiClient.post<{ sale: Sale } | Sale>(`/sales/${saleId}/payments`, paymentData);
             if ('sale' in response.data) {
@@ -246,6 +247,23 @@ const saleService = {
             return response.data as Sale;
         } catch (error) {
             console.error(`Error adding payment to sale ${saleId}:`, error);
+            throw error;
+        }
+    },
+
+    /**
+     * Delete all payments from an existing sale.
+     */
+    deletePaymentsFromSale: async (saleId: number): Promise<Sale> => {
+        try {
+            console.log('deletePaymentsFromSale called for sale ID:', saleId);
+            const response = await apiClient.delete<{ sale: Sale } | Sale>(`/sales/${saleId}/payments`);
+            if ('sale' in response.data) {
+                return response.data.sale;
+            }
+            return response.data as Sale;
+        } catch (error) {
+            console.error(`Error deleting payments from sale ${saleId}:`, error);
             throw error;
         }
     },

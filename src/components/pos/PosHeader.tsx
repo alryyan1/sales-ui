@@ -1,28 +1,27 @@
 // src/components/pos/PosHeader.tsx
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 
 // MUI Components
 import {
   Box,
   TextField,
-  AppBar,
-  Toolbar,
-  IconButton,
-  Typography,
   InputAdornment,
   Autocomplete,
-  Button,
 } from "@mui/material";
+
+// Shadcn Components
+import { Button } from "@/components/ui/button";
 
 // MUI Icons
 import {
-  ArrowBack as BackIcon,
   QrCode as BarcodeIcon,
   Add as AddIcon,
   Receipt as ReceiptIcon,
   Calculate as CalculateIcon,
+  PictureAsPdf as PdfIcon,
+  Description as InvoiceIcon,
+  Print as PrintIcon,
 } from "@mui/icons-material";
 
 // Lucide Icons
@@ -39,11 +38,14 @@ interface PosHeaderProps {
   onNewSale?: () => void;
   onOpenCalculator?: () => void;
   onGeneratePdf?: () => void;
+  onPreviewPdf?: () => void;
+  onGenerateInvoice?: () => void;
+  onPrintThermalInvoice?: () => void;
+  hasSelectedSale?: boolean;
 }
 
-export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onNewSale, onOpenCalculator, onGeneratePdf }) => {
+export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onNewSale, onOpenCalculator, onGeneratePdf, onPreviewPdf, onGenerateInvoice, onPrintThermalInvoice, hasSelectedSale }) => {
   const { t } = useTranslation(['pos', 'common']);
-  const navigate = useNavigate();
   const [searchInput, setSearchInput] = useState("");
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -124,20 +126,11 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onN
   };
 
   return (
-    <AppBar position="static" color="primary" elevation={2}>
-      <Toolbar sx={{ minHeight: '80px' }}>
-        <IconButton
-          edge="start"
-          color="inherit"
-          onClick={() => navigate('/')}
-          sx={{ mr: 3 }}
-        >
-          <BackIcon />
-        </IconButton>
-        
-        <Typography variant="h5" component="div" sx={{ flexGrow: 0, mr: 4, fontWeight: 600 }}>
+    <div className="bg-primary text-primary-foreground shadow-md">
+      <div className="container mx-auto px-4 py-4 min-h-[80px] flex items-center justify-between">
+        <h1 className="text-2xl font-semibold mr-4">
           {t('pos:title')}
-        </Typography>
+        </h1>
 
         <Box sx={{ flexGrow: 1, maxWidth: 600, display: 'flex', gap: 2, alignItems: 'center' }}>
           <Autocomplete
@@ -196,12 +189,12 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onN
             renderOption={(props, option) => (
               <Box component="li" {...props}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  <div className="font-medium">
                     {option.name}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  </div>
+                  <div className="text-sm text-gray-500">
                     SKU: {option.sku || "N/A"} | Price: {formatNumber(option.suggested_sale_price_per_sellable_unit || 0)}
-                  </Typography>
+                  </div>
                 </Box>
               </Box>
             )}
@@ -209,106 +202,91 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onN
           />
           
           <Button
-            variant="contained"
-            size="medium"
+            variant="outline"
+            size="default"
             onClick={handleAddProduct}
             disabled={!selectedProduct || loading}
-            startIcon={<AddIcon />}
-            sx={{
-              minWidth: 'auto',
-              px: 2,
-              py: 1.5,
-              backgroundColor: 'white',
-              color: 'primary.main',
-              '&:hover': {
-                backgroundColor: 'grey.100',
-              },
-              '&:disabled': {
-                backgroundColor: 'grey.300',
-                color: 'grey.500',
-              }
-            }}
+            className="min-w-auto px-2 py-1.5 bg-white text-primary hover:bg-gray-100 disabled:bg-gray-300 disabled:text-gray-500"
           >
+            <AddIcon className="mr-2 h-4 w-4" />
             {t('pos:addProduct')}
           </Button>
         </Box>
 
-        <Typography variant="body2" color="inherit" sx={{ ml: 3 }}>
+        <span className="text-sm ml-3">
           {t('pos:pressEnterToAdd')}
-        </Typography>
+        </span>
 
         {/* Calculator Button */}
         <Button
-          variant="contained"
-          size="medium"
+          variant="default"
+          size="default"
           onClick={onOpenCalculator}
-          startIcon={<CalculateIcon />}
-          sx={{
-            ml: 3,
-            px: 3,
-            py: 1.5,
-            backgroundColor: 'warning.main',
-            color: 'white',
-            '&:hover': {
-              backgroundColor: 'warning.dark',
-            },
-            '&:disabled': {
-              backgroundColor: 'grey.300',
-              color: 'grey.500',
-            }
-          }}
+          className="ml-3 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 disabled:text-gray-500"
         >
+          <CalculateIcon className="mr-2 h-4 w-4" />
           {t('pos:calculator')}
         </Button>
 
         {/* New Sale Button */}
         <Button
-          variant="contained"
-          size="medium"
+          variant="default"
+          size="default"
           onClick={onNewSale}
-          startIcon={<ReceiptIcon />}
-          sx={{
-            ml: 3,
-            px: 3,
-            py: 1.5,
-            backgroundColor: 'success.main',
-            color: 'white',
-            '&:hover': {
-              backgroundColor: 'success.dark',
-            },
-            '&:disabled': {
-              backgroundColor: 'grey.300',
-              color: 'grey.500',
-            }
-          }}
+          className="ml-3 px-3 py-1.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:text-gray-500"
         >
+          <ReceiptIcon className="mr-2 h-4 w-4" />
           {t('pos:newSale')}
         </Button>
 
+        {/* Preview PDF Button */}
+        <Button
+          variant="default"
+          size="default"
+          onClick={onPreviewPdf}
+          className="ml-3 px-3 py-1.5 bg-purple-500 hover:bg-purple-600 disabled:bg-gray-300 disabled:text-gray-500"
+        >
+          <PdfIcon className="mr-2 h-4 w-4" />
+          {t('pos:previewPdf')}
+        </Button>
+
+        {/* Invoice PDF Button - Only show when sale is selected */}
+        {hasSelectedSale && (
+          <Button
+            variant="default"
+            size="default"
+            onClick={onGenerateInvoice}
+            className="ml-3 px-3 py-1.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:text-gray-500"
+          >
+            <InvoiceIcon className="mr-2 h-4 w-4" />
+            {t('pos:generateInvoice')}
+          </Button>
+        )}
+
+        {/* Thermal Invoice Button - Only show when sale is selected */}
+        {hasSelectedSale && (
+          <Button
+            variant="default"
+            size="default"
+            onClick={onPrintThermalInvoice}
+            className="ml-3 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 disabled:text-gray-500"
+          >
+            <PrintIcon className="mr-2 h-4 w-4" />
+            {t('pos:printThermalInvoice')}
+          </Button>
+        )}
+
         {/* PDF Report Button */}
         <Button
-          variant="contained"
-          size="medium"
+          variant="default"
+          size="default"
           onClick={onGeneratePdf}
-          startIcon={<FileText />}
-          sx={{
-            ml: 3,
-            px: 3,
-            py: 1.5,
-            backgroundColor: 'info.main',
-            color: 'white',
-            '&:hover': {
-              backgroundColor: 'info.dark',
-            },
-            '&:disabled': {
-              backgroundColor: 'grey.300',
-              color: 'grey.500',
-            }
-          }}
+          className="ml-3 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:text-gray-500"
         >
+          <FileText className="mr-2 h-4 w-4" />
           {t('pos:generatePdf')}
         </Button>
-      </Toolbar>
-    </AppBar>
+      </div>
+    </div>
   );
 }; 

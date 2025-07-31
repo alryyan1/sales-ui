@@ -23,10 +23,14 @@ import Chip from "@mui/material/Chip"; // To display status
 import VisibilityIcon from "@mui/icons-material/Visibility"; // View details icon
 import FilterListIcon from "@mui/icons-material/FilterList";
 import ClearIcon from "@mui/icons-material/Clear";
+import HistoryIcon from "@mui/icons-material/History"; // Product history icon
+import TableChartIcon from "@mui/icons-material/TableChart"; // Excel export icon
 
 // Services and Types
 import purchaseService from "../../services/purchaseService"; // Use purchase service
 import supplierService, { Supplier } from "../../services/supplierService";
+import productService, { Product } from "../../services/productService";
+import exportService from "../../services/exportService"; // Import export service
 import dayjs from "dayjs";
 import { CardContent } from "@mui/material";
 import { Button } from "@/components/ui/button";
@@ -39,6 +43,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatCurrency } from "@/constants";
+import { PurchaseItemDetailsDialog } from "@/components/purchases/PurchaseItemDetailsDialog";
 
 // Filter interface
 interface PurchaseFilters {
@@ -47,6 +52,7 @@ interface PurchaseFilters {
   purchase_date?: string;
   created_at?: string;
   status?: string;
+  product_id?: number;
 }
 
 const PurchasesListPage: React.FC = () => {
@@ -64,7 +70,15 @@ const PurchasesListPage: React.FC = () => {
   const [filters, setFilters] = useState<PurchaseFilters>({});
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  
+  // Product history dialog states
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [productPurchases, setProductPurchases] = useState<any[]>([]);
+  const [loadingProductPurchases, setLoadingProductPurchases] = useState(false);
+  const [productHistoryDialogOpen, setProductHistoryDialogOpen] = useState(false);
 
   // Status options
   const statusOptions = [
@@ -83,6 +97,18 @@ const PurchasesListPage: React.FC = () => {
       console.error("Failed to fetch suppliers:", error);
     } finally {
       setLoadingSuppliers(false);
+    }
+  }, []);
+
+  const fetchProducts = useCallback(async () => {
+    setLoadingProducts(true);
+    try {
+      const response = await productService.getProducts(1, "", "name", "asc", 1000); // Get all products for filter
+      setProducts(response.data || []);
+    } catch (error) {
+      console.error("Failed to fetch products:", error);
+    } finally {
+      setLoadingProducts(false);
     }
   }, []);
 
@@ -110,6 +136,9 @@ const PurchasesListPage: React.FC = () => {
          if (filters.status) {
            params.append('status', filters.status);
          }
+         if (filters.product_id) {
+           params.append('product_id', filters.product_id.toString());
+         }
 
          console.log('Filter params:', params.toString());
 
@@ -129,10 +158,11 @@ const PurchasesListPage: React.FC = () => {
     fetchPurchases(currentPage, filters);
   }, [fetchPurchases, currentPage, filters]);
 
-  // Effect to fetch suppliers on component mount
+  // Effect to fetch suppliers and products on component mount
   useEffect(() => {
     fetchSuppliers();
-  }, [fetchSuppliers]);
+    fetchProducts();
+  }, [fetchSuppliers, fetchProducts]);
 
   // --- Filter Handlers ---
   const handleFilterChange = (key: keyof PurchaseFilters, value: string | number | undefined) => {
@@ -165,6 +195,42 @@ const PurchasesListPage: React.FC = () => {
     // Navigate to a dedicated page for purchase details (implement later)
     navigate(`/purchases/${id}/edit`);
     // Or open a details modal
+  };
+
+  // --- Product History Handler ---
+  const handleViewProductHistory = async (product: Product) => {
+    setSelectedProduct(product);
+    setProductHistoryDialogOpen(true);
+    setLoadingProductPurchases(true);
+    
+    try {
+      const purchases = await purchaseService.getPurchasesForProduct(product.id);
+      setProductPurchases(purchases);
+    } catch (error) {
+      console.error('Failed to fetch product purchases:', error);
+      setProductPurchases([]);
+    } finally {
+      setLoadingProductPurchases(false);
+    }
+  };
+
+  const handleCloseProductHistory = () => {
+    setProductHistoryDialogOpen(false);
+    setSelectedProduct(null);
+    setProductPurchases([]);
+  };
+
+  // --- Excel Export Handler ---
+  const handleExportExcel = async () => {
+    try {
+      // Pass current filters to the Excel export
+      await exportService.exportPurchasesExcel(filters);
+      // Show success message (you can add a toast notification here if needed)
+      console.log('Excel export initiated successfully');
+    } catch (error) {
+      console.error('Failed to export Excel:', error);
+      // Show error message (you can add a toast notification here if needed)
+    }
   };
 
   // --- Render ---
@@ -200,6 +266,14 @@ const PurchasesListPage: React.FC = () => {
           >
             {t("common:filters")}
           </Button>
+          {/* Excel Export Button */}
+          <Button
+            variant="outline"
+            onClick={handleExportExcel}
+            startIcon={<TableChartIcon />}
+          >
+            {t("purchases:exportExcel")}
+          </Button>
           {/* Link to the Add Purchase Page */}
           <Button asChild>
             <RouterLink to="/purchases/add">
@@ -228,7 +302,7 @@ const PurchasesListPage: React.FC = () => {
             )}
           </Box>
           
-                     <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(5, 1fr)" }, gap: 2 }}>
+                     <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(6, 1fr)" }, gap: 2 }}>
              {/* Supplier Filter */}
              <Autocomplete
                options={suppliers}
@@ -243,6 +317,25 @@ const PurchasesListPage: React.FC = () => {
                    {...params}
                    label={t("purchases:supplier")}
                    placeholder={t("purchases:selectSupplier")}
+                   size="small"
+                 />
+               )}
+             />
+
+             {/* Product Filter */}
+             <Autocomplete
+               options={products}
+               getOptionLabel={(option) => `${option.name}${option.sku ? ` (${option.sku})` : ''}`}
+               value={products.find(p => p.id === filters.product_id) || null}
+               onChange={(event, newValue) => {
+                 handleFilterChange('product_id', newValue?.id);
+               }}
+               loading={loadingProducts}
+               renderInput={(params) => (
+                 <TextField
+                   {...params}
+                   label={t("purchases:product")}
+                   placeholder={t("purchases:selectProduct")}
                    size="small"
                  />
                )}
@@ -377,34 +470,45 @@ const PurchasesListPage: React.FC = () => {
                     <TableCell align="center" className="text-base font-semibold">
                       {formatCurrency(purchase.total_amount)}
                     </TableCell>
-                    <TableCell align="center" className="text-base">
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "center",
-                          gap: 0.5,
-                        }}
-                      >
-                        <Tooltip title={t("common:view") || ""}>
-                          <IconButton
-                            aria-label={t("common:view") || "View"}
-                            color="default"
-                            size="small"
-                            onClick={() => handleViewDetails(purchase.id)}
-                          >
-                            <VisibilityIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        {/* Optional: Add Delete button if allowed */}
-                        {/* <Tooltip title={t('common:delete') || ''}>
-                                                     <span>
-                                                         <IconButton aria-label={t('common:delete') || 'Delete'} color="error" size="small" onClick={() => openConfirmDialog(purchase.id)} disabled={isDeleting}>
-                                                             <DeleteIcon fontSize="small" />
-                                                         </IconButton>
-                                                     </span>
-                                                 </Tooltip> */}
-                      </Box>
-                    </TableCell>
+                                         <TableCell align="center" className="text-base">
+                       <Box
+                         sx={{
+                           display: "flex",
+                           justifyContent: "center",
+                           gap: 0.5,
+                         }}
+                       >
+                         <Tooltip title={t("common:view") || ""}>
+                           <IconButton
+                             aria-label={t("common:view") || "View"}
+                             color="default"
+                             size="small"
+                             onClick={() => handleViewDetails(purchase.id)}
+                           >
+                             <VisibilityIcon fontSize="small" />
+                           </IconButton>
+                         </Tooltip>
+                         
+                         {/* Product History Button - only show if there's a product filter */}
+                         {filters.product_id && (
+                           <Tooltip title={t("purchases:viewProductHistory") || ""}>
+                             <IconButton
+                               aria-label={t("purchases:viewProductHistory") || "View Product History"}
+                               color="primary"
+                               size="small"
+                               onClick={() => {
+                                 const product = products.find(p => p.id === filters.product_id);
+                                 if (product) {
+                                   handleViewProductHistory(product);
+                                 }
+                               }}
+                             >
+                               <HistoryIcon fontSize="small" />
+                             </IconButton>
+                           </Tooltip>
+                         )}
+                       </Box>
+                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -438,12 +542,20 @@ const PurchasesListPage: React.FC = () => {
               {t("purchases:noPurchases")}
             </Typography>
           )}
-        </Card>
-      )}
+                 </Card>
+       )}
 
+       {/* Product History Dialog */}
+       <PurchaseItemDetailsDialog
+         open={productHistoryDialogOpen}
+         onClose={handleCloseProductHistory}
+         product={selectedProduct}
+         purchases={productPurchases}
+         isLoading={loadingProductPurchases}
+       />
 
-    </Box>
-  );
-};
+     </Box>
+   );
+ };
 
 export default PurchasesListPage;

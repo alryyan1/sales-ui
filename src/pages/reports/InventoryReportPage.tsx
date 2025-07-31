@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import {
   useNavigate,
   useSearchParams,
-  Link as RouterLink,
 } from "react-router-dom";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils"; // Assuming you have this from shadcn/ui setup
@@ -18,16 +17,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"; // For filter form
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Pagination,
@@ -40,9 +30,6 @@ import {
 } from "@/components/ui/pagination";
 import {
   Loader2,
-  Filter,
-  X,
-  Search,
   AlertCircle,
   ArrowLeft,
   PackageCheck,
@@ -65,11 +52,10 @@ import { formatNumber } from "@/constants";
 import { PurchaseItem } from "@/services/purchaseService";
 
 // Interface for Product with potentially loaded batches for this page
-interface ProductWithBatches extends ProductType {
+interface ProductWithBatches extends Omit<ProductType, 'available_batches'> {
   available_batches?: PurchaseItem[];
 }
-interface PaginatedProductsWithBatches
-  extends PaginatedResponse<ProductWithBatches> {}
+type PaginatedProductsWithBatches = PaginatedResponse<ProductWithBatches>;
 
 // Pagination helper function (place in a utils file or define here)
 const DOTS = "...";
@@ -100,14 +86,14 @@ const generatePagination = (
   const lastPageIndex = totalPages;
 
   if (!shouldShowLeftDots && shouldShowRightDots) {
-    let leftItemCount = 3 + 2 * siblingCount;
-    let leftRange = Array.from({ length: leftItemCount }, (_, i) => i + 1);
+    const leftItemCount = 3 + 2 * siblingCount;
+    const leftRange = Array.from({ length: leftItemCount }, (_, i) => i + 1);
     return [...leftRange, DOTS, lastPageIndex];
   }
 
   if (shouldShowLeftDots && !shouldShowRightDots) {
-    let rightItemCount = 3 + 2 * siblingCount;
-    let rightRange = Array.from(
+    const rightItemCount = 3 + 2 * siblingCount;
+    const rightRange = Array.from(
       { length: rightItemCount },
       (_, i) => lastPageIndex - rightItemCount + 1 + i
     );
@@ -115,7 +101,7 @@ const generatePagination = (
   }
 
   if (shouldShowLeftDots && shouldShowRightDots) {
-    let middleRange = Array.from(
+    const middleRange = Array.from(
       { length: rightSiblingIndex - leftSiblingIndex + 1 },
       (_, i) => leftSiblingIndex + i
     );
@@ -214,11 +200,6 @@ const InventoryReportPage: React.FC = () => {
   };
   // console.log(reportData,'reportData')
   const handleClearFilters = () => {
-    const defaultFilters = {
-      search: "",
-      lowStockOnly: false,
-      outOfStockOnly: false /*, categoryId: null */,
-    };
     // Does not reset form directly, relies on useEffect syncing form with URL params
     setSearchParams({ page: "1" }); // This will trigger useEffect which resets the form
   };
@@ -295,9 +276,9 @@ const InventoryReportPage: React.FC = () => {
               </CardTitle>
               <CardDescription className="text-sm text-muted-foreground">
                 {t("common:paginationSummary", {
-                  from: formatNumber(reportData.meta.from),
-                  to: formatNumber(reportData.meta.to),
-                  total: formatNumber(reportData.meta.total),
+                  from: formatNumber(reportData.from),
+                  to: formatNumber(reportData.to),
+                  total: formatNumber(reportData.total),
                 })}
               </CardDescription>
             </CardHeader>

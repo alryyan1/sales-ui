@@ -7,6 +7,15 @@ export interface ExportFilters {
   in_stock_only?: boolean;
 }
 
+export interface PurchaseExportFilters {
+  supplier_id?: number;
+  reference_number?: string;
+  purchase_date?: string;
+  created_at?: string;
+  status?: string;
+  product_id?: number;
+}
+
 const exportService = {
   /**
    * Export products to PDF and open in new tab
@@ -95,6 +104,48 @@ const exportService = {
     } catch (error) {
       console.error('Error opening PDF:', error);
       throw new Error('Failed to open PDF. Please try again.');
+    }
+  },
+
+  /**
+   * Export purchases to Excel and open in new tab
+   * @param filters Optional filters to apply to the export
+   * @returns Promise that resolves when Excel is opened
+   */
+  exportPurchasesExcel: async (filters: PurchaseExportFilters = {}): Promise<void> => {
+    try {
+      // Build query parameters
+      const params = new URLSearchParams();
+      
+      if (filters.supplier_id) {
+        params.append('supplier_id', filters.supplier_id.toString());
+      }
+      if (filters.reference_number) {
+        params.append('reference_number', filters.reference_number);
+      }
+      if (filters.purchase_date) {
+        params.append('purchase_date', filters.purchase_date);
+      }
+      if (filters.created_at) {
+        params.append('created_at', filters.created_at);
+      }
+      if (filters.status) {
+        params.append('status', filters.status);
+      }
+      if (filters.product_id) {
+        params.append('product_id', filters.product_id.toString());
+      }
+
+      // Create the URL for the web Excel endpoint (not API)
+      const baseUrl = apiClient.defaults.baseURL?.replace('/api', '') || '';
+      const excelUrl = `${baseUrl}/purchases/export/excel?${params.toString()}`;
+      
+      // Open Excel in new tab
+      window.open(excelUrl, '_blank');
+      
+    } catch (error) {
+      console.error('Error opening Excel:', error);
+      throw new Error('Failed to open Excel. Please try again.');
     }
   },
 };

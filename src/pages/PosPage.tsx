@@ -22,13 +22,16 @@ import {
   SaleSummaryColumn,
   CurrentSaleItemsColumn,
   CalculatorDialog,
+  PosPdfDialog,
+  InvoicePdfDialog,
+  ThermalInvoiceDialog,
   PaymentMethodData,
 } from "../components/pos";
 
 // Types
 import { Product } from "../services/productService";
 import saleService from "../services/saleService";
-import { preciseCalculation } from "../constants";
+import { preciseCalculation, preciseSum } from "../constants";
 import { generateDailySalesPdf } from "../services/exportService";
 
 // Main POS Page Component
@@ -45,6 +48,9 @@ const PosPage: React.FC = () => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
   const [isTodaySalesCollapsed, setIsTodaySalesCollapsed] = useState(false);
   const [calculatorDialogOpen, setCalculatorDialogOpen] = useState(false);
+  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [thermalDialogOpen, setThermalDialogOpen] = useState(false);
   
   // Discount and Payment State
   const [discountAmount, setDiscountAmount] = useState(0);
@@ -197,11 +203,11 @@ const PosPage: React.FC = () => {
       // Show error message in toast
       showSnackbar(errorMessage, 'error');
     } else {
-      // Success case
+      // Success case - always reload today's sales after payment completion
+      await loadTodaySales();
+      
       if (selectedSale) {
-        // If we were editing a sale, reload the sales to get updated data
-        await loadTodaySales();
-        // Clear the selected sale to exit edit mode
+        // If we were editing a sale, clear the selected sale to exit edit mode
         setSelectedSale(null);
         setSelectedSaleId(null);
         setCurrentSaleItems([]);
@@ -266,6 +272,22 @@ const PosPage: React.FC = () => {
     setCalculatorDialogOpen(true);
   };
 
+  const handleOpenPdfDialog = () => {
+    setPdfDialogOpen(true);
+  };
+
+  const handleOpenInvoiceDialog = () => {
+    setInvoiceDialogOpen(true);
+  };
+
+  const handlePrintThermalInvoice = () => {
+    if (!selectedSale) {
+      showSnackbar(t('pos:noSaleSelected'), 'error');
+      return;
+    }
+    setThermalDialogOpen(true);
+  };
+
   const handleGenerateDailySalesPdf = async () => {
     try {
       await generateDailySalesPdf();
@@ -276,19 +298,71 @@ const PosPage: React.FC = () => {
   };
 
   // Payment method handlers
-  const handleRemovePayment = (index: number) => {
-    setPaymentMethods(prev => {
-      const newMethods = prev.filter((_, i) => i !== index);
+  const handleRemovePayment = async (index: number) => {
+    if (!selectedSale) {
+      // For new sales, just update frontend state
+      setPaymentMethods(prev => {
+        const newMethods = prev.filter((_, i) => i !== index);
+        const newTotalPaid = newMethods.reduce((sum, method) => sum + method.amount, 0);
+        setTotalPaid(newTotalPaid);
+        return newMethods;
+      });
+      return;
+    }
+
+    // For existing sales, update backend
+    try {
+      const newMethods = paymentMethods.filter((_, i) => i !== index);
       const newTotalPaid = newMethods.reduce((sum, method) => sum + method.amount, 0);
+      
+      const paymentData = {
+        payments: newMethods
+          .filter(payment => payment.method !== 'refund') // Filter out refund payments for backend
+          .map(payment => ({
+            method: payment.method as 'cash' | 'visa' | 'mastercard' | 'bank_transfer' | 'mada' | 'other' | 'store_credit',
+            amount: payment.amount,
+            payment_date: new Date().toISOString().split('T')[0],
+            reference_number: payment.reference || null,
+            notes: null,
+          })),
+      };
+
+      await saleService.addPaymentToSale(selectedSale.id, paymentData);
+      
+      // Update frontend state
+      setPaymentMethods(newMethods);
       setTotalPaid(newTotalPaid);
-      return newMethods;
-    });
+      await loadTodaySales(); // Reload to get updated data
+      showSnackbar(t('pos:paymentRemoved'), 'success');
+    } catch (error) {
+      console.error('Failed to remove payment:', error);
+      showSnackbar(t('pos:paymentRemovalFailed'), 'error');
+    }
   };
 
-  const handleCancelPayments = () => {
-    setPaymentMethods([]);
-    setTotalPaid(0);
-    showSnackbar(t('pos:paymentsCancelled'), 'success');
+  const handleCancelPayments = async () => {
+    if (!selectedSale) {
+      // For new sales, just update frontend state
+      setPaymentMethods([]);
+      setTotalPaid(0);
+      showSnackbar(t('pos:paymentsCancelled'), 'success');
+      return;
+    }
+
+    // For existing sales, update backend
+    try {
+      console.log('Cancelling payments for sale ID:', selectedSale.id);
+      await saleService.deletePaymentsFromSale(selectedSale.id);
+      
+      // Update frontend state
+      setPaymentMethods([]);
+      setTotalPaid(0);
+      await loadTodaySales(); // Reload to get updated data
+      showSnackbar(t('pos:paymentsCancelled'), 'success');
+    } catch (error) {
+      console.error('Failed to cancel payments:', error);
+      showSnackbar(t('pos:paymentCancellationFailed'), 'error');
+    }
   };
 
   return (
@@ -300,19 +374,16 @@ const PosPage: React.FC = () => {
         onNewSale={handleNewSale} 
         onOpenCalculator={handleOpenCalculator}
         onGeneratePdf={handleGenerateDailySalesPdf}
+        onPreviewPdf={handleOpenPdfDialog}
+        onGenerateInvoice={handleOpenInvoiceDialog}
+        onPrintThermalInvoice={handlePrintThermalInvoice}
+        hasSelectedSale={!!selectedSale}
       />
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Column 1 - Current Sale Items (50%) */}
-        <CurrentSaleItemsColumn
-          currentSaleItems={currentSaleItems}
-          onUpdateQuantity={updateQuantity}
-          onRemoveItem={removeFromCurrentSale}
-        />
-
-        {/* Column 2 - Summary and Actions (30%) */}
-        <SaleSummaryColumn
+          {/* Column 2 - Summary and Actions (30%) */}
+          <SaleSummaryColumn
           currentSaleItems={currentSaleItems}
           onProceedToPayment={handleProceedToPayment}
           onClearSale={clearCurrentSale}
@@ -323,6 +394,15 @@ const PosPage: React.FC = () => {
           onRemovePayment={handleRemovePayment}
           onCancelPayment={handleCancelPayments}
         />
+        {/* Column 1 - Current Sale Items (50%) */}
+        <CurrentSaleItemsColumn
+          currentSaleItems={currentSaleItems}
+          onUpdateQuantity={updateQuantity}
+          onRemoveItem={removeFromCurrentSale}
+          isSalePaid={totalPaid > 0 && (preciseSum(currentSaleItems.map(item => item.total)) - (discountType === 'percentage' ? (preciseSum(currentSaleItems.map(item => item.total)) * discountAmount) / 100 : discountAmount)) <= totalPaid}
+        />
+
+      
 
         {/* Column 3 - Today's Sales (20%) */}
         <div className={`border-l border-gray-200 transition-all duration-300 ${
@@ -373,6 +453,26 @@ const PosPage: React.FC = () => {
       <CalculatorDialog 
         open={calculatorDialogOpen} 
         onOpenChange={setCalculatorDialogOpen} 
+      />
+
+      {/* PDF Dialog */}
+      <PosPdfDialog
+        open={pdfDialogOpen}
+        onClose={() => setPdfDialogOpen(false)}
+      />
+
+      {/* Invoice PDF Dialog */}
+      <InvoicePdfDialog
+        open={invoiceDialogOpen}
+        onClose={() => setInvoiceDialogOpen(false)}
+        sale={selectedSale}
+      />
+
+      {/* Thermal Invoice Dialog */}
+      <ThermalInvoiceDialog
+        open={thermalDialogOpen}
+        onClose={() => setThermalDialogOpen(false)}
+        sale={selectedSale}
       />
 
       {/* Snackbar */}

@@ -205,6 +205,21 @@ const purchaseService = {
       throw error; // Rethrow for component/form handling
     }
   },
+
+  /**
+   * Get purchases with items for a specific product.
+   */
+  getPurchasesForProduct: async (productId: number): Promise<Purchase[]> => {
+    try {
+      const response = await apiClient.get<{ data: Purchase[] }>(
+        `/purchases?product_id=${productId}&include_items=true`
+      );
+      return response.data.data || [];
+    } catch (error) {
+      console.error(`Error fetching purchases for product ${productId}:`, error);
+      throw error;
+    }
+  },
   // --- Error Helpers ---
   getValidationErrors,
   getErrorMessage,

@@ -42,6 +42,9 @@ export interface Product {
   last_sale_price_per_sellable_unit?: number | null;
   earliest_expiry_date?: string | null;
   current_stock_quantity?: number;
+  // --- Inventory Report specific fields ---
+  total_items_purchased?: number | null;
+  total_items_sold?: number | null;
   available_batches?: {
     batch_id: number;
     quantity: number;
