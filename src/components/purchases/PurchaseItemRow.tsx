@@ -253,7 +253,11 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
              getOptionLabel={(option) => option.name}
              value={selectedProduct || null}
              onChange={handleProductChange}
-             onInputChange={(_, newInputValue) => setProductSearchInput(newInputValue)}
+             onInputChange={(_, newInputValue) => {
+               if (!isPurchaseReceived) {
+                 setProductSearchInput(newInputValue);
+               }
+             }}
              inputValue={productSearchInput}
              loading={localLoadingProducts}
              isOptionEqualToValue={(option, value) => option.id === value.id}
@@ -283,7 +287,6 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
               </li>
             )}
             onKeyDown={handleKeyDown}
-            disabled={isSubmitting || isPurchaseReceived}
           />
           
           {selectedProduct?.sku && (
@@ -394,6 +397,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
     setProductSearchInput,
     handleKeyDown,
     isSubmitting,
+    isPurchaseReceived,
     getFieldError,
     handleRemove,
     itemCount,
