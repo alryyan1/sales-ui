@@ -270,6 +270,7 @@ const PosPage: React.FC = () => {
     
     // Convert sale items to current sale items format
     const items: CartItem[] = sale.items.map(item => ({
+      id: item.id, // Preserve the sale item ID for deletion
       product: item.product,
       quantity: item.quantity,
       unitPrice: item.unitPrice,

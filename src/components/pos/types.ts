@@ -3,6 +3,7 @@ import { Product } from "../../services/productService";
 
 // Cart Item Type
 export interface CartItem {
+  id?: number; // Optional ID for existing sale items
   product: Product;
   quantity: number;
   unitPrice: number;
