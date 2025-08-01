@@ -1,11 +1,11 @@
 // src/pages/PurchaseFormPage.tsx
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   useForm,
   FormProvider,
   SubmitHandler,
   useWatch,
-} from "react-hook-form"; // Import FormProvider
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useTranslation } from "react-i18next";
@@ -18,7 +18,7 @@ import { PurchaseHeaderFormSection } from "../components/purchases/PurchaseHeade
 import { PurchaseItemsList } from "../components/purchases/PurchaseItemsList";
 import PurchaseItemsImportDialog from "../components/purchases/PurchaseItemsImportDialog";
 
-// shadcn/ui & Lucide Icons (Only those needed for page shell/totals/submit)
+// shadcn/ui & Lucide Icons
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -36,19 +36,18 @@ import exportService from "../services/exportService";
 import { formatNumber, preciseSum, preciseCalculation } from "@/constants";
 import apiClient from "@/lib/axios";
 
-// --- Zod Schema Definition (with item ID for edits) ---
+// --- Zod Schema Definition ---
 const purchaseItemSchema = z.object({
-  id: z.number().nullable().optional(), // For existing items during update
+  id: z.number().nullable().optional(),
   product_id: z
     .number({ required_error: "validation:required" })
     .positive({ message: "validation:selectProduct" }),
-    
-  product: z.custom<Product>().optional(), // For UI state only
+  product: z.custom<Product>().optional(),
   batch_number: z
     .string()
     .max(100, { message: "validation:maxLengthHundred" })
     .nullable()
-    .optional(), // Add key "validation:maxLengthHundred"
+    .optional(),
   quantity: z.coerce
     .number({ invalid_type_error: "validation:invalidInteger" })
     .int({ message: "validation:invalidInteger" })
@@ -89,17 +88,15 @@ const purchaseFormSchema = z.object({
 
 export type PurchaseFormValues = z.infer<typeof purchaseFormSchema>;
 
-// Type for a single item in the PurchaseFormValues
 export type PurchaseItemFormValues = {
   id?: number | null;
   product_id: number;
-  product?: Product; // Full selected product object (includes UOM info)
+  product?: Product;
   batch_number?: string | null;
-  quantity: number; // Quantity of STOCKING UNITS (e.g., boxes)
-  unit_cost: number; // Cost per STOCKING UNIT (e.g., per box)
-  sale_price?: number | null; // Intended sale price PER SELLABLE UNIT
+  quantity: number;
+  unit_cost: number;
+  sale_price?: number | null;
   expiry_date?: Date | null;
-  // Display only, calculated:
   total_sellable_units_display?: number;
   cost_per_sellable_unit_display?: number;
 };
@@ -121,21 +118,19 @@ const PurchaseFormPage: React.FC = () => {
   // --- State ---
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [loadingData, setLoadingData] = useState(isEditMode); // Loading existing purchase
+  const [loadingData, setLoadingData] = useState(isEditMode);
   const [loadingSuppliers, setLoadingSuppliers] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  
   // Search States
   const [supplierSearchInput, setSupplierSearchInput] = useState("");
   const [debouncedSupplierSearch, setDebouncedSupplierSearch] = useState("");
   const supplierDebounceRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Track last search to prevent duplicate API calls
   const lastSupplierSearchRef = useRef<string>("");
+  
   // Selected objects for display
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(
-    null
-  );
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
 
   // --- React Hook Form Setup ---
   const formMethods = useForm<PurchaseFormValues>({
@@ -155,11 +150,11 @@ const PurchaseFormPage: React.FC = () => {
           sale_price: null,
           expiry_date: null,
           product: undefined,
-          
         },
       ],
     },
   });
+  
   const {
     handleSubmit,
     reset,
@@ -167,8 +162,11 @@ const PurchaseFormPage: React.FC = () => {
     setError,
     control,
   } = formMethods;
-  // console.log(errors,'errors') // Removed to prevent infinite re-renders
+
+  // Memoized watched items to prevent unnecessary re-renders
   const watchedItems = useWatch({ control, name: "items" });
+  
+  // Memoized grand total calculation
   const grandTotal = useMemo(() => 
     watchedItems?.reduce(
       (total, item) =>
@@ -177,10 +175,6 @@ const PurchaseFormPage: React.FC = () => {
     ) ?? 0,
     [watchedItems]
   );
-
-  // --- Data Fetching Callbacks ---
-  // Removed fetchSuppliers and fetchProducts to prevent infinite loops
-  // Now using inline async functions in useEffect
 
   // --- Debounce Effects ---
   useEffect(() => {
@@ -193,9 +187,12 @@ const PurchaseFormPage: React.FC = () => {
         clearTimeout(supplierDebounceRef.current);
     };
   }, [supplierSearchInput]);
+
+  // Memoized supplier search effect
   useEffect(() => {
     if (debouncedSupplierSearch !== '' && debouncedSupplierSearch !== lastSupplierSearchRef.current) {
       lastSupplierSearchRef.current = debouncedSupplierSearch;
+      
       const searchSuppliers = async () => {
         setLoadingSuppliers(true);
         try {
@@ -215,8 +212,6 @@ const PurchaseFormPage: React.FC = () => {
       searchSuppliers();
     }
   }, [debouncedSupplierSearch, t]);
-  
-
 
   // --- Fetch Existing Purchase Data for Edit Mode ---
   useEffect(() => {
@@ -248,7 +243,6 @@ const PurchaseFormPage: React.FC = () => {
           }
         }
         
-        // Ensure initialProducts is always an array
         const safeInitialProducts = Array.isArray(initialProducts) ? initialProducts : [];
 
         if (initialSupplier)
@@ -258,7 +252,6 @@ const PurchaseFormPage: React.FC = () => {
               : [initialSupplier, ...prev]
           );
         setProducts((prev) => {
-          // Merge fetched products with existing to avoid duplicates
           const existingProductIds = new Set(prev.map((p) => p.id));
           const newProducts = safeInitialProducts.filter(
             (p) => !existingProductIds.has(p.id)
@@ -297,7 +290,7 @@ const PurchaseFormPage: React.FC = () => {
         const errorMsg = purchaseService.getErrorMessage(err);
         setError("root", { type: "manual", message: errorMsg });
         toast.error(t("common:error"), { description: errorMsg });
-        navigate("/purchases"); // Redirect if purchase not found
+        navigate("/purchases");
       } finally {
         setLoadingData(false);
       }
@@ -308,22 +301,16 @@ const PurchaseFormPage: React.FC = () => {
     } else {
       setLoadingData(false);
     }
-  }, [
-    isEditMode,
-    purchaseId,
-    reset,
-    navigate,
-    t,
-  ]); // Added fetchSuppliers/fetchProducts
+  }, [isEditMode, purchaseId, reset, navigate, t, setError]);
 
   // --- Form Submission ---
-  const onSubmit: SubmitHandler<PurchaseFormValues> = async (data) => {
+  const onSubmit: SubmitHandler<PurchaseFormValues> = useCallback(async (data) => {
     setServerError(null);
     const apiData: CreatePurchaseData | UpdatePurchaseData = {
       ...data,
       purchase_date: format(data.purchase_date as Date, "yyyy-MM-dd"),
       items: data.items.map((item) => ({
-        id: isEditMode ? item.id : undefined, // Send ID only if editing and item has one
+        id: isEditMode ? item.id : undefined,
         product_id: item.product_id,
         batch_number: item.batch_number || null,
         quantity: Number(item.quantity),
@@ -337,16 +324,18 @@ const PurchaseFormPage: React.FC = () => {
           : null,
       })),
     };
+    
     console.log(
       `Submitting ${isEditMode ? "Update" : "Create"} Purchase:`,
       apiData
     );
+    
     try {
       if (isEditMode && purchaseId) {
         await purchaseService.updatePurchase(
           purchaseId,
           apiData as UpdatePurchaseData
-        ); // Cast if types differ significantly
+        );
       } else {
         await purchaseService.createPurchase(apiData as CreatePurchaseData);
       }
@@ -355,7 +344,7 @@ const PurchaseFormPage: React.FC = () => {
       });
       navigate("/purchases", {
         state: { updatedPurchaseId: isEditMode ? purchaseId : undefined },
-      }); // Pass ID for highlight
+      });
     } catch (err) {
       console.error(
         `Failed to ${isEditMode ? "update" : "create"} purchase:`,
@@ -384,10 +373,10 @@ const PurchaseFormPage: React.FC = () => {
         setServerError(t("validation:checkFields"));
       }
     }
-  };
+  }, [isEditMode, purchaseId, navigate, t, setError]);
 
   // --- PDF Export Handler ---
-  const handleViewPdf = async () => {
+  const handleViewPdf = useCallback(async () => {
     if (!purchaseId) return;
     
     try {
@@ -397,11 +386,85 @@ const PurchaseFormPage: React.FC = () => {
         description: err instanceof Error ? err.message : "Failed to open PDF",
       });
     }
-  };
+  }, [purchaseId, t]);
 
-  // --- Render Page ---
-  //if (loadingData && isEditMode) { /* ... Loading Indicator for Edit Mode Initial Load ... */ }
-  //if (error && isEditMode && !loadingData) { /* ... Error Alert for Edit Mode Initial Load ... */ }
+  // --- Import Success Handler ---
+  const handleImportSuccess = useCallback(async () => {
+    if (!purchaseId) return;
+    
+    try {
+      const existingPurchase = await purchaseService.getPurchase(purchaseId);
+      if (!existingPurchase.items)
+        throw new Error("Purchase items missing in API response.");
+
+      const initialSupplier = existingPurchase.supplier_id
+        ? await supplierService
+            .getSupplier(existingPurchase.supplier_id)
+            .catch(() => null)
+        : null;
+
+      const productIds = existingPurchase.items.map(
+        (item) => item.product_id
+      );
+      let initialProducts: Product[] = [];
+      if (productIds.length > 0) {
+        try {
+          initialProducts = await productService.getProductsByIds(productIds);
+        } catch (error) {
+          console.error("Failed to fetch products by IDs:", error);
+          initialProducts = [];
+        }
+      }
+      
+      const safeInitialProducts = Array.isArray(initialProducts) ? initialProducts : [];
+
+      if (initialSupplier)
+        setSuppliers((prev) =>
+          prev.find((s) => s.id === initialSupplier.id)
+            ? prev
+            : [initialSupplier, ...prev]
+        );
+      setProducts((prev) => {
+        const existingProductIds = new Set(prev.map((p) => p.id));
+        const newProducts = safeInitialProducts.filter(
+          (p) => !existingProductIds.has(p.id)
+        );
+        return [...prev, ...newProducts];
+      });
+      setSelectedSupplier(initialSupplier);
+
+      const initialProductMap = safeInitialProducts.reduce((map, prod) => {
+        map[prod.id] = prod;
+        return map;
+      }, {} as Record<number, Product>);
+
+      reset({
+        supplier_id: existingPurchase.supplier_id ?? undefined,
+        purchase_date: existingPurchase.purchase_date
+          ? parseISO(existingPurchase.purchase_date)
+          : new Date(),
+        status: existingPurchase.status,
+        reference_number: existingPurchase.reference_number || "",
+        notes: existingPurchase.notes || "",
+        items: existingPurchase.items.map((item) => ({
+          id: item.id,
+          product_id: item.product_id,
+          product: initialProductMap[item.product_id],
+          batch_number: item.batch_number || "",
+          quantity: Number(item.quantity) || 1,
+          unit_cost: Number(item.unit_cost) || 0,
+          sale_price:
+            item.sale_price !== null ? Number(item.sale_price) : null,
+          expiry_date: item.expiry_date ? parseISO(item.expiry_date) : null,
+        })),
+      });
+    } catch (err) {
+      console.error("Failed to load purchase data:", err);
+      const errorMsg = purchaseService.getErrorMessage(err);
+      setError("root", { type: "manual", message: errorMsg });
+      toast.error(t("common:error"), { description: errorMsg });
+    }
+  }, [purchaseId, reset, setError, t]);
 
   return (
     <div className="dark:bg-gray-950 min-h-screen pb-10">
@@ -418,13 +481,11 @@ const PurchaseFormPage: React.FC = () => {
             {isEditMode
               ? t("purchases:editPurchaseTitle")
               : t("purchases:addPageTitle")}{" "}
-            {/* Add key */}
             {isEditMode && purchaseId && ` #${purchaseId}`}
           </h1>
         </div>
         
         <div className="flex items-center gap-2">
-          {/* Import Items Button - Only show in edit mode */}
           {isEditMode && purchaseId && (
             <Button
               variant="outline"
@@ -436,7 +497,6 @@ const PurchaseFormPage: React.FC = () => {
             </Button>
           )}
           
-          {/* PDF Button - Only show in edit mode */}
           {isEditMode && purchaseId && (
             <Button
               variant="outline"
@@ -447,13 +507,25 @@ const PurchaseFormPage: React.FC = () => {
               {t("purchases:viewPdf")}
             </Button>
           )}
+          
+          <Button
+            type="submit"
+            disabled={isSubmitting || (loadingData && isEditMode)}
+            size="lg"
+            onClick={handleSubmit(onSubmit)}
+          >
+            {isSubmitting && (
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />
+            )}
+            {isEditMode
+              ? t("common:update")
+              : t("purchases:submitPurchase")}
+          </Button>
         </div>
       </div>
 
       <Card className="dark:bg-gray-900">
         <FormProvider {...formMethods}>
-          {" "}
-          {/* Pass all form methods via context */}
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
             <CardContent className="pt-1">
               {serverError && !isSubmitting && (
@@ -480,29 +552,11 @@ const PurchaseFormPage: React.FC = () => {
               />
               <Separator className="my-6" />
           
-   
               {/* Totals Display */}
               <div className="flex justify-end mb-6">
                 <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">
                   {t("purchases:grandTotal")}: {formatNumber(grandTotal)}
                 </p>
-              </div>
-              {/* Submit Button */}
-              <div className="flex justify-end">
-                <Button
-                  type="submit"
-                  disabled={isSubmitting || (loadingData && isEditMode)}
-                  size="lg"
-                >
-                  {" "}
-                  {/* Disable if initial data is loading for edit */}
-                  {isSubmitting && (
-                    <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                  )}
-                  {isEditMode
-                    ? t("common:update")
-                    : t("purchases:submitPurchase")}
-                </Button>
               </div>
             </CardContent>
           </form>
@@ -516,91 +570,7 @@ const PurchaseFormPage: React.FC = () => {
           onClose={() => setIsImportDialogOpen(false)}
           purchaseId={purchaseId}
           onImportSuccess={() => {
-            // Refresh the purchase data to show new items
-            if (purchaseId) {
-              const loadPurchaseData = async (id: number) => {
-                setLoadingData(true);
-                setServerError(null);
-                try {
-                  const existingPurchase = await purchaseService.getPurchase(id);
-                  if (!existingPurchase.items)
-                    throw new Error("Purchase items missing in API response.");
-
-                  // Pre-fetch related data for display
-                  const initialSupplier = existingPurchase.supplier_id
-                    ? await supplierService
-                        .getSupplier(existingPurchase.supplier_id)
-                        .catch(() => null)
-                    : null;
-
-                  const productIds = existingPurchase.items.map(
-                    (item) => item.product_id
-                  );
-                  let initialProducts: Product[] = [];
-                  if (productIds.length > 0) {
-                    try {
-                      initialProducts = await productService.getProductsByIds(productIds);
-                    } catch (error) {
-                      console.error("Failed to fetch products by IDs:", error);
-                      initialProducts = [];
-                    }
-                  }
-                  
-                  // Ensure initialProducts is always an array
-                  const safeInitialProducts = Array.isArray(initialProducts) ? initialProducts : [];
-
-                  if (initialSupplier)
-                    setSuppliers((prev) =>
-                      prev.find((s) => s.id === initialSupplier.id)
-                        ? prev
-                        : [initialSupplier, ...prev]
-                    );
-                  setProducts((prev) => {
-                    // Merge fetched products with existing to avoid duplicates
-                    const existingProductIds = new Set(prev.map((p) => p.id));
-                    const newProducts = safeInitialProducts.filter(
-                      (p) => !existingProductIds.has(p.id)
-                    );
-                    return [...prev, ...newProducts];
-                  });
-                  setSelectedSupplier(initialSupplier);
-
-                  const initialProductMap = safeInitialProducts.reduce((map, prod) => {
-                    map[prod.id] = prod;
-                    return map;
-                  }, {} as Record<number, Product>);
-
-                  reset({
-                    supplier_id: existingPurchase.supplier_id ?? undefined,
-                    purchase_date: existingPurchase.purchase_date
-                      ? parseISO(existingPurchase.purchase_date)
-                      : new Date(),
-                    status: existingPurchase.status,
-                    reference_number: existingPurchase.reference_number || "",
-                    notes: existingPurchase.notes || "",
-                    items: existingPurchase.items.map((item) => ({
-                      id: item.id,
-                      product_id: item.product_id,
-                      product: initialProductMap[item.product_id],
-                      batch_number: item.batch_number || "",
-                      quantity: Number(item.quantity) || 1,
-                      unit_cost: Number(item.unit_cost) || 0,
-                      sale_price:
-                        item.sale_price !== null ? Number(item.sale_price) : null,
-                      expiry_date: item.expiry_date ? parseISO(item.expiry_date) : null,
-                    })),
-                  });
-                } catch (err) {
-                  console.error("Failed to load purchase data:", err);
-                  const errorMsg = purchaseService.getErrorMessage(err);
-                  setError("root", { type: "manual", message: errorMsg });
-                  toast.error(t("common:error"), { description: errorMsg });
-                } finally {
-                  setLoadingData(false);
-                }
-              };
-              loadPurchaseData(purchaseId);
-            }
+            handleImportSuccess();
             setIsImportDialogOpen(false);
             toast.success(t("common:success"), {
               description: t("purchases:importItemsSuccess"),

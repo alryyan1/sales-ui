@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -25,6 +25,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  LinearProgress,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -161,6 +162,7 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
   const [autoMapped, setAutoMapped] = useState(false);
   const [previewData, setPreviewData] = useState<any[]>([]);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -181,7 +183,8 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
     { key: 'expiry_date', label: t('purchases:fields.expiryDate'), required: false },
   ];
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Memoized handlers to prevent unnecessary re-renders
+  const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     if (!selectedFile) return;
 
@@ -209,22 +212,22 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
-  const handleColumnMappingChange = (field: keyof ColumnMapping, value: string) => {
+  const handleColumnMappingChange = useCallback((field: keyof ColumnMapping, value: string) => {
     setColumnMapping(prev => ({
       ...prev,
       [field]: value,
     }));
-  };
+  }, []);
 
-  const handleAutoMap = () => {
+  const handleAutoMap = useCallback(() => {
     const autoMappedColumns = autoMapColumns(headers);
     setColumnMapping(autoMappedColumns);
     setAutoMapped(true);
-  };
+  }, [headers]);
 
-  const handleNext = async () => {
+  const handleNext = useCallback(async () => {
     if (activeStep === 1) {
       // Validate required fields are mapped
       const requiredFields = purchaseItemFields.filter(field => field.required);
@@ -241,13 +244,13 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
     } else if (activeStep === 2) {
       setActiveStep(3);
     }
-  };
+  }, [activeStep, columnMapping, purchaseItemFields, t]);
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     setActiveStep(prev => prev - 1);
-  };
+  }, []);
 
-  const handlePreview = async () => {
+  const handlePreview = useCallback(async () => {
     if (!file) return;
 
     setPreviewLoading(true);
@@ -261,16 +264,29 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
     } finally {
       setPreviewLoading(false);
     }
-  };
+  }, [file, columnMapping, skipHeader, t]);
 
-  const handleImport = async () => {
+  const handleImport = useCallback(async () => {
     if (!file) return;
 
     setLoading(true);
     setError(null);
+    setImportProgress(0);
 
     try {
+      // Simulate progress updates for large imports
+      const progressInterval = setInterval(() => {
+        setImportProgress(prev => {
+          if (prev >= 90) return prev;
+          return prev + Math.random() * 10;
+        });
+      }, 1000);
+
       const result = await purchaseService.importPurchaseItemsStep2(file, columnMapping, skipHeader, purchaseId);
+      
+      clearInterval(progressInterval);
+      setImportProgress(100);
+      
       setImportResult(result);
       onImportSuccess();
     } catch (err) {
@@ -291,9 +307,9 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [file, columnMapping, skipHeader, purchaseId, onImportSuccess, t]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setActiveStep(0);
     setFile(null);
     setHeaders([]);
@@ -311,10 +327,12 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
     setImportResult(null);
     setAutoMapped(false);
     setPreviewData([]);
+    setImportProgress(0);
     onClose();
-  };
+  }, [onClose]);
 
-  const renderStep1 = () => (
+  // Memoized render functions for better performance
+  const renderStep1 = useMemo(() => (
     <Box>
       <Typography variant="body1" sx={{ mb: 2 }}>
         {t('purchases:import.step1Description')}
@@ -356,9 +374,9 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
         </Alert>
       )}
     </Box>
-  );
+  ), [t, handleFileSelect, file]);
 
-  const renderStep2 = () => (
+  const renderStep2 = useMemo(() => (
     <Box>
       <Typography variant="body1" sx={{ mb: 2 }}>
         {t('purchases:import.step2Description')}
@@ -390,18 +408,6 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
           sx={{ ml: 'auto' }}
         >
           {t('purchases:import.autoMapColumns') || 'Auto-Map Columns'}
-        </Button>
-        <Button
-          variant="outlined"
-          size="small"
-          onClick={() => {
-            console.log('Current mapping:', columnMapping);
-            console.log('Headers:', headers);
-            console.log('Purchase item fields:', purchaseItemFields);
-          }}
-          sx={{ ml: 1 }}
-        >
-          Debug
         </Button>
       </Box>
       
@@ -454,9 +460,9 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
         </Table>
       </TableContainer>
     </Box>
-  );
+  ), [t, autoMapped, skipHeader, handleAutoMap, columnMapping, headers, handleColumnMappingChange, purchaseItemFields]);
 
-  const renderStep3 = () => (
+  const renderStep3 = useMemo(() => (
     <Box>
       <Typography variant="body1" sx={{ mb: 2 }}>
         {t('purchases:import.step3Description') || 'Preview the data that will be imported'}
@@ -516,9 +522,9 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
         </Alert>
       )}
     </Box>
-  );
+  ), [t, previewLoading, previewData]);
 
-  const renderStep4 = () => (
+  const renderStep4 = useMemo(() => (
     <Box>
       <Typography variant="body1" sx={{ mb: 2 }}>
         {t('purchases:import.step4Description') || 'Review and confirm the import'}
@@ -530,9 +536,15 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
           <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
             {t('purchases:import.processing') || 'Processing Import...'}
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 2 }}>
             {t('purchases:import.processingDescription') || 'This may take a few minutes for large files. Please do not close this dialog.'}
           </Typography>
+          <Box sx={{ width: '100%', maxWidth: 400 }}>
+            <LinearProgress variant="determinate" value={importProgress} />
+            <Typography variant="caption" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+              {Math.round(importProgress)}% Complete
+            </Typography>
+          </Box>
         </Box>
       )}
       
@@ -579,22 +591,22 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
         </Box>
       )}
     </Box>
-  );
+  ), [t, loading, importProgress, importResult]);
 
-  const renderStepContent = () => {
+  const renderStepContent = useMemo(() => {
     switch (activeStep) {
       case 0:
-        return renderStep1();
+        return renderStep1;
       case 1:
-        return renderStep2();
+        return renderStep2;
       case 2:
-        return renderStep3();
+        return renderStep3;
       case 3:
-        return renderStep4();
+        return renderStep4;
       default:
         return null;
     }
-  };
+  }, [activeStep, renderStep1, renderStep2, renderStep3, renderStep4]);
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
@@ -618,13 +630,13 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
           </Alert>
         )}
         
-        {loading && (
+        {loading && activeStep !== 3 && (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
             <CircularProgress />
           </Box>
         )}
         
-        {!loading && renderStepContent()}
+        {!loading && renderStepContent}
       </DialogContent>
       
       <DialogActions>
@@ -632,7 +644,6 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
           {activeStep === 3 ? t('common:close') : t('common:cancel')}
         </Button>
 
-        {/* Back button: show on steps 1, 2, and 3 (activeStep > 0) */}
         {activeStep > 0 && (
           <Button onClick={handleBack}>
             {t('common:back')}

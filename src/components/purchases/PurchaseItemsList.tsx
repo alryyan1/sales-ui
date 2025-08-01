@@ -1,11 +1,15 @@
 // src/components/purchases/PurchaseItemsList.tsx
-import React from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import { useFieldArray, useFormContext } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 // MUI Components
-import { Button, Typography, Box, Alert, AlertTitle } from '@mui/material';
-import { Add as AddIcon, Error as ErrorIcon } from '@mui/icons-material';
+import { Button, Typography, Box, Alert, AlertTitle, TextField, InputAdornment } from '@mui/material';
+import { Add as AddIcon, Error as ErrorIcon, Search as SearchIcon } from '@mui/icons-material';
+
+// Virtualization for performance
+import { FixedSizeList as List } from 'react-window';
+import AutoSizer from 'react-virtualized-auto-sizer';
 
 // Child Row Component
 import { PurchaseItemRow } from './PurchaseItemRow';
@@ -18,35 +22,127 @@ interface PurchaseItemsListProps {
     isSubmitting: boolean;
 }
 
+// Virtualized row component for better performance
+const VirtualizedRow = React.memo(({ 
+    index, 
+    style, 
+    data 
+}: {
+    index: number;
+    style: React.CSSProperties;
+    data: {
+        fields: any[];
+        remove: (index: number) => void;
+        products: Product[];
+        isSubmitting: boolean;
+        itemCount: number;
+        searchTerm: string;
+    };
+}) => {
+    const { fields, remove, products, isSubmitting, itemCount, searchTerm } = data;
+    const field = fields[index];
+    
+    // Skip rendering if item doesn't match search
+    if (searchTerm && field) {
+        const productName = field.product?.name || '';
+        const productSku = field.product?.sku || '';
+        const batchNumber = field.batch_number || '';
+        
+        const searchLower = searchTerm.toLowerCase();
+        const matchesSearch = 
+            productName.toLowerCase().includes(searchLower) ||
+            productSku.toLowerCase().includes(searchLower) ||
+            batchNumber.toLowerCase().includes(searchLower);
+            
+        if (!matchesSearch) {
+            return null;
+        }
+    }
+    
+    return (
+        <div style={style}>
+            <PurchaseItemRow
+                key={field.id}
+                index={index}
+                remove={remove}
+                products={products}
+                isSubmitting={isSubmitting}
+                itemCount={itemCount}
+                isNew={index === 0}
+                shouldFocus={index === 0}
+            />
+        </div>
+    );
+});
+
+VirtualizedRow.displayName = 'VirtualizedRow';
+
 export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
     products, isSubmitting
 }) => {
     const { t } = useTranslation(['purchases', 'common']);
-    const { control, formState: { errors } } = useFormContext(); // Get control and errors
+    const { control, formState: { errors } } = useFormContext();
+    const [searchTerm, setSearchTerm] = useState('');
 
     const { fields, insert, remove } = useFieldArray({
         control,
         name: "items",
     });
 
-    const addItem = () => {
-        console.log('Adding new item, current fields count:', fields.length);
-        
+    // Memoize the add item function to prevent unnecessary re-renders
+    const addItem = useCallback(() => {
         const newItem = {
-            id: null, // If editing, this would be for new items
-            product_id: 0, // Or null, depending on combobox handling
+            id: null,
+            product_id: 0,
             batch_number: '',
             quantity: 1,
             unit_cost: 0,
             sale_price: null,
             expiry_date: null,
-            product: undefined, // For UI state
+            product: undefined,
         };
         
-        // Insert at the beginning (index 0) so new items appear at the top
         insert(0, newItem);
-        console.log('New item added at index 0, updated fields count:', fields.length + 1);
-    };
+    }, [insert]);
+
+    // Memoize the remove function
+    const handleRemove = useCallback((index: number) => {
+        remove(index);
+    }, [remove]);
+
+    // Filter fields based on search term
+    const filteredFields = useMemo(() => {
+        if (!searchTerm) return fields;
+        
+        return fields.filter((field) => {
+            const productName = field.product?.name || '';
+            const productSku = field.product?.sku || '';
+            const batchNumber = field.batch_number || '';
+            
+            const searchLower = searchTerm.toLowerCase();
+            return (
+                productName.toLowerCase().includes(searchLower) ||
+                productSku.toLowerCase().includes(searchLower) ||
+                batchNumber.toLowerCase().includes(searchLower)
+            );
+        });
+    }, [fields, searchTerm]);
+
+    // Memoize the list data to prevent unnecessary re-renders
+    const listData = useMemo(() => ({
+        fields,
+        remove: handleRemove,
+        products,
+        isSubmitting,
+        itemCount: fields.length,
+        searchTerm,
+    }), [fields, handleRemove, products, isSubmitting, searchTerm]);
+
+    // Calculate row height based on content
+    const getRowHeight = useCallback((index: number) => {
+        // Base height for each row, adjust as needed
+        return 120; // Adjust based on your PurchaseItemRow height
+    }, []);
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -58,7 +154,6 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                     {t('purchases:itemsSectionTitle')} ({fields.length})
                 </Typography>
 
-                {/* Add Item Button - Fixed at top */}
                 <Button
                     type="button"
                     variant="outlined"
@@ -82,7 +177,26 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                 </Button>
             </Box>
 
-            {/* Display root error for items array (e.g., minimum length) */}
+            {/* Search functionality for large datasets */}
+            {fields.length > 10 && (
+                <TextField
+                    fullWidth
+                    size="small"
+                    placeholder={t('purchases:searchItems') || 'Search items...'}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    InputProps={{
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <SearchIcon />
+                            </InputAdornment>
+                        ),
+                    }}
+                    sx={{ mb: 2 }}
+                />
+            )}
+
+            {/* Display root error for items array */}
             {errors.items && !Array.isArray(errors.items) && errors.items.root && (
                 <Alert severity="error" sx={{ mb: 2 }}>
                     <ErrorIcon />
@@ -95,19 +209,51 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                 </Alert>
              )}
 
-            {/* Map over the fields array */}
-            {fields.map((item, index) => (
-                <PurchaseItemRow
-                    key={item.id} // RHF provides stable id
-                    index={index}
-                    remove={remove}
-                    products={products}
-                    isSubmitting={isSubmitting}
-                    itemCount={fields.length}
-                    isNew={index === 0} // Mark the first item (top) as new
-                    shouldFocus={index === 0} // Focus the first item (newly added)
-                />
-            ))}
+            {/* Performance optimized rendering */}
+            {fields.length > 50 ? (
+                // Use virtualization for large datasets
+                <Box sx={{ height: 600, width: '100%' }}>
+                    <AutoSizer>
+                        {({ height, width }) => (
+                            <List
+                                height={height}
+                                itemCount={fields.length}
+                                itemSize={getRowHeight(0)}
+                                width={width}
+                                itemData={listData}
+                            >
+                                {VirtualizedRow}
+                            </List>
+                        )}
+                    </AutoSizer>
+                </Box>
+            ) : (
+                // Regular rendering for smaller datasets
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {fields.map((item, index) => (
+                        <PurchaseItemRow
+                            key={item.id}
+                            index={index}
+                            remove={handleRemove}
+                            products={products}
+                            isSubmitting={isSubmitting}
+                            itemCount={fields.length}
+                            isNew={index === 0}
+                            shouldFocus={index === 0}
+                        />
+                    ))}
+                </Box>
+            )}
+
+            {/* Show filtered count if searching */}
+            {searchTerm && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    {t('purchases:showingFilteredResults', { 
+                        shown: filteredFields.length, 
+                        total: fields.length 
+                    }) || `Showing ${filteredFields.length} of ${fields.length} items`}
+                </Typography>
+            )}
         </Box>
     );
 };
