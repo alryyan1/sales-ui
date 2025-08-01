@@ -259,6 +259,101 @@ const productService = {
     }
   },
 
+  /**
+   * Import products from Excel file - Step 1: Upload file and get headers
+   * @param file Excel file to upload
+   * @returns Promise resolving to headers from Excel file
+   */
+  importProductsStep1: async (file: File): Promise<{ headers: string[]; message: string }> => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await apiClient.post('/products/import', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Error uploading Excel file:', error);
+      throw new Error(getErrorMessage(error));
+    }
+  },
+
+  /**
+   * Import products from Excel file - Preview: Preview data with column mapping
+   * @param file Excel file
+   * @param columnMapping Mapping of product fields to Excel columns
+   * @param skipHeader Whether to skip the header row
+   * @returns Promise resolving to preview data
+   */
+  importProductsPreview: async (
+    file: File, 
+    columnMapping: Record<string, string>, 
+    skipHeader: boolean = true
+  ): Promise<{ preview: any[] }> => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('skipHeader', skipHeader ? '1' : '0');
+      
+      // Add column mapping as JSON
+      Object.entries(columnMapping).forEach(([field, column]) => {
+        formData.append(`columnMapping[${field}]`, column);
+      });
+
+      const response = await apiClient.post('/products/preview-import', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 60000, // 1 minute timeout for preview
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Error previewing import:', error);
+      throw new Error(getErrorMessage(error));
+    }
+  },
+
+  /**
+   * Import products from Excel file - Step 2: Process import with column mapping
+   * @param file Excel file
+   * @param columnMapping Mapping of product fields to Excel columns
+   * @param skipHeader Whether to skip the header row
+   * @returns Promise resolving to import results
+   */
+  importProductsStep2: async (
+    file: File, 
+    columnMapping: Record<string, string>, 
+    skipHeader: boolean = true
+  ): Promise<{ imported: number; errors: number; message: string; errorDetails: any[] }> => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('skipHeader', skipHeader ? '1' : '0');
+      
+      // Add column mapping as JSON
+      Object.entries(columnMapping).forEach(([field, column]) => {
+        formData.append(`columnMapping[${field}]`, column);
+      });
+
+      const response = await apiClient.post('/products/process-import', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 300000, // 5 minutes timeout for large imports
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Error processing import:', error);
+      throw new Error(getErrorMessage(error));
+    }
+  },
+
   // --- Error Helpers (Imported from axios.ts) ---
   getValidationErrors,
   getErrorMessage,

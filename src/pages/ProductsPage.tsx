@@ -17,6 +17,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import PrintIcon from "@mui/icons-material/Print";
 import TableChartIcon from "@mui/icons-material/TableChart";
+import FileUploadIcon from "@mui/icons-material/FileUpload";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import Select, { SelectChangeEvent } from "@mui/material/Select";
@@ -55,6 +56,7 @@ interface ProductPaginatedResponse {
 // Custom Components
 import { ProductsTable } from "../components/products/ProductsTable"; // Use ProductsTable named export
 import ProductFormModal from "../components/products/ProductFormModal"; // Use ProductFormModal
+import ProductImportDialog from "../components/products/ProductImportDialog"; // Import dialog
 
 // Type that matches the actual API response structure
 type ProductTableItem = {
@@ -101,6 +103,7 @@ const ProductsPage: React.FC = () => {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductTableItem | null>(null); // Use ProductTableItem type
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   // Snackbar State
   const [snackbar, setSnackbar] = useState<{
@@ -276,6 +279,12 @@ const ProductsPage: React.FC = () => {
     }
   };
 
+  const handleImportSuccess = () => {
+    // Refresh the products list after successful import
+    fetchProducts(currentPage, debouncedSearchTerm, selectedCategory, rowsPerPage, showOnlyInStock);
+    showSnackbar(t("products:importSuccess"), "success");
+  };
+
   // --- Render ---
   return (
     <>
@@ -346,6 +355,13 @@ const ProductsPage: React.FC = () => {
             onClick={() => handleExportExcel()}
           >
             {t("products:exportExcel")}
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<FileUploadIcon />}
+            onClick={() => setIsImportDialogOpen(true)}
+          >
+            {t("products:importProducts")}
           </Button>
           <Button
             variant="contained"
@@ -551,6 +567,11 @@ const ProductsPage: React.FC = () => {
         onClose={closeModal}
         productToEdit={editingProduct as Product | null}
         onSaveSuccess={handleSaveSuccess}
+      />
+      <ProductImportDialog
+        open={isImportDialogOpen}
+        onClose={() => setIsImportDialogOpen(false)}
+        onImportSuccess={handleImportSuccess}
       />
       {/* Removed ConfirmationDialog */}
       {/* Snackbar for notifications */}

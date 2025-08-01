@@ -16,13 +16,14 @@ import { format, parseISO } from "date-fns";
 // Import Child Components
 import { PurchaseHeaderFormSection } from "../components/purchases/PurchaseHeaderFormSection";
 import { PurchaseItemsList } from "../components/purchases/PurchaseItemsList";
+import PurchaseItemsImportDialog from "../components/purchases/PurchaseItemsImportDialog";
 
 // shadcn/ui & Lucide Icons (Only those needed for page shell/totals/submit)
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, ArrowLeft, AlertCircle, FileText } from "lucide-react";
+import { Loader2, ArrowLeft, AlertCircle, FileText, Upload } from "lucide-react";
 
 // Services and Types
 import purchaseService, {
@@ -123,6 +124,7 @@ const PurchaseFormPage: React.FC = () => {
   const [loadingData, setLoadingData] = useState(isEditMode); // Loading existing purchase
   const [loadingSuppliers, setLoadingSuppliers] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   // Search States
   const [supplierSearchInput, setSupplierSearchInput] = useState("");
   const [debouncedSupplierSearch, setDebouncedSupplierSearch] = useState("");
@@ -421,17 +423,31 @@ const PurchaseFormPage: React.FC = () => {
           </h1>
         </div>
         
-        {/* PDF Button - Only show in edit mode */}
-        {isEditMode && purchaseId && (
-          <Button
-            variant="outline"
-            onClick={handleViewPdf}
-            className="flex items-center gap-2"
-          >
-            <FileText className="h-4 w-4" />
-            {t("purchases:viewPdf")}
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Import Items Button - Only show in edit mode */}
+          {isEditMode && purchaseId && (
+            <Button
+              variant="outline"
+              onClick={() => setIsImportDialogOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              {t("purchases:importItems")}
+            </Button>
+          )}
+          
+          {/* PDF Button - Only show in edit mode */}
+          {isEditMode && purchaseId && (
+            <Button
+              variant="outline"
+              onClick={handleViewPdf}
+              className="flex items-center gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              {t("purchases:viewPdf")}
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card className="dark:bg-gray-900">
@@ -492,6 +508,106 @@ const PurchaseFormPage: React.FC = () => {
           </form>
         </FormProvider>
       </Card>
+
+      {/* Purchase Items Import Dialog */}
+      {isEditMode && purchaseId && (
+        <PurchaseItemsImportDialog
+          open={isImportDialogOpen}
+          onClose={() => setIsImportDialogOpen(false)}
+          purchaseId={purchaseId}
+          onImportSuccess={() => {
+            // Refresh the purchase data to show new items
+            if (purchaseId) {
+              const loadPurchaseData = async (id: number) => {
+                setLoadingData(true);
+                setServerError(null);
+                try {
+                  const existingPurchase = await purchaseService.getPurchase(id);
+                  if (!existingPurchase.items)
+                    throw new Error("Purchase items missing in API response.");
+
+                  // Pre-fetch related data for display
+                  const initialSupplier = existingPurchase.supplier_id
+                    ? await supplierService
+                        .getSupplier(existingPurchase.supplier_id)
+                        .catch(() => null)
+                    : null;
+
+                  const productIds = existingPurchase.items.map(
+                    (item) => item.product_id
+                  );
+                  let initialProducts: Product[] = [];
+                  if (productIds.length > 0) {
+                    try {
+                      initialProducts = await productService.getProductsByIds(productIds);
+                    } catch (error) {
+                      console.error("Failed to fetch products by IDs:", error);
+                      initialProducts = [];
+                    }
+                  }
+                  
+                  // Ensure initialProducts is always an array
+                  const safeInitialProducts = Array.isArray(initialProducts) ? initialProducts : [];
+
+                  if (initialSupplier)
+                    setSuppliers((prev) =>
+                      prev.find((s) => s.id === initialSupplier.id)
+                        ? prev
+                        : [initialSupplier, ...prev]
+                    );
+                  setProducts((prev) => {
+                    // Merge fetched products with existing to avoid duplicates
+                    const existingProductIds = new Set(prev.map((p) => p.id));
+                    const newProducts = safeInitialProducts.filter(
+                      (p) => !existingProductIds.has(p.id)
+                    );
+                    return [...prev, ...newProducts];
+                  });
+                  setSelectedSupplier(initialSupplier);
+
+                  const initialProductMap = safeInitialProducts.reduce((map, prod) => {
+                    map[prod.id] = prod;
+                    return map;
+                  }, {} as Record<number, Product>);
+
+                  reset({
+                    supplier_id: existingPurchase.supplier_id ?? undefined,
+                    purchase_date: existingPurchase.purchase_date
+                      ? parseISO(existingPurchase.purchase_date)
+                      : new Date(),
+                    status: existingPurchase.status,
+                    reference_number: existingPurchase.reference_number || "",
+                    notes: existingPurchase.notes || "",
+                    items: existingPurchase.items.map((item) => ({
+                      id: item.id,
+                      product_id: item.product_id,
+                      product: initialProductMap[item.product_id],
+                      batch_number: item.batch_number || "",
+                      quantity: Number(item.quantity) || 1,
+                      unit_cost: Number(item.unit_cost) || 0,
+                      sale_price:
+                        item.sale_price !== null ? Number(item.sale_price) : null,
+                      expiry_date: item.expiry_date ? parseISO(item.expiry_date) : null,
+                    })),
+                  });
+                } catch (err) {
+                  console.error("Failed to load purchase data:", err);
+                  const errorMsg = purchaseService.getErrorMessage(err);
+                  setError("root", { type: "manual", message: errorMsg });
+                  toast.error(t("common:error"), { description: errorMsg });
+                } finally {
+                  setLoadingData(false);
+                }
+              };
+              loadPurchaseData(purchaseId);
+            }
+            setIsImportDialogOpen(false);
+            toast.success(t("common:success"), {
+              description: t("purchases:importItemsSuccess"),
+            });
+          }}
+        />
+      )}
     </div>
   );
 };

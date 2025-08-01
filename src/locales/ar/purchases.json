@@ -64,7 +64,59 @@
     "viewPdf": "عرض PDF",
     "exportExcel": "تصدير Excel",
     "excelSuccess": "تم فتح ملف Excel في تبويب جديد",
+    "importItems": "استيراد العناصر",
+    "importItemsSuccess": "تم استيراد عناصر الشراء بنجاح",
 
-    "selectStatus": "اختر الحالة"
+    "selectStatus": "اختر الحالة",
+
+    "import": {
+        "title": "استيراد عناصر الشراء من ملف Excel",
+        "step1": "رفع الملف",
+        "step2": "تخطيط الأعمدة",
+        "step3": "معاينة",
+        "step4": "الاستيراد",
+        "step1Description": "اختر ملف Excel يحتوي على بيانات عناصر الشراء",
+        "step2Description": "قم بتخطيط أعمدة Excel مع حقول عناصر الشراء",
+        "step3Description": "معاينة البيانات التي سيتم استيرادها",
+        "step4Description": "مراجعة وتأكيد الاستيراد",
+        "processing": "جاري معالجة الاستيراد...",
+        "processingDescription": "قد يستغرق هذا بضع دقائق للملفات الكبيرة. يرجى عدم إغلاق هذه النافذة.",
+        "uploadFile": "رفع ملف Excel",
+        "supportedFormats": "يدعم ملفات .xlsx و .xls",
+        "fileSelected": "تم اختيار الملف: {{fileName}}",
+        "skipHeaderRow": "تخطي صف العناوين",
+        "purchaseItemField": "حقل عنصر الشراء",
+        "excelColumn": "عمود Excel",
+        "required": "مطلوب",
+        "selectColumn": "اختر العمود",
+        "skipColumn": "تخطي العمود",
+        "requiredFieldsNotMapped": "يجب تخطيط جميع الحقول المطلوبة",
+        "invalidFileType": "نوع الملف غير صحيح. يرجى اختيار ملف Excel",
+        "uploadError": "خطأ في رفع الملف",
+        "processError": "خطأ في معالجة الاستيراد",
+        "previewError": "خطأ في إنشاء المعاينة",
+        "timeoutError": "انتهت مهلة الاستيراد. يرجى المحاولة بملف أصغر أو التحقق من الاتصال.",
+        "fileTooLarge": "الملف كبير جداً. يرجى استخدام ملف Excel أصغر.",
+        "result": "تم استيراد {{imported}} عنصر، {{errors}} أخطاء",
+        "errorDetails": "تفاصيل الأخطاء",
+        "row": "الصف",
+        "errors": "الأخطاء",
+        "autoMappedMessage": "تم تخطيط الأعمدة تلقائياً بناءً على التشابه. يرجى المراجعة والتعديل إذا لزم الأمر.",
+        "autoMapColumns": "تخطيط الأعمدة تلقائياً",
+        "generatingPreview": "جاري إنشاء المعاينة...",
+        "previewTitle": "معاينة البيانات (أول 10 صفوف)",
+        "previewNote": "عرض أول 10 صفوف. إجمالي الصفوف للاستيراد: {{count}}",
+        "noPreviewData": "لم يتم العثور على بيانات للمعاينة. يرجى التحقق من تخطيط الأعمدة."
+    },
+
+    "fields": {
+        "productName": "اسم المنتج",
+        "productSku": "رمز المنتج",
+        "batchNumber": "رقم الدفعة",
+        "quantity": "الكمية",
+        "unitCost": "تكلفة الوحدة",
+        "salePrice": "سعر البيع",
+        "expiryDate": "تاريخ انتهاء الصلاحية"
+    }
 
 }
