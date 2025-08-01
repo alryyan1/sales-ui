@@ -33,7 +33,7 @@ import purchaseService, {
 import supplierService, { Supplier } from "../services/supplierService";
 import productService, { Product } from "../services/productService";
 import exportService from "../services/exportService";
-import { formatNumber, preciseSum, preciseCalculation } from "@/constants";
+import { formatNumber, preciseCalculation } from "@/constants";
 import apiClient from "@/lib/axios";
 
 // --- Zod Schema Definition ---
@@ -165,6 +165,10 @@ const PurchaseFormPage: React.FC = () => {
 
   // Memoized watched items to prevent unnecessary re-renders
   const watchedItems = useWatch({ control, name: "items" });
+  
+  // Watch purchase status to determine if items can be modified
+  const watchedStatus = useWatch({ control, name: "status" });
+  const isPurchaseReceived = watchedStatus === "received";
   
   // Memoized grand total calculation
   const grandTotal = useMemo(() => 
@@ -477,16 +481,23 @@ const PurchaseFormPage: React.FC = () => {
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 dark:text-gray-100">
-            {isEditMode
-              ? t("purchases:editPurchaseTitle")
-              : t("purchases:addPageTitle")}{" "}
-            {isEditMode && purchaseId && ` #${purchaseId}`}
-          </h1>
+          <div className="flex flex-col">
+            <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 dark:text-gray-100">
+              {isEditMode
+                ? t("purchases:editPurchaseTitle")
+                : t("purchases:addPageTitle")}{" "}
+              {isEditMode && purchaseId && ` #${purchaseId}`}
+            </h1>
+            {isPurchaseReceived && (
+              <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
+                {t("purchases:purchaseReceivedReadOnly")}
+              </p>
+            )}
+          </div>
         </div>
         
         <div className="flex items-center gap-2">
-          {isEditMode && purchaseId && (
+          {isEditMode && purchaseId && !isPurchaseReceived && (
             <Button
               variant="outline"
               onClick={() => setIsImportDialogOpen(true)}
@@ -544,11 +555,13 @@ const PurchaseFormPage: React.FC = () => {
                 isSubmitting={isSubmitting}
                 selectedSupplier={selectedSupplier}
                 onSupplierSelect={setSelectedSupplier}
+                isPurchaseReceived={isPurchaseReceived}
               />
               <Separator className="my-6" />
               <PurchaseItemsList
                 products={products}
                 isSubmitting={isSubmitting}
+                isPurchaseReceived={isPurchaseReceived}
               />
               <Separator className="my-6" />
           

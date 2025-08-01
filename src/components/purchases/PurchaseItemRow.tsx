@@ -35,6 +35,7 @@ interface PurchaseItemRowProps {
   itemCount: number;
   isNew?: boolean;
   shouldFocus?: boolean;
+  isPurchaseReceived?: boolean;
 }
 
 // Type for a single item in the PurchaseFormValues
@@ -74,6 +75,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
   isSubmitting,
   itemCount,
   shouldFocus = false,
+  isPurchaseReceived = false,
 }) => {
   const { t } = useTranslation([
     "purchases",
@@ -189,12 +191,14 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
 
   // Memoized handlers
   const handleProductSelect = useCallback((product: Product) => {
+    if (isPurchaseReceived) return; // Prevent changes if purchase is received
     setValue(`items.${index}.product_id`, product.id);
     setValue(`items.${index}.product`, product);
     setProductSearchInput(product.name);
-  }, [setValue, index]);
+  }, [setValue, index, isPurchaseReceived]);
 
   const handleProductChange = useCallback((event: React.SyntheticEvent, newValue: Product | null) => {
+    if (isPurchaseReceived) return; // Prevent changes if purchase is received
     if (newValue) {
       handleProductSelect(newValue);
     } else {
@@ -203,7 +207,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
       setValue(`items.${index}.product`, undefined);
       setProductSearchInput("");
     }
-  }, [handleProductSelect, setValue, index]);
+  }, [handleProductSelect, setValue, index, isPurchaseReceived]);
 
   const handleKeyDown = useCallback(async (event: React.KeyboardEvent) => {
     if (event.key === 'Enter' && event.ctrlKey) {
@@ -215,10 +219,11 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
   }, [index]);
 
   const handleRemove = useCallback(() => {
+    if (isPurchaseReceived) return; // Prevent deletion if purchase is received
     if (itemCount > 1) {
       remove(index);
     }
-  }, [remove, index, itemCount]);
+  }, [remove, index, itemCount, isPurchaseReceived]);
 
   const handleCopySku = useCallback(async (sku: string) => {
     try {
@@ -260,6 +265,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
                 error={!!getFieldError('product_id')}
                 helperText={getFieldError('product_id')}
                 size="small"
+                disabled={isSubmitting || isPurchaseReceived}
                 InputProps={{
                   ...params.InputProps,
                   endAdornment: (
@@ -277,7 +283,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
               </li>
             )}
             onKeyDown={handleKeyDown}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isPurchaseReceived}
           />
           
           {selectedProduct?.sku && (
@@ -304,7 +310,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
           size="small"
           error={!!getFieldError('batch_number')}
           helperText={getFieldError('batch_number')}
-          disabled={isSubmitting}
+          disabled={isSubmitting || isPurchaseReceived}
           {...register(`items.${index}.batch_number`)}
         />
 
@@ -315,7 +321,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
           size="small"
           error={!!getFieldError('quantity')}
           helperText={getFieldError('quantity')}
-          disabled={isSubmitting}
+          disabled={isSubmitting || isPurchaseReceived}
           {...register(`items.${index}.quantity`)}
         />
 
@@ -326,7 +332,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
           size="small"
           error={!!getFieldError('unit_cost')}
           helperText={getFieldError('unit_cost')}
-          disabled={isSubmitting}
+          disabled={isSubmitting || isPurchaseReceived}
           {...register(`items.${index}.unit_cost`)}
         />
 
@@ -337,16 +343,16 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
           size="small"
           error={!!getFieldError('sale_price')}
           helperText={getFieldError('sale_price')}
-          disabled={isSubmitting}
+          disabled={isSubmitting || isPurchaseReceived}
           {...register(`items.${index}.sale_price`)}
         />
 
         {/* Actions */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <Tooltip title={t('common:delete')}>
+          <Tooltip title={isPurchaseReceived ? t('purchases:cannotDeleteReceived') : t('common:delete')}>
             <IconButton
               onClick={handleRemove}
-              disabled={isSubmitting || itemCount <= 1}
+              disabled={isSubmitting || itemCount <= 1 || isPurchaseReceived}
               color="error"
               size="small"
             >
@@ -397,6 +403,19 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
 
   return (
     <Card variant="outlined" sx={{ mb: 2 }}>
+      {isPurchaseReceived && (
+        <Box sx={{ 
+          p: 1, 
+          bgcolor: 'warning.light', 
+          color: 'warning.contrastText',
+          borderBottom: 1,
+          borderColor: 'warning.main'
+        }}>
+          <Typography variant="caption" sx={{ fontWeight: 'medium' }}>
+            {t('purchases:itemLockedReceived')}
+          </Typography>
+        </Box>
+      )}
       {renderContent}
     </Card>
   );

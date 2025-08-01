@@ -20,6 +20,7 @@ import { Product } from '../../services/productService';
 interface PurchaseItemsListProps {
     products: Product[];
     isSubmitting: boolean;
+    isPurchaseReceived?: boolean;
 }
 
 // Virtualized row component for better performance
@@ -37,9 +38,10 @@ const VirtualizedRow = React.memo(({
         isSubmitting: boolean;
         itemCount: number;
         searchTerm: string;
+        isPurchaseReceived: boolean;
     };
 }) => {
-    const { fields, remove, products, isSubmitting, itemCount, searchTerm } = data;
+    const { fields, remove, products, isSubmitting, itemCount, searchTerm, isPurchaseReceived } = data;
     const field = fields[index];
     
     // Skip rendering if item doesn't match search
@@ -70,6 +72,7 @@ const VirtualizedRow = React.memo(({
                 itemCount={itemCount}
                 isNew={index === 0}
                 shouldFocus={index === 0}
+                isPurchaseReceived={isPurchaseReceived}
             />
         </div>
     );
@@ -78,7 +81,7 @@ const VirtualizedRow = React.memo(({
 VirtualizedRow.displayName = 'VirtualizedRow';
 
 export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
-    products, isSubmitting
+    products, isSubmitting, isPurchaseReceived = false
 }) => {
     const { t } = useTranslation(['purchases', 'common']);
     const { control, formState: { errors } } = useFormContext();
@@ -91,6 +94,8 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
 
     // Memoize the add item function to prevent unnecessary re-renders
     const addItem = useCallback(() => {
+        if (isPurchaseReceived) return; // Prevent adding items if purchase is received
+        
         const newItem = {
             id: null,
             product_id: 0,
@@ -103,12 +108,13 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
         };
         
         insert(0, newItem);
-    }, [insert]);
+    }, [insert, isPurchaseReceived]);
 
     // Memoize the remove function
     const handleRemove = useCallback((index: number) => {
+        if (isPurchaseReceived) return; // Prevent removing items if purchase is received
         remove(index);
-    }, [remove]);
+    }, [remove, isPurchaseReceived]);
 
     // Filter fields based on search term
     const filteredFields = useMemo(() => {
@@ -136,7 +142,8 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
         isSubmitting,
         itemCount: fields.length,
         searchTerm,
-    }), [fields, handleRemove, products, isSubmitting, searchTerm]);
+        isPurchaseReceived,
+    }), [fields, handleRemove, products, isSubmitting, searchTerm, isPurchaseReceived]);
 
     // Calculate row height based on content
     const getRowHeight = useCallback((index: number) => {
@@ -146,6 +153,11 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {isPurchaseReceived && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                    {t('purchases:itemsLockedReceived')}
+                </Alert>
+            )}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h6" component="h3" sx={{ 
                     color: 'text.primary',
@@ -158,7 +170,7 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                     type="button"
                     variant="outlined"
                     onClick={addItem}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isPurchaseReceived}
                     startIcon={<AddIcon />}
                     size="medium"
                     sx={{ 

@@ -31,6 +31,7 @@ interface PurchaseHeaderFormSectionProps {
     isSubmitting: boolean;
     selectedSupplier: Supplier | null;
     onSupplierSelect: (supplier: Supplier | null) => void;
+    isPurchaseReceived?: boolean;
 }
 
 // Status options for the autocomplete
@@ -47,7 +48,8 @@ export const PurchaseHeaderFormSection: React.FC<PurchaseHeaderFormSectionProps>
     onSupplierSearchInputChange,
     isSubmitting,
     selectedSupplier,
-    onSupplierSelect
+    onSupplierSelect,
+    isPurchaseReceived = false
 }) => {
     const { t } = useTranslation(['purchases', 'common', 'suppliers', 'validation']);
     const { control } = useFormContext();
@@ -177,7 +179,7 @@ export const PurchaseHeaderFormSection: React.FC<PurchaseHeaderFormSectionProps>
                                         onChange={(event, newValue) => {
                                             field.onChange(newValue?.value || "");
                                         }}
-                                        disabled={isSubmitting}
+                                        disabled={isSubmitting || isPurchaseReceived}
                                         size="small"
                                         renderInput={(params) => (
                                             <TextField

@@ -66,6 +66,10 @@
     "excelSuccess": "تم فتح ملف Excel في تبويب جديد",
     "importItems": "استيراد العناصر",
     "importItemsSuccess": "تم استيراد عناصر الشراء بنجاح",
+    "cannotDeleteReceived": "لا يمكن حذف العناصر من الشراء المستلم",
+    "itemLockedReceived": "لا يمكن تعديل هذا العنصر - تم استلام الشراء",
+    "itemsLockedReceived": "لا يمكن تعديل عناصر الشراء - تم استلام هذا الشراء",
+    "purchaseReceivedReadOnly": "تم استلام الشراء - العناصر للقراءة فقط",
 
     "selectStatus": "اختر الحالة",
 

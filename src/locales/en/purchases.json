@@ -77,6 +77,10 @@
     "excelSuccess": "Excel file opened in new tab",
     "importItems": "Import Items",
     "importItemsSuccess": "Purchase items imported successfully",
+    "cannotDeleteReceived": "Cannot delete items from received purchase",
+    "itemLockedReceived": "This item cannot be modified - purchase has been received",
+    "itemsLockedReceived": "Purchase items cannot be modified - this purchase has been received",
+    "purchaseReceivedReadOnly": "Purchase has been received - items are read-only",
 
     "selectStatus": "Select Status",
 
