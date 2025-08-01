@@ -44,6 +44,7 @@ import PosPage from "./pages/PosPage";
 import NearExpiryReportPage from "./components/reports/NearExpiryReportPage";
 import MonthlyRevenueReportPage from "./components/reports/MonthlyRevenueReportPage";
 import SupplierLedgerPage from "./pages/suppliers/SupplierLedgerPage";
+import BackupPage from "./pages/admin/BackupPage";
 // ... other page imports
 
 // --- Admin Route Guard Component ---
@@ -170,6 +171,7 @@ const router = createHashRouter([
               { path: "roles", element: <RolesListPage /> }, // Add later for role management
               { path: "categories", element: <CategoriesListPage /> },
               { path: "settings", element: <SettingsPage /> },
+              { path: "backups", element: <BackupPage /> }, // Database backup management
               {
                 path: "inventory",
                 children: [
