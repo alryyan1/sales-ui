@@ -184,6 +184,45 @@ const PosPage: React.FC = () => {
     setCurrentSaleItems(prevItems => prevItems.filter(item => item.product.id !== productId));
   };
 
+  const handleDeleteSaleItem = async (saleItemId: number) => {
+    if (!selectedSale) {
+      showSnackbar(t('pos:noSaleSelected'), 'error');
+      return;
+    }
+
+    try {
+      const result = await saleService.deleteSaleItem(selectedSale.id, saleItemId);
+      
+      // Show success message
+      showSnackbar(result.message, 'success');
+      
+      // Reload today's sales to get updated data
+      await loadTodaySales();
+      
+      // If the sale was cancelled (no items left), clear the selection
+      if (result.sale_status === 'cancelled') {
+        setSelectedSale(null);
+        setSelectedSaleId(null);
+        setCurrentSaleItems([]);
+        setPaymentMethods([]);
+        setTotalPaid(0);
+        setDiscountAmount(0);
+        setDiscountType('fixed');
+        showSnackbar(t('pos:saleCancelled'), 'success');
+      } else {
+        // Update the selected sale with new data
+        const updatedSale = todaySales.find(sale => sale.id === selectedSale.id);
+        if (updatedSale) {
+          handleSaleSelect(updatedSale);
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting sale item:', error);
+      const errorMessage = saleService.getErrorMessage(error);
+      showSnackbar(errorMessage, 'error');
+    }
+  };
+
   const clearCurrentSale = () => {
     setCurrentSaleItems([]);
     // Clear payment methods when clearing sale
@@ -401,6 +440,8 @@ const PosPage: React.FC = () => {
           onRemoveItem={removeFromCurrentSale}
           onClearAll={clearCurrentSale}
           isSalePaid={totalPaid > 0 && (preciseSum(currentSaleItems.map(item => item.total)) - (discountType === 'percentage' ? (preciseSum(currentSaleItems.map(item => item.total)) * discountAmount) / 100 : discountAmount)) <= totalPaid}
+          isEditMode={!!selectedSale}
+          onDeleteSaleItem={handleDeleteSaleItem}
         />
 
       

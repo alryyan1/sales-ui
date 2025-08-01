@@ -102,6 +102,7 @@
   "removeItem": "Remove item",
   "clearAll": "Clear All",
   "clearAllItems": "Clear all items from sale",
+  "saleCancelled": "Sale cancelled due to all items being removed",
   "paymentRemoved": "Payment removed successfully",
   "paymentRemovalFailed": "Failed to remove payment",
   "paymentCancellationFailed": "Failed to cancel payments",

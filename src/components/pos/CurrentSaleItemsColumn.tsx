@@ -28,6 +28,9 @@ interface CurrentSaleItemsColumnProps {
   onRemoveItem: (productId: number) => void;
   onClearAll?: () => void;
   isSalePaid?: boolean;
+  // New props for existing sale items
+  isEditMode?: boolean;
+  onDeleteSaleItem?: (saleItemId: number) => void;
 }
 
 export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
@@ -36,6 +39,8 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
   onRemoveItem,
   onClearAll,
   isSalePaid = false,
+  isEditMode = false,
+  onDeleteSaleItem,
 }) => {
   const { t } = useTranslation(['pos', 'common']);
 
@@ -203,7 +208,16 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => onRemoveItem(item.product.id)}
+                          onClick={() => {
+                            // Check if this is an existing sale item (has ID) or a new item
+                            if (isEditMode && onDeleteSaleItem && 'id' in item && item.id) {
+                              // This is an existing sale item, call the delete API
+                              onDeleteSaleItem(item.id);
+                            } else {
+                              // This is a new item, just remove from current sale
+                              onRemoveItem(item.product.id);
+                            }
+                          }}
                           disabled={isSalePaid}
                           className={`h-10 w-10 p-0 ${
                             isSalePaid 

@@ -268,6 +268,28 @@ const saleService = {
         }
     },
 
+    /**
+     * Delete a specific sale item and return inventory quantity.
+     */
+    deleteSaleItem: async (saleId: number, saleItemId: number): Promise<{
+        message: string;
+        deleted_quantity: number;
+        product_name: string;
+        returned_to_batch: string | null;
+        new_sale_total: number;
+        remaining_items_count: number;
+        sale_status: string;
+    }> => {
+        try {
+            console.log('deleteSaleItem called for sale ID:', saleId, 'item ID:', saleItemId);
+            const response = await apiClient.delete(`/sales/${saleId}/items/${saleItemId}`);
+            return response.data;
+        } catch (error) {
+            console.error(`Error deleting sale item ${saleItemId} from sale ${saleId}:`, error);
+            throw error;
+        }
+    },
+
 
     /**
      * Delete a sale (generally not recommended for completed sales).
