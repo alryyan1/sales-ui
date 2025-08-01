@@ -18,7 +18,7 @@ import {
   CheckCircle,
   Clock
 } from 'lucide-react';
-import { useToast } from '../../hooks/use-toast';
+import { toast } from 'sonner';
 import backupService, { Backup, BackupStatistics } from '../../services/backupService';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -41,7 +41,7 @@ const BackupPage: React.FC = () => {
     include_structure: true,
   });
 
-  const { toast } = useToast();
+
 
   useEffect(() => {
     loadData();
@@ -58,11 +58,7 @@ const BackupPage: React.FC = () => {
       setStatistics(statsData);
     } catch (error) {
       console.error('Error loading backup data:', error);
-      toast({
-        title: 'خطأ',
-        description: 'فشل في تحميل بيانات النسخ الاحتياطية',
-        variant: 'destructive',
-      });
+      toast.error('فشل في تحميل بيانات النسخ الاحتياطية');
     } finally {
       setLoading(false);
     }
@@ -72,20 +68,13 @@ const BackupPage: React.FC = () => {
     try {
       setCreating(true);
       await backupService.createBackup(createForm);
-      toast({
-        title: 'نجح',
-        description: 'تم إنشاء النسخة الاحتياطية بنجاح',
-      });
+      toast.success('تم إنشاء النسخة الاحتياطية بنجاح');
       setShowCreateDialog(false);
       setCreateForm({ description: '', include_data: true, include_structure: true });
       loadData();
     } catch (error) {
       console.error('Error creating backup:', error);
-      toast({
-        title: 'خطأ',
-        description: 'فشل في إنشاء النسخة الاحتياطية',
-        variant: 'destructive',
-      });
+      toast.error('فشل في إنشاء النسخة الاحتياطية');
     } finally {
       setCreating(false);
     }
@@ -103,17 +92,10 @@ const BackupPage: React.FC = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       
-      toast({
-        title: 'نجح',
-        description: 'تم بدء تحميل النسخة الاحتياطية',
-      });
+      toast.success('تم بدء تحميل النسخة الاحتياطية');
     } catch (error) {
       console.error('Error downloading backup:', error);
-      toast({
-        title: 'خطأ',
-        description: 'فشل في تحميل النسخة الاحتياطية',
-        variant: 'destructive',
-      });
+      toast.error('فشل في تحميل النسخة الاحتياطية');
     }
   };
 
@@ -122,19 +104,12 @@ const BackupPage: React.FC = () => {
 
     try {
       await backupService.deleteBackup(deleteDialog.backup.filename);
-      toast({
-        title: 'نجح',
-        description: 'تم حذف النسخة الاحتياطية بنجاح',
-      });
+      toast.success('تم حذف النسخة الاحتياطية بنجاح');
       setDeleteDialog({ show: false, backup: null });
       loadData();
     } catch (error) {
       console.error('Error deleting backup:', error);
-      toast({
-        title: 'خطأ',
-        description: 'فشل في حذف النسخة الاحتياطية',
-        variant: 'destructive',
-      });
+      toast.error('فشل في حذف النسخة الاحتياطية');
     }
   };
 
