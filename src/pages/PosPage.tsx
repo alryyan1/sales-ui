@@ -399,6 +399,7 @@ const PosPage: React.FC = () => {
           currentSaleItems={currentSaleItems}
           onUpdateQuantity={updateQuantity}
           onRemoveItem={removeFromCurrentSale}
+          onClearAll={clearCurrentSale}
           isSalePaid={totalPaid > 0 && (preciseSum(currentSaleItems.map(item => item.total)) - (discountType === 'percentage' ? (preciseSum(currentSaleItems.map(item => item.total)) * discountAmount) / 100 : discountAmount)) <= totalPaid}
         />
 

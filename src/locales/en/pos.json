@@ -99,7 +99,9 @@
   "cancelPayments": "Cancel All",
   "paymentsCancelled": "All payments cancelled",
   "salePaidCannotModify": "Sale is paid - cannot modify items",
-  "removeItem": "Remove item"
+  "removeItem": "Remove item",
+  "clearAll": "Clear All",
+  "clearAllItems": "Clear all items from sale",
   "paymentRemoved": "Payment removed successfully",
   "paymentRemovalFailed": "Failed to remove payment",
   "paymentCancellationFailed": "Failed to cancel payments",

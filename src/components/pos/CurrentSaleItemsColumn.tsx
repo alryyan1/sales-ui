@@ -14,7 +14,8 @@ import {
   Minus, 
   Trash2, 
   Package, 
-  Calendar 
+  Calendar,
+  Trash
 } from "lucide-react";
 
 // Types
@@ -25,6 +26,7 @@ interface CurrentSaleItemsColumnProps {
   currentSaleItems: CartItem[];
   onUpdateQuantity: (productId: number, newQuantity: number) => void;
   onRemoveItem: (productId: number) => void;
+  onClearAll?: () => void;
   isSalePaid?: boolean;
 }
 
@@ -32,6 +34,7 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
   currentSaleItems,
   onUpdateQuantity,
   onRemoveItem,
+  onClearAll,
   isSalePaid = false,
 }) => {
   const { t } = useTranslation(['pos', 'common']);
@@ -61,9 +64,28 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
     <div dir="ltr" className="w-full h-full flex flex-col">
       <Card className="flex-1 flex flex-col">
         <CardHeader className="pb-3">
-          <CardTitle className="text-xl font-semibold text-gray-900">
-            {t('pos:currentSaleItems')} ({currentSaleItems.length})
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl font-semibold text-gray-900">
+              {t('pos:currentSaleItems')} ({currentSaleItems.length})
+            </CardTitle>
+            {currentSaleItems.length > 0 && onClearAll && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onClearAll}
+                disabled={isSalePaid}
+                className={`flex items-center gap-2 ${
+                  isSalePaid 
+                    ? 'opacity-50 cursor-not-allowed' 
+                    : 'text-red-600 hover:text-red-700 hover:bg-red-50'
+                }`}
+                title={isSalePaid ? t('pos:salePaidCannotModify') : t('pos:clearAllItems')}
+              >
+                <Trash className="h-4 w-4" />
+                {t('pos:clearAll')}
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="flex-1 p-0">
           {currentSaleItems.length === 0 ? (

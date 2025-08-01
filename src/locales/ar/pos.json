@@ -134,5 +134,7 @@
   "noSaleSelected": "لم يتم اختيار بيع",
   "thermalInvoicePreview": "معاينة الفاتورة الحرارية",
   "salePaidCannotModify": "البيع مدفوع - لا يمكن تعديل العناصر",
-  "removeItem": "إزالة العنصر"
+  "removeItem": "إزالة العنصر",
+  "clearAll": "مسح الكل",
+  "clearAllItems": "مسح جميع العناصر من البيع"
 } 
