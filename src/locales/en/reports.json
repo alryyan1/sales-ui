@@ -55,5 +55,13 @@
     "dailyRevenue": "Daily Revenue",
     "dailyTotalPayments": "Daily Total Payments",
     "selectMonthYearPrompt": "Please select month and year",
-    "monthlyRevenue": "Monthly Revenue"
+    "monthlyRevenue": "Monthly Revenue",
+    "exportPdf": "Export PDF",
+    "applyFiltersToView": "Apply filters to view inventory report",
+    "errorFetchingData": "Error fetching data",
+    "retry": "Retry",
+    "paginationSummary": "Showing {from} to {to} of {total} results",
+    "noResultsFound": "No {term} found",
+    "errorGeneratingPdf": "Failed to generate PDF report",
+    "noBatchesAvailableForProduct": "No batches available for this product"
 } 

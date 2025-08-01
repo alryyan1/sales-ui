@@ -42,8 +42,14 @@
   "copy": "Copy",
   "filters": "Filters",
   "clearFilters": "Clear Filters",
+  "applyFilters": "Apply Filters",
   "view": "View",
   "n/a": "N/A",
   "unit": "Unit",
-  "items": "Items"
+  "items": "Items",
+  "expand": "Expand",
+  "collapse": "Collapse",
+  "download": "Download",
+  "loadingPdf": "Loading PDF...",
+  "errorLoadingPdf": "Error loading PDF"
 } 

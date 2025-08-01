@@ -55,7 +55,15 @@
     "dailyRevenue": "إيرادات يومية",
     "dailyTotalPayments": "إجمالي المدفوعات اليومية",
     "selectMonthYearPrompt": "يرجى اختيار الشهر والسنة",
-    "monthlyRevenue": "الإيرادات الشهرية"
+    "monthlyRevenue": "الإيرادات الشهرية",
+    "exportPdf": "تصدير PDF",
+    "applyFiltersToView": "طبق المرشحات لعرض تقرير المخزون",
+    "errorFetchingData": "خطأ في جلب البيانات",
+    "retry": "إعادة المحاولة",
+    "paginationSummary": "عرض {from} إلى {to} من {total} نتيجة",
+    "noResultsFound": "لم يتم العثور على {term}",
+    "errorGeneratingPdf": "فشل في إنشاء تقرير PDF",
+    "noBatchesAvailableForProduct": "لا توجد دفعات متاحة لهذا المنتج"
     
   
 

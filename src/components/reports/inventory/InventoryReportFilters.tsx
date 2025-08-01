@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 
 // shadcn/ui & Lucide Icons
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -46,29 +45,29 @@ export const InventoryReportFilters: React.FC<InventoryReportFiltersProps> = ({
     }, [defaultValues, reset]);
 
     return (
-        <Card className="dark:bg-gray-900 mb-6">
-            <CardHeader><CardTitle className="text-lg">{t('common:filters')}</CardTitle></CardHeader>
-            <CardContent>
-                <Form {...form}>
-                    <form onSubmit={handleSubmit(onFilterSubmit)}>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
-                            <FormField control={control} name="search" render={({ field }) => (
-                                <FormItem> <FormLabel>{t('common:search')}</FormLabel> <FormControl><Input placeholder={t('products:searchPlaceholder')} {...field} value={field.value ?? ''} /></FormControl> </FormItem>
-                            )} />
-                            {/* Category Select Placeholder */}
-                            {/* <FormField control={control} name="categoryId" render={...} /> */}
-                            <div className="flex flex-col space-y-2 pt-2 sm:pt-0 md:pt-6">
-                                <FormField control={control} name="lowStockOnly" render={({ field }) => ( <FormItem className="flex flex-row items-center space-x-3 space-y-0 rtl:space-x-reverse"> <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl> <FormLabel className="font-normal">{t('reports:showLowStockOnly')}</FormLabel> </FormItem> )} />
-                                <FormField control={control} name="outOfStockOnly" render={({ field }) => ( <FormItem className="flex flex-row items-center space-x-3 space-y-0 rtl:space-x-reverse"> <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl> <FormLabel className="font-normal">{t('reports:showOutOfStockOnly')}</FormLabel> </FormItem> )} />
-                            </div>
+        <div className="mb-4">
+            <div className="pb-2">
+                <h3 className="text-lg font-medium">{t('common:filters')}</h3>
+            </div>
+            <Form {...form}>
+                <form onSubmit={handleSubmit(onFilterSubmit)}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
+                        <FormField control={control} name="search" render={({ field }) => (
+                            <FormItem> <FormLabel>{t('common:search')}</FormLabel> <FormControl><Input placeholder={t('products:searchPlaceholder')} {...field} value={field.value ?? ''} /></FormControl> </FormItem>
+                        )} />
+                        {/* Category Select Placeholder */}
+                        {/* <FormField control={control} name="categoryId" render={...} /> */}
+                        <div className="flex flex-col space-y-2 pt-2 sm:pt-0 md:pt-6">
+                            <FormField control={control} name="lowStockOnly" render={({ field }) => ( <FormItem className="flex flex-row items-center space-x-3 space-y-0 rtl:space-x-reverse"> <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl> <FormLabel className="font-normal">{t('reports:showLowStockOnly')}</FormLabel> </FormItem> )} />
+                            <FormField control={control} name="outOfStockOnly" render={({ field }) => ( <FormItem className="flex flex-row items-center space-x-3 space-y-0 rtl:space-x-reverse"> <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl> <FormLabel className="font-normal">{t('reports:showOutOfStockOnly')}</FormLabel> </FormItem> )} />
                         </div>
-                        <div className="flex justify-end gap-2 mt-4">
-                            <Button type="button" variant="ghost" onClick={onClearFilters} disabled={isLoading}> <X className="me-2 h-4 w-4" />{t('common:clearFilters')} </Button>
-                            <Button type="submit" disabled={isLoading}> {isLoading ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <Filter className="me-2 h-4 w-4" />} {t('common:applyFilters')} </Button>
-                        </div>
-                    </form>
-                </Form>
-            </CardContent>
-        </Card>
+                    </div>
+                    <div className="flex justify-end gap-2 mt-3">
+                        <Button type="button" variant="ghost" onClick={onClearFilters} disabled={isLoading}> <X className="me-2 h-4 w-4" />{t('common:clearFilters')} </Button>
+                        <Button type="submit" disabled={isLoading}> {isLoading ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <Filter className="me-2 h-4 w-4" />} {t('common:applyFilters')} </Button>
+                    </div>
+                </form>
+            </Form>
+        </div>
     );
 };

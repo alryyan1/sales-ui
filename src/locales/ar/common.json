@@ -17,6 +17,7 @@
   "filter": "تصفية",
   "clear": "مسح",
   "apply": "تطبيق",
+  "applyFilters": "تطبيق المرشحات",
   "reset": "إعادة تعيين",
   "confirm": "تأكيد",
   "yes": "نعم",
@@ -42,5 +43,10 @@
   "required": "مطلوب",
   "optional": "اختياري",
   "import": "استيراد",
-  "importing": "جاري الاستيراد..."
+  "importing": "جاري الاستيراد...",
+  "expand": "توسيع",
+  "collapse": "طي",
+  "download": "تنزيل",
+  "loadingPdf": "جاري تحميل PDF...",
+  "errorLoadingPdf": "خطأ في تحميل PDF"
 }

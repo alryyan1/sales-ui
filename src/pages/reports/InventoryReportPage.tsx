@@ -33,6 +33,7 @@ import {
   AlertCircle,
   ArrowLeft,
   PackageCheck,
+  FileText,
 } from "lucide-react";
 
 // API Client & Types
@@ -50,6 +51,7 @@ import {
 import { InventoryReportTable } from "../../components/reports/inventory/InventoryReportTable"; // Path to your table component
 import { formatNumber } from "@/constants";
 import { PurchaseItem } from "@/services/purchaseService";
+import { PdfViewerDialog } from "@/components/common/PdfViewerDialog";
 
 // Interface for Product with potentially loaded batches for this page
 interface ProductWithBatches extends Omit<ProductType, 'available_batches'> {
@@ -117,7 +119,7 @@ const InventoryReportPage: React.FC = () => {
     "common",
     "purchases",
     "validation",
-  ]); // Ensure all needed namespaces
+  ]);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -126,6 +128,8 @@ const InventoryReportPage: React.FC = () => {
     useState<PaginatedProductsWithBatches | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string>("");
   // Add categories state here if implementing category filter
   // const [categories, setCategories] = useState<Category[]>([]);
   // const [loadingCategories, setLoadingCategories] = useState(false);
@@ -151,7 +155,6 @@ const InventoryReportPage: React.FC = () => {
     async (filters: InventoryFilterValues, page: number) => {
       setIsLoading(true);
       setError(null);
-      console.log("Fetching Inventory Report:", { ...filters, page });
       try {
         const params = new URLSearchParams();
         params.append("page", page.toString());
@@ -186,7 +189,6 @@ const InventoryReportPage: React.FC = () => {
 
   // --- Filter Handlers ---
   const handleFilterSubmit = (data: InventoryFilterValues) => {
-    console.log("Applying inventory filters:", data);
     const newParams = new URLSearchParams();
     if (data.search) newParams.set("search", data.search);
     else newParams.delete("search");
@@ -198,7 +200,24 @@ const InventoryReportPage: React.FC = () => {
     newParams.set("page", "1"); // Reset to page 1 when filters change
     setSearchParams(newParams);
   };
-  // console.log(reportData,'reportData')
+
+  // --- PDF Export Handler ---
+  const handleExportPdf = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (currentFilters.search) params.append("search", currentFilters.search);
+      if (currentFilters.lowStockOnly) params.append("low_stock_only", "true");
+      if (currentFilters.outOfStockOnly) params.append("out_of_stock_only", "true");
+
+      const url = `/api/reports/inventory-pdf?${params.toString()}`;
+      setPdfUrl(url);
+      setPdfDialogOpen(true);
+    } catch (err) {
+      toast.error(t("common:error"), {
+        description: t("reports:errorGeneratingPdf"),
+      });
+    }
+  }, [currentFilters, t]);
   const handleClearFilters = () => {
     // Does not reset form directly, relies on useEffect syncing form with URL params
     setSearchParams({ page: "1" }); // This will trigger useEffect which resets the form
@@ -219,18 +238,33 @@ const InventoryReportPage: React.FC = () => {
   return (
     <div className="p-4 md:p-6 lg:p-8 dark:bg-gray-950 min-h-screen pb-10">
       {/* Header */}
-      <div className="flex items-center mb-6 gap-2">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => navigate("/dashboard")}
-          aria-label={t("common:back")}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 dark:text-gray-100">
-          {t("reports:inventoryReportTitle")}
-        </h1>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => navigate("/dashboard")}
+            aria-label={t("common:back")}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 dark:text-gray-100">
+            {t("reports:inventoryReportTitle")}
+          </h1>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {!isLoading && !error && reportData && (
+            <Button
+              variant="outline"
+              onClick={handleExportPdf}
+              className="flex items-center gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              {t("reports:exportPdf")}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Filter Form Component */}
@@ -389,6 +423,14 @@ const InventoryReportPage: React.FC = () => {
             {t("reports:applyFiltersToView")} {/* Add key */}
           </div>
         )}
+
+      {/* PDF Viewer Dialog */}
+      <PdfViewerDialog
+        isOpen={pdfDialogOpen}
+        onClose={() => setPdfDialogOpen(false)}
+        pdfUrl={pdfUrl}
+        title={t("reports:inventoryReportTitle")}
+      />
     </div>
   );
 };

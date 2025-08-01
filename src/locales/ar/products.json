@@ -68,6 +68,7 @@
     "suggestedSalePricePerSellableUnit": "سعر البيع المقترح لكل وحدة بيع",
     "suggestedSalePricePerStockingUnit": "سعر البيع المقترح لكل وحدة تخزين",
     "latestCostPerSellableUnit": "آخر تكلفة لكل وحدة بيع",
+    "lastSalePricePerSellableUnit": "آخر سعر بيع لكل وحدة بيع",
     "totalStock": "إجمالي المخزون",
     "sellableUnits": "وحدات البيع",
     "generateSKU": "توليد رمز عشوائي",

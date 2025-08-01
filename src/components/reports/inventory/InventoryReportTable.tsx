@@ -97,7 +97,7 @@ export const InventoryReportTable: React.FC<InventoryReportTableProps> = ({
             {t("products:latestCostPerSellableUnit")}
           </TableHead>
           <TableHead className="text-right px-2 py-3">
-            {t("products:suggestedSalePricePerSellableUnit")}
+            {t("products:lastSalePricePerSellableUnit")}
           </TableHead>
           <TableHead className="text-center px-2 py-3">
             {t("reports:totalItemsPurchased")}
@@ -155,7 +155,7 @@ export const InventoryReportTable: React.FC<InventoryReportTableProps> = ({
                   )}
                 </TableCell>
                 <TableCell className="px-2 py-3 dark:text-gray-300">
-                  {product.sku || "---"}
+                  {product.sku || t("common:n/a")}
                 </TableCell>
                 <TableCell className="px-2 py-3 font-medium dark:text-gray-100">
                   {product.name}
@@ -171,29 +171,29 @@ export const InventoryReportTable: React.FC<InventoryReportTableProps> = ({
                     ? `${formatNumber(
                         product.stock_alert_level
                       )} ${sellableUnitName}`
-                    : "---"}
+                    : t("common:n/a")}
                 </TableCell>
                 <TableCell className="text-right px-2 py-3 dark:text-gray-100">
                   {product.latest_cost_per_sellable_unit
                     ? formatCurrency(product.latest_cost_per_sellable_unit)
-                    : "---"}
+                    : t("common:n/a")}
                 </TableCell>
                 <TableCell className="text-right px-2 py-3 dark:text-gray-100">
-                  {product.suggested_sale_price_per_sellable_unit
+                  {product.last_sale_price_per_sellable_unit
                     ? formatCurrency(
-                        product.suggested_sale_price_per_sellable_unit
+                        product.last_sale_price_per_sellable_unit
                       )
-                    : "---"}
+                    : t("common:n/a")}
                 </TableCell>
                 <TableCell className="text-center px-2 py-3 dark:text-gray-100">
                   {product.total_items_purchased !== null && product.total_items_purchased !== undefined
                     ? formatNumber(product.total_items_purchased)
-                    : "---"}
+                    : t("common:n/a")}
                 </TableCell>
                 <TableCell className="text-center px-2 py-3 dark:text-gray-100">
                   {product.total_items_sold !== null && product.total_items_sold !== undefined
                     ? formatNumber(product.total_items_sold)
-                    : "---"}
+                    : t("common:n/a")}
                 </TableCell>
               </TableRow>
               {/* Collapsible Content for Batches */}

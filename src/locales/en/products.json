@@ -67,6 +67,7 @@
     "suggestedSalePricePerSellableUnit": "Suggested Sale Price per Sellable Unit",
     "suggestedSalePricePerStockingUnit": "Suggested Sale Price per Stocking Unit",
     "latestCostPerSellableUnit": "Latest Cost per Sellable Unit",
+    "lastSalePricePerSellableUnit": "Last Sale Price per Sellable Unit",
     "totalStock": "Total Stock",
     "sellableUnits": "Sellable Units",
     "generateSKU": "Generate Random SKU",

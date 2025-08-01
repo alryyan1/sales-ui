@@ -59,7 +59,7 @@ export const InventoryBatchDetailsTable: React.FC<
             key={batch.id}
             className="text-xs hover:bg-slate-50 dark:hover:bg-slate-700/50"
           >
-            <TableCell>{batch.batch_number || "---"}</TableCell>
+            <TableCell>{batch.batch_number || t("common:n/a")}</TableCell>
             <TableCell className="text-center">
               {formatNumber(batch.remaining_quantity)}
             </TableCell>
@@ -73,7 +73,7 @@ export const InventoryBatchDetailsTable: React.FC<
             </TableCell>{" "}
             {/* Display cost_per_sellable_unit */}
             <TableCell className="text-right">
-              {batch.sale_price ? formatCurrency(batch.sale_price) : "---"}
+              {batch.sale_price ? formatCurrency(batch.sale_price) : t("common:n/a")}
             </TableCell>
           </TableRow>
         ))}
