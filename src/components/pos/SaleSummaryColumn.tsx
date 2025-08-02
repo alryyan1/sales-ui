@@ -232,10 +232,11 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
       setPaymentLines(existingPaymentLines);
     } else {
       // If no existing payments (including empty array from empty sale), start with one payment line
+      // Only set amount if grandTotal is greater than 0, otherwise leave it empty
       setPaymentLines([{
         id: Date.now().toString(),
         method: 'cash',
-        amount: grandTotal,
+        amount: grandTotal > 0 ? grandTotal : 0,
       }]);
     }
   }, [saleInfo?.payments, saleInfo?.payments?.length, externalPaymentMethods.length, grandTotal, saleId]); // Added saleInfo?.payments?.length dependency
@@ -260,10 +261,11 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
   useEffect(() => {
     if (saleInfo && saleInfo.payments && saleInfo.payments.length === 0) {
       // Reset to one payment line with grand total for empty sales
+      // Only set amount if grandTotal is greater than 0, otherwise leave it empty
       setPaymentLines([{
         id: Date.now().toString(),
         method: 'cash',
-        amount: grandTotal,
+        amount: grandTotal > 0 ? grandTotal : 0,
       }]);
     }
   }, [saleInfo?.payments, grandTotal]);
@@ -296,7 +298,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
 
   // Update payment amounts when discount changes
   useEffect(() => {
-    if (paymentLines.length > 0) {
+    if (paymentLines.length > 0 && grandTotal > 0) {
       // Calculate the total amount already paid (excluding the last payment line)
       const existingPayments = paymentLines.slice(0, -1);
       const totalExistingPaid = preciseSum(existingPayments.map(line => line.amount || 0), 2);
@@ -309,7 +311,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
         if (index === paymentLines.length - 1) {
           return {
             ...line,
-            amount: Math.max(0.01, remainingAmount)
+            amount: Math.max(0, remainingAmount)
           };
         }
         return line;
@@ -328,7 +330,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
     const newPaymentLine: PaymentLine = {
       id: Date.now().toString(),
       method: 'cash',
-      amount: Math.max(0.01, remainingAmount),
+      amount: Math.max(0, remainingAmount),
     };
     setPaymentLines([...paymentLines, newPaymentLine]);
   };
@@ -359,12 +361,15 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
       newErrors.push('Discount amount cannot exceed subtotal');
     }
     
-    if (effectiveTotalPaid < effectiveGrandTotal) {
-      newErrors.push(`Total paid (${formatNumber(effectiveTotalPaid)}) is less than total amount (${formatNumber(effectiveGrandTotal)})`);
-    }
-    
-    if (effectiveTotalPaid > effectiveGrandTotal) {
-      newErrors.push(`Total paid (${formatNumber(effectiveTotalPaid)}) exceeds total amount (${formatNumber(effectiveGrandTotal)})`);
+    // Only validate payment amounts if there's actually a total to pay
+    if (effectiveGrandTotal > 0) {
+      if (effectiveTotalPaid < effectiveGrandTotal) {
+        newErrors.push(`Total paid (${formatNumber(effectiveTotalPaid)}) is less than total amount (${formatNumber(effectiveGrandTotal)})`);
+      }
+      
+      if (effectiveTotalPaid > effectiveGrandTotal) {
+        newErrors.push(`Total paid (${formatNumber(effectiveTotalPaid)}) exceeds total amount (${formatNumber(effectiveGrandTotal)})`);
+      }
     }
     
     setErrors(newErrors);
@@ -586,7 +591,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
               variant="outline"
               size="sm"
               onClick={addPaymentLine}
-              disabled={effectiveTotalPaid >= effectiveGrandTotal}
+              disabled={effectiveGrandTotal === 0 || effectiveTotalPaid >= effectiveGrandTotal}
               className="h-8 px-2"
             >
               <AddIcon className="h-4 w-4 mr-1" />
@@ -654,7 +659,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
                           }
                         }}
                         inputProps={{
-                          min: 0.01,
+                          min: 0,
                           step: 0.01,
                           max: amountDue + paymentLine.amount
                         }}
@@ -702,9 +707,9 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
         <div className="space-y-1">
         <Button
           onClick={handleCompleteSale}
-          disabled={currentSaleItems.length === 0 || Math.abs(effectiveTotalPaid - effectiveGrandTotal) > 0.01 || isSaving}
+          disabled={currentSaleItems.length === 0 || (effectiveGrandTotal > 0 && Math.abs(effectiveTotalPaid - effectiveGrandTotal) > 0.01) || isSaving}
           className={`w-full h-12 text-lg transition-all duration-300 ${
-            currentSaleItems.length > 0 && Math.abs(effectiveTotalPaid - effectiveGrandTotal) <= 0.01 && !isSaving
+            currentSaleItems.length > 0 && (effectiveGrandTotal === 0 || Math.abs(effectiveTotalPaid - effectiveGrandTotal) <= 0.01) && !isSaving
               ? 'bg-sky-500 hover:bg-sky-600 animate-pulse shadow-lg'
               : 'bg-gray-400 hover:bg-gray-500'
           }`}
