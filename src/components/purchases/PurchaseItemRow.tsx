@@ -24,7 +24,7 @@ import { formatNumber, preciseCalculation } from "@/constants";
 import { PurchaseFormValues } from "@/pages/PurchaseFormPage";
 
 // Components
-import { ProductAutocomplete } from "../common/ProductAutocomplete";
+import { ProductSelect } from "../common/ProductSelect";
 
 interface PurchaseItemRowProps {
   index: number;
@@ -137,21 +137,22 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
   // Memoized render content
   const renderContent = useMemo(() => (
     <CardContent sx={{ p: 2 }}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr auto', gap: 2, alignItems: 'start' }}>
+      <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-2 items-start">
         {/* Product Selection */}
-        <Box>
-          <ProductAutocomplete
-            id={`product-autocomplete-${uniqueId}`}
+        <div>
+          <ProductSelect
+            id={`product-select-${uniqueId}`}
             value={selectedProduct || null}
             onChange={handleProductChange}
             label={t('purchases:fields.productName')}
             error={!!getFieldError('product_id')}
             helperText={getFieldError('product_id')}
             disabled={isSubmitting || isPurchaseReceived}
-            size="small"
             showSku={true}
+            placeholder={t('products:selectProduct')}
+            required
           />
-        </Box>
+        </div>
 
         {/* Batch Number */}
         <TextField
@@ -197,7 +198,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
         />
 
         {/* Actions */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <div className="flex flex-col gap-1">
           <Tooltip title={isPurchaseReceived ? t('purchases:cannotDeleteReceived') : t('common:delete')}>
             <IconButton
               onClick={handleRemove}
@@ -208,8 +209,8 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
               <DeleteIcon />
             </IconButton>
           </Tooltip>
-        </Box>
-      </Box>
+        </div>
+      </div>
 
       {/* Additional Info Row */}
       {selectedProduct && (
@@ -244,6 +245,8 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
     itemCount,
     calculatedValues,
     uniqueId,
+    index,
+    register,
     t
   ]);
 

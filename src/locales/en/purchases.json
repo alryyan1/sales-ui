@@ -151,5 +151,22 @@
     "itemUpdated": "Item updated successfully",
     "itemDeleted": "Item deleted successfully",
     "confirmDeleteItem": "Are you sure you want to delete this item?",
-    "purchaseNotFound": "Purchase not found"
+    "purchaseNotFound": "Purchase not found",
+    
+    "managePurchaseItems": "Manage Purchase Items",
+    "purchaseSummary": "Purchase Summary",
+    "totalSellValue": "Total Sell Value",
+    "addNewItem": "Add New Item",
+    "searchProduct": "Search Product",
+    "enterSkuAndPressEnter": "Enter SKU and press Enter",
+    "batch": "Batch",
+    "purchaseItems": "Purchase Items",
+    "noPurchaseItems": "No purchase items found",
+    "itemAddedSuccess": "Item added successfully",
+    "itemUpdatedSuccess": "Item updated successfully", 
+    "itemDeletedSuccess": "Item deleted successfully",
+    "selectProductFirst": "Please select a product first",
+    "invalidQuantityOrCost": "Please enter valid quantity and cost",
+    "invalidPurchaseId": "Invalid purchase ID provided",
+    "errorSearchingSku": "Error searching for product by SKU"
 } 

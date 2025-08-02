@@ -140,6 +140,22 @@
     "itemUpdated": "تم تحديث العنصر بنجاح",
     "itemDeleted": "تم حذف العنصر بنجاح",
     "confirmDeleteItem": "هل أنت متأكد من حذف هذا العنصر؟",
-    "purchaseNotFound": "الشراء غير موجود"
-
+    "purchaseNotFound": "الشراء غير موجود",
+    
+    "managePurchaseItems": "إدارة عناصر المشتريات",
+    "purchaseSummary": "ملخص المشتريات",
+    "totalSellValue": "إجمالي قيمة البيع",
+    "addNewItem": "إضافة عنصر جديد",
+    "searchProduct": "البحث عن منتج",
+    "enterSkuAndPressEnter": "أدخل الرقم المرجعي واضغط Enter",
+    "batch": "الدفعة",
+    "purchaseItems": "عناصر المشتريات",
+    "noPurchaseItems": "لا توجد عناصر مشتريات",
+    "itemAddedSuccess": "تم إضافة العنصر بنجاح",
+    "itemUpdatedSuccess": "تم تحديث العنصر بنجاح",
+    "itemDeletedSuccess": "تم حذف العنصر بنجاح", 
+    "selectProductFirst": "يرجى اختيار منتج أولاً",
+    "invalidQuantityOrCost": "يرجى إدخال كمية وتكلفة صحيحة",
+    "invalidPurchaseId": "معرف المشتريات غير صحيح",
+    "errorSearchingSku": "خطأ في البحث عن المنتج بالرقم المرجعي"
 }

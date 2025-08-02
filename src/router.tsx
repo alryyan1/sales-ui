@@ -40,6 +40,7 @@ import ProcessRequisitionPage from "./components/admin/inventory/ProcessRequisit
 import InventoryLogPage from "./pages/reports/InventoryLogPage";
 import PurchaseDetailsPage from "./pages/purchases/PurchaseDetailsPage";
 import PurchaseItemsPage from "./pages/purchases/PurchaseItemsPage";
+import ManagePurchaseItemsPage from "./pages/purchases/ManagePurchaseItemsPage";
 import SalesTerminalPage from "./pages/sales/SalesTerminalPage";
 import PosPage from "./pages/PosPage";
 import NearExpiryReportPage from "./components/reports/NearExpiryReportPage";
@@ -110,7 +111,7 @@ const router = createHashRouter([
               { path: "add", element: <PurchaseFormPage /> },
               { path: ":id/edit", element: <PurchaseFormPage /> }, // Edit Purchase
               { path: ':id', element: <PurchaseDetailsPage /> }, // Details
-              { path: ':purchaseId/items', element: <PurchaseItemsPage /> }, // Manage Purchase Items
+              { path: ':id/manage-items', element: <ManagePurchaseItemsPage /> }, // Manage Purchase Items
             ],
           },
           {

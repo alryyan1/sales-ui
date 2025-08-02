@@ -495,7 +495,7 @@ const PurchasesListPage: React.FC = () => {
                              aria-label={t("purchases:managePurchaseItems") || "Manage Items"}
                              color="primary"
                              size="small"
-                             onClick={() => navigate(`/purchases/${purchase.id}/items`)}
+                             onClick={() => navigate(`/purchases/${purchase.id}/manage-items`)}
                            >
                              <InventoryIcon fontSize="small" />
                            </IconButton>

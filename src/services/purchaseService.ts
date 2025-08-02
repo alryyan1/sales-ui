@@ -371,6 +371,20 @@ const purchaseService = {
       throw new Error(getErrorMessage(error));
     }
   },
+
+  /**
+   * Get product by SKU
+   */
+  getProductBySku: async (sku: string): Promise<Product> => {
+    try {
+      const response = await apiClient.get(`/products/by-sku/${encodeURIComponent(sku)}`);
+      return response.data.product || response.data;
+    } catch (error) {
+      console.error('Error getting product by SKU:', error);
+      throw error;
+    }
+  },
+
   // --- Error Helpers ---
   getValidationErrors,
   getErrorMessage,

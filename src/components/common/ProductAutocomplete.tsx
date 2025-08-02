@@ -144,7 +144,28 @@ export const ProductAutocomplete: React.FC<ProductAutocompleteProps> = React.mem
 
   // Initial search when component mounts
   useEffect(() => {
-    setDebouncedProductSearch('');
+    // Trigger initial search for all products
+    const initialSearch = async () => {
+      setLoadingProducts(true);
+      try {
+        const params = new URLSearchParams();
+        params.append("show_all_for_empty_search", "true");
+        params.append("limit", "15");
+
+        const response = await apiClient.get<{ data: Product[] }>(
+          `/products/autocomplete?${params.toString()}`
+        );
+        const products = response.data.data ?? response.data;
+        setLocalProducts(products);
+      } catch (error) {
+        console.error('Error loading initial products:', error);
+        setLocalProducts([]);
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
+
+    initialSearch();
   }, []);
 
   // Memoized handlers
