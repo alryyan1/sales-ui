@@ -19,7 +19,10 @@ import {
   Typography,
   CircularProgress,
   IconButton,
-  Tooltip
+  Tooltip,
+  Autocomplete,
+  TextField,
+  Box
 } from '@mui/material';
 
 // Icons
@@ -30,9 +33,9 @@ import { Delete as DeleteIcon } from '@mui/icons-material';
 import purchaseService, { PurchaseItem } from '../../services/purchaseService';
 import { Product } from '../../services/productService';
 import { formatNumber, formatCurrency } from '@/constants';
+import apiClient from '@/lib/axios';
 
 // Components
-import { ProductAutocomplete } from '@/components/common/ProductAutocomplete';
 import EditablePurchaseItemField from '@/components/purchases/EditablePurchaseItemField';
 
 
@@ -136,6 +139,11 @@ const ManagePurchaseItemsPage: React.FC = () => {
   const [batchNumber, setBatchNumber] = useState<string>('');
   const [expiryDate, setExpiryDate] = useState<string>('');
   const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
+  
+  // Product search state
+  const [productOptions, setProductOptions] = useState<Product[]>([]);
+  const [productLoading, setProductLoading] = useState(false);
+  const [productInputValue, setProductInputValue] = useState('');
 
   // Fetch purchase data
   const {
@@ -227,6 +235,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
   const resetForm = useCallback(() => {
     setSelectedProduct(null);
     setSkuInput('');
+    setProductInputValue('');
     setQuantity(1);
     setUnitCost(0);
     setSalePrice(undefined);
@@ -234,11 +243,37 @@ const ManagePurchaseItemsPage: React.FC = () => {
     setExpiryDate('');
   }, []);
 
+  // Product search function
+  const searchProducts = useCallback(async (searchTerm: string) => {
+    setProductLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (searchTerm) {
+        params.append("search", searchTerm);
+      } else {
+        params.append("show_all_for_empty_search", "true");
+      }
+      params.append("limit", "15");
+
+      const response = await apiClient.get<{ data: Product[] }>(
+        `/products/autocomplete?${params.toString()}`
+      );
+      const products = response.data.data ?? response.data;
+      setProductOptions(products);
+    } catch (error) {
+      console.error('Error searching products:', error);
+      setProductOptions([]);
+    } finally {
+      setProductLoading(false);
+    }
+  }, []);
+
   // Handle product selection
   const handleProductSelect = useCallback((product: Product | null) => {
     setSelectedProduct(product);
     if (product) {
       setSkuInput(product.sku || '');
+      setProductInputValue(product.name);
       // Set suggested prices if available
       if (product.latest_cost_per_sellable_unit) {
         setUnitCost(Number(product.latest_cost_per_sellable_unit));
@@ -248,6 +283,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
       }
     } else {
       setSkuInput('');
+      setProductInputValue('');
     }
   }, []);
 
@@ -343,6 +379,20 @@ const ManagePurchaseItemsPage: React.FC = () => {
     
     updateTimeoutRefs.current.set(updateKey, newTimeout);
   }, [updateItemMutation]);
+
+  // Debounced product search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      searchProducts(productInputValue);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [productInputValue, searchProducts]);
+
+  // Initial product load
+  useEffect(() => {
+    searchProducts('');
+  }, [searchProducts]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -447,11 +497,55 @@ const ManagePurchaseItemsPage: React.FC = () => {
             {/* Product Selection */}
             <div className="space-y-2">
               <Label>{t('products:productName')}</Label>
-              <ProductAutocomplete
+              <Autocomplete
+                options={productOptions}
+                getOptionLabel={(option) => typeof option === 'string' ? option : option.name}
                 value={selectedProduct}
-                onChange={handleProductSelect}
-                label={t('products:searchProduct')}
+                onChange={(_, newValue) => handleProductSelect(typeof newValue === 'string' ? null : newValue)}
+                inputValue={productInputValue}
+                onInputChange={(_, newInputValue) => setProductInputValue(newInputValue)}
+                loading={productLoading}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                noOptionsText={t('common:noResults')}
+                freeSolo={true}
+                clearOnBlur={true}
+                selectOnFocus={true}
+                blurOnSelect={true}
+                filterOptions={(x) => x} // Disable client-side filtering since we're doing server-side search
                 size="small"
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label={t('products:searchProduct')}
+                    size="small"
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {productLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                  />
+                )}
+                renderOption={(props, option) => {
+                  const { key, ...otherProps } = props;
+                  return (
+                    <li key={key} {...otherProps}>
+                      <Box>
+                        <Typography variant="body2" component="span">
+                          {option.name}
+                        </Typography>
+                        {option.sku && (
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            SKU: {option.sku}
+                          </Typography>
+                        )}
+                      </Box>
+                    </li>
+                  );
+                }}
               />
             </div>
 
