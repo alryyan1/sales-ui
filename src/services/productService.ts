@@ -121,15 +121,13 @@ const productService = {
    */
   getProductsForAutocomplete: async (
     search: string = "",
-    limit: number = 20,
-    showAllForEmptySearch: boolean = false
+    limit: number = 20
   ): Promise<Product[]> => {
     // Returns flat array, not paginated
     try {
       const params = new URLSearchParams();
       if (search) params.append("search", search);
       params.append("limit", limit.toString());
-      if (showAllForEmptySearch) params.append("show_all_for_empty_search", "1");
 
       // Assumes backend endpoint /api/products/autocomplete exists
       const response = await apiClient.get<{ data: Product[] }>(

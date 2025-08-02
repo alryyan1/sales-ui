@@ -56,17 +56,7 @@ interface PurchaseItemFormData {
   expiry_date: string;
 }
 
-interface UpdatePurchaseData {
-  items: Array<{
-    id?: number;
-    product_id: number;
-    batch_number?: string | null;
-    quantity: number;
-    unit_cost: string | number;
-    sale_price?: string | number | null;
-    expiry_date?: string | null;
-  }>;
-}
+
 
 const PurchaseItemsPage: React.FC = () => {
   const { t } = useTranslation(['purchases', 'common', 'products']);
@@ -229,62 +219,33 @@ const PurchaseItemsPage: React.FC = () => {
     try {
       if (editingItemId) {
         // Update existing item
-        const updateData: UpdatePurchaseData = {
-          items: purchaseItems.map(item => {
-            if (item.id === editingItemId) {
-              return {
-                id: item.id,
-                product_id: formData.product_id,
-                batch_number: formData.batch_number || null,
-                quantity: formData.quantity,
-                unit_cost: formData.unit_cost,
-                sale_price: formData.sale_price,
-                expiry_date: formData.expiry_date || null,
-              };
-            }
-            return {
-              id: item.id,
-              product_id: item.product_id,
-              batch_number: item.batch_number,
-              quantity: item.quantity,
-              unit_cost: item.unit_cost,
-              sale_price: item.sale_price,
-              expiry_date: item.expiry_date,
-            };
-          })
+        const itemData = {
+          product_id: formData.product_id,
+          batch_number: formData.batch_number || null,
+          quantity: formData.quantity,
+          unit_cost: formData.unit_cost,
+          sale_price: formData.sale_price,
+          expiry_date: formData.expiry_date || null,
         };
 
-        const updatedPurchase = await purchaseService.updatePurchase(Number(purchaseId), updateData);
-        setPurchase(updatedPurchase);
-        setPurchaseItems(updatedPurchase.items || []);
+        const result = await purchaseService.updatePurchaseItem(Number(purchaseId), editingItemId, itemData);
+        setPurchase(result.purchase);
+        setPurchaseItems(result.purchase.items || []);
         toast.success(t('purchases:itemUpdated'));
       } else {
         // Add new item
-        const updateData: UpdatePurchaseData = {
-          items: [
-            ...purchaseItems.map(item => ({
-              id: item.id,
-              product_id: item.product_id,
-              batch_number: item.batch_number,
-              quantity: item.quantity,
-              unit_cost: item.unit_cost,
-              sale_price: item.sale_price,
-              expiry_date: item.expiry_date,
-            })),
-            {
-              product_id: formData.product_id,
-              batch_number: formData.batch_number || null,
-              quantity: formData.quantity,
-              unit_cost: formData.unit_cost,
-              sale_price: formData.sale_price,
-              expiry_date: formData.expiry_date || null,
-            }
-          ]
+        const itemData = {
+          product_id: formData.product_id,
+          batch_number: formData.batch_number || null,
+          quantity: formData.quantity,
+          unit_cost: formData.unit_cost,
+          sale_price: formData.sale_price,
+          expiry_date: formData.expiry_date || null,
         };
 
-        const updatedPurchase = await purchaseService.updatePurchase(Number(purchaseId), updateData);
-        setPurchase(updatedPurchase);
-        setPurchaseItems(updatedPurchase.items || []);
+        const result = await purchaseService.addPurchaseItem(Number(purchaseId), itemData);
+        setPurchase(result.purchase);
+        setPurchaseItems(result.purchase.items || []);
         toast.success(t('purchases:itemAdded'));
       }
 
@@ -301,23 +262,9 @@ const PurchaseItemsPage: React.FC = () => {
     if (!confirm(t('purchases:confirmDeleteItem'))) return;
 
     try {
-      const updateData: UpdatePurchaseData = {
-        items: purchaseItems
-          .filter(item => item.id !== itemId)
-          .map(item => ({
-            id: item.id,
-            product_id: item.product_id,
-            batch_number: item.batch_number,
-            quantity: item.quantity,
-            unit_cost: item.unit_cost,
-            sale_price: item.sale_price,
-            expiry_date: item.expiry_date,
-          }))
-      };
-
-      const updatedPurchase = await purchaseService.updatePurchase(Number(purchaseId), updateData);
-      setPurchase(updatedPurchase);
-      setPurchaseItems(updatedPurchase.items || []);
+      const result = await purchaseService.deletePurchaseItem(Number(purchaseId), itemId);
+      setPurchase(result.purchase);
+      setPurchaseItems(result.purchase.items || []);
       toast.success(t('purchases:itemDeleted'));
     } catch (error) {
       console.error('Failed to delete item:', error);

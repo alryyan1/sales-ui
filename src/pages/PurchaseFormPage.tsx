@@ -217,24 +217,6 @@ const PurchaseFormPage: React.FC = () => {
     }
   }, [debouncedSupplierSearch, t]);
 
-  // --- Load Initial Products for New Purchases ---
-  useEffect(() => {
-    const loadInitialProducts = async () => {
-      if (!isEditMode && products.length === 0) {
-        try {
-          // Load initial products for autocomplete in new purchases
-          const initialProducts = await productService.getProductsForAutocomplete("", 50, true);
-          setProducts(initialProducts);
-        } catch (error) {
-          console.error("Failed to load initial products:", error);
-          // Don't show error toast for this as it's not critical
-        }
-      }
-    };
-
-    loadInitialProducts();
-  }, [isEditMode, products.length]);
-
   // --- Fetch Existing Purchase Data for Edit Mode ---
   useEffect(() => {
     const loadPurchaseData = async (id: number) => {
@@ -273,13 +255,6 @@ const PurchaseFormPage: React.FC = () => {
               ? prev
               : [initialSupplier, ...prev]
           );
-        setProducts((prev) => {
-          const existingProductIds = new Set(prev.map((p) => p.id));
-          const newProducts = safeInitialProducts.filter(
-            (p) => !existingProductIds.has(p.id)
-          );
-          return [...prev, ...newProducts];
-        });
         setSelectedSupplier(initialSupplier);
 
         const initialProductMap = safeInitialProducts.reduce((map, prod) => {
@@ -577,9 +552,9 @@ const PurchaseFormPage: React.FC = () => {
               />
               <Separator className="my-6" />
               <PurchaseItemsList
-                products={products}
                 isSubmitting={isSubmitting}
                 isPurchaseReceived={isPurchaseReceived}
+                products={products}
               />
               <Separator className="my-6" />
           

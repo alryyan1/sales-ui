@@ -18,7 +18,6 @@ import { PurchaseItemRow } from './PurchaseItemRow';
 import { Product } from '../../services/productService';
 
 interface PurchaseItemsListProps {
-    products: Product[];
     isSubmitting: boolean;
     isPurchaseReceived?: boolean;
 }
@@ -34,14 +33,14 @@ const VirtualizedRow = React.memo(({
     data: {
         fields: any[];
         remove: (index: number) => void;
-        products: Product[];
         isSubmitting: boolean;
         itemCount: number;
         searchTerm: string;
         isPurchaseReceived: boolean;
+        products: Product[];
     };
 }) => {
-    const { fields, remove, products, isSubmitting, itemCount, searchTerm, isPurchaseReceived } = data;
+    const { fields, remove, isSubmitting, itemCount, searchTerm, isPurchaseReceived, products } = data;
     const field = fields[index];
     
     // Skip rendering if item doesn't match search
@@ -71,7 +70,6 @@ const VirtualizedRow = React.memo(({
                 isSubmitting={isSubmitting}
                 itemCount={itemCount}
                 isNew={index === 0}
-                shouldFocus={index === 0}
                 isPurchaseReceived={isPurchaseReceived}
             />
         </div>
@@ -81,7 +79,7 @@ const VirtualizedRow = React.memo(({
 VirtualizedRow.displayName = 'VirtualizedRow';
 
 export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
-    products, isSubmitting, isPurchaseReceived = false
+    isSubmitting, isPurchaseReceived = false, products
 }) => {
     const { t } = useTranslation(['purchases', 'common']);
     const { control, formState: { errors } } = useFormContext();
@@ -138,12 +136,12 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
     const listData = useMemo(() => ({
         fields,
         remove: handleRemove,
-        products,
         isSubmitting,
         itemCount: fields.length,
         searchTerm,
         isPurchaseReceived,
-    }), [fields, handleRemove, products, isSubmitting, searchTerm, isPurchaseReceived]);
+        products,
+    }), [fields, handleRemove, isSubmitting, searchTerm, isPurchaseReceived, products]);
 
     // Calculate row height based on content
     const getRowHeight = useCallback((index: number) => {
@@ -240,21 +238,20 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                     </AutoSizer>
                 </Box>
             ) : (
-                // Regular rendering for smaller datasets
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {fields.map((item, index) => (
-                        <PurchaseItemRow
-                            key={item.id}
-                            index={index}
-                            remove={handleRemove}
-                            products={products}
-                            isSubmitting={isSubmitting}
-                            itemCount={fields.length}
-                            isNew={index === 0}
-                            shouldFocus={index === 0}
-                        />
-                    ))}
-                </Box>
+                                 // Regular rendering for smaller datasets
+                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                     {fields.map((item, index) => (
+                         <PurchaseItemRow
+                             key={item.id}
+                             index={index}
+                             remove={handleRemove}
+                             isSubmitting={isSubmitting}
+                             itemCount={fields.length}
+                             isNew={index === 0}
+                             isPurchaseReceived={isPurchaseReceived}
+                         />
+                     ))}
+                 </Box>
             )}
 
             {/* Show filtered count if searching */}

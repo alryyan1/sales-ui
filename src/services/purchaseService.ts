@@ -245,6 +245,59 @@ const purchaseService = {
   },
 
   /**
+   * Add a new item to a purchase.
+   */
+  addPurchaseItem: async (purchaseId: number, itemData: {
+    product_id: number;
+    batch_number?: string | null;
+    quantity: number;
+    unit_cost: number;
+    sale_price?: number | null;
+    expiry_date?: string | null;
+  }): Promise<{ purchase: Purchase }> => {
+    try {
+      const response = await apiClient.post(`/purchases/${purchaseId}/items`, itemData);
+      return response.data;
+    } catch (error) {
+      console.error('Error adding purchase item:', error);
+      throw new Error(getErrorMessage(error));
+    }
+  },
+
+  /**
+   * Update a specific purchase item.
+   */
+  updatePurchaseItem: async (purchaseId: number, itemId: number, itemData: {
+    product_id: number;
+    batch_number?: string | null;
+    quantity: number;
+    unit_cost: number;
+    sale_price?: number | null;
+    expiry_date?: string | null;
+  }): Promise<{ purchase: Purchase }> => {
+    try {
+      const response = await apiClient.put(`/purchases/${purchaseId}/items/${itemId}`, itemData);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating purchase item:', error);
+      throw new Error(getErrorMessage(error));
+    }
+  },
+
+  /**
+   * Delete a specific purchase item.
+   */
+  deletePurchaseItem: async (purchaseId: number, itemId: number): Promise<{ purchase: Purchase }> => {
+    try {
+      const response = await apiClient.delete(`/purchases/${purchaseId}/items/${itemId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting purchase item:', error);
+      throw new Error(getErrorMessage(error));
+    }
+  },
+
+  /**
    * Import purchase items from Excel file - Preview: Preview data with column mapping
    * @param file Excel file
    * @param columnMapping Mapping of purchase item fields to Excel columns

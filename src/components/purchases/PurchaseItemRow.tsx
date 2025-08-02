@@ -1,5 +1,5 @@
 // src/components/purchases/PurchaseItemRow.tsx
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
@@ -15,22 +15,20 @@ import {
   Tooltip
 } from "@mui/material";
 import { 
-  Delete as DeleteIcon,
-  ContentCopy as CopyIcon
+  Delete as DeleteIcon
 } from "@mui/icons-material";
-import Autocomplete from "@mui/material/Autocomplete";
-import CircularProgress from "@mui/material/CircularProgress";
 
 // Types
 import { Product } from "../../services/productService";
 import { formatNumber, preciseCalculation } from "@/constants";
 import { PurchaseFormValues } from "@/pages/PurchaseFormPage";
-import apiClient from "@/lib/axios";
+
+// Components
+import { ProductAutocomplete } from "../common/ProductAutocomplete";
 
 interface PurchaseItemRowProps {
   index: number;
   remove: (index: number) => void;
-  products: Product[];
   isSubmitting: boolean;
   itemCount: number;
   isNew?: boolean;
@@ -71,10 +69,8 @@ ProductOption.displayName = 'ProductOption';
 export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
   index,
   remove,
-  products,
   isSubmitting,
   itemCount,
-  shouldFocus = false,
   isPurchaseReceived = false,
 }) => {
   const { t } = useTranslation([
@@ -85,16 +81,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
   ]);
   
   const { watch, setValue, register, formState: { errors } } = useFormContext<PurchaseFormValues>();
-  const autocompleteRef = useRef<HTMLInputElement>(null);
   const uniqueId = useMemo(() => `purchase-item-${index}`, [index]);
-
-  // Local state for this row's product search
-  const [productSearchInput, setProductSearchInput] = useState("");
-  const [debouncedProductSearch, setDebouncedProductSearch] = useState("");
-  const [localProducts, setLocalProducts] = useState<Product[]>([]);
-  const [localLoadingProducts, setLocalLoadingProducts] = useState(false);
-  const productDebounceRef = useRef<NodeJS.Timeout | null>(null);
-  const lastProductSearchRef = useRef<string>("");
 
   // Watch fields for this item row - memoized to prevent unnecessary re-renders
   const watchedFields = useMemo(() => ({
@@ -120,112 +107,19 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
     };
   }, [selectedProduct, quantityOfStockingUnits, costPerStockingUnit]);
 
-  // Auto-focus effect for new items
-  useEffect(() => {
-    if (shouldFocus && autocompleteRef.current) {
-      const timer = setTimeout(() => {
-        autocompleteRef.current?.focus();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [shouldFocus]);
-
-  // Debounced product search effect
-  useEffect(() => {
-    if (productDebounceRef.current) {
-      clearTimeout(productDebounceRef.current);
-    }
-    
-    productDebounceRef.current = setTimeout(() => {
-      setDebouncedProductSearch(productSearchInput);
-    }, 300);
-    
-    return () => {
-      if (productDebounceRef.current) {
-        clearTimeout(productDebounceRef.current);
-      }
-    };
-  }, [productSearchInput]);
-
-  // Product search effect
-  useEffect(() => {
-    if (debouncedProductSearch !== '' && debouncedProductSearch !== lastProductSearchRef.current) {
-      lastProductSearchRef.current = debouncedProductSearch;
-      
-      const searchProducts = async () => {
-        setLocalLoadingProducts(true);
-        try {
-          const response = await apiClient.get<{ data: Product[] }>(
-            `/products/autocomplete?search=${encodeURIComponent(debouncedProductSearch)}&limit=15`
-          );
-          const searchResults = response.data.data ?? response.data;
-          setLocalProducts(searchResults);
-        } catch (error) {
-          console.error('Error searching products:', error);
-          setLocalProducts([]);
-        } finally {
-          setLocalLoadingProducts(false);
-        }
-      };
-      
-      searchProducts();
-    }
-  }, [debouncedProductSearch]);
-
-  // Sync input value when product is selected from form state
-  useEffect(() => {
-    if (selectedProduct && selectedProduct.name !== productSearchInput) {
-      setProductSearchInput(selectedProduct.name);
-    } else if (!selectedProduct && productSearchInput !== '') {
-      setProductSearchInput('');
-    }
-  }, [selectedProduct, productSearchInput]);
-
-  // Memoized product options
-  const productOptions = useMemo(() => {
-    const allProducts = [...products, ...localProducts];
-    // Remove duplicates based on ID
-    const uniqueProducts = allProducts.filter((product, index, self) => 
-      index === self.findIndex(p => p.id === product.id)
-    );
-    return uniqueProducts;
-  }, [products, localProducts]);
-
   // Memoized handlers
-  const handleProductSelect = useCallback((product: Product) => {
+  const handleProductChange = useCallback((product: Product | null) => {
     if (isPurchaseReceived) return; // Prevent changes if purchase is received
-    setValue(`items.${index}.product_id`, product.id);
-    setValue(`items.${index}.product`, product);
-    setProductSearchInput(product.name);
-  }, [setValue, index, isPurchaseReceived]);
-
-  const handleProductChange = useCallback((event: React.SyntheticEvent, newValue: Product | null) => {
-    if (isPurchaseReceived) {
-      // If purchase is received, don't allow selection changes
-      return;
-    }
-    if (newValue) {
-      handleProductSelect(newValue);
+    
+    if (product) {
+      setValue(`items.${index}.product_id`, product.id);
+      setValue(`items.${index}.product`, product);
     } else {
       // Clear selection
       setValue(`items.${index}.product_id`, 0);
       setValue(`items.${index}.product`, undefined);
-      setProductSearchInput("");
     }
-  }, [handleProductSelect, setValue, index, isPurchaseReceived]);
-
-  const handleInputChange = useCallback((event: React.SyntheticEvent, newInputValue: string) => {
-    setProductSearchInput(newInputValue);
-  }, []);
-
-  const handleKeyDown = useCallback(async (event: React.KeyboardEvent) => {
-    if (event.key === 'Enter' && event.ctrlKey) {
-      event.preventDefault();
-      // Add new item below current one
-      // This would need to be handled by the parent component
-      // For now, we'll just focus the next item if it exists
-    }
-  }, [index]);
+  }, [setValue, index, isPurchaseReceived]);
 
   const handleRemove = useCallback(() => {
     if (isPurchaseReceived) return; // Prevent deletion if purchase is received
@@ -233,15 +127,6 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
       remove(index);
     }
   }, [remove, index, itemCount, isPurchaseReceived]);
-
-  const handleCopySku = useCallback(async (sku: string) => {
-    try {
-      await navigator.clipboard.writeText(sku);
-      // You could add a toast notification here
-    } catch (err) {
-      console.error('Failed to copy SKU:', err);
-    }
-  }, []);
 
   // Memoized error getter
   const getFieldError = useCallback((fieldName: string) => {
@@ -255,69 +140,17 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
       <Box sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr auto', gap: 2, alignItems: 'start' }}>
         {/* Product Selection */}
         <Box>
-                     <Autocomplete
-             key={`product-autocomplete-${uniqueId}`}
-             id={`product-autocomplete-${uniqueId}`}
-             ref={autocompleteRef}
-             options={productOptions}
-             getOptionLabel={(option) => option.name}
-             value={selectedProduct || null}
-             onChange={handleProductChange}
-             onInputChange={handleInputChange}
-             inputValue={productSearchInput}
-             loading={localLoadingProducts}
-             isOptionEqualToValue={(option, value) => option.id === value.id}
-             noOptionsText={t('common:noResults')}
-             disabled={isSubmitting}
-             freeSolo={false}
-             clearOnBlur={false}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                id={`product-input-${uniqueId}`}
-                label={t('purchases:fields.productName')}
-                error={!!getFieldError('product_id')}
-                helperText={getFieldError('product_id')}
-                size="small"
-                disabled={false}
-                InputProps={{
-                  ...params.InputProps,
-                  endAdornment: (
-                    <>
-                      {localLoadingProducts ? <CircularProgress color="inherit" size={20} /> : null}
-                      {params.InputProps.endAdornment}
-                    </>
-                  ),
-                }}
-              />
-            )}
-            renderOption={(props, option) => {
-              const { key, ...otherProps } = props;
-              return (
-                <li key={key} {...otherProps}>
-                  <ProductOption option={option} />
-                </li>
-              );
-            }}
-            onKeyDown={handleKeyDown}
+          <ProductAutocomplete
+            id={`product-autocomplete-${uniqueId}`}
+            value={selectedProduct || null}
+            onChange={handleProductChange}
+            label={t('purchases:fields.productName')}
+            error={!!getFieldError('product_id')}
+            helperText={getFieldError('product_id')}
+            disabled={isSubmitting || isPurchaseReceived}
+            size="small"
+            showSku={true}
           />
-          
-          {selectedProduct?.sku && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-              <Typography variant="caption" color="text.secondary">
-                SKU: {selectedProduct.sku}
-              </Typography>
-                             <Tooltip title={t('common:copy')}>
-                 <IconButton
-                   size="small"
-                   onClick={() => selectedProduct.sku && handleCopySku(selectedProduct.sku)}
-                   sx={{ p: 0.5 }}
-                 >
-                   <CopyIcon fontSize="small" />
-                 </IconButton>
-               </Tooltip>
-            </Box>
-          )}
         </Box>
 
         {/* Batch Number */}
@@ -402,13 +235,8 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
       )}
     </CardContent>
   ), [
-    productOptions,
     selectedProduct,
-    productSearchInput,
-    localLoadingProducts,
     handleProductChange,
-    handleInputChange,
-    handleKeyDown,
     isSubmitting,
     isPurchaseReceived,
     getFieldError,
