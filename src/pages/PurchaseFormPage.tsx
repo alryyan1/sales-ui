@@ -217,6 +217,24 @@ const PurchaseFormPage: React.FC = () => {
     }
   }, [debouncedSupplierSearch, t]);
 
+  // --- Load Initial Products for New Purchases ---
+  useEffect(() => {
+    const loadInitialProducts = async () => {
+      if (!isEditMode && products.length === 0) {
+        try {
+          // Load initial products for autocomplete in new purchases
+          const initialProducts = await productService.getProductsForAutocomplete("", 50, true);
+          setProducts(initialProducts);
+        } catch (error) {
+          console.error("Failed to load initial products:", error);
+          // Don't show error toast for this as it's not critical
+        }
+      }
+    };
+
+    loadInitialProducts();
+  }, [isEditMode, products.length]);
+
   // --- Fetch Existing Purchase Data for Edit Mode ---
   useEffect(() => {
     const loadPurchaseData = async (id: number) => {

@@ -63,8 +63,8 @@
     "paginationSummary": "عرض {from} إلى {to} من {total} نتيجة",
     "noResultsFound": "لم يتم العثور على {term}",
     "errorGeneratingPdf": "فشل في إنشاء تقرير PDF",
-    "noBatchesAvailableForProduct": "لا توجد دفعات متاحة لهذا المنتج"
-    
-  
-
+    "noBatchesAvailableForProduct": "لا توجد دفعات متاحة لهذا المنتج",
+    "pdfGenerated": "تم إنشاء PDF بنجاح",
+    "pdfGenerationFailed": "فشل في إنشاء PDF",
+    "generatingPdf": "جاري إنشاء PDF..."
   }

@@ -63,5 +63,8 @@
     "paginationSummary": "Showing {from} to {to} of {total} results",
     "noResultsFound": "No {term} found",
     "errorGeneratingPdf": "Failed to generate PDF report",
-    "noBatchesAvailableForProduct": "No batches available for this product"
+    "noBatchesAvailableForProduct": "No batches available for this product",
+    "pdfGenerated": "PDF generated successfully",
+    "pdfGenerationFailed": "Failed to generate PDF",
+    "generatingPdf": "Generating PDF..."
 } 

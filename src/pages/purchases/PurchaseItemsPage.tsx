@@ -9,21 +9,15 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
-import Paper from '@mui/material/Paper';
 import TextField from '@mui/material/TextField';
 import Autocomplete from '@mui/material/Autocomplete';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
-import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
-import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
 import InputAdornment from '@mui/material/InputAdornment';
 
 // Icons
@@ -51,7 +45,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 
 interface PurchaseItemFormData {
   id?: number;
@@ -61,6 +54,18 @@ interface PurchaseItemFormData {
   unit_cost: number;
   sale_price: number | null;
   expiry_date: string;
+}
+
+interface UpdatePurchaseData {
+  items: Array<{
+    id?: number;
+    product_id: number;
+    batch_number?: string | null;
+    quantity: number;
+    unit_cost: string | number;
+    sale_price?: string | number | null;
+    expiry_date?: string | null;
+  }>;
 }
 
 const PurchaseItemsPage: React.FC = () => {
@@ -121,7 +126,7 @@ const PurchaseItemsPage: React.FC = () => {
   const fetchProducts = useCallback(async () => {
     setIsLoadingProducts(true);
     try {
-      const response = await productService.getProducts(1, '', '', '', '', 1000);
+      const response = await productService.getProducts(1, '', 'created_at', 'desc', 1000);
       setProducts(response.data || []);
     } catch (error) {
       console.error('Failed to fetch products:', error);
@@ -140,8 +145,8 @@ const PurchaseItemsPage: React.FC = () => {
   }, [purchaseId, fetchPurchaseDetails, fetchProducts]);
 
   // Form validation
-  const validateForm = (data: PurchaseItemFormData): Partial<PurchaseItemFormData> => {
-    const errors: Partial<PurchaseItemFormData> = {};
+  const validateForm = (data: PurchaseItemFormData): { [key: string]: string } => {
+    const errors: { [key: string]: string } = {};
     
     if (!data.product_id) {
       errors.product_id = t('purchases:productRequired');
@@ -159,7 +164,7 @@ const PurchaseItemsPage: React.FC = () => {
   };
 
   // Handle form input changes
-  const handleFormChange = (field: keyof PurchaseItemFormData, value: any) => {
+  const handleFormChange = (field: keyof PurchaseItemFormData, value: string | number | null) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (formErrors[field]) {
@@ -224,7 +229,7 @@ const PurchaseItemsPage: React.FC = () => {
     try {
       if (editingItemId) {
         // Update existing item
-        const updateData: any = {
+        const updateData: UpdatePurchaseData = {
           items: purchaseItems.map(item => {
             if (item.id === editingItemId) {
               return {
@@ -255,7 +260,7 @@ const PurchaseItemsPage: React.FC = () => {
         toast.success(t('purchases:itemUpdated'));
       } else {
         // Add new item
-        const updateData: any = {
+        const updateData: UpdatePurchaseData = {
           items: [
             ...purchaseItems.map(item => ({
               id: item.id,
@@ -296,7 +301,7 @@ const PurchaseItemsPage: React.FC = () => {
     if (!confirm(t('purchases:confirmDeleteItem'))) return;
 
     try {
-      const updateData: any = {
+      const updateData: UpdatePurchaseData = {
         items: purchaseItems
           .filter(item => item.id !== itemId)
           .map(item => ({
@@ -321,9 +326,14 @@ const PurchaseItemsPage: React.FC = () => {
     }
   };
 
-  // Get product name by ID
-  const getProductName = (productId: number) => {
-    const product = products.find(p => p.id === productId);
+  // Get product name from purchase item or fallback to products array
+  const getProductName = (item: PurchaseItem) => {
+    // First try to use the product_name from the purchase item
+    if (item.product_name) {
+      return item.product_name;
+    }
+    // Fallback to finding product by ID
+    const product = products.find(p => p.id === item.product_id);
     return product ? product.name : 'Unknown Product';
   };
 
@@ -471,7 +481,7 @@ const PurchaseItemsPage: React.FC = () => {
                   <TableRow key={item.id}>
                     <TableCell>
                       <Typography variant="body2" fontWeight="medium">
-                        {getProductName(item.product_id)}
+                        {getProductName(item)}
                       </Typography>
                     </TableCell>
                     <TableCell>

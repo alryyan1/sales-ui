@@ -13,8 +13,24 @@ import { toast } from "sonner";
 import { format, parseISO, startOfMonth } from "date-fns";
 import { cn } from "@/lib/utils";
 
+// MUI Components
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import TextField from "@mui/material/TextField";
+import Autocomplete from "@mui/material/Autocomplete";
+import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
+import Alert from "@mui/material/Alert";
+import IconButton from "@mui/material/IconButton";
+import Tooltip from "@mui/material/Tooltip";
+
+// Icons
+import ArrowLeft from "@mui/icons-material/ArrowBack";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import FilterListIcon from "@mui/icons-material/FilterList";
+import ClearIcon from "@mui/icons-material/Clear";
+
 // shadcn/ui & Lucide Icons
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -30,13 +46,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Select,
   SelectContent,
@@ -52,7 +61,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Pagination,
   PaginationContent,
@@ -63,34 +71,25 @@ import {
   PaginationEllipsis,
 } from "@/components/ui/pagination";
 
-import { Badge } from "@/components/ui/badge"; // Ensure correct Badge component is imported
+import { Badge } from "@/components/ui/badge";
 
 // Services and Types
 import inventoryLogService, {
   InventoryLogEntry,
   PaginatedResponse as LogPaginatedResponse,
 } from "../../services/inventoryLogService";
-import productService, { Product } from "../../services/productService"; // For product filter
+import productService, { Product } from "../../services/productService";
 import { formatCurrency, formatDate, formatNumber } from "@/constants";
-import {
-  CommandInput,
-  CommandList,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-  Command,
-} from "cmdk";
 import dayjs from "dayjs";
-import { AlertCircle, ArrowLeft, Check, ChevronsUpDown, Loader2 } from "lucide-react";
 
 // --- Zod Schema for Filter Form ---
 const logFilterSchema = z
   .object({
-    startDate: z.date().nullable().optional(),
-    endDate: z.date().nullable().optional(),
-    productId: z.string().nullable().optional(), // Product ID as string from select
-    type: z.string().nullable().optional(), // Movement type
-    search: z.string().optional(), // General search
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+    productId: z.string().nullable().optional(),
+    type: z.string().nullable().optional(),
+    search: z.string().optional(),
   })
   .refine(
     (data) =>
@@ -120,18 +119,22 @@ const InventoryLogPage: React.FC = () => {
     useState<LogPaginatedResponse<InventoryLogEntry> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // For product filter dropdown
   const [productsForFilter, setProductsForFilter] = useState<Product[]>([]);
   const [loadingProductsFilter, setLoadingProductsFilter] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   // --- Form for Filters ---
   const form = useForm<LogFilterValues>({
     resolver: zodResolver(logFilterSchema),
     defaultValues: {
-      /* ... read from searchParams ... */
+      startDate: searchParams.get("startDate") || "",
+      endDate: searchParams.get("endDate") || "",
+      productId: searchParams.get("productId") || null,
+      type: searchParams.get("type") || null,
+      search: searchParams.get("search") || "",
     },
   });
-  const { control, handleSubmit, reset } = form;
+  const { control, handleSubmit, reset, watch } = form;
 
   // --- Fetch Products for Filter ---
   const fetchProductsForFilter = useCallback(
@@ -141,7 +144,7 @@ const InventoryLogPage: React.FC = () => {
         const data = await productService.getProductsForAutocomplete(
           search,
           100
-        ); // Fetch a good number for filter
+        );
         setProductsForFilter(data);
       } catch (err) {
         toast.error(t("common:error"), {
@@ -153,9 +156,10 @@ const InventoryLogPage: React.FC = () => {
     },
     [t]
   );
+
   useEffect(() => {
     fetchProductsForFilter("");
-  }, [fetchProductsForFilter]); // Load initial
+  }, [fetchProductsForFilter]);
 
   // --- Fetch Log Data ---
   const fetchLog = useCallback(
@@ -165,12 +169,8 @@ const InventoryLogPage: React.FC = () => {
       try {
         const apiFilters = {
           page,
-          startDate: filters.startDate
-            ? format(filters.startDate, "yyyy-MM-dd")
-            : undefined,
-          endDate: filters.endDate
-            ? format(filters.endDate, "yyyy-MM-dd")
-            : undefined,
+          startDate: filters.startDate || undefined,
+          endDate: filters.endDate || undefined,
           productId: filters.productId ? Number(filters.productId) : undefined,
           type: filters.type || undefined,
           search: filters.search || undefined,
@@ -182,18 +182,23 @@ const InventoryLogPage: React.FC = () => {
         );
         setLogData(data);
       } catch (err) {
-        /* ... error handling ... */
+        console.error("Failed to fetch inventory log:", err);
+        setError(t("common:error"));
       } finally {
         setIsLoading(false);
       }
     },
-    []
+    [t]
   );
 
   // --- Effect to Fetch Log When Filters/Page Change ---
   const currentFilters = useMemo(
     () => ({
-      /* ... get from searchParams ... */
+      startDate: searchParams.get("startDate") || "",
+      endDate: searchParams.get("endDate") || "",
+      productId: searchParams.get("productId") || null,
+      type: searchParams.get("type") || null,
+      search: searchParams.get("search") || "",
     }),
     [searchParams]
   );
@@ -201,6 +206,7 @@ const InventoryLogPage: React.FC = () => {
     () => Number(searchParams.get("page") || "1"),
     [searchParams]
   );
+
   useEffect(() => {
     reset(currentFilters);
     fetchLog(currentFilters, currentPage);
@@ -211,10 +217,10 @@ const InventoryLogPage: React.FC = () => {
     const params = new URLSearchParams();
 
     if (data.startDate) {
-      params.set("startDate", format(data.startDate, "yyyy-MM-dd"));
+      params.set("startDate", data.startDate);
     }
     if (data.endDate) {
-      params.set("endDate", format(data.endDate, "yyyy-MM-dd"));
+      params.set("endDate", data.endDate);
     }
     if (data.productId) {
       params.set("productId", data.productId);
@@ -228,18 +234,52 @@ const InventoryLogPage: React.FC = () => {
 
     setSearchParams(params);
   };
+
   const clearFilters = () => {
-    reset(); // Reset the form to its default values
-    setSearchParams({}); // Clear all search parameters
+    reset();
+    setSearchParams({});
   };
+
   const handlePageChange = (newPage: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("page", newPage.toString());
     setSearchParams(params);
   };
-  const paginationItems = useMemo(() => {
-    /* ... generatePagination logic ... */
-  }, [currentPage, logData?.last_page]);
+
+  // --- PDF Generation ---
+  const generatePdf = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      const filters = watch();
+      const apiFilters = {
+        startDate: filters.startDate || undefined,
+        endDate: filters.endDate || undefined,
+        productId: filters.productId ? Number(filters.productId) : undefined,
+        type: filters.type || undefined,
+        search: filters.search || undefined,
+      };
+      
+      const response = await inventoryLogService.generatePdf(apiFilters);
+      
+      // Create blob and download
+      const blob = new Blob([response], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `inventory-log-${dayjs().format('YYYY-MM-DD')}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success(t("reports:pdfGenerated"));
+    } catch (error) {
+      console.error("Failed to generate PDF:", error);
+      toast.error(t("common:error"), { description: t("reports:pdfGenerationFailed") });
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
 
   const getMovementTypeColor = (type: string) => {
     if (type.includes("purchase")) return "text-green-600 dark:text-green-400";
@@ -252,260 +292,209 @@ const InventoryLogPage: React.FC = () => {
   return (
     <div className="p-4 md:p-6 lg:p-8 dark:bg-gray-950 min-h-screen pb-10">
       {/* Header */}
-      <div className="flex items-center mb-6 gap-2">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <IconButton
+            onClick={() => navigate("/reports")}
+            size="large"
+          >
+            <ArrowLeft />
+          </IconButton>
+          <Typography variant="h4" component="h1" className="text-2xl md:text-3xl font-semibold">
+            {t("inventory:logPageTitle")}
+          </Typography>
+        </div>
         <Button
-          variant="outline"
-          size="icon"
-          onClick={() => navigate("/reports")}
+          variant="contained"
+          startIcon={isGeneratingPdf ? <CircularProgress size={20} /> : <PictureAsPdfIcon />}
+          onClick={generatePdf}
+          disabled={isGeneratingPdf}
+          size="large"
         >
-          <ArrowLeft className="h-4 w-4" />
+          {isGeneratingPdf ? t("reports:generatingPdf") : t("reports:exportPdf")}
         </Button>
-        {/* Or /dashboard */}
-        <h1 className="text-2xl md:text-3xl font-semibold">
-          {t("inventory:logPageTitle")}
-        </h1>
-        {/* Add key */}
       </div>
 
-      {/* Filter Form Card */}
-      <Card className="dark:bg-gray-900 mb-6">
-        <CardHeader>
-          <CardTitle className="text-lg">{t("common:filters")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={handleSubmit(onFilterSubmit)}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 items-end">
-                {/* More columns for filters */}
-                <FormField
-                  control={control}
-                  name="startDate"
-                  render={({ field, fieldState }) => (
-                    <FormItem>
-                      <FormLabel>{t("common:startDate")}</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value
-                                ? format(field.value, "yyyy-MM-dd")
-                                : t("common:selectDate")}
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent align="start" className="w-auto p-0">
-                          <Calendar
-                            mode="single"
-                            selected={field.value || undefined}
-                            onSelect={field.onChange}
-                            disabled={(date) => date > new Date()}
-                            initialFocus
+      {/* Filter Form - No Card Wrapper */}
+      <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <Typography variant="h6" className="mb-4 text-lg font-semibold">
+          {t("common:filters")}
+        </Typography>
+        <Form {...form}>
+          <form onSubmit={handleSubmit(onFilterSubmit)}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 items-end">
+              {/* Start Date */}
+              <FormField
+                control={control}
+                name="startDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base">{t("common:startDate")}</FormLabel>
+                    <FormControl>
+                      <TextField
+                        type="date"
+                        {...field}
+                        size="medium"
+                        fullWidth
+                        InputProps={{
+                          style: { fontSize: '16px' }
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* End Date */}
+              <FormField
+                control={control}
+                name="endDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base">{t("common:endDate")}</FormLabel>
+                    <FormControl>
+                      <TextField
+                        type="date"
+                        {...field}
+                        size="medium"
+                        fullWidth
+                        InputProps={{
+                          style: { fontSize: '16px' }
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Product Filter - MUI Autocomplete */}
+              <FormField
+                control={control}
+                name="productId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base">{t("products:product")}</FormLabel>
+                    <FormControl>
+                      <Autocomplete
+                        options={productsForFilter}
+                        getOptionLabel={(option) => option.name}
+                        value={productsForFilter.find(p => String(p.id) === field.value) || null}
+                        onChange={(_, newValue) => field.onChange(newValue ? String(newValue.id) : null)}
+                        loading={loadingProductsFilter}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            placeholder={t("reports:allProducts")}
+                            size="medium"
+                            InputProps={{
+                              ...params.InputProps,
+                              style: { fontSize: '16px' }
+                            }}
                           />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={control}
-                  name="endDate"
-                  render={({ field, fieldState }) => (
-                    <FormItem>
-                      <FormLabel>{t("common:endDate")}</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value
-                                ? format(field.value, "yyyy-MM-dd")
-                                : t("common:selectDate")}
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent align="start" className="w-auto p-0">
-                          <Calendar
-                            mode="single"
-                            selected={field.value || undefined}
-                            onSelect={field.onChange}
-                            disabled={(date) => date > new Date()}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                {/* Product Filter (Combobox) */}
-                <FormField
-                  control={control}
-                  name="productId"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>{t("products:product")}</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              className={cn(
-                                "w-full justify-between",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value
-                                ? productsForFilter.find(
-                                    (p) => String(p.id) === field.value
-                                  )?.name
-                                : t("reports:allProducts")}
-                              {/* Add key */}
-                              <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--popover-trigger-width] p-0">
-                          <Command
-                            // Removed invalid filter function
-                          >
-                            <CommandInput onValueChange={fetchProductsForFilter}
-                              placeholder={t("products:searchPlaceholder")}
-                            />
-                            <CommandList>
-                              <CommandEmpty>
-                                {t("common:noResults")}
-                              </CommandEmpty>
-                              <CommandGroup>
-                                <CommandItem
-                                  value=""
-                                  onSelect={() => field.onChange(null)}
-                                >
-                                  {t("reports:allProducts")}
-                                </CommandItem>
-                                {productsForFilter.map((p) => (
-                                  <CommandItem
-                                    key={p.id}
-                                    value={p.name}
-                                    onSelect={() =>
-                                      field.onChange(String(p.id))
-                                    }
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "me-2 h-4 w-4",
-                                        String(p.id) === field.value
-                                          ? "opacity-100"
-                                          : "opacity-0"
-                                      )}
-                                    />
-                                    {p.name} ({p.sku})
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                {/* Type Filter */}
-                <FormField
-                  control={control}
-                  name="type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("inventory:movementType")}</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value ?? " "}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("reports:allTypes")} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value=" ">
-                            {t("reports:allTypes")}
-                          </SelectItem>
-                          {movementTypes.map((mt) => (
-                            <SelectItem key={mt.value} value={mt.value}>
-                              {t(mt.labelKey)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                {/* Add keys */}
-                {/* Search (General) */}
-                <FormField
-                  control={control}
-                  name="search"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("common:search")}</FormLabel>
+                        )}
+                        renderOption={(props, option) => (
+                          <Box component="li" {...props}>
+                            <Typography variant="body1">
+                              {option.name} ({option.sku})
+                            </Typography>
+                          </Box>
+                        )}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Type Filter */}
+              <FormField
+                control={control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base">{t("inventory:movementType")}</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value ?? ""}
+                    >
                       <FormControl>
-                        <Input
-                          placeholder={t("inventory:searchLogPlaceholder")}
-                          {...field}
-                          value={field.value ?? " "}
-                        />
+                        <SelectTrigger className="text-base">
+                          <SelectValue placeholder={t("reports:allTypes")} />
+                        </SelectTrigger>
                       </FormControl>
-                    </FormItem>
-                  )}
-                />
-                {/* Add key */}
-              </div>
-              <div className="flex justify-end gap-2 mt-4">
-                <Button type="submit" variant="default">
-                  {t("common:filter")}
-                </Button>
-                <Button type="button" variant="outline" onClick={clearFilters}>
-                  {t("common:clear")}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+                      <SelectContent>
+                        <SelectItem value=" ">
+                          {t("reports:allTypes")}
+                        </SelectItem>
+                        {movementTypes.map((mt) => (
+                          <SelectItem key={mt.value} value={mt.value}>
+                            {t(mt.labelKey)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Search */}
+              <FormField
+                control={control}
+                name="search"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base">{t("common:search")}</FormLabel>
+                    <FormControl>
+                      <TextField
+                        placeholder={t("inventory:searchLogPlaceholder")}
+                        {...field}
+                        size="medium"
+                        fullWidth
+                        InputProps={{
+                          style: { fontSize: '16px' }
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button type="submit" variant="contained" size="large" startIcon={<FilterListIcon />}>
+                {t("common:filter")}
+              </Button>
+              <Button type="button" variant="outlined" size="large" onClick={clearFilters} startIcon={<ClearIcon />}>
+                {t("common:clear")}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </div>
 
       {/* Results Section */}
       {isLoading && (
         <div className="flex justify-center items-center py-10">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <CircularProgress size={40} />
         </div>
       )}
+
       {!isLoading && error && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>{t("common:error")}</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+        <Alert severity="error" className="mb-6">
+          <Typography variant="h6">{t("common:error")}</Typography>
+          <Typography>{error}</Typography>
         </Alert>
       )}
+
       {!isLoading && !error && logData && (
         <>
           <Card className="dark:bg-gray-900">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>{t("reports:results")}</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-xl">{t("reports:results")}</CardTitle>
+              <CardDescription className="text-base">
                 {t("common:paginationSummary", {
                   from: logData.from,
                   to: logData.to,
@@ -517,17 +506,16 @@ const InventoryLogPage: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-center">{t("common:date")}</TableHead>
-                    <TableHead className="text-center">{t("inventory:movementType")}</TableHead>
-                    <TableHead className="text-center">{t("products:product")}</TableHead>
-                    <TableHead className="text-center">{t("purchases:batchNumber")}</TableHead>
-                    <TableHead className="text-center">
+                    <TableHead className="text-center text-base font-semibold">{t("common:date")}</TableHead>
+                    <TableHead className="text-center text-base font-semibold">{t("inventory:movementType")}</TableHead>
+                    <TableHead className="text-center text-base font-semibold">{t("products:product")}</TableHead>
+                    <TableHead className="text-center text-base font-semibold">{t("purchases:batchNumber")}</TableHead>
+                    <TableHead className="text-center text-base font-semibold">
                       {t("inventory:quantityChange")}
                     </TableHead>
-                    <TableHead className="text-center">{t("inventory:documentRef")}</TableHead>
-                    <TableHead className="text-center">{t("common:user")}</TableHead>
-                    <TableHead className="text-center">{t("common:notesOrReason")}</TableHead>
-                    {/* Add key */}
+                    <TableHead className="text-center text-base font-semibold">{t("inventory:documentRef")}</TableHead>
+                    <TableHead className="text-center text-base font-semibold">{t("common:user")}</TableHead>
+                    <TableHead className="text-center text-base font-semibold">{t("common:notesOrReason")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -535,40 +523,36 @@ const InventoryLogPage: React.FC = () => {
                     <TableRow>
                       <TableCell
                         colSpan={8}
-                        className="h-24 text-center text-muted-foreground"
+                        className="h-24 text-center text-muted-foreground text-base"
                       >
                         {t("common:noResults")}
                       </TableCell>
                     </TableRow>
                   )}
                   {logData.data.map(
-                    (
-                      entry,
-                      index // Use index for key if no unique ID from UNION
-                    ) => (
+                    (entry, index) => (
                       <TableRow
                         key={`${entry.type}-${entry.document_id}-${entry.product_id}-${index}`}
                       >
-                        <TableCell className="text-center">
+                        <TableCell className="text-center text-base">
                           {dayjs(entry.transaction_date).format("YYYY-MM-DD")}
                         </TableCell>
                         <TableCell className="text-center">
-                          <Badge className="border border-gray-300">
+                          <Badge className="border border-gray-300 text-sm">
                             {t(`inventory:type_${entry.type}`)}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center">
-                          <span className="font-medium">
+                          <Typography variant="body1" className="font-medium">
                             {entry.product_name}
-                          </span>
-                          <br />
-                          <span className="text-xs text-muted-foreground">
+                          </Typography>
+                          <Typography variant="body2" className="text-muted-foreground">
                             {entry.product_sku}
-                          </span>
+                          </Typography>
                         </TableCell>
-                                            <TableCell className="text-center">{entry.batch_number || '---'}</TableCell>
+                        <TableCell className="text-center text-base">{entry.batch_number || '---'}</TableCell>
                         <TableCell
-                          className={`text-center font-semibold ${getMovementTypeColor(
+                          className={`text-center font-bold text-lg ${getMovementTypeColor(
                             entry.type
                           )}`}
                         >
@@ -584,18 +568,18 @@ const InventoryLogPage: React.FC = () => {
                                 ? `/sales/${entry.document_id}`
                                 : entry.type === "requisition_issue"
                                 ? `/admin/inventory/requisitions/${entry.document_id}/process`
-                                : "#" // No link for adjustment currently
+                                : "#"
                             }
-                            className="hover:underline text-primary"
+                            className="hover:underline text-primary text-base font-medium"
                           >
                             {entry.document_reference ||
                               `#${entry.document_id}`}
                           </RouterLink>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-center text-base">
                           {entry.user_name || t("common:n/a")}
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
+                        <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
                           {entry.reason_notes}
                         </TableCell>
                       </TableRow>
@@ -605,35 +589,35 @@ const InventoryLogPage: React.FC = () => {
               </Table>
             </CardContent>
           </Card>
-          {/* {logData.last_page > 1 && (
-            <Pagination className="mt-6">
-              <PaginationContent>
-                <PaginationPrevious
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                >
-                  {t("common:previous")}
-                </PaginationPrevious>
-                {paginationItems.map((item, index) =>
-                  item === "..." ? (
-                    <PaginationEllipsis key={index} />
-                  ) : (
-                    <PaginationItem key={index} active={item === currentPage}>
-                      <PaginationLink onClick={() => handlePageChange(item)}>
-                        {item}
+
+          {/* Pagination */}
+          {logData.last_page > 1 && (
+            <div className="flex justify-center mt-6">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationPrevious
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    {t("common:previous")}
+                  </PaginationPrevious>
+                  {Array.from({ length: logData.last_page }, (_, i) => i + 1).map((page) => (
+                    <PaginationItem key={page} active={page === currentPage}>
+                      <PaginationLink onClick={() => handlePageChange(page)}>
+                        {page}
                       </PaginationLink>
                     </PaginationItem>
-                  )
-                )}
-                <PaginationNext
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === logData.last_page}
-                >
-                  {t("common:next")}
-                </PaginationNext>
-              </PaginationContent>
-            </Pagination>
-          )} */}
+                  ))}
+                  <PaginationNext
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === logData.last_page}
+                  >
+                    {t("common:next")}
+                  </PaginationNext>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </>
       )}
     </div>

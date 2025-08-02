@@ -156,9 +156,10 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
         setLocalLoadingProducts(true);
         try {
           const response = await apiClient.get<{ data: Product[] }>(
-            `/products?search=${encodeURIComponent(debouncedProductSearch)}&limit=15`
+            `/products/autocomplete?search=${encodeURIComponent(debouncedProductSearch)}&limit=15`
           );
-          setLocalProducts(response.data.data ?? response.data);
+          const searchResults = response.data.data ?? response.data;
+          setLocalProducts(searchResults);
         } catch (error) {
           console.error('Error searching products:', error);
           setLocalProducts([]);

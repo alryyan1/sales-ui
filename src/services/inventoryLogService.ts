@@ -45,6 +45,32 @@ const inventoryLogService = {
             throw error;
         }
     },
+
+    generatePdf: async (filters: {
+        startDate?: string | null;
+        endDate?: string | null;
+        productId?: number | null;
+        type?: string | null;
+        search?: string | null;
+    } = {}): Promise<Blob> => {
+        try {
+            const params = new URLSearchParams();
+            if (filters.startDate) params.append('start_date', filters.startDate);
+            if (filters.endDate) params.append('end_date', filters.endDate);
+            if (filters.productId) params.append('product_id', filters.productId.toString());
+            if (filters.type) params.append('type', filters.type);
+            if (filters.search) params.append('search', filters.search);
+
+            const response = await apiClient.get(`/reports/inventory-log/pdf?${params.toString()}`, {
+                responseType: 'blob',
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error generating inventory log PDF:', error);
+            throw error;
+        }
+    },
+
     getErrorMessage, // Re-export if needed
 };
 
