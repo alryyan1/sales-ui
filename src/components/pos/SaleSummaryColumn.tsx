@@ -451,7 +451,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
 
 
   return (
-    <div className="w-96 flex flex-col p-4 space-y-4 overflow-y-auto max-h-screen">
+    <div className="w-96 flex flex-col p-2 space-y-2 overflow-y-auto max-h-screen">
       {/* Sale Summary */}
       <Card>
         <CardHeader>
@@ -470,7 +470,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
             )}
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-2">
           {/* Sale Info - Only show when editing existing sale */}
           {isEditMode && saleInfo && (
             <>
@@ -481,24 +481,30 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
                 </span>
               </div>
               
+              <div className="flex justify-between">
+                <span className="text-gray-600">{t('pos:saleTime')}</span>
+                <span className="font-medium">
+                  {new Date(saleInfo.created_at).toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                  })}
+                </span>
+              </div>
+              
+              {saleInfo.user_name && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">{t('pos:saleUser')}</span>
+                  <span className="font-medium">{saleInfo.user_name}</span>
+                </div>
+              )}
+              
               {saleInfo.client_name && (
                 <div className="flex justify-between">
                   <span className="text-gray-600">{t('pos:client')}</span>
                   <span className="font-medium">{saleInfo.client_name}</span>
                 </div>
               )}
-              
-              <div className="flex justify-between">
-                <span className="text-gray-600">{t('pos:status')}</span>
-                <span className={`font-medium px-2 py-1 rounded text-xs ${
-                  saleInfo.status === 'completed' ? 'bg-green-100 text-green-800' :
-                  saleInfo.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                  saleInfo.status === 'draft' ? 'bg-gray-100 text-gray-800' :
-                  'bg-red-100 text-red-800'
-                }`}>
-                  {saleInfo.status}
-                </span>
-              </div>
               
               <Separator />
             </>
@@ -588,7 +594,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
             </Button>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-2">
           {errors.length > 0 && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {errors.map((error, index) => (
@@ -604,11 +610,11 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
               {t('pos:noPaymentsAdded')}
             </Typography>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1">
               {paymentLines.map((paymentLine) => {
                 const isFromSale = paymentLine.id.startsWith('sale-payment-');
                 return (
-                  <div key={paymentLine.id} className="relative border border-gray-200 rounded-md p-3">
+                  <div key={paymentLine.id} className="relative border border-gray-200 rounded-md p-2">
                     {!isFromSale && (
                       <IconButton
                         size="small"
@@ -619,7 +625,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
                       </IconButton>
                     )}
                     
-                    <div className="flex gap-2 items-end">
+                    <div className="flex gap-1 items-end">
                       <FormControl size="small" sx={{ minWidth: 120 }}>
                         <InputLabel>{t('pos:paymentMethod')}</InputLabel>
                         <Select
@@ -660,7 +666,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
                     </div>
                     
                     {isFromSale && (
-                      <div className="mt-2 text-xs text-gray-500">
+                      <div className="mt-1 text-xs text-gray-500">
                         {t('pos:paymentFromSale')}
                       </div>
                     )}
@@ -674,7 +680,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
           {paymentLines.length > 0 && (
             <>
               <Separator />
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <div className="flex justify-between">
                   <span className="text-gray-600">{t('pos:amountPaid')}</span>
                   <span className="font-medium text-blue-600">{formatNumber(effectiveTotalPaid)}</span>
@@ -693,7 +699,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
   
       
         {/* Action Buttons */}
-        <div className="space-y-2">
+        <div className="space-y-1">
         <Button
           onClick={handleCompleteSale}
           disabled={currentSaleItems.length === 0 || Math.abs(effectiveTotalPaid - effectiveGrandTotal) > 0.01 || isSaving}

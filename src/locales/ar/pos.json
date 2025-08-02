@@ -143,5 +143,7 @@
   "clearAllItems": "مسح جميع العناصر من البيع",
   "saleCancelled": "تم إلغاء البيع بسبب إزالة جميع العناصر",
   "showMySales": "عرض مبيعاتي",
-  "showAllSales": "عرض جميع المبيعات"
+  "showAllSales": "عرض جميع المبيعات",
+  "saleTime": "وقت البيع",
+  "saleUser": "أنشئ بواسطة"
 } 

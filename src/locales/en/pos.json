@@ -100,6 +100,8 @@
   "generatePdf": "Daily Report",
   "showMySales": "Show My Sales",
   "showAllSales": "Show All Sales",
+  "saleTime": "Sale Time",
+  "saleUser": "Created By",
   "pdfGenerated": "Daily sales PDF generated successfully!",
   "pdfGenerationFailed": "Failed to generate PDF report",
   "cancelPayments": "Cancel All",
