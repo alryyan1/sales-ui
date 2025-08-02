@@ -13,6 +13,7 @@
   "referenceNumber": "رقم المرجع",
   "referenceNumberPlaceholder": "معرف المعاملة، رقم الإيصال، إلخ.",
   "noPaymentsAdded": "لم يتم إضافة طرق دفع",
+  "paymentFromSale": "دفع من البيع",
   "currentSaleItems": "عناصر البيع الحالي",
   "noItemsInSale": "لا توجد عناصر في البيع الحالي",
   "addProductsToStart": "أضف المنتجات لبدء البيع",
@@ -53,6 +54,8 @@
   "back": "رجوع",
   "completeSale": "إكمال البيع",
   "savingSale": "جاري حفظ البيع...",
+  "savingPayment": "جاري حفظ الدفع...",
+  "completePayment": "إكمال الدفع",
   "saleCompleted": "تم إكمال البيع بنجاح!",
   "failedToLoadProducts": "فشل في تحميل المنتجات",
   "remove": "إزالة",
@@ -144,6 +147,7 @@
   "saleCancelled": "تم إلغاء البيع بسبب إزالة جميع العناصر",
   "showMySales": "عرض مبيعاتي",
   "showAllSales": "عرض جميع المبيعات",
+  "saleDate": "تاريخ البيع",
   "saleTime": "وقت البيع",
   "saleUser": "أنشئ بواسطة"
 } 
