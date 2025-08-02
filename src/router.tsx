@@ -118,17 +118,12 @@ const router = createHashRouter([
               { path: "add", element: <SaleFormPage /> },
               { path: "pos", element: <SalesTerminalPage /> },
               { path: "pos-new", element: <PosPage /> },
-              { path: ":id/edit", element: <SaleFormPage /> }, // Edit Sale
               // --- Routes for Sale Returns ---
-              // Option A: Generic add return page, ID passed via state
-              { path: "return/add", element: <AddSaleReturnPage /> },
-
-              // Option B: Add return page linked to an original sale via URL
-              // { path: ':originalSaleIdParam/return/add', element: <AddSaleReturnPage /> },
-
-              // Optional: Route to view details of a specific sale return
               { path: "returns", element: <SaleReturnsListPage /> },
               { path: "returns/:returnId", element: <SaleReturnDetailsPage /> },
+              { path: "return/add", element: <AddSaleReturnPage /> },
+              // Dynamic routes should come last to avoid conflicts
+              { path: ":id/edit", element: <SaleFormPage /> }, // Edit Sale
               { path: ":id", element: <SaleDetailsPage /> }, // Details
             ],
           },
