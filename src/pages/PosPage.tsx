@@ -30,12 +30,13 @@ import {
 // Types
 import { Product } from "../services/productService";
 import saleService from "../services/saleService";
-import { preciseCalculation, preciseSum } from "../constants";
+import { preciseCalculation } from "../constants";
 import { generateDailySalesPdf } from "../services/exportService";
+import { useAuth } from "@/context/AuthContext";
 
-// Main POS Page Component
 const PosPage: React.FC = () => {
   const { t } = useTranslation(['pos', 'common']);
+  const { user } = useAuth(); // Get current user
 
   // State
   const [currentSaleItems, setCurrentSaleItems] = useState<CartItem[]>([]);
@@ -50,6 +51,9 @@ const PosPage: React.FC = () => {
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [thermalDialogOpen, setThermalDialogOpen] = useState(false);
   
+  // User filtering state
+  const [filterByCurrentUser, setFilterByCurrentUser] = useState(true);
+  
   // Discount and Payment State
   const [discountAmount, setDiscountAmount] = useState(0);
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('fixed');
@@ -60,16 +64,32 @@ const PosPage: React.FC = () => {
   // Load today's sales on mount
   useEffect(() => {
     loadTodaySales();
-  }, []);
+  }, [filterByCurrentUser]); // Reload when filter changes
 
   const loadTodaySales = async () => {
     try {
-      // Load today's sales from database (no limit, all sales for today including drafts)
-      const response = await saleService.getSales(1, '', '', '', '', 1000, null, true);
+      // Load today's sales from database with user filtering
+      const response = await saleService.getSales(
+        1, '', '', '', '', 1000, null, true, 
+        filterByCurrentUser ? user?.id || null : null
+      );
       const dbSales = response.data || [];
       
+      // Debug logging
+      console.log('Current user ID:', user?.id);
+      console.log('Filter by current user:', filterByCurrentUser);
+      console.log('Raw sales from API:', dbSales);
+      console.log('Sales with user_id:', dbSales.map(sale => ({ id: sale.id, user_id: sale.user_id, user_name: sale.user_name })));
+      
+      // Apply client-side filtering as fallback if backend filtering doesn't work
+      const filteredDbSales = filterByCurrentUser && user?.id 
+        ? dbSales.filter(sale => sale.user_id === user.id)
+        : dbSales;
+      
+      console.log('Filtered sales:', filteredDbSales.map(sale => ({ id: sale.id, user_id: sale.user_id, user_name: sale.user_name })));
+      
       // Transform database sales to POS format
-      const transformedSales: Sale[] = dbSales.map((dbSale) => ({
+      const transformedSales: Sale[] = filteredDbSales.map((dbSale) => ({
         id: dbSale.id,
         sale_order_number: dbSale.sale_order_number,
         client_id: dbSale.client_id,
@@ -660,18 +680,95 @@ const PosPage: React.FC = () => {
       await loadTodaySales();
       
       if (selectedSale) {
-        // If we were editing a sale, clear the selected sale to exit edit mode
-        setSelectedSale(null);
-        setSelectedSaleId(null);
+        // If we were editing a sale, keep it selected but clear the items and payments
+        // This maintains focus on the completed sale
         setCurrentSaleItems([]);
         setPaymentMethods([]);
         setTotalPaid(0);
         setDiscountAmount(0);
         setDiscountType('fixed');
         showSnackbar(t('pos:saleUpdated'), 'success');
+        
+        // Automatically open thermal PDF dialog for the completed sale
+        setTimeout(() => {
+          setThermalDialogOpen(true);
+        }, 500); // Small delay to ensure the sale data is updated
       } else {
-        // New sale completed
-        clearCurrentSale();
+        // New sale completed - find the newly created sale and select it
+        const updatedSales = await saleService.getSales(
+          1, '', '', '', '', 1000, null, true,
+          filterByCurrentUser ? user?.id || null : null
+        );
+        const dbSales = updatedSales.data || [];
+        
+        // Find the most recent sale (should be the one we just created)
+        if (dbSales.length > 0) {
+          const latestSale = dbSales[0]; // Assuming they're sorted by creation date desc
+          
+          // Transform and select the latest sale
+          const transformedSale: Sale = {
+            id: latestSale.id,
+            sale_order_number: latestSale.sale_order_number,
+            client_id: latestSale.client_id,
+            client_name: latestSale.client_name,
+            user_id: latestSale.user_id,
+            user_name: latestSale.user_name,
+            sale_date: latestSale.sale_date,
+            invoice_number: latestSale.invoice_number,
+            status: latestSale.status,
+            total_amount: Number(latestSale.total_amount),
+            paid_amount: Number(latestSale.paid_amount),
+            due_amount: Number(latestSale.due_amount || 0),
+            notes: latestSale.notes,
+            created_at: latestSale.created_at,
+            updated_at: latestSale.updated_at,
+            items: latestSale.items?.map(item => ({
+              id: item.id,
+              product: {
+                id: item.product_id,
+                name: item.product_name || 'Unknown Product',
+                sku: item.product_sku || 'N/A',
+                suggested_sale_price_per_sellable_unit: Number(item.unit_price),
+                last_sale_price_per_sellable_unit: Number(item.unit_price),
+                stock_quantity: item.current_stock_quantity || 0,
+                stock_alert_level: item.stock_alert_level,
+                earliest_expiry_date: item.earliest_expiry_date,
+                current_stock_quantity: item.current_stock_quantity || 0,
+                sellable_unit_name: item.sellable_unit_name || 'Piece'
+              } as Product,
+              quantity: item.quantity,
+              unitPrice: Number(item.unit_price),
+              total: Number(item.total_price || item.quantity * Number(item.unit_price))
+            })) || [],
+            payments: latestSale.payments?.map(payment => ({
+              id: payment.id,
+              sale_id: payment.sale_id,
+              user_name: payment.user_name,
+              method: payment.method,
+              amount: Number(payment.amount),
+              payment_date: payment.payment_date,
+              reference_number: payment.reference_number || undefined,
+              notes: payment.notes || undefined,
+              created_at: payment.created_at
+            })) || [],
+            timestamp: new Date(latestSale.sale_date)
+          };
+          
+          // Select the completed sale
+          setSelectedSale(transformedSale);
+          setSelectedSaleId(transformedSale.id);
+          setCurrentSaleItems([]);
+          setPaymentMethods([]);
+          setTotalPaid(0);
+          setDiscountAmount(0);
+          setDiscountType('fixed');
+          
+          // Automatically open thermal PDF dialog for the completed sale
+          setTimeout(() => {
+            setThermalDialogOpen(true);
+          }, 500); // Small delay to ensure the sale data is updated
+        }
+        
         showSnackbar(t('pos:saleCompleted'), 'success');
       }
     }
@@ -812,72 +909,7 @@ const PosPage: React.FC = () => {
   };
 
   // Payment method handlers
-  const handleRemovePayment = async (index: number) => {
-    if (!selectedSale) {
-      // For new sales, just update frontend state
-      setPaymentMethods(prev => {
-        const newMethods = prev.filter((_, i) => i !== index);
-        const newTotalPaid = newMethods.reduce((sum, method) => sum + method.amount, 0);
-        setTotalPaid(newTotalPaid);
-        return newMethods;
-      });
-      return;
-    }
 
-    // For existing sales, update backend
-    try {
-      const newMethods = paymentMethods.filter((_, i) => i !== index);
-      const newTotalPaid = newMethods.reduce((sum, method) => sum + method.amount, 0);
-      
-      const paymentData = {
-        payments: newMethods
-          .filter(payment => payment.method !== 'refund') // Filter out refund payments for backend
-          .map(payment => ({
-            method: payment.method as 'cash' | 'visa' | 'mastercard' | 'bank_transfer' | 'mada' | 'other' | 'store_credit',
-            amount: payment.amount,
-            payment_date: new Date().toISOString().split('T')[0],
-            reference_number: payment.reference || null,
-            notes: null,
-          })),
-      };
-
-      await saleService.addPaymentToSale(selectedSale.id, paymentData);
-      
-      // Update frontend state
-      setPaymentMethods(newMethods);
-      setTotalPaid(newTotalPaid);
-      await loadTodaySales(); // Reload to get updated data
-      showSnackbar(t('pos:paymentRemoved'), 'success');
-    } catch (error) {
-      console.error('Failed to remove payment:', error);
-      showSnackbar(t('pos:paymentRemovalFailed'), 'error');
-    }
-  };
-
-  const handleCancelPayments = async () => {
-    if (!selectedSale) {
-      // For new sales, just update frontend state
-      setPaymentMethods([]);
-      setTotalPaid(0);
-      showSnackbar(t('pos:paymentsCancelled'), 'success');
-      return;
-    }
-
-    // For existing sales, update backend
-    try {
-      console.log('Cancelling payments for sale ID:', selectedSale.id);
-      await saleService.deletePaymentsFromSale(selectedSale.id);
-      
-      // Update frontend state
-      setPaymentMethods([]);
-      setTotalPaid(0);
-      await loadTodaySales(); // Reload to get updated data
-      showSnackbar(t('pos:paymentsCancelled'), 'success');
-    } catch (error) {
-      console.error('Failed to cancel payments:', error);
-      showSnackbar(t('pos:paymentCancellationFailed'), 'error');
-    }
-  };
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
@@ -894,6 +926,8 @@ const PosPage: React.FC = () => {
         hasSelectedSale={!!selectedSale}
         selectedClient={selectedClient}
         onClientChange={setSelectedClient}
+        filterByCurrentUser={filterByCurrentUser}
+        onToggleUserFilter={() => setFilterByCurrentUser(!filterByCurrentUser)}
       />
 
       {/* Main Content */}
@@ -923,14 +957,14 @@ const PosPage: React.FC = () => {
           onUpdateQuantity={updateQuantity}
           onRemoveItem={removeFromCurrentSale}
           onClearAll={clearCurrentSale}
-          isSalePaid={totalPaid > 0 && (preciseSum(currentSaleItems.map(item => item.total)) - (discountType === 'percentage' ? (preciseSum(currentSaleItems.map(item => item.total)) * discountAmount) / 100 : discountAmount)) <= totalPaid}
+          isSalePaid={selectedSale ? (selectedSale.payments && selectedSale.payments.length > 0) : false}
         />
 
       
 
         {/* Column 3 - Today's Sales (20%) */}
         <div className={`border-l border-gray-200 transition-all duration-300 ${
-          isTodaySalesCollapsed ? 'w-16' : 'w-26'
+          isTodaySalesCollapsed ? 'w-32' : 'w-32'
         }`}>
           <TodaySalesColumn
             sales={todaySales}
@@ -938,6 +972,7 @@ const PosPage: React.FC = () => {
             onSaleSelect={handleSaleSelect}
             isCollapsed={isTodaySalesCollapsed}
             onToggleCollapse={() => setIsTodaySalesCollapsed(!isTodaySalesCollapsed)}
+            filterByCurrentUser={filterByCurrentUser}
           />
         </div>
       </div>
@@ -958,7 +993,9 @@ const PosPage: React.FC = () => {
       {/* Calculator Dialog */}
       <CalculatorDialog 
         open={calculatorDialogOpen} 
-        onOpenChange={setCalculatorDialogOpen} 
+        onOpenChange={setCalculatorDialogOpen}
+        currentUserId={user?.id || null}
+        filterByCurrentUser={filterByCurrentUser}
       />
 
       {/* PDF Dialog */}

@@ -22,7 +22,7 @@ import {
 } from "@mui/material";
 
 // Icons
-import { Calculator, DollarSign, Calendar, User, TrendingUp, CreditCard, Banknote, Receipt } from "lucide-react";
+import { Calculator, Calendar, User, TrendingUp, CreditCard, Banknote, Receipt } from "lucide-react";
 
 // Services
 import apiClient from "@/lib/axios";
@@ -56,15 +56,19 @@ interface User {
 interface CalculatorDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  currentUserId?: number | null;
+  filterByCurrentUser?: boolean;
 }
 
-export const CalculatorDialog: React.FC<CalculatorDialogProps> = ({ open, onOpenChange }) => {
+export const CalculatorDialog: React.FC<CalculatorDialogProps> = ({ open, onOpenChange, currentUserId, filterByCurrentUser = false }) => {
   const { t } = useTranslation(['pos', 'common']);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<CalculatorData | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [selectedUser, setSelectedUser] = useState<string>('all');
+  const [selectedUser, setSelectedUser] = useState<string>(
+    filterByCurrentUser && currentUserId ? currentUserId.toString() : 'all'
+  );
   const [error, setError] = useState<string | null>(null);
 
   const fetchUsers = async () => {
@@ -102,6 +106,15 @@ export const CalculatorDialog: React.FC<CalculatorDialogProps> = ({ open, onOpen
       fetchCalculatorData();
     }
   }, [open, selectedDate, selectedUser]);
+
+  // Update selected user when filter changes
+  useEffect(() => {
+    if (filterByCurrentUser && currentUserId) {
+      setSelectedUser(currentUserId.toString());
+    } else {
+      setSelectedUser('all');
+    }
+  }, [filterByCurrentUser, currentUserId]);
 
   const getPaymentMethodIcon = (method: string) => {
     switch (method.toLowerCase()) {
@@ -226,24 +239,7 @@ export const CalculatorDialog: React.FC<CalculatorDialogProps> = ({ open, onOpen
                 </CardContent>
               </Card>
 
-              <Card sx={{ flex: 1 }}>
-                <CardHeader
-                  title={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <DollarSign style={{ height: '16px', width: '16px' }} />
-                      <Typography variant="body2" color="text.secondary">
-                        {t('pos:averageSale')}
-                      </Typography>
-                    </Box>
-                  }
-                  sx={{ pb: 1 }}
-                />
-                <CardContent>
-                  <Typography variant="h4" color="secondary.main" fontWeight="bold">
-                    {data.total_sales > 0 ? formatNumber(data.total_income / data.total_sales) : '0.00'}
-                  </Typography>
-                </CardContent>
-              </Card>
+
             </Box>
 
             {/* Payment Breakdown */}

@@ -127,18 +127,18 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={async () => await onUpdateQuantity(item.product.id, item.quantity - 1)}
-                            disabled={item.quantity <= 1 || isSalePaid}
-                            className={`h-8 w-8 p-0 ${
-                              (item.quantity <= 1 || isSalePaid) ? 'opacity-50 cursor-not-allowed' : ''
-                            }`}
-                          >
-                            <Minus className="h-4 w-4" />
-                          </Button>
-                              {console.log(isSalePaid,'isSalePaid')}                       <span className="w-10 text-center font-medium text-base">{item.quantity}</span>
+                                                     <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={async () => await onUpdateQuantity(item.product.id, item.quantity - 1)}
+                             disabled={item.quantity <= 1 || isSalePaid}
+                             className={`h-8 w-8 p-0 ${
+                               (item.quantity <= 1 || isSalePaid) ? 'opacity-50 cursor-not-allowed' : ''
+                             }`}
+                           >
+                             <Minus className="h-4 w-4" />
+                           </Button>
+                           <span className="w-10 text-center font-medium text-base">{item.quantity}</span>
                            <Button
                              variant="outline"
                              size="sm"

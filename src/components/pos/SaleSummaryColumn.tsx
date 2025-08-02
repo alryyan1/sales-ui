@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 
 // Types
-import { CartItem, PaymentMethodData } from "./types";
+import { CartItem, PaymentMethodData, Sale } from "./types";
 import { formatNumber, preciseSum, preciseCalculation } from "@/constants";
 import saleService, { CreateSaleData } from "../../services/saleService";
 
@@ -71,7 +71,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
   currentSaleItems,
   discountAmount: externalDiscountAmount = 0,
   discountType: externalDiscountType = 'fixed',
-  totalPaid: externalTotalPaid = 0,
+
   paymentMethods: externalPaymentMethods = [],
   onDiscountChange,
   onTotalPaidChange,
@@ -89,6 +89,10 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
   const [discountAmount, setDiscountAmount] = useState(externalDiscountAmount);
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>(externalDiscountType);
 
+  // Sale info state
+  const [saleInfo, setSaleInfo] = useState<Sale | null>(null);
+  const [loadingSaleInfo, setLoadingSaleInfo] = useState(false);
+
 
   const subtotal = preciseSum(currentSaleItems.map(item => item.total), 2);
   
@@ -96,17 +100,130 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
   const discountValue = discountType === 'percentage' 
     ? preciseCalculation(subtotal, discountAmount / 100, 'multiply', 2)
     : discountAmount;
+
+  // Fetch sale info when saleId changes or when currentSaleItems change (indicating items were added/modified)
+  useEffect(() => {
+    if (saleId) {
+      fetchSaleInfo();
+    } else {
+      setSaleInfo(null);
+    }
+  }, [saleId, currentSaleItems]); // Refetch when sale items change
+
+  const fetchSaleInfo = async () => {
+    if (!saleId) return;
+
+    setLoadingSaleInfo(true);
+    try {
+      const saleData = await saleService.getSale(saleId);
+      
+      // Transform the backend sale data to match our Sale interface
+      const transformedSale: Sale = {
+        id: saleData.id,
+        sale_order_number: saleData.sale_order_number,
+        client_id: saleData.client_id,
+        client_name: saleData.client_name,
+        user_id: saleData.user_id,
+        user_name: saleData.user_name,
+        sale_date: saleData.sale_date,
+        invoice_number: saleData.invoice_number,
+        status: saleData.status,
+        total_amount: Number(saleData.total_amount),
+        paid_amount: Number(saleData.paid_amount),
+        due_amount: Number(saleData.due_amount || 0),
+        notes: saleData.notes,
+        created_at: saleData.created_at,
+        updated_at: saleData.updated_at,
+        items: saleData.items?.map((item: any) => ({
+          id: item.id,
+          product: {
+            id: item.product_id,
+            name: item.product_name || 'Unknown Product',
+            sku: item.product_sku || 'N/A',
+            suggested_sale_price_per_sellable_unit: Number(item.unit_price),
+            last_sale_price_per_sellable_unit: Number(item.unit_price),
+            stock_quantity: item.current_stock_quantity || 0,
+            stock_alert_level: item.stock_alert_level,
+            earliest_expiry_date: item.earliest_expiry_date,
+            current_stock_quantity: item.current_stock_quantity || 0,
+            sellable_unit_name: item.sellable_unit_name || 'Piece'
+          } as any,
+          quantity: item.quantity,
+          unitPrice: Number(item.unit_price),
+          total: Number(item.total_price || item.quantity * Number(item.unit_price))
+        })) || [],
+        payments: saleData.payments?.map((payment: any) => ({
+          id: payment.id,
+          sale_id: payment.sale_id,
+          user_name: payment.user_name,
+          method: payment.method,
+          amount: Number(payment.amount),
+          payment_date: payment.payment_date,
+          reference_number: payment.reference_number || undefined,
+          notes: payment.notes || undefined,
+          created_at: payment.created_at
+        })) || [],
+        timestamp: new Date(saleData.sale_date)
+      };
+      
+      setSaleInfo(transformedSale);
+    } catch (error) {
+      console.error('Failed to fetch sale info:', error);
+      setSaleInfo(null);
+    } finally {
+      setLoadingSaleInfo(false);
+    }
+  };
   
   // Ensure discount doesn't exceed subtotal
   const actualDiscountValue = Math.min(discountValue, subtotal);
   const afterDiscount = preciseCalculation(subtotal, actualDiscountValue, 'subtract', 2);
   const grandTotal = afterDiscount; // No tax calculation
-  const totalPaid = preciseSum(paymentLines.map(line => line.amount || 0), 2);
-  const amountDue = preciseCalculation(grandTotal, totalPaid, 'subtract', 2);
+  
+  // Use fetched sale data for totals when available (for completed sales)
+  const effectiveGrandTotal = saleInfo ? Number(saleInfo.total_amount) : grandTotal;
+  
+  // Calculate effective total paid - prioritize payment lines for new payments, then sale info for existing payments
+  let effectiveTotalPaid: number;
+  if (paymentLines.length > 0) {
+    // If we have payment lines, use them (for new payments being added)
+    effectiveTotalPaid = preciseSum(paymentLines.map(line => line.amount || 0), 2);
+  } else if (saleInfo) {
+    // If no payment lines but we have sale info, use the sale's paid amount
+    effectiveTotalPaid = Number(saleInfo.paid_amount);
+  } else {
+    // If no payment lines yet, use grand total as default
+    effectiveTotalPaid = grandTotal;
+  }
+  
+  const amountDue = preciseCalculation(effectiveGrandTotal, effectiveTotalPaid, 'subtract', 2);
 
-  // Initialize payment lines with existing payment methods
+  // Helper function to get payment method display name
+  const getPaymentMethodName = (method: string) => {
+    const methods: Record<string, string> = {
+      'cash': 'نقداً',
+      'visa': 'فيزا',
+      'mastercard': 'ماستركارد',
+      'bank_transfer': 'تحويل بنكي',
+      'mada': 'مدى',
+      'store_credit': 'رصيد المحل',
+      'other': 'أخرى',
+      'refund': 'استرداد'
+    };
+    return methods[method] || method;
+  };
+
+  // Initialize payment lines with existing payment methods or sale payments
   useEffect(() => {
-    if (externalPaymentMethods.length > 0) {
+    if (saleInfo?.payments && saleInfo.payments.length > 0) {
+      // Use payments from fetched sale data
+      const salePaymentLines: PaymentLine[] = saleInfo.payments.map((payment, index) => ({
+        id: `sale-payment-${payment.id || index}`,
+        method: payment.method,
+        amount: Number(payment.amount),
+      }));
+      setPaymentLines(salePaymentLines);
+    } else if (externalPaymentMethods.length > 0) {
       const existingPaymentLines: PaymentLine[] = externalPaymentMethods.map((payment, index) => ({
         id: `existing-${index}`,
         method: payment.method,
@@ -114,20 +231,42 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
       }));
       setPaymentLines(existingPaymentLines);
     } else {
-      // If no existing payments, start with one empty payment line
+      // If no existing payments (including empty array from empty sale), start with one payment line
       setPaymentLines([{
         id: Date.now().toString(),
         method: 'cash',
         amount: grandTotal,
       }]);
     }
-  }, [externalPaymentMethods.length, grandTotal]);
+  }, [saleInfo?.payments, saleInfo?.payments?.length, externalPaymentMethods.length, grandTotal, saleId]); // Added saleInfo?.payments?.length dependency
 
   // Sync internal discount state with external changes
   useEffect(() => {
     setDiscountAmount(externalDiscountAmount);
     setDiscountType(externalDiscountType);
   }, [externalDiscountAmount, externalDiscountType]);
+
+  // Reset payment-related state when sale changes
+  useEffect(() => {
+    if (saleId) {
+      // Reset discount when switching to a new sale
+      setDiscountAmount(0);
+      setDiscountType('fixed');
+      setErrors([]);
+    }
+  }, [saleId]);
+
+  // Reset payment lines when sale info shows empty payments (like empty sale)
+  useEffect(() => {
+    if (saleInfo && saleInfo.payments && saleInfo.payments.length === 0) {
+      // Reset to one payment line with grand total for empty sales
+      setPaymentLines([{
+        id: Date.now().toString(),
+        method: 'cash',
+        amount: grandTotal,
+      }]);
+    }
+  }, [saleInfo?.payments, grandTotal]);
 
   // Update external state when internal state changes
   useEffect(() => {
@@ -138,9 +277,9 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
 
   useEffect(() => {
     if (onTotalPaidChange) {
-      onTotalPaidChange(totalPaid);
+      onTotalPaidChange(effectiveTotalPaid);
     }
-  }, [totalPaid, onTotalPaidChange]);
+  }, [effectiveTotalPaid, onTotalPaidChange]);
 
   // Update parent's payment methods when payment lines change
   useEffect(() => {
@@ -220,12 +359,12 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
       newErrors.push('Discount amount cannot exceed subtotal');
     }
     
-    if (totalPaid < grandTotal) {
-      newErrors.push(`Total paid (${formatNumber(totalPaid)}) is less than total amount (${formatNumber(grandTotal)})`);
+    if (effectiveTotalPaid < effectiveGrandTotal) {
+      newErrors.push(`Total paid (${formatNumber(effectiveTotalPaid)}) is less than total amount (${formatNumber(effectiveGrandTotal)})`);
     }
     
-    if (totalPaid > grandTotal) {
-      newErrors.push(`Total paid (${formatNumber(totalPaid)}) exceeds total amount (${formatNumber(grandTotal)})`);
+    if (effectiveTotalPaid > effectiveGrandTotal) {
+      newErrors.push(`Total paid (${formatNumber(effectiveTotalPaid)}) exceeds total amount (${formatNumber(effectiveGrandTotal)})`);
     }
     
     setErrors(newErrors);
@@ -309,25 +448,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
     }
   };
 
-  // Helper function to get payment method display name
-  const getPaymentMethodName = (method: string) => {
-    const methods: Record<string, string> = {
-      'cash': 'نقداً',
-      'visa': 'فيزا',
-      'mastercard': 'ماستركارد',
-      'bank_transfer': 'تحويل بنكي',
-      'mada': 'مدى',
-      'store_credit': 'رصيد المحل',
-      'other': 'أخرى',
-      'refund': 'استرداد'
-    };
-    return methods[method] || method;
-  };
 
-  // Helper function to determine if payment is a refund
-  const isRefund = (payment: PaymentMethodData) => {
-    return payment.method === 'refund' || payment.amount < 0;
-  };
 
   return (
     <div className="w-96 flex flex-col p-4 space-y-4 overflow-y-auto max-h-screen">
@@ -337,9 +458,52 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
           <CardTitle className="flex items-center space-x-2">
             <Receipt className="h-5 w-5" />
             <span>{t('pos:saleSummary')}</span>
+            {isEditMode && saleInfo && (
+              <span className="text-sm text-gray-500 ml-2">
+                #{saleInfo.sale_order_number || saleInfo.id}
+              </span>
+            )}
+            {isEditMode && loadingSaleInfo && (
+              <span className="text-sm text-blue-500 ml-2">
+                {t('common:loading')}...
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Sale Info - Only show when editing existing sale */}
+          {isEditMode && saleInfo && (
+            <>
+              <div className="flex justify-between">
+                <span className="text-gray-600">{t('pos:saleDate')}</span>
+                <span className="font-medium">
+                  {new Date(saleInfo.sale_date).toLocaleDateString()}
+                </span>
+              </div>
+              
+              {saleInfo.client_name && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">{t('pos:client')}</span>
+                  <span className="font-medium">{saleInfo.client_name}</span>
+                </div>
+              )}
+              
+              <div className="flex justify-between">
+                <span className="text-gray-600">{t('pos:status')}</span>
+                <span className={`font-medium px-2 py-1 rounded text-xs ${
+                  saleInfo.status === 'completed' ? 'bg-green-100 text-green-800' :
+                  saleInfo.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                  saleInfo.status === 'draft' ? 'bg-gray-100 text-gray-800' :
+                  'bg-red-100 text-red-800'
+                }`}>
+                  {saleInfo.status}
+                </span>
+              </div>
+              
+              <Separator />
+            </>
+          )}
+          
           <div className="flex justify-between">
             <span className="text-gray-600">{t('pos:itemsCount')}</span>
             <span className="font-medium">{currentSaleItems.length}</span>
@@ -416,7 +580,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
               variant="outline"
               size="sm"
               onClick={addPaymentLine}
-              disabled={totalPaid >= grandTotal}
+              disabled={effectiveTotalPaid >= effectiveGrandTotal}
               className="h-8 px-2"
             >
               <AddIcon className="h-4 w-4 mr-1" />
@@ -441,57 +605,68 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
             </Typography>
           ) : (
             <div className="space-y-2">
-              {paymentLines.map((paymentLine) => (
-                <div key={paymentLine.id} className="relative border border-gray-200 rounded-md p-3">
-                  <IconButton
-                    size="small"
-                    onClick={() => removePaymentLine(paymentLine.id)}
-                    className="absolute top-1 right-1 text-red-500 hover:text-red-700"
-                  >
-                    <DeleteIcon className="h-4 w-4" />
-                  </IconButton>
-                  
-                  <div className="flex gap-2 items-end">
-                    <FormControl size="small" sx={{ minWidth: 120 }}>
-                      <InputLabel>{t('pos:paymentMethod')}</InputLabel>
-                      <Select
-                        value={paymentLine.method}
-                        onChange={(e) => updatePaymentLine(paymentLine.id, 'method', e.target.value)}
-                        label={t('pos:paymentMethod')}
+              {paymentLines.map((paymentLine) => {
+                const isFromSale = paymentLine.id.startsWith('sale-payment-');
+                return (
+                  <div key={paymentLine.id} className="relative border border-gray-200 rounded-md p-3">
+                    {!isFromSale && (
+                      <IconButton
+                        size="small"
+                        onClick={() => removePaymentLine(paymentLine.id)}
+                        className="absolute top-1 right-1 text-red-500 hover:text-red-700"
                       >
-                        {paymentMethodOptions.map(option => (
-                          <MenuItem key={option.value} value={option.value}>
-                            {t(option.labelKey)}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
+                        <DeleteIcon className="h-4 w-4" />
+                      </IconButton>
+                    )}
                     
-                    <TextField
-                      size="small"
-                      label={t('pos:paymentAmount')}
-                      type="number"
-                      value={paymentLine.amount}
-                      onChange={(e) => {
-                        const value = Number(e.target.value);
-                        if (value >= 0) {
-                          updatePaymentLine(paymentLine.id, 'amount', value);
-                        }
-                      }}
-                      inputProps={{
-                        min: 0.01,
-                        step: 0.01,
-                        max: amountDue + paymentLine.amount
-                      }}
-                      error={paymentLine.amount > amountDue + paymentLine.amount}
-                      helperText={paymentLine.amount > amountDue + paymentLine.amount ? 'Amount exceeds remaining balance' : ''}
-                      sx={{ minWidth: 120 }}
-                    />
+                    <div className="flex gap-2 items-end">
+                      <FormControl size="small" sx={{ minWidth: 120 }}>
+                        <InputLabel>{t('pos:paymentMethod')}</InputLabel>
+                        <Select
+                          value={paymentLine.method}
+                          onChange={(e) => updatePaymentLine(paymentLine.id, 'method', e.target.value)}
+                          label={t('pos:paymentMethod')}
+                          disabled={isFromSale}
+                        >
+                          {paymentMethodOptions.map(option => (
+                            <MenuItem key={option.value} value={option.value}>
+                              {getPaymentMethodName(option.value)}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      
+                      <TextField
+                        size="small"
+                        label={t('pos:paymentAmount')}
+                        type="number"
+                        value={paymentLine.amount}
+                        onChange={(e) => {
+                          const value = Number(e.target.value);
+                          if (value >= 0) {
+                            updatePaymentLine(paymentLine.id, 'amount', value);
+                          }
+                        }}
+                        inputProps={{
+                          min: 0.01,
+                          step: 0.01,
+                          max: amountDue + paymentLine.amount
+                        }}
+                        error={paymentLine.amount > amountDue + paymentLine.amount}
+                        helperText={paymentLine.amount > amountDue + paymentLine.amount ? 'Amount exceeds remaining balance' : ''}
+                        sx={{ minWidth: 120 }}
+                        disabled={isFromSale}
+                      />
+                    </div>
                     
-
+                    {isFromSale && (
+                      <div className="mt-2 text-xs text-gray-500">
+                        {t('pos:paymentFromSale')}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -502,7 +677,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-gray-600">{t('pos:amountPaid')}</span>
-                  <span className="font-medium text-blue-600">{formatNumber(totalPaid)}</span>
+                  <span className="font-medium text-blue-600">{formatNumber(effectiveTotalPaid)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">{t('pos:amountDue')}</span>
@@ -514,15 +689,16 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
             </>
           )}
         </CardContent>
-      </Card>
-
-      {/* Action Buttons */}
-      <div className="space-y-2">
+              </Card>
+  
+      
+        {/* Action Buttons */}
+        <div className="space-y-2">
         <Button
           onClick={handleCompleteSale}
-          disabled={currentSaleItems.length === 0 || totalPaid !== grandTotal || isSaving}
+          disabled={currentSaleItems.length === 0 || Math.abs(effectiveTotalPaid - effectiveGrandTotal) > 0.01 || isSaving}
           className={`w-full h-12 text-lg transition-all duration-300 ${
-            currentSaleItems.length > 0 && totalPaid === grandTotal && !isSaving
+            currentSaleItems.length > 0 && Math.abs(effectiveTotalPaid - effectiveGrandTotal) <= 0.01 && !isSaving
               ? 'bg-sky-500 hover:bg-sky-600 animate-pulse shadow-lg'
               : 'bg-gray-400 hover:bg-gray-500'
           }`}

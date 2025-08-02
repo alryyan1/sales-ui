@@ -108,12 +108,13 @@ export const ThermalInvoiceDialog: React.FC<ThermalInvoiceDialogProps> = ({
     <Dialog
       open={open}
       onClose={handleClose}
-      maxWidth="md"
-      fullWidth
+      maxWidth={false}
       PaperProps={{
         sx: {
+          width: '300px',
           height: '90vh',
           maxHeight: '90vh',
+          maxWidth: '300px',
         }
       }}
     >

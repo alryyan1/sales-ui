@@ -82,7 +82,7 @@
   "financialCalculator": "الحاسبة المالية",
   "totalIncome": "إجمالي الدخل",
   "totalSales": "إجمالي المبيعات",
-  "averageSale": "متوسط البيع",
+
   "paymentBreakdown": "تفصيل المدفوعات",
   "userBreakdown": "تفصيل المستخدمين",
   "transactions": "معاملات",
@@ -141,5 +141,7 @@
   "removeItem": "إزالة العنصر",
   "clearAll": "مسح الكل",
   "clearAllItems": "مسح جميع العناصر من البيع",
-  "saleCancelled": "تم إلغاء البيع بسبب إزالة جميع العناصر"
+  "saleCancelled": "تم إلغاء البيع بسبب إزالة جميع العناصر",
+  "showMySales": "عرض مبيعاتي",
+  "showAllSales": "عرض جميع المبيعات"
 } 

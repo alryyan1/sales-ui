@@ -19,6 +19,7 @@ interface TodaySalesColumnProps {
   onSaleSelect: (sale: Sale) => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  filterByCurrentUser?: boolean;
 }
 
 export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
@@ -27,6 +28,7 @@ export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
   onSaleSelect,
   isCollapsed = false,
   onToggleCollapse,
+  filterByCurrentUser = false,
 }) => {
   const { t } = useTranslation(['pos', 'common']);
 
@@ -44,7 +46,9 @@ export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
         <div className="p-2 border-b border-gray-200 bg-blue-50 flex items-center justify-between">
           <div className="flex items-center space-x-1">
             <Receipt className="h-3 w-3 text-blue-600" />
-            <span className="text-xs font-semibold text-blue-900">Sales</span>
+            <span className="text-xs font-semibold text-blue-900">
+              {filterByCurrentUser ? 'My Sales' : 'Sales'}
+            </span>
           </div>
           <Button
             variant="ghost"
@@ -78,6 +82,12 @@ export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
         {/* Header */}
         <div className="p-2 border-b border-gray-200 bg-blue-50">
           <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-1">
+              <Receipt className="h-3 w-3 text-blue-600" />
+              <span className="text-xs font-semibold text-blue-900">
+                {filterByCurrentUser ? 'My Sales' : 'Today\'s Sales'}
+              </span>
+            </div>
             
             <div className="flex items-center space-x-1">
               <Badge className="text-xs bg-green-100 text-green-800 border-green-200">
@@ -109,7 +119,13 @@ export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
       {/* Header */}
       <div className="p-2 border-b border-gray-200 bg-blue-50 rounded-t-lg">
         <div className="flex items-center justify-between">
-        
+          <div className="flex items-center space-x-1">
+            <Receipt className="h-3 w-3 text-blue-600" />
+            <span className="text-xs font-semibold text-blue-900">
+              {filterByCurrentUser ? 'My Sales' : 'Today\'s Sales'}
+            </span>
+          </div>
+          
           <div className="flex items-center space-x-1">
             <Badge className="text-xs bg-green-100 text-green-800 border-green-200">
               {sales.length}
@@ -126,13 +142,13 @@ export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
         </div>
       </div>
 
-      {/* Sales List */}
-      <div className="flex-1 p-1 overflow-y-auto max-h-[calc(100vh-200px)]">
-        <div className="grid grid-cols-1 gap-2 p-2">
-          {sales
-            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-            .map((sale) => (
-            <div key={sale.id} className="relative">
+                    {/* Sales List */}
+       <div className="flex-1 p-1 overflow-y-auto max-h-[calc(100vh-200px)]">
+         <div className="grid grid-cols-1 gap-2 p-2">
+           {sales
+             .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+             .map((sale) => (
+               <div key={sale.id} className="relative">
               {/* Badge outside card - show 0 for empty sales */}
               <Badge className={`absolute -top-1 -right-1 z-10 text-xs ${
                 sale.items.length === 0 
@@ -152,12 +168,17 @@ export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
                 }`}
                 onClick={() => onSaleSelect(sale)}
               >
-                <CardContent className="p-0 h-full flex items-center justify-center relative">
-                  <div className="text-center">
-                    <div className="font-bold text-sm text-gray-900">
-                      {sale.sale_order_number || sale.id}
-                    </div>
-                  </div>
+                                 <CardContent className="p-0 h-full flex items-center justify-center relative">
+                   <div className="text-center">
+                     <div className="font-bold text-sm text-gray-900">
+                       {sale.sale_order_number || sale.id}
+                     </div>
+                     {!filterByCurrentUser && sale.user_name && (
+                       <div className="text-xs text-gray-500 mt-1 truncate">
+                         {sale.user_name}
+                       </div>
+                     )}
+                   </div>
                   
                   {/* Green check mark when total amount equals total paid AND there are payments */}
                   {sale.total_amount === sale.paid_amount && sale.payments && sale.payments.length > 0 && (

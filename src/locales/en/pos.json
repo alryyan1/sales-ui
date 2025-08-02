@@ -84,7 +84,7 @@
   "financialCalculator": "Financial Calculator",
   "totalIncome": "Total Income",
   "totalSales": "Total Sales",
-  "averageSale": "Average Sale",
+
   "paymentBreakdown": "Payment Breakdown",
   "userBreakdown": "User Breakdown",
   "transactions": "transactions",
@@ -98,6 +98,8 @@
   "itemNotFound": "Sale item not found",
   "alreadyInCart": "already in cart",
   "generatePdf": "Daily Report",
+  "showMySales": "Show My Sales",
+  "showAllSales": "Show All Sales",
   "pdfGenerated": "Daily sales PDF generated successfully!",
   "pdfGenerationFailed": "Failed to generate PDF report",
   "cancelPayments": "Cancel All",
