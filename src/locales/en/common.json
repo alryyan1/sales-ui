@@ -1,4 +1,5 @@
 {
+  "appName": "Sales Management System",
   "cancel": "Cancel",
   "save": "Save",
   "edit": "Edit",
@@ -51,5 +52,13 @@
   "collapse": "Collapse",
   "download": "Download",
   "loadingPdf": "Loading PDF...",
-  "errorLoadingPdf": "Error loading PDF"
+  "errorLoadingPdf": "Error loading PDF",
+  "required": "Required",
+  "optional": "Optional",
+  "import": "Import",
+  "importing": "Importing...",
+  "type": "Type",
+  "reference": "Reference",
+  "confirmDeleteTitle": "Confirm Deletion",
+  "loadingSale": "Loading sale..."
 } 

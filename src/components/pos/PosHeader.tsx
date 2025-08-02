@@ -1,5 +1,5 @@
 // src/components/pos/PosHeader.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 // MUI Components
@@ -8,6 +8,7 @@ import {
   TextField,
   InputAdornment,
   Autocomplete,
+  Typography,
 } from "@mui/material";
 
 // Shadcn Components
@@ -17,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import {
   QrCode as BarcodeIcon,
   Add as AddIcon,
-  Receipt as ReceiptIcon,
   Calculate as CalculateIcon,
   PictureAsPdf as PdfIcon,
   Description as InvoiceIcon,
@@ -31,25 +31,30 @@ import { FileText } from "lucide-react";
 import { Product } from "../../services/productService";
 import { formatNumber } from "@/constants";
 import apiClient from "@/lib/axios";
+import clientService, { Client } from "../../services/clientService";
 
 interface PosHeaderProps {
-  onAddProduct: (product: Product) => void;
+  onAddProduct: (product: Product) => Promise<void>;
   loading: boolean;
-  onNewSale?: () => void;
+  onCreateEmptySale?: () => void;
   onOpenCalculator?: () => void;
   onGeneratePdf?: () => void;
   onPreviewPdf?: () => void;
   onGenerateInvoice?: () => void;
   onPrintThermalInvoice?: () => void;
   hasSelectedSale?: boolean;
+  selectedClient?: Client | null;
+  onClientChange?: (client: Client | null) => void;
 }
 
-export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onNewSale, onOpenCalculator, onGeneratePdf, onPreviewPdf, onGenerateInvoice, onPrintThermalInvoice, hasSelectedSale }) => {
+export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onCreateEmptySale, onOpenCalculator, onGeneratePdf, onPreviewPdf, onGenerateInvoice, onPrintThermalInvoice, hasSelectedSale, selectedClient, onClientChange }) => {
   const { t } = useTranslation(['pos', 'common']);
   const [searchInput, setSearchInput] = useState("");
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loadingClients, setLoadingClients] = useState(false);
 
   const handleSearch = async (input: string) => {
     if (!input.trim()) {
@@ -84,7 +89,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onN
       
       if (productBySku) {
         // Automatically add the product to sale
-        onAddProduct(productBySku);
+        await onAddProduct(productBySku);
         setSearchInput("");
         setSearchResults([]);
         return;
@@ -104,7 +109,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onN
         
         if (exactSkuMatch) {
           // Automatically add the product to sale
-          onAddProduct(exactSkuMatch);
+          await onAddProduct(exactSkuMatch);
           setSearchInput("");
           setSearchResults([]);
         }
@@ -116,9 +121,27 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onN
     }
   };
 
-  const handleAddProduct = () => {
+  const loadClients = async () => {
+    try {
+      setLoadingClients(true);
+      const response = await clientService.getClients();
+      setClients(response.data || []);
+    } catch (error) {
+      console.error('Failed to load clients:', error);
+      setClients([]);
+    } finally {
+      setLoadingClients(false);
+    }
+  };
+
+  // Load clients on mount
+  useEffect(() => {
+    loadClients();
+  }, []);
+
+  const handleAddProduct = async () => {
     if (selectedProduct) {
-      onAddProduct(selectedProduct);
+      await onAddProduct(selectedProduct);
       setSelectedProduct(null);
       setSearchInput("");
       setSearchResults([]);
@@ -128,164 +151,241 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onN
   return (
     <div className="bg-primary text-primary-foreground shadow-md">
       <div className="container mx-auto px-4 py-4 min-h-[80px] flex items-center justify-between">
-        <h1 className="text-2xl font-semibold mr-4">
-          {t('pos:title')}
-        </h1>
-
-        <Box sx={{ flexGrow: 1, maxWidth: 600, display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Autocomplete
-            freeSolo
-            sx={{
-              width: '100%'
-            }}
-            fullWidth
-            options={searchResults}
-            getOptionLabel={(option) => {
-              if (typeof option === 'string') return option;
-              return `${option.name} (${option.sku || 'N/A'})`;
-            }}
-            inputValue={searchInput}
-            onInputChange={(event, newInputValue) => {
-              setSearchInput(newInputValue);
-              handleSearch(newInputValue);
-            }}
-            onChange={(event, newValue) => {
-              if (newValue && typeof newValue !== 'string') {
-                setSelectedProduct(newValue);
-              }
-            }}
-            loading={searchLoading}
+        {/* Left side - Create Empty Sale Button */}
+        <div className="flex items-center">
+          <Button
+            variant="default"
+            size="default"
+            onClick={onCreateEmptySale}
             disabled={loading}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                placeholder={t('pos:searchProducts')}
-                variant="outlined"
-                size="medium"
-                onKeyDown={handleKeyDown}
-                InputProps={{
-                  ...params.InputProps,
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <BarcodeIcon />
-                    </InputAdornment>
-                  ),
-                  sx: {
-                    backgroundColor: 'white',
-                    borderRadius: 1,
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'transparent',
-                    },
-                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'transparent',
-                    },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'transparent',
-                    },
-                  }
-                }}
+            className="relative group px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:text-gray-500"
+            title={t('pos:createEmptySale')}
+          >
+            <AddIcon className="h-4 w-4" />
+            <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+              {t('pos:createEmptySale')}
+            </span>
+          </Button>
+        </div>
+
+        {/* Center - Client Selection and Product Search */}
+        <div className="flex items-center space-x-4">
+          {/* Client Selection - Only show when sale is selected */}
+          {hasSelectedSale && (
+            <Box sx={{ minWidth: 200 }}>
+              <Autocomplete
+                options={clients}
+                getOptionLabel={(option) => `${option.name} ${option.phone ? `(${option.phone})` : ''}`}
+                value={selectedClient}
+                onChange={(_, newValue) => onClientChange?.(newValue)}
+                loading={loadingClients}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label={t('pos:selectClient')}
+                    placeholder={t('pos:searchClientPlaceholder')}
+                    size="small"
+                    sx={{
+                      backgroundColor: 'white',
+                      borderRadius: 1,
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'transparent',
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'transparent',
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'transparent',
+                      },
+                    }}
+                  />
+                )}
+                renderOption={(props, option) => (
+                  <Box component="li" {...props}>
+                    <Box>
+                      <Typography variant="body1">{option.name}</Typography>
+                      {option.phone && (
+                        <Typography variant="body2" color="text.secondary">
+                          {option.phone}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                )}
               />
-            )}
-            renderOption={(props, option) => (
-              <Box component="li" {...props}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                  <div className="font-medium">
-                    {option.name}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    SKU: {option.sku || "N/A"} | Price: {formatNumber(option.suggested_sale_price_per_sellable_unit || 0)}
-                  </div>
-                </Box>
+            </Box>
+          )}
+
+          {/* Product Search - Only show when sale is selected */}
+          {hasSelectedSale && (
+            <>
+              <Box sx={{ minWidth: 400, display: 'flex', gap: 2, alignItems: 'center' }}>
+                <Autocomplete
+                  freeSolo
+                  sx={{
+                    width: '100%'
+                  }}
+                  fullWidth
+                  options={searchResults}
+                  getOptionLabel={(option) => {
+                    if (typeof option === 'string') return option;
+                    return `${option.name} (${option.sku || 'N/A'})`;
+                  }}
+                  inputValue={searchInput}
+                  onInputChange={(event, newInputValue) => {
+                    setSearchInput(newInputValue);
+                    handleSearch(newInputValue);
+                  }}
+                  onChange={(event, newValue) => {
+                    if (newValue && typeof newValue !== 'string') {
+                      setSelectedProduct(newValue);
+                    }
+                  }}
+                  loading={searchLoading}
+                  disabled={loading}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder={t('pos:searchProducts')}
+                      variant="outlined"
+                      size="medium"
+                      onKeyDown={handleKeyDown}
+                      InputProps={{
+                        ...params.InputProps,
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <BarcodeIcon />
+                          </InputAdornment>
+                        ),
+                        sx: {
+                          backgroundColor: 'white',
+                          borderRadius: 1,
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'transparent',
+                          },
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'transparent',
+                          },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'transparent',
+                          },
+                        }
+                      }}
+                    />
+                  )}
+                  renderOption={(props, option) => (
+                    <Box component="li" {...props}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                        <div className="font-medium">
+                          {option.name}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          SKU: {option.sku || "N/A"} | Price: {formatNumber(option.suggested_sale_price_per_sellable_unit || 0)}
+                        </div>
+                      </Box>
+                    </Box>
+                  )}
+                  noOptionsText={searchInput ? t("common:noResults") : t("pos:typeToSearch")}
+                />
+                
+                <Button
+                  variant="outline"
+                  size="default"
+                  onClick={handleAddProduct}
+                  disabled={!selectedProduct || loading}
+                  className="relative group min-w-auto px-2 py-1.5 bg-white text-primary hover:bg-gray-100 disabled:bg-gray-300 disabled:text-gray-500"
+                  title={t('pos:addProduct')}
+                >
+                  <AddIcon className="h-4 w-4" />
+                  <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                    {t('pos:addProduct')}
+                  </span>
+                </Button>
               </Box>
-            )}
-            noOptionsText={searchInput ? t("common:noResults") : t("pos:typeToSearch")}
-          />
-          
-          <Button
-            variant="outline"
-            size="default"
-            onClick={handleAddProduct}
-            disabled={!selectedProduct || loading}
-            className="min-w-auto px-2 py-1.5 bg-white text-primary hover:bg-gray-100 disabled:bg-gray-300 disabled:text-gray-500"
-          >
-            <AddIcon className="mr-2 h-4 w-4" />
-            {t('pos:addProduct')}
-          </Button>
-        </Box>
 
-        <span className="text-sm ml-3">
-          {t('pos:pressEnterToAdd')}
-        </span>
+              <span className="text-sm text-gray-300">
+                {t('pos:pressEnterToAdd')}
+              </span>
+            </>
+          )}
+        </div>
 
-        {/* Calculator Button */}
-        <Button
-          variant="default"
-          size="default"
-          onClick={onOpenCalculator}
-          className="ml-3 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 disabled:text-gray-500"
-        >
-          <CalculateIcon className="mr-2 h-4 w-4" />
-          {t('pos:calculator')}
-        </Button>
-
-        {/* New Sale Button */}
-        <Button
-          variant="default"
-          size="default"
-          onClick={onNewSale}
-          className="ml-3 px-3 py-1.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:text-gray-500"
-        >
-          <ReceiptIcon className="mr-2 h-4 w-4" />
-          {t('pos:newSale')}
-        </Button>
-
-        {/* Preview PDF Button */}
-        <Button
-          variant="default"
-          size="default"
-          onClick={onPreviewPdf}
-          className="ml-3 px-3 py-1.5 bg-purple-500 hover:bg-purple-600 disabled:bg-gray-300 disabled:text-gray-500"
-        >
-          <PdfIcon className="mr-2 h-4 w-4" />
-          {t('pos:previewPdf')}
-        </Button>
-
-        {/* Invoice PDF Button - Only show when sale is selected */}
-        {hasSelectedSale && (
+        {/* Right side - Action Buttons */}
+        <div className="flex items-center space-x-2">
+          {/* Calculator Button */}
           <Button
             variant="default"
             size="default"
-            onClick={onGenerateInvoice}
-            className="ml-3 px-3 py-1.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:text-gray-500"
+            onClick={onOpenCalculator}
+            className="relative group px-3 py-1.5 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 disabled:text-gray-500"
+            title={t('pos:calculator')}
           >
-            <InvoiceIcon className="mr-2 h-4 w-4" />
-            {t('pos:generateInvoice')}
+            <CalculateIcon className="h-4 w-4" />
+            <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+              {t('pos:calculator')}
+            </span>
           </Button>
-        )}
 
-        {/* Thermal Invoice Button - Only show when sale is selected */}
-        {hasSelectedSale && (
+          {/* Preview PDF Button */}
           <Button
             variant="default"
             size="default"
-            onClick={onPrintThermalInvoice}
-            className="ml-3 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 disabled:text-gray-500"
+            onClick={onPreviewPdf}
+            className="relative group px-3 py-1.5 bg-purple-500 hover:bg-purple-600 disabled:bg-gray-300 disabled:text-gray-500"
+            title={t('pos:previewPdf')}
           >
-            <PrintIcon className="mr-2 h-4 w-4" />
-            {t('pos:printThermalInvoice')}
+            <PdfIcon className="h-4 w-4" />
+            <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+              {t('pos:previewPdf')}
+            </span>
           </Button>
-        )}
 
-        {/* PDF Report Button */}
-        <Button
-          variant="default"
-          size="default"
-          onClick={onGeneratePdf}
-          className="ml-3 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:text-gray-500"
-        >
-          <FileText className="mr-2 h-4 w-4" />
-          {t('pos:generatePdf')}
-        </Button>
+          {/* Invoice PDF Button - Only show when sale is selected */}
+          {hasSelectedSale && (
+            <Button
+              variant="default"
+              size="default"
+              onClick={onGenerateInvoice}
+              className="relative group px-3 py-1.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:text-gray-500"
+              title={t('pos:generateInvoice')}
+            >
+              <InvoiceIcon className="h-4 w-4" />
+              <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                {t('pos:generateInvoice')}
+              </span>
+            </Button>
+          )}
+
+          {/* Thermal Invoice Button - Only show when sale is selected */}
+          {hasSelectedSale && (
+            <Button
+              variant="default"
+              size="default"
+              onClick={onPrintThermalInvoice}
+              className="relative group px-3 py-1.5 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 disabled:text-gray-500"
+              title={t('pos:printThermalInvoice')}
+            >
+              <PrintIcon className="h-4 w-4" />
+              <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                {t('pos:printThermalInvoice')}
+              </span>
+            </Button>
+          )}
+
+          {/* PDF Report Button */}
+          <Button
+            variant="default"
+            size="default"
+            onClick={onGeneratePdf}
+            className="relative group px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:text-gray-500"
+            title={t('pos:generatePdf')}
+          >
+            <FileText className="h-4 w-4" />
+            <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+              {t('pos:generatePdf')}
+            </span>
+          </Button>
+        </div>
       </div>
     </div>
   );

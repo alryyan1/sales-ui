@@ -1,0 +1,18 @@
+{
+  "pageTitle": "System Settings",
+  "appSettingsTitle": "Application General Settings",
+  "appSettingsDesc": "Modify the basic settings of the sales management system.",
+  "companyName": "Company/Organization Name",
+  "companyAddress": "Company Address",
+  "companyPhone": "Company Phone",
+  "companyEmail": "Company Email",
+  "companyLogoUrl": "Company Logo URL",
+  "currencySymbol": "Currency Symbol *",
+  "dateFormat": "Date Format",
+  "dateFormatDesc": "Example: YYYY-MM-DD, DD/MM/YYYY",
+  "lowStockThreshold": "General Stock Alert Threshold",
+  "invoicePrefix": "Invoice Prefix",
+  "poPrefix": "Purchase Order Prefix",
+  "updateSuccess": "Settings saved successfully.",
+  "updateError": "Failed to save settings."
+} 

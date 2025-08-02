@@ -213,6 +213,19 @@ const saleService = {
     },
 
     /**
+     * Create an empty sale (draft) for POS operations.
+     */
+    createEmptySale: async (data: { client_id?: number | null; sale_date: string; notes?: string | null }): Promise<Sale> => {
+        try {
+            const response = await apiClient.post<{ sale: Sale }>('/sales/create-empty', data);
+            return response.data.sale;
+        } catch (error) {
+            console.error('Error creating empty sale:', error);
+            throw error;
+        }
+    },
+
+    /**
      * Update an existing sale.
      * Backend logic for this can be very complex if item/payment changes affect stock/totals.
      * A simplified version might only update header fields.
@@ -264,6 +277,39 @@ const saleService = {
             return response.data as Sale;
         } catch (error) {
             console.error(`Error deleting payments from sale ${saleId}:`, error);
+            throw error;
+        }
+    },
+
+    /**
+     * Add a new item to an existing sale.
+     */
+    addSaleItem: async (saleId: number, itemData: {
+        product_id: number;
+        quantity: number;
+        unit_price: number;
+    }): Promise<{ sale: Sale; message: string }> => {
+        try {
+            const response = await apiClient.post<{ sale: Sale; message: string }>(`/sales/${saleId}/items`, itemData);
+            return response.data;
+        } catch (error) {
+            console.error(`Error adding sale item to sale ${saleId}:`, error);
+            throw error;
+        }
+    },
+
+    /**
+     * Update an existing sale item.
+     */
+    updateSaleItem: async (saleId: number, saleItemId: number, itemData: {
+        quantity: number;
+        unit_price: number;
+    }): Promise<Sale> => {
+        try {
+            const response = await apiClient.put<{ sale: Sale }>(`/sales/${saleId}/items/${saleItemId}`, itemData);
+            return response.data.sale;
+        } catch (error) {
+            console.error(`Error updating sale item ${saleItemId} in sale ${saleId}:`, error);
             throw error;
         }
     },

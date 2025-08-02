@@ -1,0 +1,65 @@
+{
+    "appName": "Sales Management System",
+    "loading": "Loading...",
+    "login": {
+      "title": "Login",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "submitButton": "Login",
+      "submitButtonLoading": "Logging in...",
+      "registerPrompt": "Don't have an account?",
+      "registerLink": "Create new account"
+    },
+    "register": {
+      "title": "Create New Account",
+      "nameLabel": "Name",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "confirmPasswordLabel": "Confirm Password",
+      "submitButton": "Register",
+      "submitButtonLoading": "Registering...",
+      "loginPrompt": "Already have an account?",
+      "loginLink": "Login"
+    },
+    "navigation": {
+      "home": "Home",
+      "dashboard": "Dashboard",
+      "clients": "Clients",
+      "suppliers": "Suppliers",
+      "products": "Products",
+      "purchases": "Purchases",
+      "sales": "Sales",
+      "logout": "Logout",
+      "welcome": "Welcome, {{name}}!"
+    },
+    "errors": {
+      "unexpected": "An unexpected error occurred.",
+      "requiredField": "This field is required.",
+      "invalidEmail": "Invalid email format.",
+      "passwordMismatch": "Passwords do not match.",
+      "networkError": "Network error, please try again."
+    },
+    "clients": {
+          "pageTitle": "Clients Management",
+          "addClient": "Add New Client",
+          "editClient": "Edit Client Information",
+          "deleteClientConfirm": "Are you sure you want to delete this client?",
+          "deleteSuccess": "Client deleted successfully.",
+          "saveSuccess": "Client information saved successfully.",
+          "name": "Client Name",
+          "email": "Email",
+          "phone": "Phone Number",
+          "address": "Address",
+          "actions": "Actions",
+          "noClients": "No clients to display."
+     },
+     "common": {
+         "save": "Save",
+         "cancel": "Cancel",
+         "delete": "Delete",
+         "edit": "Edit",
+         "view": "View",
+         "search": "Search...",
+         "close": "Close"
+     }
+} 

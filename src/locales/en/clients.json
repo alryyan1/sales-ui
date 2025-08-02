@@ -1,0 +1,22 @@
+{
+    "pageTitle": "Clients Management",
+    "addClient": "Add New Client",
+    "editClient": "Edit Client Information",
+    "deleteClientConfirm": "Are you sure you want to delete this client?",
+    "deleteSuccess": "Client deleted successfully.",
+    "saveSuccess": "Client information saved successfully.",
+    "name": "Client Name",
+    "email": "Email",
+    "phone": "Phone Number",
+    "address": "Address",
+    "noClients": "No clients to display.",
+    "searchPlaceholder": "Search by name, email, or phone...",
+    "selectClientPlaceholder": "Select a client...",
+    "namePlaceholder": "Example: Al-Amal Trading Company",
+    "emailPlaceholder": "example@company.com",
+    "phonePlaceholder": "Example: 9665XXXXXXXX",
+    "addressPlaceholder": "Example: King Fahd Street, Riyadh...",
+    "typeToSearch": "Type to search clients...",
+    "client": "Client",
+    "id": "Client ID"
+} 

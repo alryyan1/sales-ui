@@ -1,0 +1,22 @@
+{
+    "manageTitle": "Users Management",
+    "addUser": "Add New User",
+    "editUser": "Edit User Information",
+    "deleteConfirm": "Are you sure you want to delete this item? This action cannot be undone.",
+    "deleteSuccess": "User deleted successfully.",
+    "createSuccess": "User created successfully.",
+    "updateSuccess": "User updated successfully.",
+    "fetchError": "Failed to load users list.",
+    "fetchSingleError": "Failed to load user data.",
+    "deleteError": "Failed to delete user.",
+    "saveError": "Failed to save user data.",
+    "nameLabel": "Full Name",
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "confirmPasswordLabel": "Confirm Password",
+    "searchPlaceholder": "Search by name or email...",
+    "noUsers": "No users to display.",
+    "selfDeleteError": "You cannot delete your own account.",
+    "roleLabel": "Roles",
+    "usersCount": "Users Count"
+} 

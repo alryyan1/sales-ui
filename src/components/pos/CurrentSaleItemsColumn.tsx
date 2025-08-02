@@ -24,13 +24,10 @@ import { formatNumber } from "@/constants";
 
 interface CurrentSaleItemsColumnProps {
   currentSaleItems: CartItem[];
-  onUpdateQuantity: (productId: number, newQuantity: number) => void;
-  onRemoveItem: (productId: number) => void;
+  onUpdateQuantity: (productId: number, newQuantity: number) => Promise<void>;
+  onRemoveItem: (productId: number) => Promise<void>;
   onClearAll?: () => void;
   isSalePaid?: boolean;
-  // New props for existing sale items
-  isEditMode?: boolean;
-  onDeleteSaleItem?: (saleItemId: number) => void;
 }
 
 export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
@@ -39,8 +36,6 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
   onRemoveItem,
   onClearAll,
   isSalePaid = false,
-  isEditMode = false,
-  onDeleteSaleItem,
 }) => {
   const { t } = useTranslation(['pos', 'common']);
 
@@ -135,24 +130,24 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => onUpdateQuantity(item.product.id, item.quantity - 1)}
+                            onClick={async () => await onUpdateQuantity(item.product.id, item.quantity - 1)}
                             disabled={item.quantity <= 1 || isSalePaid}
                             className={`h-8 w-8 p-0 ${
-                              isSalePaid ? 'opacity-50 cursor-not-allowed' : ''
+                              (item.quantity <= 1 || isSalePaid) ? 'opacity-50 cursor-not-allowed' : ''
                             }`}
                           >
                             <Minus className="h-4 w-4" />
                           </Button>
-                          <span className="w-10 text-center font-medium text-base">{item.quantity}</span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onUpdateQuantity(item.product.id, item.quantity + 1)}
-                            disabled={isSalePaid}
-                            className={`h-8 w-8 p-0 ${
-                              isSalePaid ? 'opacity-50 cursor-not-allowed' : ''
-                            }`}
-                          >
+                              {console.log(isSalePaid,'isSalePaid')}                       <span className="w-10 text-center font-medium text-base">{item.quantity}</span>
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={async () => await onUpdateQuantity(item.product.id, item.quantity + 1)}
+                             disabled={isSalePaid || (item.quantity >= item.product.stock_quantity)}
+                             className={`h-8 w-8 p-0 ${
+                               (isSalePaid || (item.quantity >= item.product.stock_quantity)) ? 'opacity-50 cursor-not-allowed' : ''
+                             }`}
+                           >
                             <Plus className="h-4 w-4" />
                           </Button>
                         </div>
@@ -167,21 +162,21 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                         <div className="font-bold text-green-600 text-base">{formatNumber(item.total)}</div>
                       </TableCell>
                       <TableCell className="text-center">
-                        <div className="flex flex-col items-center space-y-1">
-                          <div className="flex items-center space-x-1">
-                            <Package className="h-3 w-3 text-gray-500" />
-                            <span className={`text-base font-medium ${
-                              isLowStock(item.product.current_stock_quantity || item.product.stock_quantity, item.product.stock_alert_level) 
-                                ? 'text-red-600' 
-                                : 'text-green-600'
-                            }`}>
-                              {formatNumber(item.product.current_stock_quantity || item.product.stock_quantity)}
-                            </span>
-                          </div>
-                          {isLowStock(item.product.current_stock_quantity || item.product.stock_quantity, item.product.stock_alert_level) && (
-                            <span className="text-sm text-red-500">Low Stock</span>
-                          )}
-                        </div>
+                                                 <div className="flex flex-col items-center space-y-1">
+                           <div className="flex items-center space-x-1">
+                             <Package className="h-3 w-3 text-gray-500" />
+                             <span className={`text-base font-medium ${
+                               isLowStock(item.product.stock_quantity, item.product.stock_alert_level) 
+                                 ? 'text-red-600' 
+                                 : 'text-green-600'
+                             }`}>
+                               {formatNumber(item.product.stock_quantity)}
+                             </span>
+                           </div>
+                           {isLowStock(item.product.stock_quantity, item.product.stock_alert_level) && (
+                             <span className="text-sm text-red-500">Low Stock</span>
+                           )}
+                         </div>
                       </TableCell>
                       <TableCell className="text-center">
                         {item.product.earliest_expiry_date ? (
@@ -208,16 +203,11 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                         <Button
                           variant="ghost"
                           size="sm"
-                                                     onClick={() => {
-                             // Check if this is an existing sale item (has ID) or a new item
-                             if (isEditMode && onDeleteSaleItem && item.id) {
-                               // This is an existing sale item, call the delete API
-                               onDeleteSaleItem(item.id);
-                             } else {
-                               // This is a new item, just remove from current sale
-                               onRemoveItem(item.product.id);
-                             }
-                           }}
+                          onClick={async () => {
+                            // Since we now create sales on backend before adding items, 
+                            // all sale items have backend records and should use backend deletion
+                            await onRemoveItem(item.product.id);
+                          }}
                           disabled={isSalePaid}
                           className={`h-10 w-10 p-0 ${
                             isSalePaid 

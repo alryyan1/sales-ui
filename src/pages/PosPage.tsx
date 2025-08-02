@@ -14,7 +14,6 @@ import {
 // POS Components
 import {
   SaleEditor,
-  PaymentDialog,
   CartItem,
   Sale,
   PosHeader,
@@ -44,7 +43,6 @@ const PosPage: React.FC = () => {
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [selectedSaleId, setSelectedSaleId] = useState<number | null>(null);
   const [saleEditorOpen, setSaleEditorOpen] = useState(false);
-  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
   const [isTodaySalesCollapsed, setIsTodaySalesCollapsed] = useState(false);
   const [calculatorDialogOpen, setCalculatorDialogOpen] = useState(false);
@@ -57,6 +55,7 @@ const PosPage: React.FC = () => {
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('fixed');
   const [totalPaid, setTotalPaid] = useState(0);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodData[]>([]);
+  const [selectedClient, setSelectedClient] = useState<import('../services/clientService').Client | null>(null);
 
   // Load today's sales on mount
   useEffect(() => {
@@ -65,8 +64,8 @@ const PosPage: React.FC = () => {
 
   const loadTodaySales = async () => {
     try {
-      // Load today's sales from database (no limit, all sales for today)
-      const response = await saleService.getSales(1, '', 'completed', '', '', 1000, null, true);
+      // Load today's sales from database (no limit, all sales for today including drafts)
+      const response = await saleService.getSales(1, '', '', '', '', 1000, null, true);
       const dbSales = response.data || [];
       
       // Transform database sales to POS format
@@ -87,6 +86,7 @@ const PosPage: React.FC = () => {
         created_at: dbSale.created_at,
         updated_at: dbSale.updated_at,
         items: dbSale.items?.map(item => ({
+          id: item.id, // Add the missing ID field
           product: {
             id: item.product_id,
             name: item.product_name || 'Unknown Product',
@@ -133,55 +133,473 @@ const PosPage: React.FC = () => {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  const addToCurrentSale = (product: Product) => {
-    setCurrentSaleItems(prevItems => {
-      const existingItem = prevItems.find(item => item.product.id === product.id);
-      
-      if (existingItem) {
-        return prevItems.map(item =>
-          item.product.id === product.id
-            ? {
-                ...item,
-                quantity: item.quantity + 1,
-                total: preciseCalculation(item.quantity + 1, item.unitPrice, 'multiply', 2)
-              }
-            : item
-        );
-      } else {
-        const newItem: CartItem = {
-          product,
-          quantity: 1,
-          unitPrice: product.last_sale_price_per_sellable_unit || product.suggested_sale_price_per_sellable_unit || 0,
-          total: product.last_sale_price_per_sellable_unit || product.suggested_sale_price_per_sellable_unit || 0
+  const addToCurrentSale = async (product: Product) => {
+    // Always ensure we have a sale on the backend before adding items
+    if (!selectedSale) {
+      // Create an empty sale first
+      try {
+        const emptySaleData = {
+          client_id: null,
+          sale_date: new Date().toISOString().split('T')[0], // Today's date
+          notes: null
         };
-        return [...prevItems, newItem];
+
+        const newSale = await saleService.createEmptySale(emptySaleData);
+        
+        // Transform the backend sale to POS format
+        const transformedSale: Sale = {
+          id: newSale.id,
+          sale_order_number: newSale.sale_order_number,
+          client_id: newSale.client_id,
+          client_name: newSale.client_name,
+          user_id: newSale.user_id,
+          user_name: newSale.user_name,
+          sale_date: newSale.sale_date,
+          invoice_number: newSale.invoice_number,
+          status: newSale.status,
+          total_amount: Number(newSale.total_amount),
+          paid_amount: Number(newSale.paid_amount),
+          due_amount: Number(newSale.due_amount || 0),
+          notes: newSale.notes,
+          created_at: newSale.created_at,
+          updated_at: newSale.updated_at,
+          items: newSale.items?.map(item => ({
+            id: item.id,
+            product: {
+              id: item.product_id,
+              name: item.product_name || 'Unknown Product',
+              sku: item.product_sku || 'N/A',
+              suggested_sale_price_per_sellable_unit: Number(item.unit_price),
+              last_sale_price_per_sellable_unit: Number(item.unit_price),
+              stock_quantity: item.current_stock_quantity || 0,
+              stock_alert_level: item.stock_alert_level,
+              earliest_expiry_date: item.earliest_expiry_date,
+              current_stock_quantity: item.current_stock_quantity || 0,
+              sellable_unit_name: item.sellable_unit_name || 'Piece'
+            } as Product,
+            quantity: item.quantity,
+            unitPrice: Number(item.unit_price),
+            total: Number(item.total_price || item.quantity * Number(item.unit_price))
+          })) || [],
+          payments: newSale.payments?.map(payment => ({
+            id: payment.id,
+            sale_id: payment.sale_id,
+            user_name: payment.user_name,
+            method: payment.method,
+            amount: Number(payment.amount),
+            payment_date: payment.payment_date,
+            reference_number: payment.reference_number || undefined,
+            notes: payment.notes || undefined,
+            created_at: payment.created_at
+          })) || [],
+          timestamp: new Date(newSale.sale_date)
+        };
+
+        // Select the new sale
+        setSelectedSale(transformedSale);
+        setSelectedSaleId(transformedSale.id);
+        
+        // Add the new sale to today's sales
+        setTodaySales(prevSales => [transformedSale, ...prevSales]);
+        
+        // If there are existing items in currentSaleItems without IDs, add them to the backend sale
+        const existingItemsWithoutIds = currentSaleItems.filter(item => !item.id);
+        if (existingItemsWithoutIds.length > 0) {
+          console.log('Adding existing items without IDs to backend sale:', existingItemsWithoutIds);
+          
+          // Add each existing item to the backend sale
+          for (const existingItem of existingItemsWithoutIds) {
+            try {
+              const itemData = {
+                product_id: existingItem.product.id,
+                quantity: existingItem.quantity,
+                unit_price: existingItem.unitPrice
+              };
+
+              await saleService.addSaleItem(transformedSale.id, itemData);
+            } catch (error) {
+              console.error('Error adding existing item to backend sale:', error);
+              // Continue with other items even if one fails
+            }
+          }
+          
+          // Reload the sale data to get updated items with IDs
+          const updatedSale = await saleService.getSale(transformedSale.id);
+          
+          const updatedItems: CartItem[] = (updatedSale.items || []).map((item: import('../services/saleService').SaleItem) => ({
+            id: item.id,
+            product: {
+              id: item.product_id,
+              name: item.product_name || 'Unknown Product',
+              sku: item.product_sku || 'N/A',
+              suggested_sale_price_per_sellable_unit: Number(item.unit_price),
+              last_sale_price_per_sellable_unit: Number(item.unit_price),
+              stock_quantity: item.current_stock_quantity || 0,
+              stock_alert_level: item.stock_alert_level,
+              earliest_expiry_date: item.earliest_expiry_date,
+              current_stock_quantity: item.current_stock_quantity || 0,
+              sellable_unit_name: item.sellable_unit_name || 'Piece'
+            } as Product,
+            quantity: item.quantity,
+            unitPrice: Number(item.unit_price),
+            total: Number(item.total_price || item.quantity * Number(item.unit_price))
+          }));
+          
+          setCurrentSaleItems(updatedItems);
+          
+          const finalTransformedSale: Sale = {
+            id: updatedSale.id,
+            sale_order_number: updatedSale.sale_order_number,
+            client_id: updatedSale.client_id,
+            client_name: updatedSale.client_name,
+            user_id: updatedSale.user_id,
+            user_name: updatedSale.user_name,
+            sale_date: updatedSale.sale_date,
+            invoice_number: updatedSale.invoice_number,
+            status: updatedSale.status,
+            total_amount: Number(updatedSale.total_amount),
+            paid_amount: Number(updatedSale.paid_amount),
+            due_amount: Number(updatedSale.due_amount || 0),
+            notes: updatedSale.notes,
+            created_at: updatedSale.created_at,
+            updated_at: updatedSale.updated_at,
+            items: updatedItems,
+            payments: updatedSale.payments?.map((payment: import('../services/saleService').Payment) => ({
+              id: payment.id,
+              sale_id: payment.sale_id,
+              user_name: payment.user_name,
+              method: payment.method,
+              amount: Number(payment.amount),
+              payment_date: payment.payment_date,
+              reference_number: payment.reference_number || undefined,
+              notes: payment.notes || undefined,
+              created_at: payment.created_at
+            })) || [],
+            timestamp: new Date(updatedSale.sale_date)
+          };
+          
+          setSelectedSale(finalTransformedSale);
+          
+          // Update today's sales list
+          setTodaySales(prevSales => 
+            prevSales.map(sale => 
+              sale.id === finalTransformedSale.id ? finalTransformedSale : sale
+            )
+          );
+          
+          // Now add the new product
+          const itemData = {
+            product_id: product.id,
+            quantity: 1,
+            unit_price: product.last_sale_price_per_sellable_unit || product.suggested_sale_price_per_sellable_unit || 0
+          };
+
+          const response = await saleService.addSaleItem(finalTransformedSale.id, itemData);
+          
+          // Check if the response indicates product already exists
+          if (response.message === 'Product already exists in sale') {
+            showSnackbar(`${product.name} ${t('pos:alreadyInCart')}`, 'success');
+            return;
+          }
+          
+          // Update with the final response
+          const finalItems: CartItem[] = (response.sale.items || []).map(item => ({
+            id: item.id,
+            product: {
+              id: item.product_id,
+              name: item.product_name || 'Unknown Product',
+              sku: item.product_sku || 'N/A',
+              suggested_sale_price_per_sellable_unit: Number(item.unit_price),
+              last_sale_price_per_sellable_unit: Number(item.unit_price),
+              stock_quantity: item.current_stock_quantity || 0,
+              stock_alert_level: item.stock_alert_level,
+              earliest_expiry_date: item.earliest_expiry_date,
+              current_stock_quantity: item.current_stock_quantity || 0,
+              sellable_unit_name: item.sellable_unit_name || 'Piece'
+            } as Product,
+            quantity: item.quantity,
+            unitPrice: Number(item.unit_price),
+            total: Number(item.total_price || item.quantity * Number(item.unit_price))
+          }));
+          
+          setCurrentSaleItems(finalItems);
+          
+          const finalSale: Sale = {
+            id: response.sale.id,
+            sale_order_number: response.sale.sale_order_number,
+            client_id: response.sale.client_id,
+            client_name: response.sale.client_name,
+            user_id: response.sale.user_id,
+            user_name: response.sale.user_name,
+            sale_date: response.sale.sale_date,
+            invoice_number: response.sale.invoice_number,
+            status: response.sale.status,
+            total_amount: Number(response.sale.total_amount),
+            paid_amount: Number(response.sale.paid_amount),
+            due_amount: Number(response.sale.due_amount || 0),
+            notes: response.sale.notes,
+            created_at: response.sale.created_at,
+            updated_at: response.sale.updated_at,
+            items: finalItems,
+            payments: response.sale.payments?.map(payment => ({
+              id: payment.id,
+              sale_id: payment.sale_id,
+              user_name: payment.user_name,
+              method: payment.method,
+              amount: Number(payment.amount),
+              payment_date: payment.payment_date,
+              reference_number: payment.reference_number || undefined,
+              notes: payment.notes || undefined,
+              created_at: payment.created_at
+            })) || [],
+            timestamp: new Date(response.sale.sale_date)
+          };
+          
+          setSelectedSale(finalSale);
+          
+          // Update today's sales list
+          setTodaySales(prevSales => 
+            prevSales.map(sale => 
+              sale.id === finalSale.id ? finalSale : sale
+            )
+          );
+          
+          showSnackbar(`${product.name} ${t('pos:addedToCart')}`, 'success');
+          return;
+        }
+        
+        // Now continue with adding the product to this sale
+      } catch (error) {
+        console.error('Error creating empty sale:', error);
+        const errorMessage = saleService.getErrorMessage(error);
+        showSnackbar(errorMessage, 'error');
+        return;
       }
-    });
-    
-    showSnackbar(`${product.name} ${t('pos:addedToCart')}`, 'success');
+    }
+
+    // Now we always have a selectedSale, so add the product to it
+    try {
+      const itemData = {
+        product_id: product.id,
+        quantity: 1,
+        unit_price: product.last_sale_price_per_sellable_unit || product.suggested_sale_price_per_sellable_unit || 0
+      };
+
+      const response = await saleService.addSaleItem(selectedSale!.id, itemData);
+      
+      // Check if the response indicates product already exists
+      if (response.message === 'Product already exists in sale') {
+        showSnackbar(`${product.name} ${t('pos:alreadyInCart')}`, 'success');
+        return;
+      }
+      
+      // Update the current sale items with the new data from backend
+      const items: CartItem[] = (response.sale.items || []).map(item => ({
+        id: item.id,
+        product: {
+          id: item.product_id,
+          name: item.product_name || 'Unknown Product',
+          sku: item.product_sku || 'N/A',
+          suggested_sale_price_per_sellable_unit: Number(item.unit_price),
+          last_sale_price_per_sellable_unit: Number(item.unit_price),
+          stock_quantity: item.current_stock_quantity || 0,
+          stock_alert_level: item.stock_alert_level,
+          earliest_expiry_date: item.earliest_expiry_date,
+          current_stock_quantity: item.current_stock_quantity || 0,
+          sellable_unit_name: item.sellable_unit_name || 'Piece'
+        } as Product,
+        quantity: item.quantity,
+        unitPrice: Number(item.unit_price),
+        total: Number(item.total_price || item.quantity * Number(item.unit_price))
+      }));
+      
+      setCurrentSaleItems(items);
+      
+      // Update the selected sale with new data
+      const transformedSale: Sale = {
+        id: response.sale.id,
+        sale_order_number: response.sale.sale_order_number,
+        client_id: response.sale.client_id,
+        client_name: response.sale.client_name,
+        user_id: response.sale.user_id,
+        user_name: response.sale.user_name,
+        sale_date: response.sale.sale_date,
+        invoice_number: response.sale.invoice_number,
+        status: response.sale.status,
+        total_amount: Number(response.sale.total_amount),
+        paid_amount: Number(response.sale.paid_amount),
+        due_amount: Number(response.sale.due_amount || 0),
+        notes: response.sale.notes,
+        created_at: response.sale.created_at,
+        updated_at: response.sale.updated_at,
+        items: items,
+        payments: response.sale.payments?.map(payment => ({
+          id: payment.id,
+          sale_id: payment.sale_id,
+          user_name: payment.user_name,
+          method: payment.method,
+          amount: Number(payment.amount),
+          payment_date: payment.payment_date,
+          reference_number: payment.reference_number || undefined,
+          notes: payment.notes || undefined,
+          created_at: payment.created_at
+        })) || [],
+        timestamp: new Date(response.sale.sale_date)
+      };
+      
+      setSelectedSale(transformedSale);
+      
+      // Update today's sales list
+      setTodaySales(prevSales => 
+        prevSales.map(sale => 
+          sale.id === selectedSale!.id ? transformedSale : sale
+        )
+      );
+      
+      showSnackbar(`${product.name} ${t('pos:addedToCart')}`, 'success');
+    } catch (error) {
+      console.error('Error adding product to sale:', error);
+      const errorMessage = saleService.getErrorMessage(error);
+      showSnackbar(errorMessage, 'error');
+    }
   };
 
-  const updateQuantity = (productId: number, newQuantity: number) => {
+  const updateQuantity = async (productId: number, newQuantity: number) => {
     if (newQuantity <= 0) {
-      removeFromCurrentSale(productId);
+      await removeFromCurrentSale(productId);
       return;
     }
 
-    setCurrentSaleItems(prevItems =>
-      prevItems.map(item =>
-        item.product.id === productId
-          ? {
-              ...item,
-              quantity: newQuantity,
-              total: preciseCalculation(newQuantity, item.unitPrice, 'multiply', 2)
-            }
-          : item
-      )
-    );
+    // If we have a selected sale (edit mode), update on backend
+    if (selectedSale) {
+      try {
+        // Find the sale item to update
+        const itemToUpdate = currentSaleItems.find(item => item.product.id === productId);
+        if (!itemToUpdate || !itemToUpdate.id) {
+          showSnackbar(t('pos:itemNotFound'), 'error');
+          return;
+        }
+
+        const itemData = {
+          quantity: newQuantity,
+          unit_price: itemToUpdate.unitPrice
+        };
+
+        const updatedSale = await saleService.updateSaleItem(selectedSale.id, itemToUpdate.id, itemData);
+        
+        // Update the current sale items with the new data from backend
+        const items: CartItem[] = (updatedSale.items || []).map(item => ({
+          id: item.id,
+          product: {
+            id: item.product_id,
+            name: item.product_name || 'Unknown Product',
+            sku: item.product_sku || 'N/A',
+            suggested_sale_price_per_sellable_unit: Number(item.unit_price),
+            last_sale_price_per_sellable_unit: Number(item.unit_price),
+            stock_quantity: item.current_stock_quantity || 0,
+            stock_alert_level: item.stock_alert_level,
+            earliest_expiry_date: item.earliest_expiry_date,
+            current_stock_quantity: item.current_stock_quantity || 0,
+            sellable_unit_name: item.sellable_unit_name || 'Piece'
+          } as Product,
+          quantity: item.quantity,
+          unitPrice: Number(item.unit_price),
+          total: Number(item.total_price || item.quantity * Number(item.unit_price))
+        }));
+        
+        setCurrentSaleItems(items);
+        
+        // Update the selected sale with new data
+        const transformedSale: Sale = {
+          id: updatedSale.id,
+          sale_order_number: updatedSale.sale_order_number,
+          client_id: updatedSale.client_id,
+          client_name: updatedSale.client_name,
+          user_id: updatedSale.user_id,
+          user_name: updatedSale.user_name,
+          sale_date: updatedSale.sale_date,
+          invoice_number: updatedSale.invoice_number,
+          status: updatedSale.status,
+          total_amount: Number(updatedSale.total_amount),
+          paid_amount: Number(updatedSale.paid_amount),
+          due_amount: Number(updatedSale.due_amount || 0),
+          notes: updatedSale.notes,
+          created_at: updatedSale.created_at,
+          updated_at: updatedSale.updated_at,
+          items: items,
+          payments: updatedSale.payments?.map(payment => ({
+            id: payment.id,
+            sale_id: payment.sale_id,
+            user_name: payment.user_name,
+            method: payment.method,
+            amount: Number(payment.amount),
+            payment_date: payment.payment_date,
+            reference_number: payment.reference_number || undefined,
+            notes: payment.notes || undefined,
+            created_at: payment.created_at
+          })) || [],
+          timestamp: new Date(updatedSale.sale_date)
+        };
+        
+        setSelectedSale(transformedSale);
+        
+        // Update today's sales list
+        setTodaySales(prevSales => 
+          prevSales.map(sale => 
+            sale.id === selectedSale.id ? transformedSale : sale
+          )
+        );
+      } catch (error) {
+        console.error('Error updating sale item quantity:', error);
+        const errorMessage = saleService.getErrorMessage(error);
+        showSnackbar(errorMessage, 'error');
+      }
+    } else {
+      // For new sales, update frontend state
+      setCurrentSaleItems(prevItems =>
+        prevItems.map(item =>
+          item.product.id === productId
+            ? {
+                ...item,
+                quantity: newQuantity,
+                total: preciseCalculation(newQuantity, item.unitPrice, 'multiply', 2)
+              }
+            : item
+        )
+      );
+    }
   };
 
-  const removeFromCurrentSale = (productId: number) => {
-    setCurrentSaleItems(prevItems => prevItems.filter(item => item.product.id !== productId));
+  const removeFromCurrentSale = async (productId: number) => {
+    // Since we now create sales on backend before adding items, all sale items have backend records
+    // Find the item to get its ID for backend deletion
+    const itemToRemove = currentSaleItems.find(item => item.product.id === productId);
+    
+    console.log('removeFromCurrentSale called with productId:', productId);
+    console.log('currentSaleItems:', currentSaleItems);
+    console.log('itemToRemove:', itemToRemove);
+    
+    if (!itemToRemove) {
+      console.error('Item not found for productId:', productId);
+      showSnackbar(t('pos:itemNotFound'), 'error');
+      return;
+    }
+
+    if (!itemToRemove.id) {
+      console.error('Item found but has no ID:', itemToRemove);
+      showSnackbar(t('pos:itemNotFound'), 'error');
+      return;
+    }
+
+    console.log('Deleting sale item with ID:', itemToRemove.id);
+
+    // Always make backend request to delete the sale item
+    try {
+      await handleDeleteSaleItem(itemToRemove.id);
+    } catch (error) {
+      console.error('Error removing item from sale:', error);
+      showSnackbar(t('pos:itemRemovalFailed'), 'error');
+    }
   };
 
   const handleDeleteSaleItem = async (saleItemId: number) => {
@@ -233,10 +651,6 @@ const PosPage: React.FC = () => {
     showSnackbar(t('pos:saleCleared'), 'success');
   };
 
-  const handleProceedToPayment = () => {
-    setPaymentDialogOpen(true);
-  };
-
   const handlePaymentComplete = async (errorMessage?: string) => {
     if (errorMessage) {
       // Show error message in toast
@@ -260,7 +674,6 @@ const PosPage: React.FC = () => {
         clearCurrentSale();
         showSnackbar(t('pos:saleCompleted'), 'success');
       }
-      setPaymentDialogOpen(false);
     }
   };
 
@@ -293,19 +706,80 @@ const PosPage: React.FC = () => {
     }
   };
 
-  const handleNewSale = () => {
-    // Clear current sale items
-    setCurrentSaleItems([]);
-    // Clear selected sale
-    setSelectedSale(null);
-    setSelectedSaleId(null);
-    // Reset discount and payment state
-    setDiscountAmount(0);
-    setDiscountType('fixed');
-    setTotalPaid(0);
-    setPaymentMethods([]);
-    // Show success message
-    showSnackbar(t('pos:newSaleStarted'), 'success');
+
+
+  const handleCreateEmptySale = async () => {
+    try {
+      // Create an empty sale on the backend using the dedicated endpoint
+      const emptySaleData = {
+        client_id: null,
+        sale_date: new Date().toISOString().split('T')[0], // Today's date
+        notes: null
+      };
+
+      const newSale = await saleService.createEmptySale(emptySaleData);
+      
+      // Transform the backend sale to POS format
+      const transformedSale: Sale = {
+        id: newSale.id,
+        sale_order_number: newSale.sale_order_number,
+        client_id: newSale.client_id,
+        client_name: newSale.client_name,
+        user_id: newSale.user_id,
+        user_name: newSale.user_name,
+        sale_date: newSale.sale_date,
+        invoice_number: newSale.invoice_number,
+        status: newSale.status,
+        total_amount: Number(newSale.total_amount),
+        paid_amount: Number(newSale.paid_amount),
+        due_amount: Number(newSale.due_amount || 0),
+        notes: newSale.notes,
+        created_at: newSale.created_at,
+        updated_at: newSale.updated_at,
+        items: newSale.items?.map(item => ({
+          id: item.id,
+          product: {
+            id: item.product_id,
+            name: item.product_name || 'Unknown Product',
+            sku: item.product_sku || 'N/A',
+            suggested_sale_price_per_sellable_unit: Number(item.unit_price),
+            last_sale_price_per_sellable_unit: Number(item.unit_price),
+            stock_quantity: item.current_stock_quantity || 0,
+            stock_alert_level: item.stock_alert_level,
+            earliest_expiry_date: item.earliest_expiry_date,
+            current_stock_quantity: item.current_stock_quantity || 0,
+            sellable_unit_name: item.sellable_unit_name || 'Piece'
+          } as Product,
+          quantity: item.quantity,
+          unitPrice: Number(item.unit_price),
+          total: Number(item.total_price || item.quantity * Number(item.unit_price))
+        })) || [],
+        payments: newSale.payments?.map(payment => ({
+          id: payment.id,
+          sale_id: payment.sale_id,
+          user_name: payment.user_name,
+          method: payment.method,
+          amount: Number(payment.amount),
+          payment_date: payment.payment_date,
+          reference_number: payment.reference_number || undefined,
+          notes: payment.notes || undefined,
+          created_at: payment.created_at
+        })) || [],
+        timestamp: new Date(newSale.sale_date)
+      };
+
+      // Select the new sale
+      handleSaleSelect(transformedSale);
+      
+      // Add the new sale to today's sales
+      setTodaySales(prevSales => [transformedSale, ...prevSales]);
+      
+      showSnackbar(t('pos:emptySaleCreated'), 'success');
+    } catch (error) {
+      console.error('Error creating empty sale:', error);
+      const errorMessage = saleService.getErrorMessage(error);
+      showSnackbar(errorMessage, 'error');
+    }
   };
 
   const handleOpenCalculator = () => {
@@ -411,29 +885,38 @@ const PosPage: React.FC = () => {
       <PosHeader 
         onAddProduct={addToCurrentSale} 
         loading={false} 
-        onNewSale={handleNewSale} 
+        onCreateEmptySale={handleCreateEmptySale}
         onOpenCalculator={handleOpenCalculator}
         onGeneratePdf={handleGenerateDailySalesPdf}
         onPreviewPdf={handleOpenPdfDialog}
         onGenerateInvoice={handleOpenInvoiceDialog}
         onPrintThermalInvoice={handlePrintThermalInvoice}
         hasSelectedSale={!!selectedSale}
+        selectedClient={selectedClient}
+        onClientChange={setSelectedClient}
       />
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-          {/* Column 2 - Summary and Actions (30%) */}
-          <SaleSummaryColumn
+          {/* Column 2 - Summary and Actions */}
+          <div className="w-[400px]">
+                      <SaleSummaryColumn
           currentSaleItems={currentSaleItems}
-          onProceedToPayment={handleProceedToPayment}
-          onClearSale={clearCurrentSale}
           discountAmount={discountAmount}
           discountType={discountType}
           totalPaid={totalPaid}
           paymentMethods={paymentMethods}
-          onRemovePayment={handleRemovePayment}
-          onCancelPayment={handleCancelPayments}
+          onDiscountChange={(amount: number, type: 'percentage' | 'fixed') => {
+            setDiscountAmount(amount);
+            setDiscountType(type);
+          }}
+          onTotalPaidChange={setTotalPaid}
+          onPaymentMethodsChange={setPaymentMethods}
+          isEditMode={!!selectedSale}
+          saleId={selectedSale?.id}
+          onPaymentComplete={handlePaymentComplete}
         />
+          </div>
         {/* Column 1 - Current Sale Items (50%) */}
         <CurrentSaleItemsColumn
           currentSaleItems={currentSaleItems}
@@ -441,8 +924,6 @@ const PosPage: React.FC = () => {
           onRemoveItem={removeFromCurrentSale}
           onClearAll={clearCurrentSale}
           isSalePaid={totalPaid > 0 && (preciseSum(currentSaleItems.map(item => item.total)) - (discountType === 'percentage' ? (preciseSum(currentSaleItems.map(item => item.total)) * discountAmount) / 100 : discountAmount)) <= totalPaid}
-          isEditMode={!!selectedSale}
-          onDeleteSaleItem={handleDeleteSaleItem}
         />
 
       
@@ -472,25 +953,7 @@ const PosPage: React.FC = () => {
         onSaleUpdated={loadTodaySales}
       />
 
-      {/* Payment Dialog */}
-      <PaymentDialog
-        open={paymentDialogOpen}
-        onClose={() => setPaymentDialogOpen(false)}
-        items={currentSaleItems}
-        onPaymentComplete={handlePaymentComplete}
-        discountAmount={discountAmount}
-        discountType={discountType}
-        onDiscountChange={(amount, type) => {
-          setDiscountAmount(amount);
-          setDiscountType(type);
-        }}
-        totalPaid={totalPaid}
-        onTotalPaidChange={setTotalPaid}
-        paymentMethods={paymentMethods}
-        onPaymentMethodsChange={setPaymentMethods}
-        isEditMode={!!selectedSale}
-        saleId={selectedSale?.id}
-      />
+
 
       {/* Calculator Dialog */}
       <CalculatorDialog 

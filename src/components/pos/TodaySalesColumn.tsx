@@ -127,14 +127,18 @@ export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
       </div>
 
       {/* Sales List */}
-      <div className="flex-1 p-1 overflow-hidden">
-        <div className="grid grid-cols-1 gap-2 p-2 h-full">
+      <div className="flex-1 p-1 overflow-y-auto max-h-[calc(100vh-200px)]">
+        <div className="grid grid-cols-1 gap-2 p-2">
           {sales
             .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
             .map((sale) => (
             <div key={sale.id} className="relative">
-              {/* Badge outside card */}
-              <Badge className="absolute -top-1 -right-1 z-10 text-xs bg-orange-100 text-orange-800 border-orange-200">
+              {/* Badge outside card - show 0 for empty sales */}
+              <Badge className={`absolute -top-1 -right-1 z-10 text-xs ${
+                sale.items.length === 0 
+                  ? 'bg-gray-100 text-gray-600 border-gray-200' 
+                  : 'bg-orange-100 text-orange-800 border-orange-200'
+              }`}>
                 {sale.items.length}
               </Badge>
               
@@ -142,6 +146,8 @@ export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
                 className={`cursor-pointer transition-all duration-200 hover:shadow-sm border w-[50px] h-[50px] ${
                   selectedSaleId === sale.id
                     ? 'ring-1 ring-blue-500 border-blue-300 bg-blue-50'
+                    : sale.status === 'draft'
+                    ? 'border-dashed border-gray-300 hover:border-gray-400 bg-gray-50'
                     : 'border-gray-200 hover:border-gray-300 bg-white'
                 }`}
                 onClick={() => onSaleSelect(sale)}
@@ -153,8 +159,8 @@ export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
                     </div>
                   </div>
                   
-                  {/* Green check mark when total amount equals total paid */}
-                  {sale.total_amount === sale.paid_amount && (
+                  {/* Green check mark when total amount equals total paid AND there are payments */}
+                  {sale.total_amount === sale.paid_amount && sale.payments && sale.payments.length > 0 && (
                     <div className="absolute bottom-0 left-0 p-1">
                       <div className="h-3 w-3 bg-green-500 rounded-full flex items-center justify-center">
                         <Check className="h-2 w-2 text-white" />
