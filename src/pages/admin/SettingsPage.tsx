@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import WhatsAppSchedulerComponent from "@/components/admin/WhatsAppScheduler";
 
 // --- Zod Schema for Settings Form (Matches AppSettings keys) ---
 // Make all fields optional for partial updates, but RHF will use defaultValues
@@ -379,6 +380,11 @@ const SettingsPage: React.FC = () => {
           </Form>
         </CardContent>
       </Card>
+
+      {/* WhatsApp Scheduler Section */}
+      <div className="mt-8">
+        <WhatsAppSchedulerComponent />
+      </div>
       
     </div>
   );
