@@ -56,6 +56,7 @@ interface SalePaymentCardProps {
   grandTotal: number;
   onPaymentComplete: (errorMessage?: string) => void;
   isEditMode?: boolean;
+  refreshTrigger?: number; // Add this to force refetch when items are added
 }
 
 export const SalePaymentCard: React.FC<SalePaymentCardProps> = ({
@@ -63,6 +64,7 @@ export const SalePaymentCard: React.FC<SalePaymentCardProps> = ({
   grandTotal,
   onPaymentComplete,
   isEditMode = false,
+  refreshTrigger = 0,
 }) => {
   const { t } = useTranslation(['pos', 'common', 'paymentMethods']);
 
@@ -75,10 +77,10 @@ export const SalePaymentCard: React.FC<SalePaymentCardProps> = ({
   const [saleInfo, setSaleInfo] = useState<Sale | null>(null);
   const [loadingSaleInfo, setLoadingSaleInfo] = useState(false);
 
-  // Fetch sale info when saleId changes
+  // Fetch sale info when saleId changes or refreshTrigger changes
   useEffect(() => {
     if (saleId) {
-      // Reset payment lines and errors when switching to a new sale
+      // Reset payment lines and errors when switching to a new sale or refreshing
       setPaymentLines([]);
       setErrors([]);
       fetchSaleInfo();
@@ -87,7 +89,7 @@ export const SalePaymentCard: React.FC<SalePaymentCardProps> = ({
       setPaymentLines([]);
       setErrors([]);
     }
-  }, [saleId]);
+  }, [saleId, refreshTrigger]);
 
   const fetchSaleInfo = async () => {
     if (!saleId) return;
@@ -155,7 +157,8 @@ export const SalePaymentCard: React.FC<SalePaymentCardProps> = ({
   };
 
   // Use fetched sale data for totals when available (for completed sales)
-  const effectiveGrandTotal = saleInfo ? Number(saleInfo.total_amount) : grandTotal;
+  // For edit mode, use sale info total, otherwise use the current grandTotal
+  const effectiveGrandTotal = isEditMode && saleInfo ? Number(saleInfo.total_amount) : grandTotal;
   
   // Calculate effective total paid - prioritize payment lines for new payments, then sale info for existing payments
   let effectiveTotalPaid: number;
@@ -197,8 +200,8 @@ export const SalePaymentCard: React.FC<SalePaymentCardProps> = ({
         amount: Number(payment.amount),
       }));
       setPaymentLines(salePaymentLines);
-    } else {
-      // If no existing payments (including empty array from empty sale), start with one payment line
+    } else if (!isEditMode) {
+      // For new sales (not edit mode), initialize with current grandTotal
       // Only set amount if grandTotal is greater than 0, otherwise leave it empty
       setPaymentLines([{
         id: Date.now().toString(),
@@ -206,7 +209,7 @@ export const SalePaymentCard: React.FC<SalePaymentCardProps> = ({
         amount: grandTotal > 0 ? grandTotal : 0,
       }]);
     }
-  }, [saleInfo?.payments, saleInfo?.payments?.length, grandTotal, saleId]);
+  }, [saleInfo?.payments, saleInfo?.payments?.length, grandTotal, saleId, isEditMode]);
 
   // Reset payment-related state when sale changes
   useEffect(() => {
@@ -217,8 +220,8 @@ export const SalePaymentCard: React.FC<SalePaymentCardProps> = ({
 
   // Reset payment lines when sale info shows empty payments (like empty sale)
   useEffect(() => {
-    if (saleInfo && saleInfo.payments && saleInfo.payments.length === 0) {
-      // Reset to one payment line with grand total for empty sales
+    if (saleInfo && saleInfo.payments && saleInfo.payments.length === 0 && !isEditMode) {
+      // Reset to one payment line with grand total for empty sales (only for new sales)
       // Only set amount if grandTotal is greater than 0, otherwise leave it empty
       setPaymentLines([{
         id: Date.now().toString(),
@@ -226,31 +229,34 @@ export const SalePaymentCard: React.FC<SalePaymentCardProps> = ({
         amount: grandTotal > 0 ? grandTotal : 0,
       }]);
     }
-  }, [saleInfo?.payments, grandTotal]);
+  }, [saleInfo?.payments, grandTotal, isEditMode]);
 
   // Update payment amounts when grandTotal changes
   useEffect(() => {
     if (paymentLines.length > 0 && grandTotal > 0) {
-      // Calculate the total amount already paid (excluding the last payment line)
-      const existingPayments = paymentLines.slice(0, -1);
-      const totalExistingPaid = preciseSum(existingPayments.map(line => line.amount || 0), 2);
-      
-      // Calculate the remaining amount that needs to be paid
-      const remainingAmount = preciseCalculation(grandTotal, totalExistingPaid, 'subtract', 2);
-      
-      // Update only the last payment line with the remaining amount
-      const updatedPaymentLines = paymentLines.map((line, index) => {
-        if (index === paymentLines.length - 1) {
-          return {
-            ...line,
-            amount: Math.max(0, remainingAmount)
-          };
-        }
-        return line;
-      });
-      setPaymentLines(updatedPaymentLines);
+      // Only update if we're not loading sale info (to avoid conflicts with fetched data)
+      if (!loadingSaleInfo) {
+        // Calculate the total amount already paid (excluding the last payment line)
+        const existingPayments = paymentLines.slice(0, -1);
+        const totalExistingPaid = preciseSum(existingPayments.map(line => line.amount || 0), 2);
+        
+        // Calculate the remaining amount that needs to be paid
+        const remainingAmount = preciseCalculation(grandTotal, totalExistingPaid, 'subtract', 2);
+        
+        // Update only the last payment line with the remaining amount
+        const updatedPaymentLines = paymentLines.map((line, index) => {
+          if (index === paymentLines.length - 1) {
+            return {
+              ...line,
+              amount: Math.max(0, remainingAmount)
+            };
+          }
+          return line;
+        });
+        setPaymentLines(updatedPaymentLines);
+      }
     }
-  }, [grandTotal, paymentLines.length]);
+  }, [grandTotal, paymentLines.length, loadingSaleInfo]);
 
   const addPaymentLine = () => {
     // Calculate the total amount already paid

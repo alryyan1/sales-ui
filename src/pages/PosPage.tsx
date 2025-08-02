@@ -24,7 +24,6 @@ import {
   PosPdfDialog,
   InvoicePdfDialog,
   ThermalInvoiceDialog,
-  PaymentMethodData,
 } from "../components/pos";
 
 // Types
@@ -57,9 +56,10 @@ const PosPage: React.FC = () => {
   // Discount and Payment State
   const [discountAmount, setDiscountAmount] = useState(0);
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('fixed');
-  const [totalPaid, setTotalPaid] = useState(0);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodData[]>([]);
   const [selectedClient, setSelectedClient] = useState<import('../services/clientService').Client | null>(null);
+  
+  // Refresh trigger for SalePaymentCard
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Load today's sales on mount
   useEffect(() => {
@@ -385,6 +385,9 @@ const PosPage: React.FC = () => {
           );
           
           showSnackbar(`${product.name} ${t('pos:addedToCart')}`, 'success');
+          
+          // Increment refresh trigger to force SalePaymentCard to refetch sale data
+          setRefreshTrigger(prev => prev + 1);
           return;
         }
         
@@ -477,6 +480,9 @@ const PosPage: React.FC = () => {
       );
       
       showSnackbar(`${product.name} ${t('pos:addedToCart')}`, 'success');
+      
+      // Increment refresh trigger to force SalePaymentCard to refetch sale data
+      setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       console.error('Error adding product to sale:', error);
       const errorMessage = saleService.getErrorMessage(error);
@@ -642,8 +648,7 @@ const PosPage: React.FC = () => {
         setSelectedSale(null);
         setSelectedSaleId(null);
         setCurrentSaleItems([]);
-        setPaymentMethods([]);
-        setTotalPaid(0);
+        // Reset payment state - now handled by SalePaymentCard
         setDiscountAmount(0);
         setDiscountType('fixed');
         showSnackbar(t('pos:saleCancelled'), 'success');
@@ -663,9 +668,7 @@ const PosPage: React.FC = () => {
 
   const clearCurrentSale = () => {
     setCurrentSaleItems([]);
-    // Clear payment methods when clearing sale
-    setPaymentMethods([]);
-    setTotalPaid(0);
+    // Reset payment state - now handled by SalePaymentCard
     setDiscountAmount(0);
     setDiscountType('fixed');
     showSnackbar(t('pos:saleCleared'), 'success');
@@ -683,8 +686,7 @@ const PosPage: React.FC = () => {
         // If we were editing a sale, keep it selected but clear the items and payments
         // This maintains focus on the completed sale
         setCurrentSaleItems([]);
-        setPaymentMethods([]);
-        setTotalPaid(0);
+        // Reset payment state - now handled by SalePaymentCard
         setDiscountAmount(0);
         setDiscountType('fixed');
         showSnackbar(t('pos:saleUpdated'), 'success');
@@ -758,8 +760,7 @@ const PosPage: React.FC = () => {
           setSelectedSale(transformedSale);
           setSelectedSaleId(transformedSale.id);
           setCurrentSaleItems([]);
-          setPaymentMethods([]);
-          setTotalPaid(0);
+          // Reset payment state - now handled by SalePaymentCard
           setDiscountAmount(0);
           setDiscountType('fixed');
           
@@ -789,18 +790,8 @@ const PosPage: React.FC = () => {
     setCurrentSaleItems(items);
     
     // Load sale payments if they exist
-    if (sale.payments && sale.payments.length > 0) {
-      const paymentMethods: PaymentMethodData[] = sale.payments.map(payment => ({
-        method: payment.method,
-        amount: payment.amount,
-        reference: payment.reference_number || undefined,
-      }));
-      setPaymentMethods(paymentMethods);
-      setTotalPaid(sale.paid_amount);
-    } else {
-      setPaymentMethods([]);
-      setTotalPaid(0);
-    }
+    // Payment state is now handled by SalePaymentCard component
+    // No need to set payment methods or total paid here
   };
 
 
@@ -868,8 +859,8 @@ const PosPage: React.FC = () => {
       // Select the new sale
       handleSaleSelect(transformedSale);
       
-      // Add the new sale to today's sales
-      setTodaySales(prevSales => [transformedSale, ...prevSales]);
+      // Refresh today's sales to ensure consistency and get the most up-to-date data
+      await loadTodaySales();
       
       showSnackbar(t('pos:emptySaleCreated'), 'success');
     } catch (error) {
@@ -938,17 +929,14 @@ const PosPage: React.FC = () => {
           currentSaleItems={currentSaleItems}
           discountAmount={discountAmount}
           discountType={discountType}
-          totalPaid={totalPaid}
-          paymentMethods={paymentMethods}
           onDiscountChange={(amount: number, type: 'percentage' | 'fixed') => {
             setDiscountAmount(amount);
             setDiscountType(type);
           }}
-          onTotalPaidChange={setTotalPaid}
-          onPaymentMethodsChange={setPaymentMethods}
           isEditMode={!!selectedSale}
           saleId={selectedSale?.id}
           onPaymentComplete={handlePaymentComplete}
+          refreshTrigger={refreshTrigger}
         />
           </div>
         {/* Column 1 - Current Sale Items (50%) */}

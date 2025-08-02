@@ -31,6 +31,7 @@ interface SaleSummaryColumnProps {
   isEditMode?: boolean;
   saleId?: number;
   onPaymentComplete: (errorMessage?: string) => void;
+  refreshTrigger?: number; // Add this to force refetch when items are added
 }
 
 export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
@@ -41,6 +42,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
   isEditMode = false,
   saleId,
   onPaymentComplete,
+  refreshTrigger = 0,
 }) => {
   const { t } = useTranslation(['pos', 'common']);
 
@@ -295,6 +297,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
         grandTotal={grandTotal}
         onPaymentComplete={onPaymentComplete}
         isEditMode={isEditMode}
+        refreshTrigger={refreshTrigger}
       />
     </div>
   );
