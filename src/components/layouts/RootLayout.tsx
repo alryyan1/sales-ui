@@ -90,6 +90,7 @@ const RootLayout: React.FC = () => {
     }
 
     const reportItems: ReportItem[] = [
+         { to: "/analytics", labelKey: "analytics", permission: "view-reports"},
          { to: "/reports/sales", labelKey: "salesReportTitle", permission: "view-reports"},
          { to: "/reports/purchases", labelKey: "purchaseReportTitle", permission: "view-reports"},
          { to: "/reports/inventory", labelKey: "inventoryReportTitle", permission: "view-reports"},

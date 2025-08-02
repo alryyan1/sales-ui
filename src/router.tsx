@@ -47,6 +47,7 @@ import NearExpiryReportPage from "./components/reports/NearExpiryReportPage";
 import MonthlyRevenueReportPage from "./components/reports/MonthlyRevenueReportPage";
 import SupplierLedgerPage from "./pages/suppliers/SupplierLedgerPage";
 import BackupPage from "./pages/admin/BackupPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
 // ... other page imports
 
 // --- Admin Route Guard Component ---
@@ -154,6 +155,9 @@ const router = createHashRouter([
               }
             ],
           },
+          
+          // Analytics
+          { path: "analytics", element: <AnalyticsPage /> },
 
           // --- Admin Section ---
           {

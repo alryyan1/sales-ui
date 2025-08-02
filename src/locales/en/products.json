@@ -48,6 +48,8 @@
     "product": "Product",
     "productName": "Product Name",
     "searchProduct": "Search Product",
+    "searchByNameOrSku": "Search by name or SKU",
+    "searchByNameOrSkuHint": "Type product name or SKU, then press Enter to select",
     "sku": "SKU",
     "enterSkuAndPressEnter": "Enter SKU and press Enter",
     "productNotFound": "Product not found",

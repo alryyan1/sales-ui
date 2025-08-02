@@ -20,7 +20,7 @@ import Tooltip from "@mui/material/Tooltip";
 import Chip from "@mui/material/Chip"; // To display status
 
 // Icons
-import VisibilityIcon from "@mui/icons-material/Visibility"; // View details icon
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf"; // PDF report icon
 import FilterListIcon from "@mui/icons-material/FilterList";
 import ClearIcon from "@mui/icons-material/Clear";
 import HistoryIcon from "@mui/icons-material/History"; // Product history icon
@@ -191,11 +191,16 @@ const PurchasesListPage: React.FC = () => {
     setCurrentPage(value);
   };
 
-  // --- Navigation Handler ---
-  const handleViewDetails = (id: number) => {
-    // Navigate to a dedicated page for purchase details (implement later)
-    navigate(`/purchases/${id}/edit`);
-    // Or open a details modal
+  // --- PDF Report Handler ---
+  const handleViewPdfReport = async (id: number) => {
+    try {
+      // Generate and view PDF report for the purchase
+      await exportService.exportPurchasePdf(id);
+      console.log('PDF report generated successfully');
+    } catch (error) {
+      console.error('Failed to generate PDF report:', error);
+      // Show error message (you can add a toast notification here if needed)
+    }
   };
 
   // --- Product History Handler ---
@@ -479,14 +484,14 @@ const PurchasesListPage: React.FC = () => {
                            gap: 0.5,
                          }}
                        >
-                         <Tooltip title={t("common:view") || ""}>
+                         <Tooltip title={t("purchases:viewPdfReport") || "View PDF Report"}>
                            <IconButton
-                             aria-label={t("common:view") || "View"}
+                             aria-label={t("purchases:viewPdfReport") || "View PDF Report"}
                              color="default"
                              size="small"
-                             onClick={() => handleViewDetails(purchase.id)}
+                             onClick={() => handleViewPdfReport(purchase.id)}
                            >
-                             <VisibilityIcon fontSize="small" />
+                             <PictureAsPdfIcon fontSize="small" />
                            </IconButton>
                          </Tooltip>
                          

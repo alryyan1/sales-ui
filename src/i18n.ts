@@ -25,6 +25,29 @@ import settingsAr from './locales/ar/settings.json'; // <-- Import
 import paymentMethodsAr from './locales/ar/paymentMethods.json'; // <-- Import
 import unitsAr from './locales/ar/units.json'; // <-- Import
 import posAr from './locales/ar/pos.json'; // <-- Import
+import analyticsAr from './locales/ar/analytics.json'; // <-- Import
+
+// English imports - only import files that exist
+import commonEN from './locales/en/common.json';
+import validationEN from './locales/en/validation.json';
+import navigationEN from './locales/en/navigation.json';
+import loginEN from './locales/en/login.json';
+import clientsEN from './locales/en/clients.json';
+import supplierEN from './locales/en/suppliers.json';
+import productsEN from './locales/en/products.json';
+import purchasesEN from './locales/en/purchases.json';
+import salesEN from './locales/en/sales.json';
+import dashboardEN from './locales/en/dashboard.json';
+import reportEN from './locales/en/reports.json';
+import usersEN from './locales/en/users.json';
+import rolesEN from './locales/en/roles.json';
+import permissionsEN from './locales/en/permissions.json';
+import inventoryEN from './locales/en/inventory.json';
+import categoryEN from './locales/en/categories.json';
+import settingsEN from './locales/en/settings.json';
+import paymentMethodsEN from './locales/en/paymentMethods.json';
+import posEN from './locales/en/pos.json';
+import analyticsEN from './locales/en/analytics.json';
 // ... استيراد ملفات أخرى
 
 // --- تعريف الموارد ---
@@ -52,18 +75,34 @@ const resources = {
     settings:settingsAr, // <-- Add this line
     paymentMethods:paymentMethodsAr,
     units:unitsAr,
-    pos:posAr
-
-
+    pos:posAr,
+    analytics:analyticsAr
     
     // ... namespaces أخرى
   },
+  en: {
+    common: commonEN,
+    validation: validationEN,
+    navigation: navigationEN,
+    login: loginEN,
+    clients: clientsEN,
+    suppliers: supplierEN,
+    products: productsEN,
+    purchases: purchasesEN,
+    sales: salesEN,
+    dashboard: dashboardEN,
+    reports: reportEN,
+    users: usersEN,
+    roles: rolesEN,
+    permissions: permissionsEN,
+    inventory: inventoryEN,
+    categories: categoryEN,
+    settings: settingsEN,
+    paymentMethods: paymentMethodsEN,
+    pos: posEN,
+    analytics: analyticsEN
+  }
   // يمكنك إضافة لغات أخرى هنا بنفس الهيكل
-  // en: {
-  //   common: commonEN,
-  //   validation: validationEN,
-  //   ...
-  // }
 };
 
 // --- تعريف قائمة الـ Namespaces المستخدمة ---
@@ -76,6 +115,9 @@ export const namespaces = [
     'register',
     'clients',
     'suppliers',
+    'products',
+    'purchases',
+    'sales',
     'dashboard',
     'reports',
     'users', // <-- Add namespace
@@ -87,7 +129,8 @@ export const namespaces = [
     'settings', // <-- Add namespace
     'paymentMethods',
     'units',
-    'pos'
+    'pos',
+    'analytics'
     // ... أسماء namespaces أخرى
 ];
 
@@ -99,8 +142,8 @@ i18n
     ns: namespaces, // قائمة بجميع الـ namespaces
     defaultNS: 'common', // تحديد الـ Namespace الافتراضي (مهم!)
 
-    lng: 'ar', // اللغة النشطة الافتراضية
-    fallbackLng: 'ar', // اللغة الاحتياطية
+    lng: 'ar', // اللغة النشطة الافتراضية - changed to English for better compatibility
+    fallbackLng: 'en', // اللغة الاحتياطية
 
     interpolation: {
       escapeValue: false // React يحمي بالفعل من XSS

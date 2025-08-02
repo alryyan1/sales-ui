@@ -26,5 +26,8 @@
   "results": "results",
   "noResultsFound": "No results found",
   "allProducts": "All Products",
-  "appName": "Sales Management System"
+  "appName": "Sales Management System",
+  "analytics": "Analytics",
+  "refresh": "Refresh",
+  "retry": "Retry"
 } 

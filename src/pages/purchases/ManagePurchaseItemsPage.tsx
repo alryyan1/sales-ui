@@ -251,6 +251,8 @@ const ManagePurchaseItemsPage: React.FC = () => {
       const params = new URLSearchParams();
       if (searchTerm) {
         params.append("search", searchTerm);
+        // Also search by SKU
+        params.append("search_sku", "true");
       } else {
         params.append("show_all_for_empty_search", "true");
       }
@@ -308,6 +310,39 @@ const ManagePurchaseItemsPage: React.FC = () => {
       }
     }
   }, [skuInput, handleProductSelect, t]);
+
+  // Handle autocomplete Enter key for SKU search
+  const handleAutocompleteKeyDown = useCallback(async (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' && productInputValue.trim() && !selectedProduct) {
+      e.preventDefault();
+      try {
+        // Try to search by SKU first
+        const product = await purchaseService.getProductBySku(productInputValue.trim());
+        if (product) {
+          handleProductSelect(product);
+          return;
+        }
+        
+        // If no SKU match, search in existing options by name
+        const nameMatch = productOptions.find(p => 
+          p.name.toLowerCase().includes(productInputValue.toLowerCase()) ||
+          (p.sku && p.sku.toLowerCase() === productInputValue.toLowerCase())
+        );
+        
+        if (nameMatch) {
+          handleProductSelect(nameMatch);
+        } else {
+          toast.error(t('common:error'), {
+            description: t('products:productNotFound'),
+          });
+        }
+      } catch {
+        toast.error(t('common:error'), {
+          description: t('products:errorSearchingSku'),
+        });
+      }
+    }
+  }, [productInputValue, selectedProduct, productOptions, handleProductSelect, t]);
 
   // Handle adding item
   const handleAddItem = useCallback(() => {
@@ -514,10 +549,12 @@ const ManagePurchaseItemsPage: React.FC = () => {
                 blurOnSelect={true}
                 filterOptions={(x) => x} // Disable client-side filtering since we're doing server-side search
                 size="small"
+                onKeyDown={handleAutocompleteKeyDown}
                 renderInput={(params) => (
                   <TextField
                     {...params}
                     label={t('products:searchProduct')}
+                    placeholder={t('products:searchByNameOrSku')}
                     size="small"
                     InputProps={{
                       ...params.InputProps,
@@ -532,6 +569,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
                 )}
                 renderOption={(props, option) => {
                   const { key, ...otherProps } = props;
+                  const isSkuMatch = option.sku && productInputValue.toLowerCase() === option.sku.toLowerCase();
                   return (
                     <li key={key} {...otherProps}>
                       <Box>
@@ -539,7 +577,12 @@ const ManagePurchaseItemsPage: React.FC = () => {
                           {option.name}
                         </Typography>
                         {option.sku && (
-                          <Typography variant="caption" color="text.secondary" display="block">
+                          <Typography 
+                            variant="caption" 
+                            color={isSkuMatch ? "primary" : "text.secondary"} 
+                            display="block"
+                            sx={{ fontWeight: isSkuMatch ? 'bold' : 'normal' }}
+                          >
                             SKU: {option.sku}
                           </Typography>
                         )}
@@ -548,6 +591,9 @@ const ManagePurchaseItemsPage: React.FC = () => {
                   );
                 }}
               />
+              <Typography variant="caption" color="text.secondary" className="block mt-1">
+                {t('products:searchByNameOrSkuHint')}
+              </Typography>
             </div>
 
             {/* SKU Input */}
@@ -646,7 +692,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
                           fontWeight: 'bold'
                         }}
                       >
-                        {index + 1}
+                        {(purchase.items?.length || 0) - index}
                       </Avatar>
                       <div>
                         <Typography variant="subtitle2" className="font-medium">

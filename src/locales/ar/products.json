@@ -49,6 +49,8 @@
     "product": "المنتج",
     "productName": "اسم المنتج",
     "searchProduct": "البحث عن منتج",
+    "searchByNameOrSku": "البحث بالاسم أو الرقم المرجعي",
+    "searchByNameOrSkuHint": "اكتب اسم المنتج أو الرقم المرجعي، ثم اضغط Enter للاختيار",
     "sku": "الرقم المرجعي",
     "enterSkuAndPressEnter": "أدخل الرقم المرجعي واضغط Enter",
     "productNotFound": "المنتج غير موجود",
