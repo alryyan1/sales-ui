@@ -12,6 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 // MUI Components
 import { 
@@ -22,7 +23,7 @@ import {
 } from '@mui/material';
 
 // Icons
-import { ArrowLeft, AlertCircle, Package, Plus } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Plus, BarChart3 } from 'lucide-react';
 import { Delete as DeleteIcon } from '@mui/icons-material';
 
 // Services and Types
@@ -47,6 +48,78 @@ interface AddPurchaseItemData {
   expiry_date?: string;
 }
 
+// Custom Input component with select-on-focus behavior
+const SelectOnFocusInput = React.forwardRef<HTMLInputElement, React.ComponentProps<typeof Input>>((props, ref) => {
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.select();
+    if (props.onFocus) {
+      props.onFocus(e);
+    }
+  };
+
+  return <Input {...props} ref={ref} onFocus={handleFocus} />;
+});
+
+SelectOnFocusInput.displayName = 'SelectOnFocusInput';
+
+// Summary Dialog Component
+const PurchaseSummaryDialog: React.FC<{ 
+  summary: { totalItems: number; totalCost: number; totalSell: number; totalQuantity: number }; 
+  purchase: { supplier_name?: string }; 
+  t: (key: string) => string 
+}> = ({ summary, purchase, t }) => (
+  <DialogContent className="max-w-md">
+    <DialogHeader>
+      <DialogTitle className="flex items-center gap-2">
+        <BarChart3 className="h-5 w-5" />
+        {t('purchases:purchaseSummary')}
+      </DialogTitle>
+    </DialogHeader>
+    <div className="grid grid-cols-1 gap-4 mt-4">
+      <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+        <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+          {summary.totalItems}
+        </div>
+        <div className="text-sm text-gray-600 dark:text-gray-400">
+          {t('purchases:totalItems')}
+        </div>
+      </div>
+      <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+        <div className="text-3xl font-bold text-green-600 dark:text-green-400">
+          {formatCurrency(summary.totalCost)}
+        </div>
+        <div className="text-sm text-gray-600 dark:text-gray-400">
+          {t('purchases:totalCost')}
+        </div>
+      </div>
+      <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+        <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+          {formatCurrency(summary.totalSell)}
+        </div>
+        <div className="text-sm text-gray-600 dark:text-gray-400">
+          {t('purchases:totalSellValue')}
+        </div>
+      </div>
+      <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+        <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
+          {formatNumber(summary.totalQuantity)}
+        </div>
+        <div className="text-sm text-gray-600 dark:text-gray-400">
+          {t('purchases:totalQuantity')}
+        </div>
+      </div>
+      <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <div className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+          {purchase.supplier_name || 'N/A'}
+        </div>
+        <div className="text-sm text-gray-600 dark:text-gray-400">
+          {t('purchases:supplier')}
+        </div>
+      </div>
+    </div>
+  </DialogContent>
+);
+
 const ManagePurchaseItemsPage: React.FC = () => {
   const { id: purchaseIdParam } = useParams<{ id: string }>();
   const purchaseId = purchaseIdParam ? Number(purchaseIdParam) : null;
@@ -62,6 +135,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
   const [salePrice, setSalePrice] = useState<number | undefined>(undefined);
   const [batchNumber, setBatchNumber] = useState<string>('');
   const [expiryDate, setExpiryDate] = useState<string>('');
+  const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
 
   // Fetch purchase data
   const {
@@ -342,56 +416,23 @@ const ManagePurchaseItemsPage: React.FC = () => {
             </p>
           </div>
         </div>
-        <Badge variant={purchase.status === 'received' ? 'default' : 'secondary'}>
-          {t(`purchases:status_${purchase.status}`)}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Dialog open={summaryDialogOpen} onOpenChange={setSummaryDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                {t('purchases:viewSummary')}
+              </Button>
+            </DialogTrigger>
+            <PurchaseSummaryDialog summary={summary} purchase={purchase} t={t} />
+          </Dialog>
+          <Badge variant={purchase.status === 'received' ? 'default' : 'secondary'}>
+            {t(`purchases:status_${purchase.status}`)}
+          </Badge>
+        </div>
       </div>
 
-      {/* Purchase Summary */}
-      <Card className="mb-4">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            {t('purchases:purchaseSummary')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {summary.totalItems}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                {t('purchases:totalItems')}
-              </div>
-            </div>
-            <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                {formatCurrency(summary.totalCost)}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                {t('purchases:totalCost')}
-              </div>
-            </div>
-            <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                {formatCurrency(summary.totalSell)}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                {t('purchases:totalSellValue')}
-              </div>
-            </div>
-            <div className="text-center p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-              <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                {formatNumber(summary.totalQuantity)}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                {t('purchases:totalQuantity')}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+
 
       {/* Add New Item */}
       <Card className="mb-4">
@@ -417,7 +458,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
             {/* SKU Input */}
             <div className="space-y-2">
               <Label>{t('products:sku')}</Label>
-              <Input
+              <SelectOnFocusInput
                 value={skuInput}
                 onChange={(e) => setSkuInput(e.target.value)}
                 onKeyPress={handleSkuKeyPress}
@@ -428,7 +469,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
             {/* Quantity */}
             <div className="space-y-2">
               <Label>{t('purchases:quantity')}</Label>
-              <Input
+              <SelectOnFocusInput
                 type="number"
                 value={quantity}
                 onChange={(e) => setQuantity(Number(e.target.value))}
@@ -439,7 +480,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
             {/* Unit Cost */}
             <div className="space-y-2">
               <Label>{t('purchases:unitCost')}</Label>
-              <Input
+              <SelectOnFocusInput
                 type="number"
                 value={unitCost}
                 onChange={(e) => setUnitCost(Number(e.target.value))}
@@ -451,7 +492,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
             {/* Sale Price */}
             <div className="space-y-2">
               <Label>{t('purchases:salePrice')}</Label>
-              <Input
+              <SelectOnFocusInput
                 type="number"
                 value={salePrice || ''}
                 onChange={(e) => setSalePrice(e.target.value ? Number(e.target.value) : undefined)}
@@ -463,7 +504,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
             {/* Batch Number */}
             <div className="space-y-2">
               <Label>{t('purchases:batchNumber')}</Label>
-              <Input
+              <SelectOnFocusInput
                 value={batchNumber}
                 onChange={(e) => setBatchNumber(e.target.value)}
               />

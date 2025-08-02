@@ -140,6 +140,7 @@ export const EditablePurchaseItemField: React.FC<EditablePurchaseItemFieldProps>
         <TextField
           ref={inputRef}
           value={editValue}
+          onFocus={(e)=>e.target.select()}
           onChange={handleInputChange}
           onKeyDown={handleKeyPress}
           onBlur={handleBlur}

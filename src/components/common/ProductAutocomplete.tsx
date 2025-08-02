@@ -215,7 +215,7 @@ export const ProductAutocomplete: React.FC<ProductAutocompleteProps> = React.mem
         isOptionEqualToValue={(option, value) => option.id === value.id}
         noOptionsText={t('common:noResults')}
         disabled={disabled}
-        freeSolo={false}
+        freeSolo={true}
         clearOnBlur={true}
         selectOnFocus={true}
         blurOnSelect={true}
