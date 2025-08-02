@@ -2,7 +2,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'; // Import InternalAxiosRequestConfig
 
 // --- Base URL ---
-const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost/sales-api/public';
 
 export const apiClient = axios.create({
     baseURL: `${VITE_API_BASE_URL}/api`,

@@ -53,6 +53,11 @@ const PosPage: React.FC = () => {
   // User filtering state
   const [filterByCurrentUser, setFilterByCurrentUser] = useState(true);
   
+  // Date selection state
+  const [selectedDate, setSelectedDate] = useState<string>(
+    new Date().toISOString().split('T')[0] // Today's date as default
+  );
+  
   // Discount and Payment State
   const [discountAmount, setDiscountAmount] = useState(0);
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('fixed');
@@ -64,13 +69,13 @@ const PosPage: React.FC = () => {
   // Load today's sales on mount
   useEffect(() => {
     loadTodaySales();
-  }, [filterByCurrentUser]); // Reload when filter changes
+  }, [filterByCurrentUser, selectedDate]); // Reload when filter or date changes
 
   const loadTodaySales = async () => {
     try {
-      // Load today's sales from database with user filtering
+      // Load sales for selected date from database with user filtering
       const response = await saleService.getSales(
-        1, '', '', '', '', 1000, null, true, 
+        1, '', '', selectedDate, selectedDate, 1000, null, false, 
         filterByCurrentUser ? user?.id || null : null
       );
       const dbSales = response.data || [];
@@ -899,6 +904,10 @@ const PosPage: React.FC = () => {
     }
   };
 
+  const handleDateChange = (date: string) => {
+    setSelectedDate(date);
+  };
+
   // Payment method handlers
 
 
@@ -919,6 +928,8 @@ const PosPage: React.FC = () => {
         onClientChange={setSelectedClient}
         filterByCurrentUser={filterByCurrentUser}
         onToggleUserFilter={() => setFilterByCurrentUser(!filterByCurrentUser)}
+        selectedDate={selectedDate}
+        onDateChange={handleDateChange}
       />
 
       {/* Main Content */}
@@ -961,6 +972,7 @@ const PosPage: React.FC = () => {
             isCollapsed={isTodaySalesCollapsed}
             onToggleCollapse={() => setIsTodaySalesCollapsed(!isTodaySalesCollapsed)}
             filterByCurrentUser={filterByCurrentUser}
+            selectedDate={selectedDate}
           />
         </div>
       </div>

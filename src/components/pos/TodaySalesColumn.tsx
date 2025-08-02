@@ -20,6 +20,7 @@ interface TodaySalesColumnProps {
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
   filterByCurrentUser?: boolean;
+  selectedDate?: string;
 }
 
 export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
@@ -29,6 +30,7 @@ export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
   isCollapsed = false,
   onToggleCollapse,
   filterByCurrentUser = false,
+  selectedDate,
 }) => {
   const { t } = useTranslation(['pos', 'common']);
 
@@ -66,7 +68,9 @@ export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
             <Badge className="text-xs bg-green-100 text-green-800 border-green-200 mb-1">
               {sales.length}
             </Badge>
-            <p className="text-xs text-gray-600">Sales Today</p>
+            <p className="text-xs text-gray-600">
+              {selectedDate ? `Sales ${new Date(selectedDate).toLocaleDateString()}` : 'Sales Today'}
+            </p>
             <p className="text-xs font-medium text-green-700">
               {formatCurrency(sales.reduce((sum, sale) => sum + sale.total_amount, 0))}
             </p>
@@ -84,9 +88,9 @@ export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-1">
               <Receipt className="h-3 w-3 text-blue-600" />
-              <span className="text-xs font-semibold text-blue-900">
-                {filterByCurrentUser ? 'My Sales' : 'Today\'s Sales'}
-              </span>
+                          <span className="text-xs font-semibold text-blue-900">
+              {filterByCurrentUser ? 'My Sales' : (selectedDate ? `Sales ${new Date(selectedDate).toLocaleDateString()}` : 'Today\'s Sales')}
+            </span>
             </div>
             
             <div className="flex items-center space-x-1">
@@ -122,7 +126,7 @@ export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
           <div className="flex items-center space-x-1">
             <Receipt className="h-3 w-3 text-blue-600" />
             <span className="text-xs font-semibold text-blue-900">
-              {filterByCurrentUser ? 'My Sales' : 'Today\'s Sales'}
+              {filterByCurrentUser ? 'My Sales' : (selectedDate ? `Sales ${new Date(selectedDate).toLocaleDateString()}` : 'Today\'s Sales')}
             </span>
           </div>
           

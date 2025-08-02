@@ -149,5 +149,7 @@
   "showAllSales": "عرض جميع المبيعات",
   "saleDate": "تاريخ البيع",
   "saleTime": "وقت البيع",
-  "saleUser": "أنشئ بواسطة"
+  "saleUser": "أنشئ بواسطة",
+  "selectDate": "اختر التاريخ",
+  "salesForDate": "المبيعات للتاريخ {{date}}"
 } 

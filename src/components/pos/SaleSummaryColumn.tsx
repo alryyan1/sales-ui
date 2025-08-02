@@ -94,7 +94,23 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
         notes: saleData.notes,
         created_at: saleData.created_at,
         updated_at: saleData.updated_at,
-        items: saleData.items?.map((item: any) => ({
+        items: saleData.items?.map((item: {
+          id: number;
+          product_id: number;
+          product_name?: string;
+          product_sku?: string;
+          scientific_name?: string;
+          description?: string;
+          unit_price: number;
+          quantity: number;
+          total_price?: number;
+          current_stock_quantity?: number;
+          stock_alert_level?: number;
+          earliest_expiry_date?: string;
+          sellable_unit_name?: string;
+          created_at?: string;
+          updated_at?: string;
+        }) => ({
           id: item.id,
           product: {
             id: item.product_id,
@@ -111,12 +127,37 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
             sellable_unit_name: item.sellable_unit_name || 'Piece',
             created_at: item.created_at || new Date().toISOString(),
             updated_at: item.updated_at || new Date().toISOString()
-          } as any,
+          } as {
+            id: number;
+            name: string;
+            sku: string;
+            scientific_name: string;
+            description: string;
+            suggested_sale_price_per_sellable_unit: number;
+            last_sale_price_per_sellable_unit: number;
+            stock_quantity: number;
+            stock_alert_level?: number;
+            earliest_expiry_date?: string;
+            current_stock_quantity: number;
+            sellable_unit_name: string;
+            created_at: string;
+            updated_at: string;
+          },
           quantity: item.quantity,
           unitPrice: Number(item.unit_price),
           total: Number(item.total_price || item.quantity * Number(item.unit_price))
         })) || [],
-        payments: saleData.payments?.map((payment: any) => ({
+        payments: saleData.payments?.map((payment: {
+          id: number;
+          sale_id: number;
+          user_name?: string;
+          method: string;
+          amount: number;
+          payment_date: string;
+          reference_number?: string;
+          notes?: string;
+          created_at: string;
+        }) => ({
           id: payment.id,
           sale_id: payment.sale_id,
           user_name: payment.user_name,
@@ -175,6 +216,11 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
           <CardTitle className="flex items-center space-x-2">
             <Receipt className="h-5 w-5" />
             <span>{t('pos:saleSummary')}</span>
+            {isEditMode && saleId && (
+              <span className="text-sm font-bold text-blue-600 ml-2">
+                Sale ID: {saleId}
+              </span>
+            )}
             {isEditMode && saleInfo && (
               <span className="text-sm text-gray-500 ml-2">
                 #{saleInfo.sale_order_number || saleInfo.id}
@@ -189,6 +235,12 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
         </CardHeader>
         <CardContent className="space-y-2">
           {/* Sale Info - Only show when editing existing sale */}
+          {isEditMode && saleId && (
+            <div className="flex justify-between bg-blue-50 p-2 rounded-lg border border-blue-200">
+              <span className="text-blue-700 font-semibold">Current Sale ID:</span>
+              <span className="text-blue-700 font-bold text-lg">#{saleId}</span>
+            </div>
+          )}
           {isEditMode && saleInfo && (
             <>
               <div className="flex justify-between">

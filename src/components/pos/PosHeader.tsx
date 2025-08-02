@@ -47,9 +47,11 @@ interface PosHeaderProps {
   onClientChange?: (client: Client | null) => void;
   filterByCurrentUser?: boolean;
   onToggleUserFilter?: () => void;
+  selectedDate?: string;
+  onDateChange?: (date: string) => void;
 }
 
-export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onCreateEmptySale, onOpenCalculator, onGeneratePdf, onPreviewPdf, onGenerateInvoice, onPrintThermalInvoice, hasSelectedSale, selectedClient, onClientChange, filterByCurrentUser, onToggleUserFilter }) => {
+export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onCreateEmptySale, onOpenCalculator, onGeneratePdf, onPreviewPdf, onGenerateInvoice, onPrintThermalInvoice, hasSelectedSale, selectedClient, onClientChange, filterByCurrentUser, onToggleUserFilter, selectedDate, onDateChange }) => {
   const { t } = useTranslation(['pos', 'common']);
   const [searchInput, setSearchInput] = useState("");
   const [searchResults, setSearchResults] = useState<Product[]>([]);
@@ -153,8 +155,8 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onC
   return (
     <div className="bg-primary text-primary-foreground shadow-md">
       <div className="container mx-auto px-4 py-4 min-h-[80px] flex items-center justify-between">
-        {/* Left side - Create Empty Sale Button */}
-        <div className="flex items-center">
+        {/* Left side - Create Empty Sale Button and Date Selection */}
+        <div className="flex items-center space-x-4">
           <Button
             variant="default"
             size="default"
@@ -168,6 +170,29 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onC
               {t('pos:createEmptySale')}
             </span>
           </Button>
+
+          {/* Date Selection */}
+          <Box sx={{ minWidth: 150 }}>
+            <TextField
+              type="date"
+              value={selectedDate || new Date().toISOString().split('T')[0]}
+              onChange={(e) => onDateChange?.(e.target.value)}
+              size="small"
+              sx={{
+                backgroundColor: 'white',
+                borderRadius: 1,
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'transparent',
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'transparent',
+                },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'transparent',
+                },
+              }}
+            />
+          </Box>
         </div>
 
         {/* Center - Client Selection and Product Search */}

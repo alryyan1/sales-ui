@@ -152,5 +152,7 @@
   "thermalInvoicePrinted": "Thermal invoice printed successfully!",
   "thermalInvoicePrintFailed": "Failed to print thermal invoice",
   "noSaleSelected": "No sale selected",
-  "thermalInvoicePreview": "Thermal Invoice Preview"
+  "thermalInvoicePreview": "Thermal Invoice Preview",
+  "selectDate": "Select Date",
+  "salesForDate": "Sales for {{date}}"
 } 
