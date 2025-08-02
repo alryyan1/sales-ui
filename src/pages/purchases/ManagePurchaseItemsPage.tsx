@@ -22,7 +22,8 @@ import {
   Tooltip,
   Autocomplete,
   TextField,
-  Box
+  Box,
+  Avatar
 } from '@mui/material';
 
 // Icons
@@ -627,21 +628,36 @@ const ManagePurchaseItemsPage: React.FC = () => {
         <CardContent>
           {purchase.items && purchase.items.length > 0 ? (
             <div className="space-y-4">
-              {purchase.items.map((item: PurchaseItem) => (
+              {purchase.items
+                .sort((a, b) => b.id - a.id) // Sort by ID descending (newest first)
+                .map((item: PurchaseItem, index: number) => (
                 <div
                   key={item.id}
                   className="border rounded-lg p-3 bg-white dark:bg-gray-800"
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-7 gap-4 items-center">
-                    <div>
-                      <Typography variant="subtitle2" className="font-medium">
-                        {item.product_name || item.product?.name || `Product ID: ${item.product_id}`}
-                      </Typography>
-                      {(item.product_sku || item.product?.sku) && (
-                        <Typography variant="caption" color="text.secondary">
-                          SKU: {item.product_sku || item.product?.sku}
+                  <div className="grid grid-cols-1 md:grid-cols-8 gap-4 items-center">
+                    <div className="flex items-center gap-3">
+                      <Avatar 
+                        sx={{ 
+                          width: 32, 
+                          height: 32, 
+                          bgcolor: 'primary.main',
+                          fontSize: '0.875rem',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        {index + 1}
+                      </Avatar>
+                      <div>
+                        <Typography variant="subtitle2" className="font-medium">
+                          {item.product_name || item.product?.name || `Product ID: ${item.product_id}`}
                         </Typography>
-                      )}
+                        {(item.product_sku || item.product?.sku) && (
+                          <Typography variant="caption" color="text.secondary">
+                            SKU: {item.product_sku || item.product?.sku}
+                          </Typography>
+                        )}
+                      </div>
                     </div>
                     <div className="text-center">
                       <EditablePurchaseItemField
