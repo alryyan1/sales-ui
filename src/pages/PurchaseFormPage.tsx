@@ -117,7 +117,6 @@ const PurchaseFormPage: React.FC = () => {
 
   // --- State ---
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
   const [loadingData, setLoadingData] = useState(isEditMode);
   const [loadingSuppliers, setLoadingSuppliers] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -554,7 +553,6 @@ const PurchaseFormPage: React.FC = () => {
               <PurchaseItemsList
                 isSubmitting={isSubmitting}
                 isPurchaseReceived={isPurchaseReceived}
-                products={products}
               />
               <Separator className="my-6" />
           

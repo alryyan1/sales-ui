@@ -142,6 +142,11 @@ export const ProductAutocomplete: React.FC<ProductAutocompleteProps> = React.mem
     }
   }, [value, productSearchInput]);
 
+  // Initial search when component mounts
+  useEffect(() => {
+    setDebouncedProductSearch('');
+  }, []);
+
   // Memoized handlers
   const handleProductChange = useCallback((event: React.SyntheticEvent, newValue: Product | null) => {
     if (newValue) {

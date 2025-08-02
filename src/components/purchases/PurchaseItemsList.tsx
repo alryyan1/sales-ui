@@ -37,10 +37,9 @@ const VirtualizedRow = React.memo(({
         itemCount: number;
         searchTerm: string;
         isPurchaseReceived: boolean;
-        products: Product[];
     };
 }) => {
-    const { fields, remove, isSubmitting, itemCount, searchTerm, isPurchaseReceived, products } = data;
+    const { fields, remove, isSubmitting, itemCount, searchTerm, isPurchaseReceived } = data;
     const field = fields[index];
     
     // Skip rendering if item doesn't match search
@@ -62,16 +61,15 @@ const VirtualizedRow = React.memo(({
     
     return (
         <div style={style}>
-            <PurchaseItemRow
-                key={field.id}
-                index={index}
-                remove={remove}
-                products={products}
-                isSubmitting={isSubmitting}
-                itemCount={itemCount}
-                isNew={index === 0}
-                isPurchaseReceived={isPurchaseReceived}
-            />
+                         <PurchaseItemRow
+                 key={field.id}
+                 index={index}
+                 remove={remove}
+                 isSubmitting={isSubmitting}
+                 itemCount={itemCount}
+                 isNew={index === 0}
+                 isPurchaseReceived={isPurchaseReceived}
+             />
         </div>
     );
 });
@@ -79,7 +77,7 @@ const VirtualizedRow = React.memo(({
 VirtualizedRow.displayName = 'VirtualizedRow';
 
 export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
-    isSubmitting, isPurchaseReceived = false, products
+    isSubmitting, isPurchaseReceived = false
 }) => {
     const { t } = useTranslation(['purchases', 'common']);
     const { control, formState: { errors } } = useFormContext();
@@ -140,8 +138,7 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
         itemCount: fields.length,
         searchTerm,
         isPurchaseReceived,
-        products,
-    }), [fields, handleRemove, isSubmitting, searchTerm, isPurchaseReceived, products]);
+    }), [fields, handleRemove, isSubmitting, searchTerm, isPurchaseReceived]);
 
     // Calculate row height based on content
     const getRowHeight = useCallback((index: number) => {
