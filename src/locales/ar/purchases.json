@@ -157,5 +157,10 @@
     "selectProductFirst": "يرجى اختيار منتج أولاً",
     "invalidQuantityOrCost": "يرجى إدخال كمية وتكلفة صحيحة",
     "invalidPurchaseId": "معرف المشتريات غير صحيح",
-    "errorSearchingSku": "خطأ في البحث عن المنتج بالرقم المرجعي"
+    "errorSearchingSku": "خطأ في البحث عن المنتج بالرقم المرجعي",
+    
+    "createPurchaseFirst": "إنشاء أمر الشراء أولاً",
+    "createPurchaseFirstDescription": "قم بتعبئة معلومات الشراء الأساسية (المورد، التاريخ، الحالة، إلخ) واحفظ أمر الشراء.",
+    "manageItemsNext": "إضافة المنتجات بعد ذلك",
+    "manageItemsNextDescription": "بعد إنشاء الشراء، ستتم إعادة توجيهك لإدارة العناصر حيث يمكنك إضافة المنتجات وتحديد الكميات والأسعار."
 }

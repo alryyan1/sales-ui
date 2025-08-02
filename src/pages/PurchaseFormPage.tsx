@@ -68,7 +68,8 @@ const purchaseItemSchema = z.object({
     .optional(),
 });
 
-const purchaseFormSchema = z.object({
+// Base schema for purchase header
+const basePurchaseFormSchema = z.object({
   supplier_id: z
     .number({ required_error: "validation:required" })
     .positive({ message: "validation:selectSupplier" }),
@@ -81,12 +82,25 @@ const purchaseFormSchema = z.object({
   }),
   reference_number: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
+});
+
+// Schema for creating new purchases (items are optional)
+const createPurchaseFormSchema = basePurchaseFormSchema.extend({
+  items: z.array(purchaseItemSchema).optional().default([]),
+});
+
+// Schema for editing existing purchases (items required)
+const editPurchaseFormSchema = basePurchaseFormSchema.extend({
   items: z
     .array(purchaseItemSchema)
     .min(1, { message: "purchases:errorItemsRequired" }),
 });
 
-export type PurchaseFormValues = z.infer<typeof purchaseFormSchema>;
+// Dynamic schema based on mode
+const getPurchaseFormSchema = (isEditMode: boolean) => 
+  isEditMode ? editPurchaseFormSchema : createPurchaseFormSchema;
+
+export type PurchaseFormValues = z.infer<typeof editPurchaseFormSchema>;
 
 export type PurchaseItemFormValues = {
   id?: number | null;
@@ -133,14 +147,14 @@ const PurchaseFormPage: React.FC = () => {
 
   // --- React Hook Form Setup ---
   const formMethods = useForm<PurchaseFormValues>({
-    resolver: zodResolver(purchaseFormSchema),
+    resolver: zodResolver(getPurchaseFormSchema(isEditMode)),
     defaultValues: {
       supplier_id: undefined,
       purchase_date: new Date(),
       status: "pending",
       reference_number: "",
       notes: "",
-      items: [
+      items: isEditMode ? [
         {
           product_id: 0,
           batch_number: "",
@@ -150,7 +164,7 @@ const PurchaseFormPage: React.FC = () => {
           expiry_date: null,
           product: undefined,
         },
-      ],
+      ] : [],
     },
   });
   
@@ -305,7 +319,7 @@ const PurchaseFormPage: React.FC = () => {
     const apiData: CreatePurchaseData | UpdatePurchaseData = {
       ...data,
       purchase_date: format(data.purchase_date as Date, "yyyy-MM-dd"),
-      items: data.items.map((item) => ({
+      items: (data.items || []).map((item) => ({
         id: isEditMode ? item.id : undefined,
         product_id: item.product_id,
         batch_number: item.batch_number || null,
@@ -327,20 +341,28 @@ const PurchaseFormPage: React.FC = () => {
     );
     
     try {
+      let createdPurchase: any;
       if (isEditMode && purchaseId) {
         await purchaseService.updatePurchase(
           purchaseId,
           apiData as UpdatePurchaseData
         );
       } else {
-        await purchaseService.createPurchase(apiData as CreatePurchaseData);
+        createdPurchase = await purchaseService.createPurchase(apiData as CreatePurchaseData);
       }
+      
       toast.success(t("common:success"), {
         description: t("purchases:saveSuccess"),
       });
-      navigate("/purchases", {
-        state: { updatedPurchaseId: isEditMode ? purchaseId : undefined },
-      });
+      
+      // For new purchases, redirect to manage items page to add products
+      if (!isEditMode && createdPurchase?.purchase?.id) {
+        navigate(`/purchases/${createdPurchase.purchase.id}/manage-items`);
+      } else {
+        navigate("/purchases", {
+          state: { updatedPurchaseId: isEditMode ? purchaseId : undefined },
+        });
+      }
     } catch (err) {
       console.error(
         `Failed to ${isEditMode ? "update" : "create"} purchase:`,
@@ -549,19 +571,60 @@ const PurchaseFormPage: React.FC = () => {
                 onSupplierSelect={setSelectedSupplier}
                 isPurchaseReceived={isPurchaseReceived}
               />
-              <Separator className="my-6" />
-              <PurchaseItemsList
-                isSubmitting={isSubmitting}
-                isPurchaseReceived={isPurchaseReceived}
-              />
-              <Separator className="my-6" />
-          
-              {/* Totals Display */}
-              <div className="flex justify-end mb-6">
-                <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-                  {t("purchases:grandTotal")}: {formatNumber(grandTotal)}
-                </p>
-              </div>
+              
+              {/* Workflow info for new purchases */}
+              {!isEditMode && (
+                <>
+                  <Separator className="my-6" />
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center">
+                        <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">1</span>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+                          {t("purchases:createPurchaseFirst")}
+                        </h3>
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          {t("purchases:createPurchaseFirstDescription")}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 mt-3">
+                      <div className="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center">
+                        <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">2</span>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+                          {t("purchases:manageItemsNext")}
+                        </h3>
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          {t("purchases:manageItemsNextDescription")}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+              
+              {/* Only show items section for edit mode */}
+              {isEditMode && (
+                <>
+                  <Separator className="my-6" />
+                  <PurchaseItemsList
+                    isSubmitting={isSubmitting}
+                    isPurchaseReceived={isPurchaseReceived}
+                  />
+                  <Separator className="my-6" />
+              
+                  {/* Totals Display */}
+                  <div className="flex justify-end mb-6">
+                    <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+                      {t("purchases:grandTotal")}: {formatNumber(grandTotal)}
+                    </p>
+                  </div>
+                </>
+              )}
             </CardContent>
           </form>
         </FormProvider>

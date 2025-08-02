@@ -168,5 +168,10 @@
     "selectProductFirst": "Please select a product first",
     "invalidQuantityOrCost": "Please enter valid quantity and cost",
     "invalidPurchaseId": "Invalid purchase ID provided",
-    "errorSearchingSku": "Error searching for product by SKU"
+    "errorSearchingSku": "Error searching for product by SKU",
+    
+    "createPurchaseFirst": "Create Purchase Order First",
+    "createPurchaseFirstDescription": "Fill in the basic purchase information (supplier, date, status, etc.) and save the purchase order.",
+    "manageItemsNext": "Add Products Next",
+    "manageItemsNextDescription": "After creating the purchase, you'll be redirected to manage items where you can add products, set quantities, and prices."
 } 

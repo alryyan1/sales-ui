@@ -2,13 +2,12 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 // shadcn/ui Components
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -16,21 +15,18 @@ import { Label } from '@/components/ui/label';
 
 // MUI Components
 import { 
-  Box,
   Typography,
   CircularProgress,
-  Alert as MuiAlert,
-  Chip,
   IconButton,
   Tooltip
 } from '@mui/material';
 
 // Icons
-import { ArrowLeft, AlertCircle, Package, DollarSign, ShoppingCart, Plus } from 'lucide-react';
-import { Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
+import { ArrowLeft, AlertCircle, Package, Plus } from 'lucide-react';
+import { Delete as DeleteIcon } from '@mui/icons-material';
 
 // Services and Types
-import purchaseService from '../../services/purchaseService';
+import purchaseService, { PurchaseItem } from '../../services/purchaseService';
 import { Product } from '../../services/productService';
 import { formatNumber, formatCurrency } from '@/constants';
 
@@ -38,31 +34,9 @@ import { formatNumber, formatCurrency } from '@/constants';
 import { ProductAutocomplete } from '@/components/common/ProductAutocomplete';
 import EditablePurchaseItemField from '@/components/purchases/EditablePurchaseItemField';
 
-interface PurchaseItem {
-  id: number;
-  product_id: number;
-  product?: Product;
-  batch_number?: string;
-  quantity: number;
-  unit_cost: number;
-  sale_price?: number;
-  expiry_date?: string;
-  total_cost?: number;
-}
 
-interface Purchase {
-  id: number;
-  supplier_id: number;
-  supplier_name: string;
-  purchase_date: string;
-  status: string;
-  reference_number?: string;
-  notes?: string;
-  total_amount: number;
-  items: PurchaseItem[];
-  items_count: number;
-  total_sellable_units: number;
-}
+
+
 
 interface AddPurchaseItemData {
   product_id: number;
@@ -78,7 +52,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
   const purchaseId = purchaseIdParam ? Number(purchaseIdParam) : null;
   const navigate = useNavigate();
   const { t } = useTranslation(['purchases', 'common', 'products']);
-  const queryClient = useQueryClient();
+
 
   // State for adding new items
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -116,7 +90,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
       // Reset form
       resetForm();
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast.error(t('common:error'), {
         description: purchaseService.getErrorMessage(error),
       });
@@ -125,9 +99,9 @@ const ManagePurchaseItemsPage: React.FC = () => {
 
   // Update purchase item mutation
   const updateItemMutation = useMutation({
-    mutationFn: async ({ itemId, field, value }: { itemId: number; field: string; value: any }) => {
+    mutationFn: async ({ itemId, field, value }: { itemId: number; field: string; value: unknown }) => {
       // Find the current item to get all its current values
-      const currentItem = purchase?.items.find(item => item.id === itemId);
+      const currentItem = purchase?.items?.find(item => item.id === itemId);
       if (!currentItem) {
         throw new Error('Item not found');
       }
@@ -135,11 +109,11 @@ const ManagePurchaseItemsPage: React.FC = () => {
       // Prepare complete item data with the updated field
       const updatedItemData = {
         product_id: currentItem.product_id,
-        batch_number: field === 'batch_number' ? (value || null) : (currentItem.batch_number || null),
+        batch_number: field === 'batch_number' ? (value as string || null) : (currentItem.batch_number || null),
         quantity: field === 'quantity' ? Number(value) : currentItem.quantity,
         unit_cost: field === 'unit_cost' ? Number(value) : Number(currentItem.unit_cost),
         sale_price: field === 'sale_price' ? (value ? Number(value) : null) : (currentItem.sale_price ? Number(currentItem.sale_price) : null),
-        expiry_date: field === 'expiry_date' ? (value || null) : (currentItem.expiry_date || null),
+        expiry_date: field === 'expiry_date' ? (value as string || null) : (currentItem.expiry_date || null),
       };
 
       return await purchaseService.updatePurchaseItem(purchaseId!, itemId, updatedItemData);
@@ -150,7 +124,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
       });
       refetchPurchase();
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast.error(t('common:error'), {
         description: purchaseService.getErrorMessage(error),
       });
@@ -168,7 +142,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
       });
       refetchPurchase();
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast.error(t('common:error'), {
         description: purchaseService.getErrorMessage(error),
       });
@@ -216,7 +190,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
             description: t('products:productNotFound'),
           });
         }
-      } catch (error) {
+      } catch {
         toast.error(t('common:error'), {
           description: t('products:errorSearchingSku'),
         });
@@ -265,8 +239,8 @@ const ManagePurchaseItemsPage: React.FC = () => {
 
     return purchase.items.reduce(
       (acc, item) => ({
-        totalCost: acc.totalCost + (item.quantity * item.unit_cost),
-        totalSell: acc.totalSell + (item.quantity * (item.sale_price || 0)),
+        totalCost: acc.totalCost + (item.quantity * Number(item.unit_cost)),
+        totalSell: acc.totalSell + (item.quantity * Number(item.sale_price || 0)),
         totalItems: acc.totalItems + 1,
         totalQuantity: acc.totalQuantity + item.quantity,
       }),
@@ -278,7 +252,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
   const updateTimeoutRefs = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Handle item updates with debouncing
-  const handleItemUpdate = useCallback((itemId: number, field: string, value: any) => {
+  const handleItemUpdate = useCallback((itemId: number, field: string, value: unknown) => {
     const updateKey = `${itemId}-${field}`;
     
     // Clear existing timeout for this specific field
@@ -298,9 +272,10 @@ const ManagePurchaseItemsPage: React.FC = () => {
 
   // Cleanup timeouts on unmount
   useEffect(() => {
+    const timeoutRefs = updateTimeoutRefs.current;
     return () => {
-      updateTimeoutRefs.current.forEach(timeout => clearTimeout(timeout));
-      updateTimeoutRefs.current.clear();
+      timeoutRefs.forEach(timeout => clearTimeout(timeout));
+      timeoutRefs.clear();
     };
   }, []);
 
@@ -517,7 +492,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
         <CardContent>
           {purchase.items && purchase.items.length > 0 ? (
             <div className="space-y-4">
-              {purchase.items.map((item) => (
+              {purchase.items.map((item: PurchaseItem) => (
                 <div
                   key={item.id}
                   className="border rounded-lg p-3 bg-white dark:bg-gray-800"
@@ -525,11 +500,11 @@ const ManagePurchaseItemsPage: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-7 gap-4 items-center">
                     <div>
                       <Typography variant="subtitle2" className="font-medium">
-                        {item.product?.name || `Product ID: ${item.product_id}`}
+                        {item.product_name || item.product?.name || `Product ID: ${item.product_id}`}
                       </Typography>
-                      {item.product?.sku && (
+                      {(item.product_sku || item.product?.sku) && (
                         <Typography variant="caption" color="text.secondary">
-                          SKU: {item.product.sku}
+                          SKU: {item.product_sku || item.product?.sku}
                         </Typography>
                       )}
                     </div>
@@ -582,7 +557,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
                         min={0}
                         step={0.01}
                         formatDisplay={(value) => Number(value) > 0 ? formatCurrency(Number(value)) : '—'}
-                        parseValue={(value) => Number(value) || undefined}
+                        parseValue={(value) => Number(value) || 0}
                         isLoading={updateItemMutation.isPending}
                       />
                       <Typography variant="caption" color="text.secondary" className="block mt-1">
