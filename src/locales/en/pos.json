@@ -154,5 +154,8 @@
   "noSaleSelected": "No sale selected",
   "thermalInvoicePreview": "Thermal Invoice Preview",
   "selectDate": "Select Date",
-  "salesForDate": "Sales for {{date}}"
+  "salesForDate": "Sales for {{date}}",
+  "saleIdLabel": "Sale ID",
+  "currentSaleIdLabel": "Current Sale ID",
+  "amountExceedsBalance": "Amount exceeds remaining balance"
 } 

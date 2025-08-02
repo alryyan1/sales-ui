@@ -218,7 +218,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
             <span>{t('pos:saleSummary')}</span>
             {isEditMode && saleId && (
               <span className="text-sm font-bold text-blue-600 ml-2">
-                Sale ID: {saleId}
+                {t('pos:saleIdLabel')}: {saleId}
               </span>
             )}
             {isEditMode && saleInfo && (
@@ -237,7 +237,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
           {/* Sale Info - Only show when editing existing sale */}
           {isEditMode && saleId && (
             <div className="flex justify-between bg-blue-50 p-2 rounded-lg border border-blue-200">
-              <span className="text-blue-700 font-semibold">Current Sale ID:</span>
+              <span className="text-blue-700 font-semibold">{t('pos:currentSaleIdLabel')}:</span>
               <span className="text-blue-700 font-bold text-lg">#{saleId}</span>
             </div>
           )}

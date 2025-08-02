@@ -17,13 +17,13 @@
   "yes": "Yes",
   "no": "No",
   "ok": "OK",
-      "selectAll": "Select All",
-    "deselectAll": "Deselect All",
-    "deleteSelected": "Delete Selected",
-    "filters": "Filters",
-    "activeFilters": "active filters",
-    "clear": "Clear",
-    "results": "results",
-    "noResultsFound": "No results found",
-    "allProducts": "All Products"
+  "selectAll": "Select All",
+  "deselectAll": "Deselect All",
+  "deleteSelected": "Delete Selected",
+  "filters": "Filters",
+  "activeFilters": "active filters",
+  "clear": "Clear",
+  "results": "results",
+  "noResultsFound": "No results found",
+  "allProducts": "All Products"
 } 

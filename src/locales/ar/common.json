@@ -17,13 +17,13 @@
   "yes": "نعم",
   "no": "لا",
   "ok": "موافق",
-      "selectAll": "تحديد الكل",
-    "deselectAll": "إلغاء تحديد الكل",
-    "deleteSelected": "حذف المحدد",
-    "filters": "المرشحات",
-    "activeFilters": "مرشحات نشطة",
-    "clear": "مسح",
-    "results": "نتائج",
-    "noResultsFound": "لم يتم العثور على نتائج",
-    "allProducts": "جميع المنتجات"
+  "selectAll": "اختيار الكل",
+  "deselectAll": "إلغاء اختيار الكل",
+  "deleteSelected": "حذف المحدد",
+  "filters": "المرشحات",
+  "activeFilters": "مرشحات نشطة",
+  "clear": "مسح",
+  "results": "نتائج",
+  "noResultsFound": "لم يتم العثور على نتائج",
+  "allProducts": "جميع المنتجات"
 }

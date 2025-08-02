@@ -461,7 +461,7 @@ export const SalePaymentCard: React.FC<SalePaymentCardProps> = ({
                         max: amountDue + paymentLine.amount
                       }}
                       error={paymentLine.amount > amountDue + paymentLine.amount}
-                      helperText={paymentLine.amount > amountDue + paymentLine.amount ? 'Amount exceeds remaining balance' : ''}
+                      helperText={paymentLine.amount > amountDue + paymentLine.amount ? t('pos:amountExceedsBalance') : ''}
                       sx={{ minWidth: 120 }}
                       disabled={isFromSale}
                     />

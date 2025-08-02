@@ -64,7 +64,7 @@ const AdminRouteGuard: React.FC<{ children: React.ReactNode }> = ({
 
   if (!isLoggedIn || !hasRole("admin")) {
     // Redirect non-admins away
-    toast.error("Access Denied", {
+            toast.error("Access Denied", {
       description: "You do not have permission to access this area.",
     });
     return <Navigate to="/dashboard" replace />; // Redirect to dashboard or login
