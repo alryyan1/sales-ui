@@ -24,6 +24,7 @@ import IconButton from '@mui/material/IconButton';
 
 // Icons
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import InventoryIcon from '@mui/icons-material/Inventory';
 // Or Lucide icons if using shadcn
 // import { ArrowLeft } from 'lucide-react';
 
@@ -174,9 +175,18 @@ const PurchaseDetailsPage: React.FC = () => {
              </Paper>
 
              {/* Items Table */}
-             <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
-                 {t('purchases:itemsSectionTitle')}
-             </Typography>
+             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                 <Typography variant="h6" component="h2">
+                     {t('purchases:itemsSectionTitle')}
+                 </Typography>
+                 <Button
+                     variant="contained"
+                     startIcon={<InventoryIcon />}
+                     onClick={() => navigate(`/purchases/${purchase.id}/items`)}
+                 >
+                     {t('purchases:managePurchaseItems')}
+                 </Button>
+             </Box>
              <TableContainer component={Paper} elevation={1} className="dark:bg-gray-800">
                  <Table size="small">
                      <TableHead sx={{ backgroundColor: 'action.hover' }} className="dark:bg-gray-700">

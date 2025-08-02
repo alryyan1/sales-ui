@@ -42,7 +42,6 @@ export interface Sale {
   updated_at?: string;
   items: CartItem[];
   payments?: SalePayment[];
-  timestamp: Date; // For compatibility with existing code
 }
 
 // Payment Method Type

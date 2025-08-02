@@ -13,6 +13,7 @@ import {
 // Shadcn Components
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 
 // Icons
 import { Receipt } from "lucide-react";
@@ -32,6 +33,7 @@ interface SaleSummaryColumnProps {
   saleId?: number;
   onPaymentComplete: (errorMessage?: string) => void;
   refreshTrigger?: number; // Add this to force refetch when items are added
+  onSaleDateChange?: (saleId: number, newDate: string) => void; // Add callback for sale date changes
 }
 
 export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
@@ -43,6 +45,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
   saleId,
   onPaymentComplete,
   refreshTrigger = 0,
+  onSaleDateChange,
 }) => {
   const { t } = useTranslation(['pos', 'common']);
 
@@ -52,6 +55,11 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
   // Sale info state
   const [saleInfo, setSaleInfo] = useState<Sale | null>(null);
   const [loadingSaleInfo, setLoadingSaleInfo] = useState(false);
+  
+  // Sale date editing state
+  const [isEditingDate, setIsEditingDate] = useState(false);
+  const [editingDate, setEditingDate] = useState<string>('');
+  const [updatingDate, setUpdatingDate] = useState(false);
 
 
   const subtotal = preciseSum(currentSaleItems.map(item => item.total), 2);
@@ -168,7 +176,6 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
           notes: payment.notes || undefined,
           created_at: payment.created_at
         })) || [],
-        timestamp: new Date(saleData.sale_date)
       };
       
       setSaleInfo(transformedSale);
@@ -205,6 +212,41 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
       onDiscountChange(discountAmount, discountType);
     }
   }, [discountAmount, discountType, onDiscountChange]);
+
+  // Handle sale date editing
+  const handleStartDateEdit = () => {
+    if (saleInfo) {
+      setEditingDate(saleInfo.sale_date);
+      setIsEditingDate(true);
+    }
+  };
+
+  const handleCancelDateEdit = () => {
+    setIsEditingDate(false);
+    setEditingDate('');
+  };
+
+  const handleSaveDateEdit = async () => {
+    if (!saleId || !editingDate) return;
+
+    setUpdatingDate(true);
+    try {
+      // Call the parent callback to update the sale date
+      if (onSaleDateChange) {
+        await onSaleDateChange(saleId, editingDate);
+      }
+      
+      // Refresh sale info to get updated data
+      await fetchSaleInfo();
+      
+      setIsEditingDate(false);
+      setEditingDate('');
+    } catch (error) {
+      console.error('Failed to update sale date:', error);
+    } finally {
+      setUpdatingDate(false);
+    }
+  };
 
 
 
@@ -243,11 +285,50 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
           )}
           {isEditMode && saleInfo && (
             <>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-gray-600">{t('pos:saleDate')}</span>
-                <span className="font-medium">
-                  {new Date(saleInfo.sale_date).toLocaleDateString()}
-                </span>
+                {isEditingDate ? (
+                  <div className="flex items-center space-x-2">
+                    <TextField
+                      type="date"
+                      value={editingDate}
+                      onChange={(e) => setEditingDate(e.target.value)}
+                      size="small"
+                      disabled={updatingDate}
+                      sx={{ width: 140 }}
+                    />
+                    <Button
+                      size="sm"
+                      onClick={handleSaveDateEdit}
+                      disabled={updatingDate}
+                      className="bg-green-500 hover:bg-green-600 text-white px-2 py-1"
+                    >
+                      {updatingDate ? '...' : '✓'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleCancelDateEdit}
+                      disabled={updatingDate}
+                      className="bg-gray-500 hover:bg-gray-600 text-white px-2 py-1"
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <span className="font-medium">
+                      {new Date(saleInfo.sale_date).toLocaleDateString()}
+                    </span>
+                    <Button
+                      size="sm"
+                      onClick={handleStartDateEdit}
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1"
+                      title={t('pos:editSaleDate')}
+                    >
+                      ✎
+                    </Button>
+                  </div>
+                )}
               </div>
               
               <div className="flex justify-between">

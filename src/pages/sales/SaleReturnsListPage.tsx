@@ -53,10 +53,17 @@ import {
   X,
 } from "lucide-react";
 
+// MUI Components
+import Autocomplete from "@mui/material/Autocomplete";
+import TextField from "@mui/material/TextField";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Switch from "@mui/material/Switch";
+
 // Services and Types
 import saleService, { Sale, SaleItem } from "../../services/saleService";
-import productService from "../../services/productService";
-import clientService from "../../services/clientService";
+import productService, { Product as ProductType } from "../../services/productService";
 import { formatCurrency, formatDate } from "@/constants";
 import { apiClient } from "@/lib/axios";
 
@@ -64,13 +71,12 @@ import { apiClient } from "@/lib/axios";
 interface Product {
   id: number;
   name: string;
-  sku: string;
+  sku: string | null;
 }
 
-interface Client {
-  id: number;
-  name: string;
-  phone?: string;
+// Extended Sale interface to include has_returns
+interface ExtendedSale extends Sale {
+  has_returns?: boolean;
 }
 
 // --- Component ---
@@ -81,8 +87,8 @@ const SaleReturnsListPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0] // Today's date as default
   );
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [filteredSales, setFilteredSales] = useState<Sale[]>([]);
+  const [sales, setSales] = useState<ExtendedSale[]>([]);
+  const [filteredSales, setFilteredSales] = useState<ExtendedSale[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalReturnedAmount, setTotalReturnedAmount] = useState(0);
@@ -90,17 +96,15 @@ const SaleReturnsListPage: React.FC = () => {
   // Filter states
   const [searchSaleId, setSearchSaleId] = useState("");
   const [searchClient, setSearchClient] = useState("");
-  const [selectedProduct, setSelectedProduct] = useState<number | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showOnlyReturns, setShowOnlyReturns] = useState(false);
   
   // Data for filters
   const [products, setProducts] = useState<Product[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
-  const [isLoadingClients, setIsLoadingClients] = useState(false);
   
   // Dialog state
-  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [selectedSale, setSelectedSale] = useState<ExtendedSale | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [returnedItems, setReturnedItems] = useState<{[key: number]: number}>({});
   const [isProcessingReturn, setIsProcessingReturn] = useState(false);
@@ -113,24 +117,18 @@ const SaleReturnsListPage: React.FC = () => {
   const loadProducts = useCallback(async () => {
     setIsLoadingProducts(true);
     try {
-      const response = await productService.getProducts(1, '', 1000);
-      setProducts(response.data || []);
+      const response = await productService.getProducts(1, '', 'created_at', 'desc', 1000);
+      // Transform the data to match our Product interface
+      const transformedProducts: Product[] = (response.data || []).map((product: ProductType) => ({
+        id: product.id,
+        name: product.name,
+        sku: product.sku
+      }));
+      setProducts(transformedProducts);
     } catch (error) {
       console.error('Error loading products:', error);
     } finally {
       setIsLoadingProducts(false);
-    }
-  }, []);
-
-  const loadClients = useCallback(async () => {
-    setIsLoadingClients(true);
-    try {
-      const response = await clientService.getClients(1, '', 1000);
-      setClients(response.data || []);
-    } catch (error) {
-      console.error('Error loading clients:', error);
-    } finally {
-      setIsLoadingClients(false);
     }
   }, []);
 
@@ -247,7 +245,7 @@ const SaleReturnsListPage: React.FC = () => {
     // Filter by product
     if (selectedProduct) {
       filtered = filtered.filter(sale => 
-        sale.items?.some(item => item.product_id === selectedProduct)
+        sale.items?.some(item => item.product_id === selectedProduct.id)
       );
     }
 
@@ -263,8 +261,7 @@ const SaleReturnsListPage: React.FC = () => {
   useEffect(() => {
     fetchSalesForDate(selectedDate);
     loadProducts();
-    loadClients();
-  }, [selectedDate, fetchSalesForDate, loadProducts, loadClients]);
+  }, [selectedDate, fetchSalesForDate, loadProducts]);
 
   useEffect(() => {
     applyFilters();
@@ -284,7 +281,7 @@ const SaleReturnsListPage: React.FC = () => {
   };
 
   // --- Handle Sale Items Dialog ---
-  const handleOpenSaleItems = async (sale: Sale) => {
+  const handleOpenSaleItems = async (sale: ExtendedSale) => {
     console.log('Opening sale items for sale:', sale);
     console.log('Sale items:', sale.items);
     
@@ -294,7 +291,7 @@ const SaleReturnsListPage: React.FC = () => {
       console.log('Full sale with items:', fullSale);
       console.log('Full sale items:', fullSale.items);
       
-      setSelectedSale(fullSale);
+      setSelectedSale(fullSale as ExtendedSale);
       setReturnedItems({});
       setIsDialogOpen(true);
     } catch (error) {
@@ -319,7 +316,7 @@ const SaleReturnsListPage: React.FC = () => {
     if (!selectedSale) return;
     
     const itemsToReturn = Object.entries(returnedItems)
-      .filter(([_, quantity]) => quantity > 0)
+      .filter(([, quantity]) => quantity > 0)
       .map(([itemId, quantity]) => ({
         original_sale_item_id: parseInt(itemId),
         product_id: selectedSale.items?.find(item => item.id === parseInt(itemId))?.product_id || 0,
@@ -366,7 +363,7 @@ const SaleReturnsListPage: React.FC = () => {
   };
 
   // --- Handle Delete Sale ---
-  const handleDeleteSale = async (sale: Sale) => {
+  const handleDeleteSale = async (sale: ExtendedSale) => {
     if (!confirm(t("sales:confirmDeleteSale"))) return;
     
     try {
@@ -725,13 +722,13 @@ const SaleReturnsListPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Filters Sidebar */}
+      {/* Filters Sidebar - Refactored */}
       <div className="w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 overflow-y-auto">
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+        <div className="p-2">
+          <div className="flex items-center justify-between mb-3">
+            <Typography variant="h6" className="text-gray-800 dark:text-gray-100">
               {t("common:filters")}
-            </h2>
+            </Typography>
             {activeFiltersCount > 0 && (
               <Button
                 variant="ghost"
@@ -745,136 +742,127 @@ const SaleReturnsListPage: React.FC = () => {
             )}
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Date Selection */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  {t("sales:selectDate")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <Input
-                  type="date"
-                  value={selectedDate}
-                  onChange={handleDateChange}
-                  className="w-full"
-                />
-              </CardContent>
-            </Card>
+            <Box>
+              <Typography variant="subtitle2" className="flex items-center gap-2 mb-1">
+                <Calendar className="h-4 w-4" />
+                {t("sales:selectDate")}
+              </Typography>
+              <Input
+                type="date"
+                value={selectedDate}
+                onChange={handleDateChange}
+                className="w-full"
+              />
+            </Box>
 
             {/* Search Sale ID */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Search className="h-4 w-4" />
-                  {t("sales:searchBySaleId")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <Input
-                  placeholder={t("sales:saleIdPlaceholder")}
-                  value={searchSaleId}
-                  onChange={(e) => setSearchSaleId(e.target.value)}
-                  className="w-full"
-                />
-              </CardContent>
-            </Card>
+            <Box>
+              <Typography variant="subtitle2" className="flex items-center gap-2 mb-1">
+                <Search className="h-4 w-4" />
+                {t("sales:searchBySaleId")}
+              </Typography>
+              <Input
+                placeholder={t("sales:saleIdPlaceholder")}
+                value={searchSaleId}
+                onChange={(e) => setSearchSaleId(e.target.value)}
+                className="w-full"
+              />
+            </Box>
 
             {/* Search Client */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Search className="h-4 w-4" />
-                  {t("sales:searchByClient")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <Input
-                  placeholder={t("sales:clientPlaceholder")}
-                  value={searchClient}
-                  onChange={(e) => setSearchClient(e.target.value)}
-                  className="w-full"
-                />
-              </CardContent>
-            </Card>
+            <Box>
+              <Typography variant="subtitle2" className="flex items-center gap-2 mb-1">
+                <Search className="h-4 w-4" />
+                {t("sales:searchByClient")}
+              </Typography>
+              <Input
+                placeholder={t("sales:clientPlaceholder")}
+                value={searchClient}
+                onChange={(e) => setSearchClient(e.target.value)}
+                className="w-full"
+              />
+            </Box>
 
-            {/* Filter by Product */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Package className="h-4 w-4" />
-                  {t("sales:filterByProduct")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <Select
-                  value={selectedProduct?.toString() || ""}
-                  onValueChange={(value) => setSelectedProduct(value ? parseInt(value) : null)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder={t("sales:selectProductPlaceholder")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">{t("common:allProducts")}</SelectItem>
-                    {isLoadingProducts ? (
-                      <SelectItem value="" disabled>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        {t("common:loading")}...
-                      </SelectItem>
-                    ) : (
-                      products.map((product) => (
-                        <SelectItem key={product.id} value={product.id.toString()}>
-                          {product.name}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </CardContent>
-            </Card>
+            {/* Filter by Product - MUI Autocomplete */}
+            <Box>
+              <Typography variant="subtitle2" className="flex items-center gap-2 mb-1">
+                <Package className="h-4 w-4" />
+                {t("sales:filterByProduct")}
+              </Typography>
+              <Autocomplete
+                options={products}
+                getOptionLabel={(option) => option.name}
+                value={selectedProduct}
+                onChange={(_, newValue) => setSelectedProduct(newValue)}
+                loading={isLoadingProducts}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder={t("sales:selectProductPlaceholder")}
+                    size="small"
+                    variant="outlined"
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {isLoadingProducts ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                  />
+                )}
+                renderOption={(props, option) => (
+                  <Box component="li" {...props}>
+                    <div>
+                      <div className="font-medium">{option.name}</div>
+                      {option.sku && (
+                        <div className="text-sm text-gray-500">SKU: {option.sku}</div>
+                      )}
+                    </div>
+                  </Box>
+                )}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+              />
+            </Box>
 
             {/* Show Only Returns */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Undo2 className="h-4 w-4" />
-                  {t("sales:showOnlyReturns")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="showOnlyReturns"
+            <Box>
+              <Typography variant="subtitle2" className="flex items-center gap-2 mb-1">
+                <Undo2 className="h-4 w-4" />
+                {t("sales:showOnlyReturns")}
+              </Typography>
+              <FormControlLabel
+                control={
+                  <Switch
                     checked={showOnlyReturns}
-                    onCheckedChange={(checked) => setShowOnlyReturns(checked as boolean)}
+                    onChange={(e) => setShowOnlyReturns(e.target.checked)}
+                    size="small"
                   />
-                  <Label htmlFor="showOnlyReturns" className="text-sm">
-                    {t("sales:showOnlySalesWithReturns")}
-                  </Label>
-                </div>
-              </CardContent>
-            </Card>
+                }
+                label={t("sales:showOnlySalesWithReturns")}
+                className="text-sm"
+              />
+            </Box>
 
             {/* Debug Information */}
             {process.env.NODE_ENV === 'development' && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-gray-500">Debug Info</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="text-xs text-gray-500 space-y-1">
-                    <div>Selected Date: {selectedDate}</div>
-                    <div>Total Sales: {sales.length}</div>
-                    <div>Filtered Sales: {filteredSales.length}</div>
-                    <div>Loading: {isLoading ? 'Yes' : 'No'}</div>
-                    <div>Error: {error || 'None'}</div>
-                    <div>Selected Sales: {selectedSales.size}</div>
-                    <div>Active Filters: {activeFiltersCount}</div>
-                  </div>
-                </CardContent>
-              </Card>
+              <Box className="mt-4 p-2 bg-gray-50 dark:bg-gray-800 rounded">
+                <Typography variant="caption" className="text-gray-500 block mb-1">
+                  Debug Info
+                </Typography>
+                <div className="text-xs text-gray-500 space-y-1">
+                  <div>Selected Date: {selectedDate}</div>
+                  <div>Total Sales: {sales.length}</div>
+                  <div>Filtered Sales: {filteredSales.length}</div>
+                  <div>Loading: {isLoading ? 'Yes' : 'No'}</div>
+                  <div>Error: {error || 'None'}</div>
+                  <div>Selected Sales: {selectedSales.size}</div>
+                  <div>Active Filters: {activeFiltersCount}</div>
+                </div>
+              </Box>
             )}
           </div>
         </div>

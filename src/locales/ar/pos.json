@@ -157,5 +157,7 @@
   "salesForDate": "المبيعات لـ {{date}}",
   "saleIdLabel": "معرف البيع",
   "currentSaleIdLabel": "معرف البيع الحالي",
-  "amountExceedsBalance": "المبلغ يتجاوز الرصيد المتبقي"
+  "amountExceedsBalance": "المبلغ يتجاوز الرصيد المتبقي",
+  "editSaleDate": "تعديل تاريخ البيع",
+  "saleDateUpdated": "تم تحديث تاريخ البيع بنجاح!"
 } 

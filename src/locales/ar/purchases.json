@@ -121,6 +121,25 @@
         "unitCost": "تكلفة الوحدة",
         "salePrice": "سعر البيع",
         "expiryDate": "تاريخ انتهاء الصلاحية"
-    }
+    },
+
+    "managePurchaseItems": "إدارة عناصر الشراء",
+    "purchaseSummary": "ملخص الشراء",
+    "purchaseItems": "عناصر الشراء",
+    "addItem": "إضافة عنصر",
+    "editItem": "تعديل العنصر",
+    "totalItems": "إجمالي العناصر",
+    "totalValue": "القيمة الإجمالية",
+    "averageValue": "متوسط القيمة",
+    "salePrice": "سعر البيع",
+    "noItems": "لا توجد عناصر",
+    "productRequired": "المنتج مطلوب",
+    "quantityRequired": "يجب أن تكون الكمية أكبر من 0",
+    "unitCostRequired": "يجب أن تكون تكلفة الوحدة أكبر من 0",
+    "itemAdded": "تم إضافة العنصر بنجاح",
+    "itemUpdated": "تم تحديث العنصر بنجاح",
+    "itemDeleted": "تم حذف العنصر بنجاح",
+    "confirmDeleteItem": "هل أنت متأكد من حذف هذا العنصر؟",
+    "purchaseNotFound": "الشراء غير موجود"
 
 }

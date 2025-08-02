@@ -102,6 +102,11 @@ main() {
     print_color $BLUE "Starting deployment process..."
     echo ""
 
+    # Step 0: Git Stash (Frontend)
+    print_color $YELLOW "Step 0: Stashing local changes (frontend)..."
+    execute_command "git stash" "Git stash failed!" "Git stash completed successfully"
+    echo ""
+
     # Step 1: Git Pull
     print_color $YELLOW "Step 1: Pulling latest changes from Git..."
     if ! execute_command "git pull" "Git pull failed!" "Git pull completed successfully"; then
@@ -144,6 +149,10 @@ main() {
         
         # Change to backend directory
         cd ../sales-api
+        
+        # Step 0: Git Stash (Backend)
+        print_color $YELLOW "  - Stashing local changes (backend)..."
+        execute_command "git stash" "Backend git stash failed!" "Backend git stash completed"
         
         # Git pull for backend
         print_color $BLUE "  - Pulling backend changes..."
@@ -204,7 +213,15 @@ main() {
     echo "• Check the browser console for any errors"
     echo "• Verify that all features are functioning as expected"
     echo ""
-    
+
+    # Step 5: Git add, commit, push (Frontend)
+    print_color $YELLOW "Step 5: Committing and pushing changes (frontend)..."
+    execute_command "git add ." "Git add failed!" "Git add completed"
+    execute_command "git commit -m 'deploy'" "Git commit failed or nothing to commit!" "Git commit completed"
+    execute_command "git push" "Git push failed!" "Git push completed"
+    echo ""
+
+    print_color $GREEN "All deployment steps finished!"
     read -p "Press Enter to continue"
 }
 

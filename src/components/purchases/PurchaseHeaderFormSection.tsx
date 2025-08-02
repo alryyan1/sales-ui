@@ -104,16 +104,19 @@ export const PurchaseHeaderFormSection: React.FC<PurchaseHeaderFormSectionProps>
                                                 }}
                                             />
                                         )}
-                                        renderOption={(props, option) => (
-                                            <li {...props}>
-                                                <div className="flex flex-col">
-                                                    <span className="font-medium text-sm">{option.name}</span>
-                                                    <span className="text-xs text-muted-foreground">
-                                                        {option.email || t('common:n/a')}
-                                                    </span>
-                                                </div>
-                                            </li>
-                                        )}
+                                        renderOption={(props, option) => {
+                                            const { key, ...otherProps } = props;
+                                            return (
+                                                <li key={key} {...otherProps}>
+                                                    <div className="flex flex-col">
+                                                        <span className="font-medium text-sm">{option.name}</span>
+                                                        <span className="text-xs text-muted-foreground">
+                                                            {option.email || t('common:n/a')}
+                                                        </span>
+                                                    </div>
+                                                </li>
+                                            );
+                                        }}
                                     />
                                 </FormControl>
                                 <FormMessage />
@@ -189,13 +192,16 @@ export const PurchaseHeaderFormSection: React.FC<PurchaseHeaderFormSectionProps>
                                                 helperText={fieldState.error?.message ? t(fieldState.error.message) : ""}
                                             />
                                         )}
-                                        renderOption={(props, option) => (
-                                            <li {...props}>
-                                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-${option.color}-100 text-${option.color}-800 dark:bg-${option.color}-900 dark:text-${option.color}-200`}>
-                                                    {t(option.label)}
-                                                </span>
-                                            </li>
-                                        )}
+                                        renderOption={(props, option) => {
+                                            const { key, ...otherProps } = props;
+                                            return (
+                                                <li key={key} {...otherProps}>
+                                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-${option.color}-100 text-${option.color}-800 dark:bg-${option.color}-900 dark:text-${option.color}-200`}>
+                                                        {t(option.label)}
+                                                    </span>
+                                                </li>
+                                            );
+                                        }}
                                     />
                                 </FormControl>
                                 <FormMessage />

@@ -198,7 +198,7 @@ export const SaleEditor: React.FC<SaleEditorProps> = ({
       <DialogTitle>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6">
-            {t('pos:editSale')} #{sale.transactionNumber}
+            {t('pos:editSale')} #{sale.id}
           </Typography>
           <IconButton onClick={onClose}>
             <CloseIcon />
@@ -209,7 +209,7 @@ export const SaleEditor: React.FC<SaleEditorProps> = ({
       <DialogContent>
         <Box sx={{ mb: 2 }}>
           <Typography variant="body2" color="text.secondary">
-            {t('pos:transactionTime')}: {sale.timestamp.toLocaleString()}
+            {t('pos:transactionTime')}: {sale.created_at.toLocaleString()}
           </Typography>
           {hasChanges && (
             <Chip 

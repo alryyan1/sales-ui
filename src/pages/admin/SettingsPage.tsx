@@ -184,7 +184,7 @@ const SettingsPage: React.FC = () => {
   }
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 max-w-3xl mx-auto dark:bg-gray-950 pb-10">
+    <div className="p-4 md:p-6 lg:p-8 max-w-6xl mx-auto dark:bg-gray-950 pb-10">
       <div className="flex items-center mb-6 gap-2">
         {/* <Button variant="outline" size="icon" onClick={() => navigate('/admin')}><ArrowLeft className="h-4 w-4" /></Button> */}
         <SettingsIcon className="h-7 w-7 text-primary me-2" />

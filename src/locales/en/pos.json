@@ -98,6 +98,8 @@
   "newSaleStarted": "New sale started",
   "createEmptySale": "Create Empty Sale",
   "emptySaleCreated": "Empty sale created and selected successfully!",
+  "editSaleDate": "Edit Sale Date",
+  "saleDateUpdated": "Sale date updated successfully!",
   "itemNotFound": "Sale item not found",
   "alreadyInCart": "already in cart",
   "generatePdf": "Daily Report",

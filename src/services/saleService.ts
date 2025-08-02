@@ -140,6 +140,20 @@ export interface ReturnableSaleItem extends SaleItem {
 const saleService = {
 
     /**
+     * Get today's sales by created_at (for POS TodaySalesColumn)
+     */
+    getTodaySalesByCreatedAt: async (): Promise<Sale[]> => {
+        try {
+            const response = await apiClient.get<{data: Sale[]}>('/sales/today-by-created-at');
+            console.log('getTodaySalesByCreatedAt response:', response.data);
+            return response.data.data || response.data;
+        } catch (error) {
+            console.error('Error fetching today\'s sales by created_at:', error);
+            throw error;
+        }
+    },
+
+    /**
      * Get paginated list of sales.
      */
     getSales: async (

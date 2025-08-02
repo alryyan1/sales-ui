@@ -25,6 +25,7 @@ import FilterListIcon from "@mui/icons-material/FilterList";
 import ClearIcon from "@mui/icons-material/Clear";
 import HistoryIcon from "@mui/icons-material/History"; // Product history icon
 import TableChartIcon from "@mui/icons-material/TableChart"; // Excel export icon
+import InventoryIcon from "@mui/icons-material/Inventory"; // Manage items icon
 
 // Services and Types
 import purchaseService from "../../services/purchaseService"; // Use purchase service
@@ -486,6 +487,17 @@ const PurchasesListPage: React.FC = () => {
                              onClick={() => handleViewDetails(purchase.id)}
                            >
                              <VisibilityIcon fontSize="small" />
+                           </IconButton>
+                         </Tooltip>
+                         
+                         <Tooltip title={t("purchases:managePurchaseItems") || ""}>
+                           <IconButton
+                             aria-label={t("purchases:managePurchaseItems") || "Manage Items"}
+                             color="primary"
+                             size="small"
+                             onClick={() => navigate(`/purchases/${purchase.id}/items`)}
+                           >
+                             <InventoryIcon fontSize="small" />
                            </IconButton>
                          </Tooltip>
                          

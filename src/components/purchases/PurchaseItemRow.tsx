@@ -86,6 +86,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
   
   const { watch, setValue, register, formState: { errors } } = useFormContext<PurchaseFormValues>();
   const autocompleteRef = useRef<HTMLInputElement>(null);
+  const uniqueId = useMemo(() => `purchase-item-${index}`, [index]);
 
   // Local state for this row's product search
   const [productSearchInput, setProductSearchInput] = useState("");
@@ -198,7 +199,10 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
   }, [setValue, index, isPurchaseReceived]);
 
   const handleProductChange = useCallback((event: React.SyntheticEvent, newValue: Product | null) => {
-    if (isPurchaseReceived) return; // Prevent changes if purchase is received
+    if (isPurchaseReceived) {
+      // If purchase is received, don't allow selection changes
+      return;
+    }
     if (newValue) {
       handleProductSelect(newValue);
     } else {
@@ -208,6 +212,10 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
       setProductSearchInput("");
     }
   }, [handleProductSelect, setValue, index, isPurchaseReceived]);
+
+  const handleInputChange = useCallback((event: React.SyntheticEvent, newInputValue: string) => {
+    setProductSearchInput(newInputValue);
+  }, []);
 
   const handleKeyDown = useCallback(async (event: React.KeyboardEvent) => {
     if (event.key === 'Enter' && event.ctrlKey) {
@@ -247,29 +255,30 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
         {/* Product Selection */}
         <Box>
                      <Autocomplete
-             key={`product-autocomplete-${index}`}
+             key={`product-autocomplete-${uniqueId}`}
+             id={`product-autocomplete-${uniqueId}`}
              ref={autocompleteRef}
              options={productOptions}
              getOptionLabel={(option) => option.name}
              value={selectedProduct || null}
              onChange={handleProductChange}
-             onInputChange={(_, newInputValue) => {
-               if (!isPurchaseReceived) {
-                 setProductSearchInput(newInputValue);
-               }
-             }}
+             onInputChange={handleInputChange}
              inputValue={productSearchInput}
              loading={localLoadingProducts}
              isOptionEqualToValue={(option, value) => option.id === value.id}
              noOptionsText={t('common:noResults')}
+             disabled={isSubmitting}
+             freeSolo={false}
+             clearOnBlur={false}
             renderInput={(params) => (
               <TextField
                 {...params}
+                id={`product-input-${uniqueId}`}
                 label={t('purchases:fields.productName')}
                 error={!!getFieldError('product_id')}
                 helperText={getFieldError('product_id')}
                 size="small"
-                disabled={isSubmitting || isPurchaseReceived}
+                disabled={false}
                 InputProps={{
                   ...params.InputProps,
                   endAdornment: (
@@ -281,11 +290,14 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
                 }}
               />
             )}
-            renderOption={(props, option) => (
-              <li {...props}>
-                <ProductOption option={option} />
-              </li>
-            )}
+            renderOption={(props, option) => {
+              const { key, ...otherProps } = props;
+              return (
+                <li key={key} {...otherProps}>
+                  <ProductOption option={option} />
+                </li>
+              );
+            }}
             onKeyDown={handleKeyDown}
           />
           
@@ -394,7 +406,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
     productSearchInput,
     localLoadingProducts,
     handleProductChange,
-    setProductSearchInput,
+    handleInputChange,
     handleKeyDown,
     isSubmitting,
     isPurchaseReceived,
@@ -402,6 +414,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
     handleRemove,
     itemCount,
     calculatedValues,
+    uniqueId,
     t
   ]);
 

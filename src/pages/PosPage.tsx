@@ -73,12 +73,8 @@ const PosPage: React.FC = () => {
 
   const loadTodaySales = async () => {
     try {
-      // Load sales for selected date from database with user filtering
-      const response = await saleService.getSales(
-        1, '', '', selectedDate, selectedDate, 1000, null, false, 
-        filterByCurrentUser ? user?.id || null : null
-      );
-      const dbSales = response.data || [];
+      // Use the new endpoint for today's sales by created_at
+      const dbSales = await saleService.getTodaySalesByCreatedAt();
       
       // Debug logging
       console.log('Current user ID:', user?.id);
@@ -86,7 +82,7 @@ const PosPage: React.FC = () => {
       console.log('Raw sales from API:', dbSales);
       console.log('Sales with user_id:', dbSales.map(sale => ({ id: sale.id, user_id: sale.user_id, user_name: sale.user_name })));
       
-      // Apply client-side filtering as fallback if backend filtering doesn't work
+      // Apply client-side filtering for current user if needed
       const filteredDbSales = filterByCurrentUser && user?.id 
         ? dbSales.filter(sale => sale.user_id === user.id)
         : dbSales;
@@ -139,7 +135,7 @@ const PosPage: React.FC = () => {
           notes: payment.notes || undefined,
           created_at: payment.created_at
         })) || [],
-        timestamp: new Date(dbSale.sale_date)
+        // timestamp removed - not part of Sale type
       }));
       
       setTodaySales(transformedSales);
@@ -217,7 +213,7 @@ const PosPage: React.FC = () => {
             notes: payment.notes || undefined,
             created_at: payment.created_at
           })) || [],
-          timestamp: new Date(newSale.sale_date)
+          // timestamp removed - not part of Sale type
         };
 
         // Select the new sale
@@ -300,7 +296,7 @@ const PosPage: React.FC = () => {
               notes: payment.notes || undefined,
               created_at: payment.created_at
             })) || [],
-            timestamp: new Date(updatedSale.sale_date)
+            // timestamp removed - not part of Sale type
           };
           
           setSelectedSale(finalTransformedSale);
@@ -377,7 +373,7 @@ const PosPage: React.FC = () => {
               notes: payment.notes || undefined,
               created_at: payment.created_at
             })) || [],
-            timestamp: new Date(response.sale.sale_date)
+            // timestamp removed - not part of Sale type
           };
           
           setSelectedSale(finalSale);
@@ -472,7 +468,7 @@ const PosPage: React.FC = () => {
           notes: payment.notes || undefined,
           created_at: payment.created_at
         })) || [],
-        timestamp: new Date(response.sale.sale_date)
+        // timestamp removed - not part of Sale type
       };
       
       setSelectedSale(transformedSale);
@@ -569,8 +565,8 @@ const PosPage: React.FC = () => {
             notes: payment.notes || undefined,
             created_at: payment.created_at
           })) || [],
-          timestamp: new Date(updatedSale.sale_date)
-        };
+                  // timestamp removed - not part of Sale type
+      };
         
         setSelectedSale(transformedSale);
         
@@ -758,8 +754,8 @@ const PosPage: React.FC = () => {
               notes: payment.notes || undefined,
               created_at: payment.created_at
             })) || [],
-            timestamp: new Date(latestSale.sale_date)
-          };
+                    // timestamp removed - not part of Sale type
+      };
           
           // Select the completed sale
           setSelectedSale(transformedSale);
@@ -858,7 +854,7 @@ const PosPage: React.FC = () => {
           notes: payment.notes || undefined,
           created_at: payment.created_at
         })) || [],
-        timestamp: new Date(newSale.sale_date)
+        // timestamp removed - not part of Sale type
       };
 
       // Select the new sale
@@ -908,6 +904,31 @@ const PosPage: React.FC = () => {
     setSelectedDate(date);
   };
 
+  // Handle sale date change
+  const handleSaleDateChange = async (saleId: number, newDate: string) => {
+    try {
+      // Update the sale date on the backend
+      await saleService.updateSale(saleId, { sale_date: newDate });
+      
+      // Reload today's sales to reflect the change
+      await loadTodaySales();
+      
+      // Update the selected sale if it's the one being edited
+      if (selectedSale && selectedSale.id === saleId) {
+        const updatedSale = todaySales.find(sale => sale.id === saleId);
+        if (updatedSale) {
+          setSelectedSale(updatedSale);
+        }
+      }
+      
+      showSnackbar(t('pos:saleDateUpdated'), 'success');
+    } catch (error) {
+      console.error('Failed to update sale date:', error);
+      const errorMessage = saleService.getErrorMessage(error);
+      showSnackbar(errorMessage, 'error');
+    }
+  };
+
   // Payment method handlers
 
 
@@ -948,6 +969,7 @@ const PosPage: React.FC = () => {
           saleId={selectedSale?.id}
           onPaymentComplete={handlePaymentComplete}
           refreshTrigger={refreshTrigger}
+          onSaleDateChange={handleSaleDateChange}
         />
           </div>
         {/* Column 1 - Current Sale Items (50%) */}
