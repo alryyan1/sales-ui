@@ -48,6 +48,8 @@ import settingsEN from './locales/en/settings.json';
 import paymentMethodsEN from './locales/en/paymentMethods.json';
 import posEN from './locales/en/pos.json';
 import analyticsEN from './locales/en/analytics.json';
+
+
 // ... استيراد ملفات أخرى
 
 // --- تعريف الموارد ---

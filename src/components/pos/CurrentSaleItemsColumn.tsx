@@ -14,8 +14,7 @@ import {
   Minus, 
   Trash2, 
   Package, 
-  Calendar,
-  Trash
+  Calendar
 } from "lucide-react";
 
 // Types
@@ -28,6 +27,8 @@ interface CurrentSaleItemsColumnProps {
   onRemoveItem: (productId: number) => Promise<void>;
   onClearAll?: () => void;
   isSalePaid?: boolean;
+  deletingItems?: Set<number>; // Track which items are being deleted
+  updatingItems?: Set<number>; // Track which items are being updated
 }
 
 export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
@@ -36,6 +37,8 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
   onRemoveItem,
   onClearAll,
   isSalePaid = false,
+  deletingItems = new Set(),
+  updatingItems = new Set(),
 }) => {
   const { t } = useTranslation(['pos', 'common']);
 
@@ -103,28 +106,36 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center space-x-2">
-                                                     <Button
-                             variant="outline"
-                             size="sm"
-                             onClick={async () => await onUpdateQuantity(item.product.id, item.quantity - 1)}
-                             disabled={item.quantity <= 1 || isSalePaid}
-                             className={`h-8 w-8 p-0 ${
-                               (item.quantity <= 1 || isSalePaid) ? 'opacity-50 cursor-not-allowed' : ''
-                             }`}
-                           >
-                             <Minus className="h-4 w-4" />
-                           </Button>
-                           <span className="w-10 text-center font-medium text-base">{item.quantity}</span>
-                           <Button
-                             variant="outline"
-                             size="sm"
-                             onClick={async () => await onUpdateQuantity(item.product.id, item.quantity + 1)}
-                             disabled={isSalePaid || (item.quantity >= item.product.stock_quantity)}
-                             className={`h-8 w-8 p-0 ${
-                               (isSalePaid || (item.quantity >= item.product.stock_quantity)) ? 'opacity-50 cursor-not-allowed' : ''
-                             }`}
-                           >
-                            <Plus className="h-4 w-4" />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => await onUpdateQuantity(item.product.id, item.quantity - 1)}
+                            disabled={item.quantity <= 1 || isSalePaid || updatingItems.has(item.product.id)}
+                            className={`h-8 w-8 p-0 ${
+                              (item.quantity <= 1 || isSalePaid || updatingItems.has(item.product.id)) ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                          >
+                            {updatingItems.has(item.product.id) ? (
+                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500"></div>
+                            ) : (
+                              <Minus className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <span className="w-10 text-center font-medium text-base">{item.quantity}</span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => await onUpdateQuantity(item.product.id, item.quantity + 1)}
+                            disabled={isSalePaid || (item.quantity >= item.product.stock_quantity) || updatingItems.has(item.product.id)}
+                            className={`h-8 w-8 p-0 ${
+                              (isSalePaid || (item.quantity >= item.product.stock_quantity) || updatingItems.has(item.product.id)) ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                          >
+                            {updatingItems.has(item.product.id) ? (
+                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500"></div>
+                            ) : (
+                              <Plus className="h-4 w-4" />
+                            )}
                           </Button>
                         </div>
                       </TableCell>
@@ -184,15 +195,21 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                             // all sale items have backend records and should use backend deletion
                             await onRemoveItem(item.product.id);
                           }}
-                          disabled={isSalePaid}
+                          disabled={isSalePaid || deletingItems.has(item.product.id)}
                           className={`h-10 w-10 p-0 ${
                             isSalePaid 
                               ? 'text-gray-400 cursor-not-allowed' 
+                              : deletingItems.has(item.product.id)
+                              ? 'text-gray-400 cursor-not-allowed'
                               : 'text-red-500 hover:text-red-700'
                           }`}
                           title={isSalePaid ? t('pos:salePaidCannotModify') : t('pos:removeItem')}
                         >
-                          <Trash2 className="h-5 w-5" />
+                          {deletingItems.has(item.product.id) ? (
+                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-red-600"></div>
+                          ) : (
+                            <Trash2 className="h-5 w-5" />
+                          )}
                         </Button>
                       </TableCell>
                     </TableRow>

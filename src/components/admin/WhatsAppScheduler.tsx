@@ -31,12 +31,12 @@ const WhatsAppSchedulerComponent: React.FC = () => {
       <CardContent>
         <div className="text-center py-8 text-gray-500">
           <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p className="text-lg font-medium mb-2">WhatsApp Scheduler</p>
+          <p className="text-lg font-medium mb-2">{t("settings:whatsappSchedulerTitle")}</p>
           <p className="text-sm">
-            Schedule automated WhatsApp messages for reports and notifications.
+            {t("settings:whatsappSchedulerDesc2")}
           </p>
           <p className="text-xs mt-2 text-gray-400">
-            This feature will be available in a future update.
+            {t("settings:whatsappSchedulerComingSoon")}
           </p>
         </div>
       </CardContent>

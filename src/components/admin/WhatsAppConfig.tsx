@@ -109,7 +109,7 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
 
   const handleTestConnection = async () => {
     if (!testPhoneNumber) {
-      toast.error("Please enter a phone number to test");
+      toast.error(t("settings:pleaseEnterPhoneNumber"));
       return;
     }
 
@@ -124,17 +124,17 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
       });
       
       if (result.success) {
-        toast.success("WhatsApp test message sent successfully!");
+        toast.success(t("settings:whatsappTestMessageSent"));
       } else {
-        toast.error(result.error || "Test failed");
+        toast.error(result.error || t("settings:testFailed"));
       }
     } catch (error) {
       console.error("WhatsApp test error:", error);
       setTestResult({
         success: false,
-        message: "Failed to send test message. Please check your configuration.",
+        message: t("settings:failedToSendTestMessage"),
       });
-      toast.error("Test failed. Please check your configuration.");
+      toast.error(t("settings:testFailedCheckConfig"));
     } finally {
       setIsTesting(false);
     }
@@ -279,7 +279,7 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm font-medium">
-                      Phone Number to Test
+                      {t("settings:phoneNumberToTest")}
                     </label>
                     <Input
                       type="tel"
@@ -300,7 +300,7 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
                         <XCircle className="h-4 w-4" />
                       )}
                       <AlertTitle>
-                        {testResult.success ? "Success" : "Error"}
+                        {testResult.success ? t("settings:success") : t("settings:error")}
                       </AlertTitle>
                       <AlertDescription>{testResult.message}</AlertDescription>
                     </Alert>
@@ -311,14 +311,14 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
                       variant="outline"
                       onClick={() => setIsTestDialogOpen(false)}
                     >
-                      Cancel
+                      {t("settings:cancel")}
                     </Button>
                     <Button
                       onClick={handleTestConnection}
                       disabled={isTesting || !testPhoneNumber}
                     >
                       {isTesting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                      {isTesting ? "Testing..." : "Send Test Message"}
+                      {isTesting ? t("settings:testing") : t("settings:sendTestMessage")}
                     </Button>
                   </div>
                 </div>
@@ -338,14 +338,14 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
         {/* Help Information */}
         <Alert className="mt-6">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Setup Instructions</AlertTitle>
+          <AlertTitle>{t("settings:setupInstructions")}</AlertTitle>
           <AlertDescription>
             <ol className="list-decimal list-inside space-y-1 mt-2">
-              <li>Sign up at <a href="https://waapi.app" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">waapi.app</a></li>
-              <li>Create an instance and get your API token</li>
-              <li>Enter your instance ID and API token above</li>
-              <li>Enable WhatsApp integration</li>
-              <li>Test the connection with a phone number</li>
+              <li>{t("settings:setupInstructionsStep1")} <a href="https://waapi.app" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">waapi.app</a></li>
+              <li>{t("settings:setupInstructionsStep2")}</li>
+              <li>{t("settings:setupInstructionsStep3")}</li>
+              <li>{t("settings:setupInstructionsStep4")}</li>
+              <li>{t("settings:setupInstructionsStep5")}</li>
             </ol>
           </AlertDescription>
         </Alert>

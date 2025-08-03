@@ -145,7 +145,7 @@ const saleService = {
     getTodaySalesByCreatedAt: async (): Promise<Sale[]> => {
         try {
             const response = await apiClient.get<{data: Sale[]}>('/sales/today-by-created-at');
-            console.log('getTodaySalesByCreatedAt response:', response.data);
+
             return response.data.data || response.data;
         } catch (error) {
             console.error('Error fetching today\'s sales by created_at:', error);
@@ -387,7 +387,7 @@ const saleService = {
         sale_status: string;
     }> => {
         try {
-            console.log('deleteSaleItem called for sale ID:', saleId, 'item ID:', saleItemId);
+
             const response = await apiClient.delete(`/sales/${saleId}/items/${saleItemId}`);
             return response.data;
         } catch (error) {

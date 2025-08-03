@@ -60,8 +60,8 @@ const settingsFormSchema = z.object({
     .optional(),
   currency_symbol: z
     .string()
-    .min(1, { message: "validation:required" })
-    .max(5, { message: "validation:maxLengthShort" }), // Example: make currency symbol required
+    .max(5, { message: "validation:maxLengthShort" })
+    .optional(), // Make currency symbol optional
   date_format: z.string().optional(), // Could use z.enum if you have predefined formats
   global_low_stock_threshold: z.coerce.number().int().min(0).optional(),
   invoice_prefix: z.string().optional(),
@@ -317,7 +317,6 @@ const SettingsPage: React.FC = () => {
                       
                       <FormLabel>
                         {t("settings:currencySymbol")}
-                        <span className="text-red-500">*</span>
                       </FormLabel>
                       <FormControl>
                         <Input {...field} maxLength={5} />

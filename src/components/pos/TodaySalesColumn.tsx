@@ -16,11 +16,12 @@ import { Sale } from "./types";
 interface TodaySalesColumnProps {
   sales: Sale[];
   selectedSaleId: number | null;
-  onSaleSelect: (sale: Sale) => void;
+  onSaleSelect: (sale: Sale) => Promise<void>;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
   filterByCurrentUser?: boolean;
   selectedDate?: string;
+  loadingSaleId?: number | null;
 }
 
 export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
@@ -31,6 +32,7 @@ export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
   onToggleCollapse,
   filterByCurrentUser = false,
   selectedDate,
+  loadingSaleId = null,
 }) => {
   const { t } = useTranslation(['pos', 'common']);
 
@@ -164,25 +166,41 @@ export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
               
               <Card
                 className={`cursor-pointer transition-all duration-200 hover:shadow-sm border w-[50px] h-[50px] ${
-                  selectedSaleId === sale.id
+                  loadingSaleId === sale.id
+                    ? 'ring-1 ring-yellow-500 border-yellow-300 bg-yellow-50'
+                    : selectedSaleId === sale.id
                     ? 'ring-1 ring-blue-500 border-blue-300 bg-blue-50'
                     : sale.status === 'draft'
                     ? 'border-dashed border-gray-300 hover:border-gray-400 bg-gray-50'
                     : 'border-gray-200 hover:border-gray-300 bg-white'
                 }`}
-                onClick={() => onSaleSelect(sale)}
+                onClick={async () => {
+                  if (loadingSaleId !== sale.id && selectedSaleId !== sale.id) {
+                    await onSaleSelect(sale);
+                  }
+                }}
+                style={{ pointerEvents: (loadingSaleId === sale.id || selectedSaleId === sale.id) ? 'none' : 'auto' }}
               >
                                  <CardContent className="p-0 h-full flex items-center justify-center relative">
-                   <div className="text-center">
-                     <div className="font-bold text-sm text-gray-900">
-                       {sale.sale_order_number || sale.id}
-                     </div>
-                     {!filterByCurrentUser && sale.user_name && (
-                       <div className="text-xs text-gray-500 mt-1 truncate">
-                         {sale.user_name}
+                   {loadingSaleId === sale.id ? (
+                     <div className="text-center">
+                       <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-yellow-600 mx-auto mb-1"></div>
+                       <div className="text-xs text-yellow-700 font-medium">
+                         Loading...
                        </div>
-                     )}
-                   </div>
+                     </div>
+                   ) : (
+                     <div className="text-center">
+                       <div className="font-bold text-sm text-gray-900">
+                         {sale.sale_order_number || sale.id}
+                       </div>
+                       {!filterByCurrentUser && sale.user_name && (
+                         <div className="text-xs text-gray-500 mt-1 truncate">
+                           {sale.user_name}
+                         </div>
+                       )}
+                     </div>
+                   )}
                   
                   {/* Green check mark when total amount equals total paid AND there are payments */}
                   {sale.total_amount === sale.paid_amount && sale.payments && sale.payments.length > 0 && (
