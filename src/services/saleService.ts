@@ -342,6 +342,23 @@ const saleService = {
     },
 
     /**
+     * Add multiple items to an existing sale.
+     */
+    addMultipleSaleItems: async (saleId: number, itemsData: Array<{
+        product_id: number;
+        quantity: number;
+        unit_price: number;
+    }>): Promise<{ sale: Sale; message: string; total_added: number; errors: string[] }> => {
+        try {
+            const response = await apiClient.post<{ sale: Sale; message: string; total_added: number; errors: string[] }>(`/sales/${saleId}/items/multiple`, { items: itemsData });
+            return response.data;
+        } catch (error) {
+            console.error(`Error adding multiple sale items to sale ${saleId}:`, error);
+            throw error;
+        }
+    },
+
+    /**
      * Update an existing sale item.
      */
     updateSaleItem: async (saleId: number, saleItemId: number, itemData: {

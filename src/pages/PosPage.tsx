@@ -484,6 +484,167 @@ const PosPage: React.FC = () => {
     }
   };
 
+  const addMultipleToCurrentSale = async (products: Product[]) => {
+    // Always ensure we have a sale on the backend before adding items
+    if (!selectedSale) {
+      // Create an empty sale first
+      try {
+        const emptySaleData = {
+          client_id: null,
+          sale_date: new Date().toISOString().split('T')[0], // Today's date
+          notes: null
+        };
+
+        const newSale = await saleService.createEmptySale(emptySaleData);
+        
+        // Transform the backend sale to POS format
+        const transformedSale: Sale = {
+          id: newSale.id,
+          sale_order_number: newSale.sale_order_number,
+          client_id: newSale.client_id,
+          client_name: newSale.client_name,
+          user_id: newSale.user_id,
+          user_name: newSale.user_name,
+          sale_date: newSale.sale_date,
+          invoice_number: newSale.invoice_number,
+          status: newSale.status,
+          total_amount: Number(newSale.total_amount),
+          paid_amount: Number(newSale.paid_amount),
+          due_amount: Number(newSale.due_amount || 0),
+          notes: newSale.notes,
+          created_at: newSale.created_at,
+          updated_at: newSale.updated_at,
+          items: newSale.items?.map(item => ({
+            id: item.id,
+            product: {
+              id: item.product_id,
+              name: item.product_name || 'Unknown Product',
+              sku: item.product_sku || 'N/A',
+              suggested_sale_price_per_sellable_unit: Number(item.unit_price),
+              last_sale_price_per_sellable_unit: Number(item.unit_price),
+              stock_quantity: item.current_stock_quantity || 0,
+              stock_alert_level: item.stock_alert_level,
+              earliest_expiry_date: item.earliest_expiry_date,
+              current_stock_quantity: item.current_stock_quantity || 0,
+              sellable_unit_name: item.sellable_unit_name || 'Piece'
+            } as Product,
+            quantity: item.quantity,
+            unitPrice: Number(item.unit_price),
+            total: Number(item.total_price || item.quantity * Number(item.unit_price))
+          })) || [],
+          payments: newSale.payments?.map(payment => ({
+            id: payment.id,
+            sale_id: payment.sale_id,
+            user_name: payment.user_name,
+            method: payment.method,
+            amount: Number(payment.amount),
+            payment_date: payment.payment_date,
+            reference_number: payment.reference_number || undefined,
+            notes: payment.notes || undefined,
+            created_at: payment.created_at
+          })) || [],
+        };
+
+        // Select the new sale
+        setSelectedSale(transformedSale);
+        setSelectedSaleId(transformedSale.id);
+        
+        // Add the new sale to today's sales
+        setTodaySales(prevSales => [transformedSale, ...prevSales]);
+      } catch (error) {
+        console.error('Error creating empty sale:', error);
+        showToast(t('pos:failedToCreateSale'), 'error');
+        return;
+      }
+    }
+
+    // Now add multiple products to the selected sale
+    try {
+      const itemsData = products.map(product => ({
+        product_id: product.id,
+        quantity: 1, // Default quantity
+        unit_price: product.suggested_sale_price_per_sellable_unit || 0
+      }));
+
+      const result = await saleService.addMultipleSaleItems(selectedSale!.id, itemsData);
+      
+      // Update the selected sale with new data
+      const updatedSale: Sale = {
+        id: result.sale.id,
+        sale_order_number: result.sale.sale_order_number,
+        client_id: result.sale.client_id,
+        client_name: result.sale.client_name,
+        user_id: result.sale.user_id,
+        user_name: result.sale.user_name,
+        sale_date: result.sale.sale_date,
+        invoice_number: result.sale.invoice_number,
+        status: result.sale.status,
+        total_amount: Number(result.sale.total_amount),
+        paid_amount: Number(result.sale.paid_amount),
+        due_amount: Number(result.sale.due_amount || 0),
+        notes: result.sale.notes,
+        created_at: result.sale.created_at,
+        updated_at: result.sale.updated_at,
+        items: result.sale.items?.map(item => ({
+          id: item.id,
+          product: {
+            id: item.product_id,
+            name: item.product_name || 'Unknown Product',
+            sku: item.product_sku || 'N/A',
+            suggested_sale_price_per_sellable_unit: Number(item.unit_price),
+            last_sale_price_per_sellable_unit: Number(item.unit_price),
+            stock_quantity: item.current_stock_quantity || 0,
+            stock_alert_level: item.stock_alert_level,
+            earliest_expiry_date: item.earliest_expiry_date,
+            current_stock_quantity: item.current_stock_quantity || 0,
+            sellable_unit_name: item.sellable_unit_name || 'Piece'
+          } as Product,
+          quantity: item.quantity,
+          unitPrice: Number(item.unit_price),
+          total: Number(item.total_price || item.quantity * Number(item.unit_price))
+        })) || [],
+        payments: result.sale.payments?.map(payment => ({
+          id: payment.id,
+          sale_id: payment.sale_id,
+          user_name: payment.user_name,
+          method: payment.method,
+          amount: Number(payment.amount),
+          payment_date: payment.payment_date,
+          reference_number: payment.reference_number || undefined,
+          notes: payment.notes || undefined,
+          created_at: payment.created_at
+        })) || [],
+      };
+      
+      setSelectedSale(updatedSale);
+      
+      // Update current sale items
+      const updatedItems: CartItem[] = updatedSale.items.map(item => ({
+        id: item.id,
+        product: item.product,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        total: item.total
+      }));
+      
+      setCurrentSaleItems(updatedItems);
+      
+      // Trigger refresh for SaleSummaryColumn and PaymentDialog
+      setRefreshTrigger(prev => prev + 1);
+      
+      if (result.total_added > 0) {
+        showToast(`${result.total_added} product(s) added successfully`, 'success');
+      }
+      
+      if (result.errors && result.errors.length > 0) {
+        showToast(`Some products could not be added: ${result.errors.join(', ')}`, 'error');
+      }
+    } catch (error) {
+      console.error('Error adding multiple products to sale:', error);
+      showToast(t('pos:failedToAddProduct'), 'error');
+    }
+  };
+
   const updateQuantity = async (productId: number, newQuantity: number) => {
     if (newQuantity <= 0) {
       await removeFromCurrentSale(productId);
@@ -997,6 +1158,7 @@ const PosPage: React.FC = () => {
       <div className="flex-shrink-0 bg-white border-b border-gray-200">
       <PosHeader 
         onAddProduct={addToCurrentSale} 
+        onAddMultipleProducts={addMultipleToCurrentSale}
         loading={false} 
         onCreateEmptySale={handleCreateEmptySale}
         onOpenCalculator={handleOpenCalculator}

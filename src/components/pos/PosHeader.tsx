@@ -9,6 +9,7 @@ import {
   InputAdornment,
   Autocomplete,
   Typography,
+  Chip,
 } from "@mui/material";
 
 // Shadcn Components
@@ -35,6 +36,7 @@ import clientService, { Client } from "../../services/clientService";
 
 interface PosHeaderProps {
   onAddProduct: (product: Product) => Promise<void>;
+  onAddMultipleProducts?: (products: Product[]) => Promise<void>;
   loading: boolean;
   onCreateEmptySale?: () => void;
   onOpenCalculator?: () => void;
@@ -51,12 +53,29 @@ interface PosHeaderProps {
   onDateChange?: (date: string) => void;
 }
 
-export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onCreateEmptySale, onOpenCalculator, onGeneratePdf, onPreviewPdf, onGenerateInvoice, onPrintThermalInvoice, hasSelectedSale, selectedClient, onClientChange, filterByCurrentUser, onToggleUserFilter, selectedDate, onDateChange }) => {
+export const PosHeader: React.FC<PosHeaderProps> = ({ 
+  onAddProduct, 
+  onAddMultipleProducts, 
+  loading, 
+  onCreateEmptySale, 
+  onOpenCalculator, 
+  onGeneratePdf, 
+  onPreviewPdf, 
+  onGenerateInvoice, 
+  onPrintThermalInvoice, 
+  hasSelectedSale, 
+  selectedClient, 
+  onClientChange, 
+  filterByCurrentUser, 
+  onToggleUserFilter, 
+  selectedDate, 
+  onDateChange 
+}) => {
   const { t } = useTranslation(['pos', 'common']);
   const [searchInput, setSearchInput] = useState("");
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
 
@@ -92,8 +111,10 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onC
       );
       
       if (productBySku) {
-        // Automatically add the product to sale
-        await onAddProduct(productBySku);
+        // Add to selected products if not already selected
+        if (!selectedProducts.find(p => p.id === productBySku.id)) {
+          setSelectedProducts(prev => [...prev, productBySku]);
+        }
         setSearchInput("");
         setSearchResults([]);
         return;
@@ -112,8 +133,10 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onC
         );
         
         if (exactSkuMatch) {
-          // Automatically add the product to sale
-          await onAddProduct(exactSkuMatch);
+          // Add to selected products if not already selected
+          if (!selectedProducts.find(p => p.id === exactSkuMatch.id)) {
+            setSelectedProducts(prev => [...prev, exactSkuMatch]);
+          }
           setSearchInput("");
           setSearchResults([]);
         }
@@ -143,13 +166,31 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onC
     loadClients();
   }, []);
 
-  const handleAddProduct = async () => {
-    if (selectedProduct) {
-      await onAddProduct(selectedProduct);
-      setSelectedProduct(null);
-      setSearchInput("");
-      setSearchResults([]);
+  const handleAddProducts = async () => {
+    if (selectedProducts.length === 0) return;
+
+    if (selectedProducts.length === 1 && onAddProduct) {
+      // Single product - use existing method
+      await onAddProduct(selectedProducts[0]);
+    } else if (onAddMultipleProducts) {
+      // Multiple products - use new method
+      await onAddMultipleProducts(selectedProducts);
+    } else {
+      // Fallback - add one by one
+      for (const product of selectedProducts) {
+        if (onAddProduct) {
+          await onAddProduct(product);
+        }
+      }
     }
+    
+    setSelectedProducts([]);
+    setSearchInput("");
+    setSearchResults([]);
+  };
+
+  const handleRemoveProduct = (productId: number) => {
+    setSelectedProducts(prev => prev.filter(p => p.id !== productId));
   };
 
   return (
@@ -247,12 +288,19 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onC
             <>
               <Box sx={{ minWidth: 400, display: 'flex', gap: 2, alignItems: 'center' }}>
                 <Autocomplete
+                  multiple
                   freeSolo
                   sx={{
                     width: '100%'
                   }}
                   fullWidth
                   options={searchResults}
+                  value={selectedProducts}
+                  onChange={(event, newValue) => {
+                    // Filter out string values (freeSolo input)
+                    const products = newValue.filter(item => typeof item !== 'string') as Product[];
+                    setSelectedProducts(products);
+                  }}
                   getOptionLabel={(option) => {
                     if (typeof option === 'string') return option;
                     return `${option.name} (${option.sku || 'N/A'})`;
@@ -262,13 +310,19 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onC
                     setSearchInput(newInputValue);
                     handleSearch(newInputValue);
                   }}
-                  onChange={(event, newValue) => {
-                    if (newValue && typeof newValue !== 'string') {
-                      setSelectedProduct(newValue);
-                    }
-                  }}
                   loading={searchLoading}
                   disabled={loading}
+                  renderTags={(value, getTagProps) =>
+                    value.map((option, index) => (
+                      <Chip
+                        {...getTagProps({ index })}
+                        key={option.id}
+                        label={`${option.name} (${option.sku || 'N/A'})`}
+                        size="small"
+                        onDelete={() => handleRemoveProduct(option.id)}
+                      />
+                    ))
+                  }
                   renderInput={(params) => (
                     <TextField
                       {...params}
@@ -317,14 +371,14 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onC
                 <Button
                   variant="outline"
                   size="default"
-                  onClick={handleAddProduct}
-                  disabled={!selectedProduct || loading}
+                  onClick={handleAddProducts}
+                  disabled={selectedProducts.length === 0 || loading}
                   className="relative group min-w-auto px-2 py-1.5 bg-white text-primary hover:bg-gray-100 disabled:bg-gray-300 disabled:text-gray-500 cursor-pointer"
                   title={t('pos:addProduct')}
                 >
                   <AddIcon className="h-4 w-4" />
                   <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-                    {t('pos:addProduct')}
+                    {selectedProducts.length > 1 ? t('pos:addProducts') : t('pos:addProduct')}
                   </span>
                 </Button>
               </Box>
