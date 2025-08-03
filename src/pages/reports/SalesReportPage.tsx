@@ -20,16 +20,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -44,42 +38,44 @@ import {
 } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 // Icons
 import {
   Loader2,
-  Calendar as CalendarIcon,
   Filter,
   X,
   FileText,
   Download,
   BarChart3,
-  TrendingUp,
   Users,
   DollarSign,
   ArrowLeft,
   AlertCircle,
   Eye,
-  RefreshCw,
   ChevronLeft,
   ChevronRight,
-  MoreHorizontal,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
 
 // Services and Types
 import saleService, { Sale } from "@/services/saleService";
 import clientService, { Client } from "@/services/clientService";
-import userService, { User } from "@/services/authService";
+import productService, { Product } from "@/services/productService";
 import { PaginatedResponse } from "@/services/clientService";
 
 // Helpers
@@ -88,11 +84,12 @@ import { formatNumber } from "@/constants";
 // --- Zod Schema for Filter Form ---
 const reportFilterSchema = z
   .object({
-    startDate: z.date().nullable().optional(),
-    endDate: z.date().nullable().optional(),
+    startDate: z.string().nullable().optional(),
+    endDate: z.string().nullable().optional(),
     clientId: z.string().nullable().optional(),
     userId: z.string().nullable().optional(),
     status: z.string().nullable().optional(),
+    productId: z.string().nullable().optional(),
   })
   .refine(
     (data) =>
@@ -123,23 +120,20 @@ const SalesReportPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loadingFilters, setLoadingFilters] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [productSearchOpen, setProductSearchOpen] = useState(false);
 
   // --- Initialize Form with URL Search Params ---
   const form = useForm<ReportFilterValues>({
     resolver: zodResolver(reportFilterSchema),
     defaultValues: {
-      startDate: searchParams.get("startDate")
-        ? parseISO(searchParams.get("startDate")!)
-        : startOfMonth(new Date()),
-      endDate: searchParams.get("endDate")
-        ? parseISO(searchParams.get("endDate")!)
-        : endOfMonth(new Date()),
+      startDate: searchParams.get("startDate") || format(startOfMonth(new Date()), "yyyy-MM-dd"),
+      endDate: searchParams.get("endDate") || format(endOfMonth(new Date()), "yyyy-MM-dd"),
       clientId: searchParams.get("clientId") || null,
       userId: searchParams.get("userId") || null,
       status: searchParams.get("status") || null,
+      productId: searchParams.get("productId") || null,
     },
   });
   const { control, handleSubmit, reset, watch } = form;
@@ -148,13 +142,14 @@ const SalesReportPage: React.FC = () => {
   const fetchFilterData = useCallback(async () => {
     setLoadingFilters(true);
     try {
-      const [clientsResponse, usersResponse] = await Promise.all([
+      const [clientsResponse, productsResponse] = await Promise.all([
         clientService.getClients(),
-        userService.getUsers(),
+        productService.getProducts(),
       ]);
       setClients(clientsResponse.data);
-      setUsers(usersResponse.data);
-    } catch (err) {
+      setProducts(productsResponse.data);
+    } catch (error) {
+      console.error("Error loading filters:", error);
       toast.error(t("common:error"), {
         description: t("reports:errorLoadingFilters"),
       });
@@ -199,15 +194,12 @@ const SalesReportPage: React.FC = () => {
   // --- Current Filters and Page ---
   const currentFilters = useMemo(
     () => ({
-      startDate: searchParams.get("startDate")
-        ? parseISO(searchParams.get("startDate")!)
-        : null,
-      endDate: searchParams.get("endDate")
-        ? parseISO(searchParams.get("endDate")!)
-        : null,
+      startDate: searchParams.get("startDate") || format(startOfMonth(new Date()), "yyyy-MM-dd"),
+      endDate: searchParams.get("endDate") || format(endOfMonth(new Date()), "yyyy-MM-dd"),
       clientId: searchParams.get("clientId") || null,
       userId: searchParams.get("userId") || null,
       status: searchParams.get("status") || null,
+      productId: searchParams.get("productId") || null,
     }),
     [searchParams]
   );
@@ -219,11 +211,12 @@ const SalesReportPage: React.FC = () => {
 
   useEffect(() => {
     reset({
-      startDate: currentFilters.startDate ?? startOfMonth(new Date()),
-      endDate: currentFilters.endDate ?? endOfMonth(new Date()),
+      startDate: currentFilters.startDate,
+      endDate: currentFilters.endDate,
       clientId: currentFilters.clientId,
       userId: currentFilters.userId,
       status: currentFilters.status,
+      productId: currentFilters.productId,
     });
     fetchReport(currentFilters, currentPage);
   }, [currentFilters, currentPage, fetchReport, reset]);
@@ -232,30 +225,30 @@ const SalesReportPage: React.FC = () => {
   const onFilterSubmit: SubmitHandler<ReportFilterValues> = (data) => {
     const newParams = new URLSearchParams();
     if (data.startDate) {
-      newParams.set("startDate", format(data.startDate, "yyyy-MM-dd"));
+      newParams.set("startDate", data.startDate);
     }
     if (data.endDate) {
-      newParams.set("endDate", format(data.endDate, "yyyy-MM-dd"));
+      newParams.set("endDate", data.endDate);
     }
     if (data.clientId) newParams.set("clientId", data.clientId);
     if (data.userId) newParams.set("userId", data.userId);
     if (data.status) newParams.set("status", data.status);
+    if (data.productId) newParams.set("productId", data.productId);
     newParams.set("page", "1");
 
     setSearchParams(newParams);
-    setShowFilters(false);
   };
 
   const clearFilters = () => {
     reset({
-      startDate: startOfMonth(new Date()),
-      endDate: endOfMonth(new Date()),
+      startDate: format(startOfMonth(new Date()), "yyyy-MM-dd"),
+      endDate: format(endOfMonth(new Date()), "yyyy-MM-dd"),
       clientId: null,
       userId: null,
       status: null,
+      productId: null,
     });
     setSearchParams({ page: "1" });
-    setShowFilters(false);
   };
 
   const handlePageChange = (newPage: number) => {
@@ -271,30 +264,35 @@ const SalesReportPage: React.FC = () => {
     let endDate: Date;
 
     switch (preset) {
-      case "today":
+      case "today": {
         startDate = today;
         endDate = today;
         break;
-      case "yesterday":
+      }
+      case "yesterday": {
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
         startDate = yesterday;
         endDate = yesterday;
         break;
-      case "thisWeek":
+      }
+      case "thisWeek": {
         const startOfWeek = new Date(today);
         startOfWeek.setDate(today.getDate() - today.getDay());
         startDate = startOfWeek;
         endDate = today;
         break;
-      case "thisMonth":
+      }
+      case "thisMonth": {
         startDate = startOfMonth(today);
         endDate = endOfMonth(today);
         break;
-      case "lastMonth":
+      }
+      case "lastMonth": {
         startDate = startOfMonth(subMonths(today, 1));
         endDate = endOfMonth(subMonths(today, 1));
         break;
+      }
       default:
         return;
     }
@@ -396,15 +394,6 @@ const SalesReportPage: React.FC = () => {
             </div>
             
             <div className="flex items-center space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center space-x-2"
-              >
-                <Filter className="h-4 w-4" />
-                <span>{t("common:filters")}</span>
-              </Button>
-              
               {!isLoading && reportData && reportData.data.length > 0 && (
                 <Button onClick={handleDownloadPdf} variant="outline">
                   <Download className="h-4 w-4 mr-2" />
@@ -440,54 +429,271 @@ const SalesReportPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Filters */}
-        {showFilters && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center space-x-2">
-                <Filter className="h-5 w-5" />
-                <span>{t("common:filters")}</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Form {...form}>
-                <form onSubmit={handleSubmit(onFilterSubmit)}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        {/* Two Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Main Content - Table */}
+          <div className="lg:col-span-3">
+            {/* Summary Stats */}
+            {summaryStats && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                        <BarChart3 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                          {t("reports:totalSales")}
+                        </p>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                          {summaryStats.totalSales}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                        <DollarSign className="h-6 w-6 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                          {t("reports:totalAmount")}
+                        </p>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                          {formatNumber(summaryStats.totalAmount)}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                        <Users className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                          {t("reports:totalDue")}
+                        </p>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                          {formatNumber(summaryStats.totalDue)}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Loading State */}
+            {isLoading && (
+              <div className="space-y-4">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-center space-x-4 p-4 bg-white dark:bg-gray-900 rounded-lg">
+                    <Skeleton className="h-12 w-12 rounded-full" />
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-4 w-[250px]" />
+                      <Skeleton className="h-4 w-[200px]" />
+                    </div>
+                    <Skeleton className="h-4 w-[100px]" />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Error State */}
+            {!isLoading && error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>{t("common:error")}</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Results */}
+            {!isLoading && !error && reportData && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>{t("reports:results")}</CardTitle>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      {t("reports:showingResults", {
+                        from: (currentPage - 1) * 25 + 1,
+                        to: Math.min(currentPage * 25, reportData.total),
+                        total: reportData.total,
+                      })}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {reportData.data.length === 0 ? (
+                    <div className="text-center py-12">
+                      <FileText className="mx-auto h-12 w-12 text-gray-400" />
+                      <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {t("reports:noSalesFound")}
+                      </h3>
+                      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        {t("reports:tryAdjustingFilters")}
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>{t("sales:date")}</TableHead>
+                              <TableHead>{t("sales:invoice")}</TableHead>
+                              <TableHead>{t("clients:client")}</TableHead>
+                              <TableHead>{t("users:user")}</TableHead>
+                              <TableHead>{t("sales:status")}</TableHead>
+                              <TableHead className="text-right">{t("sales:totalAmount")}</TableHead>
+                              <TableHead className="text-right">{t("sales:paidAmount")}</TableHead>
+                              <TableHead className="text-right">{t("sales:dueAmount")}</TableHead>
+                              <TableHead className="text-right">{t("common:actions")}</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {reportData.data.map((sale) => (
+                              <TableRow key={sale.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                                <TableCell className="font-medium">
+                                  {format(parseISO(sale.sale_date), "MMM dd, yyyy")}
+                                </TableCell>
+                                <TableCell>
+                                  {sale.invoice_number || (
+                                    <span className="text-gray-400">—</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {sale.client_name || (
+                                    <span className="text-gray-400">—</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {sale.user_name || (
+                                    <span className="text-gray-400">—</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {getStatusBadge(sale.status)}
+                                </TableCell>
+                                <TableCell className="text-right font-medium">
+                                  {formatNumber(sale.total_amount)}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {formatNumber(sale.paid_amount)}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <span className={Number(sale.due_amount) > 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}>
+                                    {formatNumber(sale.due_amount || 0)}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => navigate(`/sales/${sale.id}`)}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+
+                      {/* Pagination */}
+                      {reportData.last_page > 1 && (
+                        <div className="flex items-center justify-between mt-6">
+                          <div className="text-sm text-gray-700 dark:text-gray-300">
+                            {t("reports:showingResults", {
+                              from: (currentPage - 1) * 25 + 1,
+                              to: Math.min(currentPage * 25, reportData.total),
+                              total: reportData.total,
+                            })}
+                          </div>
+                          
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePageChange(currentPage - 1)}
+                              disabled={currentPage === 1}
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                              {t("common:previous")}
+                            </Button>
+                            
+                            <div className="flex items-center space-x-1">
+                              {Array.from({ length: Math.min(5, reportData.last_page) }, (_, i) => {
+                                const page = i + 1;
+                                return (
+                                  <Button
+                                    key={page}
+                                    variant={currentPage === page ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => handlePageChange(page)}
+                                    className="w-8 h-8"
+                                  >
+                                    {page}
+                                  </Button>
+                                );
+                              })}
+                            </div>
+                            
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePageChange(currentPage + 1)}
+                              disabled={currentPage === reportData.last_page}
+                            >
+                              {t("common:next")}
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Filters Sidebar */}
+          <div className="lg:col-span-1">
+            <Card className="sticky top-6">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center space-x-2">
+                  <Filter className="h-5 w-5" />
+                  <span>{t("common:filters")}</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Form {...form}>
+                  <form onSubmit={handleSubmit(onFilterSubmit)} className="space-y-4">
                     {/* Start Date */}
                     <FormField
                       control={control}
                       name="startDate"
                       render={({ field }) => (
-                        <FormItem className="flex flex-col">
+                        <FormItem>
                           <FormLabel>{t("common:startDate")}</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant="outline"
-                                  className={cn(
-                                    "w-full justify-start text-left font-normal",
-                                    !field.value && "text-muted-foreground"
-                                  )}
-                                >
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {field.value ? (
-                                    format(field.value, "PPP")
-                                  ) : (
-                                    <span>{t("common:pickDate")}</span>
-                                  )}
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                              <Calendar
-                                mode="single"
-                                selected={field.value ?? undefined}
-                                onSelect={field.onChange}
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
+                          <FormControl>
+                            <Input
+                              type="date"
+                              {...field}
+                              value={field.value || ""}
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -498,36 +704,15 @@ const SalesReportPage: React.FC = () => {
                       control={control}
                       name="endDate"
                       render={({ field }) => (
-                        <FormItem className="flex flex-col">
+                        <FormItem>
                           <FormLabel>{t("common:endDate")}</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant="outline"
-                                  className={cn(
-                                    "w-full justify-start text-left font-normal",
-                                    !field.value && "text-muted-foreground"
-                                  )}
-                                >
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {field.value ? (
-                                    format(field.value, "PPP")
-                                  ) : (
-                                    <span>{t("common:pickDate")}</span>
-                                  )}
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                              <Calendar
-                                mode="single"
-                                selected={field.value ?? undefined}
-                                onSelect={field.onChange}
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
+                          <FormControl>
+                            <Input
+                              type="date"
+                              {...field}
+                              value={field.value || ""}
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -551,7 +736,7 @@ const SalesReportPage: React.FC = () => {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">{t("reports:allClients")}</SelectItem>
+                              <SelectItem value=" ">{t("reports:allClients")}</SelectItem>
                               {clients.map((client) => (
                                 <SelectItem key={client.id} value={String(client.id)}>
                                   {client.name}
@@ -582,14 +767,83 @@ const SalesReportPage: React.FC = () => {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">{t("reports:allUsers")}</SelectItem>
-                              {users.map((user) => (
-                                <SelectItem key={user.id} value={String(user.id)}>
-                                  {user.name}
-                                </SelectItem>
-                              ))}
+                              <SelectItem value=" ">{t("reports:allUsers")}</SelectItem>
+                              {/* User selection temporarily disabled */}
                             </SelectContent>
                           </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Product Select */}
+                    <FormField
+                      control={control}
+                      name="productId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("products:product")}</FormLabel>
+                          <Popover open={productSearchOpen} onOpenChange={setProductSearchOpen}>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={productSearchOpen}
+                                  className="w-full justify-between"
+                                  disabled={loadingFilters}
+                                >
+                                  {field.value
+                                    ? products.find((product) => String(product.id) === field.value)?.name
+                                    : t("reports:allProducts")}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput placeholder={t("products:searchProducts")} />
+                                <CommandList>
+                                  <CommandEmpty>{t("products:noProductsFound")}</CommandEmpty>
+                                  <CommandGroup>
+                                    <CommandItem
+                                      value=""
+                                      onSelect={() => {
+                                        field.onChange("");
+                                        setProductSearchOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          !field.value ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      {t("reports:allProducts")}
+                                    </CommandItem>
+                                    {products.map((product) => (
+                                      <CommandItem
+                                        key={product.id}
+                                        value={product.name}
+                                        onSelect={() => {
+                                          field.onChange(String(product.id));
+                                          setProductSearchOpen(false);
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            field.value === String(product.id) ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        {product.name}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -612,7 +866,7 @@ const SalesReportPage: React.FC = () => {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">{t("reports:allStatuses")}</SelectItem>
+                              <SelectItem value=" ">{t("reports:allStatuses")}</SelectItem>
                               <SelectItem value="completed">{t("sales:status_completed")}</SelectItem>
                               <SelectItem value="pending">{t("sales:status_pending")}</SelectItem>
                               <SelectItem value="draft">{t("sales:status_draft")}</SelectItem>
@@ -623,271 +877,37 @@ const SalesReportPage: React.FC = () => {
                         </FormItem>
                       )}
                     />
-                  </div>
 
-                  <div className="flex justify-end gap-2 mt-6">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={clearFilters}
-                      disabled={isLoading}
-                    >
-                      <X className="mr-2 h-4 w-4" />
-                      {t("common:clearFilters")}
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Filter className="mr-2 h-4 w-4" />
-                      )}
-                      {t("common:applyFilters")}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Summary Stats */}
-        {summaryStats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                    <BarChart3 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      {t("reports:totalSales")}
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                      {summaryStats.totalSales}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                    <DollarSign className="h-6 w-6 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      {t("reports:totalAmount")}
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                      {formatNumber(summaryStats.totalAmount)}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                    <Users className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      {t("reports:totalDue")}
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                      {formatNumber(summaryStats.totalDue)}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Loading State */}
-        {isLoading && (
-          <div className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="flex items-center space-x-4 p-4 bg-white dark:bg-gray-900 rounded-lg">
-                <Skeleton className="h-12 w-12 rounded-full" />
-                <div className="space-y-2 flex-1">
-                  <Skeleton className="h-4 w-[250px]" />
-                  <Skeleton className="h-4 w-[200px]" />
-                </div>
-                <Skeleton className="h-4 w-[100px]" />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Error State */}
-        {!isLoading && error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>{t("common:error")}</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {/* Results */}
-        {!isLoading && !error && reportData && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>{t("reports:results")}</CardTitle>
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  {t("reports:showingResults", {
-                    from: (currentPage - 1) * 25 + 1,
-                    to: Math.min(currentPage * 25, reportData.total),
-                    total: reportData.total,
-                  })}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {reportData.data.length === 0 ? (
-                <div className="text-center py-12">
-                  <FileText className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {t("reports:noSalesFound")}
-                  </h3>
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    {t("reports:tryAdjustingFilters")}
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>{t("sales:date")}</TableHead>
-                          <TableHead>{t("sales:invoice")}</TableHead>
-                          <TableHead>{t("clients:client")}</TableHead>
-                          <TableHead>{t("users:user")}</TableHead>
-                          <TableHead>{t("sales:status")}</TableHead>
-                          <TableHead className="text-right">{t("sales:totalAmount")}</TableHead>
-                          <TableHead className="text-right">{t("sales:paidAmount")}</TableHead>
-                          <TableHead className="text-right">{t("sales:dueAmount")}</TableHead>
-                          <TableHead className="text-right">{t("common:actions")}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {reportData.data.map((sale) => (
-                          <TableRow key={sale.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                            <TableCell className="font-medium">
-                              {format(parseISO(sale.sale_date), "MMM dd, yyyy")}
-                            </TableCell>
-                            <TableCell>
-                              {sale.invoice_number || (
-                                <span className="text-gray-400">—</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {sale.client_name || (
-                                <span className="text-gray-400">—</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {sale.user_name || (
-                                <span className="text-gray-400">—</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {getStatusBadge(sale.status)}
-                            </TableCell>
-                            <TableCell className="text-right font-medium">
-                              {formatNumber(sale.total_amount)}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {formatNumber(sale.paid_amount)}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <span className={Number(sale.due_amount) > 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}>
-                                {formatNumber(sale.due_amount || 0)}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => navigate(`/sales/${sale.id}`)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  {/* Pagination */}
-                  {reportData.last_page > 1 && (
-                    <div className="flex items-center justify-between mt-6">
-                      <div className="text-sm text-gray-700 dark:text-gray-300">
-                        {t("reports:showingResults", {
-                          from: (currentPage - 1) * 25 + 1,
-                          to: Math.min(currentPage * 25, reportData.total),
-                          total: reportData.total,
-                        })}
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePageChange(currentPage - 1)}
-                          disabled={currentPage === 1}
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                          {t("common:previous")}
-                        </Button>
-                        
-                        <div className="flex items-center space-x-1">
-                          {Array.from({ length: Math.min(5, reportData.last_page) }, (_, i) => {
-                            const page = i + 1;
-                            return (
-                              <Button
-                                key={page}
-                                variant={currentPage === page ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => handlePageChange(page)}
-                                className="w-8 h-8"
-                              >
-                                {page}
-                              </Button>
-                            );
-                          })}
-                        </div>
-                        
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePageChange(currentPage + 1)}
-                          disabled={currentPage === reportData.last_page}
-                        >
-                          {t("common:next")}
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </div>
+                    <div className="flex flex-col gap-2 pt-4">
+                      <Button
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full"
+                      >
+                        {isLoading ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Filter className="mr-2 h-4 w-4" />
+                        )}
+                        {t("common:applyFilters")}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={clearFilters}
+                        disabled={isLoading}
+                        className="w-full"
+                      >
+                        <X className="mr-2 h-4 w-4" />
+                        {t("common:clearFilters")}
+                      </Button>
                     </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        )}
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </div>
   );
