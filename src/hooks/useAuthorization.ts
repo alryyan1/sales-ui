@@ -40,7 +40,12 @@ import { useAuth } from "@/context/AuthContext";
         | 'request-stock'
         | 'view-own-stock-requisitions'
         | 'view-all-stock-requisitions'
-        | 'process-stock-requisitions';
+        | 'process-stock-requisitions'
+        | 'view-system'
+        | 'update-system'
+        | 'send-whatsapp-messages'
+        | 'view-whatsapp-status'
+        | 'manage-whatsapp-schedulers';
 /**
  * Custom hook providing utility functions for checking user roles and permissions.
  */

@@ -21,5 +21,9 @@
   "adjustments": "Stock Adjustments",
   "salesReturns": "Sales Returns",
   "categories": "Categories",
-  "units": "Units"
+  "units": "Units",
+  "system": "System",
+  "backups": "Backups",
+  "inventoryRequest": "Request Stock",
+  "requisitions": "Stock Requisitions"
 }
