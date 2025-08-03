@@ -103,6 +103,13 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
     if (event.key === 'Enter') {
       event.preventDefault();
       
+      // If there are selected products, trigger the add products button
+      if (selectedProducts.length > 0) {
+        await handleAddProducts();
+        return;
+      }
+      
+      // If no selected products but there's search input, try to find and add a product
       if (!searchInput.trim()) return;
       
       // First try to find in search results
@@ -287,83 +294,83 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
           {hasSelectedSale && (
             <>
               <Box sx={{ minWidth: 400, display: 'flex', gap: 2, alignItems: 'center' }}>
-                <Autocomplete
-                  multiple
-                  freeSolo
-                  blurOnSelect={false}
-                  clearOnBlur={false}
-                  sx={{
-                    width: '100%'
-                  }}
-                  fullWidth
-                  options={searchResults}
-                  
-                  value={selectedProducts}
-                  onChange={(event, newValue) => {
-                    // Filter out string values (freeSolo input)
-                    const products = newValue.filter(item => typeof item !== 'string') as Product[];
-                    setSelectedProducts(products);
-                    
-                    // Keep the search input focused and don't clear it immediately
-                    // This allows users to continue selecting multiple products
-                  }}
-                  getOptionLabel={(option) => {
-                    if (typeof option === 'string') return option;
-                    return `${option.name} (${option.sku || 'N/A'})`;
-                  }}
-                  inputValue={searchInput}
-                  onInputChange={(event, newInputValue, reason) => {
-                    // Only update search input if it's a user typing or clearing
-                    // Don't clear when selecting an option
-                    if (reason === 'input' || reason === 'clear') {
-                      setSearchInput(newInputValue);
-                      handleSearch(newInputValue);
-                    }
-                    // When selecting an option (reason === 'selectOption'), keep the current input
-                  }}
-                  loading={searchLoading}
-                  disabled={loading}
-                  renderTags={(value, getTagProps) =>
-                    value.map((option, index) => (
-                      <Chip
-                        {...getTagProps({ index })}
-                        key={option.id}
-                        label={`${option.name} (${option.sku || 'N/A'})`}
-                        size="small"
-                        onDelete={() => handleRemoveProduct(option.id)}
-                      />
-                    ))
-                  }
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      placeholder={t('pos:searchProducts')}
-                      variant="outlined"
-                      size="medium"
-                      onKeyDown={handleKeyDown}
-                      InputProps={{
-                        ...params.InputProps,
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <BarcodeIcon />
-                          </InputAdornment>
-                        ),
-                        sx: {
-                          backgroundColor: 'white',
-                          borderRadius: 1,
-                          '& .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'transparent',
-                          },
-                          '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'transparent',
-                          },
-                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'transparent',
-                          },
-                        }
-                      }}
-                    />
-                  )}
+                                 <Autocomplete
+                   multiple
+                   freeSolo
+                   blurOnSelect={false}
+                   clearOnBlur={false}
+                   sx={{
+                     width: '100%'
+                   }}
+                   fullWidth
+                   options={searchResults}
+                   
+                   value={selectedProducts}
+                   onChange={(event, newValue) => {
+                     // Filter out string values (freeSolo input)
+                     const products = newValue.filter(item => typeof item !== 'string') as Product[];
+                     setSelectedProducts(products);
+                     
+                     // Keep the search input focused and don't clear it immediately
+                     // This allows users to continue selecting multiple products
+                   }}
+                   getOptionLabel={(option) => {
+                     if (typeof option === 'string') return option;
+                     return `${option.name} (${option.sku || 'N/A'})`;
+                   }}
+                   inputValue={searchInput}
+                   onInputChange={(event, newInputValue, reason) => {
+                     // Only update search input if it's a user typing or clearing
+                     // Don't clear when selecting an option
+                     if (reason === 'input' || reason === 'clear') {
+                       setSearchInput(newInputValue);
+                       handleSearch(newInputValue);
+                     }
+                     // When selecting an option (reason === 'selectOption'), keep the current input
+                   }}
+                   loading={searchLoading}
+                   disabled={loading}
+                   renderTags={(value, getTagProps) =>
+                     value.map((option, index) => (
+                       <Chip
+                         {...getTagProps({ index })}
+                         key={option.id}
+                         label={`${option.name} (${option.sku || 'N/A'})`}
+                         size="small"
+                         onDelete={() => handleRemoveProduct(option.id)}
+                       />
+                     ))
+                   }
+                   renderInput={(params) => (
+                     <TextField
+                       {...params}
+                       placeholder={t('pos:searchProducts')}
+                       variant="outlined"
+                       size="medium"
+                       onKeyDown={handleKeyDown}
+                       InputProps={{
+                         ...params.InputProps,
+                         startAdornment: (
+                           <InputAdornment position="start">
+                             <BarcodeIcon />
+                           </InputAdornment>
+                         ),
+                         sx: {
+                           backgroundColor: 'white',
+                           borderRadius: 1,
+                           '& .MuiOutlinedInput-notchedOutline': {
+                             borderColor: 'transparent',
+                           },
+                           '&:hover .MuiOutlinedInput-notchedOutline': {
+                             borderColor: 'transparent',
+                           },
+                           '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                             borderColor: 'transparent',
+                           },
+                         }
+                       }}
+                     />
+                   )}
                   renderOption={(props, option) => (
                     <Box component="li" {...props}>
                       <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
