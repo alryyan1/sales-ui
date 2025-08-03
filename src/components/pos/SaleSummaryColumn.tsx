@@ -337,8 +337,8 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
             onClick={() => setIsPaymentDialogOpen(true)}
             className={`w-full ${
               paidAmount > 0 
-                ? 'bg-sky-500 hover:bg-sky-600 text-white' 
-                : 'bg-blue-600 hover:bg-blue-700 text-white'
+                ? 'bg-green-600 hover:bg-green-700 text-white' 
+                : ''
             }`}
             disabled={!saleId || grandTotal <= 0}
             size="lg"
