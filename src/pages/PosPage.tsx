@@ -45,6 +45,8 @@ const PosPage: React.FC = () => {
   const [deletingItems, setDeletingItems] = useState<Set<number>>(new Set());
   const [updatingItems, setUpdatingItems] = useState<Set<number>>(new Set());
   const [loadingSaleId, setLoadingSaleId] = useState<number | null>(null);
+  const [isLoadingSales, setIsLoadingSales] = useState(false);
+  const [isLoadingSaleItems, setIsLoadingSaleItems] = useState(false);
   
   // User filtering state
   const [filterByCurrentUser, setFilterByCurrentUser] = useState(true);
@@ -64,6 +66,7 @@ const PosPage: React.FC = () => {
 
   // Load today's sales
   const loadTodaySales = async () => {
+    setIsLoadingSales(true);
     try {
       const dbSales = await saleService.getTodaySalesByCreatedAt();
       
@@ -126,6 +129,8 @@ const PosPage: React.FC = () => {
       console.error('Failed to load today\'s sales:', error);
       // Fallback to empty array if API fails
       setTodaySales([]);
+    } finally {
+      setIsLoadingSales(false);
     }
   };
 
@@ -1084,6 +1089,7 @@ const PosPage: React.FC = () => {
   const handleSaleSelect = async (sale: Sale) => {
     // Set loading state
     setLoadingSaleId(sale.id);
+    setIsLoadingSaleItems(true);
     
     try {
       // Fetch the latest sale data from the backend
@@ -1177,6 +1183,7 @@ const PosPage: React.FC = () => {
     } finally {
       // Clear loading state
       setLoadingSaleId(null);
+      setIsLoadingSaleItems(false);
     }
   };
 
@@ -1354,6 +1361,7 @@ const PosPage: React.FC = () => {
             filterByCurrentUser={filterByCurrentUser}
             selectedDate={selectedDate}
             loadingSaleId={loadingSaleId}
+            isLoading={isLoadingSales}
           />
         </div>
 
@@ -1367,6 +1375,7 @@ const PosPage: React.FC = () => {
             isSalePaid={selectedSale ? (selectedSale.payments && selectedSale.payments.length > 0) : false}
             deletingItems={deletingItems}
             updatingItems={updatingItems}
+            isLoading={isLoadingSaleItems}
           />
         </div>
 

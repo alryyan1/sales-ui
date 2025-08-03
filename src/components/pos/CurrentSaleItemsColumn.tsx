@@ -29,6 +29,7 @@ interface CurrentSaleItemsColumnProps {
   isSalePaid?: boolean;
   deletingItems?: Set<number>; // Track which items are being deleted
   updatingItems?: Set<number>; // Track which items are being updated
+  isLoading?: boolean; // Add loading state
 }
 
 export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
@@ -39,6 +40,7 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
   isSalePaid = false,
   deletingItems = new Set(),
   updatingItems = new Set(),
+  isLoading = false,
 }) => {
   const { t } = useTranslation(['pos', 'common']);
 
@@ -67,7 +69,62 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
     <div dir="ltr" className="w-full h-full flex flex-col">
       <Card className="flex-1 flex flex-col">
         <CardContent className="flex-1 p-0">
-          {currentSaleItems.length === 0 ? (
+          {isLoading ? (
+            // Skeleton loading state
+            <div className="flex-1 overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-center">No.</TableHead>
+                    <TableHead className="text-center">Product</TableHead>
+                    <TableHead className="text-center">Quantity</TableHead>
+                    <TableHead className="text-center">Unit Price</TableHead>
+                    <TableHead className="text-center">Total</TableHead>
+                    <TableHead className="text-center">Stock</TableHead>
+                    <TableHead className="text-center">Expiry</TableHead>
+                    <TableHead className="text-center">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...Array(5)].map((_, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="text-center">
+                        <div className="h-10 w-10 rounded-full bg-gray-200 animate-pulse mx-auto"></div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="space-y-2">
+                          <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="h-3 bg-gray-200 rounded animate-pulse w-3/4 mx-auto"></div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="h-8 bg-gray-200 rounded animate-pulse w-16 mx-auto"></div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-20 mx-auto"></div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-16 mx-auto"></div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-12 mx-auto"></div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-16 mx-auto"></div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex justify-center space-x-1">
+                          <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : currentSaleItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-gray-500">
               <ShoppingCart className="h-16 w-16 mb-4 opacity-50" />
               <h3 className="text-xl font-medium mb-2">{t('pos:noItemsInSale')}</h3>

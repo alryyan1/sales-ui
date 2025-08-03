@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 
 // Icons
-import { CreditCard, Percent, Edit2, Check, X } from "lucide-react";
+import { Percent, Edit2, Check, X } from "lucide-react";
 
 // Types
 import { CartItem, Sale } from "./types";
@@ -210,11 +210,11 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
   };
 
   return (
@@ -222,7 +222,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
       <Card>
         <CardContent className="space-y-4">
           
-          {/* Row 1: Sale ID, User, and Date/Time */}
+          {/* Row 1: Sale ID, Date/Time, and Time */}
           <div className="flex justify-between items-center bg-blue-50 p-3 rounded-lg">
             <div className="flex flex-col">
               <span className="text-sm text-gray-600">{t('pos:saleId')}</span>
@@ -230,12 +230,18 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
                 #{saleInfo?.sale_order_number || saleId || 'New'}
               </span>
             </div>
+            
+            {/* Center - Time */}
             <div className="flex flex-col text-center">
-              <span className="text-sm text-gray-600">{t('pos:user')}</span>
-              <span className="font-semibold">{saleInfo?.user_name || saleInfo?.user_id || 'Current User'}</span>
+              <span className="text-sm text-gray-600">{t('pos:time')}</span>
+              <span className="font-semibold text-sm">
+                {saleInfo ? formatTime(saleInfo.created_at) : formatTime(new Date().toISOString())}
+              </span>
             </div>
+            
+            {/* Right - Date with edit icon */}
             <div className="flex flex-col text-right">
-              <span className="text-sm text-gray-600">{t('pos:date')} & {t('pos:time')}</span>
+              <span className="text-sm text-gray-600">{t('pos:date')}</span>
               {isDateEditing ? (
                 <div className="flex items-center space-x-1">
                   <Input
@@ -263,21 +269,16 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
                 </div>
               ) : (
                 <div 
-                  className="cursor-pointer hover:bg-blue-100 px-2 py-1 rounded transition-colors"
+                  className="cursor-pointer hover:bg-blue-100 px-2 py-1 rounded transition-colors flex items-center justify-end space-x-1"
                   onClick={handleDateClick}
                   title={t('pos:clickToEditDate')}
                 >
                   <span className="font-semibold text-sm">
                     {saleInfo ? formatDate(saleInfo.sale_date) : formatDate(new Date().toISOString())}
                   </span>
-                  <div className="flex items-center justify-center mt-1">
-                    <Edit2 className="h-3 w-3 text-blue-500" />
-                  </div>
+                  <Edit2 className="h-3 w-3 text-blue-500" />
                 </div>
               )}
-              <span className="font-semibold text-sm">
-                {saleInfo ? formatTime(saleInfo.created_at) : formatTime(new Date().toISOString())}
-              </span>
             </div>
           </div>
 
@@ -299,7 +300,9 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
                   size="sm"
                   variant="outline"
                   onClick={() => setIsDiscountDialogOpen(true)}
+                  disabled={paidAmount > 0}
                   className="h-6 px-2"
+                  title={paidAmount > 0 ? t('pos:salePaidCannotModify') : t('pos:setDiscount')}
                 >
                   <Percent className="h-3 w-3" />
                 </Button>

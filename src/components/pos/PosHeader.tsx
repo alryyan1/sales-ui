@@ -341,7 +341,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
                           {option.name}
                         </div>
                         <div className="text-sm text-gray-500">
-                          SKU: {option.sku || "N/A"} | Price: {formatNumber(option.suggested_sale_price_per_sellable_unit || 0)}
+                          SKU: {option.sku || "N/A"} | Price: {formatNumber(option.last_sale_price_per_sellable_unit || 0)}
                         </div>
                       </Box>
                     </Box>

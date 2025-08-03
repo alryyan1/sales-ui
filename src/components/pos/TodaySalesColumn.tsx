@@ -22,6 +22,7 @@ interface TodaySalesColumnProps {
   filterByCurrentUser?: boolean;
   selectedDate?: string;
   loadingSaleId?: number | null;
+  isLoading?: boolean; // Add loading state
 }
 
 export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
@@ -33,6 +34,7 @@ export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
   filterByCurrentUser = false,
   selectedDate,
   loadingSaleId = null,
+  isLoading = false,
 }) => {
   const { t } = useTranslation(['pos', 'common']);
 
@@ -76,6 +78,47 @@ export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
             <p className="text-xs font-medium text-green-700">
               {formatCurrency(sales.reduce((sum, sale) => sum + sale.total_amount, 0))}
             </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="h-full flex flex-col border-l border-gray-200">
+        {/* Header */}
+        <div className="p-2 border-b border-gray-200 bg-blue-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-1">
+              <Receipt className="h-3 w-3 text-blue-600" />
+              <span className="text-xs font-semibold text-blue-900">
+                {filterByCurrentUser ? 'My Sales' : (selectedDate ? `Sales ${new Date(selectedDate).toLocaleDateString()}` : 'Today\'s Sales')}
+              </span>
+            </div>
+            
+            <div className="flex items-center space-x-1">
+              <div className="h-4 w-12 bg-gray-200 rounded animate-pulse"></div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-4 w-4 p-0 hover:bg-blue-100"
+                onClick={onToggleCollapse}
+              >
+                <ChevronLeft className="h-2.5 w-2.5 text-blue-600" />
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Skeleton Sales List */}
+        <div className="flex-1 p-1 overflow-y-auto h-full">
+          <div className="grid grid-cols-1 gap-2 p-2">
+            {[...Array(8)].map((_, index) => (
+              <div key={index} className="relative">
+                <div className="w-[50px] h-[50px] bg-gray-200 rounded-lg animate-pulse mx-auto"></div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

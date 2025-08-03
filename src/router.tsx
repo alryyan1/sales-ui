@@ -30,6 +30,7 @@ import StockAdjustmentsListPage from "./components/inventory/StockAdjustmentsLis
 import StockAdjustmentFormModal from "./components/inventory/StockAdjustmentFormModal";
 import CategoriesListPage from "./pages/admin/CategoriesListPage";
 import SettingsPage from "./pages/admin/SettingsPage";
+import SystemPage from "./pages/admin/SystemPage";
 import AddSaleReturnPage from "./pages/sales/AddSaleReturnPage";
 import SaleDetailsPage from "./pages/sales/SaleDetailsPage";
 import SaleReturnDetailsPage from "./pages/sales/SaleReturnDetailsPage";
@@ -173,6 +174,7 @@ const router = createHashRouter([
               { path: "roles", element: <RolesListPage /> }, // Add later for role management
               { path: "categories", element: <CategoriesListPage /> },
               { path: "settings", element: <SettingsPage /> },
+              { path: "system", element: <SystemPage /> }, // System version and updates
               { path: "backups", element: <BackupPage /> }, // Database backup management
               {
                 path: "inventory",
