@@ -37,6 +37,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import WhatsAppSchedulerComponent from "@/components/admin/WhatsAppScheduler";
+import WhatsAppConfig from "@/components/admin/WhatsAppConfig";
 
 // --- Zod Schema for Settings Form (Matches AppSettings keys) ---
 // Make all fields optional for partial updates, but RHF will use defaultValues
@@ -65,6 +66,13 @@ const settingsFormSchema = z.object({
   global_low_stock_threshold: z.coerce.number().int().min(0).optional(),
   invoice_prefix: z.string().optional(),
   purchase_order_prefix: z.string().optional(),
+  
+  // WhatsApp Settings
+  whatsapp_enabled: z.boolean().optional(),
+  whatsapp_api_url: z.string().url({ message: "validation:url" }).optional(),
+  whatsapp_api_token: z.string().optional(),
+  whatsapp_instance_id: z.string().optional(),
+  whatsapp_default_phone: z.string().optional(),
 });
 
 type SettingsFormValues = z.infer<typeof settingsFormSchema>;
@@ -92,6 +100,13 @@ const SettingsPage: React.FC = () => {
       global_low_stock_threshold: 10,
       invoice_prefix: "INV-",
       purchase_order_prefix: "PO-",
+      
+      // WhatsApp defaults
+      whatsapp_enabled: false,
+      whatsapp_api_url: "https://waapi.app/api/v1",
+      whatsapp_api_token: "",
+      whatsapp_instance_id: "",
+      whatsapp_default_phone: "",
     },
   });
   const {
@@ -118,6 +133,13 @@ const SettingsPage: React.FC = () => {
         global_low_stock_threshold: settings.global_low_stock_threshold ?? 10,
         invoice_prefix: settings.invoice_prefix || "INV-",
         purchase_order_prefix: settings.purchase_order_prefix || "PO-",
+        
+        // WhatsApp settings
+        whatsapp_enabled: settings.whatsapp_enabled || false,
+        whatsapp_api_url: settings.whatsapp_api_url || "https://waapi.app/api/v1",
+        whatsapp_api_token: settings.whatsapp_api_token || "",
+        whatsapp_instance_id: settings.whatsapp_instance_id || "",
+        whatsapp_default_phone: settings.whatsapp_default_phone || "",
       });
     }
   }, [settings, reset, isOpen]); // Depend on isOpen if this were a modal, or just settings
@@ -192,7 +214,9 @@ const SettingsPage: React.FC = () => {
           {t("settings:pageTitle")}
         </h1>
       </div>
-<Card className="dark:bg-gray-900">
+
+      {/* General Settings */}
+      <Card className="dark:bg-gray-900 mb-8">
         <CardHeader>
           <CardTitle>{t("settings:appSettingsTitle")}</CardTitle>
           <CardDescription>{t("settings:appSettingsDesc")}</CardDescription>
@@ -380,6 +404,16 @@ const SettingsPage: React.FC = () => {
           </Form>
         </CardContent>
       </Card>
+
+      {/* WhatsApp Configuration */}
+      {settings && (
+        <div className="mb-8">
+          <WhatsAppConfig 
+            settings={settings} 
+            onSettingsUpdate={updateSettings} 
+          />
+        </div>
+      )}
 
       {/* WhatsApp Scheduler Section */}
       <div className="mt-8">

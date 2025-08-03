@@ -14,6 +14,14 @@ export interface AppSettings {
     global_low_stock_threshold: number;
     invoice_prefix: string;
     purchase_order_prefix: string;
+    
+    // WhatsApp API Configuration
+    whatsapp_enabled: boolean;
+    whatsapp_api_url: string;
+    whatsapp_api_token: string;
+    whatsapp_instance_id: string;
+    whatsapp_default_phone: string;
+    
     // Add other settings as defined in your config
 }
 

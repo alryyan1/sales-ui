@@ -677,13 +677,70 @@ const PosPage: React.FC = () => {
       await loadTodaySales();
       
       if (selectedSale) {
-        // If we were editing a sale, keep it selected but clear the items and payments
-        // This maintains focus on the completed sale
-        setCurrentSaleItems([]);
+        // If we were editing a sale, keep it selected and refresh the sale data
+        // This maintains focus on the completed sale and shows updated payment info
+        // Don't clear currentSaleItems - let the SaleSummaryColumn handle the display
         // Reset payment state - now handled by SalePaymentCard
         setDiscountAmount(0);
         setDiscountType('fixed');
         showToast(t('pos:saleUpdated'), 'success');
+        
+        // Refresh the sale data to get updated payment information
+        const updatedSale = await saleService.getSale(selectedSale.id);
+        
+        // Transform and update the selected sale with fresh data
+        const transformedSale: Sale = {
+          id: updatedSale.id,
+          sale_order_number: updatedSale.sale_order_number,
+          client_id: updatedSale.client_id,
+          client_name: updatedSale.client_name,
+          user_id: updatedSale.user_id,
+          user_name: updatedSale.user_name,
+          sale_date: updatedSale.sale_date,
+          invoice_number: updatedSale.invoice_number,
+          status: updatedSale.status,
+          total_amount: Number(updatedSale.total_amount),
+          paid_amount: Number(updatedSale.paid_amount),
+          due_amount: Number(updatedSale.due_amount || 0),
+          notes: updatedSale.notes,
+          created_at: updatedSale.created_at,
+          updated_at: updatedSale.updated_at,
+          items: updatedSale.items?.map(item => ({
+            id: item.id,
+            product: {
+              id: item.product_id,
+              name: item.product_name || 'Unknown Product',
+              sku: item.product_sku || 'N/A',
+              suggested_sale_price_per_sellable_unit: Number(item.unit_price),
+              last_sale_price_per_sellable_unit: Number(item.unit_price),
+              stock_quantity: item.current_stock_quantity || 0,
+              stock_alert_level: item.stock_alert_level,
+              earliest_expiry_date: item.earliest_expiry_date,
+              current_stock_quantity: item.current_stock_quantity || 0,
+              sellable_unit_name: item.sellable_unit_name || 'Piece'
+            } as Product,
+            quantity: item.quantity,
+            unitPrice: Number(item.unit_price),
+            total: Number(item.total_price || item.quantity * Number(item.unit_price))
+          })) || [],
+          payments: updatedSale.payments?.map(payment => ({
+            id: payment.id,
+            sale_id: payment.sale_id,
+            user_name: payment.user_name,
+            method: payment.method,
+            amount: Number(payment.amount),
+            payment_date: payment.payment_date,
+            reference_number: payment.reference_number || undefined,
+            notes: payment.notes || undefined,
+            created_at: payment.created_at
+          })) || [],
+        };
+        
+        // Update the selected sale with fresh data
+        setSelectedSale(transformedSale);
+        
+        // Update currentSaleItems to reflect the sale's items
+        setCurrentSaleItems(transformedSale.items);
         
         // Automatically open thermal PDF dialog for the completed sale
         setTimeout(() => {
@@ -753,7 +810,8 @@ const PosPage: React.FC = () => {
           // Select the completed sale
           setSelectedSale(transformedSale);
           setSelectedSaleId(transformedSale.id);
-          setCurrentSaleItems([]);
+          // Update currentSaleItems to reflect the sale's items
+          setCurrentSaleItems(transformedSale.items);
           // Reset payment state - now handled by SalePaymentCard
           setDiscountAmount(0);
           setDiscountType('fixed');

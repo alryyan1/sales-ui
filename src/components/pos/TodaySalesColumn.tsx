@@ -147,7 +147,7 @@ export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
       </div>
 
                     {/* Sales List */}
-       <div className="flex-1 p-1 overflow-y-auto max-h-[calc(100vh-200px)]">
+       <div className="flex-1 p-1 overflow-y-auto h-full">
          <div className="grid grid-cols-1 gap-2 p-2">
            {sales
              .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())

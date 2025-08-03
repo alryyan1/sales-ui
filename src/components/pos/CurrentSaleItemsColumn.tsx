@@ -14,8 +14,7 @@ import {
   Minus, 
   Trash2, 
   Package, 
-  Calendar,
-  Trash
+  Calendar
 } from "lucide-react";
 
 // Types
@@ -26,7 +25,6 @@ interface CurrentSaleItemsColumnProps {
   currentSaleItems: CartItem[];
   onUpdateQuantity: (productId: number, newQuantity: number) => Promise<void>;
   onRemoveItem: (productId: number) => Promise<void>;
-  onClearAll?: () => void;
   isSalePaid?: boolean;
 }
 
@@ -34,7 +32,6 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
   currentSaleItems,
   onUpdateQuantity,
   onRemoveItem,
-  onClearAll,
   isSalePaid = false,
 }) => {
   const { t } = useTranslation(['pos', 'common']);
@@ -71,7 +68,7 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
               <p className="text-base">{t('pos:addProductsToStart')}</p>
             </div>
           ) : (
-            <div className="h-[calc(100vh-200px)] overflow-y-auto">
+            <div className="flex-1 overflow-y-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
