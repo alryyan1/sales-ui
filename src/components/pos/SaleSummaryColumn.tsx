@@ -335,12 +335,16 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
           {/* Add Payment Button */}
           <Button
             onClick={() => setIsPaymentDialogOpen(true)}
-            className="w-full"
+            className={`w-full ${
+              paidAmount > 0 
+                ? 'bg-sky-500 hover:bg-sky-600 text-white' 
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
             disabled={!saleId || grandTotal <= 0}
             size="lg"
           >
             <CreditCard className="h-4 w-4 mr-2" />
-            {t('pos:addPayment')}
+            {paidAmount > 0 ? t('pos:payments') : t('pos:addPayment')}
           </Button>
 
         </CardContent>
