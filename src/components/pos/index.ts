@@ -11,6 +11,7 @@ export { TodaySalesColumn } from './TodaySalesColumn';
 export { SaleSummaryColumn } from './SaleSummaryColumn';
 export { CurrentSaleItemsColumn } from './CurrentSaleItemsColumn';
 export { PaymentDialog } from './PaymentDialog';
+export { DiscountDialog } from './DiscountDialog';
 export { CalculatorDialog } from './CalculatorDialog';
 export { PosPdfDialog } from './PosPdfDialog';
 export { InvoicePdfDialog } from './InvoicePdfDialog';

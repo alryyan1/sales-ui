@@ -296,6 +296,35 @@ const saleService = {
     },
 
     /**
+     * Add a single payment to an existing sale.
+     */
+    addPayment: async (saleId: number, paymentData: {
+        method: string;
+        amount: number;
+        reference_number?: string | null;
+        notes?: string | null;
+    }): Promise<void> => {
+        try {
+            await apiClient.post(`/sales/${saleId}/payments/single`, paymentData);
+        } catch (error) {
+            console.error(`Error adding payment to sale ${saleId}:`, error);
+            throw error;
+        }
+    },
+
+    /**
+     * Delete a single payment from an existing sale.
+     */
+    deletePayment: async (saleId: number, paymentId: number): Promise<void> => {
+        try {
+            await apiClient.delete(`/sales/${saleId}/payments/${paymentId}`);
+        } catch (error) {
+            console.error(`Error deleting payment ${paymentId} from sale ${saleId}:`, error);
+            throw error;
+        }
+    },
+
+    /**
      * Add a new item to an existing sale.
      */
     addSaleItem: async (saleId: number, itemData: {

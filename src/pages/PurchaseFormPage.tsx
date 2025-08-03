@@ -442,13 +442,6 @@ const PurchaseFormPage: React.FC = () => {
             ? prev
             : [initialSupplier, ...prev]
         );
-      setProducts((prev) => {
-        const existingProductIds = new Set(prev.map((p) => p.id));
-        const newProducts = safeInitialProducts.filter(
-          (p) => !existingProductIds.has(p.id)
-        );
-        return [...prev, ...newProducts];
-      });
       setSelectedSupplier(initialSupplier);
 
       const initialProductMap = safeInitialProducts.reduce((map, prod) => {

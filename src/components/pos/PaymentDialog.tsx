@@ -2,42 +2,36 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
-// MUI Components
+// Shadcn Components
 import {
-  Box,
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
-  Typography,
-  IconButton,
-  Button,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Alert,
-  Autocomplete,
-  Chip,
-} from "@mui/material";
-
-// MUI Icons
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
-  Close as CloseIcon,
-  Add as AddIcon,
-  Delete as DeleteIcon,
-  Discount as DiscountIcon,
-  Person as PersonIcon,
-} from "@mui/icons-material";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 
+// Icons
+import { CreditCard, Trash2, Plus, AlertCircle } from "lucide-react";
 
-
-// Types
-import { formatNumber, preciseSum, preciseCalculation } from "@/constants";
-import { CartItem, PaymentMethod, PaymentMethodData } from "./types";
-import saleService, { CreateSaleData } from "../../services/saleService";
-import clientService, { Client } from "../../services/clientService";
+// Types and Services
+import { PaymentMethod } from "./types";
+import { formatNumber, preciseSum } from "@/constants";
+import saleService from "../../services/saleService";
 
 // Payment Method Options
 const paymentMethodOptions = [
@@ -50,636 +44,351 @@ const paymentMethodOptions = [
   { value: 'other', labelKey: 'paymentMethods:other' },
 ];
 
-interface PaymentLine {
-  id: string;
-  method: PaymentMethod;
+interface Payment {
+  id: number;
+  sale_id: number;
+  user_name?: string;
+  method: string;
   amount: number;
-  reference_number: string;
+  payment_date: string;
+  reference_number?: string;
+  notes?: string;
+  created_at: string;
 }
 
 interface PaymentDialogProps {
   open: boolean;
   onClose: () => void;
-  items: CartItem[];
-  onPaymentComplete: (errorMessage?: string) => void;
-  discountAmount?: number;
-  discountType?: 'percentage' | 'fixed';
-  onDiscountChange?: (amount: number, type: 'percentage' | 'fixed') => void;
-  totalPaid?: number;
-  onTotalPaidChange?: (amount: number) => void;
-  paymentMethods?: PaymentMethodData[];
-  onPaymentMethodsChange?: (paymentMethods: PaymentMethodData[]) => void;
-  // Add edit mode props
-  isEditMode?: boolean;
   saleId?: number;
+  grandTotal: number;
+  paidAmount: number;
+  onSuccess: () => void;
 }
 
 export const PaymentDialog: React.FC<PaymentDialogProps> = ({
   open,
   onClose,
-  items,
-  onPaymentComplete,
-  discountAmount: externalDiscountAmount = 0,
-  discountType: externalDiscountType = 'percentage',
-  onDiscountChange,
-  onTotalPaidChange,
-  paymentMethods = [],
-  onPaymentMethodsChange,
-  isEditMode = false,
   saleId,
+  grandTotal,
+  paidAmount,
+  onSuccess,
 }) => {
   const { t } = useTranslation(['pos', 'common', 'paymentMethods']);
-  const [paymentLines, setPaymentLines] = useState<PaymentLine[]>([]);
-  const [errors, setErrors] = useState<string[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
-  const [discountAmount, setDiscountAmount] = useState(externalDiscountAmount);
-  const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>(externalDiscountType);
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loadingClients, setLoadingClients] = useState(false);
 
-  const subtotal = preciseSum(items.map(item => item.total), 2);
-  
-  // Calculate discount
-  const discountValue = discountType === 'percentage' 
-    ? preciseCalculation(subtotal, discountAmount / 100, 'multiply', 2)
-    : discountAmount;
-  
-  // Ensure discount doesn't exceed subtotal
-  const actualDiscountValue = Math.min(discountValue, subtotal);
-  const afterDiscount = preciseCalculation(subtotal, actualDiscountValue, 'subtract', 2);
-  const grandTotal = afterDiscount; // No tax calculation
-  const totalPaid = preciseSum(paymentLines.map(line => line.amount || 0), 2);
-  const amountDue = preciseCalculation(grandTotal, totalPaid, 'subtract', 2);
+  // State for existing payments
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
 
-  // Initialize payment lines with existing payment methods when dialog opens
+  // State for new payment form
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
+  const [paymentAmount, setPaymentAmount] = useState<string>('');
+  const [referenceNumber, setReferenceNumber] = useState('');
+  const [notes, setNotes] = useState('');
+
+  // State for operations
+  const [addingPayment, setAddingPayment] = useState(false);
+  const [deletingPaymentId, setDeletingPaymentId] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load payments when dialog opens
   useEffect(() => {
-    if (open && paymentMethods.length > 0) {
-      const existingPaymentLines: PaymentLine[] = paymentMethods.map((payment, index) => ({
-        id: `existing-${index}`,
-        method: payment.method,
-        amount: payment.amount,
-        reference_number: payment.reference || '',
-      }));
-      setPaymentLines(existingPaymentLines);
-    } else if (open && paymentMethods.length === 0) {
-      // If no existing payments, start with one empty payment line
-      setPaymentLines([{
-        id: Date.now().toString(),
-        method: 'cash',
-        amount: grandTotal,
-        reference_number: '',
-      }]);
-    }
-  }, [open, paymentMethods.length, grandTotal]); // Changed dependency to paymentMethods.length
-
-  // Sync internal discount state with external changes
-  useEffect(() => {
-    if (open) {
-      setDiscountAmount(externalDiscountAmount);
-      setDiscountType(externalDiscountType);
-    }
-  }, [open, externalDiscountAmount, externalDiscountType]);
-
-  // Update external state when internal state changes
-  useEffect(() => {
-    if (onDiscountChange) {
-      onDiscountChange(discountAmount, discountType);
-    }
-  }, [discountAmount, discountType, onDiscountChange]);
-
-  useEffect(() => {
-    if (onTotalPaidChange) {
-      onTotalPaidChange(totalPaid);
-    }
-  }, [totalPaid, onTotalPaidChange]);
-
-  // Update parent's payment methods when payment lines change
-  useEffect(() => {
-    if (onPaymentMethodsChange && open) {
-      const updatedPaymentMethods: PaymentMethodData[] = paymentLines.map(line => ({
-        method: line.method,
-        amount: line.amount,
-        reference: line.reference_number || undefined,
-      }));
-      onPaymentMethodsChange(updatedPaymentMethods);
-    }
-  }, [paymentLines, onPaymentMethodsChange, open]);
-
-  // Load clients for autocomplete
-  useEffect(() => {
-    const loadClients = async () => {
-      setLoadingClients(true);
-      try {
-        const response = await clientService.getClients(1);
-        setClients(response.data);
-      } catch (error) {
-        console.error('Failed to load clients:', error);
-      } finally {
-        setLoadingClients(false);
+    if (open && saleId) {
+      loadPayments();
+      // Set default payment amount to remaining due
+      const remainingDue = grandTotal - paidAmount;
+      if (remainingDue > 0) {
+        setPaymentAmount(remainingDue.toFixed(2));
       }
-    };
-
-    if (open) {
-      loadClients();
+    } else {
+      // Reset form when dialog closes
+      resetForm();
     }
-  }, [open]);
+  }, [open, saleId, grandTotal, paidAmount]);
 
-  // Update payment amounts when discount changes (only if dialog is open)
-  useEffect(() => {
-    if (open && paymentLines.length > 0) {
-      // Calculate the total amount already paid (excluding the last payment line)
-      const existingPayments = paymentLines.slice(0, -1);
-      const totalExistingPaid = preciseSum(existingPayments.map(line => line.amount || 0), 2);
+  const loadPayments = async () => {
+    if (!saleId) return;
+
+    setLoadingPayments(true);
+    setError(null);
+    try {
+      const saleData = await saleService.getSale(saleId);
+      setPayments(saleData.payments || []);
+    } catch (err) {
+      console.error('Failed to load payments:', err);
+      setError(t('pos:failedToLoadPayments'));
+    } finally {
+      setLoadingPayments(false);
+    }
+  };
+
+  const resetForm = () => {
+    setPaymentMethod('cash');
+    setPaymentAmount('');
+    setReferenceNumber('');
+    setNotes('');
+    setError(null);
+  };
+
+  const handleAddPayment = async () => {
+    if (!saleId || !paymentAmount) return;
+
+    const amount = parseFloat(paymentAmount);
+    if (amount <= 0) {
+      setError(t('pos:invalidPaymentAmount'));
+      return;
+    }
+
+    // Check if payment amount exceeds remaining due
+    const remainingDue = grandTotal - preciseSum(payments.map(p => p.amount), 2);
+    if (amount > remainingDue) {
+      setError(t('pos:paymentExceedsRemainingDue'));
+      return;
+    }
+
+    setAddingPayment(true);
+    setError(null);
+    try {
+      const paymentData = {
+        method: paymentMethod,
+        amount: amount,
+        reference_number: referenceNumber || null,
+        notes: notes || null,
+      };
+
+      await saleService.addPayment(saleId, paymentData);
       
-      // Calculate the remaining amount that needs to be paid
-      const remainingAmount = preciseCalculation(grandTotal, totalExistingPaid, 'subtract', 2);
+      // Reload payments
+      await loadPayments();
       
-      // Update only the last payment line with the remaining amount
-      const updatedPaymentLines = paymentLines.map((line, index) => {
-        if (index === paymentLines.length - 1) {
-          return {
-            ...line,
-            amount: Math.max(0.01, remainingAmount)
-          };
-        }
-        return line;
-      });
-      setPaymentLines(updatedPaymentLines);
-    }
-  }, [discountAmount, discountType, grandTotal, paymentLines.length, open]);
-
-  const addPaymentLine = () => {
-    // Calculate the total amount already paid
-    const totalExistingPaid = preciseSum(paymentLines.map(line => line.amount || 0), 2);
-    
-    // Calculate the remaining amount that needs to be paid
-    const remainingAmount = preciseCalculation(grandTotal, totalExistingPaid, 'subtract', 2);
-    
-    const newPaymentLine: PaymentLine = {
-      id: Date.now().toString(),
-      method: 'cash',
-      amount: Math.max(0.01, remainingAmount),
-      reference_number: '',
-    };
-    setPaymentLines([...paymentLines, newPaymentLine]);
-  };
-
-  const removePaymentLine = (id: string) => {
-    setPaymentLines(paymentLines.filter(line => line.id !== id));
-  };
-
-  const updatePaymentLine = (id: string, field: keyof PaymentLine, value: string | number) => {
-    setPaymentLines(paymentLines.map(line => 
-      line.id === id ? { ...line, [field]: value } : line
-    ));
-  };
-
-  const validatePayments = (): boolean => {
-    const newErrors: string[] = [];
-    
-    if (paymentLines.length === 0) {
-      newErrors.push('At least one payment method is required');
-    }
-    
-    // Validate discount
-    if (discountType === 'percentage' && discountAmount > 100) {
-      newErrors.push('Discount percentage cannot exceed 100%');
-    }
-    
-    if (discountType === 'fixed' && discountAmount > subtotal) {
-      newErrors.push('Discount amount cannot exceed subtotal');
-    }
-    
-    if (totalPaid < grandTotal) {
-      newErrors.push(`Total paid (${formatNumber(totalPaid)}) is less than total amount (${formatNumber(grandTotal)})`);
-    }
-    
-    if (totalPaid > grandTotal) {
-      newErrors.push(`Total paid (${formatNumber(totalPaid)}) exceeds total amount (${formatNumber(grandTotal)})`);
-    }
-    
-    setErrors(newErrors);
-    return newErrors.length === 0;
-  };
-
-  const handleCompleteSale = async () => {
-    if (validatePayments()) {
-      setIsSaving(true);
-      try {
-        if (isEditMode && saleId) {
-          // Add payments to existing sale using the dedicated endpoint
-          const paymentData = {
-            payments: paymentLines.map(payment => ({
-              method: payment.method,
-              amount: payment.amount,
-              payment_date: new Date().toISOString().split('T')[0],
-              reference_number: payment.reference_number || null,
-              notes: null,
-            })),
-          };
-          
-          await saleService.addPaymentToSale(saleId, paymentData);
-        } else {
-          // Create new sale
-          const saleData: CreateSaleData = {
-            client_id: selectedClient?.id || null,
-            sale_date: new Date().toISOString().split('T')[0], // Today's date
-            status: 'completed',
-            notes: `POS Sale - ${new Date().toLocaleString()}`,
-            items: items.map(item => ({
-              product_id: item.product.id,
-              quantity: item.quantity,
-              unit_price: item.unitPrice,
-            })),
-            payments: paymentLines.map(payment => ({
-              method: payment.method,
-              amount: payment.amount,
-              payment_date: new Date().toISOString().split('T')[0],
-              reference_number: payment.reference_number || null,
-              notes: null,
-            })),
-          };
-
-          await saleService.createSale(saleData);
-        }
-        
-        // Call the completion callback
-        onPaymentComplete();
-        setPaymentLines([]);
-        setErrors([]);
-        setDiscountAmount(0);
-        setSelectedClient(null);
-      } catch (error: unknown) {
-        console.error('Failed to save sale to database:', error);
-        
-        // Handle insufficient stock error
-        if (error && typeof error === 'object' && 'response' in error) {
-          const axiosError = error as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } };
-          if (axiosError.response?.data?.message) {
-            const errorMessage = axiosError.response.data.message;
-            setErrors([errorMessage]);
-            
-            // Pass error message to parent component for toast display
-            onPaymentComplete(errorMessage);
-          } else if (axiosError.response?.data?.errors) {
-            // Handle validation errors
-            const errorMessages = Object.values(axiosError.response.data.errors).flat();
-            const errorMessage = Array.isArray(errorMessages) ? errorMessages[0] : 'Validation error occurred';
-            setErrors([errorMessage]);
-            onPaymentComplete(errorMessage);
-          } else {
-            setErrors(['Failed to save sale to database. Please try again.']);
-          }
-        } else {
-          setErrors(['Failed to save sale to database. Please try again.']);
-        }
-      } finally {
-        setIsSaving(false);
-      }
+      // Reset form
+      resetForm();
+      
+      // Notify parent of success
+      onSuccess();
+    } catch (err) {
+      console.error('Failed to add payment:', err);
+      const errorMessage = saleService.getErrorMessage(err);
+      setError(errorMessage);
+    } finally {
+      setAddingPayment(false);
     }
   };
 
-  const handleClose = () => {
-    setPaymentLines([]);
-    setErrors([]);
-    setDiscountAmount(0);
-    setSelectedClient(null);
-    onClose();
+  const handleDeletePayment = async (paymentId: number) => {
+    if (!saleId) return;
+
+    setDeletingPaymentId(paymentId);
+    setError(null);
+    try {
+      await saleService.deletePayment(saleId, paymentId);
+      
+      // Reload payments
+      await loadPayments();
+      
+      // Notify parent of success
+      onSuccess();
+    } catch (err) {
+      console.error('Failed to delete payment:', err);
+      const errorMessage = saleService.getErrorMessage(err);
+      setError(errorMessage);
+    } finally {
+      setDeletingPaymentId(null);
+    }
   };
+
+  const formatPaymentDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const totalPaid = preciseSum(payments.map(p => p.amount), 2);
+  const remainingDue = Math.max(0, grandTotal - totalPaid);
 
   return (
-    <Dialog
-      open={open}
-      onClose={handleClose}
-      maxWidth="md"
-      fullWidth
-    >
-      <DialogTitle>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6">{t('pos:payment')}</Typography>
-          <IconButton onClick={handleClose}>
-            <CloseIcon />
-          </IconButton>
-        </Box>
-      </DialogTitle>
-      
-      <DialogContent>
-        {/* Client Selection */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <PersonIcon />
-            {t('pos:selectClient')}
-          </Typography>
-          <Autocomplete
-            options={clients}
-            getOptionLabel={(option) => `${option.name} ${option.phone ? `(${option.phone})` : ''}`}
-            value={selectedClient}
-            onChange={(_, newValue) => setSelectedClient(newValue)}
-            loading={loadingClients}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label={t('pos:searchClient')}
-                placeholder={t('pos:searchClientPlaceholder')}
-              />
-            )}
-            renderOption={(props, option) => (
-              <Box component="li" {...props}>
-                <Box>
-                  <Typography variant="body1">{option.name}</Typography>
-                  {option.phone && (
-                    <Typography variant="body2" color="text.secondary">
-                      {option.phone}
-                    </Typography>
-                  )}
-                </Box>
-              </Box>
-            )}
-            renderTags={(value, getTagProps) =>
-              value.map((option, index) => (
-                <Chip
-                  {...getTagProps({ index })}
-                  key={option.id}
-                  label={option.name}
-                  color="primary"
-                  variant="outlined"
-                />
-              ))
-            }
-          />
-        </Box>
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center space-x-2">
+            <CreditCard className="h-5 w-5" />
+            <span>{t('pos:managePayments')}</span>
+            {saleId && <span className="text-sm text-gray-500">- Sale #{saleId}</span>}
+          </DialogTitle>
+        </DialogHeader>
 
-        {/* Summary Cards */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>
-            {t('pos:saleSummary')}
-          </Typography>
-                     <Box sx={{ display: 'flex', gap: 1, overflowX: 'auto', pb: 1 }}>
-             <Box sx={{ 
-               minWidth: 120, 
-               flexShrink: 0, 
-               p: 2, 
-               borderRadius: 1, 
-               border: '1px solid #bfdbfe', 
-               bgcolor: '#eff6ff',
-               display: 'flex',
-               flexDirection: 'column',
-               gap: 0.5
-             }}>
-               <Typography variant="caption" sx={{ color: '#1d4ed8', fontWeight: 500 }}>
-                 {t('pos:subtotal')}
-               </Typography>
-               <Typography variant="body1" sx={{ color: '#1e3a8a', fontWeight: 'bold' }}>
-                 {formatNumber(subtotal)}
-               </Typography>
-             </Box>
+        <div className="space-y-6">
+          {/* Payment Summary */}
+          <Card>
+            <CardContent className="pt-4">
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <div className="text-sm text-gray-600">{t('pos:total')}</div>
+                  <div className="text-lg font-bold text-gray-900">{formatNumber(grandTotal)}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-600">{t('pos:paid')}</div>
+                  <div className="text-lg font-bold text-green-600">{formatNumber(totalPaid)}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-600">{t('pos:due')}</div>
+                  <div className="text-lg font-bold text-orange-600">{formatNumber(remainingDue)}</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-             <Box sx={{ 
-               minWidth: 120, 
-               flexShrink: 0, 
-               p: 2, 
-               borderRadius: 1, 
-               border: '1px solid #fed7aa', 
-               bgcolor: '#fff7ed',
-               display: 'flex',
-               flexDirection: 'column',
-               gap: 0.5
-             }}>
-               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                 <DiscountIcon sx={{ fontSize: 16, color: '#ea580c' }} />
-                 <Typography variant="caption" sx={{ color: '#ea580c', fontWeight: 500 }}>
-                   {t('pos:discount')}
-                 </Typography>
-               </Box>
-               <Typography variant="body1" sx={{ color: '#c2410c', fontWeight: 'bold' }}>
-                 {formatNumber(actualDiscountValue)}
-               </Typography>
-             </Box>
-
-
-
-             <Box sx={{ 
-               minWidth: 120, 
-               flexShrink: 0, 
-               p: 2, 
-               borderRadius: 1, 
-               border: '1px solid #86efac', 
-               bgcolor: '#f0fdf4',
-               display: 'flex',
-               flexDirection: 'column',
-               gap: 0.5
-             }}>
-               <Typography variant="caption" sx={{ color: '#16a34a', fontWeight: 500 }}>
-                 {t('pos:totalAmount')}
-               </Typography>
-               <Typography variant="body1" sx={{ color: '#15803d', fontWeight: 'bold' }}>
-                 {formatNumber(grandTotal)}
-               </Typography>
-             </Box>
-
-             <Box sx={{ 
-               minWidth: 120, 
-               flexShrink: 0, 
-               p: 2, 
-               borderRadius: 1, 
-               border: '1px solid #c4b5fd', 
-               bgcolor: '#faf5ff',
-               display: 'flex',
-               flexDirection: 'column',
-               gap: 0.5
-             }}>
-               <Typography variant="caption" sx={{ color: '#7c3aed', fontWeight: 500 }}>
-                 {t('pos:amountPaid')}
-               </Typography>
-               <Typography variant="body1" sx={{ color: '#6d28d9', fontWeight: 'bold' }}>
-                 {formatNumber(totalPaid)}
-               </Typography>
-             </Box>
-
-             <Box sx={{ 
-               minWidth: 120, 
-               flexShrink: 0, 
-               p: 2, 
-               borderRadius: 1, 
-               border: amountDue > 0 ? '1px solid #fca5a5' : amountDue < 0 ? '1px solid #6ee7b7' : '1px solid #d1d5db', 
-               bgcolor: amountDue > 0 ? '#fef2f2' : amountDue < 0 ? '#ecfdf5' : '#f9fafb',
-               display: 'flex',
-               flexDirection: 'column',
-               gap: 0.5
-             }}>
-               <Typography variant="caption" sx={{ 
-                 color: amountDue > 0 ? '#dc2626' : amountDue < 0 ? '#059669' : '#6b7280', 
-                 fontWeight: 500 
-               }}>
-                 {amountDue < 0 ? t('pos:change') : t('pos:amountDue')}
-               </Typography>
-               <Typography variant="body1" sx={{ 
-                 color: amountDue > 0 ? '#991b1b' : amountDue < 0 ? '#047857' : '#374151', 
-                 fontWeight: 'bold' 
-               }}>
-                 {formatNumber(Math.abs(amountDue))}
-               </Typography>
-             </Box>
-           </Box>
-        </Box>
-
-        {/* Discount Section */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <DiscountIcon />
-            {t('pos:discount')}
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <FormControl size="small" sx={{ minWidth: 120 }}>
-              <InputLabel>{t('pos:discountType')}</InputLabel>
-              <Select
-                value={discountType}
-                onChange={(e) => setDiscountType(e.target.value as 'percentage' | 'fixed')}
-                label={t('pos:discountType')}
-              >
-                <MenuItem value="percentage">{t('pos:percentage')}</MenuItem>
-                <MenuItem value="fixed">{t('pos:fixedAmount')}</MenuItem>
-              </Select>
-            </FormControl>
-            
-                         <TextField
-               size="small"
-               label={discountType === 'percentage' ? t('pos:discountPercentage') : t('pos:discountAmount')}
-               type="number"
-               value={discountAmount}
-               onChange={(e) => {
-                 const value = Number(e.target.value);
-                 if (value >= 0) {
-                   setDiscountAmount(value);
-                 }
-               }}
-               inputProps={{
-                 min: 0,
-                 max: discountType === 'percentage' ? 100 : subtotal,
-                 step: discountType === 'percentage' ? 0.01 : 0.01
-               }}
-               sx={{ flex: 1 }}
-               error={discountType === 'percentage' ? discountAmount > 100 : discountAmount > subtotal}
-               helperText={discountType === 'percentage' && discountAmount > 100 ? 'Percentage cannot exceed 100%' : 
-                          discountType === 'fixed' && discountAmount > subtotal ? 'Amount cannot exceed subtotal' : ''}
-             />
-          </Box>
-        </Box>
-
-        {/* Payment Methods Section */}
-        <Box sx={{ mb: 3 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6">
-              {t('pos:paymentMethods')}
-            </Typography>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={addPaymentLine}
-              disabled={totalPaid >= grandTotal}
-              startIcon={<AddIcon />}
-            >
-              {t('pos:addPaymentMethod')}
-            </Button>
-          </Box>
-
-          {errors.length > 0 && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {errors.map((error, index) => (
-                <Typography key={index} variant="body2">
-                  {error}
-                </Typography>
-              ))}
+          {/* Error Alert */}
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
-          {paymentLines.length === 0 ? (
-            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-              {t('pos:noPaymentsAdded')}
-            </Typography>
-          ) : (
-            <Box sx={{ space: 2 }}>
-              {paymentLines.map((paymentLine) => (
-                <Box key={paymentLine.id} sx={{ mb: 2, position: 'relative', border: '1px solid #e0e0e0', borderRadius: 1, p: 2 }}>
-                  <IconButton
-                    size="small"
-                    onClick={() => removePaymentLine(paymentLine.id)}
-                    sx={{
-                      position: 'absolute',
-                      top: 8,
-                      right: 8,
-                      color: 'error.main'
-                    }}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                  
-                  <Box sx={{ display: 'flex', gap: 2, pt: 1 }}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>{t('pos:paymentMethod')}</InputLabel>
-                      <Select
-                        value={paymentLine.method}
-                        onChange={(e) => updatePaymentLine(paymentLine.id, 'method', e.target.value)}
-                        label={t('pos:paymentMethod')}
-                      >
-                        {paymentMethodOptions.map(option => (
-                          <MenuItem key={option.value} value={option.value}>
+          {/* Existing Payments */}
+          <div>
+            <h3 className="text-lg font-semibold mb-3">{t('pos:existingPayments')}</h3>
+            {loadingPayments ? (
+              <div className="text-center py-4">
+                <span className="text-gray-500">{t('common:loading')}...</span>
+              </div>
+            ) : payments.length === 0 ? (
+              <div className="text-center py-4 text-gray-500">
+                {t('pos:noPaymentsYet')}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {payments.map((payment) => (
+                  <div key={payment.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="outline">
+                          {t(`paymentMethods:${payment.method}`)}
+                        </Badge>
+                        <span className="font-semibold">{formatNumber(payment.amount)}</span>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {formatPaymentDate(payment.created_at)}
+                        {payment.user_name && ` • ${payment.user_name}`}
+                      </div>
+                      {payment.reference_number && (
+                        <div className="text-sm text-gray-600">Ref: {payment.reference_number}</div>
+                      )}
+                      {payment.notes && (
+                        <div className="text-sm text-gray-600">{payment.notes}</div>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeletePayment(payment.id)}
+                      disabled={deletingPaymentId === payment.id}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      {deletingPaymentId === payment.id ? (
+                        <span className="text-xs">...</span>
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Add New Payment */}
+          {remainingDue > 0 && (
+            <>
+              <Separator />
+              <div>
+                <h3 className="text-lg font-semibold mb-3 flex items-center space-x-2">
+                  <Plus className="h-5 w-5" />
+                  <span>{t('pos:addNewPayment')}</span>
+                </h3>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="paymentMethod">{t('pos:paymentMethod')}</Label>
+                    <Select value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {paymentMethodOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
                             {t(option.labelKey)}
-                          </MenuItem>
+                          </SelectItem>
                         ))}
-                      </Select>
-                    </FormControl>
-                    
-                                         <TextField
-                       fullWidth
-                       size="small"
-                       label={t('pos:paymentAmount')}
-                       type="number"
-                       value={paymentLine.amount}
-                       onChange={(e) => {
-                         const value = Number(e.target.value);
-                         if (value >= 0) {
-                           updatePaymentLine(paymentLine.id, 'amount', value);
-                         }
-                       }}
-                       inputProps={{
-                         min: 0.01,
-                         step: 0.01,
-                         max: amountDue + paymentLine.amount
-                       }}
-                       error={paymentLine.amount > amountDue + paymentLine.amount}
-                       helperText={paymentLine.amount > amountDue + paymentLine.amount ? 'Amount exceeds remaining balance' : ''}
-                     />
-                    
-                    <TextField
-                      fullWidth
-                      size="small"
-                      label={t('pos:referenceNumber')}
-                      value={paymentLine.reference_number}
-                      onChange={(e) => updatePaymentLine(paymentLine.id, 'reference_number', e.target.value)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="paymentAmount">{t('pos:amount')}</Label>
+                    <Input
+                      id="paymentAmount"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max={remainingDue}
+                      value={paymentAmount}
+                      onChange={(e) => setPaymentAmount(e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="referenceNumber">{t('pos:referenceNumber')} ({t('common:optional')})</Label>
+                    <Input
+                      id="referenceNumber"
+                      value={referenceNumber}
+                      onChange={(e) => setReferenceNumber(e.target.value)}
                       placeholder={t('pos:referenceNumberPlaceholder')}
                     />
-                  </Box>
-                </Box>
-              ))}
-            </Box>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="notes">{t('pos:notes')} ({t('common:optional')})</Label>
+                    <Input
+                      id="notes"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder={t('pos:notesPlaceholder')}
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleAddPayment}
+                  disabled={addingPayment || !paymentAmount || parseFloat(paymentAmount) <= 0}
+                  className="w-full mt-4"
+                >
+                  {addingPayment ? (
+                    <span>{t('common:saving')}...</span>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      {t('pos:addPayment')}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </>
           )}
-        </Box>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            {t('common:close')}
+          </Button>
+        </DialogFooter>
       </DialogContent>
-      
-      <DialogActions>
-        <Button onClick={handleClose}>
-          {t('common:cancel')}
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleCompleteSale}
-          disabled={paymentLines.length === 0 || totalPaid !== grandTotal || isSaving}
-        >
-          {isSaving ? t('pos:savingSale') : isEditMode ? t('pos:updateSale') : t('pos:completeSale')}
-        </Button>
-      </DialogActions>
     </Dialog>
   );
-}; 
+};

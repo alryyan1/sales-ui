@@ -2,27 +2,22 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
-// MUI Components
-import {
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-} from "@mui/material";
-
 // Shadcn Components
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
 // Icons
-import { Receipt } from "lucide-react";
+import { Receipt, CreditCard, Percent, Plus } from "lucide-react";
 
 // Types
 import { CartItem, Sale } from "./types";
 import { formatNumber, preciseSum, preciseCalculation } from "@/constants";
 import saleService from "../../services/saleService";
-import { SalePaymentCard } from "./SalePaymentCard";
+
+// Import the new dialogs
+import { PaymentDialog } from "./PaymentDialog";
+import { DiscountDialog } from "./DiscountDialog";
 
 interface SaleSummaryColumnProps {
   currentSaleItems: CartItem[];
@@ -32,8 +27,8 @@ interface SaleSummaryColumnProps {
   isEditMode?: boolean;
   saleId?: number;
   onPaymentComplete: (errorMessage?: string) => void;
-  refreshTrigger?: number; // Add this to force refetch when items are added
-  onSaleDateChange?: (saleId: number, newDate: string) => void; // Add callback for sale date changes
+  refreshTrigger?: number;
+  onSaleDateChange?: (saleId: number, newDate: string) => void;
 }
 
 export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
@@ -49,25 +44,32 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
 }) => {
   const { t } = useTranslation(['pos', 'common']);
 
-  const [discountAmount, setDiscountAmount] = useState(externalDiscountAmount);
-  const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>(externalDiscountType);
-
-  // Sale info state
+  // State for sale info
   const [saleInfo, setSaleInfo] = useState<Sale | null>(null);
   const [loadingSaleInfo, setLoadingSaleInfo] = useState(false);
   
-  // Sale date editing state
-  const [isEditingDate, setIsEditingDate] = useState(false);
-  const [editingDate, setEditingDate] = useState<string>('');
-  const [updatingDate, setUpdatingDate] = useState(false);
+  // Dialog states
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState(false);
+  
+  // Discount state
+  const [discountAmount, setDiscountAmount] = useState(externalDiscountAmount);
+  const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>(externalDiscountType);
 
-
+  // Calculate totals
   const subtotal = preciseSum(currentSaleItems.map(item => item.total), 2);
   
   // Calculate discount
   const discountValue = discountType === 'percentage' 
     ? preciseCalculation(subtotal, discountAmount / 100, 'multiply', 2)
     : discountAmount;
+  const actualDiscountValue = Math.min(discountValue, subtotal);
+  const grandTotal = preciseCalculation(subtotal, actualDiscountValue, 'subtract', 2);
+
+  // Calculate paid amount from sale payments
+  const paidAmount = saleInfo?.payments 
+    ? preciseSum(saleInfo.payments.map(payment => payment.amount), 2)
+    : 0;
 
   // Fetch sale info when saleId changes
   useEffect(() => {
@@ -76,7 +78,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
     } else {
       setSaleInfo(null);
     }
-  }, [saleId]);
+  }, [saleId, refreshTrigger]);
 
   const fetchSaleInfo = async () => {
     if (!saleId) return;
@@ -102,23 +104,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
         notes: saleData.notes,
         created_at: saleData.created_at,
         updated_at: saleData.updated_at,
-        items: saleData.items?.map((item: {
-          id: number;
-          product_id: number;
-          product_name?: string;
-          product_sku?: string;
-          scientific_name?: string;
-          description?: string;
-          unit_price: number;
-          quantity: number;
-          total_price?: number;
-          current_stock_quantity?: number;
-          stock_alert_level?: number;
-          earliest_expiry_date?: string;
-          sellable_unit_name?: string;
-          created_at?: string;
-          updated_at?: string;
-        }) => ({
+        items: saleData.items?.map((item: any) => ({
           id: item.id,
           product: {
             id: item.product_id,
@@ -135,37 +121,12 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
             sellable_unit_name: item.sellable_unit_name || 'Piece',
             created_at: item.created_at || new Date().toISOString(),
             updated_at: item.updated_at || new Date().toISOString()
-          } as {
-            id: number;
-            name: string;
-            sku: string;
-            scientific_name: string;
-            description: string;
-            suggested_sale_price_per_sellable_unit: number;
-            last_sale_price_per_sellable_unit: number;
-            stock_quantity: number;
-            stock_alert_level?: number;
-            earliest_expiry_date?: string;
-            current_stock_quantity: number;
-            sellable_unit_name: string;
-            created_at: string;
-            updated_at: string;
           },
           quantity: item.quantity,
           unitPrice: Number(item.unit_price),
           total: Number(item.total_price || item.quantity * Number(item.unit_price))
         })) || [],
-        payments: saleData.payments?.map((payment: {
-          id: number;
-          sale_id: number;
-          user_name?: string;
-          method: string;
-          amount: number;
-          payment_date: string;
-          reference_number?: string;
-          notes?: string;
-          created_at: string;
-        }) => ({
+        payments: saleData.payments?.map((payment: any) => ({
           id: payment.id,
           sale_id: payment.sale_id,
           user_name: payment.user_name,
@@ -186,25 +147,12 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
       setLoadingSaleInfo(false);
     }
   };
-  
-  // Ensure discount doesn't exceed subtotal
-  const actualDiscountValue = Math.min(discountValue, subtotal);
-  const afterDiscount = preciseCalculation(subtotal, actualDiscountValue, 'subtract', 2);
-  const grandTotal = afterDiscount; // No tax calculation
 
-  // Sync internal discount state with external changes
+  // Sync discount state with external changes
   useEffect(() => {
     setDiscountAmount(externalDiscountAmount);
     setDiscountType(externalDiscountType);
   }, [externalDiscountAmount, externalDiscountType]);
-
-  // Reset discount when sale changes
-  useEffect(() => {
-    if (saleId) {
-      setDiscountAmount(0);
-      setDiscountType('fixed');
-    }
-  }, [saleId]);
 
   // Update external state when internal state changes
   useEffect(() => {
@@ -213,225 +161,159 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
     }
   }, [discountAmount, discountType, onDiscountChange]);
 
-  // Handle sale date editing
-  const handleStartDateEdit = () => {
-    if (saleInfo) {
-      setEditingDate(saleInfo.sale_date);
-      setIsEditingDate(true);
-    }
+  // Handle discount update
+  const handleDiscountUpdate = (amount: number, type: 'percentage' | 'fixed') => {
+    setDiscountAmount(amount);
+    setDiscountType(type);
   };
 
-  const handleCancelDateEdit = () => {
-    setIsEditingDate(false);
-    setEditingDate('');
+  // Handle payment dialog success
+  const handlePaymentSuccess = () => {
+    fetchSaleInfo(); // Refresh sale info to get updated payments
+    onPaymentComplete(); // Notify parent component
   };
 
-  const handleSaveDateEdit = async () => {
-    if (!saleId || !editingDate) return;
-
-    setUpdatingDate(true);
-    try {
-      // Call the parent callback to update the sale date
-      if (onSaleDateChange) {
-        await onSaleDateChange(saleId, editingDate);
-      }
-      
-      // Refresh sale info to get updated data
-      await fetchSaleInfo();
-      
-      setIsEditingDate(false);
-      setEditingDate('');
-    } catch (error) {
-      console.error('Failed to update sale date:', error);
-    } finally {
-      setUpdatingDate(false);
-    }
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
   };
 
-
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
 
   return (
     <div className="w-96 flex flex-col p-2 space-y-2 overflow-y-auto max-h-screen">
-      {/* Sale Summary */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Receipt className="h-5 w-5" />
             <span>{t('pos:saleSummary')}</span>
-            {isEditMode && saleId && (
-              <span className="text-sm font-bold text-blue-600 ml-2">
-                {t('pos:saleIdLabel')}: {saleId}
-              </span>
-            )}
-            {isEditMode && saleInfo && (
-              <span className="text-sm text-gray-500 ml-2">
-                #{saleInfo.sale_order_number || saleInfo.id}
-              </span>
-            )}
-            {isEditMode && loadingSaleInfo && (
-              <span className="text-sm text-blue-500 ml-2">
-                {t('common:loading')}...
-              </span>
-            )}
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
-          {/* Sale Info - Only show when editing existing sale */}
-          {isEditMode && saleId && (
-            <div className="flex justify-between bg-blue-50 p-2 rounded-lg border border-blue-200">
-              <span className="text-blue-700 font-semibold">{t('pos:currentSaleIdLabel')}:</span>
-              <span className="text-blue-700 font-bold text-lg">#{saleId}</span>
+        <CardContent className="space-y-4">
+          
+          {/* Row 1: Sale ID and Date */}
+          <div className="flex justify-between items-center bg-blue-50 p-3 rounded-lg">
+            <div className="flex flex-col">
+              <span className="text-sm text-gray-600">{t('pos:saleId')}</span>
+              <span className="font-bold text-lg text-blue-600">
+                #{saleInfo?.sale_order_number || saleId || 'New'}
+              </span>
             </div>
-          )}
-          {isEditMode && saleInfo && (
-            <>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">{t('pos:saleDate')}</span>
-                {isEditingDate ? (
-                  <div className="flex items-center space-x-2">
-                    <TextField
-                      type="date"
-                      value={editingDate}
-                      onChange={(e) => setEditingDate(e.target.value)}
-                      size="small"
-                      disabled={updatingDate}
-                      sx={{ width: 140 }}
-                    />
-                    <Button
-                      size="sm"
-                      onClick={handleSaveDateEdit}
-                      disabled={updatingDate}
-                      className="bg-green-500 hover:bg-green-600 text-white px-2 py-1"
-                    >
-                      {updatingDate ? '...' : '✓'}
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={handleCancelDateEdit}
-                      disabled={updatingDate}
-                      className="bg-gray-500 hover:bg-gray-600 text-white px-2 py-1"
-                    >
-                      ✕
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex items-center space-x-2">
-                    <span className="font-medium">
-                      {new Date(saleInfo.sale_date).toLocaleDateString()}
-                    </span>
-                    <Button
-                      size="sm"
-                      onClick={handleStartDateEdit}
-                      className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1"
-                      title={t('pos:editSaleDate')}
-                    >
-                      ✎
-                    </Button>
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex justify-between">
-                <span className="text-gray-600">{t('pos:saleTime')}</span>
-                <span className="font-medium">
-                  {new Date(saleInfo.created_at).toLocaleTimeString('en-US', {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true
-                  })}
-                </span>
-              </div>
-              
-              {saleInfo.user_name && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">{t('pos:saleUser')}</span>
-                  <span className="font-medium">{saleInfo.user_name}</span>
-                </div>
-              )}
-              
-              {saleInfo.client_name && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">{t('pos:client')}</span>
-                  <span className="font-medium">{saleInfo.client_name}</span>
-                </div>
-              )}
-              
-              <Separator />
-            </>
-          )}
-          
-          <div className="flex justify-between">
-            <span className="text-gray-600">{t('pos:itemsCount')}</span>
-            <span className="font-medium">{currentSaleItems.length}</span>
-          </div>
-          
-          <div className="flex justify-between">
-            <span className="text-gray-600">{t('pos:subtotal')}</span>
-            <span className="font-medium">{formatNumber(subtotal)}</span>
+            <div className="flex flex-col text-right">
+              <span className="text-sm text-gray-600">{t('pos:date')}</span>
+              <span className="font-semibold">
+                {saleInfo ? formatDate(saleInfo.sale_date) : formatDate(new Date().toISOString())}
+              </span>
+            </div>
           </div>
 
-          {/* Discount Section */}
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">{t('pos:discount')}</span>
-              <div className="flex items-center space-x-2">
-                <FormControl size="small" sx={{ minWidth: 80 }}>
-                  <Select
-                    value={discountType}
-                    onChange={(e) => setDiscountType(e.target.value as 'percentage' | 'fixed')}
-                    size="small"
-                  >
-                    <MenuItem value="percentage">%</MenuItem>
-                    <MenuItem value="fixed">$</MenuItem>
-                  </Select>
-                </FormControl>
-                <TextField
-                  size="small"
-                  type="number"
-                  value={discountAmount}
-                  onChange={(e) => {
-                    const value = Number(e.target.value);
-                    if (value >= 0) {
-                      setDiscountAmount(value);
-                    }
-                  }}
-                  inputProps={{
-                    min: 0,
-                    max: discountType === 'percentage' ? 100 : subtotal,
-                    step: 0.01
-                  }}
-                  sx={{ width: 80 }}
-                  error={discountType === 'percentage' ? discountAmount > 100 : discountAmount > subtotal}
-                />
+          {/* Row 2: User ID and Time */}
+          {saleInfo && (
+            <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
+              <div className="flex flex-col">
+                <span className="text-sm text-gray-600">{t('pos:user')}</span>
+                <span className="font-semibold">{saleInfo.user_name || saleInfo.user_id}</span>
+              </div>
+              <div className="flex flex-col text-right">
+                <span className="text-sm text-gray-600">{t('pos:time')}</span>
+                <span className="font-semibold">{formatTime(saleInfo.created_at)}</span>
               </div>
             </div>
-            {discountAmount > 0 && (
+          )}
+
+          <Separator />
+
+          {/* Row 3: Monetary Info */}
+          <div className="space-y-3">
+            {/* Items count and subtotal */}
+            <div className="flex justify-between">
+              <span className="text-gray-600">{t('pos:items')} ({currentSaleItems.length})</span>
+              <span className="font-medium">{formatNumber(subtotal)}</span>
+            </div>
+
+            {/* Discount row with button */}
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-2">
+                <span className="text-gray-600">{t('pos:discount')}</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsDiscountDialogOpen(true)}
+                  className="h-6 px-2"
+                >
+                  <Percent className="h-3 w-3" />
+                </Button>
+              </div>
+              <span className="font-medium text-red-600">
+                {actualDiscountValue > 0 ? `-${formatNumber(actualDiscountValue)}` : '0.00'}
+              </span>
+            </div>
+
+            {/* Total Amount */}
+            <div className="flex justify-between text-lg font-bold border-t pt-2">
+              <span>{t('pos:total')}</span>
+              <span className="text-green-600">{formatNumber(grandTotal)}</span>
+            </div>
+
+            {/* Paid Amount */}
+            <div className="flex justify-between">
+              <span className="text-gray-600">{t('pos:paid')}</span>
+              <span className="font-medium text-blue-600">{formatNumber(paidAmount)}</span>
+            </div>
+
+            {/* Due Amount */}
+            {(grandTotal - paidAmount) > 0 && (
               <div className="flex justify-between">
-                <span className="text-gray-600">{t('pos:discountValue')}</span>
-                <span className="font-medium text-green-600">-{formatNumber(actualDiscountValue)}</span>
+                <span className="text-gray-600">{t('pos:due')}</span>
+                <span className="font-medium text-orange-600">{formatNumber(grandTotal - paidAmount)}</span>
               </div>
             )}
           </div>
 
           <Separator />
-          
-          <div className="flex justify-between">
-            <span className="text-lg font-bold">{t('pos:total')}</span>
-            <span className="text-lg font-bold text-green-600">{formatNumber(grandTotal)}</span>
-          </div>
+
+          {/* Add Payment Button */}
+          <Button
+            onClick={() => setIsPaymentDialogOpen(true)}
+            className="w-full"
+            disabled={!saleId || grandTotal <= 0}
+            size="lg"
+          >
+            <CreditCard className="h-4 w-4 mr-2" />
+            {t('pos:addPayment')}
+          </Button>
+
         </CardContent>
       </Card>
 
-
-
-      {/* Payment Methods Section */}
-      <SalePaymentCard
+      {/* Payment Dialog */}
+      <PaymentDialog
+        open={isPaymentDialogOpen}
+        onClose={() => setIsPaymentDialogOpen(false)}
         saleId={saleId}
         grandTotal={grandTotal}
-        onPaymentComplete={onPaymentComplete}
-        isEditMode={isEditMode}
-        refreshTrigger={refreshTrigger}
+        paidAmount={paidAmount}
+        onSuccess={handlePaymentSuccess}
+      />
+
+      {/* Discount Dialog */}
+      <DiscountDialog
+        open={isDiscountDialogOpen}
+        onClose={() => setIsDiscountDialogOpen(false)}
+        currentAmount={discountAmount}
+        currentType={discountType}
+        maxAmount={subtotal}
+        onSave={handleDiscountUpdate}
       />
     </div>
   );
-}; 
+};
