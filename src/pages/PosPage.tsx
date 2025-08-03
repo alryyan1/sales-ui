@@ -926,60 +926,32 @@ const PosPage: React.FC = () => {
 
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50 p-[5px]">
+    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
       {/* Header */}
-      <PosHeader 
-        onAddProduct={addToCurrentSale} 
-        loading={false} 
-        onCreateEmptySale={handleCreateEmptySale}
-        onOpenCalculator={handleOpenCalculator}
-        onGeneratePdf={handleGenerateDailySalesPdf}
-        onPreviewPdf={handleOpenPdfDialog}
-        onGenerateInvoice={handleOpenInvoiceDialog}
-        onPrintThermalInvoice={handlePrintThermalInvoice}
-        hasSelectedSale={!!selectedSale}
-        selectedClient={selectedClient}
-        onClientChange={setSelectedClient}
-        filterByCurrentUser={filterByCurrentUser}
-        onToggleUserFilter={() => setFilterByCurrentUser(!filterByCurrentUser)}
-        selectedDate={selectedDate}
-        onDateChange={handleDateChange}
-      />
+      <div className="flex-shrink-0 bg-white border-b border-gray-200">
+        <PosHeader 
+          onAddProduct={addToCurrentSale} 
+          loading={false} 
+          onCreateEmptySale={handleCreateEmptySale}
+          onOpenCalculator={handleOpenCalculator}
+          onGeneratePdf={handleGenerateDailySalesPdf}
+          onPreviewPdf={handleOpenPdfDialog}
+          onGenerateInvoice={handleOpenInvoiceDialog}
+          onPrintThermalInvoice={handlePrintThermalInvoice}
+          hasSelectedSale={!!selectedSale}
+          selectedClient={selectedClient}
+          onClientChange={setSelectedClient}
+          filterByCurrentUser={filterByCurrentUser}
+          onToggleUserFilter={() => setFilterByCurrentUser(!filterByCurrentUser)}
+          selectedDate={selectedDate}
+          onDateChange={handleDateChange}
+        />
+      </div>
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-          {/* Column 2 - Summary and Actions */}
-          <div className="w-[450px]">
-                      <SaleSummaryColumn
-          currentSaleItems={currentSaleItems}
-          discountAmount={discountAmount}
-          discountType={discountType}
-          onDiscountChange={(amount: number, type: 'percentage' | 'fixed') => {
-            setDiscountAmount(amount);
-            setDiscountType(type);
-          }}
-          isEditMode={!!selectedSale}
-          saleId={selectedSale?.id}
-          onPaymentComplete={handlePaymentComplete}
-          refreshTrigger={refreshTrigger}
-          onSaleDateChange={handleSaleDateChange}
-        />
-          </div>
-        {/* Column 1 - Current Sale Items (50%) */}
-        <CurrentSaleItemsColumn
-          currentSaleItems={currentSaleItems}
-          onUpdateQuantity={updateQuantity}
-          onRemoveItem={removeFromCurrentSale}
-          onClearAll={clearCurrentSale}
-          isSalePaid={selectedSale ? (selectedSale.payments && selectedSale.payments.length > 0) : false}
-        />
-
-      
-
-        {/* Column 3 - Today's Sales (20%) */}
-        <div className={`border-l border-gray-200 transition-all duration-300 ${
-          isTodaySalesCollapsed ? 'w-32' : 'w-32'
-        }`}>
+        {/* Column 1 - Today's Sales (100px fixed width) */}
+        <div className="w-[100px] flex-shrink-0 border-r border-gray-200">
           <TodaySalesColumn
             sales={todaySales}
             selectedSaleId={selectedSaleId}
@@ -988,6 +960,35 @@ const PosPage: React.FC = () => {
             onToggleCollapse={() => setIsTodaySalesCollapsed(!isTodaySalesCollapsed)}
             filterByCurrentUser={filterByCurrentUser}
             selectedDate={selectedDate}
+          />
+        </div>
+
+        {/* Column 2 - Current Sale Items (flexible - takes remaining width) */}
+        <div className="flex-1 min-w-0">
+          <CurrentSaleItemsColumn
+            currentSaleItems={currentSaleItems}
+            onUpdateQuantity={updateQuantity}
+            onRemoveItem={removeFromCurrentSale}
+            onClearAll={clearCurrentSale}
+            isSalePaid={selectedSale ? (selectedSale.payments && selectedSale.payments.length > 0) : false}
+          />
+        </div>
+
+        {/* Column 3 - Summary and Actions (350px fixed width) */}
+        <div className="w-[350px] flex-shrink-0 border-l border-gray-200">
+          <SaleSummaryColumn
+            currentSaleItems={currentSaleItems}
+            discountAmount={discountAmount}
+            discountType={discountType}
+            onDiscountChange={(amount: number, type: 'percentage' | 'fixed') => {
+              setDiscountAmount(amount);
+              setDiscountType(type);
+            }}
+            isEditMode={!!selectedSale}
+            saleId={selectedSale?.id}
+            onPaymentComplete={handlePaymentComplete}
+            refreshTrigger={refreshTrigger}
+            onSaleDateChange={handleSaleDateChange}
           />
         </div>
       </div>
