@@ -6,10 +6,8 @@ import { useTranslation } from "react-i18next";
 import {
   Box,
   TextField,
-  InputAdornment,
   Autocomplete,
   Typography,
-  Chip,
 } from "@mui/material";
 
 // Shadcn Components
@@ -17,7 +15,6 @@ import { Button } from "@/components/ui/button";
 
 // MUI Icons
 import {
-    QrCode as BarcodeIcon,
     Add as AddIcon,
     Calculate as CalculateIcon,
     PictureAsPdf as PdfIcon,
@@ -196,9 +193,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
     setSearchResults([]);
   };
 
-  const handleRemoveProduct = (productId: number) => {
-    setSelectedProducts(prev => prev.filter(p => p.id !== productId));
-  };
+
 
   return (
       <div className="w-full px-1 py-1 min-h-[80px] flex items-center justify-between">
@@ -330,17 +325,6 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
                    }}
                    loading={searchLoading}
                    disabled={loading}
-                   renderTags={(value, getTagProps) =>
-                     value.map((option, index) => (
-                       <Chip
-                         {...getTagProps({ index })}
-                         key={option.id}
-                         label={`${option.name} (${option.sku || 'N/A'})`}
-                         size="small"
-                         onDelete={() => handleRemoveProduct(option.id)}
-                       />
-                     ))
-                   }
                    renderInput={(params) => (
                      <TextField
                        {...params}
@@ -348,27 +332,6 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
                        variant="outlined"
                        size="medium"
                        onKeyDown={handleKeyDown}
-                       InputProps={{
-                         ...params.InputProps,
-                         startAdornment: (
-                           <InputAdornment position="start">
-                             <BarcodeIcon />
-                           </InputAdornment>
-                         ),
-                         sx: {
-                           backgroundColor: 'white',
-                           borderRadius: 1,
-                           '& .MuiOutlinedInput-notchedOutline': {
-                             borderColor: 'transparent',
-                           },
-                           '&:hover .MuiOutlinedInput-notchedOutline': {
-                             borderColor: 'transparent',
-                           },
-                           '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                             borderColor: 'transparent',
-                           },
-                         }
-                       }}
                      />
                    )}
                   renderOption={(props, option) => (
