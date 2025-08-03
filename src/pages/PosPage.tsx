@@ -933,7 +933,7 @@ const PosPage: React.FC = () => {
 
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div className="h-screen flex flex-col bg-gray-50 p-[5px]">
       {/* Header */}
       <PosHeader 
         onAddProduct={addToCurrentSale} 

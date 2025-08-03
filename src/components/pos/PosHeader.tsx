@@ -153,7 +153,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onC
   };
 
   return (
-      <div className="container mx-auto px-1 py-1 min-h-[80px] flex items-center justify-between">
+      <div className="w-full px-1 py-1 min-h-[80px] flex items-center justify-between">
         {/* Left side - Create Empty Sale Button and Date Selection */}
         <div className="flex items-center space-x-1">
           <Button
