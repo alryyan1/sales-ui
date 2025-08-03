@@ -558,7 +558,7 @@ const PosPage: React.FC = () => {
             notes: payment.notes || undefined,
             created_at: payment.created_at
           })) || [],
-          // timestamp removed - not part of Sale type
+                  // timestamp removed - not part of Sale type
       };
         
         setSelectedSale(transformedSale);
@@ -569,11 +569,16 @@ const PosPage: React.FC = () => {
             sale.id === selectedSale.id ? transformedSale : sale
           )
         );
-              } catch (error) {
-          console.error('Error updating sale item quantity:', error);
-          const errorMessage = saleService.getErrorMessage(error);
+
+        // Trigger refresh for SaleSummaryColumn and PaymentDialog
+        setRefreshTrigger(prev => prev + 1);
+        
+        showToast(t('pos:quantityUpdated'), 'success');
+      } catch (error) {
+        console.error('Error updating sale item quantity:', error);
+        const errorMessage = saleService.getErrorMessage(error);
           showToast(errorMessage, 'error');
-        }
+      }
     } else {
       // For new sales, update frontend state
       setCurrentSaleItems(prevItems =>
@@ -636,6 +641,9 @@ const PosPage: React.FC = () => {
       
       // Reload today's sales to get updated data
       await loadTodaySales();
+      
+      // Trigger refresh for SaleSummaryColumn and PaymentDialog
+      setRefreshTrigger(prev => prev + 1);
       
       // If the sale was cancelled (no items left), clear the selection
       if (result.sale_status === 'cancelled') {
@@ -987,23 +995,23 @@ const PosPage: React.FC = () => {
     <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
       {/* Header */}
       <div className="flex-shrink-0 bg-white border-b border-gray-200">
-        <PosHeader 
-          onAddProduct={addToCurrentSale} 
-          loading={false} 
-          onCreateEmptySale={handleCreateEmptySale}
-          onOpenCalculator={handleOpenCalculator}
-          onGeneratePdf={handleGenerateDailySalesPdf}
-          onPreviewPdf={handleOpenPdfDialog}
-          onGenerateInvoice={handleOpenInvoiceDialog}
-          onPrintThermalInvoice={handlePrintThermalInvoice}
-          hasSelectedSale={!!selectedSale}
-          selectedClient={selectedClient}
-          onClientChange={setSelectedClient}
-          filterByCurrentUser={filterByCurrentUser}
-          onToggleUserFilter={() => setFilterByCurrentUser(!filterByCurrentUser)}
-          selectedDate={selectedDate}
-          onDateChange={handleDateChange}
-        />
+      <PosHeader 
+        onAddProduct={addToCurrentSale} 
+        loading={false} 
+        onCreateEmptySale={handleCreateEmptySale}
+        onOpenCalculator={handleOpenCalculator}
+        onGeneratePdf={handleGenerateDailySalesPdf}
+        onPreviewPdf={handleOpenPdfDialog}
+        onGenerateInvoice={handleOpenInvoiceDialog}
+        onPrintThermalInvoice={handlePrintThermalInvoice}
+        hasSelectedSale={!!selectedSale}
+        selectedClient={selectedClient}
+        onClientChange={setSelectedClient}
+        filterByCurrentUser={filterByCurrentUser}
+        onToggleUserFilter={() => setFilterByCurrentUser(!filterByCurrentUser)}
+        selectedDate={selectedDate}
+        onDateChange={handleDateChange}
+      />
       </div>
 
       {/* Main Content */}
@@ -1034,19 +1042,19 @@ const PosPage: React.FC = () => {
 
         {/* Column 3 - Summary and Actions (350px fixed width) */}
         <div className="w-[350px] flex-shrink-0 border-l border-gray-200">
-          <SaleSummaryColumn
-            currentSaleItems={currentSaleItems}
-            discountAmount={discountAmount}
-            discountType={discountType}
-            onDiscountChange={(amount: number, type: 'percentage' | 'fixed') => {
-              setDiscountAmount(amount);
-              setDiscountType(type);
-            }}
-            isEditMode={!!selectedSale}
-            saleId={selectedSale?.id}
-            onPaymentComplete={handlePaymentComplete}
-            refreshTrigger={refreshTrigger}
-            onSaleDateChange={handleSaleDateChange}
+                      <SaleSummaryColumn
+          currentSaleItems={currentSaleItems}
+          discountAmount={discountAmount}
+          discountType={discountType}
+          onDiscountChange={(amount: number, type: 'percentage' | 'fixed') => {
+            setDiscountAmount(amount);
+            setDiscountType(type);
+          }}
+          isEditMode={!!selectedSale}
+          saleId={selectedSale?.id}
+          onPaymentComplete={handlePaymentComplete}
+          refreshTrigger={refreshTrigger}
+          onSaleDateChange={handleSaleDateChange}
           />
         </div>
       </div>

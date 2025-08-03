@@ -14,7 +14,8 @@ import {
   Minus, 
   Trash2, 
   Package, 
-  Calendar
+  Calendar,
+  Trash
 } from "lucide-react";
 
 // Types
@@ -25,6 +26,7 @@ interface CurrentSaleItemsColumnProps {
   currentSaleItems: CartItem[];
   onUpdateQuantity: (productId: number, newQuantity: number) => Promise<void>;
   onRemoveItem: (productId: number) => Promise<void>;
+  onClearAll?: () => void;
   isSalePaid?: boolean;
 }
 
@@ -32,6 +34,7 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
   currentSaleItems,
   onUpdateQuantity,
   onRemoveItem,
+  onClearAll,
   isSalePaid = false,
 }) => {
   const { t } = useTranslation(['pos', 'common']);

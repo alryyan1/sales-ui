@@ -98,6 +98,7 @@
   "newSaleStarted": "تم بدء بيع جديد",
   "createEmptySale": "إنشاء بيع فارغ",
   "emptySaleCreated": "تم إنشاء البيع الفارغ واختياره بنجاح!",
+  "quantityUpdated": "تم تحديث الكمية بنجاح",
   "itemNotFound": "عنصر البيع غير موجود",
   "alreadyInCart": "موجود بالفعل في السلة",
   "generatePdf": "التقرير اليومي",

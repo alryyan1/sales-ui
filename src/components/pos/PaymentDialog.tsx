@@ -175,7 +175,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
       console.error('Failed to delete payment:', err);
       const errorMessage = saleService.getErrorMessage(err);
       setError(errorMessage);
-    } finally {
+      } finally {
       setDeletingPaymentId(null);
     }
   };
@@ -202,7 +202,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
             <CreditCard className="h-5 w-5" />
             <span>{t('pos:managePayments')}</span>
             {saleId && <span className="text-sm text-gray-500">- Sale #{saleId}</span>}
-          </DialogTitle>
+      </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -304,14 +304,14 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                           </SelectItem>
                         ))}
                       </SelectContent>
-                    </Select>
+                      </Select>
                   </div>
 
                   <div>
                     <Label htmlFor="paymentAmount">{t('pos:amount')}</Label>
                     <Input
                       id="paymentAmount"
-                      type="number"
+                       type="number"
                       step="0.01"
                       min="0"
                       max={remainingDue}
@@ -349,4 +349,4 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
       </DialogContent>
     </Dialog>
   );
-};
+}; 
