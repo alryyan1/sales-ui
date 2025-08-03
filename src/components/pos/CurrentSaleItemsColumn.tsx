@@ -3,7 +3,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 // shadcn/ui Components
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -63,30 +63,6 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
   return (
     <div dir="ltr" className="w-full h-full flex flex-col">
       <Card className="flex-1 flex flex-col">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-xl font-semibold text-gray-900">
-              {t('pos:currentSaleItems')} ({currentSaleItems.length})
-            </CardTitle>
-            {currentSaleItems.length > 0 && onClearAll && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onClearAll}
-                disabled={isSalePaid}
-                className={`flex items-center gap-2 ${
-                  isSalePaid 
-                    ? 'opacity-50 cursor-not-allowed' 
-                    : 'text-red-600 hover:text-red-700 hover:bg-red-50'
-                }`}
-                title={isSalePaid ? t('pos:salePaidCannotModify') : t('pos:clearAllItems')}
-              >
-                <Trash className="h-4 w-4" />
-                {t('pos:clearAll')}
-              </Button>
-            )}
-          </div>
-        </CardHeader>
         <CardContent className="flex-1 p-0">
           {currentSaleItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-gray-500">
@@ -95,7 +71,7 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
               <p className="text-base">{t('pos:addProductsToStart')}</p>
             </div>
           ) : (
-            <div className="h-[calc(100vh-300px)] overflow-y-auto">
+            <div className="h-[calc(100vh-200px)] overflow-y-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
