@@ -343,7 +343,6 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
             disabled={!saleId || grandTotal <= 0}
             size="lg"
           >
-            <CreditCard className="h-4 w-4 mr-2" />
             {paidAmount > 0 ? t('pos:payments') : t('pos:addPayment')}
           </Button>
 

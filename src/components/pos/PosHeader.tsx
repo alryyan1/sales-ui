@@ -161,7 +161,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onC
             size="default"
             onClick={onCreateEmptySale}
             disabled={loading}
-            className="relative group px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:text-gray-500"
+            className="relative group px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:text-gray-500 cursor-pointer"
             title={t('pos:createEmptySale')}
           >
             <AddIcon className="h-4 w-4" />
@@ -319,7 +319,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onC
                   size="default"
                   onClick={handleAddProduct}
                   disabled={!selectedProduct || loading}
-                  className="relative group min-w-auto px-2 py-1.5 bg-white text-primary hover:bg-gray-100 disabled:bg-gray-300 disabled:text-gray-500"
+                  className="relative group min-w-auto px-2 py-1.5 bg-white text-primary hover:bg-gray-100 disabled:bg-gray-300 disabled:text-gray-500 cursor-pointer"
                   title={t('pos:addProduct')}
                 >
                   <AddIcon className="h-4 w-4" />
@@ -343,12 +343,12 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onC
             variant="default"
             size="default"
             onClick={onToggleUserFilter}
-            className={`relative group px-3 py-1.5 ${
+            className={`relative group px-3 py-1.5 cursor-pointer ${
               filterByCurrentUser 
                 ? 'bg-blue-500 hover:bg-blue-600' 
                 : 'bg-gray-500 hover:bg-gray-600'
             } disabled:bg-gray-300 disabled:text-gray-500`}
-            title={filterByCurrentUser ? t('pos:showAllSales') : t('pos:showMySales')}
+            title={filterByCurrentUser ? t('pos:showMySales') : t('pos:showAllSales')}
           >
             <Users className="h-4 w-4" />
             <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
@@ -361,7 +361,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onC
             variant="default"
             size="default"
             onClick={onOpenCalculator}
-            className="relative group px-3 py-1.5 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 disabled:text-gray-500"
+            className="relative group px-3 py-1.5 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 disabled:text-gray-500 cursor-pointer"
             title={t('pos:calculator')}
           >
             <CalculateIcon className="h-4 w-4" />
@@ -375,7 +375,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onC
             variant="default"
             size="default"
             onClick={onPreviewPdf}
-            className="relative group px-3 py-1.5 bg-purple-500 hover:bg-purple-600 disabled:bg-gray-300 disabled:text-gray-500"
+            className="relative group px-3 py-1.5 bg-purple-500 hover:bg-purple-600 disabled:bg-gray-300 disabled:text-gray-500 cursor-pointer"
             title={t('pos:previewPdf')}
           >
             <PdfIcon className="h-4 w-4" />
@@ -390,7 +390,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onC
               variant="default"
               size="default"
               onClick={onGenerateInvoice}
-              className="relative group px-3 py-1.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:text-gray-500"
+              className="relative group px-3 py-1.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:text-gray-500 cursor-pointer"
               title={t('pos:generateInvoice')}
             >
               <InvoiceIcon className="h-4 w-4" />
@@ -406,7 +406,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onC
               variant="default"
               size="default"
               onClick={onPrintThermalInvoice}
-              className="relative group px-3 py-1.5 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 disabled:text-gray-500"
+              className="relative group px-3 py-1.5 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 disabled:text-gray-500 cursor-pointer"
               title={t('pos:printThermalInvoice')}
             >
               <PrintIcon className="h-4 w-4" />
@@ -421,7 +421,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({ onAddProduct, loading, onC
             variant="default"
             size="default"
             onClick={onGeneratePdf}
-            className="relative group px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:text-gray-500"
+            className="relative group px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:text-gray-500 cursor-pointer"
             title={t('pos:generatePdf')}
           >
             <FileText className="h-4 w-4" />
