@@ -1,15 +1,13 @@
 // src/pages/PosPage.tsx
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 // Shadcn Components
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
-// Icons
-import { 
-  X
-} from "lucide-react";
+// Toast
+import { toast } from "sonner";
 
 // POS Components
 import {
@@ -43,7 +41,6 @@ const PosPage: React.FC = () => {
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [selectedSaleId, setSelectedSaleId] = useState<number | null>(null);
   const [saleEditorOpen, setSaleEditorOpen] = useState(false);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
   const [isTodaySalesCollapsed, setIsTodaySalesCollapsed] = useState(false);
   const [calculatorDialogOpen, setCalculatorDialogOpen] = useState(false);
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
@@ -66,31 +63,30 @@ const PosPage: React.FC = () => {
   // Refresh trigger for SalePaymentCard
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Load today's sales on mount
-  useEffect(() => {
-    loadTodaySales();
-  }, [filterByCurrentUser, selectedDate]); // Reload when filter or date changes
+  const queryClient = useQueryClient();
 
-  const loadTodaySales = async () => {
-    try {
-      // Use the new endpoint for today's sales by created_at
-      const dbSales = await saleService.getTodaySalesByCreatedAt();
-      
-      // Debug logging
-      console.log('Current user ID:', user?.id);
-      console.log('Filter by current user:', filterByCurrentUser);
-      console.log('Raw sales from API:', dbSales);
-      console.log('Sales with user_id:', dbSales.map(sale => ({ id: sale.id, user_id: sale.user_id, user_name: sale.user_name })));
-      
-      // Apply client-side filtering for current user if needed
-      const filteredDbSales = filterByCurrentUser && user?.id 
-        ? dbSales.filter(sale => sale.user_id === user.id)
-        : dbSales;
-      
-      console.log('Filtered sales:', filteredDbSales.map(sale => ({ id: sale.id, user_id: sale.user_id, user_name: sale.user_name })));
-      
-      // Transform database sales to POS format
-      const transformedSales: Sale[] = filteredDbSales.map((dbSale) => ({
+    // React Query for today's sales
+  const { data: todaySales = [], isLoading: loadingTodaySales, refetch: refetchTodaySales } = useQuery({
+    queryKey: ['todaySales', filterByCurrentUser, selectedDate, user?.id],
+    queryFn: async () => {
+      try {
+        const dbSales = await saleService.getTodaySalesByCreatedAt();
+        
+        // Debug logging
+        console.log('Current user ID:', user?.id);
+        console.log('Filter by current user:', filterByCurrentUser);
+        console.log('Raw sales from API:', dbSales);
+        console.log('Sales with user_id:', dbSales.map(sale => ({ id: sale.id, user_id: sale.user_id, user_name: sale.user_name })));
+        
+        // Apply client-side filtering for current user if needed
+        const filteredDbSales = filterByCurrentUser && user?.id 
+          ? dbSales.filter(sale => sale.user_id === user.id)
+          : dbSales;
+        
+        console.log('Filtered sales:', filteredDbSales.map(sale => ({ id: sale.id, user_id: sale.user_id, user_name: sale.user_name })));
+        
+        // Transform database sales to POS format
+        const transformedSales: Sale[] = filteredDbSales.map((dbSale) => ({
         id: dbSale.id,
         sale_order_number: dbSale.sale_order_number,
         client_id: dbSale.client_id,
@@ -146,12 +142,12 @@ const PosPage: React.FC = () => {
     }
   };
 
-  const showSnackbar = (message: string, severity: 'success' | 'error') => {
-    setSnackbar({ open: true, message, severity });
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbar({ ...snackbar, open: false });
+  const showToast = (message: string, severity: 'success' | 'error') => {
+    if (severity === 'success') {
+      toast.success(message);
+    } else {
+      toast.error(message);
+    }
   };
 
   const addToCurrentSale = async (product: Product) => {
@@ -221,7 +217,7 @@ const PosPage: React.FC = () => {
         setSelectedSaleId(transformedSale.id);
         
         // Add the new sale to today's sales
-        setTodaySales(prevSales => [transformedSale, ...prevSales]);
+        queryClient.setQueryData(['todaySales', filterByCurrentUser, selectedDate, user?.id], (oldData: Sale[] = []) => [transformedSale, ...oldData]);
         
         // If there are existing items in currentSaleItems without IDs, add them to the backend sale
         const existingItemsWithoutIds = currentSaleItems.filter(item => !item.id);
@@ -319,7 +315,7 @@ const PosPage: React.FC = () => {
           
           // Check if the response indicates product already exists
           if (response.message === 'Product already exists in sale') {
-            showSnackbar(`${product.name} ${t('pos:alreadyInCart')}`, 'success');
+            showToast(`${product.name} ${t('pos:alreadyInCart')}`, 'success');
             return;
           }
           
@@ -385,7 +381,7 @@ const PosPage: React.FC = () => {
             )
           );
           
-          showSnackbar(`${product.name} ${t('pos:addedToCart')}`, 'success');
+          showToast(`${product.name} ${t('pos:addedToCart')}`, 'success');
           
           // Increment refresh trigger to force SalePaymentCard to refetch sale data
           setRefreshTrigger(prev => prev + 1);
@@ -396,12 +392,12 @@ const PosPage: React.FC = () => {
       } catch (error) {
         console.error('Error creating empty sale:', error);
         const errorMessage = saleService.getErrorMessage(error);
-        showSnackbar(errorMessage, 'error');
+        showToast(errorMessage, 'error');
         return;
       }
     }
 
-    // Now we always have a selectedSale, so add the product to it
+    // Now we always have a selectedSale, so add the product to this sale
     try {
       const itemData = {
         product_id: product.id,
@@ -413,7 +409,7 @@ const PosPage: React.FC = () => {
       
       // Check if the response indicates product already exists
       if (response.message === 'Product already exists in sale') {
-        showSnackbar(`${product.name} ${t('pos:alreadyInCart')}`, 'success');
+        showToast(`${product.name} ${t('pos:alreadyInCart')}`, 'success');
         return;
       }
       
@@ -480,15 +476,15 @@ const PosPage: React.FC = () => {
         )
       );
       
-      showSnackbar(`${product.name} ${t('pos:addedToCart')}`, 'success');
-      
-      // Increment refresh trigger to force SalePaymentCard to refetch sale data
-      setRefreshTrigger(prev => prev + 1);
-    } catch (error) {
-      console.error('Error adding product to sale:', error);
-      const errorMessage = saleService.getErrorMessage(error);
-      showSnackbar(errorMessage, 'error');
-    }
+                showToast(`${product.name} ${t('pos:addedToCart')}`, 'success');
+          
+          // Increment refresh trigger to force SalePaymentCard to refetch sale data
+          setRefreshTrigger(prev => prev + 1);
+        } catch (error) {
+          console.error('Error adding product to sale:', error);
+          const errorMessage = saleService.getErrorMessage(error);
+          showToast(errorMessage, 'error');
+        }
   };
 
   const updateQuantity = async (productId: number, newQuantity: number) => {
@@ -503,7 +499,7 @@ const PosPage: React.FC = () => {
         // Find the sale item to update
         const itemToUpdate = currentSaleItems.find(item => item.product.id === productId);
         if (!itemToUpdate || !itemToUpdate.id) {
-          showSnackbar(t('pos:itemNotFound'), 'error');
+          showToast(t('pos:itemNotFound'), 'error');
           return;
         }
 
@@ -576,11 +572,11 @@ const PosPage: React.FC = () => {
             sale.id === selectedSale.id ? transformedSale : sale
           )
         );
-      } catch (error) {
-        console.error('Error updating sale item quantity:', error);
-        const errorMessage = saleService.getErrorMessage(error);
-        showSnackbar(errorMessage, 'error');
-      }
+              } catch (error) {
+          console.error('Error updating sale item quantity:', error);
+          const errorMessage = saleService.getErrorMessage(error);
+          showToast(errorMessage, 'error');
+        }
     } else {
       // For new sales, update frontend state
       setCurrentSaleItems(prevItems =>
@@ -608,13 +604,13 @@ const PosPage: React.FC = () => {
     
     if (!itemToRemove) {
       console.error('Item not found for productId:', productId);
-      showSnackbar(t('pos:itemNotFound'), 'error');
+      showToast(t('pos:itemNotFound'), 'error');
       return;
     }
 
     if (!itemToRemove.id) {
       console.error('Item found but has no ID:', itemToRemove);
-      showSnackbar(t('pos:itemNotFound'), 'error');
+      showToast(t('pos:itemNotFound'), 'error');
       return;
     }
 
@@ -625,13 +621,13 @@ const PosPage: React.FC = () => {
       await handleDeleteSaleItem(itemToRemove.id);
     } catch (error) {
       console.error('Error removing item from sale:', error);
-      showSnackbar(t('pos:itemRemovalFailed'), 'error');
+      showToast(t('pos:itemRemovalFailed'), 'error');
     }
   };
 
   const handleDeleteSaleItem = async (saleItemId: number) => {
     if (!selectedSale) {
-      showSnackbar(t('pos:noSaleSelected'), 'error');
+      showToast(t('pos:noSaleSelected'), 'error');
       return;
     }
 
@@ -639,7 +635,7 @@ const PosPage: React.FC = () => {
       const result = await saleService.deleteSaleItem(selectedSale.id, saleItemId);
       
       // Show success message
-      showSnackbar(result.message, 'success');
+      showToast(result.message, 'success');
       
       // Reload today's sales to get updated data
       await loadTodaySales();
@@ -652,7 +648,7 @@ const PosPage: React.FC = () => {
         // Reset payment state - now handled by SalePaymentCard
         setDiscountAmount(0);
         setDiscountType('fixed');
-        showSnackbar(t('pos:saleCancelled'), 'success');
+        showToast(t('pos:saleCancelled'), 'success');
       } else {
         // Update the selected sale with new data
         const updatedSale = todaySales.find(sale => sale.id === selectedSale.id);
@@ -663,7 +659,7 @@ const PosPage: React.FC = () => {
     } catch (error) {
       console.error('Error deleting sale item:', error);
       const errorMessage = saleService.getErrorMessage(error);
-      showSnackbar(errorMessage, 'error');
+      showToast(errorMessage, 'error');
     }
   };
 
@@ -672,13 +668,13 @@ const PosPage: React.FC = () => {
     // Reset payment state - now handled by SalePaymentCard
     setDiscountAmount(0);
     setDiscountType('fixed');
-    showSnackbar(t('pos:saleCleared'), 'success');
+    showToast(t('pos:saleCleared'), 'success');
   };
 
   const handlePaymentComplete = async (errorMessage?: string) => {
     if (errorMessage) {
       // Show error message in toast
-      showSnackbar(errorMessage, 'error');
+      showToast(errorMessage, 'error');
     } else {
       // Success case - always reload today's sales after payment completion
       await loadTodaySales();
@@ -690,7 +686,7 @@ const PosPage: React.FC = () => {
         // Reset payment state - now handled by SalePaymentCard
         setDiscountAmount(0);
         setDiscountType('fixed');
-        showSnackbar(t('pos:saleUpdated'), 'success');
+        showToast(t('pos:saleUpdated'), 'success');
         
         // Automatically open thermal PDF dialog for the completed sale
         setTimeout(() => {
@@ -771,7 +767,7 @@ const PosPage: React.FC = () => {
           }, 500); // Small delay to ensure the sale data is updated
         }
         
-        showSnackbar(t('pos:saleCompleted'), 'success');
+        showToast(t('pos:saleCompleted'), 'success');
       }
     }
   };
@@ -863,11 +859,11 @@ const PosPage: React.FC = () => {
       // Refresh today's sales to ensure consistency and get the most up-to-date data
       await loadTodaySales();
       
-      showSnackbar(t('pos:emptySaleCreated'), 'success');
+      showToast(t('pos:emptySaleCreated'), 'success');
     } catch (error) {
       console.error('Error creating empty sale:', error);
       const errorMessage = saleService.getErrorMessage(error);
-      showSnackbar(errorMessage, 'error');
+      showToast(errorMessage, 'error');
     }
   };
 
@@ -885,7 +881,7 @@ const PosPage: React.FC = () => {
 
   const handlePrintThermalInvoice = () => {
     if (!selectedSale) {
-      showSnackbar(t('pos:noSaleSelected'), 'error');
+      showToast(t('pos:noSaleSelected'), 'error');
       return;
     }
     setThermalDialogOpen(true);
@@ -894,9 +890,9 @@ const PosPage: React.FC = () => {
   const handleGenerateDailySalesPdf = async () => {
     try {
       await generateDailySalesPdf();
-      showSnackbar(t('pos:pdfGenerated'), 'success');
+      showToast(t('pos:pdfGenerated'), 'success');
     } catch {
-      showSnackbar(t('pos:pdfGenerationFailed'), 'error');
+      showToast(t('pos:pdfGenerationFailed'), 'error');
     }
   };
 
@@ -921,11 +917,11 @@ const PosPage: React.FC = () => {
         }
       }
       
-      showSnackbar(t('pos:saleDateUpdated'), 'success');
+      showToast(t('pos:saleDateUpdated'), 'success');
     } catch (error) {
       console.error('Failed to update sale date:', error);
       const errorMessage = saleService.getErrorMessage(error);
-      showSnackbar(errorMessage, 'error');
+      showToast(errorMessage, 'error');
     }
   };
 
@@ -956,7 +952,7 @@ const PosPage: React.FC = () => {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
           {/* Column 2 - Summary and Actions */}
-          <div className="w-[400px]">
+          <div className="w-[450px]">
                       <SaleSummaryColumn
           currentSaleItems={currentSaleItems}
           discountAmount={discountAmount}
@@ -1040,24 +1036,6 @@ const PosPage: React.FC = () => {
         sale={selectedSale}
       />
 
-      {/* Snackbar */}
-      {snackbar.open && (
-        <div className="fixed bottom-4 right-4 z-50">
-          <Alert className={snackbar.severity === 'success' ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
-            <AlertDescription className={snackbar.severity === 'success' ? 'text-green-800' : 'text-red-800'}>
-              {snackbar.message}
-            </AlertDescription>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCloseSnackbar}
-              className="ml-auto"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </Alert>
-        </div>
-      )}
     </div>
   );
 };

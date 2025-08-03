@@ -190,7 +190,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
   };
 
   return (
-    <div className="w-96 flex flex-col p-2 space-y-2 overflow-y-auto max-h-screen">
+    <div className="w-[450px] flex flex-col p-2 space-y-2 overflow-y-auto max-h-screen">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
