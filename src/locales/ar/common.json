@@ -29,5 +29,19 @@
   "appName": "نظام اداره المبيعات",
   "analytics": "التحليلات",
   "refresh": "تحديث",
-  "retry": "إعادة المحاولة"
+  "retry": "إعادة المحاولة",
+  "sunday": "الأحد",
+  "monday": "الاثنين",
+  "tuesday": "الثلاثاء",
+  "wednesday": "الأربعاء",
+  "thursday": "الخميس",
+  "friday": "الجمعة",
+  "saturday": "السبت",
+  "saving": "جاري الحفظ...",
+  "update": "تحديث",
+  "create": "إنشاء",
+  "errorLoadingData": "خطأ في تحميل البيانات",
+  "errorSavingData": "خطأ في حفظ البيانات",
+  "errorUpdatingData": "خطأ في تحديث البيانات",
+  "errorDeletingData": "خطأ في حذف البيانات"
 }

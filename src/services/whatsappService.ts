@@ -193,19 +193,49 @@ const whatsappService = {
   /**
    * Test WhatsApp connection by sending a test message
    */
-  testConnection: async (phoneNumber: string, message?: string): Promise<{ success: boolean; message: string; error?: string }> => {
+  testConnection: async (phoneNumber: string, message?: string): Promise<{ success: boolean; message: string; error?: string; details?: any }> => {
     try {
       const response = await apiClient.post('/admin/whatsapp/test', {
         phoneNumber: phoneNumber,
-        message: message
+        message: message || 'This is a test message from your sales system. If you receive this, WhatsApp integration is working correctly!'
       });
       return response.data;
     } catch (error: any) {
       console.error('Error testing WhatsApp connection:', error);
+      
+      // Extract detailed error information from the response
+      const errorResponse = error.response?.data;
+      
+      if (errorResponse) {
+        // Handle the specific WhatsApp API error format
+        if (errorResponse.status === 'error') {
+          return {
+            success: false,
+            message: errorResponse.message || 'WhatsApp API Error',
+            error: errorResponse.explanation || errorResponse.message,
+            details: {
+              instanceId: errorResponse.instanceId,
+              chatId: errorResponse.chatId,
+              explanation: errorResponse.explanation
+            }
+          };
+        }
+        
+        // Handle other API error formats
+        return {
+          success: false,
+          message: errorResponse.message || 'Failed to test WhatsApp connection',
+          error: errorResponse.error || errorResponse.message,
+          details: errorResponse
+        };
+      }
+      
+      // Fallback for network or other errors
       return {
         success: false,
-        message: error.response?.data?.message || 'Failed to test WhatsApp connection',
-        error: error.response?.data?.error || error.message
+        message: 'Failed to test WhatsApp connection',
+        error: error.message || 'Unknown error occurred',
+        details: { networkError: true }
       };
     }
   }

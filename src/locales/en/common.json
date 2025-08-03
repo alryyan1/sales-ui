@@ -29,5 +29,19 @@
   "appName": "Sales Management System",
   "analytics": "Analytics",
   "refresh": "Refresh",
-  "retry": "Retry"
+  "retry": "Retry",
+  "sunday": "Sunday",
+  "monday": "Monday",
+  "tuesday": "Tuesday",
+  "wednesday": "Wednesday",
+  "thursday": "Thursday",
+  "friday": "Friday",
+  "saturday": "Saturday",
+  "saving": "Saving...",
+  "update": "Update",
+  "create": "Create",
+  "errorLoadingData": "Error loading data",
+  "errorSavingData": "Error saving data",
+  "errorUpdatingData": "Error updating data",
+  "errorDeletingData": "Error deleting data"
 } 

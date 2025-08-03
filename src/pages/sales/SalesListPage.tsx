@@ -202,18 +202,13 @@ const SalesListPage: React.FC = () => {
               <TableHeader>
                 <TableRow>
                   {/* Add appropriate table headers */}
-                  <TableCell>{t("sales:id")}</TableCell>
-                  <TableCell>{t("sales:date")}</TableCell>
-                  <TableCell>{t("sales:invoice")}</TableCell>
-                  <TableCell>{t("clients:client")}</TableCell>
-                  {/* Use client namespace */}
-                  <TableCell align="center">{t("sales:status")}</TableCell>
-                  <TableCell align="right">{t("sales:totalAmount")}</TableCell>
-                  <TableCell align="right">{t("sales:paidAmount")}</TableCell>
-                  {/* <TableCell align="right" >
-                    {t("sales:dueAmount")}
-                  </TableCell> */}
-                  {/* Add key */}
+                  <TableCell align="center">{t("sales:id")}</TableCell>
+                  <TableCell align="center">{t("sales:date")}</TableCell>
+                  <TableCell align="center">{t("sales:invoice")}</TableCell>
+                  <TableCell align="center">{t("clients:client")}</TableCell>
+                  <TableCell align="center">{t("sales:discount")}</TableCell>
+                  <TableCell align="center">{t("sales:totalAmount")}</TableCell>
+                  <TableCell align="center">{t("sales:paidAmount")}</TableCell>
                   <TableCell align="center">{t("common:actions")}</TableCell>
                 </TableRow>
               </TableHeader>
@@ -227,6 +222,8 @@ const SalesListPage: React.FC = () => {
                         transition: "background-color 0.5s ease-out", // Smooth transition
                         backgroundColor: isHighlighted
                           ? (theme) => theme.palette.primary.light // Example MUI theme color
+                          : (sale.discount_amount && sale.discount_amount > 0)
+                          ? '#fff3cd' // Light yellow background for rows with discount
                           : "inherit", // Example MUI theme color
                         // Or use theme-agnostic color:
                         // backgroundColor: isHighlighted ? '#e6ffed' : 'inherit',
@@ -234,37 +231,28 @@ const SalesListPage: React.FC = () => {
                       key={sale.id}
                       hover
                     >
-                      <TableCell>{sale.id}</TableCell>
-                      <TableCell>
+                      <TableCell align="center">{sale.id}</TableCell>
+                      <TableCell align="center">
                         {dayjs(sale.sale_date).format("YYYY-MM-DD")}
                       </TableCell>
-                      <TableCell>{sale.invoice_number || "---"}</TableCell>
-                      <TableCell>
+                      <TableCell align="center">{sale.invoice_number || `SALE-${sale.id}`}</TableCell>
+                      <TableCell align="center">
                         {sale.client_name || t("common:n/a")}
                       </TableCell>
                       <TableCell align="center">
-                        <Chip
-                          label={t(`sales:status_${sale.status}`)} // Add keys like status_completed etc.
-                          size="small"
-                          color={
-                            sale.status === "completed"
-                              ? "success"
-                              : sale.status === "pending"
-                              ? "warning"
-                              : sale.status === "draft"
-                              ? "info"
-                              : "default"
-                          }
-                        />
+                        {sale.discount_amount && sale.discount_amount > 0 
+                          ? formatCurrency(sale.discount_amount, "en-US", settings?.currency_symbol)
+                          : "---"
+                        }
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell align="center">
                         {formatCurrency(
                           sale.total_amount,
                           "en-US",
                           settings?.currency_symbol
                         )}
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell align="center">
                         {formatNumber(sale.paid_amount)}
                       </TableCell>
                       {/* <TableCell align="right" >

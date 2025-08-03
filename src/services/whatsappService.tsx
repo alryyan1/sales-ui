@@ -5,16 +5,25 @@ import { AxiosError } from 'axios';
 // WhatsApp API Types
 export interface WhatsAppMessageRequest {
   chatId: string; // Format: {phone_number}@c.us for individual, {group_id}@g.us for group
-  text: string;
+  message: string; // Changed from 'text' to 'message' to match API
   quotedMessageId?: string; // Optional: ID of message to reply to
 }
 
 export interface WhatsAppMessageResponse {
-  id: string;
+  id: {
+    fromMe: boolean;
+    remote: string;
+    id: string;
+    _serialized: string;
+  };
   chatId: string;
-  text: string;
+  body: string; // Changed from 'text' to 'body' to match API response
   timestamp: number;
   status: 'sent' | 'delivered' | 'read' | 'failed';
+  from: string;
+  to: string;
+  fromMe: boolean;
+  type: string;
 }
 
 export interface WhatsAppTestResponse {
@@ -49,16 +58,50 @@ const whatsappService = {
   /**
    * Test WhatsApp API connection and send a test message
    */
-  testConnection: async (testPhoneNumber: string): Promise<WhatsAppTestResponse> => {
+  testConnection: async (testPhoneNumber: string): Promise<WhatsAppTestResponse & { details?: any }> => {
     try {
       const response = await apiClient.post<WhatsAppTestResponse>('/whatsapp/test', {
         phoneNumber: testPhoneNumber,
         message: 'This is a test message from your sales system. If you receive this, WhatsApp integration is working correctly!'
       });
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error testing WhatsApp connection:', error);
-      throw error;
+      
+      // Extract detailed error information from the response
+      const errorResponse = error.response?.data;
+      
+      if (errorResponse) {
+        // Handle the specific WhatsApp API error format
+        if (errorResponse.status === 'error') {
+          return {
+            success: false,
+            message: errorResponse.message || 'WhatsApp API Error',
+            error: errorResponse.explanation || errorResponse.message,
+            details: {
+              instanceId: errorResponse.instanceId,
+              chatId: errorResponse.chatId,
+              explanation: errorResponse.explanation
+            }
+          };
+        }
+        
+        // Handle other API error formats
+        return {
+          success: false,
+          message: errorResponse.message || 'Failed to test WhatsApp connection',
+          error: errorResponse.error || errorResponse.message,
+          details: errorResponse
+        };
+      }
+      
+      // Fallback for network or other errors
+      return {
+        success: false,
+        message: 'Failed to test WhatsApp connection',
+        error: error.message || 'Unknown error occurred',
+        details: { networkError: true }
+      };
     }
   },
 

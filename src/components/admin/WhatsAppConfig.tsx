@@ -76,6 +76,7 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
   const [testResult, setTestResult] = useState<{
     success: boolean;
     message: string;
+    details?: any;
   } | null>(null);
   const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
   const [testPhoneNumber, setTestPhoneNumber] = useState("");
@@ -121,12 +122,29 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
       setTestResult({
         success: result.success,
         message: result.message,
+        details: result.details,
       });
       
       if (result.success) {
         toast.success(t("settings:whatsappTestMessageSent"));
       } else {
-        toast.error(result.error || t("settings:testFailed"));
+        // Display detailed error information in toast
+        let errorMessage = result.error || result.message;
+        
+        // If there are additional details, include them in the toast
+        if (result.details) {
+          if (result.details.explanation) {
+            errorMessage = `${result.message}: ${result.details.explanation}`;
+          }
+          if (result.details.chatId) {
+            errorMessage += ` (ChatId: ${result.details.chatId})`;
+          }
+        }
+        
+        toast.error(errorMessage, {
+          description: result.details?.explanation || result.error,
+          duration: 6000, // Show for 6 seconds to allow reading longer error messages
+        });
       }
     } catch (error) {
       console.error("WhatsApp test error:", error);
@@ -134,7 +152,10 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
         success: false,
         message: t("settings:failedToSendTestMessage"),
       });
-      toast.error(t("settings:testFailedCheckConfig"));
+      toast.error(t("settings:whatsappTestFailedCheckConfig"), {
+        description: t("settings:whatsappTestFailed"),
+        duration: 5000,
+      });
     } finally {
       setIsTesting(false);
     }
@@ -302,7 +323,24 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
                       <AlertTitle>
                         {testResult.success ? t("settings:success") : t("settings:error")}
                       </AlertTitle>
-                      <AlertDescription>{testResult.message}</AlertDescription>
+                      <AlertDescription>
+                        <div className="space-y-1">
+                          <p>{testResult.message}</p>
+                          {testResult.details && !testResult.success && (
+                            <div className="text-sm space-y-1">
+                              {testResult.details.explanation && (
+                                <p className="font-medium">Explanation: {testResult.details.explanation}</p>
+                              )}
+                              {testResult.details.chatId && (
+                                <p className="text-xs opacity-75">ChatId: {testResult.details.chatId}</p>
+                              )}
+                              {testResult.details.instanceId && (
+                                <p className="text-xs opacity-75">InstanceId: {testResult.details.instanceId}</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </AlertDescription>
                     </Alert>
                   )}
 

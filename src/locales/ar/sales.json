@@ -12,6 +12,7 @@
     "invoice": "رقم الفاتورة",
     "client": "العميل",
     "status": "الحالة",
+    "discount": "الخصم",
     "totalAmount": "المبلغ الإجمالي",
     "paidAmount": "المبلغ المدفوع",
     "dueAmount": "المبلغ المستحق",

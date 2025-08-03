@@ -24,6 +24,7 @@
   "units": "Units",
   "system": "System",
   "backups": "Backups",
+  "whatsappSchedulers": "WhatsApp Schedulers",
   "inventoryRequest": "Request Stock",
   "requisitions": "Stock Requisitions"
 }

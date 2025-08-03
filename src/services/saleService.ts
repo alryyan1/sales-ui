@@ -70,6 +70,8 @@ export interface Sale {
     total_amount: string | number;
     paid_amount: string | number; // Sum of payments
     due_amount?: string | number;  // Calculated (total_amount - paid_amount)
+    discount_amount?: string | number; // Discount amount
+    discount_type?: 'percentage' | 'fixed'; // Discount type
 
     notes: string | null;
     created_at: string;

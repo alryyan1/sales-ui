@@ -49,6 +49,7 @@ import MonthlyRevenueReportPage from "./components/reports/MonthlyRevenueReportP
 import SupplierLedgerPage from "./pages/suppliers/SupplierLedgerPage";
 import BackupPage from "./pages/admin/BackupPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
+import WhatsAppSchedulersPage from "./pages/admin/WhatsAppSchedulersPage";
 // ... other page imports
 
 // --- Admin Route Guard Component ---
@@ -176,6 +177,7 @@ const router = createHashRouter([
               { path: "settings", element: <SettingsPage /> },
               { path: "system", element: <SystemPage /> }, // System version and updates
               { path: "backups", element: <BackupPage /> }, // Database backup management
+              { path: "whatsapp-schedulers", element: <WhatsAppSchedulersPage /> }, // WhatsApp schedulers management
               {
                 path: "inventory",
                 children: [

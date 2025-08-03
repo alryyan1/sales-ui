@@ -11,6 +11,7 @@
     "invoice": "Invoice Number",
     "client": "Client",
     "status": "Status",
+    "discount": "Discount",
     "totalAmount": "Total Amount",
     "paidAmount": "Paid Amount",
     "dueAmount": "Due Amount",
