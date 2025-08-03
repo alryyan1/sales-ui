@@ -1,4 +1,4 @@
-import axios from '@/lib/axios';
+import apiClient from '@/lib/axios';
 
 export interface SystemVersion {
   current_commit: string;
@@ -47,7 +47,7 @@ class SystemService {
    * Get current system version information
    */
   async getVersion(): Promise<SystemVersion> {
-    const response = await axios.get('/api/admin/system/version');
+    const response = await apiClient.get('/admin/system/version');
     return response.data.data;
   }
 
@@ -55,7 +55,7 @@ class SystemService {
    * Check for available updates
    */
   async checkForUpdates(): Promise<UpdateCheck> {
-    const response = await axios.get('/api/admin/system/check-updates');
+    const response = await apiClient.get('/admin/system/check-updates');
     return response.data.data;
   }
 
@@ -63,7 +63,7 @@ class SystemService {
    * Perform backend update operations
    */
   async updateBackend(): Promise<BackendUpdateResult> {
-    const response = await axios.post('/api/admin/system/update-backend');
+    const response = await apiClient.post('/admin/system/update-backend');
     return response.data;
   }
 
@@ -71,7 +71,7 @@ class SystemService {
    * Get frontend update instructions
    */
   async getFrontendInstructions(): Promise<FrontendInstructions> {
-    const response = await axios.get('/api/admin/system/frontend-instructions');
+    const response = await apiClient.get('/admin/system/frontend-instructions');
     return response.data.data;
   }
 }
