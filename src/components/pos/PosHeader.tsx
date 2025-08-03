@@ -290,25 +290,36 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
                 <Autocomplete
                   multiple
                   freeSolo
+                  blurOnSelect={false}
+                  clearOnBlur={false}
                   sx={{
                     width: '100%'
                   }}
                   fullWidth
                   options={searchResults}
+                  
                   value={selectedProducts}
                   onChange={(event, newValue) => {
                     // Filter out string values (freeSolo input)
                     const products = newValue.filter(item => typeof item !== 'string') as Product[];
                     setSelectedProducts(products);
+                    
+                    // Keep the search input focused and don't clear it immediately
+                    // This allows users to continue selecting multiple products
                   }}
                   getOptionLabel={(option) => {
                     if (typeof option === 'string') return option;
                     return `${option.name} (${option.sku || 'N/A'})`;
                   }}
                   inputValue={searchInput}
-                  onInputChange={(event, newInputValue) => {
-                    setSearchInput(newInputValue);
-                    handleSearch(newInputValue);
+                  onInputChange={(event, newInputValue, reason) => {
+                    // Only update search input if it's a user typing or clearing
+                    // Don't clear when selecting an option
+                    if (reason === 'input' || reason === 'clear') {
+                      setSearchInput(newInputValue);
+                      handleSearch(newInputValue);
+                    }
+                    // When selecting an option (reason === 'selectOption'), keep the current input
                   }}
                   loading={searchLoading}
                   disabled={loading}
