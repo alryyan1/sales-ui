@@ -1,10 +1,6 @@
 // src/pages/PosPage.tsx
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-
-// Shadcn Components
-import { Button } from "@/components/ui/button";
 
 // Toast
 import { toast } from "sonner";
@@ -63,30 +59,26 @@ const PosPage: React.FC = () => {
   // Refresh trigger for SalePaymentCard
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const queryClient = useQueryClient();
-
-    // React Query for today's sales
-  const { data: todaySales = [], isLoading: loadingTodaySales, refetch: refetchTodaySales } = useQuery({
-    queryKey: ['todaySales', filterByCurrentUser, selectedDate, user?.id],
-    queryFn: async () => {
-      try {
-        const dbSales = await saleService.getTodaySalesByCreatedAt();
-        
-        // Debug logging
-        console.log('Current user ID:', user?.id);
-        console.log('Filter by current user:', filterByCurrentUser);
-        console.log('Raw sales from API:', dbSales);
-        console.log('Sales with user_id:', dbSales.map(sale => ({ id: sale.id, user_id: sale.user_id, user_name: sale.user_name })));
-        
-        // Apply client-side filtering for current user if needed
-        const filteredDbSales = filterByCurrentUser && user?.id 
-          ? dbSales.filter(sale => sale.user_id === user.id)
-          : dbSales;
-        
-        console.log('Filtered sales:', filteredDbSales.map(sale => ({ id: sale.id, user_id: sale.user_id, user_name: sale.user_name })));
-        
-        // Transform database sales to POS format
-        const transformedSales: Sale[] = filteredDbSales.map((dbSale) => ({
+  // Load today's sales
+  const loadTodaySales = async () => {
+    try {
+      const dbSales = await saleService.getTodaySalesByCreatedAt();
+      
+      // Debug logging
+      console.log('Current user ID:', user?.id);
+      console.log('Filter by current user:', filterByCurrentUser);
+      console.log('Raw sales from API:', dbSales);
+      console.log('Sales with user_id:', dbSales.map(sale => ({ id: sale.id, user_id: sale.user_id, user_name: sale.user_name })));
+      
+      // Apply client-side filtering for current user if needed
+      const filteredDbSales = filterByCurrentUser && user?.id 
+        ? dbSales.filter(sale => sale.user_id === user.id)
+        : dbSales;
+      
+      console.log('Filtered sales:', filteredDbSales.map(sale => ({ id: sale.id, user_id: sale.user_id, user_name: sale.user_name })));
+      
+      // Transform database sales to POS format
+      const transformedSales: Sale[] = filteredDbSales.map((dbSale) => ({
         id: dbSale.id,
         sale_order_number: dbSale.sale_order_number,
         client_id: dbSale.client_id,
@@ -141,6 +133,11 @@ const PosPage: React.FC = () => {
       setTodaySales([]);
     }
   };
+
+  useEffect(() => {
+    loadTodaySales();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterByCurrentUser, selectedDate, user]);
 
   const showToast = (message: string, severity: 'success' | 'error') => {
     if (severity === 'success') {
@@ -217,7 +214,7 @@ const PosPage: React.FC = () => {
         setSelectedSaleId(transformedSale.id);
         
         // Add the new sale to today's sales
-        queryClient.setQueryData(['todaySales', filterByCurrentUser, selectedDate, user?.id], (oldData: Sale[] = []) => [transformedSale, ...oldData]);
+        setTodaySales(prevSales => [transformedSale, ...prevSales]);
         
         // If there are existing items in currentSaleItems without IDs, add them to the backend sale
         const existingItemsWithoutIds = currentSaleItems.filter(item => !item.id);
@@ -476,15 +473,15 @@ const PosPage: React.FC = () => {
         )
       );
       
-                showToast(`${product.name} ${t('pos:addedToCart')}`, 'success');
-          
-          // Increment refresh trigger to force SalePaymentCard to refetch sale data
-          setRefreshTrigger(prev => prev + 1);
-        } catch (error) {
-          console.error('Error adding product to sale:', error);
-          const errorMessage = saleService.getErrorMessage(error);
-          showToast(errorMessage, 'error');
-        }
+      showToast(`${product.name} ${t('pos:addedToCart')}`, 'success');
+      
+      // Increment refresh trigger to force SalePaymentCard to refetch sale data
+      setRefreshTrigger(prev => prev + 1);
+    } catch (error) {
+      console.error('Error adding product to sale:', error);
+      const errorMessage = saleService.getErrorMessage(error);
+      showToast(errorMessage, 'error');
+    }
   };
 
   const updateQuantity = async (productId: number, newQuantity: number) => {
@@ -561,7 +558,7 @@ const PosPage: React.FC = () => {
             notes: payment.notes || undefined,
             created_at: payment.created_at
           })) || [],
-                  // timestamp removed - not part of Sale type
+          // timestamp removed - not part of Sale type
       };
         
         setSelectedSale(transformedSale);
