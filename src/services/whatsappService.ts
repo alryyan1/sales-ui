@@ -188,6 +188,26 @@ const whatsappService = {
       console.error('Error generating report URL:', error);
       throw error;
     }
+  },
+
+  /**
+   * Test WhatsApp connection by sending a test message
+   */
+  testConnection: async (phoneNumber: string, message?: string): Promise<{ success: boolean; message: string; error?: string }> => {
+    try {
+      const response = await apiClient.post('/admin/whatsapp/test', {
+        phoneNumber: phoneNumber,
+        message: message
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Error testing WhatsApp connection:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to test WhatsApp connection',
+        error: error.response?.data?.error || error.message
+      };
+    }
   }
 };
 
