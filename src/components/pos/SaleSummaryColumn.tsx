@@ -3,12 +3,13 @@ import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 // Shadcn Components
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
 
 // Icons
-import { Receipt, CreditCard, Percent, Plus } from "lucide-react";
+import { CreditCard, Percent, Edit2, Check, X } from "lucide-react";
 
 // Types
 import { CartItem, Sale } from "./types";
@@ -36,7 +37,6 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
   discountAmount: externalDiscountAmount = 0,
   discountType: externalDiscountType = 'fixed',
   onDiscountChange,
-  isEditMode = false,
   saleId,
   onPaymentComplete,
   refreshTrigger = 0,
@@ -46,7 +46,6 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
 
   // State for sale info
   const [saleInfo, setSaleInfo] = useState<Sale | null>(null);
-  const [loadingSaleInfo, setLoadingSaleInfo] = useState(false);
   
   // Dialog states
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
@@ -56,8 +55,15 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
   const [discountAmount, setDiscountAmount] = useState(externalDiscountAmount);
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>(externalDiscountType);
 
+  // Date editing state
+  const [isDateEditing, setIsDateEditing] = useState(false);
+  const [editingDate, setEditingDate] = useState('');
+
+  // Determine which items to use for calculations
+  const itemsToUse = saleId && saleInfo ? saleInfo.items : currentSaleItems;
+  
   // Calculate totals
-  const subtotal = preciseSum(currentSaleItems.map(item => item.total), 2);
+  const subtotal = preciseSum(itemsToUse.map(item => item.total), 2);
   
   // Calculate discount
   const discountValue = discountType === 'percentage' 
@@ -68,7 +74,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
 
   // Calculate paid amount from sale payments
   const paidAmount = saleInfo?.payments 
-    ? preciseSum(saleInfo.payments.map(payment => payment.amount), 2)
+    ? preciseSum(saleInfo.payments.map(payment => Number(payment.amount)), 2)
     : 0;
 
   // Fetch sale info when saleId changes
@@ -83,7 +89,6 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
   const fetchSaleInfo = async () => {
     if (!saleId) return;
 
-    setLoadingSaleInfo(true);
     try {
       const saleData = await saleService.getSale(saleId);
       
@@ -104,18 +109,18 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
         notes: saleData.notes,
         created_at: saleData.created_at,
         updated_at: saleData.updated_at,
-        items: saleData.items?.map((item: any) => ({
+        items: saleData.items?.map((item: import('../../services/saleService').SaleItem) => ({
           id: item.id,
           product: {
             id: item.product_id,
             name: item.product_name || 'Unknown Product',
             sku: item.product_sku || 'N/A',
-            scientific_name: item.scientific_name || '',
-            description: item.description || '',
+            scientific_name: '',
+            description: '',
             suggested_sale_price_per_sellable_unit: Number(item.unit_price),
             last_sale_price_per_sellable_unit: Number(item.unit_price),
             stock_quantity: item.current_stock_quantity || 0,
-            stock_alert_level: item.stock_alert_level,
+            stock_alert_level: item.stock_alert_level || null,
             earliest_expiry_date: item.earliest_expiry_date,
             current_stock_quantity: item.current_stock_quantity || 0,
             sellable_unit_name: item.sellable_unit_name || 'Piece',
@@ -126,11 +131,11 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
           unitPrice: Number(item.unit_price),
           total: Number(item.total_price || item.quantity * Number(item.unit_price))
         })) || [],
-        payments: saleData.payments?.map((payment: any) => ({
+        payments: saleData.payments?.map((payment: import('../../services/saleService').Payment) => ({
           id: payment.id,
           sale_id: payment.sale_id,
           user_name: payment.user_name,
-          method: payment.method,
+          method: payment.method as import('./types').PaymentMethod,
           amount: Number(payment.amount),
           payment_date: payment.payment_date,
           reference_number: payment.reference_number || undefined,
@@ -143,8 +148,6 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
     } catch (error) {
       console.error('Failed to fetch sale info:', error);
       setSaleInfo(null);
-    } finally {
-      setLoadingSaleInfo(false);
     }
   };
 
@@ -173,6 +176,31 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
     onPaymentComplete(); // Notify parent component
   };
 
+  // Handle date editing
+  const handleDateClick = () => {
+    if (saleInfo?.sale_date) {
+      setEditingDate(saleInfo.sale_date);
+      setIsDateEditing(true);
+    }
+  };
+
+  const handleDateSave = async () => {
+    if (saleId && editingDate && onSaleDateChange) {
+      try {
+        await onSaleDateChange(saleId, editingDate);
+        setIsDateEditing(false);
+        setEditingDate('');
+      } catch (error) {
+        console.error('Failed to update sale date:', error);
+      }
+    }
+  };
+
+  const handleDateCancel = () => {
+    setIsDateEditing(false);
+    setEditingDate('');
+  };
+
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString('en-US', {
       hour: 'numeric',
@@ -190,17 +218,11 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
   };
 
   return (
-    <div className="w-[450px] flex flex-col p-2 space-y-2 overflow-y-auto max-h-screen">
+    <div className="w-full flex flex-col p-2 space-y-2 overflow-y-auto h-full">
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Receipt className="h-5 w-5" />
-            <span>{t('pos:saleSummary')}</span>
-          </CardTitle>
-        </CardHeader>
         <CardContent className="space-y-4">
           
-          {/* Row 1: Sale ID and Date */}
+          {/* Row 1: Sale ID, User, and Date/Time */}
           <div className="flex justify-between items-center bg-blue-50 p-3 rounded-lg">
             <div className="flex flex-col">
               <span className="text-sm text-gray-600">{t('pos:saleId')}</span>
@@ -208,27 +230,56 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
                 #{saleInfo?.sale_order_number || saleId || 'New'}
               </span>
             </div>
+            <div className="flex flex-col text-center">
+              <span className="text-sm text-gray-600">{t('pos:user')}</span>
+              <span className="font-semibold">{saleInfo?.user_name || saleInfo?.user_id || 'Current User'}</span>
+            </div>
             <div className="flex flex-col text-right">
-              <span className="text-sm text-gray-600">{t('pos:date')}</span>
-              <span className="font-semibold">
-                {saleInfo ? formatDate(saleInfo.sale_date) : formatDate(new Date().toISOString())}
+              <span className="text-sm text-gray-600">{t('pos:date')} & {t('pos:time')}</span>
+              {isDateEditing ? (
+                <div className="flex items-center space-x-1">
+                  <Input
+                    type="date"
+                    value={editingDate}
+                    onChange={(e) => setEditingDate(e.target.value)}
+                    className="w-24 h-6 text-xs"
+                  />
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleDateSave}
+                    className="h-6 w-6 p-0"
+                  >
+                    <Check className="h-3 w-3 text-green-600" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleDateCancel}
+                    className="h-6 w-6 p-0"
+                  >
+                    <X className="h-3 w-3 text-red-600" />
+                  </Button>
+                </div>
+              ) : (
+                <div 
+                  className="cursor-pointer hover:bg-blue-100 px-2 py-1 rounded transition-colors"
+                  onClick={handleDateClick}
+                  title={t('pos:clickToEditDate')}
+                >
+                  <span className="font-semibold text-sm">
+                    {saleInfo ? formatDate(saleInfo.sale_date) : formatDate(new Date().toISOString())}
+                  </span>
+                  <div className="flex items-center justify-center mt-1">
+                    <Edit2 className="h-3 w-3 text-blue-500" />
+                  </div>
+                </div>
+              )}
+              <span className="font-semibold text-sm">
+                {saleInfo ? formatTime(saleInfo.created_at) : formatTime(new Date().toISOString())}
               </span>
             </div>
           </div>
-
-          {/* Row 2: User ID and Time */}
-          {saleInfo && (
-            <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
-              <div className="flex flex-col">
-                <span className="text-sm text-gray-600">{t('pos:user')}</span>
-                <span className="font-semibold">{saleInfo.user_name || saleInfo.user_id}</span>
-              </div>
-              <div className="flex flex-col text-right">
-                <span className="text-sm text-gray-600">{t('pos:time')}</span>
-                <span className="font-semibold">{formatTime(saleInfo.created_at)}</span>
-              </div>
-            </div>
-          )}
 
           <Separator />
 
@@ -236,7 +287,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
           <div className="space-y-3">
             {/* Items count and subtotal */}
             <div className="flex justify-between">
-              <span className="text-gray-600">{t('pos:items')} ({currentSaleItems.length})</span>
+              <span className="text-gray-600">{t('pos:items')} ({itemsToUse.length})</span>
               <span className="font-medium">{formatNumber(subtotal)}</span>
             </div>
 
