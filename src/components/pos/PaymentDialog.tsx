@@ -44,18 +44,6 @@ const paymentMethodOptions = [
   { value: 'other', labelKey: 'paymentMethods:other' },
 ];
 
-interface Payment {
-  id: number;
-  sale_id: number;
-  user_name?: string;
-  method: string;
-  amount: number;
-  payment_date: string;
-  reference_number?: string;
-  notes?: string;
-  created_at: string;
-}
-
 interface PaymentDialogProps {
   open: boolean;
   onClose: () => void;
@@ -76,14 +64,12 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const { t } = useTranslation(['pos', 'common', 'paymentMethods']);
 
   // State for existing payments
-  const [payments, setPayments] = useState<Payment[]>([]);
+  const [payments, setPayments] = useState<import('../../services/saleService').Payment[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
 
   // State for new payment form
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [paymentAmount, setPaymentAmount] = useState<string>('');
-  const [referenceNumber, setReferenceNumber] = useState('');
-  const [notes, setNotes] = useState('');
 
   // State for operations
   const [addingPayment, setAddingPayment] = useState(false);
@@ -124,8 +110,6 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const resetForm = () => {
     setPaymentMethod('cash');
     setPaymentAmount('');
-    setReferenceNumber('');
-    setNotes('');
     setError(null);
   };
 
@@ -139,7 +123,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
     }
 
     // Check if payment amount exceeds remaining due
-    const remainingDue = grandTotal - preciseSum(payments.map(p => p.amount), 2);
+    const remainingDue = grandTotal - preciseSum(payments.map(p => Number(p.amount)), 2);
     if (amount > remainingDue) {
       setError(t('pos:paymentExceedsRemainingDue'));
       return;
@@ -151,8 +135,8 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
       const paymentData = {
         method: paymentMethod,
         amount: amount,
-        reference_number: referenceNumber || null,
-        notes: notes || null,
+        reference_number: null,
+        notes: null,
       };
 
       await saleService.addPayment(saleId, paymentData);
@@ -207,7 +191,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
     });
   };
 
-  const totalPaid = preciseSum(payments.map(p => p.amount), 2);
+  const totalPaid = preciseSum(payments.map(p => Number(p.amount)), 2);
   const remainingDue = Math.max(0, grandTotal - totalPaid);
 
   return (
@@ -270,23 +254,17 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                         <Badge variant="outline">
                           {t(`paymentMethods:${payment.method}`)}
                         </Badge>
-                        <span className="font-semibold">{formatNumber(payment.amount)}</span>
+                        <span className="font-semibold">{formatNumber(Number(payment.amount))}</span>
                       </div>
                       <div className="text-sm text-gray-600">
-                        {formatPaymentDate(payment.created_at)}
+                        {payment.created_at && formatPaymentDate(payment.created_at)}
                         {payment.user_name && ` • ${payment.user_name}`}
                       </div>
-                      {payment.reference_number && (
-                        <div className="text-sm text-gray-600">Ref: {payment.reference_number}</div>
-                      )}
-                      {payment.notes && (
-                        <div className="text-sm text-gray-600">{payment.notes}</div>
-                      )}
                     </div>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDeletePayment(payment.id)}
+                      onClick={() => payment.id && handleDeletePayment(payment.id)}
                       disabled={deletingPaymentId === payment.id}
                       className="text-red-600 hover:text-red-700"
                     >
@@ -340,26 +318,6 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                       value={paymentAmount}
                       onChange={(e) => setPaymentAmount(e.target.value)}
                       placeholder="0.00"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="referenceNumber">{t('pos:referenceNumber')} ({t('common:optional')})</Label>
-                    <Input
-                      id="referenceNumber"
-                      value={referenceNumber}
-                      onChange={(e) => setReferenceNumber(e.target.value)}
-                      placeholder={t('pos:referenceNumberPlaceholder')}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="notes">{t('pos:notes')} ({t('common:optional')})</Label>
-                    <Input
-                      id="notes"
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder={t('pos:notesPlaceholder')}
                     />
                   </div>
                 </div>
