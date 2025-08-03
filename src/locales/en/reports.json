@@ -66,5 +66,19 @@
     "noBatchesAvailableForProduct": "No batches available for this product",
     "pdfGenerated": "PDF generated successfully",
     "pdfGenerationFailed": "Failed to generate PDF",
-    "generatingPdf": "Generating PDF..."
+    "generatingPdf": "Generating PDF...",
+    "salesReportDescription": "Comprehensive sales analysis and reporting",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "thisWeek": "This Week",
+    "thisMonth": "This Month",
+    "lastMonth": "Last Month",
+    "totalAmount": "Total Amount",
+    "completionRate": "Completion Rate",
+    "totalDue": "Total Due",
+    "showingResults": "Showing {from} to {to} of {total} results",
+    "noSalesFound": "No sales found",
+    "tryAdjustingFilters": "Try adjusting your filters to see more results",
+    "errorLoadingFilters": "Error loading filter options",
+    "pdfDownloadStarting": "PDF download starting..."
 } 

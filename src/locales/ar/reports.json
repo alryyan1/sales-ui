@@ -66,5 +66,19 @@
     "noBatchesAvailableForProduct": "لا توجد دفعات متاحة لهذا المنتج",
     "pdfGenerated": "تم إنشاء PDF بنجاح",
     "pdfGenerationFailed": "فشل في إنشاء PDF",
-    "generatingPdf": "جاري إنشاء PDF..."
+    "generatingPdf": "جاري إنشاء PDF...",
+    "salesReportDescription": "تحليل شامل للمبيعات والتقارير",
+    "today": "اليوم",
+    "yesterday": "أمس",
+    "thisWeek": "هذا الأسبوع",
+    "thisMonth": "هذا الشهر",
+    "lastMonth": "الشهر الماضي",
+    "totalAmount": "إجمالي المبلغ",
+    "completionRate": "معدل الإنجاز",
+    "totalDue": "إجمالي المستحق",
+    "showingResults": "عرض {from} إلى {to} من {total} نتيجة",
+    "noSalesFound": "لم يتم العثور على مبيعات",
+    "tryAdjustingFilters": "حاول تعديل المرشحات لرؤية المزيد من النتائج",
+    "errorLoadingFilters": "خطأ في تحميل خيارات المرشحات",
+    "pdfDownloadStarting": "بدء تنزيل PDF..."
   }

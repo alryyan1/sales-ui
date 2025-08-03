@@ -190,6 +190,36 @@ const saleService = {
     },
 
     /**
+     * Get sales report data with advanced filtering and analytics.
+     */
+    getSalesReport: async (
+        page: number = 1,
+        startDate?: string,
+        endDate?: string,
+        clientId?: number | null,
+        userId?: number | null,
+        status?: string,
+        limit: number = 25
+    ): Promise<PaginatedResponse<Sale>> => {
+        try {
+            const params = new URLSearchParams();
+            params.append('page', page.toString());
+            params.append('per_page', limit.toString());
+            if (startDate) params.append('start_date', startDate);
+            if (endDate) params.append('end_date', endDate);
+            if (clientId) params.append('client_id', clientId.toString());
+            if (userId) params.append('user_id', userId.toString());
+            if (status) params.append('status', status);
+
+            const response = await apiClient.get<PaginatedResponse<Sale>>(`/reports/sales?${params.toString()}`);
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching sales report:', error);
+            throw error;
+        }
+    },
+
+    /**
      * Get a single sale by ID.
      * Backend should eager load: client, user, items.product, items.purchaseItemBatch, payments.user
      */
