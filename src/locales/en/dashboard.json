@@ -1,12 +1,14 @@
 {
   "title": "Main Dashboard",
   "salesToday": "Today's Sales",
+  "salesThisMonth": "Sales This Month",
+  "purchasesThisMonth": "Purchases This Month",
   "salesTodayCount": "{{count}} sales",
   "salesMonth": "This Month's Sales",
   "salesMonthCount": "{{count}} sales",
   "purchasesMonth": "This Month's Purchases",
   "purchasesMonthCount": "{{count}} purchases",
-  "lowStock": "Products with Low Stock",
+  "lowStock": "Low Stock",
   "lowStockItemsTitle": "Low Stock Items",
   "lowStockItemsDesc": "The following products have reached or fallen below the alert threshold.",
   "viewProducts": "View All Products",
@@ -25,5 +27,9 @@
   "viewAllSales": "View All Sales",
   "viewAllPurchases": "View All Purchases",
   "topSellingProducts": "Top Selling Products",
-  "salesOverTime": "Sales Over Time"
+  "salesOverTime": "Sales Over Time",
+  "transactions": "transactions",
+  "inInventory": "in inventory",
+  "productsNeedRestocking": "products need restocking",
+  "registeredClients": "registered clients"
 } 

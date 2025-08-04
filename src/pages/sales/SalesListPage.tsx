@@ -11,11 +11,9 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
 import Pagination from "@mui/material/Pagination";
 import AddIcon from "@mui/icons-material/Add";
-import Paper from "@mui/material/Paper";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
-import Chip from "@mui/material/Chip";
-import EditIcon from "@mui/icons-material/Edit"; // <-- Import Edit Icon
+import EditIcon from "@mui/icons-material/Edit";
 
 // Icons
 import VisibilityIcon from "@mui/icons-material/Visibility";
@@ -24,11 +22,9 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import dayjs from "dayjs";
 
 // Services and Types
-import saleService, { Sale } from "../../services/saleService"; // Use sale service
-import { PaginatedResponse } from "@/services/clientService";
+import saleService, { Sale } from "../../services/saleService";
 import { formatCurrency, formatNumber } from "@/constants";
 import { useSettings } from "@/context/SettingsContext";
-import { useAuthorization } from "@/hooks/useAuthorization";
 import { Card } from "@/components/ui/card";
 import { CardContent } from "@mui/material";
 import {
@@ -39,14 +35,28 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-// Helper to format currency
-// Helper to format date string
+// Define the actual API response structure (Laravel pagination)
+interface SalesApiResponse {
+  data: Sale[];
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+  from: number;
+  to: number;
+  first_page_url: string;
+  last_page_url: string;
+  next_page_url: string | null;
+  prev_page_url: string | null;
+  path: string;
+}
 
 const SalesListPage: React.FC = () => {
-  const { t } = useTranslation(["sales", "common", "clients"]); // Load namespaces
+  const { t } = useTranslation(["sales", "common", "clients"]);
   const navigate = useNavigate();
-  const location = useLocation(); // Get the current location
+  const location = useLocation();
   const { settings, fetchSettings } = useSettings();
+  
   // Fetch settings on load
   useEffect(() => {
     const fetchData = async () => {
@@ -54,26 +64,21 @@ const SalesListPage: React.FC = () => {
     };
     fetchData();
   }, [fetchSettings]);
+
   // --- State for Highlight ---
   const [highlightedRowId, setHighlightedRowId] = useState<number | null>(null);
-  const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Ref for timeout
+  const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // --- State ---
-  const [salesResponse, setSalesResponse] =
-    useState<PaginatedResponse<Sale> | null>(null);
+  const [salesResponse, setSalesResponse] = useState<SalesApiResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  // Add state for filters (search, status, dates) if needed
 
-  // Deletion State
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  // Notification State
- 
   const handleEditSale = (id: number) => {
-    navigate(`/sales/${id}/edit`); // <-- Navigate to the EDIT route
+    navigate(`/sales/${id}/edit`);
   };
+
   // --- Check navigation state on load/location change ---
   useEffect(() => {
     // Clear previous timeout if location changes rapidly
@@ -87,7 +92,6 @@ const SalesListPage: React.FC = () => {
     if (updatedId && typeof updatedId === "number") {
       console.log(`Highlighting Sale ID:  ${updatedId}`);
       setHighlightedRowId(updatedId);
-      //   alert(`Highlighting Sale ID:${updatedId}` ); // Debugging alert
 
       // Set a timer to remove the highlight after a few seconds
       highlightTimeoutRef.current = setTimeout(() => {
@@ -105,15 +109,40 @@ const SalesListPage: React.FC = () => {
         clearTimeout(highlightTimeoutRef.current);
       }
     };
-    // Depend on location.state specifically if possible, or location.key
-  }, [location.state, location.key, navigate]); // Add location.key to re-run if only state changes
+  }, [location.state, location.key, navigate]);
+
   // --- Data Fetching ---
-  const fetchSales = useCallback(async (page: number /*, filters */) => {
+  const fetchSales = useCallback(async (page: number) => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await saleService.getSales(page /*, filters */); // Use saleService
-      setSalesResponse(data);
+      const data = await saleService.getSales(page);
+      console.log('Sales API response:', data);
+      
+      // Handle both paginated response and simple array
+      if (data && typeof data === 'object' && 'data' in data && 'current_page' in data) {
+        // This is a paginated response
+        setSalesResponse(data as SalesApiResponse);
+      } else if (Array.isArray(data)) {
+        // This is a simple array - create a mock paginated response
+        const salesArray = data as Sale[];
+        setSalesResponse({
+          data: salesArray,
+          current_page: 1,
+          last_page: 1,
+          per_page: salesArray.length,
+          total: salesArray.length,
+          from: 1,
+          to: salesArray.length,
+          first_page_url: '',
+          last_page_url: '',
+          next_page_url: null,
+          prev_page_url: null,
+          path: ''
+        });
+      } else {
+        throw new Error('Unexpected response format from API');
+      }
     } catch (err) {
       setError(saleService.getErrorMessage(err));
     } finally {
@@ -126,7 +155,6 @@ const SalesListPage: React.FC = () => {
     fetchSales(currentPage);
   }, [fetchSales, currentPage]);
 
-
   // --- Pagination Handler ---
   const handlePageChange = (
     event: React.ChangeEvent<unknown>,
@@ -138,7 +166,7 @@ const SalesListPage: React.FC = () => {
   // --- Navigation Handler ---
   const handleViewDetails = (id: number) => {
     navigate(`/sales/${id}`);
-  }; // Define this route later
+  };
 
   // --- Render ---
   return (
@@ -162,19 +190,17 @@ const SalesListPage: React.FC = () => {
           component="h1"
           className="text-gray-800 dark:text-gray-100 font-semibold"
         >
-          {t("sales:listTitle")} {/* Add key */}
+          {t("sales:listTitle")}
         </Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           component={RouterLink}
-          to="/sales/add" // Define this route later
+          to="/sales/add"
         >
-          {t("sales:addSale")} {/* Add key */}
+          {t("sales:addSale")}
         </Button>
       </Box>
-
-      {/* Add Filters Section Here (Optional) */}
 
       {/* Loading / Error States */}
       {isLoading && (
@@ -201,7 +227,6 @@ const SalesListPage: React.FC = () => {
             <Table aria-label={t("sales:listTitle")}>
               <TableHeader>
                 <TableRow>
-                  {/* Add appropriate table headers */}
                   <TableCell align="center">{t("sales:id")}</TableCell>
                   <TableCell align="center">{t("sales:date")}</TableCell>
                   <TableCell align="center">{t("sales:invoice")}</TableCell>
@@ -215,21 +240,18 @@ const SalesListPage: React.FC = () => {
               <TableBody>
                 {salesResponse.data.map((sale) => {
                   const isHighlighted = sale.id === highlightedRowId;
+                  const discountAmount = typeof sale.discount_amount === 'string' 
+                    ? parseFloat(sale.discount_amount) 
+                    : (sale.discount_amount as number) || 0;
 
                   return (
-                    <TableRow // Apply conditional styling/class
-                      sx={{
-                        transition: "background-color 0.5s ease-out", // Smooth transition
-                        backgroundColor: isHighlighted
-                          ? (theme) => theme.palette.primary.light // Example MUI theme color
-                          : (sale.discount_amount && sale.discount_amount > 0)
-                          ? '#fff3cd' // Light yellow background for rows with discount
-                          : "inherit", // Example MUI theme color
-                        // Or use theme-agnostic color:
-                        // backgroundColor: isHighlighted ? '#e6ffed' : 'inherit',
-                      }}
+                    <TableRow
                       key={sale.id}
-                      hover
+                      className={`hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-300 ${
+                        isHighlighted ? 'bg-blue-100 dark:bg-blue-900' : ''
+                      } ${
+                        discountAmount > 0 ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''
+                      }`}
                     >
                       <TableCell align="center">{sale.id}</TableCell>
                       <TableCell align="center">
@@ -240,8 +262,8 @@ const SalesListPage: React.FC = () => {
                         {sale.client_name || t("common:n/a")}
                       </TableCell>
                       <TableCell align="center">
-                        {sale.discount_amount && sale.discount_amount > 0 
-                          ? formatCurrency(sale.discount_amount, "en-US", settings?.currency_symbol)
+                        {discountAmount > 0 
+                          ? formatCurrency(discountAmount, "en-US", settings?.currency_symbol)
                           : "---"
                         }
                       </TableCell>
@@ -255,9 +277,6 @@ const SalesListPage: React.FC = () => {
                       <TableCell align="center">
                         {formatNumber(sale.paid_amount)}
                       </TableCell>
-                      {/* <TableCell align="right" >
-                        {formatNumber(sale.due_amount)}
-                      </TableCell> */}
                       <TableCell align="center">
                         <Box
                           sx={{
@@ -269,13 +288,11 @@ const SalesListPage: React.FC = () => {
                           {/* --- Edit Button --- */}
                           <Tooltip title={t("common:edit") || ""}>
                             <span>
-                              {/* Span might be needed if button can be disabled */}
                               <IconButton
                                 aria-label={t("common:edit") || "Edit"}
-                                color="primary" // Use primary color for edit
+                                color="primary"
                                 size="small"
-                                onClick={() => handleEditSale(sale.id)} // <-- Call edit handler
-                                // disabled={isDeleting || sale.status === 'cancelled' /* Add conditions to disable editing */}
+                                onClick={() => handleEditSale(sale.id)}
                               >
                                 <EditIcon fontSize="small" />
                               </IconButton>
@@ -291,8 +308,6 @@ const SalesListPage: React.FC = () => {
                               <VisibilityIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                          {/* Optional: Delete button if allowed */}
-                          {/* <Tooltip title={t('common:delete') || ''}>...</Tooltip> */}
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -303,6 +318,7 @@ const SalesListPage: React.FC = () => {
           </CardContent>
         </Card>
       )}
+      
       {salesResponse && (
         <>
           {/* Pagination */}
@@ -318,7 +334,7 @@ const SalesListPage: React.FC = () => {
                 shape="rounded"
                 showFirstButton
                 showLastButton
-                disabled={isLoading || isDeleting}
+                disabled={isLoading}
               />
             </Box>
           )}
@@ -331,7 +347,6 @@ const SalesListPage: React.FC = () => {
               {t("sales:noSales")}
             </Typography>
           )}
-          {/* Add key */}
         </>
       )}
     </Box>

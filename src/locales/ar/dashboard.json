@@ -1,12 +1,14 @@
 {
   "title": "لوحة التحكم الرئيسية",
   "salesToday": "مبيعات اليوم",
+  "salesThisMonth": "مبيعات هذا الشهر",
+  "purchasesThisMonth": "مشتريات هذا الشهر",
   "salesTodayCount": "{{count}} عملية بيع",
   "salesMonth": "مبيعات هذا الشهر",
   "salesMonthCount": "{{count}} عملية بيع",
   "purchasesMonth": "مشتريات هذا الشهر",
   "purchasesMonthCount": "{{count}} عملية شراء",
-  "lowStock": "منتجات قارب مخزونها على النفاد",
+  "lowStock": "مخزون منخفض",
   "lowStockItemsTitle": "منتجات مخزونها منخفض",
   "lowStockItemsDesc": "المنتجات التالية وصلت أو نزلت عن حد التنبيه.",
   "viewProducts": "عرض كل المنتجات",
@@ -25,5 +27,9 @@
   "viewAllSales": "عرض كل المبيعات",
   "viewAllPurchases": "عرض كل المشتريات",
   "topSellingProducts": "المنتجات الأكثر مبيعاً",
-  "salesOverTime": "المبيعات عبر الوقت"
+  "salesOverTime": "المبيعات عبر الوقت",
+  "transactions": "معاملات",
+  "inInventory": "في المخزون",
+  "productsNeedRestocking": "منتجات تحتاج إعادة تخزين",
+  "registeredClients": "عملاء مسجلين"
 }
