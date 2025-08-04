@@ -114,7 +114,7 @@ const SalesReportPage: React.FC = () => {
   ]);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-
+ 
   // --- State ---
   const [reportData, setReportData] = useState<PaginatedResponse<Sale> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -375,18 +375,18 @@ const SalesReportPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <Button
+        <Button
                 variant="ghost"
-                size="icon"
-                onClick={() => navigate("/dashboard")}
+          size="icon"
+          onClick={() => navigate("/dashboard")}
                 className="h-8 w-8"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                   {t("reports:salesReportTitle")}
-                </h1>
+        </h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   {t("reports:salesReportDescription")}
                 </p>
@@ -671,22 +671,22 @@ const SalesReportPage: React.FC = () => {
           {/* Filters Sidebar */}
           <div className="lg:col-span-1">
             <Card className="sticky top-6">
-              <CardHeader>
+        <CardHeader>
                 <CardTitle className="text-lg flex items-center space-x-2">
                   <Filter className="h-5 w-5" />
                   <span>{t("common:filters")}</span>
                 </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Form {...form}>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
                   <form onSubmit={handleSubmit(onFilterSubmit)} className="space-y-4">
-                    {/* Start Date */}
-                    <FormField
-                      control={control}
-                      name="startDate"
-                      render={({ field }) => (
+                {/* Start Date */}
+                <FormField
+                  control={control}
+                  name="startDate"
+                  render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("common:startDate")}</FormLabel>
+                      <FormLabel>{t("common:startDate")}</FormLabel>
                           <FormControl>
                             <Input
                               type="date"
@@ -694,18 +694,18 @@ const SalesReportPage: React.FC = () => {
                               value={field.value || ""}
                             />
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                    {/* End Date */}
-                    <FormField
-                      control={control}
-                      name="endDate"
-                      render={({ field }) => (
+                {/* End Date */}
+                <FormField
+                  control={control}
+                  name="endDate"
+                  render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("common:endDate")}</FormLabel>
+                      <FormLabel>{t("common:endDate")}</FormLabel>
                           <FormControl>
                             <Input
                               type="date"
@@ -713,41 +713,41 @@ const SalesReportPage: React.FC = () => {
                               value={field.value || ""}
                             />
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                    {/* Client Select */}
-                    <FormField
-                      control={control}
-                      name="clientId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("clients:client")}</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value ?? ""}
+                {/* Client Select */}
+                <FormField
+                  control={control}
+                  name="clientId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("clients:client")}</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value ?? ""}
                             disabled={loadingFilters}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
+                      >
+                        <FormControl>
+                          <SelectTrigger>
                                 <SelectValue placeholder={t("reports:allClients")} />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
                               <SelectItem value=" ">{t("reports:allClients")}</SelectItem>
                               {clients.map((client) => (
                                 <SelectItem key={client.id} value={String(client.id)}>
                                   {client.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                     {/* User Select */}
                     <FormField
@@ -849,34 +849,34 @@ const SalesReportPage: React.FC = () => {
                       )}
                     />
 
-                    {/* Status Select */}
-                    <FormField
-                      control={control}
-                      name="status"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("sales:status")}</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value ?? ""}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
+                {/* Status Select */}
+                <FormField
+                  control={control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("sales:status")}</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value ?? ""}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
                                 <SelectValue placeholder={t("reports:allStatuses")} />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
                               <SelectItem value=" ">{t("reports:allStatuses")}</SelectItem>
                               <SelectItem value="completed">{t("sales:status_completed")}</SelectItem>
                               <SelectItem value="pending">{t("sales:status_pending")}</SelectItem>
                               <SelectItem value="draft">{t("sales:status_draft")}</SelectItem>
                               <SelectItem value="cancelled">{t("sales:status_cancelled")}</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                     <div className="flex flex-col gap-2 pt-4">
                       <Button
@@ -891,24 +891,24 @@ const SalesReportPage: React.FC = () => {
                         )}
                         {t("common:applyFilters")}
                       </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={clearFilters}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={clearFilters}
                         disabled={isLoading}
                         className="w-full"
-                      >
+                >
                         <X className="mr-2 h-4 w-4" />
-                        {t("common:clearFilters")}
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
+                  {t("common:clearFilters")}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
           </div>
         </div>
-      </div>
+            </div>
     </div>
   );
 };

@@ -275,7 +275,7 @@ const RootLayout: React.FC = () => {
             </header>
 
             {/* Main Content Area */}
-            <main className="flex-grow px-22 py-6 md:py-1">
+            <main className="flex-grow">
                  <Outlet /> {/* Renders the matched route component */}
             </main>
 

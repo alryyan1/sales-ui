@@ -1327,7 +1327,7 @@ const PosPage: React.FC = () => {
   return (
     <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
       {/* Header */}
-      <div className="flex-shrink-0 bg-white border-b border-gray-200">
+      <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8">
       <PosHeader 
         onAddProduct={addToCurrentSale} 
         onAddMultipleProducts={addMultipleToCurrentSale}
@@ -1371,7 +1371,6 @@ const PosPage: React.FC = () => {
             currentSaleItems={currentSaleItems}
             onUpdateQuantity={updateQuantity}
             onRemoveItem={removeFromCurrentSale}
-            onClearAll={clearCurrentSale}
             isSalePaid={selectedSale ? (selectedSale.payments && selectedSale.payments.length > 0) : false}
             deletingItems={deletingItems}
             updatingItems={updatingItems}
