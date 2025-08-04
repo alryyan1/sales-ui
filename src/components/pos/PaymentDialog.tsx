@@ -83,7 +83,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
       // Set default payment amount to remaining due
       const remainingDue = grandTotal - paidAmount;
       if (remainingDue > 0) {
-        setPaymentAmount(remainingDue.toFixed(2));
+        setPaymentAmount(remainingDue.toFixed(0));
       }
     } else {
       // Reset form when dialog closes

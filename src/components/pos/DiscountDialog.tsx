@@ -99,11 +99,11 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
     if (newType === 'percentage' && discountType === 'fixed') {
       // Convert from fixed to percentage
       const percentage = maxAmount > 0 ? (numericAmount / maxAmount) * 100 : 0;
-      setDiscountAmount(Math.min(percentage, 100).toFixed(2));
+              setDiscountAmount(Math.min(percentage, 100).toFixed(0));
     } else if (newType === 'fixed' && discountType === 'percentage') {
       // Convert from percentage to fixed
       const fixedAmount = preciseCalculation(maxAmount, numericAmount / 100, 'multiply', 2);
-      setDiscountAmount(fixedAmount.toFixed(2));
+              setDiscountAmount(fixedAmount.toFixed(0));
     }
   };
 

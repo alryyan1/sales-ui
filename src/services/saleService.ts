@@ -160,7 +160,7 @@ const saleService = {
      */
     getSales: async (
         page: number = 1,
-        search: string = '',
+        queryParams?: string,
         status: string = '',
         startDate: string = '',
         endDate: string = '',
@@ -173,14 +173,22 @@ const saleService = {
             const params = new URLSearchParams();
             params.append('page', page.toString());
             params.append('per_page', limit.toString());
-            if (search) params.append('search', search);
-            if (status) params.append('status', status);
-            if (startDate) params.append('start_date', startDate);
-            if (endDate) params.append('end_date', endDate);
-            if (clientId) params.append('client_id', clientId.toString());
-            if (todayOnly) params.append('today_only', 'true');
-            if (forCurrentUser) params.append('user_id', forCurrentUser.toString());
-
+            
+            // If queryParams is provided, parse and add them
+            if (queryParams) {
+                const querySearchParams = new URLSearchParams(queryParams);
+                for (const [key, value] of querySearchParams.entries()) {
+                    params.append(key, value);
+                }
+            } else {
+                // Fallback to individual parameters for backward compatibility
+                if (status) params.append('status', status);
+                if (startDate) params.append('start_date', startDate);
+                if (endDate) params.append('end_date', endDate);
+                if (clientId) params.append('client_id', clientId.toString());
+                if (todayOnly) params.append('today_only', 'true');
+                if (forCurrentUser) params.append('user_id', forCurrentUser.toString());
+            }
 
             const response = await apiClient.get<PaginatedResponse<Sale>>(`/sales?${params.toString()}`);
             console.log('getSales response:', response.data);

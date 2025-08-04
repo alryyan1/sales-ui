@@ -98,6 +98,8 @@
   "allUsers": "All Users",
   "newSale": "New Sale",
   "newSaleStarted": "New sale started",
+  "clickToEditQuantity": "Click to edit quantity",
+  "salePaidCannotModify": "Sale is paid and cannot be modified",
   "failedToFetchSaleData": "Failed to fetch latest sale data",
   "createEmptySale": "Create Empty Sale",
   "emptySaleCreated": "Empty sale created and selected successfully!",

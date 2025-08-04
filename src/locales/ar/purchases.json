@@ -70,6 +70,7 @@
     "itemLockedReceived": "لا يمكن تعديل هذا العنصر - تم استلام الشراء",
     "itemsLockedReceived": "لا يمكن تعديل عناصر الشراء - تم استلام هذا الشراء",
     "purchaseReceivedReadOnly": "تم استلام الشراء - العناصر للقراءة فقط",
+    "statusUpdatedSuccess": "تم تحديث حالة الشراء بنجاح",
 
     "selectStatus": "اختر الحالة",
 
@@ -163,5 +164,11 @@
     "createPurchaseFirst": "إنشاء أمر الشراء أولاً",
     "createPurchaseFirstDescription": "قم بتعبئة معلومات الشراء الأساسية (المورد، التاريخ، الحالة، إلخ) واحفظ أمر الشراء.",
     "manageItemsNext": "إضافة المنتجات بعد ذلك",
-    "manageItemsNextDescription": "بعد إنشاء الشراء، ستتم إعادة توجيهك لإدارة العناصر حيث يمكنك إضافة المنتجات وتحديد الكميات والأسعار."
+    "manageItemsNextDescription": "بعد إنشاء الشراء، ستتم إعادة توجيهك لإدارة العناصر حيث يمكنك إضافة المنتجات وتحديد الكميات والأسعار.",
+    
+    "addAllProducts": "إضافة جميع المنتجات",
+    "deleteZeroQuantityItems": "حذف العناصر ذات الكمية صفر",
+    "allProductsAddedSuccess": "تم إضافة {{count}} منتج بنجاح",
+    "zeroQuantityItemsDeletedSuccess": "تم حذف {{count}} عنصر ذو كمية صفر بنجاح",
+    "zeroQuantity": "كمية صفر"
 }

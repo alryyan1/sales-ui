@@ -81,6 +81,7 @@
     "itemLockedReceived": "This item cannot be modified - purchase has been received",
     "itemsLockedReceived": "Purchase items cannot be modified - this purchase has been received",
     "purchaseReceivedReadOnly": "Purchase has been received - items are read-only",
+    "statusUpdatedSuccess": "Purchase status updated successfully",
 
     "selectStatus": "Select Status",
 
@@ -174,5 +175,11 @@
     "createPurchaseFirst": "Create Purchase Order First",
     "createPurchaseFirstDescription": "Fill in the basic purchase information (supplier, date, status, etc.) and save the purchase order.",
     "manageItemsNext": "Add Products Next",
-    "manageItemsNextDescription": "After creating the purchase, you'll be redirected to manage items where you can add products, set quantities, and prices."
+    "manageItemsNextDescription": "After creating the purchase, you'll be redirected to manage items where you can add products, set quantities, and prices.",
+    
+    "addAllProducts": "Add All Products",
+    "deleteZeroQuantityItems": "Delete Zero Quantity Items",
+    "allProductsAddedSuccess": "{{count}} products added successfully",
+    "zeroQuantityItemsDeletedSuccess": "{{count}} zero quantity items deleted successfully",
+    "zeroQuantity": "Zero Quantity"
 } 

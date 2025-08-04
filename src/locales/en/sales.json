@@ -83,6 +83,7 @@
     "noReturnableItems": "No returnable items in this invoice.",
     "startDate": "Start Date",
     "endDate": "End Date",
+    "user": "User",
     "originalSaleInvoice": "Original Sale Invoice",
     "selectDate": "Select Date",
     "originalSaleInvoiceShort": "Original Sale Invoice",
@@ -190,5 +191,14 @@
       "showOnlySalesWithReturns": "Show only sales with returns",
       "saleIdPlaceholder": "Enter sale ID or invoice number...",
       "clientPlaceholder": "Enter client name...",
-      "selectProductPlaceholder": "Select a product..."
+      "selectProductPlaceholder": "Select a product...",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "user": "User",
+      "product": "Product",
+      "saleId": "Sale ID",
+      "enterSaleId": "Enter Sale ID",
+      "filters": "Filters",
+      "exportPdf": "Export PDF",
+      "generating": "Generating..."
 } 

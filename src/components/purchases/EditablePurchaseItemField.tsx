@@ -19,12 +19,12 @@ import {
 interface EditablePurchaseItemFieldProps {
   value: string | number;
   onSave: (newValue: string | number) => void;
-  type?: 'text' | 'number';
+  type?: 'text' | 'number' | 'date';
   disabled?: boolean;
   placeholder?: string;
   label?: string;
-  min?: number;
-  max?: number;
+  min?: number | string;
+  max?: number | string;
   step?: number;
   isLoading?: boolean;
   formatDisplay?: (value: string | number) => string;
@@ -89,7 +89,7 @@ export const EditablePurchaseItemField: React.FC<EditablePurchaseItemFieldProps>
   }, [value]);
 
   const handleSave = useCallback(() => {
-    if (editValue.trim() === '' && type === 'text') {
+    if (editValue.trim() === '' && (type === 'text' || type === 'date')) {
       handleCancelEdit();
       return;
     }
@@ -136,7 +136,7 @@ export const EditablePurchaseItemField: React.FC<EditablePurchaseItemFieldProps>
 
   if (isEditing) {
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 120 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
         <TextField
           ref={inputRef}
           value={editValue}
@@ -147,6 +147,7 @@ export const EditablePurchaseItemField: React.FC<EditablePurchaseItemFieldProps>
           size="small"
           type={type}
           placeholder={placeholder}
+          fullWidth
           InputProps={{
             style: { fontSize: '0.875rem' },
             inputProps: {
@@ -155,12 +156,13 @@ export const EditablePurchaseItemField: React.FC<EditablePurchaseItemFieldProps>
               step,
             }
           }}
-          sx={{ 
-            minWidth: 80,
-            '& .MuiInputBase-input': {
-              padding: '4px 8px',
-            }
-          }}
+                     sx={{ 
+             minWidth: 120,
+             width: '100%',
+             '& .MuiInputBase-input': {
+               padding: '4px 8px',
+             }
+           }}
         />
         <IconButton
           size="small"
@@ -183,19 +185,20 @@ export const EditablePurchaseItemField: React.FC<EditablePurchaseItemFieldProps>
 
   return (
     <Box 
-      sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: 1,
-        cursor: disabled ? 'default' : 'pointer',
-        padding: '4px 8px',
-        borderRadius: 1,
-        '&:hover': disabled ? {} : {
-          backgroundColor: 'action.hover',
-        },
-        minHeight: 32,
-        minWidth: 80,
-      }}
+             sx={{ 
+         display: 'flex', 
+         alignItems: 'center', 
+         gap: 1,
+         cursor: disabled ? 'default' : 'pointer',
+         padding: '4px 8px',
+         borderRadius: 1,
+         '&:hover': disabled ? {} : {
+           backgroundColor: 'action.hover',
+         },
+         minHeight: 32,
+         minWidth: 120,
+         width: '100%',
+       }}
       onClick={handleStartEdit}
     >
       <Typography 

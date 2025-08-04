@@ -12,7 +12,7 @@ export const webUrl = `${schema}://${host}/${projectFolder}/public/`;
 export const imagesUrl = `${schema}://${host}/${projectFolder}/public/`;
 
 
-  export function formatNumber(number: number | string | null | undefined, decimals: number = 2): string {
+  export function formatNumber(number: number | string | null | undefined, decimals: number = 0): string {
     if (number === null || number === undefined) return '---';
     
     const numValue = Number(number);
@@ -163,8 +163,8 @@ export const formatCurrency = (
     const defaultOptions: Intl.NumberFormatOptions = {
         style: 'currency',
         currency: currencyCode,
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
     };
     
     // Merge options properly - user options should override defaults
@@ -179,7 +179,7 @@ export const formatCurrency = (
     } catch (e) {
         console.error("Error formatting currency:", e, "Value:", value, "Currency:", currencyCode);
         // Fallback to simpler formatting if Intl fails
-        return `${currencyCode} ${numberValue.toFixed(2)}`;
+        return `${currencyCode} ${Math.round(numberValue)}`;
     }
 };
 

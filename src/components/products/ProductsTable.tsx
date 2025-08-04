@@ -86,12 +86,6 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                             const isLow = product.stock_alert_level !== null && product.stock_quantity <= product.stock_alert_level;
                             const isOutOfStock = product.stock_quantity <= 0;
                             const sellableUnit = product.sellable_unit_name || t('products:defaultSellableUnit');
-                            const stockingUnit = product.stocking_unit_name || t('products:defaultStockingUnit');
-                            
-                            // Calculate stocking quantity if units_per_stocking_unit is available
-                            const stockingQuantity = product.units_per_stocking_unit 
-                                ? Math.floor(product.stock_quantity / product.units_per_stocking_unit)
-                                : null;
 
                             return (
                                 <TableRow
@@ -102,10 +96,10 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                                         isOutOfStock && "bg-red-50 dark:bg-red-900/40 hover:bg-red-100/70 dark:hover:bg-red-800/60"
                                     )}
                                 >
-                                    <TableCell className="text-center px-3 py-2 dark:text-gray-300 font-medium text-base">
+                                    <TableCell className="text-center px-3 py-2 dark:text-gray-300 font-medium text-sm">
                                         {product.id}
                                     </TableCell>
-                                    <TableCell className="hidden sm:table-cell px-3 py-2 dark:text-gray-300 text-center text-base">
+                                    <TableCell className="hidden sm:table-cell px-3 py-2 dark:text-gray-300 text-center text-sm">
                                         {product.sku ? (
                                             <div className="flex items-center justify-center gap-2">
                                                 <span>{product.sku}</span>
@@ -134,56 +128,28 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                                             '---'
                                         )}
                                     </TableCell>
-                                    <TableCell className="px-3 py-2 font-medium font-bold dark:text-gray-100 text-center text-base text-xl">
+                                    <TableCell className="px-3 py-2 font-medium font-bold dark:text-gray-100 text-center text-sm">
                                         {product.name.charAt(0).toUpperCase() + product.name.slice(1)}
                                         {/* Mobile: Show SKU and Category below name */}
-                                        <div className="sm:hidden text-sm text-muted-foreground dark:text-gray-400 text-center space-y-0.5 mt-1">
+                                        <div className="sm:hidden text-xs text-muted-foreground dark:text-gray-400 text-center space-y-0.5 mt-1">
                                             <p>SKU: {product.sku || '---'}</p>
                                             {product.scientific_name && <p>{t('products:scientificName')}: {product.scientific_name}</p>}
                                             {product.category_name && <p>{t('products:category')}: {product.category_name}</p>}
-                                            {/* Show units on mobile */}
-                                            <div className="text-sm space-y-1">
-                                                <div className="flex items-center gap-1">
-                                                    <span className="text-muted-foreground dark:text-gray-400">{t('products:stockingUnit')}:</span>
-                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                                        {stockingUnit}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-1">
-                                                    <span className="text-muted-foreground dark:text-gray-400">{t('products:sellableUnit')}:</span>
-                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
-                                                        {sellableUnit}
-                                                    </span>
-                                                </div>
-                                                {product.units_per_stocking_unit && (
-                                                    <p className="text-muted-foreground dark:text-gray-400 text-sm">
-                                                        {t('products:unitsPerStockingUnit')}: {product.units_per_stocking_unit}
-                                                    </p>
-                                                )}
-                                            </div>
                                             {/* Show stock on mobile if other columns are hidden */}
-                                            <p className="lg:hidden text-sm">{t('products:stock')}: {formatNumber(product.stock_quantity)} {sellableUnit}</p>
+                                            <p className="lg:hidden text-xs">{t('products:stock')}: {formatNumber(product.stock_quantity)} {sellableUnit}</p>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="hidden lg:table-cell px-3 py-2 dark:text-gray-300 text-center text-base">
+                                    <TableCell className="hidden lg:table-cell px-3 py-2 dark:text-gray-300 text-center text-sm">
                                         {product.scientific_name || '---'}
                                     </TableCell>
-                                    <TableCell className="hidden md:table-cell px-3 py-2 dark:text-gray-300 text-center text-base">{product.category_name || '---'}</TableCell>
+                                    <TableCell className="hidden md:table-cell px-3 py-2 dark:text-gray-300 text-center text-sm">{product.category_name || '---'}</TableCell>
                                  
                                     <TableCell className="px-3 py-2 dark:text-gray-100 text-center">
-                                        <div className="space-y-2">
+                                        <div className="space-y-1">
                                             {/* Primary stock display in sellable units */}
-                                            <div className="font-medium text-2xl">
+                                            <div className="font-medium text-base">
                                                 {formatNumber(product.stock_quantity)} {sellableUnit}
                                             </div>
-                                            {/* Secondary stock display in stocking units if applicable */}
-                                            {stockingQuantity !== null && stockingQuantity > 0 && (
-                                                <div className="flex justify-center">
-                                                    <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                                        {formatNumber(stockingQuantity)} {stockingUnit}
-                                                    </span>
-                                                </div>
-                                            )}
                                             {(isLow || isOutOfStock) && (
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
@@ -196,13 +162,13 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                                             )}
                                         </div>
                                     </TableCell>
-                                    <TableCell className="hidden lg:table-cell px-3 py-2 dark:text-gray-300 text-center text-base">
+                                    <TableCell className="hidden lg:table-cell px-3 py-2 dark:text-gray-300 text-center text-sm">
                                         {product.stock_alert_level !== null ? `${formatNumber(product.stock_alert_level)} ` : '---'}
                                     </TableCell>
-                                    <TableCell className="hidden lg:table-cell px-3 py-2 dark:text-gray-100 text-center text-base">
+                                    <TableCell className="hidden lg:table-cell px-3 py-2 dark:text-gray-100 text-center text-sm">
                                         {product.latest_cost_per_sellable_unit ? formatCurrency(product.latest_cost_per_sellable_unit) : '---'}
                                     </TableCell>
-                                    <TableCell className="hidden lg:table-cell text-center px-3 py-2 dark:text-gray-100 text-base">
+                                    <TableCell className="hidden lg:table-cell text-center px-3 py-2 dark:text-gray-100 text-sm">
                                         {product.last_sale_price_per_sellable_unit ? formatCurrency(product.last_sale_price_per_sellable_unit) : '---'}
                                     </TableCell>
                                     <TableCell className="text-center px-3 py-2">

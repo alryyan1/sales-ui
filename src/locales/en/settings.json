@@ -13,6 +13,8 @@
   "lowStockThreshold": "Low Stock Threshold",
   "invoicePrefix": "Invoice Prefix",
   "poPrefix": "Purchase Order Prefix",
+  "defaultProfitRate": "Default Profit Rate (%)",
+  "defaultProfitRateDesc": "Default profit rate percentage used when calculating sale prices from cost prices",
   "saveChanges": "Save Changes",
   "settingsSaved": "Settings saved successfully",
   "settingsSaveError": "Failed to save settings",

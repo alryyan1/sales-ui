@@ -208,7 +208,7 @@ const HomePage: React.FC = () => {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-orange-600">
-                                {formatCurrencyWithSettings(summaryData.purchases.this_month_amount)}
+                                {summaryData.purchases.this_month_amount}
                             </div>
                             <p className="text-xs text-muted-foreground">
                                 {formatInteger(summaryData.purchases.this_month_count)} {t('dashboard:transactions', 'transactions')}

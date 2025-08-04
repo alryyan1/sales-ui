@@ -14,6 +14,7 @@ export interface AppSettings {
     global_low_stock_threshold: number;
     invoice_prefix: string;
     purchase_order_prefix: string;
+    default_profit_rate: number; // Default profit rate percentage
     
     // WhatsApp API Configuration
     whatsapp_enabled: boolean;

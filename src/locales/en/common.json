@@ -43,5 +43,7 @@
   "errorLoadingData": "Error loading data",
   "errorSavingData": "Error saving data",
   "errorUpdatingData": "Error updating data",
-  "errorDeletingData": "Error deleting data"
+  "errorDeletingData": "Error deleting data",
+  "apply": "Apply",
+  "all": "All"
 } 

@@ -85,6 +85,7 @@
     "noReturnableItems": "لا توجد عناصر قابلة للإرجاع في هذه الفاتورة.",
     "startDate": "تاريخ البدء",
     "endDate": "تاريخ الانتهاء",
+    "user": "المستخدم",
     "originalSaleInvoice": "فاتورة البيع الأصلية",
     "selectDate": "اختر التاريخ",
     "originalSaleInvoiceShort": "فاتورة البيع الأصلية",
@@ -174,7 +175,14 @@
       "showOnlySalesWithReturns": "إظهار المبيعات التي لها مرتجعات فقط",
       "saleIdPlaceholder": "أدخل رقم البيع أو رقم الفاتورة...",
       "clientPlaceholder": "أدخل اسم العميل...",
-      "selectProductPlaceholder": "اختر منتج..."
-
-
+      "selectProductPlaceholder": "اختر منتج...",
+      "startTime": "وقت البدء",
+      "endTime": "وقت الانتهاء",
+      "user": "المستخدم",
+      "product": "المنتج",
+      "saleId": "رقم البيع",
+      "enterSaleId": "أدخل رقم البيع",
+      "filters": "المرشحات",
+      "exportPdf": "تصدير PDF",
+      "generating": "جاري التوليد..."
 }

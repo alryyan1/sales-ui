@@ -172,7 +172,7 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
       : 0; // Example fallback
     setValue(
       `items.${index}.unit_price`,
-      Number(suggestedPrice.toFixed(2)) || 0
+              Number(suggestedPrice.toFixed(0)) || 0
     );
     clearErrors(`items.${index}.product_id`);
     setProductPopoverOpen(false);

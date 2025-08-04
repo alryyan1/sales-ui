@@ -1,10 +1,11 @@
 // src/components/pos/CurrentSaleItemsColumn.tsx
-import React from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 // shadcn/ui Components
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 // Icons
@@ -14,7 +15,9 @@ import {
   Minus, 
   Trash2, 
   Package, 
-  Calendar
+  Calendar,
+  Check,
+  X
 } from "lucide-react";
 
 // Types
@@ -41,6 +44,10 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
   isLoading = false,
 }) => {
   const { t } = useTranslation(['pos', 'common']);
+  
+  // State for editing quantity
+  const [editingQuantity, setEditingQuantity] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState<string>("");
 
   const formatExpiryDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -61,6 +68,50 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
   const isLowStock = (stockQuantity: number, alertLevel: number | null) => {
     if (!alertLevel) return false;
     return stockQuantity <= alertLevel;
+  };
+
+  const handleQuantityClick = (item: CartItem) => {
+    if (isSalePaid) return;
+    setEditingQuantity(item.product.id);
+    setEditValue(item.quantity.toString());
+  };
+
+  const handleQuantitySave = async (productId: number) => {
+    const newQuantity = parseInt(editValue);
+    if (isNaN(newQuantity) || newQuantity < 1) {
+      // Reset to original value if invalid
+      setEditingQuantity(null);
+      setEditValue("");
+      return;
+    }
+    
+    await onUpdateQuantity(productId, newQuantity);
+    setEditingQuantity(null);
+    setEditValue("");
+  };
+
+  const handleQuantityCancel = () => {
+    setEditingQuantity(null);
+    setEditValue("");
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent, productId: number) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      handleQuantitySave(productId);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      handleQuantityCancel();
+    }
+  };
+
+  const handleInputBlur = (productId: number) => {
+    // Small delay to allow button clicks to register
+    setTimeout(() => {
+      if (editingQuantity === productId) {
+        handleQuantityCancel();
+      }
+    }, 100);
   };
 
   return (
@@ -179,14 +230,54 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                                 <Minus className="h-4 w-4" />
                               )}
                             </Button>
-                            <span className="w-10 text-center font-medium text-base">{item.quantity}</span>
+                            
+                            {editingQuantity === item.product.id ? (
+                              <div className="flex items-center space-x-1">
+                                <Input
+                                  type="number"
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onKeyDown={(e) => handleKeyDown(e, item.product.id)}
+                                  onBlur={() => handleInputBlur(item.product.id)}
+                                  className="w-16 h-8 text-center text-sm"
+                                  min="1"
+                                  autoFocus
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleQuantitySave(item.product.id)}
+                                  disabled={updatingItems.has(item.product.id)}
+                                  className="h-6 w-6 p-0 text-green-600 hover:text-green-700"
+                                >
+                                  <Check className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={handleQuantityCancel}
+                                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <span 
+                                className="w-10 text-center font-medium text-base cursor-pointer hover:bg-gray-100 rounded px-1 py-1 transition-colors"
+                                onClick={() => handleQuantityClick(item)}
+                                title={isSalePaid ? t('pos:salePaidCannotModify') : t('pos:clickToEditQuantity')}
+                              >
+                                {item.quantity}
+                              </span>
+                            )}
+                            
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={async () => await onUpdateQuantity(item.product.id, item.quantity + 1)}
-                              disabled={isSalePaid || (item.quantity >= item.product.stock_quantity) || updatingItems.has(item.product.id)}
+                              disabled={isSalePaid || updatingItems.has(item.product.id)}
                               className={`h-8 w-8 p-0 ${
-                                (isSalePaid || (item.quantity >= item.product.stock_quantity) || updatingItems.has(item.product.id)) ? 'opacity-50 cursor-not-allowed' : ''
+                                (isSalePaid || updatingItems.has(item.product.id)) ? 'opacity-50 cursor-not-allowed' : ''
                               }`}
                             >
                               {updatingItems.has(item.product.id) ? (

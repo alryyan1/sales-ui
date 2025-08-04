@@ -154,7 +154,7 @@ export const InvoicePdfDialog: React.FC<InvoicePdfDialogProps> = ({
                 {t('pos:totalAmount')}:
               </Typography>
               <Typography variant="body2" fontWeight={500}>
-                {sale.total_amount.toFixed(2)}
+                {sale.total_amount.toFixed(0)}
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>

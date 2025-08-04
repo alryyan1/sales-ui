@@ -98,6 +98,8 @@
   "allUsers": "جميع المستخدمين",
   "newSale": "بيع جديد",
   "newSaleStarted": "تم بدء بيع جديد",
+  "clickToEditQuantity": "انقر لتعديل الكمية",
+  "salePaidCannotModify": "البيع مدفوع ولا يمكن تعديله",
   "failedToFetchSaleData": "فشل في جلب أحدث بيانات البيع",
   "createEmptySale": "إنشاء بيع فارغ",
   "emptySaleCreated": "تم إنشاء البيع الفارغ واختياره بنجاح!",

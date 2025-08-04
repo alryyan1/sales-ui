@@ -74,7 +74,7 @@ export const SalePaymentRow: React.FC<SalePaymentRowProps> = ({
                          <FormLabel>{t('sales:paymentAmount')}*</FormLabel> {/* Add key */}
                          <FormControl><Input type="number" min="0.01" step="0.01" placeholder="0.00" {...field} disabled={isSubmitting}
                             // Try to set max based on remaining due
-                            max={amountDueExcludingThisPayment > 0 ? amountDueExcludingThisPayment.toFixed(2) : undefined}
+                            max={amountDueExcludingThisPayment > 0 ? amountDueExcludingThisPayment.toFixed(0) : undefined}
                          /></FormControl>
                          <FormMessage>{fieldState.error?.message ? t(fieldState.error.message) : null}</FormMessage>
                      </FormItem>

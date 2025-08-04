@@ -151,15 +151,19 @@ const exportService = {
 };
 
 /**
- * Generate daily sales PDF report
- * @param date - Optional date in YYYY-MM-DD format, defaults to today
+ * Generate daily sales PDF report with filters
+ * @param filterParams - Optional filter parameters as URLSearchParams string
  * @returns Promise that resolves when PDF opens in new tab
  */
-export const generateDailySalesPdf = async (date?: string): Promise<void> => {
+export const generateDailySalesPdf = async (filterParams?: string): Promise<void> => {
   try {
     const params = new URLSearchParams();
-    if (date) {
-      params.append('date', date);
+    if (filterParams) {
+      // Parse the filter params and add them to the request
+      const filterSearchParams = new URLSearchParams(filterParams);
+      for (const [key, value] of filterSearchParams.entries()) {
+        params.append(key, value);
+      }
     }
 
     const response = await apiClient.get(`/reports/daily-sales-pdf?${params}`, {

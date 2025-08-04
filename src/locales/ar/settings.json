@@ -13,6 +13,8 @@
   "lowStockThreshold": "حد تنبيه المخزون المنخفض",
   "invoicePrefix": "بادئة الفاتورة",
   "poPrefix": "بادئة أمر الشراء",
+  "defaultProfitRate": "معدل الربح الافتراضي (%)",
+  "defaultProfitRateDesc": "نسبة الربح الافتراضية المستخدمة عند حساب أسعار البيع من أسعار التكلفة",
   "saveChanges": "حفظ التغييرات",
   "settingsSaved": "تم حفظ الإعدادات بنجاح",
   "settingsSaveError": "فشل في حفظ الإعدادات",

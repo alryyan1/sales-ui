@@ -66,6 +66,7 @@ const settingsFormSchema = z.object({
   global_low_stock_threshold: z.coerce.number().int().min(0).optional(),
   invoice_prefix: z.string().optional(),
   purchase_order_prefix: z.string().optional(),
+  default_profit_rate: z.coerce.number().min(0).max(1000).optional(),
   
   // WhatsApp Settings
   whatsapp_enabled: z.boolean().optional(),
@@ -100,6 +101,7 @@ const SettingsPage: React.FC = () => {
       global_low_stock_threshold: 10,
       invoice_prefix: "INV-",
       purchase_order_prefix: "PO-",
+      default_profit_rate: 20.0,
       
       // WhatsApp defaults
       whatsapp_enabled: false,
@@ -133,6 +135,7 @@ const SettingsPage: React.FC = () => {
         global_low_stock_threshold: settings.global_low_stock_threshold ?? 10,
         invoice_prefix: settings.invoice_prefix || "INV-",
         purchase_order_prefix: settings.purchase_order_prefix || "PO-",
+        default_profit_rate: settings.default_profit_rate ?? 20.0,
         
         // WhatsApp settings
         whatsapp_enabled: settings.whatsapp_enabled || false,
@@ -382,6 +385,23 @@ const SettingsPage: React.FC = () => {
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={control}
+                  name="default_profit_rate"
+                  render={({ field }) => (
+                    <FormItem>
+                      
+                      <FormLabel>{t("settings:defaultProfitRate")}</FormLabel>
+                      <FormControl>
+                        <Input type="number" min="0" max="1000" step="0.1" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        {t("settings:defaultProfitRateDesc")}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

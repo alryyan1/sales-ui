@@ -43,5 +43,7 @@
   "errorLoadingData": "خطأ في تحميل البيانات",
   "errorSavingData": "خطأ في حفظ البيانات",
   "errorUpdatingData": "خطأ في تحديث البيانات",
-  "errorDeletingData": "خطأ في حذف البيانات"
+  "errorDeletingData": "خطأ في حذف البيانات",
+  "apply": "تطبيق",
+  "all": "الكل"
 }

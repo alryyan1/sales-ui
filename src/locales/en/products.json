@@ -13,6 +13,7 @@
     "rowsPerPage": "Rows per Page",
     "showInStockOnly": "Show In Stock Only",
     "showAllProducts": "Show All Products",
+    "showLowStockOnly": "Show Low Stock Only",
     "printProducts": "Print Products",
     "printFeatureComingSoon": "Print feature coming soon",
     "printSuccess": "Report opened in new tab",
