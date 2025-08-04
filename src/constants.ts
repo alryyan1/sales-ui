@@ -165,12 +165,17 @@ export const formatCurrency = (
         currency: currencyCode,
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
-        ...options, // Merge with user-provided options
+    };
+    
+    // Merge options properly - user options should override defaults
+    const finalOptions = {
+        ...defaultOptions,
+        ...options,
     };
 
     try {
         // If no locale is provided, Intl.NumberFormat uses the browser's default locale.
-        return new Intl.NumberFormat(locale, defaultOptions).format(numberValue);
+        return new Intl.NumberFormat(locale, finalOptions).format(numberValue);
     } catch (e) {
         console.error("Error formatting currency:", e, "Value:", value, "Currency:", currencyCode);
         // Fallback to simpler formatting if Intl fails

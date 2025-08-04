@@ -38,17 +38,26 @@ import {
 // Define the actual API response structure (Laravel pagination)
 interface SalesApiResponse {
   data: Sale[];
-  current_page: number;
-  last_page: number;
-  per_page: number;
-  total: number;
-  from: number;
-  to: number;
-  first_page_url: string;
-  last_page_url: string;
-  next_page_url: string | null;
-  prev_page_url: string | null;
-  path: string;
+  links: {
+    first: string;
+    last: string;
+    prev: string | null;
+    next: string | null;
+  };
+  meta: {
+    current_page: number;
+    from: number;
+    last_page: number;
+    links: Array<{
+      url: string | null;
+      label: string;
+      active: boolean;
+    }>;
+    path: string;
+    per_page: number;
+    to: number;
+    total: number;
+  };
 }
 
 const SalesListPage: React.FC = () => {
@@ -119,26 +128,31 @@ const SalesListPage: React.FC = () => {
       const data = await saleService.getSales(page);
       console.log('Sales API response:', data);
       
-      // Handle both paginated response and simple array
-      if (data && typeof data === 'object' && 'data' in data && 'current_page' in data) {
-        // This is a paginated response
-        setSalesResponse(data as SalesApiResponse);
+      // Handle Laravel pagination response structure
+      if (data && typeof data === 'object' && 'data' in data && 'meta' in data) {
+        // This is a Laravel pagination response
+        setSalesResponse(data as unknown as SalesApiResponse);
       } else if (Array.isArray(data)) {
         // This is a simple array - create a mock paginated response
         const salesArray = data as Sale[];
         setSalesResponse({
           data: salesArray,
-          current_page: 1,
-          last_page: 1,
-          per_page: salesArray.length,
-          total: salesArray.length,
-          from: 1,
-          to: salesArray.length,
-          first_page_url: '',
-          last_page_url: '',
-          next_page_url: null,
-          prev_page_url: null,
-          path: ''
+          links: {
+            first: '',
+            last: '',
+            prev: null,
+            next: null
+          },
+          meta: {
+            current_page: 1,
+            last_page: 1,
+            per_page: salesArray.length,
+            total: salesArray.length,
+            from: 1,
+            to: salesArray.length,
+            path: '',
+            links: []
+          }
         });
       } else {
         throw new Error('Unexpected response format from API');
@@ -263,7 +277,10 @@ const SalesListPage: React.FC = () => {
                       </TableCell>
                       <TableCell align="center">
                         {discountAmount > 0 
-                          ? formatCurrency(discountAmount, "en-US", settings?.currency_symbol)
+                          ? formatCurrency(discountAmount, "en-US", settings?.currency_symbol, {
+                              minimumFractionDigits: 0,
+                              maximumFractionDigits: 0
+                            })
                           : "---"
                         }
                       </TableCell>
@@ -271,7 +288,11 @@ const SalesListPage: React.FC = () => {
                         {formatCurrency(
                           sale.total_amount,
                           "en-US",
-                          settings?.currency_symbol
+                          settings?.currency_symbol,
+                          {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0
+                          }
                         )}
                       </TableCell>
                       <TableCell align="center">
@@ -322,12 +343,12 @@ const SalesListPage: React.FC = () => {
       {salesResponse && (
         <>
           {/* Pagination */}
-          {salesResponse.last_page > 1 && (
+          {salesResponse.meta.last_page > 1 && (
             <Box
               sx={{ display: "flex", justifyContent: "center", p: 2, mt: 3 }}
             >
               <Pagination
-                count={salesResponse.last_page}
+                count={salesResponse.meta.last_page}
                 page={currentPage}
                 onChange={handlePageChange}
                 color="primary"

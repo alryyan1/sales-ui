@@ -10,7 +10,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
     Package,
     Users,
-    Building,
     ShoppingCart,
     CircleDollarSign,
     TrendingUp,
@@ -148,14 +147,14 @@ const HomePage: React.FC = () => {
     }
 
     // --- Main Content ---
-    return (
+  return (
         <div className="container mx-auto p-6">
             <div className="mb-6">
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-                    {t('home:welcomeMessage')}
+                    {t('home:welcomeMessage', 'Welcome to Sales Management System')}
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400 mt-2">
-                    {t('home:subtitle')}
+                    {t('home:subtitle', 'Your comprehensive solution for managing sales, inventory, and business operations')}
                 </p>
             </div>
 
@@ -166,108 +165,108 @@ const HomePage: React.FC = () => {
                     {/* Sales Today */}
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                                         <CardTitle className="text-sm font-medium">
-                                 {t('dashboard:salesToday')}
-                             </CardTitle>
+                            <CardTitle className="text-sm font-medium">
+                                {t('dashboard:salesToday', 'Sales Today')}
+                            </CardTitle>
                             <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-green-600">
                                 {formatCurrencyWithSettings(summaryData.sales.today_amount)}
                             </div>
-                                                         <p className="text-xs text-muted-foreground">
-                                 {formatInteger(summaryData.sales.today_count)} {t('dashboard:transactions')}
-                             </p>
+                            <p className="text-xs text-muted-foreground">
+                                {formatInteger(summaryData.sales.today_count)} {t('dashboard:transactions', 'transactions')}
+                            </p>
                         </CardContent>
                     </Card>
 
                     {/* Sales This Month */}
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                                         <CardTitle className="text-sm font-medium">
-                                 {t('dashboard:salesThisMonth')}
-                             </CardTitle>
+                            <CardTitle className="text-sm font-medium">
+                                {t('dashboard:salesThisMonth', 'Sales This Month')}
+                            </CardTitle>
                             <TrendingUp className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-blue-600">
                                 {formatCurrencyWithSettings(summaryData.sales.this_month_amount)}
                             </div>
-                                                         <p className="text-xs text-muted-foreground">
-                                 {formatInteger(summaryData.sales.this_month_count)} {t('dashboard:transactions')}
-                             </p>
+                            <p className="text-xs text-muted-foreground">
+                                {formatInteger(summaryData.sales.this_month_count)} {t('dashboard:transactions', 'transactions')}
+                            </p>
                         </CardContent>
                     </Card>
 
                     {/* Purchases This Month */}
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                                         <CardTitle className="text-sm font-medium">
-                                 {t('dashboard:purchasesThisMonth')}
-                             </CardTitle>
+                            <CardTitle className="text-sm font-medium">
+                                {t('dashboard:purchasesThisMonth', 'Purchases This Month')}
+                            </CardTitle>
                             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-orange-600">
                                 {formatCurrencyWithSettings(summaryData.purchases.this_month_amount)}
                             </div>
-                                                         <p className="text-xs text-muted-foreground">
-                                 {formatInteger(summaryData.purchases.this_month_count)} {t('dashboard:transactions')}
-                             </p>
+                            <p className="text-xs text-muted-foreground">
+                                {formatInteger(summaryData.purchases.this_month_count)} {t('dashboard:transactions', 'transactions')}
+                            </p>
                         </CardContent>
                     </Card>
 
                     {/* Total Products */}
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                                         <CardTitle className="text-sm font-medium">
-                                 {t('dashboard:totalProducts')}
-                             </CardTitle>
+                            <CardTitle className="text-sm font-medium">
+                                {t('dashboard:totalProducts', 'Total Products')}
+                            </CardTitle>
                             <Package className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-purple-600">
                                 {formatInteger(summaryData.inventory.total_products)}
                             </div>
-                                                         <p className="text-xs text-muted-foreground">
-                                 {t('dashboard:inInventory')}
-                             </p>
+                            <p className="text-xs text-muted-foreground">
+                                {t('dashboard:inInventory', 'in inventory')}
+                            </p>
                         </CardContent>
                     </Card>
 
                     {/* Low Stock Alert */}
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                                         <CardTitle className="text-sm font-medium">
-                                 {t('dashboard:lowStock')}
-                             </CardTitle>
+                            <CardTitle className="text-sm font-medium">
+                                {t('dashboard:lowStock', 'Low Stock')}
+                            </CardTitle>
                             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-red-600">
                                 {formatInteger(summaryData.inventory.low_stock_count)}
                             </div>
-                                                         <p className="text-xs text-muted-foreground">
-                                 {t('dashboard:productsNeedRestocking')}
-                             </p>
+                            <p className="text-xs text-muted-foreground">
+                                {t('dashboard:productsNeedRestocking', 'products need restocking')}
+                            </p>
                         </CardContent>
                     </Card>
 
                     {/* Total Clients */}
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                                         <CardTitle className="text-sm font-medium">
-                                 {t('dashboard:totalClients')}
-                             </CardTitle>
+                            <CardTitle className="text-sm font-medium">
+                                {t('dashboard:totalClients', 'Total Clients')}
+                            </CardTitle>
                             <Users className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-indigo-600">
                                 {formatInteger(summaryData.entities.total_clients)}
                             </div>
-                                                         <p className="text-xs text-muted-foreground">
-                                 {t('dashboard:registeredClients')}
-                             </p>
+                            <p className="text-xs text-muted-foreground">
+                                {t('dashboard:registeredClients', 'registered clients')}
+                            </p>
                         </CardContent>
                     </Card>
                 </div>
@@ -277,7 +276,7 @@ const HomePage: React.FC = () => {
             {settings && (
                 <div className="mt-8 p-6 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">
-                        {t('home:companyInfo')}
+                        {t('home:companyInfo', 'Company Information')}
                     </h2>
                     <div className="grid gap-4 md:grid-cols-2">
                         <div>
@@ -290,17 +289,17 @@ const HomePage: React.FC = () => {
                         </div>
                         <div>
                             <p className="text-sm text-gray-600 dark:text-gray-400">
-                                {t('home:phone')}: {settings.company_phone}
+                                {t('home:phone', 'Phone')}: {settings.company_phone}
                             </p>
                             <p className="text-sm text-gray-600 dark:text-gray-400">
-                                {t('home:email')}: {settings.company_email}
+                                {t('home:email', 'Email')}: {settings.company_email}
                             </p>
                         </div>
                     </div>
                 </div>
             )}
         </div>
-    );
+  );
 };
 
 export default HomePage;
