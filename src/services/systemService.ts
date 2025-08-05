@@ -24,6 +24,23 @@ export interface UpdateCheck {
   } | null;
   fetch_result: string;
   checked_at: string;
+  // Enhanced to include both frontend and backend
+  backend_has_updates: boolean;
+  frontend_has_updates: boolean;
+  backend_commit_count: number;
+  frontend_commit_count: number;
+  backend_latest_commit_info?: {
+    hash: string;
+    message: string;
+    author: string;
+    date: string;
+  };
+  frontend_latest_commit_info?: {
+    hash: string;
+    message: string;
+    author: string;
+    date: string;
+  };
 }
 
 export interface BackendUpdateResult {
@@ -36,10 +53,38 @@ export interface BackendUpdateResult {
   };
 }
 
+export interface FrontendUpdateResult {
+  message: string;
+  data: {
+    steps: string[];
+    errors: string[];
+    success: boolean;
+    updated_at: string;
+    build_output?: string;
+  };
+}
+
+export interface CombinedUpdateResult {
+  message: string;
+  data: {
+    backend: BackendUpdateResult['data'];
+    frontend: FrontendUpdateResult['data'];
+    overall_success: boolean;
+    updated_at: string;
+  };
+}
+
 export interface FrontendInstructions {
   frontend_path: string;
   commands: string[];
   description: string;
+}
+
+export interface UpdateProgress {
+  step: string;
+  status: 'pending' | 'running' | 'completed' | 'error';
+  message?: string;
+  progress?: number; // 0-100
 }
 
 class SystemService {
@@ -52,7 +97,7 @@ class SystemService {
   }
 
   /**
-   * Check for available updates
+   * Check for available updates (both frontend and backend)
    */
   async checkForUpdates(): Promise<UpdateCheck> {
     const response = await apiClient.get('/admin/system/check-updates');
@@ -68,11 +113,37 @@ class SystemService {
   }
 
   /**
+   * Perform frontend update operations
+   */
+  async updateFrontend(): Promise<FrontendUpdateResult> {
+    const response = await apiClient.post('/admin/system/update-frontend');
+    return response.data;
+  }
+
+  /**
+   * Perform combined update (both frontend and backend)
+   */
+  async updateBoth(): Promise<CombinedUpdateResult> {
+    const response = await apiClient.post('/admin/system/update-both');
+    return response.data;
+  }
+
+  /**
    * Get frontend update instructions
    */
   async getFrontendInstructions(): Promise<FrontendInstructions> {
     const response = await apiClient.get('/admin/system/frontend-instructions');
     return response.data.data;
+  }
+
+  /**
+   * Stream update progress (for real-time updates)
+   */
+  async streamUpdateProgress(updateType: 'backend' | 'frontend' | 'both'): Promise<ReadableStream<UpdateProgress>> {
+    const response = await apiClient.post(`/admin/system/update-${updateType}/stream`, {}, {
+      responseType: 'stream'
+    });
+    return response.data;
   }
 }
 
