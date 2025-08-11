@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea"; // If you have multiline settings
+import { Switch } from "@/components/ui/switch";
 import {
   Loader2,
   Settings as SettingsIcon,
@@ -67,6 +68,8 @@ const settingsFormSchema = z.object({
   invoice_prefix: z.string().optional(),
   purchase_order_prefix: z.string().optional(),
   default_profit_rate: z.coerce.number().min(0).max(1000).optional(),
+  // Layout
+  use_sidebar_layout: z.boolean().optional(),
   
   // WhatsApp Settings
   whatsapp_enabled: z.boolean().optional(),
@@ -102,6 +105,8 @@ const SettingsPage: React.FC = () => {
       invoice_prefix: "INV-",
       purchase_order_prefix: "PO-",
       default_profit_rate: 20.0,
+    // Layout
+    use_sidebar_layout: false,
       
       // WhatsApp defaults
       whatsapp_enabled: false,
@@ -136,6 +141,7 @@ const SettingsPage: React.FC = () => {
         invoice_prefix: settings.invoice_prefix || "INV-",
         purchase_order_prefix: settings.purchase_order_prefix || "PO-",
         default_profit_rate: settings.default_profit_rate ?? 20.0,
+        use_sidebar_layout: settings.use_sidebar_layout ?? false,
         
         // WhatsApp settings
         whatsapp_enabled: settings.whatsapp_enabled || false,
@@ -236,6 +242,24 @@ const SettingsPage: React.FC = () => {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Layout: Sidebar vs Topbar */}
+                <FormField
+                  control={control}
+                  name="use_sidebar_layout"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between border rounded-md px-3 py-2 md:col-span-2">
+                      <div>
+                        <FormLabel>{t("settings:useSidebarLayout", "Use Sidebar Layout")}</FormLabel>
+                        <FormDescription>
+                          {t("settings:useSidebarLayoutDesc", "إذا فُعّل سيتم عرض شريط جانبي بدلاً من شريط علوي")}
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch checked={!!field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={control}
                   name="company_name"
