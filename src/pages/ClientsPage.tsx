@@ -23,9 +23,6 @@ const ClientsPage: React.FC = () => {
     // Translations - Load namespaces needed
     const { t } = useTranslation(['clients', 'common', 'validation']);
     const { can ,isAdmin} = useAuthorization(); // <-- Get the 'can' function
-    console.log(isAdmin(),'isAdmin');
-    console.log(can('create-clients'),'can create clients');
-    console.log(can('edit-clients'),'can edit clients');
 
     // --- State Management ---
     const [clientsResponse, setClientsResponse] = useState<PaginatedResponse<Client> | null>(null);
@@ -168,9 +165,11 @@ const ClientsPage: React.FC = () => {
                         clients={clientsResponse.data}
                         canDelete={can('delete-clients')} // Pass permission check
                         canEdit ={can('edit-clients')} // Pass permission check
-                        onEdit={openModal } // Pass handler only if allowed
-                        onDelete={ openConfirmDialog } // Pass handler only if allowed
-                        isLoading={isDeleting} // Pass deleting state to potentially disable actions in table
+                        onEdit={openModal}
+                        onDelete={openConfirmDialog}
+                        onViewLedger={(id) => window.location.hash = `#/clients/${id}/ledger`}
+                        canViewLedger={true}
+                        isLoading={isDeleting}
                     />
 
                     {/* --- MUI Pagination --- */}

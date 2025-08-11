@@ -291,7 +291,6 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                         <TableCell className="text-center">
                           <div className="text-center">
                             <div className="font-medium text-base">{formatNumber(item.unitPrice)}</div>
-                            <div className="text-sm text-gray-500">per unit</div>
                           </div>
                         </TableCell>
                         <TableCell className="text-center">

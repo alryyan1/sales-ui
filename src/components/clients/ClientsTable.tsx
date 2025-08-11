@@ -10,7 +10,7 @@ import Box from "@mui/material/Box";
 
 // Import the Client type from clientService
 import { Client } from "../../services/clientService"; // Adjust the path as needed
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, FileText } from "lucide-react";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { CardContent } from "@mui/material";
@@ -30,6 +30,8 @@ interface ClientsTableProps {
   isLoading?: boolean; // Optional loading state for skeleton/indicator
   canEdit?: boolean; // <-- New prop
   canDelete?: boolean; //
+  onViewLedger?: (id: number) => void; // Optional: view ledger action
+  canViewLedger?: boolean; // Optional: control visibility
 }
 
 const ClientsTable: React.FC<ClientsTableProps> = ({
@@ -39,6 +41,8 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
   isLoading = false,
   canEdit = false,
   canDelete = false,
+  onViewLedger,
+  canViewLedger = true,
 }) => {
   const { t } = useTranslation(["clients", "common"]); // Load necessary namespaces
 
@@ -97,6 +101,20 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
                   <Box
                     sx={{ display: "flex", justifyContent: "center", gap: 1 }}
                   >
+                    {/* View Ledger Button */}
+                    {onViewLedger && canViewLedger && (
+                      <Tooltip title={t("clients:ledger") || "Ledger"}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => onViewLedger(client.id)}
+                          disabled={isLoading}
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                      </Tooltip>
+                    )}
                     {/* Edit Button */}
                     {/* Conditionally render Edit button */}
                     {canEdit && (

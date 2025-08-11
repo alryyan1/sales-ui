@@ -156,7 +156,13 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
     try {
       setLoadingClients(true);
       const response = await clientService.getClients();
-      setClients(response.data || []);
+      // Ensure selected client (if any) is included in options so Autocomplete can display it
+      const fetched = response.data || [];
+      if (selectedClient && !fetched.find(c => c.id === selectedClient.id)) {
+        setClients([selectedClient, ...fetched]);
+      } else {
+        setClients(fetched);
+      }
     } catch (error) {
       console.error('Failed to load clients:', error);
       setClients([]);
@@ -168,7 +174,18 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
   // Load clients on mount
   useEffect(() => {
     loadClients();
+    // We intentionally don't include loadClients in deps to avoid re-fetch loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // When selectedClient changes from parent, ensure it's present in options
+  useEffect(() => {
+    if (selectedClient && !clients.find(c => c.id === selectedClient.id)) {
+      setClients(prev => [selectedClient, ...prev]);
+    }
+    // We intentionally don't include clients in deps to avoid infinite loop when mutating list
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClient]);
 
   const handleAddProducts = async () => {
     if (selectedProducts.length === 0) return;
@@ -246,6 +263,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
                 options={clients}
                 getOptionLabel={(option) => `${option.name} ${option.phone ? `(${option.phone})` : ''}`}
                 value={selectedClient}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
                 onChange={(_, newValue) => onClientChange?.(newValue)}
                 loading={loadingClients}
                 renderInput={(params) => (
@@ -301,7 +319,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
                    options={searchResults}
                    
                    value={selectedProducts}
-                   onChange={(event, newValue) => {
+                   onChange={(_, newValue) => {
                      // Filter out string values (freeSolo input)
                      const products = newValue.filter(item => typeof item !== 'string') as Product[];
                      setSelectedProducts(products);
@@ -314,7 +332,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
                      return `${option.name} (${option.sku || 'N/A'})`;
                    }}
                    inputValue={searchInput}
-                   onInputChange={(event, newInputValue, reason) => {
+                   onInputChange={(_, newInputValue, reason) => {
                      // Only update search input if it's a user typing or clearing
                      // Don't clear when selecting an option
                      if (reason === 'input' || reason === 'clear') {

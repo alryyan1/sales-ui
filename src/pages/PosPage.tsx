@@ -23,6 +23,7 @@ import {
 // Types
 import { Product } from "../services/productService";
 import saleService from "../services/saleService";
+import clientService from "../services/clientService";
 import { preciseCalculation } from "../constants";
 import { generateDailySalesPdf } from "../services/exportService";
 import { useAuth } from "@/context/AuthContext";
@@ -919,13 +920,6 @@ const PosPage: React.FC = () => {
     }
   };
 
-  const clearCurrentSale = () => {
-    setCurrentSaleItems([]);
-    // Reset payment state - now handled by SalePaymentCard
-    setDiscountAmount(0);
-    setDiscountType('fixed');
-    showToast(t('pos:saleCleared'), 'success');
-  };
 
   const handlePaymentComplete = async (errorMessage?: string) => {
     if (errorMessage) {
@@ -947,6 +941,20 @@ const PosPage: React.FC = () => {
         // Refresh the sale data to get updated payment information
         const updatedSale = await saleService.getSale(selectedSale.id);
         
+        // Set selected client if present on sale
+        try {
+          if (updatedSale.client) {
+            setSelectedClient(updatedSale.client);
+          } else if (updatedSale.client_id) {
+            const client = await clientService.getClient(updatedSale.client_id);
+            setSelectedClient(client);
+          } else {
+            setSelectedClient(null);
+          }
+        } catch {
+          // ignore client fetch errors
+        }
+
         // Transform and update the selected sale with fresh data
         const transformedSale: Sale = {
           id: updatedSale.id,
@@ -1094,6 +1102,20 @@ const PosPage: React.FC = () => {
     try {
       // Fetch the latest sale data from the backend
       const latestSale = await saleService.getSale(sale.id);
+
+      // Set selected client from latest sale if available
+      try {
+        if (latestSale.client) {
+          setSelectedClient(latestSale.client);
+        } else if (latestSale.client_id) {
+          const client = await clientService.getClient(latestSale.client_id);
+          setSelectedClient(client);
+        } else {
+          setSelectedClient(null);
+        }
+      } catch {
+        // ignore client fetch errors
+      }
       
       // Transform the backend sale to POS format
       const transformedSale: Sale = {
@@ -1323,12 +1345,32 @@ const PosPage: React.FC = () => {
 
   // Payment method handlers
 
+  
+  // Update sale client instantly when client is selected in POS header
+  const handleClientChange = async (client: import('../services/clientService').Client | null) => {
+    setSelectedClient(client);
+    if (!selectedSale || !client) return;
+    try {
+      // Update on backend
+      await saleService.updateSale(selectedSale.id, { client_id: client.id });
+
+      // Update local selected sale and today's sales list
+      setSelectedSale(prev => prev ? { ...prev, client_id: client.id, client_name: client.name } : prev);
+      setTodaySales(prev => prev.map(s => s.id === selectedSale.id ? { ...s, client_id: client.id, client_name: client.name } : s));
+
+      showToast(t('pos:saleUpdated'), 'success');
+    } catch (error) {
+      const errorMessage = saleService.getErrorMessage(error);
+      showToast(errorMessage, 'error');
+    }
+  };
 
   return (
     <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
       {/* Header */}
       <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8">
       <PosHeader 
+        key={selectedSale?.id ?? 'no-sale'}
         onAddProduct={addToCurrentSale} 
         onAddMultipleProducts={addMultipleToCurrentSale}
         loading={false} 
@@ -1340,7 +1382,7 @@ const PosPage: React.FC = () => {
         onPrintThermalInvoice={handlePrintThermalInvoice}
         hasSelectedSale={!!selectedSale}
         selectedClient={selectedClient}
-        onClientChange={setSelectedClient}
+        onClientChange={handleClientChange}
         filterByCurrentUser={filterByCurrentUser}
         onToggleUserFilter={() => setFilterByCurrentUser(!filterByCurrentUser)}
         selectedDate={selectedDate}
