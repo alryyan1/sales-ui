@@ -100,6 +100,7 @@ const ProductsPage: React.FC = () => {
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [showOnlyInStock, setShowOnlyInStock] = useState(false);
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
+  const [showOutOfStockOnly, setShowOutOfStockOnly] = useState(false);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -141,7 +142,7 @@ const ProductsPage: React.FC = () => {
   }, [searchTerm]); // Runs whenever the raw searchTerm changes
 
   // --- Data Fetching (uses debounced term) ---
-  const fetchProducts = useCallback(async (page: number, search: string, categoryId: number | null, perPage: number, inStockOnly: boolean, lowStockOnly: boolean) => {
+  const fetchProducts = useCallback(async (page: number, search: string, categoryId: number | null, perPage: number, inStockOnly: boolean, lowStockOnly: boolean, outOfStockOnly: boolean) => {
     setIsLoading(true);
     setError(null);
     try {
@@ -154,7 +155,8 @@ const ProductsPage: React.FC = () => {
         perPage,
         categoryId,
         inStockOnly,
-        lowStockOnly
+        lowStockOnly,
+        outOfStockOnly
       );
       setProductsResponse(data as unknown as ProductPaginatedResponse);
     } catch (err) {
@@ -184,8 +186,8 @@ const ProductsPage: React.FC = () => {
 
   // Effect to fetch data when page, debounced search term, category, or rows per page changes
   useEffect(() => {
-    fetchProducts(currentPage, debouncedSearchTerm, selectedCategory, rowsPerPage, showOnlyInStock, showLowStockOnly);
-  }, [fetchProducts, currentPage, debouncedSearchTerm, selectedCategory, rowsPerPage, showOnlyInStock, showLowStockOnly]);
+    fetchProducts(currentPage, debouncedSearchTerm, selectedCategory, rowsPerPage, showOnlyInStock, showLowStockOnly, showOutOfStockOnly);
+  }, [fetchProducts, currentPage, debouncedSearchTerm, selectedCategory, rowsPerPage, showOnlyInStock, showLowStockOnly, showOutOfStockOnly]);
 
   // --- Notification Handlers ---
   const showSnackbar = (message: string, type: "success" | "error") => {
@@ -220,7 +222,7 @@ const ProductsPage: React.FC = () => {
     closeModal();
     showSnackbar(t(messageKey), "success");
     const pageToFetch = editingProduct ? currentPage : 1;
-    fetchProducts(pageToFetch, debouncedSearchTerm, selectedCategory, rowsPerPage, showOnlyInStock, showLowStockOnly); // Refetch
+    fetchProducts(pageToFetch, debouncedSearchTerm, selectedCategory, rowsPerPage, showOnlyInStock, showLowStockOnly, showOutOfStockOnly); // Refetch
     if (!editingProduct) setCurrentPage(1);
   };
 
@@ -252,6 +254,11 @@ const ProductsPage: React.FC = () => {
   const handleLowStockFilterToggle = () => {
     setShowLowStockOnly(!showLowStockOnly);
     setCurrentPage(1); // Reset to page 1 when filter changes
+  };
+
+  const handleOutOfStockFilterToggle = () => {
+    setShowOutOfStockOnly(!showOutOfStockOnly);
+    setCurrentPage(1);
   };
 
   const handlePrintProducts = async () => {
@@ -358,6 +365,14 @@ const ProductsPage: React.FC = () => {
             color={showLowStockOnly ? "primary" : "inherit"}
           >
             {showLowStockOnly ? t("products:showAllProducts") : t("products:showLowStockOnly")}
+          </Button>
+          <Button
+            variant={showOutOfStockOnly ? "contained" : "outlined"}
+            startIcon={<FilterListIcon />}
+            onClick={handleOutOfStockFilterToggle}
+            color={showOutOfStockOnly ? "primary" : "inherit"}
+          >
+            {showOutOfStockOnly ? t("products:showAllProducts") : t("products:showOutOfStockOnly", "Show Out of Stock")}
           </Button>
           <Button
             variant="outlined"

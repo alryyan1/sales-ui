@@ -91,7 +91,8 @@ const productService = {
     limit: number = 15, // Use the 'per_page' naming convention for Laravel's paginate
     categoryId?: number | null,
     inStockOnly?: boolean,
-    lowStockOnly?: boolean
+    lowStockOnly?: boolean,
+    outOfStockOnly?: boolean
   ): Promise<PaginatedResponse<Product>> => {
     try {
       const params = new URLSearchParams();
@@ -103,6 +104,7 @@ const productService = {
       if (categoryId) params.append("category_id", categoryId.toString());
       if (inStockOnly) params.append("in_stock_only", "1");
       if (lowStockOnly) params.append("low_stock_only", "1");
+      if (outOfStockOnly) params.append("out_of_stock_only", "1");
 
       const response = await apiClient.get<PaginatedResponse<Product>>(
         `/products?${params.toString()}`

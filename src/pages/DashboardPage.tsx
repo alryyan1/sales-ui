@@ -1,5 +1,15 @@
 // src/pages/DashboardPage.tsx
 import React, { useState, useEffect, useCallback } from 'react';
+import {
+    ResponsiveContainer,
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    Tooltip as RechartsTooltip,
+    CartesianGrid,
+} from 'recharts';
+import { PieChart, Pie, Cell, Legend } from 'recharts';
 import { useTranslation } from 'react-i18next';
 import { toast } from "sonner";
 import { Link as RouterLink, useNavigate } from "react-router-dom"; // For linking cards
@@ -82,6 +92,17 @@ const DashboardPage: React.FC = () => {
     const [isChartLoading, setIsChartLoading] = useState<boolean>(false);
     const [chartNoData, setChartNoData] = useState<boolean>(false);
 
+    // Purchases chart state
+    const [purchChartYear, setPurchChartYear] = useState<number>(currentYear);
+    const [purchMonthlySeries, setPurchMonthlySeries] = useState<number[]>(Array(12).fill(0));
+    const [isPurchChartLoading, setIsPurchChartLoading] = useState<boolean>(false);
+    const [purchChartNoData, setPurchChartNoData] = useState<boolean>(false);
+
+    // Top products (pie chart)
+    const [topProducts, setTopProducts] = useState<Array<{ name: string; value: number }>>([]);
+    const [isTopLoading, setIsTopLoading] = useState(false);
+    const [topRange, setTopRange] = useState<'month' | 'year'>('month');
+
     // --- Data Fetching ---
     const fetchSummary = useCallback(async () => {
         setIsLoading(true);
@@ -137,6 +158,68 @@ const DashboardPage: React.FC = () => {
     useEffect(() => {
         fetchYearlyMonthlyTotals(chartYear, chartMetric);
     }, [chartYear, chartMetric, fetchYearlyMonthlyTotals]);
+
+    // Fetch purchases monthly totals (placeholder endpoint, adjust when backend available)
+    const fetchYearlyMonthlyPurchases = useCallback(async (year: number) => {
+        setIsPurchChartLoading(true);
+        try {
+            const requests = Array.from({ length: 12 }, (_, i) => i + 1).map((month) =>
+                apiClient.get(`/reports/monthly-purchases`, { params: { month, year } })
+            );
+            const responses = await Promise.allSettled(requests);
+            const series: number[] = responses.map((res, idx) => {
+                if (res.status === 'fulfilled') {
+                    const data = res.value.data?.data;
+                    const sum = data?.month_summary?.total_amount_purchases ?? 0;
+                    return Number(sum) || 0;
+                }
+                console.warn(`Failed to fetch purchases month ${idx + 1} for year ${year}`);
+                return 0;
+            });
+            setPurchMonthlySeries(series);
+            setPurchChartNoData(series.every((v) => (Number(v) || 0) === 0));
+        } catch (e) {
+            console.error('Failed to fetch yearly monthly purchases', e);
+            setPurchMonthlySeries(Array(12).fill(0));
+            setPurchChartNoData(true);
+        } finally {
+            setIsPurchChartLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchYearlyMonthlyPurchases(purchChartYear);
+    }, [purchChartYear, fetchYearlyMonthlyPurchases]);
+
+    // Fetch top-selling products for pie chart
+    const fetchTopProducts = useCallback(async (range: 'month' | 'year') => {
+        setIsTopLoading(true);
+        try {
+            const now = new Date();
+            const start = range === 'month'
+                ? new Date(now.getFullYear(), now.getMonth(), 1)
+                : new Date(now.getFullYear(), 0, 1);
+            const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const params = new URLSearchParams({
+                start_date: start.toISOString().split('T')[0],
+                end_date: end.toISOString().split('T')[0],
+                limit: '10',
+            }).toString();
+            const res = await apiClient.get(`/reports/top-products?${params}`);
+            const rows = res.data?.data || [];
+            const mapped = rows.map((r: any) => ({ name: r.product_name, value: Number(r.total_qty || 0) }));
+            setTopProducts(mapped);
+        } catch (e) {
+            console.error('Failed to fetch top products', e);
+            setTopProducts([]);
+        } finally {
+            setIsTopLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchTopProducts(topRange);
+    }, [topRange, fetchTopProducts]);
 
     // --- Loading State UI ---
     const renderSkeletons = (count = 6) => ( // Default to 6 skeletons for a 2x3 or similar layout
@@ -335,7 +418,7 @@ const DashboardPage: React.FC = () => {
                                     {t('dashboard:salesByMonth', 'المبيعات خلال أشهر السنة')}
                                 </CardTitle>
                                 <CardDescription className="dark:text-gray-400">
-                                    {chartMetric === 'revenue' ? t('dashboard:byRevenue', 'حسب إجمالي الإيراد') : t('dashboard:byPaid', 'حسب إجمالي المبلغ المدفوع')}
+                                    {chartMetric === 'revenue' ? t('dashboard:byRevenue', 'حسب إجمالي المبيعات') : t('dashboard:byPaid', 'حسب إجمالي المبلغ المدفوع')}
                                 </CardDescription>
                             </div>
                             <div className="flex items-center gap-2">
@@ -353,7 +436,7 @@ const DashboardPage: React.FC = () => {
                                         className={`px-3 py-1 text-sm ${chartMetric === 'revenue' ? 'bg-primary text-white' : 'bg-white dark:bg-gray-800 dark:text-gray-200'}`}
                                         onClick={() => setChartMetric('revenue')}
                                     >
-                                        {t('dashboard:metricRevenue', 'الإيراد')}
+                                        {t('dashboard:metricRevenue', 'الإجمالي')}
                                     </button>
                                     <button
                                         className={`px-3 py-1 text-sm ${chartMetric === 'paid' ? 'bg-primary text-white' : 'bg-white dark:bg-gray-800 dark:text-gray-200'}`}
@@ -369,34 +452,128 @@ const DashboardPage: React.FC = () => {
                                 <Skeleton className="h-40 w-full dark:bg-gray-700" />
                             ) : (
                                 <div className="w-full h-56">
-                                    {/* Simple responsive bar chart using divs */}
-                                    {(() => {
-                                        const maxVal = Math.max(1, ...monthlySeries);
-                                        const monthLabels = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString(undefined, { month: 'short' }));
-                                        return chartNoData ? (
-                                            <div className="h-full w-full flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
-                                                {t('dashboard:noChartData', 'لا توجد بيانات للسنة المحددة')}
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-end gap-2 h-full">
-                                                {monthlySeries.map((val, idx) => {
-                                                    const heightPct = Math.round((val / maxVal) * 100);
-                                                    return (
-                                                        <div key={idx} className="flex-1 flex flex-col items-center">
-                                                            <div
-                                                                className="w-full rounded-t-md bg-blue-500 dark:bg-blue-400 transition-all"
-                                                                style={{ height: `${heightPct}%`, minHeight: heightPct > 0 ? '4px' : '0px' }}
-                                                                title={`${monthLabels[idx]}: ${formatCurrency(val)}`}
-                                                            />
-                                                            <span className="mt-1 text-[10px] text-gray-600 dark:text-gray-400">
-                                                                {monthLabels[idx]}
-                                                            </span>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        );
-                                    })()}
+                                    {chartNoData ? (
+                                        <div className="h-full w-full flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+                                            {t('dashboard:noChartData', 'لا توجد بيانات للسنة المحددة')}
+                                        </div>
+                                    ) : (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={monthlySeries.map((v, i) => ({
+                                                name: new Date(2000, i, 1).toLocaleString(undefined, { month: 'short' }),
+                                                value: v,
+                                            }))}>
+                                                <CartesianGrid strokeDasharray="3 3" />
+                                                <XAxis dataKey="name" />
+                                                <YAxis tickFormatter={(v) => formatNumber(v)} />
+                                                <RechartsTooltip formatter={(v: any) => formatCurrency(Number(v))} />
+                                                <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    )}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* --- Top Products Pie Chart --- */}
+                    <Card className="mt-6 dark:bg-gray-900 dark:border-gray-700">
+                        <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                            <div>
+                                <CardTitle className="text-md font-semibold text-gray-800 dark:text-gray-100">
+                                    {t('dashboard:topProducts', 'المنتجات الأكثر مبيعاً')}
+                                </CardTitle>
+                                <CardDescription className="dark:text-gray-400">
+                                    {t('dashboard:topByQty', 'حسب إجمالي الكمية المباعة')}
+                                </CardDescription>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="flex rounded-md overflow-hidden border dark:border-gray-700">
+                                    <button
+                                        className={`px-3 py-1 text-sm ${topRange === 'month' ? 'bg-primary text-white' : 'bg-white dark:bg-gray-800 dark:text-gray-200'}`}
+                                        onClick={() => setTopRange('month')}
+                                    >
+                                        {t('dashboard:thisMonth', 'هذا الشهر')}
+                                    </button>
+                                    <button
+                                        className={`px-3 py-1 text-sm ${topRange === 'year' ? 'bg-primary text-white' : 'bg-white dark:bg-gray-800 dark:text-gray-200'}`}
+                                        onClick={() => setTopRange('year')}
+                                    >
+                                        {t('dashboard:thisYear', 'هذه السنة')}
+                                    </button>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            {isTopLoading ? (
+                                <Skeleton className="h-60 w-full dark:bg-gray-700" />
+                            ) : topProducts.length === 0 ? (
+                                <div className="h-60 w-full flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+                                    {t('dashboard:noChartData', 'لا توجد بيانات للفترة المحددة')}
+                                </div>
+                            ) : (
+                                <div className="w-full h-60">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie data={topProducts} dataKey="value" nameKey="name" innerRadius={50} outerRadius={90}>
+                                                {topProducts.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={["#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#84cc16","#e11d48","#0ea5e9","#a3e635"][index % 10]} />
+                                                ))}
+                                            </Pie>
+                                            <Legend />
+                                            <RechartsTooltip />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* --- Purchases by Month Chart --- */}
+                    <Card className="mt-6 dark:bg-gray-900 dark:border-gray-700">
+                        <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                            <div>
+                                <CardTitle className="text-md font-semibold text-gray-800 dark:text-gray-100">
+                                    {t('dashboard:purchasesByMonth', 'المشتريات خلال أشهر السنة')}
+                                </CardTitle>
+                                <CardDescription className="dark:text-gray-400">
+                                    {t('dashboard:byTotalCost', 'حسب إجمالي تكلفة الشراء')}
+                                </CardDescription>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <select
+                                    className="border rounded-md px-2 py-1 bg-white dark:bg-gray-800 dark:border-gray-700"
+                                    value={purchChartYear}
+                                    onChange={(e) => setPurchChartYear(Number(e.target.value))}
+                                >
+                                    {Array.from({ length: 5 }, (_, i) => currentYear - i).map((y) => (
+                                        <option key={y} value={y}>{y}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            {isPurchChartLoading ? (
+                                <Skeleton className="h-40 w-full dark:bg-gray-700" />
+                            ) : (
+                                <div className="w-full h-56">
+                                    {purchChartNoData ? (
+                                        <div className="h-full w-full flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+                                            {t('dashboard:noChartData', 'لا توجد بيانات للسنة المحددة')}
+                                        </div>
+                                    ) : (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={purchMonthlySeries.map((v, i) => ({
+                                                name: new Date(2000, i, 1).toLocaleString(undefined, { month: 'short' }),
+                                                value: v,
+                                            }))}>
+                                                <CartesianGrid strokeDasharray="3 3" />
+                                                <XAxis dataKey="name" />
+                                                <YAxis tickFormatter={(v) => formatNumber(v)} />
+                                                <RechartsTooltip formatter={(v: any) => formatCurrency(Number(v))} />
+                                                <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    )}
                                 </div>
                             )}
                         </CardContent>
