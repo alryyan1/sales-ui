@@ -80,6 +80,7 @@ const DashboardPage: React.FC = () => {
     const [chartMetric, setChartMetric] = useState<'revenue' | 'paid'>('revenue');
     const [monthlySeries, setMonthlySeries] = useState<number[]>(Array(12).fill(0));
     const [isChartLoading, setIsChartLoading] = useState<boolean>(false);
+    const [chartNoData, setChartNoData] = useState<boolean>(false);
 
     // --- Data Fetching ---
     const fetchSummary = useCallback(async () => {
@@ -122,10 +123,12 @@ const DashboardPage: React.FC = () => {
                 return 0;
             });
             setMonthlySeries(series);
+            setChartNoData(series.every((v) => (Number(v) || 0) === 0));
         } catch (e) {
             console.error('Failed to fetch yearly monthly totals', e);
             toast.error(t('common:error'), { description: t('common:errorFetchingData', 'Error fetching data') });
             setMonthlySeries(Array(12).fill(0));
+            setChartNoData(true);
         } finally {
             setIsChartLoading(false);
         }
@@ -370,7 +373,11 @@ const DashboardPage: React.FC = () => {
                                     {(() => {
                                         const maxVal = Math.max(1, ...monthlySeries);
                                         const monthLabels = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString(undefined, { month: 'short' }));
-                                        return (
+                                        return chartNoData ? (
+                                            <div className="h-full w-full flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+                                                {t('dashboard:noChartData', 'لا توجد بيانات للسنة المحددة')}
+                                            </div>
+                                        ) : (
                                             <div className="flex items-end gap-2 h-full">
                                                 {monthlySeries.map((val, idx) => {
                                                     const heightPct = Math.round((val / maxVal) * 100);
@@ -378,7 +385,7 @@ const DashboardPage: React.FC = () => {
                                                         <div key={idx} className="flex-1 flex flex-col items-center">
                                                             <div
                                                                 className="w-full rounded-t-md bg-blue-500 dark:bg-blue-400 transition-all"
-                                                                style={{ height: `${heightPct}%` }}
+                                                                style={{ height: `${heightPct}%`, minHeight: heightPct > 0 ? '4px' : '0px' }}
                                                                 title={`${monthLabels[idx]}: ${formatCurrency(val)}`}
                                                             />
                                                             <span className="mt-1 text-[10px] text-gray-600 dark:text-gray-400">
