@@ -15,6 +15,8 @@ export interface AppSettings {
     invoice_prefix: string;
     purchase_order_prefix: string;
     default_profit_rate: number; // Default profit rate percentage
+    // Layout
+    use_sidebar_layout?: boolean; // true = sidebar, false = top navbar
     
     // WhatsApp API Configuration
     whatsapp_enabled: boolean;

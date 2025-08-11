@@ -19,6 +19,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"; // Example for User menu trigger
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"; // Example for mobile menu
 import { Toaster } from 'sonner';
+import { useSettings } from '@/context/SettingsContext';
 import {
     LayoutDashboard, Box, Users, Building, ShoppingCart, CircleDollarSign, LogOut, UserCircle,
     ChevronDown, Menu,  // Icons
@@ -54,6 +55,7 @@ const NavLinkItem: React.FC<NavLinkItemProps> = ({ to, icon: Icon, children, cla
 const RootLayout: React.FC = () => {
     const { t } = useTranslation(['navigation', 'common', 'reports', 'users', 'roles']);
     const { user, isLoading } = useAuth(); // Only need user and isLoading here now
+    const { settings } = useSettings();
     const {  can } = useAuthorization(); // Get auth checks and logout from hook
     const {handleLogout} = useAuth()
     const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false); // State for mobile sheet
@@ -132,7 +134,8 @@ const RootLayout: React.FC = () => {
         <div className="flex flex-col min-h-screen dark:bg-gray-950">
             <Toaster richColors position="bottom-center" theme="system" />
 
-            {/* Header */}
+            {/* Header or Sidebar depending on setting */}
+            {!settings?.use_sidebar_layout && (
             <header className="sticky top-0 z-40 w-full border-b bg-background dark:bg-gray-900 dark:border-gray-700">
                 <div className="container flex h-16 items-center px-4 sm:px-6 lg:px-8">
                     {/* Mobile Menu Trigger */}
@@ -273,11 +276,49 @@ const RootLayout: React.FC = () => {
                     </div>
                 </div>
             </header>
+            )}
 
-            {/* Main Content Area */}
-            <main className="flex-grow">
-                 <Outlet /> {/* Renders the matched route component */}
-            </main>
+            {/* Sidebar layout (left) */}
+            {settings?.use_sidebar_layout ? (
+                <div className="flex flex-1 min-h-0">
+                    <aside className="w-56 border-r dark:border-gray-700 px-3 py-4 hidden sm:block">
+                        <nav className="flex flex-col gap-1">
+                            {visibleNavItems.map(item => (
+                                <NavLinkItem key={item.to} to={item.to} icon={item.icon}>
+                                    {t(`navigation:${item.labelKey}`)}
+                                </NavLinkItem>
+                            ))}
+                            {canViewAnyReport && (
+                                <div className="mt-3">
+                                    <div className="px-2 text-xs text-muted-foreground mb-1">{t('navigation:reports')}</div>
+                                    {visibleReportItems.map(item => (
+                                        <NavLinkItem key={item.to} to={item.to}>
+                                            {t(`reports:${item.labelKey}`)}
+                                        </NavLinkItem>
+                                    ))}
+                                </div>
+                            )}
+                            {canManageAdmin && (
+                                <div className="mt-3">
+                                    <div className="px-2 text-xs text-muted-foreground mb-1">{t('navigation:admin')}</div>
+                                    {visibleAdminItems.map(item => (
+                                        <NavLinkItem key={item.to} to={item.to}>
+                                            {t(`navigation:${item.labelKey}`)}
+                                        </NavLinkItem>
+                                    ))}
+                                </div>
+                            )}
+                        </nav>
+                    </aside>
+                    <main className="flex-1 min-w-0">
+                        <Outlet />
+                    </main>
+                </div>
+            ) : (
+                <main className="flex-grow">
+                    <Outlet />
+                </main>
+            )}
 
             {/* Footer */}
              <footer className="p-4 text-center text-xs text-muted-foreground dark:bg-gray-800  dark:border-gray-700">
