@@ -1366,79 +1366,89 @@ const PosPage: React.FC = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+    <div className="h-[calc(100vh-100px)] flex flex-col bg-gray-50">
       {/* Header */}
-      <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8">
-      <PosHeader 
-        key={selectedSale?.id ?? 'no-sale'}
-        onAddProduct={addToCurrentSale} 
-        onAddMultipleProducts={addMultipleToCurrentSale}
-        loading={false} 
-        onCreateEmptySale={handleCreateEmptySale}
-        onOpenCalculator={handleOpenCalculator}
-        onGeneratePdf={handleGenerateDailySalesPdf}
-        onPreviewPdf={handleOpenPdfDialog}
-        onGenerateInvoice={handleOpenInvoiceDialog}
-        onPrintThermalInvoice={handlePrintThermalInvoice}
-        hasSelectedSale={!!selectedSale}
-        selectedClient={selectedClient}
-        onClientChange={handleClientChange}
-        filterByCurrentUser={filterByCurrentUser}
-        onToggleUserFilter={() => setFilterByCurrentUser(!filterByCurrentUser)}
-        selectedDate={selectedDate}
-        onDateChange={handleDateChange}
-      />
+      <div className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-gray-200">
+        <div className="px-3 sm:px-4 lg:px-6">
+          <PosHeader
+            key={selectedSale?.id ?? 'no-sale'}
+            onAddProduct={addToCurrentSale}
+            onAddMultipleProducts={addMultipleToCurrentSale}
+            loading={false}
+            onCreateEmptySale={handleCreateEmptySale}
+            onOpenCalculator={handleOpenCalculator}
+            onGeneratePdf={handleGenerateDailySalesPdf}
+            onPreviewPdf={handleOpenPdfDialog}
+            onGenerateInvoice={handleOpenInvoiceDialog}
+            onPrintThermalInvoice={handlePrintThermalInvoice}
+            hasSelectedSale={!!selectedSale}
+            selectedClient={selectedClient}
+            onClientChange={handleClientChange}
+            filterByCurrentUser={filterByCurrentUser}
+            onToggleUserFilter={() => setFilterByCurrentUser(!filterByCurrentUser)}
+            selectedDate={selectedDate}
+            onDateChange={handleDateChange}
+          />
+        </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Column 1 - Today's Sales (100px fixed width) */}
-        <div className="w-[100px] flex-shrink-0 border-r border-gray-200">
-          <TodaySalesColumn
-            sales={todaySales}
-            selectedSaleId={selectedSaleId}
-            onSaleSelect={handleSaleSelect}
-            isCollapsed={isTodaySalesCollapsed}
-            onToggleCollapse={() => setIsTodaySalesCollapsed(!isTodaySalesCollapsed)}
-            filterByCurrentUser={filterByCurrentUser}
-            selectedDate={selectedDate}
-            loadingSaleId={loadingSaleId}
-            isLoading={isLoadingSales}
-          />
-        </div>
-
-        {/* Column 2 - Current Sale Items (flexible - takes remaining width) */}
-        <div className={`${selectedSale ? 'flex-1 min-w-0' : 'flex-1'}`}>
-          <CurrentSaleItemsColumn
-            currentSaleItems={currentSaleItems}
-            onUpdateQuantity={updateQuantity}
-            onRemoveItem={removeFromCurrentSale}
-            isSalePaid={selectedSale ? (selectedSale.payments && selectedSale.payments.length > 0) : false}
-            deletingItems={deletingItems}
-            updatingItems={updatingItems}
-            isLoading={isLoadingSaleItems}
-          />
-        </div>
-
-        {/* Column 3 - Summary and Actions (350px fixed width) - Only show when sale is selected */}
-        {selectedSale && (
-          <div className="w-[350px] flex-shrink-0 border-l border-gray-200">
-            <SaleSummaryColumn
-              currentSaleItems={currentSaleItems}
-              discountAmount={discountAmount}
-              discountType={discountType}
-              onDiscountChange={(amount: number, type: 'percentage' | 'fixed') => {
-                setDiscountAmount(amount);
-                setDiscountType(type);
-              }}
-              isEditMode={!!selectedSale}
-              saleId={selectedSale?.id}
-              onPaymentComplete={handlePaymentComplete}
-              refreshTrigger={refreshTrigger}
-              onSaleDateChange={handleSaleDateChange}
-            />
+      <div className="flex-1 overflow-hidden px-3 sm:px-4 lg:px-6 py-3">
+        <div className="h-full flex flex-col md:flex-row gap-3">
+          {/* Column 1 - Today's Sales */}
+          <div className="hidden md:block w-[80px] shrink-0">
+            <div className="h-full rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden sticky top-20">
+              <TodaySalesColumn
+                sales={todaySales}
+                selectedSaleId={selectedSaleId}
+                onSaleSelect={handleSaleSelect}
+                isCollapsed={isTodaySalesCollapsed}
+                onToggleCollapse={() => setIsTodaySalesCollapsed(!isTodaySalesCollapsed)}
+                filterByCurrentUser={filterByCurrentUser}
+                selectedDate={selectedDate}
+                loadingSaleId={loadingSaleId}
+                isLoading={isLoadingSales}
+              />
+            </div>
           </div>
-        )}
+
+          {/* Column 2 - Current Sale Items (fills remaining width) */}
+          <div className="flex-1 min-w-0">
+            <div className="h-full shadow-sm overflow-hidden">
+              <CurrentSaleItemsColumn
+                currentSaleItems={currentSaleItems}
+                onUpdateQuantity={updateQuantity}
+                onRemoveItem={removeFromCurrentSale}
+                isSalePaid={selectedSale ? (selectedSale.payments && selectedSale.payments.length > 0) : false}
+                deletingItems={deletingItems}
+                updatingItems={updatingItems}
+                isLoading={isLoadingSaleItems}
+              />
+            </div>
+          </div>
+
+          {/* Column 3 - Summary and Actions */}
+          {selectedSale && (
+            <div className="md:w-[320px] xl:w-[360px] w-full shrink-0">
+              <div className="h-full rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden md:sticky md:top-20">
+                <SaleSummaryColumn
+                  currentSaleItems={currentSaleItems}
+                  discountAmount={discountAmount}
+                  discountType={discountType}
+                  onDiscountChange={(amount: number, type: 'percentage' | 'fixed') => {
+                    setDiscountAmount(amount);
+                    setDiscountType(type);
+                  }}
+                  isEditMode={!!selectedSale}
+                  saleId={selectedSale?.id}
+                  onPaymentComplete={handlePaymentComplete}
+                  refreshTrigger={refreshTrigger}
+                  onSaleDateChange={handleSaleDateChange}
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Sale Editor */}
@@ -1452,36 +1462,19 @@ const PosPage: React.FC = () => {
         onSaleUpdated={loadTodaySales}
       />
 
-
-
-      {/* Calculator Dialog */}
-      <CalculatorDialog 
-        open={calculatorDialogOpen} 
+      {/* Dialogs */}
+      <CalculatorDialog
+        open={calculatorDialogOpen}
         onOpenChange={setCalculatorDialogOpen}
         currentUserId={user?.id || null}
         filterByCurrentUser={filterByCurrentUser}
       />
 
-      {/* PDF Dialog */}
-      <PosPdfDialog
-        open={pdfDialogOpen}
-        onClose={() => setPdfDialogOpen(false)}
-      />
+      <PosPdfDialog open={pdfDialogOpen} onClose={() => setPdfDialogOpen(false)} />
 
-      {/* Invoice PDF Dialog */}
-      <InvoicePdfDialog
-        open={invoiceDialogOpen}
-        onClose={() => setInvoiceDialogOpen(false)}
-        sale={selectedSale}
-      />
+      <InvoicePdfDialog open={invoiceDialogOpen} onClose={() => setInvoiceDialogOpen(false)} sale={selectedSale} />
 
-      {/* Thermal Invoice Dialog */}
-      <ThermalInvoiceDialog
-        open={thermalDialogOpen}
-        onClose={() => setThermalDialogOpen(false)}
-        sale={selectedSale}
-      />
-
+      <ThermalInvoiceDialog open={thermalDialogOpen} onClose={() => setThermalDialogOpen(false)} sale={selectedSale} />
     </div>
   );
 };

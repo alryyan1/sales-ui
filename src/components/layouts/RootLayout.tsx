@@ -135,7 +135,7 @@ const RootLayout: React.FC = () => {
             <Toaster richColors position="bottom-center" theme="system" />
 
             {/* Header or Sidebar depending on setting */}
-            {settings?.use_sidebar_layout === false && (
+            {!settings?.use_sidebar_layout && (
             <header className="sticky top-0 z-40 w-full border-b bg-background dark:bg-gray-900 dark:border-gray-700">
                 <div className="container flex h-16 items-center px-4 sm:px-6 lg:px-8">
                     {/* Mobile Menu Trigger */}
@@ -188,9 +188,18 @@ const RootLayout: React.FC = () => {
                     {/* Desktop Navigation */}
                     <nav className="hidden sm:flex items-center gap-1 text-sm lg:gap-2 flex-grow">
                         {visibleNavItems.map(item => (
-                            <Button key={item.to} variant="ghost" size="sm" asChild className="text-muted-foreground dark:text-gray-400 hover:text-primary dark:hover:text-white">
-                                <RouterLink to={item.to}>{t(`navigation:${item.labelKey}`)}</RouterLink>
-                            </Button>
+                            <NavLink
+                                key={item.to}
+                                to={item.to}
+                                className={({ isActive }) => cn(
+                                    "px-3 py-2 rounded-md font-medium transition-colors",
+                                    isActive
+                                        ? "bg-accent text-accent-foreground dark:bg-gray-700"
+                                        : "text-muted-foreground dark:text-gray-400 hover:text-primary hover:bg-accent dark:hover:bg-gray-800"
+                                )}
+                            >
+                                {t(`navigation:${item.labelKey}`)}
+                            </NavLink>
                         ))}
 
                          {/* Reports Dropdown (Desktop) */}
@@ -279,11 +288,7 @@ const RootLayout: React.FC = () => {
             )}
 
             {/* Sidebar layout (left) */}
-            {settings?.use_sidebar_layout === false ? (
-                <main className="flex-grow">
-                    <Outlet />
-                </main>
-            ) : (
+            {settings?.use_sidebar_layout ? (
                 <div className="flex flex-1 min-h-0">
                     <aside className="w-56 border-r dark:border-gray-700 px-3 py-4 hidden sm:block">
                         <nav className="flex flex-col gap-1">
@@ -314,8 +319,14 @@ const RootLayout: React.FC = () => {
                             )}
                         </nav>
                     </aside>
-                    <main className="flex-1 min-w-0"><Outlet /></main>
+                    <main className="flex-1 min-w-0">
+                        <Outlet />
+                    </main>
                 </div>
+            ) : (
+                <main className="flex-grow">
+                    <Outlet />
+                </main>
             )}
 
             {/* Footer */}

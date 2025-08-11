@@ -54,9 +54,7 @@ export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
         <div className="p-2 border-b border-gray-200 bg-blue-50 flex items-center justify-between">
           <div className="flex items-center space-x-1">
             <Receipt className="h-3 w-3 text-blue-600" />
-            <span className="text-xs font-semibold text-blue-900">
-              {filterByCurrentUser ? 'My Sales' : 'Sales'}
-            </span>
+           
           </div>
           <Button
             variant="ghost"
@@ -88,7 +86,7 @@ export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
 
   if (isLoading) {
     return (
-      <div className="h-full flex flex-col border-l border-gray-200">
+      <div className="h-full flex flex-col items-center justify-center border-l border-gray-200">
         {/* Header */}
         <div className="p-2 border-b border-gray-200 bg-blue-50">
           <div className="flex items-center justify-between">

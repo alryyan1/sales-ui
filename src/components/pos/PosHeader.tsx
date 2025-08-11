@@ -392,22 +392,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
         {/* Right side - Action Buttons */}
         <div className="flex items-center space-x-2">
           {/* User Filter Button */}
-          <Button
-            variant="default"
-            size="default"
-            onClick={onToggleUserFilter}
-            className={`relative group px-3 py-1.5 cursor-pointer ${
-              filterByCurrentUser 
-                ? 'bg-blue-500 hover:bg-blue-600' 
-                : 'bg-gray-500 hover:bg-gray-600'
-            } disabled:bg-gray-300 disabled:text-gray-500`}
-            title={filterByCurrentUser ? t('pos:showMySales') : t('pos:showAllSales')}
-          >
-            <Users className="h-4 w-4" />
-            <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-              {filterByCurrentUser ? t('pos:showAllSales') : t('pos:showMySales')}
-            </span>
-          </Button>
+        
 
           {/* Calculator Button */}
           <Button
