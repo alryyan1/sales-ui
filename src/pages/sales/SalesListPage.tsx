@@ -23,6 +23,7 @@ import Autocomplete from "@mui/material/Autocomplete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import PrintIcon from "@mui/icons-material/Print";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ClearIcon from "@mui/icons-material/Clear";
 
 // Day.js
@@ -178,7 +179,7 @@ const SalesListPage: React.FC = () => {
         clearTimeout(highlightTimeoutRef.current);
       }
     };
-  }, [location.state, location.key, navigate]);
+  }, [location.state, location.key, location.pathname, navigate]);
 
   // --- Fetch Users and Products for filters ---
   const fetchFilterData = useCallback(async () => {
@@ -333,7 +334,7 @@ const SalesListPage: React.FC = () => {
 
   // --- Pagination Handler ---
   const handlePageChange = (
-    event: React.ChangeEvent<unknown>,
+    _event: React.ChangeEvent<unknown>,
     value: number
   ) => {
     setCurrentPage(value);
@@ -473,7 +474,7 @@ const SalesListPage: React.FC = () => {
             getOptionLabel={(option) => option.name}
             value={usersWithAllOption.find(user => user.id.toString() === filters.user_id) || 
                    (filters.user_id === "" ? usersWithAllOption[0] : null)}
-            onChange={(event, newValue) => {
+            onChange={(_, newValue) => {
               handleFilterChange('user_id', newValue && newValue.id !== 0 ? newValue.id.toString() : '');
             }}
             renderInput={(params) => (
@@ -491,7 +492,7 @@ const SalesListPage: React.FC = () => {
             options={products}
             getOptionLabel={(option) => `${option.name} (${option.sku})`}
             value={products.find(product => product.id.toString() === filters.product_id) || null}
-            onChange={(event, newValue) => {
+            onChange={(_, newValue) => {
               handleFilterChange('product_id', newValue ? newValue.id.toString() : '');
             }}
             renderInput={(params) => (
@@ -563,7 +564,7 @@ const SalesListPage: React.FC = () => {
                 <TableRow>
                   <TableCell align="center">{t("sales:id")}</TableCell>
                   <TableCell align="center">{t("sales:date")}</TableCell>
-                  <TableCell align="center">{t("sales:invoice")}</TableCell>
+                  <TableCell align="center">{t("sales:paymentStatus", "Payment")}</TableCell>
                   <TableCell align="center">{t("clients:client")}</TableCell>
                   <TableCell align="center">{t("sales:user", "User")}</TableCell>
                   <TableCell align="center">{t("sales:discount")}</TableCell>
@@ -599,7 +600,21 @@ const SalesListPage: React.FC = () => {
                           </Typography>
                         </Box>
                       </TableCell>
-                      <TableCell align="center">{sale.invoice_number || `SALE-${sale.id}`}</TableCell>
+                      <TableCell align="center">
+                        {(() => {
+                          const total = typeof sale.total_amount === 'string' ? parseFloat(sale.total_amount) : (sale.total_amount as number) || 0;
+                          const paid = typeof sale.paid_amount === 'string' ? parseFloat(sale.paid_amount) : (sale.paid_amount as number) || 0;
+                          const isFullyPaid = paid >= total - 0.0001;
+                          return (
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                              <span className={`inline-block h-2.5 w-2.5 rounded-full ${isFullyPaid ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                              {isFullyPaid ? (
+                                <CheckCircleIcon sx={{ fontSize: 18, color: 'success.main' }} />
+                              ) : null}
+                            </Box>
+                          );
+                        })()}
+                      </TableCell>
                       <TableCell align="center">
                         {sale.client_name || t("common:n/a")}
                       </TableCell>
