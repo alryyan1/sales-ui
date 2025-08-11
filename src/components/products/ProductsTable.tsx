@@ -82,8 +82,11 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                     </TableHeader>
                     <TableBody>
                         {products.map((product) => {
-                            const isLow = product.stock_alert_level !== null && product.stock_quantity <= product.stock_alert_level;
-                            const isOutOfStock = product.stock_quantity <= 0;
+                            const stockQty = Number(
+                                (product as any).current_stock_quantity ?? product.stock_quantity ?? 0
+                            );
+                            const isLow = product.stock_alert_level !== null && stockQty <= (product.stock_alert_level as number);
+                            const isOutOfStock = stockQty <= 0;
                             // Display quantities without unit label per requirements
 
                             return (
@@ -135,7 +138,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                                             {product.scientific_name && <p>{t('products:scientificName')}: {product.scientific_name}</p>}
                                             {product.category_name && <p>{t('products:category')}: {product.category_name}</p>}
                                             {/* Show stock on mobile if other columns are hidden */}
-                                            <p className="lg:hidden text-xs">{t('products:stock')}: {formatNumber(product.stock_quantity)}</p>
+                                            <p className="lg:hidden text-xs">{t('products:stock')}: {formatNumber(stockQty)}</p>
                                         </div>
                                     </TableCell>
                                     <TableCell className="hidden lg:table-cell px-3 py-2 dark:text-gray-300 text-center text-sm">
@@ -147,7 +150,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                                         <div className="space-y-1">
                                             {/* Primary stock display in sellable units */}
                                             <div className="font-medium text-base">
-                                                {formatNumber(product.stock_quantity)}
+                                                {formatNumber(stockQty)}
                                             </div>
                                             {(isLow || isOutOfStock) && (
                                                 <Tooltip>
