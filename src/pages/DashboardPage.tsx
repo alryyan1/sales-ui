@@ -74,6 +74,13 @@ const DashboardPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // --- Yearly Sales Chart State ---
+    const currentYear = new Date().getFullYear();
+    const [chartYear, setChartYear] = useState<number>(currentYear);
+    const [chartMetric, setChartMetric] = useState<'revenue' | 'paid'>('revenue');
+    const [monthlySeries, setMonthlySeries] = useState<number[]>(Array(12).fill(0));
+    const [isChartLoading, setIsChartLoading] = useState<boolean>(false);
+
     // --- Data Fetching ---
     const fetchSummary = useCallback(async () => {
         setIsLoading(true);
@@ -95,6 +102,38 @@ const DashboardPage: React.FC = () => {
     useEffect(() => {
         fetchSummary();
     }, [fetchSummary]); // Fetch on component mount
+
+    // --- Fetch monthly totals for a whole year using existing monthly-revenue endpoint ---
+    const fetchYearlyMonthlyTotals = useCallback(async (year: number, metric: 'revenue' | 'paid') => {
+        setIsChartLoading(true);
+        try {
+            const requests = Array.from({ length: 12 }, (_, i) => i + 1).map((month) =>
+                apiClient.get(`/reports/monthly-revenue`, { params: { month, year } })
+            );
+            const responses = await Promise.allSettled(requests);
+            const series: number[] = responses.map((res, idx) => {
+                if (res.status === 'fulfilled') {
+                    const data = res.value.data?.data;
+                    const sum = metric === 'revenue' ? (data?.month_summary?.total_revenue ?? 0) : (data?.month_summary?.total_paid ?? 0);
+                    return Number(sum) || 0;
+                }
+                // If a month fails, keep zero to avoid breaking chart
+                console.warn(`Failed to fetch month ${idx + 1} for year ${year}`);
+                return 0;
+            });
+            setMonthlySeries(series);
+        } catch (e) {
+            console.error('Failed to fetch yearly monthly totals', e);
+            toast.error(t('common:error'), { description: t('common:errorFetchingData', 'Error fetching data') });
+            setMonthlySeries(Array(12).fill(0));
+        } finally {
+            setIsChartLoading(false);
+        }
+    }, [t]);
+
+    useEffect(() => {
+        fetchYearlyMonthlyTotals(chartYear, chartMetric);
+    }, [chartYear, chartMetric, fetchYearlyMonthlyTotals]);
 
     // --- Loading State UI ---
     const renderSkeletons = (count = 6) => ( // Default to 6 skeletons for a 2x3 or similar layout
@@ -285,7 +324,76 @@ const DashboardPage: React.FC = () => {
                         </Card>
                     )}
 
-                   
+                    {/* --- Sales by Month Chart --- */}
+                    <Card className="mt-6 dark:bg-gray-900 dark:border-gray-700">
+                        <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                            <div>
+                                <CardTitle className="text-md font-semibold text-gray-800 dark:text-gray-100">
+                                    {t('dashboard:salesByMonth', 'المبيعات خلال أشهر السنة')}
+                                </CardTitle>
+                                <CardDescription className="dark:text-gray-400">
+                                    {chartMetric === 'revenue' ? t('dashboard:byRevenue', 'حسب إجمالي الإيراد') : t('dashboard:byPaid', 'حسب إجمالي المبلغ المدفوع')}
+                                </CardDescription>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <select
+                                    className="border rounded-md px-2 py-1 bg-white dark:bg-gray-800 dark:border-gray-700"
+                                    value={chartYear}
+                                    onChange={(e) => setChartYear(Number(e.target.value))}
+                                >
+                                    {Array.from({ length: 5 }, (_, i) => currentYear - i).map((y) => (
+                                        <option key={y} value={y}>{y}</option>
+                                    ))}
+                                </select>
+                                <div className="flex rounded-md overflow-hidden border dark:border-gray-700">
+                                    <button
+                                        className={`px-3 py-1 text-sm ${chartMetric === 'revenue' ? 'bg-primary text-white' : 'bg-white dark:bg-gray-800 dark:text-gray-200'}`}
+                                        onClick={() => setChartMetric('revenue')}
+                                    >
+                                        {t('dashboard:metricRevenue', 'الإيراد')}
+                                    </button>
+                                    <button
+                                        className={`px-3 py-1 text-sm ${chartMetric === 'paid' ? 'bg-primary text-white' : 'bg-white dark:bg-gray-800 dark:text-gray-200'}`}
+                                        onClick={() => setChartMetric('paid')}
+                                    >
+                                        {t('dashboard:metricPaid', 'المدفوع')}
+                                    </button>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            {isChartLoading ? (
+                                <Skeleton className="h-40 w-full dark:bg-gray-700" />
+                            ) : (
+                                <div className="w-full h-56">
+                                    {/* Simple responsive bar chart using divs */}
+                                    {(() => {
+                                        const maxVal = Math.max(1, ...monthlySeries);
+                                        const monthLabels = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString(undefined, { month: 'short' }));
+                                        return (
+                                            <div className="flex items-end gap-2 h-full">
+                                                {monthlySeries.map((val, idx) => {
+                                                    const heightPct = Math.round((val / maxVal) * 100);
+                                                    return (
+                                                        <div key={idx} className="flex-1 flex flex-col items-center">
+                                                            <div
+                                                                className="w-full rounded-t-md bg-blue-500 dark:bg-blue-400 transition-all"
+                                                                style={{ height: `${heightPct}%` }}
+                                                                title={`${monthLabels[idx]}: ${formatCurrency(val)}`}
+                                                            />
+                                                            <span className="mt-1 text-[10px] text-gray-600 dark:text-gray-400">
+                                                                {monthLabels[idx]}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
 
                 </>
              )}
