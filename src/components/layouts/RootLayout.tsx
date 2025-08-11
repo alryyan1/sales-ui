@@ -135,7 +135,7 @@ const RootLayout: React.FC = () => {
             <Toaster richColors position="bottom-center" theme="system" />
 
             {/* Header or Sidebar depending on setting */}
-            {!settings?.use_sidebar_layout && (
+            {settings?.use_sidebar_layout === false && (
             <header className="sticky top-0 z-40 w-full border-b bg-background dark:bg-gray-900 dark:border-gray-700">
                 <div className="container flex h-16 items-center px-4 sm:px-6 lg:px-8">
                     {/* Mobile Menu Trigger */}
@@ -279,7 +279,11 @@ const RootLayout: React.FC = () => {
             )}
 
             {/* Sidebar layout (left) */}
-            {settings?.use_sidebar_layout ? (
+            {settings?.use_sidebar_layout === false ? (
+                <main className="flex-grow">
+                    <Outlet />
+                </main>
+            ) : (
                 <div className="flex flex-1 min-h-0">
                     <aside className="w-56 border-r dark:border-gray-700 px-3 py-4 hidden sm:block">
                         <nav className="flex flex-col gap-1">
@@ -310,14 +314,8 @@ const RootLayout: React.FC = () => {
                             )}
                         </nav>
                     </aside>
-                    <main className="flex-1 min-w-0">
-                        <Outlet />
-                    </main>
+                    <main className="flex-1 min-w-0"><Outlet /></main>
                 </div>
-            ) : (
-                <main className="flex-grow">
-                    <Outlet />
-                </main>
             )}
 
             {/* Footer */}
