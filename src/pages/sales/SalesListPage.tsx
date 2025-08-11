@@ -586,12 +586,10 @@ const SalesListPage: React.FC = () => {
                   return (
                     <TableRow
                       key={sale.id}
-                      className={`hover:bg-gray-50 dark:hoverbg-gray-800 transition-colors duration-300 ${
+                      className={`hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-300 ${
                         isHighlighted ? 'bg-blue-100 dark:bg-blue-900' : ''
                       } ${
                         discountAmount > 0 ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''
-                      } ${
-                        isFullyPaid ? 'border-r-4 border-green-500' : 'border-r-4 border-transparent'
                       }`}
                     >
                       <TableCell align="center">{sale.id}</TableCell>
@@ -646,7 +644,10 @@ const SalesListPage: React.FC = () => {
                       <TableCell align="center">
                         {formatNumber(sale.paid_amount)}
                       </TableCell>
-                      <TableCell align="center" className={`${isFullyPaid ? 'border-r-4 border-green-500' : ''}`}>
+                      <TableCell
+                        align="center"
+                        className={`${isFullyPaid ? 'bg-green-50 dark:bg-green-900/20 rounded-tr-md rounded-br-md' : ''}`}
+                      >
                         <Tooltip title={t("common:view") || ""}>
                           <IconButton
                             aria-label={t("common:view") || "View"}
