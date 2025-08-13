@@ -28,7 +28,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea"; // If you have multiline settings
-import { Switch } from "@/components/ui/switch";
 import {
   Loader2,
   Settings as SettingsIcon,
@@ -37,8 +36,9 @@ import {
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import WhatsAppSchedulerComponent from "@/components/admin/WhatsAppScheduler";
 import WhatsAppConfig from "@/components/admin/WhatsAppConfig";
+import settingService from "@/services/settingService";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // --- Zod Schema for Settings Form (Matches AppSettings keys) ---
 // Make all fields optional for partial updates, but RHF will use defaultValues
@@ -64,12 +64,11 @@ const settingsFormSchema = z.object({
     .max(5, { message: "validation:maxLengthShort" })
     .optional(), // Make currency symbol optional
   date_format: z.string().optional(), // Could use z.enum if you have predefined formats
+  timezone: z.string().optional(),
   global_low_stock_threshold: z.coerce.number().int().min(0).optional(),
   invoice_prefix: z.string().optional(),
   purchase_order_prefix: z.string().optional(),
   default_profit_rate: z.coerce.number().min(0).max(1000).optional(),
-  // Layout
-  use_sidebar_layout: z.boolean().optional(),
   
   // WhatsApp Settings
   whatsapp_enabled: z.boolean().optional(),
@@ -101,12 +100,11 @@ const SettingsPage: React.FC = () => {
       company_logo_url: "",
       currency_symbol: "$",
       date_format: "YYYY-MM-DD",
+      timezone: "Africa/Khartoum",
       global_low_stock_threshold: 10,
       invoice_prefix: "INV-",
       purchase_order_prefix: "PO-",
       default_profit_rate: 20.0,
-    // Layout
-    use_sidebar_layout: false,
       
       // WhatsApp defaults
       whatsapp_enabled: false,
@@ -120,6 +118,8 @@ const SettingsPage: React.FC = () => {
     handleSubmit,
     control,
     reset,
+    getValues,
+    watch,
     formState: { isSubmitting, errors },
     setError: setFormError,
   } = form;
@@ -137,11 +137,11 @@ const SettingsPage: React.FC = () => {
         company_logo_url: settings.company_logo_url || "",
         currency_symbol: settings.currency_symbol || "$",
         date_format: settings.date_format || "YYYY-MM-DD",
+        timezone: (settings as any).timezone || "Africa/Khartoum",
         global_low_stock_threshold: settings.global_low_stock_threshold ?? 10,
         invoice_prefix: settings.invoice_prefix || "INV-",
         purchase_order_prefix: settings.purchase_order_prefix || "PO-",
         default_profit_rate: settings.default_profit_rate ?? 20.0,
-        use_sidebar_layout: settings.use_sidebar_layout ?? false,
         
         // WhatsApp settings
         whatsapp_enabled: settings.whatsapp_enabled || false,
@@ -242,24 +242,6 @@ const SettingsPage: React.FC = () => {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Layout: Sidebar vs Topbar */}
-                <FormField
-                  control={control}
-                  name="use_sidebar_layout"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between border rounded-md px-3 py-2 md:col-span-2">
-                      <div>
-                        <FormLabel>{t("settings:useSidebarLayout", "Use Sidebar Layout")}</FormLabel>
-                        <FormDescription>
-                          {t("settings:useSidebarLayoutDesc", "إذا فُعّل سيتم عرض شريط جانبي بدلاً من شريط علوي")}
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch checked={!!field.value} onCheckedChange={field.onChange} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
                 <FormField
                   control={control}
                   name="company_name"
@@ -316,25 +298,25 @@ const SettingsPage: React.FC = () => {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={control}
-                  name="company_logo_url"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      
-                      <FormLabel>{t("settings:companyLogoUrl")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="url"
-                          {...field}
-                          value={field.value || ""}
-                          placeholder="https://example.com/logo.png"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="md:col-span-2">
+                  <FormLabel>{t("settings:companyLogoUrl", "Company Logo")}</FormLabel>
+                  <div className="flex items-center gap-3">
+                    <Input type="file" accept="image/*" onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      try {
+                        const updated = await settingService.uploadLogo(file);
+                        reset({ ...getValues(), company_logo_url: updated.company_logo_url || "" });
+                        toast.success(t('success'), { description: t('settings:updateSuccess')});
+                      } catch (err) {
+                        toast.error(t('common:error'));
+                      }
+                    }} />
+                    {(watch('company_logo_url') || settings?.company_logo_url) && (
+                      <img src={watch('company_logo_url') || settings?.company_logo_url || ''} alt="Logo" className="h-20 w-auto rounded border" />
+                    )}
+                  </div>
+                </div>
 
                 <FormField
                   control={control}
@@ -365,6 +347,28 @@ const SettingsPage: React.FC = () => {
                       <FormDescription>
                         {t("settings:dateFormatDesc")}
                       </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={control}
+                  name="timezone"
+                  render={({ field }) => (
+                    <FormItem>
+                      
+                      <FormLabel>{t("settings:timezone", "Timezone")}</FormLabel>
+                      <FormControl>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select timezone" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Africa/Khartoum">Africa/Khartoum</SelectItem>
+                            <SelectItem value="Asia/Muscat">Asia/Muscat</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -458,10 +462,7 @@ const SettingsPage: React.FC = () => {
         </div>
       )}
 
-      {/* WhatsApp Scheduler Section */}
-      <div className="mt-8">
-        <WhatsAppSchedulerComponent />
-      </div>
+      {/* WhatsApp Scheduler Section removed as requested */}
       
     </div>
   );

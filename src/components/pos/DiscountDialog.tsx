@@ -163,6 +163,7 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
               }
             </Label>
             <Input
+              onFocus={(e) => e.target.select()}
               id="discountAmount"
               type="number"
               step="0.01"

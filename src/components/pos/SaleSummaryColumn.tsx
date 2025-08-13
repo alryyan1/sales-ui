@@ -157,17 +157,16 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
     setDiscountType(externalDiscountType);
   }, [externalDiscountAmount, externalDiscountType]);
 
-  // Update external state when internal state changes
-  useEffect(() => {
-    if (onDiscountChange) {
-      onDiscountChange(discountAmount, discountType);
-    }
-  }, [discountAmount, discountType, onDiscountChange]);
+  // Note: we intentionally avoid echoing internal discount state to the parent on every render
+  // to prevent update loops. The parent will be notified only on explicit user updates below.
 
   // Handle discount update
   const handleDiscountUpdate = (amount: number, type: 'percentage' | 'fixed') => {
     setDiscountAmount(amount);
     setDiscountType(type);
+    if (onDiscountChange) {
+      onDiscountChange(amount, type);
+    }
   };
 
   // Handle payment dialog success
@@ -359,6 +358,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
         saleId={saleId}
         grandTotal={grandTotal}
         paidAmount={paidAmount}
+        discountAmount={actualDiscountValue}
         onSuccess={handlePaymentSuccess}
       />
 

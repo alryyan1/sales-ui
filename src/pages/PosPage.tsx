@@ -561,11 +561,14 @@ const PosPage: React.FC = () => {
 
     // Now add multiple products to the selected sale
     try {
-      const itemsData = products.map(product => ({
-        product_id: product.id,
-        quantity: 1, // Default quantity
-        unit_price: product.suggested_sale_price_per_sellable_unit || 0
-      }));
+      const itemsData = products.map(product => {
+        const unitPrice = (product.last_sale_price_per_sellable_unit ?? product.suggested_sale_price_per_sellable_unit ?? 0);
+        return {
+          product_id: product.id,
+          quantity: 1, // Default quantity
+          unit_price: Number(unitPrice)
+        };
+      });
 
       const result = await saleService.addMultipleSaleItems(selectedSale!.id, itemsData);
       
