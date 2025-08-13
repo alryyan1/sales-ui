@@ -30,6 +30,10 @@ interface SaleSummaryColumnProps {
   onPaymentComplete: (errorMessage?: string) => void;
   refreshTrigger?: number;
   onSaleDateChange?: (saleId: number, newDate: string) => void;
+  // External control for PaymentDialog
+  paymentDialogOpen?: boolean;
+  onPaymentDialogOpenChange?: (open: boolean) => void;
+  paymentSubmitTrigger?: number;
 }
 
 export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
@@ -41,6 +45,9 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
   onPaymentComplete,
   refreshTrigger = 0,
   onSaleDateChange,
+  paymentDialogOpen,
+  onPaymentDialogOpenChange,
+  paymentSubmitTrigger,
 }) => {
   const { t } = useTranslation(['pos', 'common']);
 
@@ -48,7 +55,12 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
   const [saleInfo, setSaleInfo] = useState<Sale | null>(null);
   
   // Dialog states
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isPaymentDialogOpenInternal, setIsPaymentDialogOpenInternal] = useState(false);
+  const isPaymentDialogOpen = paymentDialogOpen ?? isPaymentDialogOpenInternal;
+  const setPaymentDialogOpen = (open: boolean) => {
+    if (onPaymentDialogOpenChange) onPaymentDialogOpenChange(open);
+    else setIsPaymentDialogOpenInternal(open);
+  };
   const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState(false);
   
   // Discount state
@@ -71,6 +83,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
     : discountAmount;
   const actualDiscountValue = Math.min(discountValue, subtotal);
   const grandTotal = preciseCalculation(subtotal, actualDiscountValue, 'subtract', 2);
+  const isDiscountApplied = actualDiscountValue > 0;
 
   // Calculate paid amount from sale payments
   const paidAmount = saleInfo?.payments 
@@ -299,11 +312,10 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
                   size="sm"
                   variant="outline"
                   onClick={() => setIsDiscountDialogOpen(true)}
-                  disabled={paidAmount > 0}
-                  className="h-6 px-2"
-                  title={paidAmount > 0 ? t('pos:salePaidCannotModify') : t('pos:setDiscount')}
+                  className={`h-6 px-2 ${isDiscountApplied ? 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100' : ''}`}
+                  title={isDiscountApplied ? `${t('pos:discount')}: ${formatNumber(actualDiscountValue)}` : t('pos:setDiscount')}
                 >
-                  <Percent className="h-3 w-3" />
+                  <Percent className={`h-3 w-3 ${isDiscountApplied ? 'text-red-600' : ''}`} />
                 </Button>
               </div>
               <span className="font-medium text-red-600">
@@ -335,8 +347,8 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
           <Separator />
 
           {/* Add Payment Button */}
-          <Button
-            onClick={() => setIsPaymentDialogOpen(true)}
+            <Button
+            onClick={() => setPaymentDialogOpen(true)}
             className={`w-full ${
               paidAmount > 0 
                 ? 'bg-green-600 hover:bg-green-700 text-white' 
@@ -354,11 +366,12 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
       {/* Payment Dialog */}
       <PaymentDialog
         open={isPaymentDialogOpen}
-        onClose={() => setIsPaymentDialogOpen(false)}
+        onClose={() => setPaymentDialogOpen(false)}
         saleId={saleId}
         grandTotal={grandTotal}
         paidAmount={paidAmount}
         discountAmount={actualDiscountValue}
+        submitTrigger={paymentSubmitTrigger}
         onSuccess={handlePaymentSuccess}
       />
 
@@ -369,6 +382,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
         currentAmount={discountAmount}
         currentType={discountType}
         maxAmount={subtotal}
+        dueAmount={Math.max(0, grandTotal - paidAmount)}
         onSave={handleDiscountUpdate}
       />
     </div>

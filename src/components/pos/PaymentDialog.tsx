@@ -1,5 +1,5 @@
 // src/components/pos/PaymentDialog.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 // Shadcn Components
@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
+// import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
@@ -51,6 +51,7 @@ interface PaymentDialogProps {
   grandTotal: number;
   paidAmount: number;
   discountAmount?: number; // amount discounted (applied or to be applied)
+  submitTrigger?: number; // increments to trigger submit programmatically
   onSuccess: () => void;
 }
 
@@ -61,6 +62,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
   grandTotal,
   paidAmount,
   discountAmount = 0,
+  submitTrigger,
   onSuccess,
 }) => {
   const { t } = useTranslation(['pos', 'common', 'paymentMethods']);
@@ -77,6 +79,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const [addingPayment, setAddingPayment] = useState(false);
   const [deletingPaymentId, setDeletingPaymentId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const addButtonRef = useRef<HTMLButtonElement | null>(null);
 
   // Load payments when dialog opens
   useEffect(() => {
@@ -92,6 +95,28 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
       resetForm();
     }
   }, [open, saleId, grandTotal, paidAmount]);
+
+  // Focus Add Payment button when dialog opens
+  useEffect(() => {
+    if (open) {
+      // Wait next tick so the button exists
+      const id = setTimeout(() => {
+        addButtonRef.current?.focus();
+      }, 0);
+      return () => clearTimeout(id);
+    }
+  }, [open]);
+
+  // Submit programmatically when submitTrigger changes and dialog is open
+  useEffect(() => {
+    if (!open) return;
+    if (submitTrigger === undefined) return;
+    // Avoid double-submit if currently adding
+    if (!addingPayment) {
+      handleAddPayment();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [submitTrigger]);
 
   const loadPayments = async () => {
     if (!saleId) return;
@@ -195,7 +220,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
 
   const totalPaid = preciseSum(payments.map(p => Number(p.amount)), 2);
   const remainingDue = Math.max(0, grandTotal - totalPaid);
-  const subtotal = preciseSum([grandTotal, discountAmount], 2);
+  // const subtotal = preciseSum([grandTotal, discountAmount], 2);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -330,6 +355,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                 </div>
 
                 <Button
+                  ref={addButtonRef}
                   onClick={handleAddPayment}
                   disabled={addingPayment || !paymentAmount || parseFloat(paymentAmount) <= 0}
                   className="w-full mt-4"

@@ -43,6 +43,9 @@ const PosPage: React.FC = () => {
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [thermalDialogOpen, setThermalDialogOpen] = useState(false);
+  // Trigger enter-to-submit in PaymentDialog
+  const [paymentSubmitTrigger, setPaymentSubmitTrigger] = useState(0);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [deletingItems, setDeletingItems] = useState<Set<number>>(new Set());
   const [updatingItems, setUpdatingItems] = useState<Set<number>>(new Set());
   const [loadingSaleId, setLoadingSaleId] = useState<number | null>(null);
@@ -139,6 +142,32 @@ const PosPage: React.FC = () => {
     loadTodaySales();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterByCurrentUser, selectedDate, user]);
+
+  // Global Enter key behavior on POS page
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Ignore if focused element is an input/textarea/select to avoid interfering with typing,
+      // unless PaymentDialog is already open (then we want Enter to add payment)
+      const activeTag = (document.activeElement?.tagName || '').toLowerCase();
+      const inFormField = ['input', 'textarea', 'select'].includes(activeTag);
+
+      if (e.key === 'Enter') {
+        if (!paymentDialogOpen) {
+          if (!inFormField) {
+            // Open payment dialog
+            setPaymentDialogOpen(true);
+            e.preventDefault();
+          }
+        } else {
+          // Trigger submit inside PaymentDialog
+          setPaymentSubmitTrigger((v) => v + 1);
+          e.preventDefault();
+        }
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   const showToast = (message: string, severity: 'success' | 'error') => {
     if (severity === 'success') {
@@ -1447,6 +1476,9 @@ const PosPage: React.FC = () => {
                   onPaymentComplete={handlePaymentComplete}
                   refreshTrigger={refreshTrigger}
                   onSaleDateChange={handleSaleDateChange}
+                paymentDialogOpen={paymentDialogOpen}
+                onPaymentDialogOpenChange={setPaymentDialogOpen}
+                paymentSubmitTrigger={paymentSubmitTrigger}
                 />
               </div>
             </div>
