@@ -431,11 +431,18 @@ const ManagePurchaseItemsPage: React.FC = () => {
     const profitFactor = globalProfitRate / 100;
     const unitsPerStocking = selectedProduct?.units_per_stocking_unit && selectedProduct.units_per_stocking_unit > 0 ? selectedProduct.units_per_stocking_unit : 1;
     // Sellable unit price
-    const sellablePrice = (newCost * profitFactor) / unitsPerStocking;
+    const costPerSellable = newCost  / unitsPerStocking;
+    const profitablePricePerSellable = costPerSellable * profitFactor;
+    const sellablePrice = costPerSellable + profitablePricePerSellable;
+    
+    console.log(newCost, 'newCost')
+    console.log(profitFactor, 'profitFactor')
+    console.log(unitsPerStocking, 'unitsPerStocking')
+    console.log(costPerSellable, 'costPerSellable')
     setSalePrice(sellablePrice);
+
     // Stocking unit price
-    const stockingPrice = newCost * profitFactor;
-    setSalePriceStockingUnit(stockingPrice);
+    setSalePriceStockingUnit(sellablePrice * unitsPerStocking);
   }, [settings?.default_profit_rate, selectedProduct?.units_per_stocking_unit]);
 
   // Handle autocomplete Enter key for SKU search
