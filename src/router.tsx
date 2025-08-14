@@ -47,6 +47,7 @@ import SalesTerminalPage from "./pages/sales/SalesTerminalPage";
 import PosPage from "./pages/PosPage";
 import NearExpiryReportPage from "./components/reports/NearExpiryReportPage";
 import MonthlyRevenueReportPage from "./components/reports/MonthlyRevenueReportPage";
+import SalesWithDiscountsPage from "./pages/reports/SalesWithDiscountsPage";
 import SupplierLedgerPage from "./pages/suppliers/SupplierLedgerPage";
 import BackupPage from "./pages/admin/BackupPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
@@ -150,6 +151,7 @@ const router = createHashRouter([
             path: "reports",
             children: [
               { path: "sales", element: <SalesReportPage /> },
+              { path: "sales-discounts", element: <SalesWithDiscountsPage /> },
               { path: "purchases", element: <PurchaseReportPage /> },
               { path: "inventory", element: <InventoryReportPage /> },
               { path: "profit-loss", element: <ProfitLossReportPage /> },
