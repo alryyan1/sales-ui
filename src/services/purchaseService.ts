@@ -25,6 +25,7 @@ export interface PurchaseItem {
     cost_per_sellable_unit: string | number; // New: Cost per SELLABLE unit (calculated by backend)
     total_cost: string | number; // Original total cost (quantity_stocking * unit_cost_stocking)
     sale_price: string | number | null; // Intended sale price per SELLABLE unit for this batch
+    sale_price_stocking_unit?: string | number | null; // Optional: sale price per STOCKING unit
     expiry_date: string | null; // Format YYYY-MM-DD
     product?: Product; // Optional full product details
 }
@@ -81,7 +82,8 @@ export interface CreatePurchaseData {
     batch_number?: string | null; // New
     quantity: number;
     unit_cost: number | string; // Cost Price
-    sale_price?: number | string | null; // New: Intended Sale Price
+    sale_price: number | string; // Required: Intended sale price per SELLABLE UNIT
+    sale_price_stocking_unit?: number | string | null; // Optional: per STOCKING UNIT
     expiry_date?: string | null; // New: YYYY-MM-DD
   }>;
 }
@@ -252,7 +254,8 @@ const purchaseService = {
     batch_number?: string | null;
     quantity: number;
     unit_cost: number;
-    sale_price?: number | null;
+    sale_price: number;
+    sale_price_stocking_unit?: number | null;
     expiry_date?: string | null;
   }): Promise<{ purchase: Purchase }> => {
     try {
@@ -272,7 +275,8 @@ const purchaseService = {
     batch_number?: string | null;
     quantity: number;
     unit_cost: number;
-    sale_price?: number | null;
+    sale_price: number;
+    sale_price_stocking_unit?: number | null;
     expiry_date?: string | null;
   }): Promise<{ purchase: Purchase }> => {
     try {

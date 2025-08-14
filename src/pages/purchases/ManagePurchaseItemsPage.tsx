@@ -49,7 +49,8 @@ interface AddPurchaseItemData {
   product_id: number;
   quantity: number;
   unit_cost: number;
-  sale_price?: number;
+  sale_price: number;
+  sale_price_stocking_unit?: number;
   batch_number?: string;
   expiry_date?: string;
 }
@@ -140,6 +141,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
   const [quantity, setQuantity] = useState<number>(1);
   const [unitCost, setUnitCost] = useState<number>(0);
   const [salePrice, setSalePrice] = useState<number | undefined>(undefined);
+  const [salePriceStockingUnit, setSalePriceStockingUnit] = useState<number | undefined>(undefined);
   const [batchNumber, setBatchNumber] = useState<string>('');
   const [expiryDate, setExpiryDate] = useState<string>('');
   const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
@@ -198,7 +200,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
         batch_number: field === 'batch_number' ? (value as string || null) : (currentItem.batch_number || null),
         quantity: field === 'quantity' ? Number(value) : currentItem.quantity,
         unit_cost: field === 'unit_cost' ? Number(value) : Number(currentItem.unit_cost),
-        sale_price: field === 'sale_price' ? (value ? Number(value) : null) : (currentItem.sale_price ? Number(currentItem.sale_price) : null),
+        sale_price: field === 'sale_price' ? (value ? Number(value) : 0) : (currentItem.sale_price ? Number(currentItem.sale_price) : 0),
         expiry_date: field === 'expiry_date' ? (value as string || null) : (currentItem.expiry_date || null),
       };
 
@@ -252,7 +254,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
           product_id: product.id,
           quantity: 0,
           unit_cost: Number(product.latest_cost_per_sellable_unit) || 0,
-          sale_price: Number(product.suggested_sale_price_per_sellable_unit) || undefined,
+          sale_price: Number(product.suggested_sale_price_per_sellable_unit) || 0,
           batch_number: undefined,
           expiry_date: undefined,
         };
@@ -479,13 +481,14 @@ const ManagePurchaseItemsPage: React.FC = () => {
       product_id: selectedProduct.id,
       quantity,
       unit_cost: unitCost,
-      sale_price: salePrice,
+      sale_price: salePrice ?? 0,
+      sale_price_stocking_unit: salePriceStockingUnit,
       batch_number: batchNumber || undefined,
       expiry_date: expiryDate || undefined,
     };
 
     addItemMutation.mutate(data);
-  }, [selectedProduct, quantity, unitCost, salePrice, batchNumber, expiryDate, addItemMutation, t]);
+  }, [selectedProduct, quantity, unitCost, salePrice, salePriceStockingUnit, batchNumber, expiryDate, addItemMutation, t]);
 
   // Calculate summary values
   const summary = useMemo(() => {
@@ -811,9 +814,46 @@ const ManagePurchaseItemsPage: React.FC = () => {
               />
             </div>
 
+            {/* Selected Product Summary */}
+            {selectedProduct && (
+              <div className="lg:col-span-6 md:col-span-2 col-span-1">
+                <div className="flex items-center gap-3 p-2 rounded-md border bg-white dark:bg-gray-800">
+                  <Avatar
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      bgcolor: 'secondary.main',
+                      fontSize: '0.9rem',
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    {(selectedProduct.name || 'P').substring(0, 1).toUpperCase()}
+                  </Avatar>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold">
+                      {selectedProduct.name}
+                      {selectedProduct.sku ? (
+                        <span className="text-xs text-gray-500 ms-2">SKU: {selectedProduct.sku}</span>
+                      ) : null}
+                    </span>
+                    <span className="text-xs">
+                      {selectedProduct.stocking_unit_name && selectedProduct.sellable_unit_name ? (
+                        <strong>
+                          1 {selectedProduct.stocking_unit_name} = {selectedProduct.units_per_stocking_unit || 1} {selectedProduct.sellable_unit_name}
+                        </strong>
+                      ) : (
+                        <strong>
+                          1 Stocking Unit = {selectedProduct.units_per_stocking_unit || 1} Sellable Units
+                        </strong>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
                          {/* Quantity */}
              <div className="space-y-2">
-               <Label>{t('purchases:quantity')}</Label>
+               <Label>{t('purchases:quantity')} {selectedProduct?.stocking_unit_name ? `(${selectedProduct.stocking_unit_name})` : ''}</Label>
                <SelectOnFocusInput
                  type="number"
                  value={quantity}
@@ -826,7 +866,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
 
              {/* Unit Cost */}
              <div className="space-y-2">
-               <Label>{t('purchases:unitCost')}</Label>
+               <Label>{t('purchases:unitCost')} {selectedProduct?.stocking_unit_name ? `(${selectedProduct.stocking_unit_name})` : ''}</Label>
                <SelectOnFocusInput
                  type="number"
                  value={unitCost}
@@ -837,9 +877,9 @@ const ManagePurchaseItemsPage: React.FC = () => {
                />
              </div>
 
-             {/* Sale Price */}
-             <div className="space-y-2">
-               <Label>{t('purchases:salePrice')}</Label>
+              {/* Sale Price (per SELLABLE unit) - Required */}
+              <div className="space-y-2">
+               <Label>{t('purchases:salePrice')} {selectedProduct?.sellable_unit_name ? `(${selectedProduct.sellable_unit_name})` : ''}</Label>
                <SelectOnFocusInput
                  type="number"
                  value={salePrice || ''}
@@ -848,7 +888,20 @@ const ManagePurchaseItemsPage: React.FC = () => {
                  step={0.01}
                  className="w-full"
                />
-             </div>
+              </div>
+
+              {/* Sale Price (per STOCKING unit) - Optional */}
+              <div className="space-y-2">
+                <Label>{t('purchases:salePrice')} ({t('products:stockingUnit')})</Label>
+                <SelectOnFocusInput
+                  type="number"
+                  value={salePriceStockingUnit || ''}
+                  onChange={(e) => setSalePriceStockingUnit(e.target.value ? Number(e.target.value) : undefined)}
+                  min={0}
+                  step={0.01}
+                  className="w-full"
+                />
+              </div>
 
              {/* Batch Number */}
              <div className="space-y-2">
