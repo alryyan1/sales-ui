@@ -66,36 +66,16 @@ const SalesWithDiscountsPage: React.FC = () => {
         <Button onClick={() => { setPage(1); fetchSales(); }} disabled={loading}>{t('common:filter') || 'Filter'}</Button>
       </div>
 
-      {/* Analytics for discounts */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-sm text-gray-500">Discounted Sales</div>
-            <div className="text-2xl font-bold">{formatNumber(sales.length)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-sm text-gray-500">Total Discount</div>
+      {/* Discount summary cards */}
+      <div className="flex items-center gap-2">
+        <Card className="inline-block">
+          <CardContent className="p-2 text-center">
             <div className="text-2xl font-bold text-red-600">{formatNumber(totals.totalDiscount)}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-sm text-gray-500">Total Sales</div>
-            <div className="text-2xl font-bold">{formatNumber(totals.totalAmount)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-sm text-gray-500">Total Paid</div>
-            <div className="text-2xl font-bold text-green-600">{formatNumber(totals.totalPaid)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-sm text-gray-500">Total Due</div>
-            <div className="text-2xl font-bold text-orange-600">{formatNumber(totals.totalDue)}</div>
+        <Card className="inline-block">
+          <CardContent className="p-2 text-center">
+            <div className="text-2xl font-bold">{formatNumber(sales.length)}</div>
           </CardContent>
         </Card>
       </div>
@@ -106,13 +86,13 @@ const SalesWithDiscountsPage: React.FC = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Paid</TableHead>
-                  <TableHead>Discount</TableHead>
-                  <TableHead>Type</TableHead>
+                  <TableHead className="text-center">ID</TableHead>
+                  <TableHead className="text-center">Date</TableHead>
+                  <TableHead className="text-center">Client</TableHead>
+                  <TableHead className="text-center">Total</TableHead>
+                  <TableHead className="text-center">Paid</TableHead>
+                  <TableHead className="text-center">Discount</TableHead>
+                  <TableHead className="text-center">Type</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -123,13 +103,13 @@ const SalesWithDiscountsPage: React.FC = () => {
                 ) : (
                   sales.map(s => (
                     <TableRow key={s.id}>
-                      <TableCell>#{s.id}</TableCell>
-                      <TableCell>{(s as ApiSale).sale_date}</TableCell>
-                      <TableCell>{(s as ApiSale).client_name || '-'}</TableCell>
-                      <TableCell>{formatNumber(Number(s.total_amount))}</TableCell>
-                      <TableCell className="text-green-600">{formatNumber(Number(s.paid_amount))}</TableCell>
-                      <TableCell className="text-red-600">{formatNumber(Number((s.discount_amount as number | string | undefined) || 0))}</TableCell>
-                      <TableCell>{(s.discount_type as string | undefined) || '-'}</TableCell>
+                      <TableCell className="text-center">#{s.id}</TableCell>
+                      <TableCell className="text-center">{(s as ApiSale).sale_date}</TableCell>
+                      <TableCell className="text-center">{(s as ApiSale).client_name || '-'}</TableCell>
+                      <TableCell className="text-center">{formatNumber(Number(s.total_amount))}</TableCell>
+                      <TableCell className="text-center text-green-600">{formatNumber(Number(s.paid_amount))}</TableCell>
+                      <TableCell className="text-center text-red-600">{formatNumber(Number((s.discount_amount as number | string | undefined) || 0))}</TableCell>
+                      <TableCell className="text-center">{(s.discount_type as string | undefined) || '-'}</TableCell>
                     </TableRow>
                   ))
                 )}
