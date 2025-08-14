@@ -52,8 +52,22 @@ const SalesWithDiscountsPage: React.FC = () => {
     return { totalAmount, totalPaid, totalDiscount, totalDue: totalAmount - totalPaid };
   }, [sales]);
 
+  const openPdf = () => {
+    const w = window as unknown as { API_BASE?: string };
+    const im = import.meta as unknown as { env?: { VITE_API_BASE_URL?: string } };
+    const baseApi = w.API_BASE || im.env?.VITE_API_BASE_URL || '';
+    const base = baseApi.replace('/api','');
+    const query = new URLSearchParams({ start_date: startDate, end_date: endDate, has_discount: '1' }).toString();
+    const url = `${base}/api/reports/sales-pdf?${query}`;
+    window.open(url, '_blank');
+  };
+
   return (
     <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold">Discounted Sales Report</h2>
+        <Button onClick={openPdf} variant="outline" size="sm">Preview PDF</Button>
+      </div>
       <div className="flex items-end gap-2">
         <div>
           <label className="text-sm">Start</label>
@@ -70,11 +84,13 @@ const SalesWithDiscountsPage: React.FC = () => {
       <div className="flex items-center gap-2">
         <Card className="inline-block">
           <CardContent className="p-2 text-center">
+            <div className="text-xs text-gray-500">Total Discount</div>
             <div className="text-2xl font-bold text-red-600">{formatNumber(totals.totalDiscount)}</div>
           </CardContent>
         </Card>
         <Card className="inline-block">
           <CardContent className="p-2 text-center">
+            <div className="text-xs text-gray-500">Count</div>
             <div className="text-2xl font-bold">{formatNumber(sales.length)}</div>
           </CardContent>
         </Card>
