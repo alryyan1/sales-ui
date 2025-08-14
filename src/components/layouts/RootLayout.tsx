@@ -100,6 +100,7 @@ const RootLayout: React.FC = () => {
          { to: "/reports/inventory-log", labelKey: "inventoryLog", permission: "view-reports"},
          { to: "/reports/near-expiry", labelKey: "nearExpiry", permission: "view-reports"},
          { to: "/reports/monthly-revenue", labelKey: "monthlyRevenue", permission: "view-reports"},
+         { to: "/reports/sales-discounts", labelKey: "discountedSales", permission: "view-reports"},
     ];
 
     interface AdminItem {
@@ -135,7 +136,7 @@ const RootLayout: React.FC = () => {
             <Toaster richColors position="bottom-center" theme="system" />
 
             {/* Header or Sidebar depending on setting */}
-            {!settings?.use_sidebar_layout && (
+            {!((settings as unknown as { sidebar_layout?: boolean })?.sidebar_layout) && (
             <header className="sticky top-0 z-40 w-full border-b bg-background dark:bg-gray-900 dark:border-gray-700">
                 <div className="container flex h-16 items-center px-4 sm:px-6 lg:px-8">
                     {/* Mobile Menu Trigger */}
@@ -288,7 +289,7 @@ const RootLayout: React.FC = () => {
             )}
 
             {/* Sidebar layout (left) */}
-            {settings?.use_sidebar_layout ? (
+            {((settings as unknown as { sidebar_layout?: boolean })?.sidebar_layout) ? (
                 <div className="flex flex-1 min-h-0">
                     <aside className="w-56 border-r dark:border-gray-700 px-3 py-4 hidden sm:block">
                         <nav className="flex flex-col gap-1">

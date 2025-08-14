@@ -25,6 +25,8 @@ export interface AppSettings {
     whatsapp_default_phone: string;
     
     // Add other settings as defined in your config
+    // UI preferences
+    sidebar_layout?: boolean; // optional flag to switch between header vs sidebar layout
 }
 
 // Type for the update payload (can be partial)
