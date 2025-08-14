@@ -11,8 +11,12 @@ const SalesWithDiscountsPage: React.FC = () => {
   const { t } = useTranslation(['reports', 'common']);
   const [sales, setSales] = useState<ApiSale[]>([]);
   const [loading, setLoading] = useState(false);
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
+  const toYmd = (d: Date) => d.toISOString().split('T')[0];
+  const now = new Date();
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const [startDate, setStartDate] = useState<string>(toYmd(firstDay));
+  const [endDate, setEndDate] = useState<string>(toYmd(lastDay));
   const [page, setPage] = useState(1);
   const [perPage] = useState(50);
 
@@ -31,7 +35,8 @@ const SalesWithDiscountsPage: React.FC = () => {
       params.append('per_page', String(perPage));
       params.append('page', String(page));
       const resp = await saleService.getSales(page, params.toString());
-      setSales(resp.data as unknown as ApiSale[]);
+      const items = (resp.data as ApiSale[]).filter(s => Number((s as ApiSale).discount_amount || 0) > 0);
+      setSales(items);
     } catch (e) {
       console.error('Failed to fetch discounted sales', e);
       setSales([]);
@@ -43,7 +48,7 @@ const SalesWithDiscountsPage: React.FC = () => {
   const totals = useMemo(() => {
     const totalAmount = sales.reduce((sum, s) => sum + Number(s.total_amount || 0), 0);
     const totalPaid = sales.reduce((sum, s) => sum + Number(s.paid_amount || 0), 0);
-    const totalDiscount = sales.reduce((sum, s) => sum + Number((s as any).discount_amount || 0), 0);
+    const totalDiscount = sales.reduce((sum, s) => sum + Number((s.discount_amount as number | string | undefined) || 0), 0);
     return { totalAmount, totalPaid, totalDiscount, totalDue: totalAmount - totalPaid };
   }, [sales]);
 
@@ -62,7 +67,13 @@ const SalesWithDiscountsPage: React.FC = () => {
       </div>
 
       {/* Analytics for discounts */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-sm text-gray-500">Discounted Sales</div>
+            <div className="text-2xl font-bold">{formatNumber(sales.length)}</div>
+          </CardContent>
+        </Card>
         <Card>
           <CardContent className="p-4">
             <div className="text-sm text-gray-500">Total Discount</div>
@@ -113,12 +124,12 @@ const SalesWithDiscountsPage: React.FC = () => {
                   sales.map(s => (
                     <TableRow key={s.id}>
                       <TableCell>#{s.id}</TableCell>
-                      <TableCell>{(s as any).sale_date}</TableCell>
-                      <TableCell>{(s as any).client_name || '-'}</TableCell>
+                      <TableCell>{(s as ApiSale).sale_date}</TableCell>
+                      <TableCell>{(s as ApiSale).client_name || '-'}</TableCell>
                       <TableCell>{formatNumber(Number(s.total_amount))}</TableCell>
                       <TableCell className="text-green-600">{formatNumber(Number(s.paid_amount))}</TableCell>
-                      <TableCell className="text-red-600">{formatNumber(Number((s as any).discount_amount || 0))}</TableCell>
-                      <TableCell>{(s as any).discount_type || '-'}</TableCell>
+                      <TableCell className="text-red-600">{formatNumber(Number((s.discount_amount as number | string | undefined) || 0))}</TableCell>
+                      <TableCell>{(s.discount_type as string | undefined) || '-'}</TableCell>
                     </TableRow>
                   ))
                 )}
