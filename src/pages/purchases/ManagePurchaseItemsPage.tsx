@@ -386,10 +386,15 @@ const ManagePurchaseItemsPage: React.FC = () => {
         const unitsPerStocking = product.units_per_stocking_unit && product.units_per_stocking_unit > 0 ? product.units_per_stocking_unit : 1;
         const costPerStocking = costPerSellable * unitsPerStocking;
         setUnitCost(costPerStocking);
-        // Calculate sellable unit price: (cost per stocking * profit% / 100) / units_per_stocking
+        // Calculate prices using profit percentage
         const globalProfitRate = settings?.default_profit_rate ?? 20;
-        const sellablePrice = (costPerStocking * (globalProfitRate / 100)) / unitsPerStocking;
+        const profitFactor = globalProfitRate / 100;
+        // Sellable unit price: (cost per stocking * profit% / 100) / units_per_stocking
+        const sellablePrice = (costPerStocking * profitFactor) / unitsPerStocking;
         setSalePrice(sellablePrice);
+        // Stocking unit price: cost per stocking * profit% / 100
+        const stockingPrice = costPerStocking * profitFactor;
+        setSalePriceStockingUnit(stockingPrice);
       }
     } else {
       setSkuInput('');
@@ -421,11 +426,16 @@ const ManagePurchaseItemsPage: React.FC = () => {
   // Handle unit cost change and calculate sale price
   const handleUnitCostChange = useCallback((newCost: number) => {
     setUnitCost(newCost);
-    // Calculate sellable unit price: (cost per stocking * profit% / 100) / units_per_stocking
+    // Calculate prices using profit percentage
     const globalProfitRate = settings?.default_profit_rate ?? 20;
+    const profitFactor = globalProfitRate / 100;
     const unitsPerStocking = selectedProduct?.units_per_stocking_unit && selectedProduct.units_per_stocking_unit > 0 ? selectedProduct.units_per_stocking_unit : 1;
-    const sellablePrice = (newCost * (globalProfitRate / 100)) / unitsPerStocking;
+    // Sellable unit price
+    const sellablePrice = (newCost * profitFactor) / unitsPerStocking;
     setSalePrice(sellablePrice);
+    // Stocking unit price
+    const stockingPrice = newCost * profitFactor;
+    setSalePriceStockingUnit(stockingPrice);
   }, [settings?.default_profit_rate, selectedProduct?.units_per_stocking_unit]);
 
   // Handle autocomplete Enter key for SKU search
@@ -859,19 +869,28 @@ const ManagePurchaseItemsPage: React.FC = () => {
              </div>
 
              {/* Sale Price (per SELLABLE unit) - Required */}
-              <div className="space-y-2">
-               <Label>{t('purchases:salePrice')}</Label>
+             <div className="space-y-2">
+               <Label>
+                 {t('purchases:salePrice')} <span className="text-red-500">*</span>
+               </Label>
                <SelectOnFocusInput
                  type="number"
                  value={salePrice || ''}
                  onChange={(e) => setSalePrice(e.target.value ? Number(e.target.value) : undefined)}
                  min={0}
                  step={0.01}
-                 className="w-full"
+                 required
+                 aria-invalid={salePrice === undefined}
+                 className={`w-full ${salePrice === undefined ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                />
-               {selectedProduct?.sellable_unit_name && (
-                 <div className="text-xs text-gray-500">({selectedProduct.sellable_unit_name})</div>
-               )}
+               <div className="text-xs">
+                 {selectedProduct?.sellable_unit_name && (
+                   <span className="text-gray-500">({selectedProduct.sellable_unit_name})</span>
+                 )}
+                 {salePrice === undefined && (
+                   <span className="text-red-500 ms-2">{t('common:required') || 'Required'}</span>
+                 )}
+               </div>
               </div>
 
               {/* Sale Price (per STOCKING unit) - Optional */}
@@ -915,7 +934,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
           <div className="flex justify-end mt-4">
             <Button
               onClick={handleAddItem}
-              disabled={!selectedProduct || addItemMutation.isPending}
+              disabled={!selectedProduct || salePrice === undefined || addItemMutation.isPending}
               className="flex items-center gap-2"
             >
               {addItemMutation.isPending && <CircularProgress size={16} />}
