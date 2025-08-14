@@ -156,6 +156,25 @@ const saleService = {
     },
 
     /**
+     * Update discount on a sale (instantly persists discount_amount and discount_type)
+     */
+    updateSaleDiscount: async (
+        saleId: number,
+        data: { discount_amount: number; discount_type: 'percentage' | 'fixed' }
+    ): Promise<Sale> => {
+        try {
+            const response = await apiClient.put<{ message: string; sale: Sale }>(`/sales/${saleId}/discount`, data);
+            return response.data.sale;
+        } catch (error) {
+            console.error(`Error updating discount for sale ${saleId}:`, error);
+            if (isAxiosError(error) && error.response?.status === 422) {
+                throw new Error(getErrorMessage(error, 'Invalid discount.'));
+            }
+            throw error;
+        }
+    },
+
+    /**
      * Get paginated list of sales.
      */
     getSales: async (

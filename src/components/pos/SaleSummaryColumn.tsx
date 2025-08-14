@@ -173,12 +173,74 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
   // Note: we intentionally avoid echoing internal discount state to the parent on every render
   // to prevent update loops. The parent will be notified only on explicit user updates below.
 
-  // Handle discount update
-  const handleDiscountUpdate = (amount: number, type: 'percentage' | 'fixed') => {
-    setDiscountAmount(amount);
-    setDiscountType(type);
-    if (onDiscountChange) {
-      onDiscountChange(amount, type);
+  // Handle discount update (persist via API when a sale exists)
+  const handleDiscountUpdate = async (amount: number, type: 'percentage' | 'fixed') => {
+    try {
+      if (saleId) {
+        const updatedSale = await saleService.updateSaleDiscount(saleId, {
+          discount_amount: amount,
+          discount_type: type,
+        });
+        // Refresh local sale info from server response to ensure totals are in sync
+        setSaleInfo(prev => ({
+          ...(prev || ({} as any)),
+          id: updatedSale.id,
+          sale_order_number: (updatedSale as any).sale_order_number,
+          client_id: updatedSale.client_id,
+          client_name: (updatedSale as any).client_name,
+          user_id: updatedSale.user_id,
+          user_name: (updatedSale as any).user_name,
+          sale_date: updatedSale.sale_date,
+          invoice_number: updatedSale.invoice_number,
+          status: updatedSale.status as any,
+          total_amount: Number(updatedSale.total_amount),
+          paid_amount: Number(updatedSale.paid_amount),
+          due_amount: Number((updatedSale as any).due_amount || 0),
+          notes: updatedSale.notes as any,
+          created_at: (updatedSale as any).created_at,
+          updated_at: (updatedSale as any).updated_at,
+          items: (updatedSale.items || []).map((item: any) => ({
+            id: item.id,
+            product: {
+              id: item.product_id,
+              name: item.product?.name || 'Unknown Product',
+              sku: item.product?.sku || 'N/A',
+              scientific_name: '',
+              description: '',
+              suggested_sale_price_per_sellable_unit: Number(item.unit_price),
+              last_sale_price_per_sellable_unit: Number(item.unit_price),
+              stock_quantity: item.product?.stock_quantity || 0,
+              stock_alert_level: item.product?.stock_alert_level || null,
+              earliest_expiry_date: item.product?.earliest_expiry_date,
+              current_stock_quantity: item.product?.stock_quantity || 0,
+              sellable_unit_name: item.product?.sellableUnit?.name || 'Piece',
+              created_at: item.created_at || new Date().toISOString(),
+              updated_at: item.updated_at || new Date().toISOString(),
+            },
+            quantity: item.quantity,
+            unitPrice: Number(item.unit_price),
+            total: Number(item.total_price || item.quantity * Number(item.unit_price)),
+          })),
+          payments: (updatedSale.payments || []).map((payment: any) => ({
+            id: payment.id,
+            sale_id: payment.sale_id,
+            user_name: payment.user?.name,
+            method: payment.method,
+            amount: Number(payment.amount),
+            payment_date: payment.payment_date,
+            reference_number: payment.reference_number || undefined,
+            notes: payment.notes || undefined,
+            created_at: payment.created_at,
+          })),
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to update discount on backend:', error);
+    } finally {
+      // Update local discount UI state regardless to reflect the attempted change
+      setDiscountAmount(amount);
+      setDiscountType(type);
+      if (onDiscountChange) onDiscountChange(amount, type);
     }
   };
 
