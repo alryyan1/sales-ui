@@ -382,15 +382,14 @@ const ManagePurchaseItemsPage: React.FC = () => {
       setProductInputValue(product.name);
       // Set suggested prices if available
       if (product.latest_cost_per_sellable_unit) {
-        const cost = Number(product.latest_cost_per_sellable_unit);
-        setUnitCost(cost);
-        // Calculate sale price based on global profit rate
+        const costPerSellable = Number(product.latest_cost_per_sellable_unit);
+        const unitsPerStocking = product.units_per_stocking_unit && product.units_per_stocking_unit > 0 ? product.units_per_stocking_unit : 1;
+        const costPerStocking = costPerSellable * unitsPerStocking;
+        setUnitCost(costPerStocking);
+        // Calculate sellable unit price: (cost per stocking * profit% / 100) / units_per_stocking
         const globalProfitRate = settings?.default_profit_rate ?? 20;
-        const calculatedSalePrice = cost * (1 + globalProfitRate / 100);
-        setSalePrice(calculatedSalePrice);
-      }
-      if (product.suggested_sale_price_per_sellable_unit) {
-        setSalePrice(Number(product.suggested_sale_price_per_sellable_unit));
+        const sellablePrice = (costPerStocking * (globalProfitRate / 100)) / unitsPerStocking;
+        setSalePrice(sellablePrice);
       }
     } else {
       setSkuInput('');
@@ -422,11 +421,12 @@ const ManagePurchaseItemsPage: React.FC = () => {
   // Handle unit cost change and calculate sale price
   const handleUnitCostChange = useCallback((newCost: number) => {
     setUnitCost(newCost);
-    // Calculate sale price based on global profit rate
+    // Calculate sellable unit price: (cost per stocking * profit% / 100) / units_per_stocking
     const globalProfitRate = settings?.default_profit_rate ?? 20;
-    const calculatedSalePrice = newCost * (1 + globalProfitRate / 100);
-    setSalePrice(calculatedSalePrice);
-  }, [settings?.default_profit_rate]);
+    const unitsPerStocking = selectedProduct?.units_per_stocking_unit && selectedProduct.units_per_stocking_unit > 0 ? selectedProduct.units_per_stocking_unit : 1;
+    const sellablePrice = (newCost * (globalProfitRate / 100)) / unitsPerStocking;
+    setSalePrice(sellablePrice);
+  }, [settings?.default_profit_rate, selectedProduct?.units_per_stocking_unit]);
 
   // Handle autocomplete Enter key for SKU search
   const handleAutocompleteKeyDown = useCallback(async (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -736,7 +736,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
             {/* Product Selection */}
-            <div className="space-y-2 lg:col-span-2">
+            <div className="space-y-2 lg:col-span-3 md:col-span-2">
               <Label>{t('products:productName')}</Label>
               <Autocomplete
                 options={productOptions}
@@ -804,7 +804,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
             </div>
 
             {/* SKU Input */}
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-1 lg:col-span-1">
               <Label>{t('products:sku')}</Label>
               <SelectOnFocusInput
                 value={skuInput}
@@ -816,37 +816,18 @@ const ManagePurchaseItemsPage: React.FC = () => {
 
             {/* Selected Product Summary */}
             {selectedProduct && (
-              <div className="lg:col-span-6 md:col-span-2 col-span-1">
-                <div className="flex items-center gap-3 p-2 rounded-md border bg-white dark:bg-gray-800">
-                  <Avatar
-                    sx={{
-                      width: 36,
-                      height: 36,
-                      bgcolor: 'secondary.main',
-                      fontSize: '0.9rem',
-                      fontWeight: 'bold',
-                    }}
-                  >
-                    {(selectedProduct.name || 'P').substring(0, 1).toUpperCase()}
-                  </Avatar>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-semibold">
-                      {selectedProduct.name}
-                      {selectedProduct.sku ? (
-                        <span className="text-xs text-gray-500 ms-2">SKU: {selectedProduct.sku}</span>
-                      ) : null}
-                    </span>
-                    <span className="text-xs">
-                      {selectedProduct.stocking_unit_name && selectedProduct.sellable_unit_name ? (
-                        <strong>
-                          1 {selectedProduct.stocking_unit_name} = {selectedProduct.units_per_stocking_unit || 1} {selectedProduct.sellable_unit_name}
-                        </strong>
-                      ) : (
-                        <strong>
-                          1 Stocking Unit = {selectedProduct.units_per_stocking_unit || 1} Sellable Units
-                        </strong>
-                      )}
-                    </span>
+              <div className="lg:col-span-2 md:col-span-2 col-span-1" dir='ltr'>
+                <div className="p-2 text-right ">
+                  <div className="text-xs text-gray-600 dark:text-gray-300">
+                    {selectedProduct.stocking_unit_name && selectedProduct.sellable_unit_name ? (
+                      <span>
+                        1 {selectedProduct.stocking_unit_name} = {selectedProduct.units_per_stocking_unit || 1} {selectedProduct.sellable_unit_name}
+                      </span>
+                    ) : (
+                      <span>
+                        1 Stocking Unit = {selectedProduct.units_per_stocking_unit || 1} Sellable Units
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -877,9 +858,9 @@ const ManagePurchaseItemsPage: React.FC = () => {
                />
              </div>
 
-              {/* Sale Price (per SELLABLE unit) - Required */}
+             {/* Sale Price (per SELLABLE unit) - Required */}
               <div className="space-y-2">
-               <Label>{t('purchases:salePrice')} {selectedProduct?.sellable_unit_name ? `(${selectedProduct.sellable_unit_name})` : ''}</Label>
+               <Label>{t('purchases:salePrice')}</Label>
                <SelectOnFocusInput
                  type="number"
                  value={salePrice || ''}
@@ -888,11 +869,14 @@ const ManagePurchaseItemsPage: React.FC = () => {
                  step={0.01}
                  className="w-full"
                />
+               {selectedProduct?.sellable_unit_name && (
+                 <div className="text-xs text-gray-500">({selectedProduct.sellable_unit_name})</div>
+               )}
               </div>
 
               {/* Sale Price (per STOCKING unit) - Optional */}
               <div className="space-y-2">
-                <Label>{t('purchases:salePrice')} ({t('products:stockingUnit')})</Label>
+                <Label>{t('purchases:salePrice')}</Label>
                 <SelectOnFocusInput
                   type="number"
                   value={salePriceStockingUnit || ''}
@@ -901,6 +885,9 @@ const ManagePurchaseItemsPage: React.FC = () => {
                   step={0.01}
                   className="w-full"
                 />
+                {selectedProduct?.stocking_unit_name && (
+                  <div className="text-xs text-gray-500">({selectedProduct.stocking_unit_name})</div>
+                )}
               </div>
 
              {/* Batch Number */}

@@ -38,7 +38,7 @@
     "selectProductPlaceholder": "ابحث أو اختر منتجًا...", 
     "quantity": "الكمية",
     "quantityPlaceholder": "1", 
-    "unitCost": "تكلفة الوحدة",
+    "unitCost": "تكلفة ",
     "unitCostPlaceholder": "0.00", 
     "totalCost": "التكلفة الإجمالية",
     "remove": "إزالة",
