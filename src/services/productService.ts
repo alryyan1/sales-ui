@@ -46,10 +46,14 @@ export interface Product {
   total_items_purchased?: number | null;
   total_items_sold?: number | null;
   available_batches?: {
-    batch_id: number;
-    quantity: number;
-    expiry_date?: string;
-  }[]; // Replace 'any[]' with a specific type
+    id: number;
+    product_id: number;
+    batch_number: string | null;
+    remaining_quantity: number;
+    unit_cost: number;
+    sale_price: number;
+    expiry_date: string | null;
+  }[]; // Matches PurchaseItemResource structure
 }
 
 // Data type for creating/updating - matches form fields before potential conversion

@@ -390,6 +390,7 @@ const saleService = {
         product_id: number;
         quantity: number;
         unit_price: number;
+        purchase_item_id?: number | null; // Optional batch selection
     }): Promise<{ sale: Sale; message: string }> => {
         try {
             const response = await apiClient.post<{ sale: Sale; message: string }>(`/sales/${saleId}/items`, itemData);
@@ -423,6 +424,7 @@ const saleService = {
     updateSaleItem: async (saleId: number, saleItemId: number, itemData: {
         quantity: number;
         unit_price: number;
+        purchase_item_id?: number | null; // Optional batch selection
     }): Promise<Sale> => {
         try {
             const response = await apiClient.put<{ sale: Sale }>(`/sales/${saleId}/items/${saleItemId}`, itemData);

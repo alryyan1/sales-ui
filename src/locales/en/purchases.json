@@ -153,6 +153,10 @@
     "itemDeleted": "Item deleted successfully",
     "confirmDeleteItem": "Are you sure you want to delete this item?",
     "purchaseNotFound": "Purchase not found",
+    "cannotDeleteItemWithSales": "Cannot delete this purchase item because it is connected to sales records. Please delete the related sales first.",
+    "duplicateProductError": "This product is already added to this purchase. Each product can only be added once per purchase.",
+    "duplicateProductInPurchaseCreation": "Cannot create purchase: One or more products are duplicated. Each product can only be added once per purchase.",
+    "duplicateProductInImport": "Import failed: One or more products in the file are already added to this purchase. Each product can only be added once per purchase.",
     
     "managePurchaseItems": "Manage Purchase Items",
     "purchaseSummary": "Purchase Summary",

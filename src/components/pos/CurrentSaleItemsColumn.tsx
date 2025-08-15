@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 // Icons
 import { 
@@ -17,17 +18,20 @@ import {
   Package, 
   Calendar,
   Check,
-  X
+  X,
+  Layers
 } from "lucide-react";
 
 // Types
 import { CartItem } from "./types";
 import { formatNumber } from "@/constants";
+import { BatchSelectionDialog } from "./BatchSelectionDialog";
 
 interface CurrentSaleItemsColumnProps {
   currentSaleItems: CartItem[];
   onUpdateQuantity: (productId: number, newQuantity: number) => Promise<void>;
   onRemoveItem: (productId: number) => Promise<void>;
+  onUpdateBatch?: (productId: number, batchId: number | null, batchNumber: string | null, expiryDate: string | null, unitPrice: number) => Promise<void>;
   isSalePaid?: boolean;
   deletingItems?: Set<number>; // Track which items are being deleted
   updatingItems?: Set<number>; // Track which items are being updated
@@ -38,6 +42,7 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
   currentSaleItems,
   onUpdateQuantity,
   onRemoveItem,
+  onUpdateBatch,
   isSalePaid = false,
   deletingItems = new Set(),
   updatingItems = new Set(),
@@ -49,6 +54,10 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
   const [editingQuantity, setEditingQuantity] = useState<number | null>(null);
   const [editValue, setEditValue] = useState<string>("");
   const [stockingMode, setStockingMode] = useState<Set<number>>(new Set()); // productIds in stocking mode
+  
+  // State for batch selection
+  const [batchDialogOpen, setBatchDialogOpen] = useState(false);
+  const [selectedProductForBatch, setSelectedProductForBatch] = useState<CartItem | null>(null);
 
   const formatExpiryDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -58,7 +67,7 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
       year: 'numeric' 
     });
   };
-
+  console.log(currentSaleItems, 'currentSaleItems');
   const isExpiringSoon = (dateString: string) => {
     const expiryDate = new Date(dateString);
     const today = new Date();
@@ -124,6 +133,36 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
     }, 100);
   };
 
+  const handleBatchSelection = (item: CartItem) => {
+    setSelectedProductForBatch(item);
+    setBatchDialogOpen(true);
+  };
+
+  const handleBatchSelect = async (batch: { id: number; batch_number: string | null; expiry_date: string | null; sale_price: number }) => {
+    if (selectedProductForBatch && onUpdateBatch) {
+      try {
+        await onUpdateBatch(
+          selectedProductForBatch.product.id,
+          batch.id,
+          batch.batch_number,
+          batch.expiry_date,
+          batch.sale_price
+        );
+      } catch (error) {
+        console.error('Error updating batch:', error);
+      }
+    }
+    setBatchDialogOpen(false);
+    setSelectedProductForBatch(null);
+  };
+
+  const hasMultipleBatches = (item: CartItem) => {
+    console.log(item.product.available_batches, 'available_batches',item.product,'item.product');
+
+    // Check if product has multiple batches available
+    return item.product.available_batches && item.product.available_batches.length > 1;
+  };
+ 
   return (
     <div dir="ltr" className="w-full h-full flex flex-col">
       <Card className="flex-1 flex flex-col">
@@ -219,8 +258,28 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="text-center">
-                            <div className="font-medium text-xl">{item.product.name}</div>
+                            <div className="font-medium text-xl flex items-center justify-center gap-2">
+                                                             {item.product.name.charAt(0).toUpperCase() + item.product.name.slice(1)}
+                              {hasMultipleBatches(item) && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleBatchSelection(item)}
+                                  className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
+                                  title={t('pos:selectBatch')}
+                                >
+                                  <Layers className="h-4 w-4 animate-bounce" />
+                                </Button>
+                              )}
+                            </div>
                             <div className="text-sm text-gray-500">SKU: {item.product.sku || 'N/A'}</div>
+                            {item.selectedBatchNumber && (
+                              <div className="text-xs text-blue-600 mt-1">
+                                <Badge variant="outline" className="text-xs">
+                                  {t('pos:batch')}: {item.selectedBatchNumber}
+                                </Badge>
+                              </div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
@@ -321,14 +380,30 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                             <div className="flex items-center space-x-1">
                               <Package className="h-3 w-3 text-gray-500" />
                               <span className={`text-base font-medium ${
-                                isLowStock(item.product.stock_quantity, item.product.stock_alert_level) 
-                                  ? 'text-red-600' 
-                                  : 'text-green-600'
+                                item.selectedBatchId 
+                                  ? (item.selectedBatchNumber ? 'text-blue-600' : 'text-blue-600')
+                                  : isLowStock(item.product.stock_quantity, item.product.stock_alert_level) 
+                                    ? 'text-red-600' 
+                                    : 'text-green-600'
                               }`}>
-                                {formatNumber(item.product.stock_quantity)}
+                                {item.selectedBatchId 
+                                  ? (() => {
+                                      // Find the selected batch to get its remaining quantity
+                                      const selectedBatch = item.product.available_batches?.find(
+                                        batch => batch.id === item.selectedBatchId
+                                      );
+                                      return formatNumber(selectedBatch?.remaining_quantity || 0);
+                                    })()
+                                  : formatNumber(item.product.stock_quantity)
+                                }
                               </span>
                             </div>
-                            {isLowStock(item.product.stock_quantity, item.product.stock_alert_level) && (
+                            {item.selectedBatchId && (
+                              <span className="text-xs text-blue-600">
+                                {item.selectedBatchNumber ? `Batch: ${item.selectedBatchNumber}` : 'Selected Batch'}
+                              </span>
+                            )}
+                            {!item.selectedBatchId && isLowStock(item.product.stock_quantity, item.product.stock_alert_level) && (
                               <span className="text-sm text-red-500">Low Stock</span>
                             )}
                           </div>
@@ -405,6 +480,15 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
           )}
         </CardContent>
       </Card>
+
+      {/* Batch Selection Dialog */}
+      <BatchSelectionDialog
+        open={batchDialogOpen}
+        onOpenChange={setBatchDialogOpen}
+        product={selectedProductForBatch?.product || null}
+        onBatchSelect={handleBatchSelect}
+        selectedBatchId={selectedProductForBatch?.selectedBatchId || null}
+      />
     </div>
   );
 }; 
