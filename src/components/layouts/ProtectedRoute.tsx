@@ -21,9 +21,12 @@ const ProtectedRoute: React.FC = () => {
         console.log('ProtectedRoute: Showing loading spinner.');
         // عرض مؤشر التحميل في المنتصف
         return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 200px)' }}> {/* ارتفاع تقديري */}
-                <CircularProgress />
-            </Box>
+            <div className="flex justify-center items-center min-h-screen bg-background">
+                <div className="flex flex-col items-center space-y-4">
+                    <CircularProgress />
+                    <p className="text-sm text-muted-foreground">Checking authentication...</p>
+                </div>
+            </div>
         );
     }
 

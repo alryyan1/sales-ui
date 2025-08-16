@@ -92,12 +92,12 @@ const router = createHashRouter([
     ),
     errorElement: <NotFoundPage />,
     children: [
-      { index: true, element: <HomePage /> },
       { path: "login", element: <LoginPage /> },
       { path: "register", element: <RegisterPage /> }, // Ensure props removed if using context
       {
         element: <ProtectedRoute />, // Ensures user is logged in
         children: [
+          { index: true, element: <HomePage /> }, // Move HomePage inside protected routes
           { path: "dashboard", element: <DashboardPage /> },
           { path: "profile", element: <ProfilePage /> },
           { 

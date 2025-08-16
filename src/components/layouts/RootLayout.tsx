@@ -121,7 +121,7 @@ const RootLayout: React.FC = () => {
          { to: "/admin/inventory/requisitions", labelKey: "requisitions", permission: "view-all-stock-requisitions"},
     ];
 
-    console.log(navItems,'navItems')
+    console.log(navItems,'navItems',user,'user')
     // Filter items based on permissions
     const visibleNavItems = navItems.filter(item => item.permission === null || can(item.permission));
     console.log(visibleNavItems,'visibleNavItems')
@@ -129,7 +129,7 @@ const RootLayout: React.FC = () => {
     const visibleReportItems = reportItems.filter(item => can(item.permission));
     const canManageAdmin = adminItems.some(item => can(item.permission)); // Check if user can access *any* admin function shown
     const visibleAdminItems = adminItems.filter(item => can(item.permission));
-
+    console.log(visibleAdminItems,'visibleAdminItems',canManageAdmin,'canManageAdmin',reportItems,'reportItems',visibleReportItems,'visibleReportItems')
 
     return (
         <div className="flex flex-col min-h-screen dark:bg-gray-950">

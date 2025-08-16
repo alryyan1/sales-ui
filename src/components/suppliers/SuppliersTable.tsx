@@ -124,22 +124,7 @@ const SuppliersTable: React.FC<SuppliersTableProps> = ({
                       </Tooltip>
                     )}
                     
-                    {/* Delete Button */}
-                    {can("delete-suppliers") && (
-                      <Tooltip title={t("common:delete") || ""}>
-                        <span>
-                          <IconButton
-                            aria-label={t("common:delete") || "Delete"}
-                            color="error"
-                            size="small"
-                            onClick={() => onDelete(supplier.id)}
-                            disabled={isLoading}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </span>
-                      </Tooltip>
-                    )}
+          
                   </Box>
                 </TableCell>
               </TableRow>

@@ -102,6 +102,9 @@ const LoginPage: React.FC = () => {
         try {
             const authResponse = await authService.login(data);
             handleLoginSuccess(authResponse);
+            // Redirect to intended destination or dashboard
+            const from = location.state?.from?.pathname || "/dashboard";
+            navigate(from, { replace: true });
         } catch (err) {
             const errorMsg = authService.getErrorMessage(err, t('login:loginFailed'));
             toast.error(t('common:error'), { description: errorMsg });
