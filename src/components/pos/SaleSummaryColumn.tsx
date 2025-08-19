@@ -274,7 +274,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
                   title={t('pos:clickToEditDate')}
                 >
                   <span className="font-semibold text-sm">
-                    {saleInfo ? formatDate(saleInfo.sale_date) : formatDate(new Date().toISOString())}
+                    {saleInfo?.sale_date}
                   </span>
                   <Edit2 className="h-3 w-3 text-blue-500" />
                 </div>
