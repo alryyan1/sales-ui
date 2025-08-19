@@ -88,7 +88,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       authResponse.permissions || authResponse.user.permissions || []
     );
     // Token is already stored by authService.login
-    navigate("/dashboard", { replace: true }); // Or intended destination
+    // The actual redirect will be handled by the LoginPage component
+    // which has access to the location state with the intended destination
   };
 
   const handleRegisterSuccess = (authResponse: AuthResponse) => {

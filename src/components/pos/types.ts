@@ -8,6 +8,9 @@ export interface CartItem {
   quantity: number;
   unitPrice: number;
   total: number;
+  selectedBatchId?: number | null; // ID of the selected purchase batch
+  selectedBatchNumber?: string | null; // Batch number for display
+  selectedBatchExpiryDate?: string | null; // Expiry date of selected batch
 }
 
 // Payment Type (matching backend PaymentResource)

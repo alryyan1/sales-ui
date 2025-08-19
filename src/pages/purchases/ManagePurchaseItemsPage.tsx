@@ -12,7 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // MUI Components
@@ -33,13 +33,13 @@ import { Delete as DeleteIcon } from '@mui/icons-material';
 
 // Services and Types
 import purchaseService, { PurchaseItem } from '../../services/purchaseService';
-import { Product } from '../../services/productService';
-import { formatNumber, formatCurrency, formatDate } from '@/constants';
+import productService, { Product } from '../../services/productService';
+import { formatCurrency } from '@/constants';
 import apiClient from '@/lib/axios';
 import { useSettings } from '@/context/SettingsContext';
 
 // Components
-import EditablePurchaseItemField from '@/components/purchases/EditablePurchaseItemField';
+import InstantTextField from '@/components/purchases/InstantTextField';
 
 
 
@@ -49,10 +49,18 @@ interface AddPurchaseItemData {
   product_id: number;
   quantity: number;
   unit_cost: number;
-  sale_price?: number;
+  sale_price: number;
+  sale_price_stocking_unit?: number;
   batch_number?: string;
   expiry_date?: string;
 }
+
+// Helper: round to exactly 3 decimal places
+const roundToThreeDecimals = (value: number): number => {
+  return Number(Number(value).toFixed(3));
+};
+
+// (Removed dd mm yyyy helpers since native date inputs are used)
 
 // Custom Input component with select-on-focus behavior
 const SelectOnFocusInput = React.forwardRef<HTMLInputElement, React.ComponentProps<typeof Input>>((props, ref) => {
@@ -68,63 +76,8 @@ const SelectOnFocusInput = React.forwardRef<HTMLInputElement, React.ComponentPro
 
 SelectOnFocusInput.displayName = 'SelectOnFocusInput';
 
-// Summary Dialog Component
-const PurchaseSummaryDialog: React.FC<{ 
-  summary: { totalItems: number; totalCost: number; totalSell: number; totalQuantity: number }; 
-  purchase: { supplier_name?: string }; 
-  t: (key: string) => string 
-}> = ({ summary, purchase, t }) => (
-  <DialogContent className="max-w-md">
-    <DialogHeader>
-      <DialogTitle className="flex items-center gap-2">
-        <BarChart3 className="h-5 w-5" />
-        {t('purchases:purchaseSummary')}
-      </DialogTitle>
-    </DialogHeader>
-    <div className="grid grid-cols-1 gap-4 mt-4">
-      <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-        <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-          {summary.totalItems}
-        </div>
-        <div className="text-sm text-gray-600 dark:text-gray-400">
-          {t('purchases:totalItems')}
-        </div>
-      </div>
-      <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-        <div className="text-3xl font-bold text-green-600 dark:text-green-400">
-          {formatCurrency(summary.totalCost)}
-        </div>
-        <div className="text-sm text-gray-600 dark:text-gray-400">
-          {t('purchases:totalCost')}
-        </div>
-      </div>
-      <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-        <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
-          {formatCurrency(summary.totalSell)}
-        </div>
-        <div className="text-sm text-gray-600 dark:text-gray-400">
-          {t('purchases:totalSellValue')}
-        </div>
-      </div>
-      <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-        <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
-                     {formatNumber(summary.totalQuantity, 0)}
-        </div>
-        <div className="text-sm text-gray-600 dark:text-gray-400">
-          {t('purchases:totalQuantity')}
-        </div>
-      </div>
-      <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-        <div className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-          {purchase.supplier_name || 'N/A'}
-        </div>
-        <div className="text-sm text-gray-600 dark:text-gray-400">
-          {t('purchases:supplier')}
-        </div>
-      </div>
-    </div>
-  </DialogContent>
-);
+// Summary Dialog Component moved to components/purchases/PurchaseSummaryDialog
+import PurchaseSummaryDialog from '@/components/purchases/PurchaseSummaryDialog';
 
 const ManagePurchaseItemsPage: React.FC = () => {
   const { id: purchaseIdParam } = useParams<{ id: string }>();
@@ -140,9 +93,11 @@ const ManagePurchaseItemsPage: React.FC = () => {
   const [quantity, setQuantity] = useState<number>(1);
   const [unitCost, setUnitCost] = useState<number>(0);
   const [salePrice, setSalePrice] = useState<number | undefined>(undefined);
+  const [salePriceStockingUnit, setSalePriceStockingUnit] = useState<number | undefined>(undefined);
   const [batchNumber, setBatchNumber] = useState<string>('');
   const [expiryDate, setExpiryDate] = useState<string>('');
   const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
+  const [productUnits, setProductUnits] = useState<Record<number, { stocking_unit_name?: string | null; sellable_unit_name?: string | null }>>({});
   
   // Product search state
   const [productOptions, setProductOptions] = useState<Product[]>([]);
@@ -198,7 +153,10 @@ const ManagePurchaseItemsPage: React.FC = () => {
         batch_number: field === 'batch_number' ? (value as string || null) : (currentItem.batch_number || null),
         quantity: field === 'quantity' ? Number(value) : currentItem.quantity,
         unit_cost: field === 'unit_cost' ? Number(value) : Number(currentItem.unit_cost),
-        sale_price: field === 'sale_price' ? (value ? Number(value) : null) : (currentItem.sale_price ? Number(currentItem.sale_price) : null),
+        sale_price: field === 'sale_price' ? (value ? Number(value) : 0) : (currentItem.sale_price ? Number(currentItem.sale_price) : 0),
+        sale_price_stocking_unit: field === 'sale_price_stocking_unit'
+          ? (value !== null && value !== undefined ? Number(value) : null)
+          : (currentItem.sale_price_stocking_unit !== undefined ? (currentItem.sale_price_stocking_unit as number | null) : null),
         expiry_date: field === 'expiry_date' ? (value as string || null) : (currentItem.expiry_date || null),
       };
 
@@ -252,7 +210,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
           product_id: product.id,
           quantity: 0,
           unit_cost: Number(product.latest_cost_per_sellable_unit) || 0,
-          sale_price: Number(product.suggested_sale_price_per_sellable_unit) || undefined,
+          sale_price: Number(product.suggested_sale_price_per_sellable_unit) || 0,
           batch_number: undefined,
           expiry_date: undefined,
         };
@@ -380,15 +338,19 @@ const ManagePurchaseItemsPage: React.FC = () => {
       setProductInputValue(product.name);
       // Set suggested prices if available
       if (product.latest_cost_per_sellable_unit) {
-        const cost = Number(product.latest_cost_per_sellable_unit);
-        setUnitCost(cost);
-        // Calculate sale price based on global profit rate
+        const costPerSellable = Number(product.latest_cost_per_sellable_unit);
+        const unitsPerStocking = product.units_per_stocking_unit && product.units_per_stocking_unit > 0 ? product.units_per_stocking_unit : 1;
+        const costPerStocking = costPerSellable * unitsPerStocking;
+        setUnitCost(costPerStocking);
+        // Calculate prices using profit percentage
         const globalProfitRate = settings?.default_profit_rate ?? 20;
-        const calculatedSalePrice = cost * (1 + globalProfitRate / 100);
-        setSalePrice(calculatedSalePrice);
-      }
-      if (product.suggested_sale_price_per_sellable_unit) {
-        setSalePrice(Number(product.suggested_sale_price_per_sellable_unit));
+        const profitFactor = globalProfitRate / 100;
+        // Sellable unit price: (cost per stocking * profit% / 100) / units_per_stocking
+        const sellablePrice = (costPerStocking * profitFactor) / unitsPerStocking;
+        setSalePrice(roundToThreeDecimals(sellablePrice));
+        // Stocking unit price: cost per stocking * profit% / 100
+        const stockingPrice = costPerStocking * profitFactor;
+        setSalePriceStockingUnit(roundToThreeDecimals(stockingPrice));
       }
     } else {
       setSkuInput('');
@@ -420,11 +382,24 @@ const ManagePurchaseItemsPage: React.FC = () => {
   // Handle unit cost change and calculate sale price
   const handleUnitCostChange = useCallback((newCost: number) => {
     setUnitCost(newCost);
-    // Calculate sale price based on global profit rate
+    // Calculate prices using profit percentage
     const globalProfitRate = settings?.default_profit_rate ?? 20;
-    const calculatedSalePrice = newCost * (1 + globalProfitRate / 100);
-    setSalePrice(calculatedSalePrice);
-  }, [settings?.default_profit_rate]);
+    const profitFactor = globalProfitRate / 100;
+    const unitsPerStocking = selectedProduct?.units_per_stocking_unit && selectedProduct.units_per_stocking_unit > 0 ? selectedProduct.units_per_stocking_unit : 1;
+    // Sellable unit price
+    const costPerSellable = newCost  / unitsPerStocking;
+    const profitablePricePerSellable = costPerSellable * profitFactor;
+    const sellablePrice = costPerSellable + profitablePricePerSellable;
+    
+    console.log(newCost, 'newCost')
+    console.log(profitFactor, 'profitFactor')
+    console.log(unitsPerStocking, 'unitsPerStocking')
+    console.log(costPerSellable, 'costPerSellable')
+    setSalePrice(roundToThreeDecimals(sellablePrice));
+
+    // Stocking unit price
+    setSalePriceStockingUnit(roundToThreeDecimals(sellablePrice * unitsPerStocking));
+  }, [settings?.default_profit_rate, selectedProduct?.units_per_stocking_unit]);
 
   // Handle autocomplete Enter key for SKU search
   const handleAutocompleteKeyDown = useCallback(async (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -479,13 +454,14 @@ const ManagePurchaseItemsPage: React.FC = () => {
       product_id: selectedProduct.id,
       quantity,
       unit_cost: unitCost,
-      sale_price: salePrice,
+      sale_price: salePrice !== undefined ? roundToThreeDecimals(salePrice) : 0,
+      sale_price_stocking_unit: salePriceStockingUnit !== undefined ? roundToThreeDecimals(salePriceStockingUnit) : undefined,
       batch_number: batchNumber || undefined,
       expiry_date: expiryDate || undefined,
     };
 
     addItemMutation.mutate(data);
-  }, [selectedProduct, quantity, unitCost, salePrice, batchNumber, expiryDate, addItemMutation, t]);
+  }, [selectedProduct, quantity, unitCost, salePrice, salePriceStockingUnit, batchNumber, expiryDate, addItemMutation, t]);
 
   // Calculate summary values
   const summary = useMemo(() => {
@@ -550,6 +526,30 @@ const ManagePurchaseItemsPage: React.FC = () => {
     searchProducts('');
   }, [searchProducts]);
 
+  // Load unit names for items' products if not present in API response
+  useEffect(() => {
+    const ids = purchase?.items?.map(i => i.product_id) || [];
+    const uniqueIds = Array.from(new Set(ids));
+    if (uniqueIds.length === 0) {
+      setProductUnits({});
+      return;
+    }
+    (async () => {
+      try {
+        const products = await productService.getProductsByIds(uniqueIds);
+        const map: Record<number, { stocking_unit_name?: string | null; sellable_unit_name?: string | null }> = {};
+        products.forEach(p => {
+          map[p.id] = {
+            stocking_unit_name: p.stocking_unit_name ?? null,
+            sellable_unit_name: p.sellable_unit_name ?? null,
+          };
+        });
+        setProductUnits(map);
+      } catch {
+        // Silent fail; UI will fallback to translations
+      }
+    })();
+  }, [purchase?.items]);
   // Cleanup timeouts on unmount
   useEffect(() => {
     const timeoutRefs = updateTimeoutRefs.current;
@@ -687,7 +687,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
                 {t('purchases:viewSummary')}
               </Button>
             </DialogTrigger>
-            <PurchaseSummaryDialog summary={summary} purchase={purchase} t={t} />
+            <PurchaseSummaryDialog summary={summary} supplierName={purchase.supplier_name} />
           </Dialog>
           
           {/* Status Select */}
@@ -733,7 +733,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
             {/* Product Selection */}
-            <div className="space-y-2 lg:col-span-2">
+            <div className="space-y-2 lg:col-span-3 md:col-span-2">
               <Label>{t('products:productName')}</Label>
               <Autocomplete
                 options={productOptions}
@@ -800,89 +800,140 @@ const ManagePurchaseItemsPage: React.FC = () => {
               </Typography>
             </div>
 
-            {/* SKU Input */}
-            <div className="space-y-2">
-              <Label>{t('products:sku')}</Label>
-              <SelectOnFocusInput
-                value={skuInput}
-                onChange={(e) => setSkuInput(e.target.value)}
-                onKeyPress={handleSkuKeyPress}
-                placeholder={t('products:enterSkuAndPressEnter')}
-              />
-            </div>
+            {selectedProduct && (
+              <>
+                {/* SKU Input */}
+                <div className="space-y-2 md:col-span-1 lg:col-span-1">
+                  <Label>{t('products:sku')}</Label>
+                  <SelectOnFocusInput
+                    value={skuInput}
+                    onChange={(e) => setSkuInput(e.target.value)}
+                    onKeyPress={handleSkuKeyPress}
+                    placeholder={t('products:enterSkuAndPressEnter')}
+                  />
+                </div>
 
-                         {/* Quantity */}
-             <div className="space-y-2">
-               <Label>{t('purchases:quantity')}</Label>
-               <SelectOnFocusInput
-                 type="number"
-                 value={quantity}
-                 onChange={(e) => setQuantity(Number(e.target.value))}
-                 min={1}
-                 step={1}
-                 className="w-full"
-               />
-             </div>
+                {/* Selected Product Summary */}
+                <div className="lg:col-span-2 md:col-span-2 col-span-1" >
+                  <div className="p-2 text-right ">
+                    <div className="text-xs text-gray-600 dark:text-gray-300">
+                      {selectedProduct.stocking_unit_name && selectedProduct.sellable_unit_name ? (
+                        <span>
+                          1 {selectedProduct.stocking_unit_name} = {selectedProduct.units_per_stocking_unit || 1} {selectedProduct.sellable_unit_name}
+                        </span>
+                      ) : (
+                        <span>
+                          1 Stocking Unit = {selectedProduct.units_per_stocking_unit || 1} Sellable Units
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
-             {/* Unit Cost */}
-             <div className="space-y-2">
-               <Label>{t('purchases:unitCost')}</Label>
-               <SelectOnFocusInput
-                 type="number"
-                 value={unitCost}
-                 onChange={(e) => handleUnitCostChange(Number(e.target.value))}
-                 min={0}
-                 step={0.01}
-                 className="w-full"
-               />
-             </div>
+                {/* Quantity */}
+                <div className="space-y-2">
+                  <Label>{t('purchases:quantity')} {selectedProduct?.stocking_unit_name ? `(${selectedProduct.stocking_unit_name})` : ''}</Label>
+                  <SelectOnFocusInput
+                    type="number"
+                    value={quantity}
+                    onChange={(e) => setQuantity(Number(e.target.value))}
+                    min={1}
+                    step={1}
+                    className="w-full"
+                  />
+                </div>
 
-             {/* Sale Price */}
-             <div className="space-y-2">
-               <Label>{t('purchases:salePrice')}</Label>
-               <SelectOnFocusInput
-                 type="number"
-                 value={salePrice || ''}
-                 onChange={(e) => setSalePrice(e.target.value ? Number(e.target.value) : undefined)}
-                 min={0}
-                 step={0.01}
-                 className="w-full"
-               />
-             </div>
+                {/* Unit Cost */}
+                <div className="space-y-2">
+                  <Label>{t('purchases:unitCost')} {selectedProduct?.stocking_unit_name ? `(${selectedProduct.stocking_unit_name})` : ''}</Label>
+                  <SelectOnFocusInput
+                    type="number"
+                    value={unitCost}
+                    onChange={(e) => handleUnitCostChange(Number(e.target.value))}
+                    min={0}
+                    step={0.01}
+                    className="w-full"
+                  />
+                </div>
 
-             {/* Batch Number */}
-             <div className="space-y-2">
-               <Label>{t('purchases:batchNumber')}</Label>
-               <SelectOnFocusInput
-                 value={batchNumber}
-                 onChange={(e) => setBatchNumber(e.target.value)}
-                 className="w-full"
-               />
-             </div>
+                {/* Sale Price (per SELLABLE unit) - Required */}
+                <div className="space-y-2">
+                  <Label>
+                    {t('purchases:salePrice')} <span className="text-red-500">*</span>
+                  </Label>
+                  <SelectOnFocusInput
+                    type="number"
+                    value={salePrice || ''}
+                    onChange={(e) => setSalePrice(e.target.value ? Number(e.target.value) : undefined)}
+                    min={0}
+                    step={0.001}
+                    required
+                    aria-invalid={salePrice === undefined}
+                    className={`w-full ${salePrice === undefined ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                  />
+                  <div className="text-xs">
+                    {selectedProduct?.sellable_unit_name && (
+                      <span className="text-gray-500">({selectedProduct.sellable_unit_name})</span>
+                    )}
+                    {salePrice === undefined && (
+                      <span className="text-red-500 ms-2">{t('common:required') || 'Required'}</span>
+                    )}
+                  </div>
+                </div>
 
-            {/* Expiry Date */}
-            <div className="space-y-2">
-              <Label>{t('purchases:expiryDate')}</Label>
-              <Input
-                type="date"
-                value={expiryDate}
-                onChange={(e) => setExpiryDate(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-              />
-            </div>
+                {/* Sale Price (per STOCKING unit) - Optional */}
+                <div className="space-y-2">
+                  <Label>{t('purchases:salePrice')}</Label>
+                  <SelectOnFocusInput
+                    type="number"
+                    value={salePriceStockingUnit || ''}
+                    onChange={(e) => setSalePriceStockingUnit(e.target.value ? Number(e.target.value) : undefined)}
+                    min={0}
+                    step={0.001}
+                    className="w-full"
+                  />
+                  {selectedProduct?.stocking_unit_name && (
+                    <div className="text-xs text-gray-500">({selectedProduct.stocking_unit_name})</div>
+                  )}
+                </div>
+
+                {/* Batch Number */}
+                <div className="space-y-2">
+                  <Label>{t('purchases:batchNumber')}</Label>
+                  <SelectOnFocusInput
+                    value={batchNumber}
+                    onChange={(e) => setBatchNumber(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+
+                {/* Expiry Date */}
+                <div className="space-y-2">
+                  <Label>{t('purchases:expiryDate')}</Label>
+                  <InstantTextField
+                    type="date"
+                    value={expiryDate}
+                    placeholder="yyyy-mm-dd"
+                    onChangeValue={(val) => setExpiryDate(String(val))}
+                  />
+                </div>
+              </>
+            )}
           </div>
 
-          <div className="flex justify-end mt-4">
-            <Button
-              onClick={handleAddItem}
-              disabled={!selectedProduct || addItemMutation.isPending}
-              className="flex items-center gap-2"
-            >
-              {addItemMutation.isPending && <CircularProgress size={16} />}
-              <Plus className="h-4 w-4" />
-              {t('purchases:addItem')}
-            </Button>
-          </div>
+          {selectedProduct && (
+            <div className="flex justify-end mt-4">
+              <Button
+                onClick={handleAddItem}
+                disabled={salePrice === undefined || addItemMutation.isPending}
+                className="flex items-center gap-2"
+              >
+                {addItemMutation.isPending && <CircularProgress size={16} />}
+                <Plus className="h-4 w-4" />
+                {t('purchases:addItem')}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
       )}
@@ -936,12 +987,11 @@ const ManagePurchaseItemsPage: React.FC = () => {
                        </div>
                      </div>
                      <div className="text-center w-full">
-                       <EditablePurchaseItemField
+                       <InstantTextField
                          value={item.batch_number || ''}
-                         onSave={(newValue) => handleItemUpdate(item.id, 'batch_number', newValue)}
+                         onChangeValue={(newValue) => handleItemUpdate(item.id, 'batch_number', newValue)}
                          type="text"
                          placeholder="—"
-                         isLoading={updateItemMutation.isPending}
                          disabled={isReadOnly}
                        />
                        <Typography variant="caption" color="text.secondary" className="block mt-1">
@@ -949,63 +999,63 @@ const ManagePurchaseItemsPage: React.FC = () => {
                        </Typography>
                      </div>
                      <div className="text-center w-full">
-                       <EditablePurchaseItemField
+                       <InstantTextField
                          value={item.quantity}
-                         onSave={(newValue) => handleItemUpdate(item.id, 'quantity', newValue)}
+                         onChangeValue={(newValue) => { if (newValue === '') return; handleItemUpdate(item.id, 'quantity', Number(newValue)); }}
                          type="number"
                          min={1}
                          step={1}
-                         formatDisplay={(value) => formatNumber(Number(value), 0)}
-                         parseValue={(value) => Number(value)}
-                         isLoading={updateItemMutation.isPending}
                          disabled={isReadOnly}
                        />
                        <Typography variant="caption" color="text.secondary" className="block mt-1">
-                         {t('purchases:quantity')}
+                         {t('purchases:quantity')} {productUnits[item.product_id]?.stocking_unit_name ? `(${productUnits[item.product_id]?.stocking_unit_name})` : ''}
                        </Typography>
                      </div>
                      <div className="text-center w-full">
-                       <EditablePurchaseItemField
+                       <InstantTextField
                          value={item.unit_cost}
-                         onSave={(newValue) => handleItemUpdate(item.id, 'unit_cost', newValue)}
+                         onChangeValue={(newValue) => { if (newValue === '') return; handleItemUpdate(item.id, 'unit_cost', Number(newValue)); }}
                          type="number"
                          min={0}
                          step={0.01}
-                         formatDisplay={(value) => formatCurrency(Number(value))}
-                         parseValue={(value) => Number(value)}
-                         isLoading={updateItemMutation.isPending}
                          disabled={isReadOnly}
                        />
                        <Typography variant="caption" color="text.secondary" className="block mt-1">
-                         {t('purchases:unitCost')}
+                         {t('purchases:unitCost')} {productUnits[item.product_id]?.stocking_unit_name ? `(${productUnits[item.product_id]?.stocking_unit_name})` : ''}
                        </Typography>
                      </div>
                      <div className="text-center w-full">
-                       <EditablePurchaseItemField
-                         value={item.sale_price || 0}
-                         onSave={(newValue) => handleItemUpdate(item.id, 'sale_price', newValue)}
+                       <InstantTextField
+                         value={item.sale_price ?? ''}
+                         onChangeValue={(newValue) => { if (newValue === '') return; const rounded = roundToThreeDecimals(Number(newValue)); handleItemUpdate(item.id, 'sale_price', rounded); }}
                          type="number"
                          min={0}
-                         step={0.01}
-                         formatDisplay={(value) => Number(value) > 0 ? formatCurrency(Number(value)) : '—'}
-                         parseValue={(value) => Number(value) || 0}
-                         isLoading={updateItemMutation.isPending}
+                         step={0.001}
                          disabled={isReadOnly}
                        />
                        <Typography variant="caption" color="text.secondary" className="block mt-1">
-                         {t('purchases:salePrice')}
+                         {t('purchases:salePrice')} {productUnits[item.product_id]?.sellable_unit_name ? `(${productUnits[item.product_id]?.sellable_unit_name})` : `(${t('products:sellableUnit')})`}
                        </Typography>
                      </div>
                      <div className="text-center w-full">
-                       <EditablePurchaseItemField
+                       <InstantTextField
+                         value={item.sale_price_stocking_unit ?? ''}
+                         onChangeValue={(newValue) => { if (newValue === '') return; const rounded = roundToThreeDecimals(Number(newValue)); handleItemUpdate(item.id, 'sale_price_stocking_unit', rounded); }}
+                         type="number"
+                         min={0}
+                         step={0.001}
+                         disabled={isReadOnly}
+                       />
+                       <Typography variant="caption" color="text.secondary" className="block mt-1">
+                         {t('purchases:salePrice')} ({productUnits[item.product_id]?.stocking_unit_name || t('products:stockingUnit')})
+                       </Typography>
+                     </div>
+                     <div className="text-center w-full">
+                       <InstantTextField
                          value={item.expiry_date || ''}
-                         onSave={(newValue) => handleItemUpdate(item.id, 'expiry_date', newValue)}
+                         onChangeValue={(newValue) => handleItemUpdate(item.id, 'expiry_date', String(newValue) || null)}
                          type="date"
-                         placeholder="—"
-                         min={new Date().toISOString().split('T')[0]}
-                         formatDisplay={(value) => value ? formatDate(value) : '—'}
-                         parseValue={(value) => value}
-                         isLoading={updateItemMutation.isPending}
+                         placeholder="yyyy-mm-dd"
                          disabled={isReadOnly}
                        />
                        <Typography variant="caption" color="text.secondary" className="block mt-1">

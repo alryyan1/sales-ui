@@ -66,7 +66,7 @@
     "stockingUnitPlaceholder": "وحدة التخزين",
     "sellableUnitPlaceholder": "وحدة البيع",
     "stockingUnitName": "اسم وحدة التخزين",
-    "unitsPerStockingUnit": "عدد الشرائط",
+    "unitsPerStockingUnit": "عدد الوحدات في وحدة التخزين",
     "initialStockDesc": "الكمية الأولية في المخزون بالشرائط، مثال: 100",
     "initialStockQuantity": "الكمية الأولية في المخزون بالشرائط",
     "initialStockDescription": "الكمية الأولية في المخزون بالشرائط، مثال: 100",

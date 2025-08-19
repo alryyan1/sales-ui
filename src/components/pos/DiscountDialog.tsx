@@ -34,6 +34,7 @@ interface DiscountDialogProps {
   currentAmount: number;
   currentType: 'percentage' | 'fixed';
   maxAmount: number; // Subtotal - the maximum discount value
+  dueAmount?: number; // Remaining due; discount must not exceed this
   onSave: (amount: number, type: 'percentage' | 'fixed') => void;
 }
 
@@ -43,6 +44,7 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
   currentAmount,
   currentType,
   maxAmount,
+  dueAmount = Infinity,
   onSave,
 }) => {
   const { t } = useTranslation(['pos', 'common']);
@@ -83,6 +85,16 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
 
     if (discountType === 'fixed' && numericAmount > maxAmount) {
       setError(t('pos:discountCannotExceedSubtotal'));
+      return false;
+    }
+
+    // Additional validation: discount should not exceed remaining due
+    const computedDiscount = discountType === 'percentage'
+      ? preciseCalculation(maxAmount, numericAmount / 100, 'multiply', 2)
+      : numericAmount;
+    const maxByDue = Math.max(0, dueAmount);
+    if (computedDiscount > maxByDue) {
+      setError('Discount cannot exceed remaining due.');
       return false;
     }
 
@@ -127,7 +139,8 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
     onClose();
   };
 
-  const maxAllowedValue = discountType === 'percentage' ? 100 : maxAmount;
+  const cappedMaxByDue = Math.max(0, dueAmount);
+  const maxAllowedValue = discountType === 'percentage' ? 100 : Math.min(maxAmount, cappedMaxByDue);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -163,6 +176,7 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
               }
             </Label>
             <Input
+              onFocus={(e) => e.target.select()}
               id="discountAmount"
               type="number"
               step="0.01"
@@ -170,13 +184,19 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
               max={maxAllowedValue}
               value={discountAmount}
               onChange={(e) => handleAmountChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSave();
+                }
+              }}
               placeholder="0"
               className={error ? "border-red-500" : ""}
             />
             <div className="text-xs text-gray-500 mt-1">
               {discountType === 'percentage' 
                 ? t('pos:maxPercentage', { max: 100 })
-                : t('pos:maxAmount', { max: formatNumber(maxAmount) })
+                : `${t('pos:maxAmount', { max: formatNumber(Math.min(maxAmount, cappedMaxByDue)) })}`
               }
             </div>
           </div>

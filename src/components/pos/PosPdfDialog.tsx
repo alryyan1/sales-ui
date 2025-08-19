@@ -1,5 +1,5 @@
 // src/components/pos/PosPdfDialog.tsx
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 // MUI Components
@@ -30,6 +30,8 @@ import {
 
 // Services
 import { generateDailySalesPdf } from "../../services/exportService";
+import userService from "@/services/userService";
+import { useAuth } from "@/context/AuthContext";
 
 interface PosPdfDialogProps {
   open: boolean;
@@ -45,6 +47,10 @@ export const PosPdfDialog: React.FC<PosPdfDialogProps> = ({ open, onClose }) => 
     new Date().toISOString().split('T')[0]
   );
   const [loading, setLoading] = useState(false);
+  const { user: currentUser } = useAuth();
+  const [users, setUsers] = useState<{id:number; name:string}[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<number | ''>('');
+  const [loadingUsers, setLoadingUsers] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleGeneratePdf = async () => {
@@ -54,7 +60,12 @@ export const PosPdfDialog: React.FC<PosPdfDialogProps> = ({ open, onClose }) => 
     try {
       switch (reportType) {
         case 'daily-sales':
-          await generateDailySalesPdf(selectedDate);
+          {
+            const params = new URLSearchParams();
+            if (selectedDate) params.append('date', selectedDate);
+            if (selectedUserId) params.append('user_id', String(selectedUserId));
+            await generateDailySalesPdf(params.toString());
+          }
           break;
         case 'current-sale':
           // TODO: Implement current sale PDF generation
@@ -80,6 +91,25 @@ export const PosPdfDialog: React.FC<PosPdfDialogProps> = ({ open, onClose }) => 
     // In the future, this could open a preview modal or generate a different format
     await handleGeneratePdf();
   };
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoadingUsers(true);
+        const page1 = await userService.getUsers(1, '', '', 100);
+        const minimal = (page1.data ?? page1.items ?? []).map((u:any) => ({ id: u.id, name: u.name }));
+        setUsers(minimal);
+        if (currentUser && (selectedUserId === '' || selectedUserId == null)) {
+          setSelectedUserId(currentUser.id);
+        }
+      } catch (e) {
+        // ignore
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+    fetchUsers();
+  }, [currentUser]);
 
   const getReportTypeLabel = (type: ReportType): string => {
     switch (type) {
@@ -211,6 +241,24 @@ export const PosPdfDialog: React.FC<PosPdfDialogProps> = ({ open, onClose }) => 
               variant="outlined"
               size="medium"
             />
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                {t('pos:selectUser', 'Select User')}
+              </Typography>
+              <FormControl fullWidth>
+                <InputLabel>{t('pos:selectUser', 'Select User')}</InputLabel>
+                <Select
+                  label={t('pos:selectUser', 'Select User')}
+                  value={selectedUserId === '' ? '' : selectedUserId}
+                  onChange={(e) => setSelectedUserId(Number(e.target.value))}
+                >
+                  <MenuItem value="">{t('pos:allUsers', 'All Users')}</MenuItem>
+                  {users.map(u => (
+                    <MenuItem key={u.id} value={u.id}>{u.name}{currentUser?.id === u.id ? ` (${t('pos:you','You')})` : ''}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
           </Box>
         )}
 

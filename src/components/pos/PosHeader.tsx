@@ -156,7 +156,13 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
     try {
       setLoadingClients(true);
       const response = await clientService.getClients();
-      setClients(response.data || []);
+      // Ensure selected client (if any) is included in options so Autocomplete can display it
+      const fetched = response.data || [];
+      if (selectedClient && !fetched.find(c => c.id === selectedClient.id)) {
+        setClients([selectedClient, ...fetched]);
+      } else {
+        setClients(fetched);
+      }
     } catch (error) {
       console.error('Failed to load clients:', error);
       setClients([]);
@@ -168,7 +174,18 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
   // Load clients on mount
   useEffect(() => {
     loadClients();
+    // We intentionally don't include loadClients in deps to avoid re-fetch loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // When selectedClient changes from parent, ensure it's present in options
+  useEffect(() => {
+    if (selectedClient && !clients.find(c => c.id === selectedClient.id)) {
+      setClients(prev => [selectedClient, ...prev]);
+    }
+    // We intentionally don't include clients in deps to avoid infinite loop when mutating list
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClient]);
 
   const handleAddProducts = async () => {
     if (selectedProducts.length === 0) return;
@@ -246,6 +263,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
                 options={clients}
                 getOptionLabel={(option) => `${option.name} ${option.phone ? `(${option.phone})` : ''}`}
                 value={selectedClient}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
                 onChange={(_, newValue) => onClientChange?.(newValue)}
                 loading={loadingClients}
                 renderInput={(params) => (
@@ -301,7 +319,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
                    options={searchResults}
                    
                    value={selectedProducts}
-                   onChange={(event, newValue) => {
+                   onChange={(_, newValue) => {
                      // Filter out string values (freeSolo input)
                      const products = newValue.filter(item => typeof item !== 'string') as Product[];
                      setSelectedProducts(products);
@@ -314,7 +332,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
                      return `${option.name} (${option.sku || 'N/A'})`;
                    }}
                    inputValue={searchInput}
-                   onInputChange={(event, newInputValue, reason) => {
+                   onInputChange={(_, newInputValue, reason) => {
                      // Only update search input if it's a user typing or clearing
                      // Don't clear when selecting an option
                      if (reason === 'input' || reason === 'clear') {
@@ -374,22 +392,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
         {/* Right side - Action Buttons */}
         <div className="flex items-center space-x-2">
           {/* User Filter Button */}
-          <Button
-            variant="default"
-            size="default"
-            onClick={onToggleUserFilter}
-            className={`relative group px-3 py-1.5 cursor-pointer ${
-              filterByCurrentUser 
-                ? 'bg-blue-500 hover:bg-blue-600' 
-                : 'bg-gray-500 hover:bg-gray-600'
-            } disabled:bg-gray-300 disabled:text-gray-500`}
-            title={filterByCurrentUser ? t('pos:showMySales') : t('pos:showAllSales')}
-          >
-            <Users className="h-4 w-4" />
-            <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-              {filterByCurrentUser ? t('pos:showAllSales') : t('pos:showMySales')}
-            </span>
-          </Button>
+        
 
           {/* Calculator Button */}
           <Button

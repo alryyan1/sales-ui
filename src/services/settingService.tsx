@@ -15,6 +15,7 @@ export interface AppSettings {
     invoice_prefix: string;
     purchase_order_prefix: string;
     default_profit_rate: number; // Default profit rate percentage
+    timezone: string;
     
     // WhatsApp API Configuration
     whatsapp_enabled: boolean;
@@ -24,6 +25,8 @@ export interface AppSettings {
     whatsapp_default_phone: string;
     
     // Add other settings as defined in your config
+    // UI preferences
+    sidebar_layout?: boolean; // optional flag to switch between header vs sidebar layout
 }
 
 // Type for the update payload (can be partial)
@@ -57,6 +60,25 @@ const settingService = {
             return response.data.data; // Return the updated settings
         } catch (error) {
             console.error('Error updating settings:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Upload company logo image. Returns updated settings with new company_logo_url.
+     */
+    uploadLogo: async (file: File): Promise<AppSettings> => {
+        const form = new FormData();
+        form.append('logo', file);
+        try {
+            const response = await apiClient.post<{ message: string; url: string; data: AppSettings }>(
+                '/admin/settings/logo',
+                form,
+                { headers: { 'Content-Type': 'multipart/form-data' } }
+            );
+            return response.data.data;
+        } catch (error) {
+            console.error('Error uploading logo:', error);
             throw error;
         }
     },

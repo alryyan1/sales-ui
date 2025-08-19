@@ -18,11 +18,13 @@ import {
   PosPdfDialog,
   InvoicePdfDialog,
   ThermalInvoiceDialog,
+  BatchSelectionDialog,
 } from "../components/pos";
 
 // Types
 import { Product } from "../services/productService";
 import saleService from "../services/saleService";
+import clientService from "../services/clientService";
 import { preciseCalculation } from "../constants";
 import { generateDailySalesPdf } from "../services/exportService";
 import { useAuth } from "@/context/AuthContext";
@@ -42,6 +44,13 @@ const PosPage: React.FC = () => {
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [thermalDialogOpen, setThermalDialogOpen] = useState(false);
+  // Trigger enter-to-submit in PaymentDialog
+  const [paymentSubmitTrigger, setPaymentSubmitTrigger] = useState(0);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  
+  // Batch selection state
+  const [batchSelectionOpen, setBatchSelectionOpen] = useState(false);
+  const [batchSelectionProduct, setBatchSelectionProduct] = useState<Product | null>(null);
   const [deletingItems, setDeletingItems] = useState<Set<number>>(new Set());
   const [updatingItems, setUpdatingItems] = useState<Set<number>>(new Set());
   const [loadingSaleId, setLoadingSaleId] = useState<number | null>(null);
@@ -139,6 +148,32 @@ const PosPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterByCurrentUser, selectedDate, user]);
 
+  // Global Enter key behavior on POS page
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Ignore if focused element is an input/textarea/select to avoid interfering with typing,
+      // unless PaymentDialog is already open (then we want Enter to add payment)
+      const activeTag = (document.activeElement?.tagName || '').toLowerCase();
+      const inFormField = ['input', 'textarea', 'select'].includes(activeTag);
+
+      if (e.key === 'Enter') {
+        if (!paymentDialogOpen) {
+          if (!inFormField) {
+            // Open payment dialog
+            setPaymentDialogOpen(true);
+            e.preventDefault();
+          }
+        } else {
+          // Trigger submit inside PaymentDialog
+          setPaymentSubmitTrigger((v) => v + 1);
+          e.preventDefault();
+        }
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
   const showToast = (message: string, severity: 'success' | 'error') => {
     if (severity === 'success') {
       toast.success(message);
@@ -148,6 +183,19 @@ const PosPage: React.FC = () => {
   };
 
   const addToCurrentSale = async (product: Product) => {
+    // Check if product has multiple batches
+    if (product.available_batches && product.available_batches.length > 1) {
+      // Show batch selection dialog
+      setBatchSelectionProduct(product);
+      setBatchSelectionOpen(true);
+      return;
+    }
+    
+    // If only one batch or no batches, proceed with normal flow
+    await addProductToSale(product);
+  };
+
+  const addProductToSale = async (product: Product, selectedBatchId?: number | null) => {
     // Always ensure we have a sale on the backend before adding items
     if (!selectedSale) {
       // Create an empty sale first
@@ -242,7 +290,7 @@ const PosPage: React.FC = () => {
           
           const updatedItems: CartItem[] = (updatedSale.items || []).map((item: import('../services/saleService').SaleItem) => ({
             id: item.id,
-            product: {
+            product: item.product || {
               id: item.product_id,
               name: item.product_name || 'Unknown Product',
               sku: item.product_sku || 'N/A',
@@ -256,7 +304,10 @@ const PosPage: React.FC = () => {
             } as Product,
             quantity: item.quantity,
             unitPrice: Number(item.unit_price),
-            total: Number(item.total_price || item.quantity * Number(item.unit_price))
+            total: Number(item.total_price || item.quantity * Number(item.unit_price)),
+            selectedBatchId: item.purchase_item_id || null,
+            selectedBatchNumber: item.batch_number_sold || null,
+            selectedBatchExpiryDate: item.purchaseItemBatch?.expiry_date || null
           }));
           
           setCurrentSaleItems(updatedItems);
@@ -305,7 +356,8 @@ const PosPage: React.FC = () => {
           const itemData = {
             product_id: product.id,
             quantity: 1,
-            unit_price: product.last_sale_price_per_sellable_unit || product.suggested_sale_price_per_sellable_unit || 0
+            unit_price: product.last_sale_price_per_sellable_unit || product.suggested_sale_price_per_sellable_unit || 0,
+            purchase_item_id: selectedBatchId || null
           };
 
           const response = await saleService.addSaleItem(finalTransformedSale.id, itemData);
@@ -399,7 +451,8 @@ const PosPage: React.FC = () => {
       const itemData = {
         product_id: product.id,
         quantity: 1,
-        unit_price: product.last_sale_price_per_sellable_unit || product.suggested_sale_price_per_sellable_unit || 0
+        unit_price: product.last_sale_price_per_sellable_unit || product.suggested_sale_price_per_sellable_unit || 0,
+        purchase_item_id: selectedBatchId || null
       };
 
       const response = await saleService.addSaleItem(selectedSale!.id, itemData);
@@ -411,9 +464,9 @@ const PosPage: React.FC = () => {
       }
       
       // Update the current sale items with the new data from backend
-      const items: CartItem[] = (response.sale.items || []).map(item => ({
+      const items: CartItem[] = (response.sale.items || []).map((item: import('../services/saleService').SaleItem) => ({
         id: item.id,
-        product: {
+        product: item.product || {
           id: item.product_id,
           name: item.product_name || 'Unknown Product',
           sku: item.product_sku || 'N/A',
@@ -427,7 +480,10 @@ const PosPage: React.FC = () => {
         } as Product,
         quantity: item.quantity,
         unitPrice: Number(item.unit_price),
-        total: Number(item.total_price || item.quantity * Number(item.unit_price))
+        total: Number(item.total_price || item.quantity * Number(item.unit_price)),
+        selectedBatchId: item.purchase_item_id || null,
+        selectedBatchNumber: item.batch_number_sold || null,
+        selectedBatchExpiryDate: item.purchaseItemBatch?.expiry_date || null
       }));
       
       setCurrentSaleItems(items);
@@ -560,11 +616,14 @@ const PosPage: React.FC = () => {
 
     // Now add multiple products to the selected sale
     try {
-      const itemsData = products.map(product => ({
-        product_id: product.id,
-        quantity: 1, // Default quantity
-        unit_price: product.suggested_sale_price_per_sellable_unit || 0
-      }));
+      const itemsData = products.map(product => {
+        const unitPrice = (product.last_sale_price_per_sellable_unit ?? product.suggested_sale_price_per_sellable_unit ?? 0);
+        return {
+          product_id: product.id,
+          quantity: 1, // Default quantity
+          unit_price: Number(unitPrice)
+        };
+      });
 
       const result = await saleService.addMultipleSaleItems(selectedSale!.id, itemsData);
       
@@ -585,9 +644,9 @@ const PosPage: React.FC = () => {
         notes: result.sale.notes,
         created_at: result.sale.created_at,
         updated_at: result.sale.updated_at,
-        items: result.sale.items?.map(item => ({
+        items: result.sale.items?.map((item: import('../services/saleService').SaleItem) => ({
           id: item.id,
-          product: {
+          product: item.product || {
             id: item.product_id,
             name: item.product_name || 'Unknown Product',
             sku: item.product_sku || 'N/A',
@@ -601,7 +660,10 @@ const PosPage: React.FC = () => {
           } as Product,
           quantity: item.quantity,
           unitPrice: Number(item.unit_price),
-          total: Number(item.total_price || item.quantity * Number(item.unit_price))
+          total: Number(item.total_price || item.quantity * Number(item.unit_price)),
+          selectedBatchId: item.purchase_item_id || null,
+          selectedBatchNumber: item.batch_number_sold || null,
+          selectedBatchExpiryDate: item.purchaseItemBatch?.expiry_date || null
         })) || [],
         payments: result.sale.payments?.map(payment => ({
           id: payment.id,
@@ -624,7 +686,10 @@ const PosPage: React.FC = () => {
         product: item.product,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
-        total: item.total
+        total: item.total,
+        selectedBatchId: item.selectedBatchId,
+        selectedBatchNumber: item.selectedBatchNumber,
+        selectedBatchExpiryDate: item.selectedBatchExpiryDate
       }));
       
       setCurrentSaleItems(updatedItems);
@@ -672,9 +737,9 @@ const PosPage: React.FC = () => {
         const updatedSale = await saleService.updateSaleItem(selectedSale.id, itemToUpdate.id, itemData);
         
         // Update the current sale items with the new data from backend
-        const items: CartItem[] = (updatedSale.items || []).map(item => ({
+        const items: CartItem[] = (updatedSale.items || []).map((item: import('../services/saleService').SaleItem) => ({
           id: item.id,
-          product: {
+          product: item.product || {
             id: item.product_id,
             name: item.product_name || 'Unknown Product',
             sku: item.product_sku || 'N/A',
@@ -688,7 +753,10 @@ const PosPage: React.FC = () => {
           } as Product,
           quantity: item.quantity,
           unitPrice: Number(item.unit_price),
-          total: Number(item.total_price || item.quantity * Number(item.unit_price))
+          total: Number(item.total_price || item.quantity * Number(item.unit_price)),
+          selectedBatchId: item.purchase_item_id || null,
+          selectedBatchNumber: item.batch_number_sold || null,
+          selectedBatchExpiryDate: item.purchaseItemBatch?.expiry_date || null
         }));
         
         setCurrentSaleItems(items);
@@ -770,6 +838,103 @@ const PosPage: React.FC = () => {
         newSet.delete(productId);
         return newSet;
       });
+    }
+  };
+
+  const updateBatch = async (productId: number, batchId: number | null, batchNumber: string | null, expiryDate: string | null, unitPrice: number) => {
+    if (!selectedSale) return;
+    
+    try {
+      // Find the sale item to update
+      const saleItem = currentSaleItems.find(item => item.product.id === productId);
+      if (!saleItem || !saleItem.id) {
+        console.error('Sale item not found or has no ID');
+        return;
+      }
+
+      // Update the sale item with batch information
+      await saleService.updateSaleItem(selectedSale.id, saleItem.id, {
+        quantity: saleItem.quantity,
+        unit_price: unitPrice,
+        purchase_item_id: batchId
+      });
+
+      // Reload the sale to get updated data
+      const updatedSale = await saleService.getSale(selectedSale.id);
+      
+      // Update the current sale items with the new data
+      const updatedItems: CartItem[] = (updatedSale.items || []).map((item: import('../services/saleService').SaleItem) => ({
+        id: item.id,
+        product: item.product || {
+          id: item.product_id,
+          name: item.product_name || 'Unknown Product',
+          sku: item.product_sku || 'N/A',
+          suggested_sale_price_per_sellable_unit: Number(item.unit_price),
+          last_sale_price_per_sellable_unit: Number(item.unit_price),
+          stock_quantity: item.current_stock_quantity || 0,
+          stock_alert_level: item.stock_alert_level,
+          earliest_expiry_date: item.earliest_expiry_date,
+          current_stock_quantity: item.current_stock_quantity || 0,
+          sellable_unit_name: item.sellable_unit_name || 'Piece'
+        } as Product,
+        quantity: item.quantity,
+        unitPrice: Number(item.unit_price),
+        total: Number(item.total_price || item.quantity * Number(item.unit_price)),
+        selectedBatchId: item.purchase_item_id || null,
+        selectedBatchNumber: item.batch_number_sold || null,
+        selectedBatchExpiryDate: item.purchaseItemBatch?.expiry_date || null
+      }));
+      
+      setCurrentSaleItems(updatedItems);
+      
+      // Update the selected sale
+      const finalTransformedSale: Sale = {
+        id: updatedSale.id,
+        sale_order_number: updatedSale.sale_order_number,
+        client_id: updatedSale.client_id,
+        client_name: updatedSale.client_name,
+        user_id: updatedSale.user_id,
+        user_name: updatedSale.user_name,
+        sale_date: updatedSale.sale_date,
+        invoice_number: updatedSale.invoice_number,
+        status: updatedSale.status,
+        total_amount: Number(updatedSale.total_amount),
+        paid_amount: Number(updatedSale.paid_amount),
+        due_amount: Number(updatedSale.due_amount || 0),
+        notes: updatedSale.notes,
+        created_at: updatedSale.created_at,
+        updated_at: updatedSale.updated_at,
+        items: updatedItems,
+        payments: updatedSale.payments?.map((payment: import('../services/saleService').Payment) => ({
+          id: payment.id,
+          sale_id: payment.sale_id,
+          user_name: payment.user_name,
+          method: payment.method,
+          amount: Number(payment.amount),
+          payment_date: payment.payment_date,
+          reference_number: payment.reference_number || undefined,
+          notes: payment.notes || undefined,
+          created_at: payment.created_at
+        })) || [],
+      };
+      
+      setSelectedSale(finalTransformedSale);
+      
+      // Update today's sales list
+      setTodaySales(prevSales => 
+        prevSales.map(sale => 
+          sale.id === finalTransformedSale.id ? finalTransformedSale : sale
+        )
+      );
+      
+      // Trigger refresh for SaleSummaryColumn and PaymentDialog
+      setRefreshTrigger(prev => prev + 1);
+      
+      showToast(t('pos:batchUpdated'), 'success');
+      
+    } catch (error) {
+      console.error('Error updating batch:', error);
+      showToast(t('pos:batchUpdateFailed'), 'error');
     }
   };
 
@@ -919,13 +1084,6 @@ const PosPage: React.FC = () => {
     }
   };
 
-  const clearCurrentSale = () => {
-    setCurrentSaleItems([]);
-    // Reset payment state - now handled by SalePaymentCard
-    setDiscountAmount(0);
-    setDiscountType('fixed');
-    showToast(t('pos:saleCleared'), 'success');
-  };
 
   const handlePaymentComplete = async (errorMessage?: string) => {
     if (errorMessage) {
@@ -947,6 +1105,20 @@ const PosPage: React.FC = () => {
         // Refresh the sale data to get updated payment information
         const updatedSale = await saleService.getSale(selectedSale.id);
         
+        // Set selected client if present on sale
+        try {
+          if (updatedSale.client) {
+            setSelectedClient(updatedSale.client);
+          } else if (updatedSale.client_id) {
+            const client = await clientService.getClient(updatedSale.client_id);
+            setSelectedClient(client);
+          } else {
+            setSelectedClient(null);
+          }
+        } catch {
+          // ignore client fetch errors
+        }
+
         // Transform and update the selected sale with fresh data
         const transformedSale: Sale = {
           id: updatedSale.id,
@@ -1094,6 +1266,20 @@ const PosPage: React.FC = () => {
     try {
       // Fetch the latest sale data from the backend
       const latestSale = await saleService.getSale(sale.id);
+
+      // Set selected client from latest sale if available
+      try {
+        if (latestSale.client) {
+          setSelectedClient(latestSale.client);
+        } else if (latestSale.client_id) {
+          const client = await clientService.getClient(latestSale.client_id);
+          setSelectedClient(client);
+        } else {
+          setSelectedClient(null);
+        }
+      } catch {
+        // ignore client fetch errors
+      }
       
       // Transform the backend sale to POS format
       const transformedSale: Sale = {
@@ -1114,21 +1300,29 @@ const PosPage: React.FC = () => {
         updated_at: latestSale.updated_at,
         items: latestSale.items?.map(item => ({
           id: item.id,
-          product: {
+          product: item.product || {
             id: item.product_id,
             name: item.product_name || 'Unknown Product',
             sku: item.product_sku || 'N/A',
+            scientific_name: '',
+            description: '',
             suggested_sale_price_per_sellable_unit: Number(item.unit_price),
             last_sale_price_per_sellable_unit: Number(item.unit_price),
             stock_quantity: item.current_stock_quantity || 0,
             stock_alert_level: item.stock_alert_level,
             earliest_expiry_date: item.earliest_expiry_date,
             current_stock_quantity: item.current_stock_quantity || 0,
-            sellable_unit_name: item.sellable_unit_name || 'Piece'
+            sellable_unit_name: item.sellable_unit_name || 'Piece',
+            created_at: item.created_at || new Date().toISOString(),
+            updated_at: item.updated_at || new Date().toISOString(),
+            available_batches: []
           } as Product,
           quantity: item.quantity,
           unitPrice: Number(item.unit_price),
-          total: Number(item.total_price || item.quantity * Number(item.unit_price))
+          total: Number(item.total_price || item.quantity * Number(item.unit_price)),
+          selectedBatchId: item.purchase_item_id || null,
+          selectedBatchNumber: item.batch_number_sold || null,
+          selectedBatchExpiryDate: item.purchaseItemBatch?.expiry_date || null
         })) || [],
         payments: latestSale.payments?.map(payment => ({
           id: payment.id,
@@ -1153,7 +1347,10 @@ const PosPage: React.FC = () => {
         product: item.product,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
-        total: item.total
+        total: item.total,
+        selectedBatchId: item.selectedBatchId,
+        selectedBatchNumber: item.selectedBatchNumber,
+        selectedBatchExpiryDate: item.selectedBatchExpiryDate
       }));
       setCurrentSaleItems(items);
       
@@ -1175,7 +1372,10 @@ const PosPage: React.FC = () => {
         product: item.product,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
-        total: item.total
+        total: item.total,
+        selectedBatchId: item.selectedBatchId,
+        selectedBatchNumber: item.selectedBatchNumber,
+        selectedBatchExpiryDate: item.selectedBatchExpiryDate
       }));
       setCurrentSaleItems(items);
       
@@ -1323,80 +1523,114 @@ const PosPage: React.FC = () => {
 
   // Payment method handlers
 
+  
+  // Update sale client instantly when client is selected in POS header
+  const handleClientChange = async (client: import('../services/clientService').Client | null) => {
+    setSelectedClient(client);
+    if (!selectedSale || !client) return;
+    try {
+      // Update on backend
+      await saleService.updateSale(selectedSale.id, { client_id: client.id });
+
+      // Update local selected sale and today's sales list
+      setSelectedSale(prev => prev ? { ...prev, client_id: client.id, client_name: client.name } : prev);
+      setTodaySales(prev => prev.map(s => s.id === selectedSale.id ? { ...s, client_id: client.id, client_name: client.name } : s));
+
+      showToast(t('pos:saleUpdated'), 'success');
+    } catch (error) {
+      const errorMessage = saleService.getErrorMessage(error);
+      showToast(errorMessage, 'error');
+    }
+  };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+    <div className="h-[calc(100vh-100px)] flex flex-col bg-gray-50">
       {/* Header */}
-      <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8">
-      <PosHeader 
-        onAddProduct={addToCurrentSale} 
-        onAddMultipleProducts={addMultipleToCurrentSale}
-        loading={false} 
-        onCreateEmptySale={handleCreateEmptySale}
-        onOpenCalculator={handleOpenCalculator}
-        onGeneratePdf={handleGenerateDailySalesPdf}
-        onPreviewPdf={handleOpenPdfDialog}
-        onGenerateInvoice={handleOpenInvoiceDialog}
-        onPrintThermalInvoice={handlePrintThermalInvoice}
-        hasSelectedSale={!!selectedSale}
-        selectedClient={selectedClient}
-        onClientChange={setSelectedClient}
-        filterByCurrentUser={filterByCurrentUser}
-        onToggleUserFilter={() => setFilterByCurrentUser(!filterByCurrentUser)}
-        selectedDate={selectedDate}
-        onDateChange={handleDateChange}
-      />
+      <div className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-gray-200">
+        <div className="px-3 sm:px-4 lg:px-6">
+          <PosHeader
+            key={selectedSale?.id ?? 'no-sale'}
+            onAddProduct={addToCurrentSale}
+            onAddMultipleProducts={addMultipleToCurrentSale}
+            loading={false}
+            onCreateEmptySale={handleCreateEmptySale}
+            onOpenCalculator={handleOpenCalculator}
+            onGeneratePdf={handleGenerateDailySalesPdf}
+            onPreviewPdf={handleOpenPdfDialog}
+            onGenerateInvoice={handleOpenInvoiceDialog}
+            onPrintThermalInvoice={handlePrintThermalInvoice}
+            hasSelectedSale={!!selectedSale}
+            selectedClient={selectedClient}
+            onClientChange={handleClientChange}
+            filterByCurrentUser={filterByCurrentUser}
+            onToggleUserFilter={() => setFilterByCurrentUser(!filterByCurrentUser)}
+            selectedDate={selectedDate}
+            onDateChange={handleDateChange}
+          />
+        </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Column 1 - Today's Sales (100px fixed width) */}
-        <div className="w-[100px] flex-shrink-0 border-r border-gray-200">
-          <TodaySalesColumn
-            sales={todaySales}
-            selectedSaleId={selectedSaleId}
-            onSaleSelect={handleSaleSelect}
-            isCollapsed={isTodaySalesCollapsed}
-            onToggleCollapse={() => setIsTodaySalesCollapsed(!isTodaySalesCollapsed)}
-            filterByCurrentUser={filterByCurrentUser}
-            selectedDate={selectedDate}
-            loadingSaleId={loadingSaleId}
-            isLoading={isLoadingSales}
-          />
-        </div>
-
-        {/* Column 2 - Current Sale Items (flexible - takes remaining width) */}
-        <div className={`${selectedSale ? 'flex-1 min-w-0' : 'flex-1'}`}>
-          <CurrentSaleItemsColumn
-            currentSaleItems={currentSaleItems}
-            onUpdateQuantity={updateQuantity}
-            onRemoveItem={removeFromCurrentSale}
-            isSalePaid={selectedSale ? (selectedSale.payments && selectedSale.payments.length > 0) : false}
-            deletingItems={deletingItems}
-            updatingItems={updatingItems}
-            isLoading={isLoadingSaleItems}
-          />
-        </div>
-
-        {/* Column 3 - Summary and Actions (350px fixed width) - Only show when sale is selected */}
-        {selectedSale && (
-          <div className="w-[350px] flex-shrink-0 border-l border-gray-200">
-            <SaleSummaryColumn
-              currentSaleItems={currentSaleItems}
-              discountAmount={discountAmount}
-              discountType={discountType}
-              onDiscountChange={(amount: number, type: 'percentage' | 'fixed') => {
-                setDiscountAmount(amount);
-                setDiscountType(type);
-              }}
-              isEditMode={!!selectedSale}
-              saleId={selectedSale?.id}
-              onPaymentComplete={handlePaymentComplete}
-              refreshTrigger={refreshTrigger}
-              onSaleDateChange={handleSaleDateChange}
-            />
+      <div className="flex-1 overflow-hidden px-3 sm:px-4 lg:px-6 py-3">
+        <div className="h-full flex flex-col md:flex-row gap-3">
+          {/* Column 1 - Today's Sales */}
+          <div className="hidden md:block w-[80px] shrink-0">
+            <div className="h-full rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden sticky top-20">
+              <TodaySalesColumn
+                sales={todaySales}
+                selectedSaleId={selectedSaleId}
+                onSaleSelect={handleSaleSelect}
+                isCollapsed={isTodaySalesCollapsed}
+                onToggleCollapse={() => setIsTodaySalesCollapsed(!isTodaySalesCollapsed)}
+                filterByCurrentUser={filterByCurrentUser}
+                selectedDate={selectedDate}
+                loadingSaleId={loadingSaleId}
+                isLoading={isLoadingSales}
+              />
+            </div>
           </div>
-        )}
+
+          {/* Column 2 - Current Sale Items (fills remaining width) */}
+          <div className="flex-1 min-w-0">
+            <div className="h-full shadow-sm overflow-hidden">
+              <CurrentSaleItemsColumn
+                currentSaleItems={currentSaleItems}
+                onUpdateQuantity={updateQuantity}
+                onRemoveItem={removeFromCurrentSale}
+                onUpdateBatch={updateBatch}
+                isSalePaid={selectedSale ? (selectedSale.payments && selectedSale.payments.length > 0) : false}
+                deletingItems={deletingItems}
+                updatingItems={updatingItems}
+                isLoading={isLoadingSaleItems}
+              />
+            </div>
+          </div>
+
+          {/* Column 3 - Summary and Actions */}
+          {selectedSale && (
+            <div className="md:w-[320px] xl:w-[360px] w-full shrink-0">
+              <div className="h-full rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden md:sticky md:top-20">
+                <SaleSummaryColumn
+                  currentSaleItems={currentSaleItems}
+                  discountAmount={discountAmount}
+                  discountType={discountType}
+                  onDiscountChange={(amount: number, type: 'percentage' | 'fixed') => {
+                    setDiscountAmount(amount);
+                    setDiscountType(type);
+                  }}
+                  isEditMode={!!selectedSale}
+                  saleId={selectedSale?.id}
+                  onPaymentComplete={handlePaymentComplete}
+                  refreshTrigger={refreshTrigger}
+                  onSaleDateChange={handleSaleDateChange}
+                paymentDialogOpen={paymentDialogOpen}
+                onPaymentDialogOpenChange={setPaymentDialogOpen}
+                paymentSubmitTrigger={paymentSubmitTrigger}
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Sale Editor */}
@@ -1410,36 +1644,33 @@ const PosPage: React.FC = () => {
         onSaleUpdated={loadTodaySales}
       />
 
-
-
-      {/* Calculator Dialog */}
-      <CalculatorDialog 
-        open={calculatorDialogOpen} 
+      {/* Dialogs */}
+      <CalculatorDialog
+        open={calculatorDialogOpen}
         onOpenChange={setCalculatorDialogOpen}
         currentUserId={user?.id || null}
         filterByCurrentUser={filterByCurrentUser}
       />
 
-      {/* PDF Dialog */}
-      <PosPdfDialog
-        open={pdfDialogOpen}
-        onClose={() => setPdfDialogOpen(false)}
-      />
+      <PosPdfDialog open={pdfDialogOpen} onClose={() => setPdfDialogOpen(false)} />
 
-      {/* Invoice PDF Dialog */}
-      <InvoicePdfDialog
-        open={invoiceDialogOpen}
-        onClose={() => setInvoiceDialogOpen(false)}
-        sale={selectedSale}
-      />
+      <InvoicePdfDialog open={invoiceDialogOpen} onClose={() => setInvoiceDialogOpen(false)} sale={selectedSale} />
 
-      {/* Thermal Invoice Dialog */}
-      <ThermalInvoiceDialog
-        open={thermalDialogOpen}
-        onClose={() => setThermalDialogOpen(false)}
-        sale={selectedSale}
-      />
+      <ThermalInvoiceDialog open={thermalDialogOpen} onClose={() => setThermalDialogOpen(false)} sale={selectedSale} />
 
+      {/* Batch Selection Dialog */}
+      <BatchSelectionDialog
+        open={batchSelectionOpen}
+        onOpenChange={setBatchSelectionOpen}
+        product={batchSelectionProduct}
+        onBatchSelect={async (batch) => {
+          if (batchSelectionProduct) {
+            await addProductToSale(batchSelectionProduct, batch.id);
+            setBatchSelectionOpen(false);
+            setBatchSelectionProduct(null);
+          }
+        }}
+      />
     </div>
   );
 };

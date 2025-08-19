@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 // Icons
 import { 
@@ -17,17 +18,20 @@ import {
   Package, 
   Calendar,
   Check,
-  X
+  X,
+  Layers
 } from "lucide-react";
 
 // Types
 import { CartItem } from "./types";
 import { formatNumber } from "@/constants";
+import { BatchSelectionDialog } from "./BatchSelectionDialog";
 
 interface CurrentSaleItemsColumnProps {
   currentSaleItems: CartItem[];
   onUpdateQuantity: (productId: number, newQuantity: number) => Promise<void>;
   onRemoveItem: (productId: number) => Promise<void>;
+  onUpdateBatch?: (productId: number, batchId: number | null, batchNumber: string | null, expiryDate: string | null, unitPrice: number) => Promise<void>;
   isSalePaid?: boolean;
   deletingItems?: Set<number>; // Track which items are being deleted
   updatingItems?: Set<number>; // Track which items are being updated
@@ -38,6 +42,7 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
   currentSaleItems,
   onUpdateQuantity,
   onRemoveItem,
+  onUpdateBatch,
   isSalePaid = false,
   deletingItems = new Set(),
   updatingItems = new Set(),
@@ -48,6 +53,11 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
   // State for editing quantity
   const [editingQuantity, setEditingQuantity] = useState<number | null>(null);
   const [editValue, setEditValue] = useState<string>("");
+  const [stockingMode, setStockingMode] = useState<Set<number>>(new Set()); // productIds in stocking mode
+  
+  // State for batch selection
+  const [batchDialogOpen, setBatchDialogOpen] = useState(false);
+  const [selectedProductForBatch, setSelectedProductForBatch] = useState<CartItem | null>(null);
 
   const formatExpiryDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -57,7 +67,7 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
       year: 'numeric' 
     });
   };
-
+  console.log(currentSaleItems, 'currentSaleItems');
   const isExpiringSoon = (dateString: string) => {
     const expiryDate = new Date(dateString);
     const today = new Date();
@@ -84,8 +94,17 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
       setEditValue("");
       return;
     }
-    
-    await onUpdateQuantity(productId, newQuantity);
+
+    // If stocking mode is on, interpret editValue as stocking units
+    const isStocking = stockingMode.has(productId);
+    const unitsPerStocking = (() => {
+      const item = currentSaleItems.find(ci => ci.product.id === productId);
+      // Fallback to 1 if missing
+      return item && (Number((item as unknown as { product: { units_per_stocking_unit?: number } }).product.units_per_stocking_unit) || 1);
+    })();
+    const targetSellableQty = isStocking ? (newQuantity * (Number(unitsPerStocking) || 1)) : newQuantity;
+
+    await onUpdateQuantity(productId, targetSellableQty);
     setEditingQuantity(null);
     setEditValue("");
   };
@@ -114,6 +133,36 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
     }, 100);
   };
 
+  const handleBatchSelection = (item: CartItem) => {
+    setSelectedProductForBatch(item);
+    setBatchDialogOpen(true);
+  };
+
+  const handleBatchSelect = async (batch: { id: number; batch_number: string | null; expiry_date: string | null; sale_price: number }) => {
+    if (selectedProductForBatch && onUpdateBatch) {
+      try {
+        await onUpdateBatch(
+          selectedProductForBatch.product.id,
+          batch.id,
+          batch.batch_number,
+          batch.expiry_date,
+          batch.sale_price
+        );
+      } catch (error) {
+        console.error('Error updating batch:', error);
+      }
+    }
+    setBatchDialogOpen(false);
+    setSelectedProductForBatch(null);
+  };
+
+  const hasMultipleBatches = (item: CartItem) => {
+    console.log(item.product.available_batches, 'available_batches',item.product,'item.product');
+
+    // Check if product has multiple batches available
+    return item.product.available_batches && item.product.available_batches.length > 1;
+  };
+ 
   return (
     <div dir="ltr" className="w-full h-full flex flex-col">
       <Card className="flex-1 flex flex-col">
@@ -209,8 +258,28 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="text-center">
-                            <div className="font-medium text-xl">{item.product.name}</div>
+                            <div className="font-medium text-xl flex items-center justify-center gap-2">
+                                                             {item.product.name.charAt(0).toUpperCase() + item.product.name.slice(1)}
+                              {hasMultipleBatches(item) && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleBatchSelection(item)}
+                                  className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
+                                  title={t('pos:selectBatch')}
+                                >
+                                  <Layers className="h-4 w-4 animate-bounce" />
+                                </Button>
+                              )}
+                            </div>
                             <div className="text-sm text-gray-500">SKU: {item.product.sku || 'N/A'}</div>
+                            {item.selectedBatchNumber && (
+                              <div className="text-xs text-blue-600 mt-1">
+                                <Badge variant="outline" className="text-xs">
+                                  {t('pos:batch')}: {item.selectedBatchNumber}
+                                </Badge>
+                              </div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
@@ -218,7 +287,11 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={async () => await onUpdateQuantity(item.product.id, item.quantity - 1)}
+                              onClick={async () => {
+                                const units = Number((item as unknown as { product: { units_per_stocking_unit?: number } }).product.units_per_stocking_unit) || 1;
+                                const step = stockingMode.has(item.product.id) ? Math.max(1, Number(units) || 1) : 1;
+                                await onUpdateQuantity(item.product.id, Math.max(1, item.quantity - step));
+                              }}
                               disabled={item.quantity <= 1 || isSalePaid || updatingItems.has(item.product.id)}
                               className={`h-8 w-8 p-0 ${
                                 (item.quantity <= 1 || isSalePaid || updatingItems.has(item.product.id)) ? 'opacity-50 cursor-not-allowed' : ''
@@ -262,19 +335,25 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                                 </Button>
                               </div>
                             ) : (
-                              <span 
-                                className="w-10 text-center font-medium text-base cursor-pointer hover:bg-gray-100 rounded px-1 py-1 transition-colors"
+                              <span
+                                className="w-14 text-center font-medium text-base cursor-pointer hover:bg-gray-100 rounded px-1 py-1 transition-colors"
                                 onClick={() => handleQuantityClick(item)}
                                 title={isSalePaid ? t('pos:salePaidCannotModify') : t('pos:clickToEditQuantity')}
                               >
-                                {item.quantity}
+                                {stockingMode.has(item.product.id)
+                                  ? Math.max(1, Math.round(item.quantity / (Number((item as unknown as { product: { units_per_stocking_unit?: number } }).product.units_per_stocking_unit) || 1)))
+                                  : item.quantity}
                               </span>
                             )}
                             
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={async () => await onUpdateQuantity(item.product.id, item.quantity + 1)}
+                              onClick={async () => {
+                                const units = Number((item as unknown as { product: { units_per_stocking_unit?: number } }).product.units_per_stocking_unit) || 1;
+                                const step = stockingMode.has(item.product.id) ? Math.max(1, Number(units) || 1) : 1;
+                                await onUpdateQuantity(item.product.id, item.quantity + step);
+                              }}
                               disabled={isSalePaid || updatingItems.has(item.product.id)}
                               className={`h-8 w-8 p-0 ${
                                 (isSalePaid || updatingItems.has(item.product.id)) ? 'opacity-50 cursor-not-allowed' : ''
@@ -291,7 +370,6 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                         <TableCell className="text-center">
                           <div className="text-center">
                             <div className="font-medium text-base">{formatNumber(item.unitPrice)}</div>
-                            <div className="text-sm text-gray-500">per unit</div>
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
@@ -302,14 +380,30 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                             <div className="flex items-center space-x-1">
                               <Package className="h-3 w-3 text-gray-500" />
                               <span className={`text-base font-medium ${
-                                isLowStock(item.product.stock_quantity, item.product.stock_alert_level) 
-                                  ? 'text-red-600' 
-                                  : 'text-green-600'
+                                item.selectedBatchId 
+                                  ? (item.selectedBatchNumber ? 'text-blue-600' : 'text-blue-600')
+                                  : isLowStock(item.product.stock_quantity, item.product.stock_alert_level) 
+                                    ? 'text-red-600' 
+                                    : 'text-green-600'
                               }`}>
-                                {formatNumber(item.product.stock_quantity)}
+                                {item.selectedBatchId 
+                                  ? (() => {
+                                      // Find the selected batch to get its remaining quantity
+                                      const selectedBatch = item.product.available_batches?.find(
+                                        batch => batch.id === item.selectedBatchId
+                                      );
+                                      return formatNumber(selectedBatch?.remaining_quantity || 0);
+                                    })()
+                                  : formatNumber(item.product.stock_quantity)
+                                }
                               </span>
                             </div>
-                            {isLowStock(item.product.stock_quantity, item.product.stock_alert_level) && (
+                            {item.selectedBatchId && (
+                              <span className="text-xs text-blue-600">
+                                {item.selectedBatchNumber ? `Batch: ${item.selectedBatchNumber}` : 'Selected Batch'}
+                              </span>
+                            )}
+                            {!item.selectedBatchId && isLowStock(item.product.stock_quantity, item.product.stock_alert_level) && (
                               <span className="text-sm text-red-500">Low Stock</span>
                             )}
                           </div>
@@ -360,6 +454,22 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                               <Trash2 className="h-5 w-5" />
                             )}
                           </Button>
+                          {/* Toggle sellable/stocking unit mode */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const next = new Set(stockingMode);
+                              if (next.has(item.product.id)) next.delete(item.product.id);
+                              else next.add(item.product.id);
+                              setStockingMode(next);
+                            }}
+                            className="h-10 px-2 ms-2"
+                            title={stockingMode.has(item.product.id) ? 'Selling by stocking unit' : 'Selling by sellable unit'}
+                            disabled={isSalePaid}
+                          >
+                            {stockingMode.has(item.product.id) ? 'Stocking' : 'Sellable'}
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -370,6 +480,15 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
           )}
         </CardContent>
       </Card>
+
+      {/* Batch Selection Dialog */}
+      <BatchSelectionDialog
+        open={batchDialogOpen}
+        onOpenChange={setBatchDialogOpen}
+        product={selectedProductForBatch?.product || null}
+        onBatchSelect={handleBatchSelect}
+        selectedBatchId={selectedProductForBatch?.selectedBatchId || null}
+      />
     </div>
   );
 }; 

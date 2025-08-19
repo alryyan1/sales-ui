@@ -8,6 +8,7 @@ import RegisterPage from "./pages/RegisterPage";
 import HomePage from "./pages/HomePage";
 import DashboardPage from "./pages/DashboardPage";
 import ClientsPage from "./pages/ClientsPage";
+import ClientLedgerPage from "./pages/clients/ClientLedgerPage";
 import SuppliersPage from "./pages/SuppliersPage";
 import ProductsPage from "./pages/ProductsPage";
 import PurchasesListPage from "./pages/purchases/PurchasesListPage";
@@ -46,6 +47,7 @@ import SalesTerminalPage from "./pages/sales/SalesTerminalPage";
 import PosPage from "./pages/PosPage";
 import NearExpiryReportPage from "./components/reports/NearExpiryReportPage";
 import MonthlyRevenueReportPage from "./components/reports/MonthlyRevenueReportPage";
+import SalesWithDiscountsPage from "./pages/reports/SalesWithDiscountsPage";
 import SupplierLedgerPage from "./pages/suppliers/SupplierLedgerPage";
 import BackupPage from "./pages/admin/BackupPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
@@ -90,15 +92,21 @@ const router = createHashRouter([
     ),
     errorElement: <NotFoundPage />,
     children: [
-      { index: true, element: <HomePage /> },
       { path: "login", element: <LoginPage /> },
       { path: "register", element: <RegisterPage /> }, // Ensure props removed if using context
       {
         element: <ProtectedRoute />, // Ensures user is logged in
         children: [
+          { index: true, element: <HomePage /> }, // Move HomePage inside protected routes
           { path: "dashboard", element: <DashboardPage /> },
           { path: "profile", element: <ProfilePage /> },
-          { path: "clients", element: <ClientsPage /> },
+          { 
+            path: "clients",
+            children: [
+              { index: true, element: <ClientsPage /> },
+              { path: ":id/ledger", element: <ClientLedgerPage /> },
+            ]
+          },
           { 
             path: "suppliers", 
             children: [
@@ -143,6 +151,7 @@ const router = createHashRouter([
             path: "reports",
             children: [
               { path: "sales", element: <SalesReportPage /> },
+              { path: "sales-discounts", element: <SalesWithDiscountsPage /> },
               { path: "purchases", element: <PurchaseReportPage /> },
               { path: "inventory", element: <InventoryReportPage /> },
               { path: "profit-loss", element: <ProfitLossReportPage /> },

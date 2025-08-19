@@ -75,7 +75,6 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                             <TableHead className="hidden lg:table-cell px-3 py-3 text-center">{t('products:scientificName')}</TableHead>
                             <TableHead className="hidden md:table-cell px-3 py-3 text-center">{t('products:category')}</TableHead>
                             <TableHead className="text-center px-3 py-3">{t('products:totalStock')}</TableHead>
-                            <TableHead className="hidden lg:table-cell text-center px-3 py-3">{t('products:stockAlertLevel')}</TableHead>
                             <TableHead className="hidden lg:table-cell text-right px-3 py-3">{t('products:latestCostPerSellableUnit')}</TableHead>
                             <TableHead className="hidden lg:table-cell text-right px-3 py-3">{t('products:lastSalePricePerSellableUnit')}</TableHead>
                             <TableHead className="text-center px-3 py-3 w-[80px]">{t('common:actions')}</TableHead>
@@ -83,9 +82,12 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                     </TableHeader>
                     <TableBody>
                         {products.map((product) => {
-                            const isLow = product.stock_alert_level !== null && product.stock_quantity <= product.stock_alert_level;
-                            const isOutOfStock = product.stock_quantity <= 0;
-                            const sellableUnit = product.sellable_unit_name || t('products:defaultSellableUnit');
+                            const stockQty = Number(
+                                (product as any).current_stock_quantity ?? product.stock_quantity ?? 0
+                            );
+                            const isLow = product.stock_alert_level !== null && stockQty <= (product.stock_alert_level as number);
+                            const isOutOfStock = stockQty <= 0;
+                            // Display quantities without unit label per requirements
 
                             return (
                                 <TableRow
@@ -128,7 +130,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                                             '---'
                                         )}
                                     </TableCell>
-                                    <TableCell className="px-3 py-2 font-medium font-bold dark:text-gray-100 text-center text-sm">
+                                    <TableCell className="px-3 py-2 font-semibold dark:text-gray-100 text-center text-sm">
                                         {product.name.charAt(0).toUpperCase() + product.name.slice(1)}
                                         {/* Mobile: Show SKU and Category below name */}
                                         <div className="sm:hidden text-xs text-muted-foreground dark:text-gray-400 text-center space-y-0.5 mt-1">
@@ -136,7 +138,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                                             {product.scientific_name && <p>{t('products:scientificName')}: {product.scientific_name}</p>}
                                             {product.category_name && <p>{t('products:category')}: {product.category_name}</p>}
                                             {/* Show stock on mobile if other columns are hidden */}
-                                            <p className="lg:hidden text-xs">{t('products:stock')}: {formatNumber(product.stock_quantity)} {sellableUnit}</p>
+                                            <p className="lg:hidden text-xs">{t('products:stock')}: {formatNumber(stockQty)}</p>
                                         </div>
                                     </TableCell>
                                     <TableCell className="hidden lg:table-cell px-3 py-2 dark:text-gray-300 text-center text-sm">
@@ -148,7 +150,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                                         <div className="space-y-1">
                                             {/* Primary stock display in sellable units */}
                                             <div className="font-medium text-base">
-                                                {formatNumber(product.stock_quantity)} {sellableUnit}
+                                                {formatNumber(stockQty)}
                                             </div>
                                             {(isLow || isOutOfStock) && (
                                                 <Tooltip>
@@ -161,9 +163,6 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                                                 </Tooltip>
                                             )}
                                         </div>
-                                    </TableCell>
-                                    <TableCell className="hidden lg:table-cell px-3 py-2 dark:text-gray-300 text-center text-sm">
-                                        {product.stock_alert_level !== null ? `${formatNumber(product.stock_alert_level)} ` : '---'}
                                     </TableCell>
                                     <TableCell className="hidden lg:table-cell px-3 py-2 dark:text-gray-100 text-center text-sm">
                                         {product.latest_cost_per_sellable_unit ? formatCurrency(product.latest_cost_per_sellable_unit) : '---'}

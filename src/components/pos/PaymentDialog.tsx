@@ -1,5 +1,5 @@
 // src/components/pos/PaymentDialog.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 // Shadcn Components
@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
+// import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
@@ -50,6 +50,8 @@ interface PaymentDialogProps {
   saleId?: number;
   grandTotal: number;
   paidAmount: number;
+  discountAmount?: number; // amount discounted (applied or to be applied)
+  submitTrigger?: number; // increments to trigger submit programmatically
   onSuccess: () => void;
 }
 
@@ -59,6 +61,8 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
   saleId,
   grandTotal,
   paidAmount,
+  discountAmount = 0,
+  submitTrigger,
   onSuccess,
 }) => {
   const { t } = useTranslation(['pos', 'common', 'paymentMethods']);
@@ -75,6 +79,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const [addingPayment, setAddingPayment] = useState(false);
   const [deletingPaymentId, setDeletingPaymentId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const addButtonRef = useRef<HTMLButtonElement | null>(null);
 
   // Load payments when dialog opens
   useEffect(() => {
@@ -90,6 +95,28 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
       resetForm();
     }
   }, [open, saleId, grandTotal, paidAmount]);
+
+  // Focus Add Payment button when dialog opens
+  useEffect(() => {
+    if (open) {
+      // Wait next tick so the button exists
+      const id = setTimeout(() => {
+        addButtonRef.current?.focus();
+      }, 0);
+      return () => clearTimeout(id);
+    }
+  }, [open]);
+
+  // Submit programmatically when submitTrigger changes and dialog is open
+  useEffect(() => {
+    if (!open) return;
+    if (submitTrigger === undefined) return;
+    // Avoid double-submit if currently adding
+    if (!addingPayment) {
+      handleAddPayment();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [submitTrigger]);
 
   const loadPayments = async () => {
     if (!saleId) return;
@@ -193,6 +220,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
 
   const totalPaid = preciseSum(payments.map(p => Number(p.amount)), 2);
   const remainingDue = Math.max(0, grandTotal - totalPaid);
+  // const subtotal = preciseSum([grandTotal, discountAmount], 2);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -206,25 +234,29 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Payment Summary */}
-          <Card>
-            <CardContent className="pt-4">
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <div className="text-sm text-gray-600">{t('pos:total')}</div>
-                  <div className="text-lg font-bold text-gray-900">{formatNumber(grandTotal)}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-600">{t('pos:paid')}</div>
-                  <div className="text-lg font-bold text-green-600">{formatNumber(totalPaid)}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-600">{t('pos:due')}</div>
-                  <div className="text-lg font-bold text-orange-600">{formatNumber(remainingDue)}</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Payment Summary - Colored Cards Row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {/* Total */}
+            <div className="rounded-lg p-3 text-center bg-blue-50 border border-blue-100">
+              <div className="text-xs font-medium text-blue-700">{t('pos:total')}</div>
+              <div className="text-xl font-extrabold text-blue-700">{formatNumber(grandTotal)}</div>
+            </div>
+            {/* Discount */}
+            <div className="rounded-lg p-3 text-center bg-red-50 border border-red-100">
+              <div className="text-xs font-medium text-red-700">{t('pos:discount')}</div>
+              <div className="text-xl font-extrabold text-red-700">-{formatNumber(discountAmount)}</div>
+            </div>
+            {/* Paid */}
+            <div className="rounded-lg p-3 text-center bg-green-50 border border-green-100">
+              <div className="text-xs font-medium text-green-700">{t('pos:paid')}</div>
+              <div className="text-xl font-extrabold text-green-700">{formatNumber(totalPaid)}</div>
+            </div>
+            {/* Due */}
+            <div className="rounded-lg p-3 text-center bg-orange-50 border border-orange-100">
+              <div className="text-xs font-medium text-orange-700">{t('pos:due')}</div>
+              <div className="text-xl font-extrabold text-orange-700">{formatNumber(remainingDue)}</div>
+            </div>
+          </div>
 
           {/* Error Alert */}
           {error && (
@@ -323,6 +355,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                 </div>
 
                 <Button
+                  ref={addButtonRef}
                   onClick={handleAddPayment}
                   disabled={addingPayment || !paymentAmount || parseFloat(paymentAmount) <= 0}
                   className="w-full mt-4"

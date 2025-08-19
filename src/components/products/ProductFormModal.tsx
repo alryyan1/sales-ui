@@ -370,7 +370,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   )}
                 />
 
-                {/* SKU Field */}
+                {/* SKU Field (locked when editing) */}
                 <FormField
                   control={control}
                   name="sku"
@@ -384,7 +384,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                             placeholder={t("products:skuPlaceholder")}
                             {...field}
                             value={field.value ?? ""}
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || isEditMode}
                           />
                         </FormControl>
                         <Button
@@ -395,7 +395,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                             const randomSKU = generateRandomSKU("PROD", 6);
                             field.onChange(randomSKU);
                           }}
-                          disabled={isSubmitting}
+                          disabled={isSubmitting || isEditMode}
                           className="shrink-0"
                         >
                           <RefreshCw className="h-4 w-4 mr-1" />

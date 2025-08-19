@@ -188,5 +188,19 @@
   "notesPlaceholder": "ملاحظات الدفع...",
   "itemRemovalFailed": "فشل في إزالة العنصر من البيع",
   "saleUpdated": "تم تحديث البيع بنجاح",
-  "amount": "المبلغ"
+  "amount": "المبلغ",
+  "selectBatch": "اختر الدفعة",
+  "batch": "الدفعة",
+  "batchNumber": "رقم الدفعة",
+  "availableStock": "المخزون المتاح",
+  "expiryDate": "تاريخ انتهاء الصلاحية",
+  "salePrice": "سعر البيع",
+  "unitCost": "تكلفة الوحدة",
+  "select": "اختر",
+  "noBatchesAvailable": "لا توجد دفعات متاحة",
+  "noStockForProduct": "لا يوجد مخزون متاح لهذا المنتج",
+  "totalBatchesAvailable": "{{count}} دفعة متاحة",
+  "expired": "منتهي الصلاحية",
+  "expiringSoon": "ينتهي قريباً",
+  "batchUpdateFailed": "فشل في تحديث اختيار الدفعة"
 } 
