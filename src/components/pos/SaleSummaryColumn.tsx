@@ -19,6 +19,7 @@ import saleService from "../../services/saleService";
 // Import the new dialogs
 import { PaymentDialog } from "./PaymentDialog";
 import { DiscountDialog } from "./DiscountDialog";
+import dayjs from "dayjs";
 
 interface SaleSummaryColumnProps {
   currentSaleItems: CartItem[];
@@ -301,7 +302,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
             <div className="flex flex-col">
               <span className="text-sm text-gray-600">{t('pos:saleId')}</span>
               <span className="font-bold text-lg text-blue-600">
-                #{saleInfo?.sale_order_number || saleId || 'New'}
+                #{saleInfo?.id || saleId || 'New'}
               </span>
             </div>
             
@@ -309,7 +310,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
             <div className="flex flex-col text-center">
               <span className="text-sm text-gray-600">{t('pos:time')}</span>
               <span className="font-semibold text-sm">
-                {saleInfo ? formatTime(saleInfo.created_at) : formatTime(new Date().toISOString())}
+                {dayjs(saleInfo?.created_at).format('HH:mm A')}
               </span>
             </div>
             
