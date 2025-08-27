@@ -113,6 +113,7 @@ const RootLayout: React.FC = () => {
          { to: "/admin/users", labelKey: "users", permission: "manage-users"},
          { to: "/admin/roles", labelKey: "roles", permission: "manage-roles"},
          { to: "/admin/categories", labelKey: "categories", permission: "manage-categories"},
+         { to: "/admin/expenses", labelKey: "expenses", permission: "manage-settings"},
          { to: "/admin/settings", labelKey: "settings", permission: "manage-settings"},
          { to: "/admin/system", labelKey: "system", permission: "view-system"},
          { to: "/admin/backups", labelKey: "backups", permission: "manage-settings"},

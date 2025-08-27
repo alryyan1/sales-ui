@@ -26,6 +26,7 @@ import paymentMethodsAr from './locales/ar/paymentMethods.json'; // <-- Import
 import unitsAr from './locales/ar/units.json'; // <-- Import
 import posAr from './locales/ar/pos.json'; // <-- Import
 import analyticsAr from './locales/ar/analytics.json'; // <-- Import
+import expensesAr from './locales/ar/expenses.json';
 
 // English imports - only import files that exist
 import commonEN from './locales/en/common.json';
@@ -48,6 +49,7 @@ import settingsEN from './locales/en/settings.json';
 import paymentMethodsEN from './locales/en/paymentMethods.json';
 import posEN from './locales/en/pos.json';
 import analyticsEN from './locales/en/analytics.json';
+import expensesEN from './locales/en/expenses.json';
 
 
 // ... استيراد ملفات أخرى
@@ -79,6 +81,7 @@ const resources = {
     units:unitsAr,
     pos:posAr,
     analytics:analyticsAr
+    ,expenses:expensesAr
     
     // ... namespaces أخرى
   },
@@ -103,6 +106,7 @@ const resources = {
     paymentMethods: paymentMethodsEN,
     pos: posEN,
     analytics: analyticsEN
+    ,expenses: expensesEN
   }
   // يمكنك إضافة لغات أخرى هنا بنفس الهيكل
 };
@@ -133,6 +137,7 @@ export const namespaces = [
     'units',
     'pos',
     'analytics'
+    ,'expenses'
     // ... أسماء namespaces أخرى
 ];
 

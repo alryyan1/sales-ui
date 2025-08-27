@@ -52,6 +52,7 @@ import SupplierLedgerPage from "./pages/suppliers/SupplierLedgerPage";
 import BackupPage from "./pages/admin/BackupPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import WhatsAppSchedulersPage from "./pages/admin/WhatsAppSchedulersPage";
+import ExpensesPage from "./pages/admin/ExpensesPage";
 // ... other page imports
 
 // --- Admin Route Guard Component ---
@@ -183,6 +184,7 @@ const router = createHashRouter([
               { path: "users", element: <UsersListPage /> }, // User management
               { path: "roles", element: <RolesListPage /> }, // Add later for role management
               { path: "categories", element: <CategoriesListPage /> },
+              { path: "expenses", element: <ExpensesPage /> },
               { path: "settings", element: <SettingsPage /> },
               { path: "system", element: <SystemPage /> }, // System version and updates
               { path: "backups", element: <BackupPage /> }, // Database backup management

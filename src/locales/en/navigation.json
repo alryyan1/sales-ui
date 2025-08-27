@@ -26,5 +26,6 @@
   "backups": "Backups",
   "whatsappSchedulers": "WhatsApp Schedulers",
   "inventoryRequest": "Request Stock",
-  "requisitions": "Stock Requisitions"
+  "requisitions": "Stock Requisitions",
+  "expenses": "Expenses"
 }
