@@ -1,9 +1,8 @@
 // src/pages/SalesListPage.tsx
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useTranslation } from "react-i18next";
 import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
 
-// MUI Components (or shadcn/Tailwind equivalents)
+// MUI Components
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
@@ -13,11 +12,19 @@ import Pagination from "@mui/material/Pagination";
 import AddIcon from "@mui/icons-material/Add";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
-
 import TextField from "@mui/material/TextField";
 import Paper from "@mui/material/Paper";
 import Autocomplete from "@mui/material/Autocomplete";
-
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import Dialog from "@mui/material/Dialog";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
 
 // Icons
 import VisibilityIcon from "@mui/icons-material/Visibility";
@@ -33,21 +40,6 @@ import dayjs from "dayjs";
 import saleService, { Sale } from "../../services/saleService";
 import { formatCurrency, formatNumber } from "@/constants";
 import { useSettings } from "@/context/SettingsContext";
-import { Card } from "@/components/ui/card";
-import { CardContent } from "@mui/material";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { generateDailySalesPdf } from "../../services/exportService";
 import { toast } from "sonner";
 import apiClient from "../../lib/axios";
@@ -89,7 +81,6 @@ interface SalesFilters {
 }
 
 const SalesListPage: React.FC = () => {
-  const { t } = useTranslation(["sales", "common", "clients"]);
   const navigate = useNavigate();
   const location = useLocation();
   const { settings, fetchSettings } = useSettings();
@@ -143,7 +134,7 @@ const SalesListPage: React.FC = () => {
   
   // Add "All Users" option to users array
   const usersWithAllOption = [
-    { id: 0, name: t("common:all", "All Users") },
+    { id: 0, name: "جميع المستخدمين" },
     ...users
   ];
 
@@ -323,10 +314,10 @@ const SalesListPage: React.FC = () => {
       if (filters.end_time) filterParams.append('end_time', filters.end_time);
 
       await generateDailySalesPdf(filterParams.toString());
-      toast.success(t('sales:pdfGenerated', 'PDF generated successfully'));
+      toast.success('تم إنشاء PDF بنجاح');
     } catch (error) {
       console.error('Error generating PDF:', error);
-      toast.error(t('sales:pdfGenerationFailed', 'Failed to generate PDF'));
+      toast.error('فشل إنشاء PDF');
     } finally {
       setIsPdfLoading(false);
     }
@@ -355,7 +346,7 @@ const SalesListPage: React.FC = () => {
       }));
     } catch (error) {
       console.error('Error fetching sale details:', error);
-      toast.error(t("common:errorLoadingData", "Error loading sale details"));
+      toast.error("خطأ في تحميل تفاصيل البيع");
       setSaleDetailsDialog(prev => ({ 
         ...prev, 
         open: false, 
@@ -394,7 +385,7 @@ const SalesListPage: React.FC = () => {
           component="h1"
           className="text-gray-800 dark:text-gray-100 font-semibold"
         >
-          {t("sales:listTitle")}
+          قائمة المبيعات
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
@@ -403,7 +394,7 @@ const SalesListPage: React.FC = () => {
             onClick={handleExportPdf}
             disabled={isPdfLoading}
           >
-            {isPdfLoading ? t("common:generating") : t("sales:exportPdf")}
+            {isPdfLoading ? "جاري الإنشاء..." : "تصدير PDF"}
           </Button>
           <Button
             variant="contained"
@@ -411,7 +402,7 @@ const SalesListPage: React.FC = () => {
             component={RouterLink}
             to="/sales/add"
           >
-            {t("sales:addSale")}
+            إضافة بيع
           </Button>
         </Box>
       </Box>
@@ -423,7 +414,7 @@ const SalesListPage: React.FC = () => {
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
           <FilterListIcon sx={{ mr: 1 }} />
           <Typography variant="h6" className="dark:text-gray-100">
-            {t("sales:filters", "Filters")}
+            الفلاتر
           </Typography>
         </Box>
         
@@ -432,7 +423,7 @@ const SalesListPage: React.FC = () => {
           <TextField
             fullWidth
             type="date"
-            label={t("sales:startDate", "Start Date")}
+            label="تاريخ البداية"
             value={filters.start_date}
             onChange={(e) => handleFilterChange('start_date', e.target.value)}
             InputLabelProps={{ shrink: true }}
@@ -441,7 +432,7 @@ const SalesListPage: React.FC = () => {
           <TextField
             fullWidth
             type="date"
-            label={t("sales:endDate", "End Date")}
+            label="تاريخ النهاية"
             value={filters.end_date}
             onChange={(e) => handleFilterChange('end_date', e.target.value)}
             InputLabelProps={{ shrink: true }}
@@ -452,7 +443,7 @@ const SalesListPage: React.FC = () => {
           <TextField
             fullWidth
             type="time"
-            label={t("sales:startTime", "Start Time")}
+            label="وقت البداية"
             value={filters.start_time}
             onChange={(e) => handleFilterChange('start_time', e.target.value)}
             InputLabelProps={{ shrink: true }}
@@ -461,7 +452,7 @@ const SalesListPage: React.FC = () => {
           <TextField
             fullWidth
             type="time"
-            label={t("sales:endTime", "End Time")}
+            label="وقت النهاية"
             value={filters.end_time}
             onChange={(e) => handleFilterChange('end_time', e.target.value)}
             InputLabelProps={{ shrink: true }}
@@ -480,7 +471,7 @@ const SalesListPage: React.FC = () => {
             renderInput={(params) => (
               <TextField
                 {...params}
-                label={t("sales:user", "User")}
+                label="المستخدم"
                 className="dark:text-gray-100"
               />
             )}
@@ -498,7 +489,7 @@ const SalesListPage: React.FC = () => {
             renderInput={(params) => (
               <TextField
                 {...params}
-                label={t("sales:product", "Product")}
+                label="المنتج"
                 className="dark:text-gray-100"
               />
             )}
@@ -508,10 +499,10 @@ const SalesListPage: React.FC = () => {
           {/* Sale ID Filter */}
           <TextField
             fullWidth
-            label={t("sales:saleId", "Sale ID")}
+            label="رقم البيع"
             value={filters.sale_id}
             onChange={(e) => handleFilterChange('sale_id', e.target.value)}
-            placeholder={t("sales:enterSaleId", "Enter Sale ID")}
+            placeholder="أدخل رقم البيع"
             className="dark:text-gray-100"
           />
 
@@ -523,7 +514,7 @@ const SalesListPage: React.FC = () => {
               disabled={isLoading}
               sx={{ flex: 1 }}
             >
-              {t("common:apply", "Apply")}
+              تطبيق
             </Button>
             <Button
               variant="outlined"
@@ -531,7 +522,7 @@ const SalesListPage: React.FC = () => {
               onClick={clearFilters}
               disabled={isLoading}
             >
-              {t("common:clear", "Clear")}
+              مسح
             </Button>
           </Box>
         </Box>
@@ -545,7 +536,7 @@ const SalesListPage: React.FC = () => {
             sx={{ ml: 2 }}
             className="text-gray-600 dark:text-gray-400"
           >
-            {t("common:loading")}
+            جاري التحميل...
           </Typography>
         </Box>
       )}
@@ -559,20 +550,20 @@ const SalesListPage: React.FC = () => {
       {!isLoading && !error && salesResponse && (
         <Card>
           <CardContent>
-            <Table aria-label={t("sales:listTitle")}>
-              <TableHeader>
+            <Table aria-label="قائمة المبيعات">
+              <TableHead>
                 <TableRow>
-                  <TableCell align="center">{t("sales:id")}</TableCell>
-                  <TableCell align="center">{t("sales:date")}</TableCell>
-                  <TableCell align="center">{t("sales:paymentStatus", "Payment")}</TableCell>
-                  <TableCell align="center">{t("clients:client")}</TableCell>
-                  <TableCell align="center">{t("sales:user", "User")}</TableCell>
-                  <TableCell align="center">{t("sales:discount")}</TableCell>
-                  <TableCell align="center">{t("sales:totalAmount")}</TableCell>
-                  <TableCell align="center">{t("sales:paidAmount")}</TableCell>
-                  <TableCell align="center">{t("common:actions")}</TableCell>
+                  <TableCell align="center">الرقم</TableCell>
+                  <TableCell align="center">التاريخ</TableCell>
+                  <TableCell align="center">حالة الدفع</TableCell>
+                  <TableCell align="center">العميل</TableCell>
+                  <TableCell align="center">المستخدم</TableCell>
+                  <TableCell align="center">الخصم</TableCell>
+                  <TableCell align="center">المبلغ الإجمالي</TableCell>
+                  <TableCell align="center">المبلغ المدفوع</TableCell>
+                  <TableCell align="center">الإجراءات</TableCell>
                 </TableRow>
-              </TableHeader>
+              </TableHead>
               <TableBody>
                 {salesResponse.data.map((sale) => {
                   const isHighlighted = sale.id === highlightedRowId;
@@ -616,10 +607,10 @@ const SalesListPage: React.FC = () => {
                         })()}
                       </TableCell>
                       <TableCell align="center">
-                        {sale.client_name || t("common:n/a")}
+                        {sale.client_name || "غير متاح"}
                       </TableCell>
                       <TableCell align="center">
-                        {sale.user_name || t("common:n/a")}
+                        {sale.user_name || "غير متاح"}
                       </TableCell>
                       <TableCell align="center">
                         {discountAmount > 0 
@@ -648,9 +639,9 @@ const SalesListPage: React.FC = () => {
                         align="center"
                         className={`${isFullyPaid ? 'bg-green-50 dark:bg-green-900/20 rounded-tr-md rounded-br-md' : ''}`}
                       >
-                        <Tooltip title={t("common:view") || ""}>
+                        <Tooltip title="عرض">
                           <IconButton
-                            aria-label={t("common:view") || "View"}
+                            aria-label="عرض"
                             color="primary"
                             size="small"
                             onClick={() => handleViewDetails(sale.id)}
@@ -693,48 +684,46 @@ const SalesListPage: React.FC = () => {
               sx={{ textAlign: "center", py: 5 }}
               className="text-gray-500 dark:text-gray-400"
             >
-              {t("sales:noSales")}
+              لا توجد مبيعات
             </Typography>
           )}
         </>
       )}
 
       {/* Sale Details Dialog */}
-      <Dialog open={saleDetailsDialog.open} onOpenChange={handleCloseDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">
-              {t("sales:saleDetails", "Sale Details")} #{saleDetailsDialog.sale?.id}
-            </DialogTitle>
-          </DialogHeader>
+      <Dialog open={saleDetailsDialog.open} onClose={handleCloseDialog} maxWidth="lg" fullWidth>
+        <DialogTitle sx={{ fontSize: '1.5rem', fontWeight: 600, pb: 2 }}>
+          تفاصيل البيع #{saleDetailsDialog.sale?.id}
+        </DialogTitle>
+        <DialogContent sx={{ maxHeight: '90vh', overflowY: 'auto' }}>
           
           {saleDetailsDialog.loading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
               <CircularProgress />
             </Box>
           ) : saleDetailsDialog.sale ? (
-            <div className="space-y-6">
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               {/* Sale Header Information */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{t("sales:date", "Date")}</p>
-                  <p className="font-semibold">{dayjs(saleDetailsDialog.sale.sale_date).format("YYYY-MM-DD")}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{t("sales:invoice", "Invoice")}</p>
-                  <p className="font-semibold">{saleDetailsDialog.sale.invoice_number || `SALE-${saleDetailsDialog.sale.id}`}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{t("clients:client", "Client")}</p>
-                  <p className="font-semibold">{saleDetailsDialog.sale.client_name || t("common:n/a")}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{t("sales:user", "User")}</p>
-                  <p className="font-semibold">{saleDetailsDialog.sale.user_name || t("common:n/a")}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{t("sales:totalAmount", "Total Amount")}</p>
-                  <p className="font-semibold text-green-600">
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">التاريخ</Typography>
+                  <Typography variant="body1" fontWeight={600}>{dayjs(saleDetailsDialog.sale.sale_date).format("YYYY-MM-DD")}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">الفاتورة</Typography>
+                  <Typography variant="body1" fontWeight={600}>{saleDetailsDialog.sale.invoice_number || `SALE-${saleDetailsDialog.sale.id}`}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">العميل</Typography>
+                  <Typography variant="body1" fontWeight={600}>{saleDetailsDialog.sale.client_name || "غير متاح"}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">المستخدم</Typography>
+                  <Typography variant="body1" fontWeight={600}>{saleDetailsDialog.sale.user_name || "غير متاح"}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">المبلغ الإجمالي</Typography>
+                  <Typography variant="body1" fontWeight={600} color="success.main">
                     {formatCurrency(
                       saleDetailsDialog.sale.total_amount,
                       "en-US",
@@ -744,11 +733,11 @@ const SalesListPage: React.FC = () => {
                         maximumFractionDigits: 0
                       }
                     )}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{t("sales:paidAmount", "Paid Amount")}</p>
-                  <p className="font-semibold text-blue-600">
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">المبلغ المدفوع</Typography>
+                  <Typography variant="body1" fontWeight={600} color="primary.main">
                     {formatCurrency(
                       saleDetailsDialog.sale.paid_amount,
                       "en-US",
@@ -758,48 +747,40 @@ const SalesListPage: React.FC = () => {
                         maximumFractionDigits: 0
                       }
                     )}
-                  </p>
-                </div>
-              </div>
+                  </Typography>
+                </Box>
+              </Box>
 
               {/* Sale Items */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">
-                  {t("sales:saleItems", "Sale Items")}
-                </h3>
-                <div className="border rounded-lg overflow-hidden">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 dark:bg-gray-700">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-                          {t("sales:product", "Product")}
-                        </th>
-                        <th className="px-4 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
-                          {t("sales:quantity", "Quantity")}
-                        </th>
-                        <th className="px-4 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
-                          {t("sales:unitPrice", "Unit Price")}
-                        </th>
-                        <th className="px-4 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
-                          {t("sales:totalPrice", "Total")}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+              <Box>
+                <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                  عناصر البيع
+                </Typography>
+                <Paper variant="outlined">
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>المنتج</TableCell>
+                        <TableCell align="center">الكمية</TableCell>
+                        <TableCell align="center">سعر الوحدة</TableCell>
+                        <TableCell align="center">الإجمالي</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
                       {saleDetailsDialog.sale.items?.map((item, index) => (
-                        <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                          <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
-                            <div>
-                              <p className="font-medium">{item.product_name || item.product?.name}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <TableRow key={index} hover>
+                          <TableCell>
+                            <Box>
+                              <Typography variant="body2" fontWeight={500}>
+                                {item.product_name || item.product?.name}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
                                 SKU: {item.product_sku || item.product?.sku || 'N/A'}
-                              </p>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-center text-gray-900 dark:text-gray-100">
-                            {item.quantity}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-center text-gray-900 dark:text-gray-100">
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell align="center">{item.quantity}</TableCell>
+                          <TableCell align="center">
                             {formatCurrency(
                               item.unit_price,
                               "en-US",
@@ -809,8 +790,8 @@ const SalesListPage: React.FC = () => {
                                 maximumFractionDigits: 0
                               }
                             )}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-center font-medium text-gray-900 dark:text-gray-100">
+                          </TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 500 }}>
                             {formatCurrency(
                               Number(item.unit_price) * item.quantity,
                               "en-US",
@@ -820,47 +801,52 @@ const SalesListPage: React.FC = () => {
                                 maximumFractionDigits: 0
                               }
                             )}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                    </TableBody>
+                  </Table>
+                </Paper>
+              </Box>
 
               {/* Payment Methods */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">
-                  {t("sales:paymentsMadeTitle", "Payments")}
-                </h3>
+              <Box>
+                <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                  المدفوعات
+                </Typography>
                 {saleDetailsDialog.sale.payments && saleDetailsDialog.sale.payments.length > 0 ? (
-                  <div className="border rounded-lg overflow-hidden">
-                    <table className="w-full">
-                      <thead className="bg-gray-50 dark:bg-gray-700">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-                            {t("sales:paymentMethod", "Method")}
-                          </th>
-                          <th className="px-4 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
-                            {t("sales:paymentAmount", "Amount")}
-                          </th>
-                          <th className="px-4 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
-                            {t("sales:paymentDate", "Date")}
-                          </th>
-                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-                            {t("sales:paymentReference", "Reference")}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                  <Paper variant="outlined">
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>طريقة الدفع</TableCell>
+                          <TableCell align="center">المبلغ</TableCell>
+                          <TableCell align="center">التاريخ</TableCell>
+                          <TableCell>المرجع</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
                         {saleDetailsDialog.sale.payments.map((payment, index) => (
-                          <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                          <TableRow key={index} hover>
+                            <TableCell>
+                              <Box
+                                component="span"
+                                sx={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  px: 1.5,
+                                  py: 0.5,
+                                  borderRadius: '16px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 500,
+                                  bgcolor: 'primary.light',
+                                  color: 'primary.dark'
+                                }}
+                              >
                                 {payment.method}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-sm text-center font-medium text-gray-900 dark:text-gray-100">
+                              </Box>
+                            </TableCell>
+                            <TableCell align="center" sx={{ fontWeight: 500 }}>
                               {formatCurrency(
                                 payment.amount,
                                 "en-US",
@@ -870,25 +856,27 @@ const SalesListPage: React.FC = () => {
                                   maximumFractionDigits: 0
                                 }
                               )}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-center text-gray-900 dark:text-gray-100">
+                            </TableCell>
+                            <TableCell align="center">
                               {dayjs(payment.payment_date).format("YYYY-MM-DD")}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
-                              {payment.reference_number || t("common:n/a")}
-                            </td>
-                          </tr>
+                            </TableCell>
+                            <TableCell>
+                              {payment.reference_number || "غير متاح"}
+                            </TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      </TableBody>
+                    </Table>
+                  </Paper>
                 ) : (
-                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    {t("sales:noPaymentsRecorded", "No payments recorded")}
-                  </div>
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      لا توجد مدفوعات مسجلة
+                    </Typography>
+                  </Box>
                 )}
-              </div>
-            </div>
+              </Box>
+            </Box>
           ) : null}
         </DialogContent>
       </Dialog>

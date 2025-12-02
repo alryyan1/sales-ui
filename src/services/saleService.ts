@@ -489,6 +489,183 @@ const saleService = {
         }
     },
 
+    // ============================================
+    // POS-OPTIMIZED API ENDPOINTS
+    // These endpoints return Sale objects ready for POS use
+    // ============================================
+
+    /**
+     * Get sale in POS format (with all relations loaded and formatted)
+     * Backend should return data already in POS format
+     */
+    getSaleForPOS: async (id: number): Promise<Sale> => {
+        try {
+            const response = await apiClient.get<{ sale: Sale } | Sale>(`/sales/${id}/pos-format`);
+            if ('sale' in response.data) {
+                return response.data.sale;
+            }
+            return response.data as Sale;
+        } catch (error) {
+            console.error(`Error fetching sale ${id} for POS:`, error);
+            throw error;
+        }
+    },
+
+    /**
+     * Add product to sale (creates sale if needed) - Returns updated Sale
+     * This is a unified endpoint that handles both creating a sale and adding items
+     */
+    addProductToSalePOS: async (
+        saleId: number | null,
+        productData: {
+            product_id: number;
+            quantity?: number;
+            purchase_item_id?: number | null;
+        }
+    ): Promise<{ sale: Sale; message: string }> => {
+        try {
+            const url = saleId 
+                ? `/sales/${saleId}/items` 
+                : '/sales/create-with-item';
+            
+            const payload = saleId 
+                ? {
+                    product_id: productData.product_id,
+                    quantity: productData.quantity || 1,
+                    unit_price: 0, // Backend should use product's last_sale_price
+                    purchase_item_id: productData.purchase_item_id || null
+                }
+                : {
+                    client_id: null,
+                    sale_date: new Date().toISOString().split('T')[0],
+                    notes: null,
+                    item: {
+                        product_id: productData.product_id,
+                        quantity: productData.quantity || 1,
+                        purchase_item_id: productData.purchase_item_id || null
+                    }
+                };
+
+            const response = await apiClient.post<{ sale: Sale; message: string }>(url, payload);
+            return response.data;
+        } catch (error) {
+            console.error('Error adding product to sale (POS):', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Update quantity and return updated Sale
+     */
+    updateQuantityPOS: async (
+        saleId: number,
+        itemId: number,
+        quantity: number
+    ): Promise<Sale> => {
+        try {
+            const response = await apiClient.put<{ sale: Sale }>(
+                `/sales/${saleId}/items/${itemId}`,
+                { quantity }
+            );
+            return response.data.sale;
+        } catch (error) {
+            console.error(`Error updating quantity (POS):`, error);
+            throw error;
+        }
+    },
+
+    /**
+     * Remove item and return updated Sale
+     */
+    removeItemPOS: async (
+        saleId: number,
+        itemId: number
+    ): Promise<Sale> => {
+        try {
+            const response = await apiClient.delete<{ sale: Sale }>(
+                `/sales/${saleId}/items/${itemId}`
+            );
+            return response.data.sale;
+        } catch (error) {
+            console.error(`Error removing item (POS):`, error);
+            throw error;
+        }
+    },
+
+    /**
+     * Update batch for an item and return updated Sale
+     */
+    updateBatchPOS: async (
+        saleId: number,
+        itemId: number,
+        batchData: {
+            purchase_item_id: number | null;
+            unit_price: number;
+        }
+    ): Promise<Sale> => {
+        try {
+            const response = await apiClient.put<{ sale: Sale }>(
+                `/sales/${saleId}/items/${itemId}`,
+                {
+                    quantity: undefined, // Keep existing quantity
+                    unit_price: batchData.unit_price,
+                    purchase_item_id: batchData.purchase_item_id
+                }
+            );
+            return response.data.sale;
+        } catch (error) {
+            console.error(`Error updating batch (POS):`, error);
+            throw error;
+        }
+    },
+
+    /**
+     * Add payment and return updated Sale
+     */
+    addPaymentPOS: async (
+        saleId: number,
+        paymentData: {
+            method: string;
+            amount: number;
+            reference_number?: string | null;
+            notes?: string | null;
+        }
+    ): Promise<Sale> => {
+        try {
+            const response = await apiClient.post<{ sale: Sale }>(
+                `/sales/${saleId}/payments`,
+                { payments: [paymentData] }
+            );
+            return response.data.sale;
+        } catch (error) {
+            console.error(`Error adding payment (POS):`, error);
+            throw error;
+        }
+    },
+
+    /**
+     * Get today's sales in POS format
+     */
+    getTodaySalesPOS: async (userId?: number | null): Promise<Sale[]> => {
+        try {
+            const params = new URLSearchParams();
+            if (userId) {
+                params.append('user_id', userId.toString());
+            }
+            
+            const url = `/sales/today-by-created-at${params.toString() ? '?' + params.toString() : ''}`;
+            const response = await apiClient.get<{ data: Sale[] } | Sale[]>(url);
+            
+            if ('data' in response.data) {
+                return response.data.data;
+            }
+            return response.data as Sale[];
+        } catch (error) {
+            console.error('Error fetching today\'s sales (POS):', error);
+            throw error;
+        }
+    },
+
     // --- Error Helpers ---
     getValidationErrors,
     getErrorMessage,

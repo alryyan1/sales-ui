@@ -1,21 +1,21 @@
 // src/components/products/ProductsTable.tsx
 import React, { useState } from 'react';
 import {
-  Box,
-  Card,
-  CardContent,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableRow,
+  TableContainer,
+  Paper,
   IconButton,
   Tooltip,
-  Typography,
+  Box,
 } from '@mui/material';
 import { Edit, AlertTriangle, PackageSearch, Copy, Check } from 'lucide-react';
 
-import { Product as ProductType } from '@/services/productService';
+// Types
+import { Product as ProductType } from '@/services/productService'; // Ensure ProductType is up-to-date
 import { formatNumber, formatCurrency } from '@/constants';
 
 // Interface for Product with potentially loaded batches (though not directly used for display in this table)
@@ -62,15 +62,14 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
         return (
             <Box className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground dark:text-gray-400">
                 <PackageSearch className="h-12 w-12 mb-3 text-gray-400 dark:text-gray-500" />
-                <p>لا توجد منتجات حاليًا</p>
+                <p>لا توجد منتجات لعرضها.</p>
             </Box>
         );
     }
 
     return (
-        <Card>
-            <CardContent className="w-full overflow-x-auto">
-                <Table className="w-full">
+        <TableContainer component={Paper}>
+            <Table>
                     <TableHead>
                         <TableRow className="dark:border-gray-700">
                             <TableCell className="text-center px-3 py-3 w-[60px]">#</TableCell>
@@ -78,10 +77,10 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                             <TableCell className="px-3 py-3 min-w-[200px] text-center">اسم المنتج</TableCell>
                             <TableCell className="hidden lg:table-cell px-3 py-3 text-center">الاسم العلمي</TableCell>
                             <TableCell className="hidden md:table-cell px-3 py-3 text-center">الفئة</TableCell>
-                            <TableCell className="text-center px-3 py-3">المخزون الكلي</TableCell>
-                            <TableCell className="hidden lg:table-cell text-right px-3 py-3">أحدث تكلفة للوحدة</TableCell>
-                            <TableCell className="hidden lg:table-cell text-right px-3 py-3">آخر سعر بيع للوحدة</TableCell>
-                            <TableCell className="text-center px-3 py-3 w-[80px]">الإجراءات</TableCell>
+                            <TableCell className="text-center px-3 py-3">إجمالي المخزون</TableCell>
+                            <TableCell className="hidden lg:table-cell text-right px-3 py-3">أحدث تكلفة للوحدة البيعية</TableCell>
+                            <TableCell className="hidden lg:table-cell text-right px-3 py-3">آخر سعر بيع للوحدة البيعية</TableCell>
+                            <TableCell className="text-center px-3 py-3 w-[80px]">إجراءات</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -94,14 +93,10 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                             // Display quantities without unit label per requirements
 
                             return (
-                                <TableRow
-                                    key={product.id}
-                                    className={cn(
-                                        "dark:border-gray-700 hover:bg-muted/50 dark:hover:bg-gray-700/30",
-                                        isLow && !isOutOfStock && "bg-orange-50 dark:bg-orange-900/40 hover:bg-orange-100/70 dark:hover:bg-orange-800/60",
-                                        isOutOfStock && "bg-red-50 dark:bg-red-900/40 hover:bg-red-100/70 dark:hover:bg-red-800/60"
-                                    )}
-                                >
+                                    <TableRow
+                                        key={product.id}
+                                        className="dark:border-gray-700 hover:bg-muted/50 dark:hover:bg-gray-700/30"
+                                    >
                                     <TableCell className="text-center px-3 py-2 dark:text-gray-300 font-medium text-sm">
                                         {product.id}
                                     </TableCell>
@@ -151,8 +146,8 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                                                 {formatNumber(stockQty)}
                                             </div>
                                             {(isLow || isOutOfStock) && (
-                                                <Tooltip title={isOutOfStock ? "غير متوفر" : "مخزون منخفض"}>
-                                                    <AlertTriangle className={`inline ms-1 h-4 w-4 ${isOutOfStock ? 'text-red-500' : 'text-orange-500'}`} />
+                                                <Tooltip title={isOutOfStock ? "نفاد المخزون" : "تنبيه: المخزون منخفض"}>
+                                                    <AlertTriangle className={`inline ms-1 h-4 w-4 ${isOutOfStock ? 'text-red-500' : 'text-orange-500'}`}/>
                                                 </Tooltip>
                                             )}
                                         </div>
@@ -166,6 +161,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                                     <TableCell className="text-center px-3 py-2">
                                         <IconButton
                                             size="small"
+                                            className="h-8 w-8 p-0"
                                             onClick={() => onEdit(product)}
                                             disabled={isLoading}
                                         >
@@ -177,8 +173,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                         })}
                     </TableBody>
                 </Table>
-            </CardContent>
-        </Card>
+            </TableContainer>
     );
 };
 

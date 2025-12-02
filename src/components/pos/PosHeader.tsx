@@ -1,6 +1,5 @@
 // src/components/pos/PosHeader.tsx
 import React, { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
 
 // MUI Components
 import {
@@ -8,10 +7,9 @@ import {
   TextField,
   Autocomplete,
   Typography,
+  Button,
+  Tooltip,
 } from "@mui/material";
-
-// Shadcn Components
-import { Button } from "@/components/ui/button";
 
 // MUI Icons
 import {
@@ -20,10 +18,8 @@ import {
     PictureAsPdf as PdfIcon,
     Description as InvoiceIcon,
     Print as PrintIcon,
+    Description as FileTextIcon,
 } from "@mui/icons-material";
-
-// Lucide Icons
-import { FileText, Users } from "lucide-react";
 
 // Types
 import { Product } from "../../services/productService";
@@ -68,7 +64,6 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
   selectedDate, 
   onDateChange 
 }) => {
-  const { t } = useTranslation(['pos', 'common']);
   const [searchInput, setSearchInput] = useState("");
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -216,19 +211,18 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
       <div className="w-full bg-white rounded-lg shadow-md border border-gray-200 px-4 py-3 min-h-[80px] flex items-center justify-between">
         {/* Left side - Create Empty Sale Button and Date Selection */}
         <div className="flex items-center space-x-1">
-          <Button
-            variant="default"
-            size="default"
-            onClick={onCreateEmptySale}
-            disabled={loading}
-            className="relative group px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:text-gray-500 cursor-pointer"
-            title={t('pos:createEmptySale')}
-          >
-            <AddIcon className="h-4 w-4" />
-            <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-              {t('pos:createEmptySale')}
-            </span>
-          </Button>
+          <Tooltip title="إنشاء بيع فارغ">
+            <Button
+              variant="contained"
+              size="small"
+              onClick={onCreateEmptySale}
+              disabled={loading}
+              startIcon={<AddIcon />}
+              sx={{ bgcolor: 'primary.main', '&:hover': { bgcolor: 'primary.dark' } }}
+            >
+              إنشاء بيع فارغ
+            </Button>
+          </Tooltip>
 
           {/* Date Selection */}
           <Box sx={{ minWidth: 150 }}>
@@ -269,8 +263,8 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label={t('pos:selectClient')}
-                    placeholder={t('pos:searchClientPlaceholder')}
+                    label="اختر العميل"
+                    placeholder="ابحث عن عميل..."
                     size="small"
                     sx={{
                       backgroundColor: 'white',
@@ -346,7 +340,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
                    renderInput={(params) => (
                      <TextField
                        {...params}
-                       placeholder={t('pos:searchProducts')}
+                       placeholder="ابحث عن منتج..."
                        variant="outlined"
                        size="medium"
                        onKeyDown={handleKeyDown}
@@ -364,27 +358,25 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
                       </Box>
                     </Box>
                   )}
-                  noOptionsText={searchInput ? t("common:noResults") : t("pos:typeToSearch")}
+                  noOptionsText={searchInput ? "لا توجد نتائج" : "اكتب للبحث..."}
                 />
                 
-                <Button
-                  variant="outline"
-                  size="default"
-                  onClick={handleAddProducts}
-                  disabled={selectedProducts.length === 0 || loading}
-                  className="relative group min-w-auto px-2 py-1.5 bg-white text-primary hover:bg-gray-100 disabled:bg-gray-300 disabled:text-gray-500 cursor-pointer"
-                  title={t('pos:addProduct')}
-                >
-                  <AddIcon className="h-4 w-4" />
-                  <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-                    {selectedProducts.length > 1 ? t('pos:addProducts') : t('pos:addProduct')}
-                  </span>
-                </Button>
+                <Tooltip title={selectedProducts.length > 1 ? "إضافة المنتجات" : "إضافة منتج"}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={handleAddProducts}
+                    disabled={selectedProducts.length === 0 || loading}
+                    startIcon={<AddIcon />}
+                  >
+                    {selectedProducts.length > 1 ? "إضافة المنتجات" : "إضافة منتج"}
+                  </Button>
+                </Tooltip>
               </Box>
 
-              <span className="text-sm text-gray-300">
-                {t('pos:pressEnterToAdd')}
-              </span>
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                اضغط Enter للإضافة
+              </Typography>
             </>
           )}
         </div>
@@ -395,78 +387,73 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
         
 
           {/* Calculator Button */}
-          <Button
-            variant="default"
-            size="default"
-            onClick={onOpenCalculator}
-            className="relative group px-3 py-1.5 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 disabled:text-gray-500 cursor-pointer"
-            title={t('pos:calculator')}
-          >
-            <CalculateIcon className="h-4 w-4" />
-            <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-              {t('pos:calculator')}
-            </span>
-          </Button>
+          <Tooltip title="الآلة الحاسبة">
+            <Button
+              variant="contained"
+              size="small"
+              onClick={onOpenCalculator}
+              startIcon={<CalculateIcon />}
+              sx={{ bgcolor: 'orange.main', '&:hover': { bgcolor: 'orange.dark' } }}
+            >
+              الآلة الحاسبة
+            </Button>
+          </Tooltip>
 
           {/* Preview PDF Button */}
-          <Button
-            variant="default"
-            size="default"
-            onClick={onPreviewPdf}
-            className="relative group px-3 py-1.5 bg-purple-500 hover:bg-purple-600 disabled:bg-gray-300 disabled:text-gray-500 cursor-pointer"
-            title={t('pos:previewPdf')}
-          >
-            <PdfIcon className="h-4 w-4" />
-            <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-              {t('pos:previewPdf')}
-            </span>
-          </Button>
+          <Tooltip title="معاينة PDF">
+            <Button
+              variant="contained"
+              size="small"
+              onClick={onPreviewPdf}
+              startIcon={<PdfIcon />}
+              sx={{ bgcolor: 'purple.main', '&:hover': { bgcolor: 'purple.dark' } }}
+            >
+              معاينة PDF
+            </Button>
+          </Tooltip>
 
           {/* Invoice PDF Button - Only show when sale is selected */}
           {hasSelectedSale && (
-            <Button
-              variant="default"
-              size="default"
-              onClick={onGenerateInvoice}
-              className="relative group px-3 py-1.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:text-gray-500 cursor-pointer"
-              title={t('pos:generateInvoice')}
-            >
-              <InvoiceIcon className="h-4 w-4" />
-              <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-                {t('pos:generateInvoice')}
-              </span>
-            </Button>
+            <Tooltip title="إنشاء فاتورة">
+              <Button
+                variant="contained"
+                size="small"
+                onClick={onGenerateInvoice}
+                startIcon={<InvoiceIcon />}
+                sx={{ bgcolor: 'success.main', '&:hover': { bgcolor: 'success.dark' } }}
+              >
+                إنشاء فاتورة
+              </Button>
+            </Tooltip>
           )}
 
           {/* Thermal Invoice Button - Only show when sale is selected */}
           {hasSelectedSale && (
-            <Button
-              variant="default"
-              size="default"
-              onClick={onPrintThermalInvoice}
-              className="relative group px-3 py-1.5 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 disabled:text-gray-500 cursor-pointer"
-              title={t('pos:printThermalInvoice')}
-            >
-              <PrintIcon className="h-4 w-4" />
-              <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-                {t('pos:printThermalInvoice')}
-              </span>
-            </Button>
+            <Tooltip title="طباعة فاتورة حرارية">
+              <Button
+                variant="contained"
+                size="small"
+                onClick={onPrintThermalInvoice}
+                startIcon={<PrintIcon />}
+                sx={{ bgcolor: 'orange.main', '&:hover': { bgcolor: 'orange.dark' } }}
+              >
+                طباعة فاتورة حرارية
+              </Button>
+            </Tooltip>
           )}
 
           {/* PDF Report Button */}
-          <Button
-            variant="default"
-            size="default"
-            onClick={onGeneratePdf}
-            className="relative group px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:text-gray-500 cursor-pointer"
-            title={t('pos:generatePdf')}
-          >
-            <FileText className="h-4 w-4" />
-            <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-              {t('pos:generatePdf')}
-            </span>
-          </Button>
+          <Tooltip title="إنشاء PDF">
+            <Button
+              variant="contained"
+              size="small"
+              onClick={onGeneratePdf}
+              startIcon={<FileTextIcon />}
+              sx={{ bgcolor: 'primary.main', '&:hover': { bgcolor: 'primary.dark' } }}
+            >
+              إنشاء PDF
+            </Button>
+          </Tooltip>
         </div>
         </div>
   );

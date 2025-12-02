@@ -1,7 +1,6 @@
 // src/pages/PurchasesListPage.tsx
 import React, { useState, useEffect, useCallback } from "react";
-import { useTranslation } from "react-i18next";
-import { Link as RouterLink, useNavigate } from "react-router-dom"; // Use React Router Link
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 
 // MUI Components
 import Box from "@mui/material/Box";
@@ -9,40 +8,35 @@ import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
 import Pagination from "@mui/material/Pagination";
-
 import Paper from "@mui/material/Paper";
 import TextField from "@mui/material/TextField";
 import Autocomplete from "@mui/material/Autocomplete";
-
-
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
-import Chip from "@mui/material/Chip"; // To display status
+import Chip from "@mui/material/Chip";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Button from "@mui/material/Button";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
 
 // Icons
-import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf"; // PDF report icon
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import ClearIcon from "@mui/icons-material/Clear";
-import HistoryIcon from "@mui/icons-material/History"; // Product history icon
-import TableChartIcon from "@mui/icons-material/TableChart"; // Excel export icon
-import InventoryIcon from "@mui/icons-material/Inventory"; // Manage items icon
+import HistoryIcon from "@mui/icons-material/History";
+import TableChartIcon from "@mui/icons-material/TableChart";
+import InventoryIcon from "@mui/icons-material/Inventory";
 
 // Services and Types
-import purchaseService from "../../services/purchaseService"; // Use purchase service
+import purchaseService from "../../services/purchaseService";
 import supplierService, { Supplier } from "../../services/supplierService";
 import productService, { Product } from "../../services/productService";
-import exportService from "../../services/exportService"; // Import export service
+import exportService from "../../services/exportService";
 import dayjs from "dayjs";
-import { CardContent } from "@mui/material";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { formatCurrency } from "@/constants";
 import { PurchaseItemDetailsDialog } from "@/components/purchases/PurchaseItemDetailsDialog";
 
@@ -57,7 +51,6 @@ interface PurchaseFilters {
 }
 
 const PurchasesListPage: React.FC = () => {
-  const { t } = useTranslation(["purchases", "common"]); // Load namespaces
   const navigate = useNavigate(); // Hook for navigation
 
   // --- State ---
@@ -83,9 +76,9 @@ const PurchasesListPage: React.FC = () => {
 
   // Status options
   const statusOptions = [
-    { value: "pending", label: t("purchases:status_pending") },
-    { value: "ordered", label: t("purchases:status_ordered") },
-    { value: "received", label: t("purchases:status_received") },
+    { value: "pending", label: "قيد الانتظار" },
+    { value: "ordered", label: "تم الطلب" },
+    { value: "received", label: "تم الاستلام" },
   ];
 
   // --- Data Fetching ---
@@ -185,7 +178,7 @@ const PurchasesListPage: React.FC = () => {
 
   // --- Pagination Handler ---
   const handlePageChange = (
-    event: React.ChangeEvent<unknown>,
+    _event: React.ChangeEvent<unknown>,
     value: number
   ) => {
     setCurrentPage(value);
@@ -242,7 +235,7 @@ const PurchasesListPage: React.FC = () => {
   // --- Render ---
   return (
     <Box
-      sx={{ p: { xs: 1, sm: 2, md: 3 } }}
+      sx={{ p: { xs: 1, sm: 2, md: 3 }, direction: "rtl" }}
       className="dark:bg-gray-900 min-h-screen"
     >
       {/* Header & Add Button */}
@@ -261,30 +254,28 @@ const PurchasesListPage: React.FC = () => {
           component="h1"
           className="text-gray-800 dark:text-gray-100 font-semibold"
         >
-          {t("purchases:listTitle")} {/* Add key */}
+          قائمة المشتريات
         </Typography>
         <Box sx={{ display: "flex", gap: 1 }}>
           {/* Filter Toggle Button */}
           <Button
-            variant="outline"
+            variant="outlined"
             onClick={() => setShowFilters(!showFilters)}
             startIcon={<FilterListIcon />}
           >
-            {t("common:filters")}
+            الفلاتر
           </Button>
           {/* Excel Export Button */}
           <Button
-            variant="outline"
+            variant="outlined"
             onClick={handleExportExcel}
             startIcon={<TableChartIcon />}
           >
-            {t("purchases:exportExcel")}
+            تصدير إلى Excel
           </Button>
           {/* Link to the Add Purchase Page */}
-          <Button asChild>
-            <RouterLink to="/purchases/add">
-              {t("purchases:addPurchase")} {/* Add key */}
-            </RouterLink>
+          <Button variant="contained" component={RouterLink} to="/purchases/add">
+            إضافة عملية شراء
           </Button>
         </Box>
       </Box>
@@ -294,16 +285,16 @@ const PurchasesListPage: React.FC = () => {
         <Paper sx={{ p: 3, mb: 3 }} className="dark:bg-gray-800">
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
             <Typography variant="h6" className="text-gray-800 dark:text-gray-100">
-              {t("common:filters")}
+              الفلاتر
             </Typography>
             {hasActiveFilters && (
               <Button
-                variant="outline"
+                variant="outlined"
                 size="small"
                 onClick={clearFilters}
                 startIcon={<ClearIcon />}
               >
-                {t("common:clearFilters")}
+                مسح الفلاتر
               </Button>
             )}
           </Box>
@@ -321,8 +312,8 @@ const PurchasesListPage: React.FC = () => {
                renderInput={(params) => (
                  <TextField
                    {...params}
-                   label={t("purchases:supplier")}
-                   placeholder={t("purchases:selectSupplier")}
+                   label="المورد"
+                   placeholder="اختر المورد"
                    size="small"
                  />
                )}
@@ -340,8 +331,8 @@ const PurchasesListPage: React.FC = () => {
                renderInput={(params) => (
                  <TextField
                    {...params}
-                   label={t("purchases:product")}
-                   placeholder={t("purchases:selectProduct")}
+                   label="المنتج"
+                   placeholder="اختر المنتج"
                    size="small"
                  />
                )}
@@ -349,8 +340,8 @@ const PurchasesListPage: React.FC = () => {
 
              {/* Reference Number Filter */}
              <TextField
-               label={t("purchases:reference")}
-               placeholder={t("purchases:referencePlaceholder")}
+               label="رقم المرجع"
+               placeholder="أدخل رقم المرجع"
                value={filters.reference_number || ''}
                onChange={(e) => handleFilterChange('reference_number', e.target.value)}
                size="small"
@@ -367,8 +358,8 @@ const PurchasesListPage: React.FC = () => {
                renderInput={(params) => (
                  <TextField
                    {...params}
-                   label={t("purchases:status")}
-                   placeholder={t("purchases:selectStatus")}
+                   label="الحالة"
+                   placeholder="اختر الحالة"
                    size="small"
                  />
                )}
@@ -377,7 +368,7 @@ const PurchasesListPage: React.FC = () => {
              {/* Purchase Date Filter */}
              <TextField
                type="date"
-               label={t("purchases:date")}
+               label="تاريخ الشراء"
                value={filters.purchase_date || ''}
                onChange={(e) => handleFilterChange('purchase_date', e.target.value)}
                size="small"
@@ -392,7 +383,7 @@ const PurchasesListPage: React.FC = () => {
              {/* Created At Filter */}
              <TextField
                type="date"
-               label={t("purchases:createdAt")}
+               label="تاريخ الإنشاء"
                value={filters.created_at || ''}
                onChange={(e) => handleFilterChange('created_at', e.target.value)}
                size="small"
@@ -416,7 +407,7 @@ const PurchasesListPage: React.FC = () => {
             sx={{ ml: 2 }}
             className="text-gray-600 dark:text-gray-400"
           >
-            {t("common:loading")}
+            جاري التحميل...
           </Typography>
         </Box>
       )}
@@ -428,21 +419,21 @@ const PurchasesListPage: React.FC = () => {
 
       {/* Content Area: Table and Pagination */}
       {!isLoading && !error && purchasesResponse && (
-        <Card>
+        <Card style={{ direction: 'rtl' }}>
           <CardContent>
-            <Table aria-label={t("purchases:listTitle")} className="text-base">
-                             <TableHeader>
+            <Table aria-label="قائمة المشتريات" className="text-base">
+              <TableHead>
                  <TableRow>
-                   <TableCell align="center" className="font-semibold text-base">{t("purchases:id")}</TableCell>
-                   <TableCell align="center" className="font-semibold text-base">{t("purchases:date")}</TableCell>
-                   <TableCell align="center" className="font-semibold text-base">{t("purchases:createdAt")}</TableCell>
-                   <TableCell align="center" className="font-semibold text-base">{t("purchases:reference")}</TableCell>
-                   <TableCell align="center" className="font-semibold text-base">{t("purchases:supplier")}</TableCell>
-                   <TableCell align="center" className="font-semibold text-base">{t("purchases:status")}</TableCell>
-                   <TableCell align="center" className="font-semibold text-base">{t("purchases:totalAmount")}</TableCell>
-                   <TableCell align="center" className="font-semibold text-base">{t("common:actions")}</TableCell>
+                   <TableCell align="center" className="font-semibold text-base">#</TableCell>
+                   <TableCell align="center" className="font-semibold text-base">تاريخ الشراء</TableCell>
+                   <TableCell align="center" className="font-semibold text-base">تاريخ الإنشاء</TableCell>
+                   <TableCell align="center" className="font-semibold text-base">رقم المرجع</TableCell>
+                   <TableCell align="center" className="font-semibold text-base">المورد</TableCell>
+                   <TableCell align="center" className="font-semibold text-base">الحالة</TableCell>
+                   <TableCell align="center" className="font-semibold text-base">إجمالي المبلغ</TableCell>
+                   <TableCell align="center" className="font-semibold text-base">إجراءات</TableCell>
                  </TableRow>
-               </TableHeader>
+               </TableHead>
               <TableBody>
                                  {purchasesResponse.data.map((purchase) => (
                    <TableRow key={purchase.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
@@ -456,13 +447,19 @@ const PurchasesListPage: React.FC = () => {
                      <TableCell align="center" className="text-base">{purchase.reference_number || "---"}</TableCell>
                      <TableCell align="center" className="text-base">
                        <span className="font-bold text-gray-900 dark:text-gray-100">
-                         {purchase.supplier_name || t("common:n/a")}
+                         {purchase.supplier_name || "-"}
                        </span>
                      </TableCell>
                     {/* Handle possible null supplier */}
                     <TableCell align="center" className="text-base">
                       <Chip
-                        label={t(`purchases:status_${purchase.status}`)} // Use status_received, status_pending etc keys
+                        label={
+                          purchase.status === "received"
+                            ? "تم الاستلام"
+                            : purchase.status === "pending"
+                            ? "قيد الانتظار"
+                            : "تم الطلب"
+                        }
                         size="small"
                         color={
                           purchase.status === "received"
@@ -484,9 +481,9 @@ const PurchasesListPage: React.FC = () => {
                            gap: 0.5,
                          }}
                        >
-                         <Tooltip title={t("purchases:viewPdfReport") || "View PDF Report"}>
+                         <Tooltip title="عرض تقرير PDF">
                            <IconButton
-                             aria-label={t("purchases:viewPdfReport") || "View PDF Report"}
+                             aria-label="عرض تقرير PDF"
                              color="default"
                              size="small"
                              onClick={() => handleViewPdfReport(purchase.id)}
@@ -495,9 +492,9 @@ const PurchasesListPage: React.FC = () => {
                            </IconButton>
                          </Tooltip>
                          
-                         <Tooltip title={t("purchases:managePurchaseItems") || ""}>
+                         <Tooltip title="إدارة بنود الشراء">
                            <IconButton
-                             aria-label={t("purchases:managePurchaseItems") || "Manage Items"}
+                             aria-label="إدارة بنود الشراء"
                              color="primary"
                              size="small"
                              onClick={() => navigate(`/purchases/${purchase.id}/manage-items`)}
@@ -508,9 +505,9 @@ const PurchasesListPage: React.FC = () => {
                          
                          {/* Product History Button - only show if there's a product filter */}
                          {filters.product_id && (
-                           <Tooltip title={t("purchases:viewProductHistory") || ""}>
+                           <Tooltip title="سجل مشتريات المنتج">
                              <IconButton
-                               aria-label={t("purchases:viewProductHistory") || "View Product History"}
+                               aria-label="سجل مشتريات المنتج"
                                color="primary"
                                size="small"
                                onClick={() => {
@@ -556,7 +553,7 @@ const PurchasesListPage: React.FC = () => {
               sx={{ textAlign: "center", py: 5 }}
               className="text-gray-500 dark:text-gray-400"
             >
-              {t("purchases:noPurchases")}
+              لا توجد عمليات شراء مسجلة.
             </Typography>
           )}
                  </Card>

@@ -4,7 +4,8 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 // MUI Components
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import Button from "@mui/material/Button";
+import IconButton from "@mui/material/IconButton";
+import Tooltip from "@mui/material/Tooltip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
 import Pagination from "@mui/material/Pagination";
@@ -214,10 +215,7 @@ const ProductsPage: React.FC = () => {
   };
   const handleSaveSuccess = () => {
     closeModal();
-    showSnackbar(
-      editingProduct ? "تم تحديث بيانات المنتج بنجاح" : "تم إضافة المنتج بنجاح",
-      "success"
-    );
+    showSnackbar("تم حفظ المنتج بنجاح", "success");
     const pageToFetch = editingProduct ? currentPage : 1;
     fetchProducts(pageToFetch, debouncedSearchTerm, selectedCategory, rowsPerPage, showOnlyInStock, showLowStockOnly, showOutOfStockOnly); // Refetch
     if (!editingProduct) setCurrentPage(1);
@@ -269,12 +267,9 @@ const ProductsPage: React.FC = () => {
       };
       
       await exportService.exportProductsPdf(filters);
-      showSnackbar("تم توليد ملف PDF للمنتجات بنجاح", "success");
+      showSnackbar("تم تصدير تقرير المنتجات إلى PDF بنجاح", "success");
     } catch (err) {
-      showSnackbar(
-        err instanceof Error ? err.message : "فشل في تصدير ملف PDF",
-        "error"
-      );
+      showSnackbar(err instanceof Error ? err.message : "Failed to export PDF", "error");
     }
   };
 
@@ -291,24 +286,13 @@ const ProductsPage: React.FC = () => {
       await exportService.exportProductsExcel(filters);
       showSnackbar("تم تصدير المنتجات إلى Excel بنجاح", "success");
     } catch (err) {
-      showSnackbar(
-        err instanceof Error ? err.message : "فشل في تصدير ملف Excel",
-        "error"
-      );
+      showSnackbar(err instanceof Error ? err.message : "Failed to export Excel", "error");
     }
   };
 
   const handleImportSuccess = () => {
     // Refresh the products list after successful import
-    fetchProducts(
-      currentPage,
-      debouncedSearchTerm,
-      selectedCategory,
-      rowsPerPage,
-      showOnlyInStock,
-      showLowStockOnly,
-      showOutOfStockOnly
-    );
+    fetchProducts(currentPage, debouncedSearchTerm, selectedCategory, rowsPerPage, showOnlyInStock, showLowStockOnly, showOutOfStockOnly);
     showSnackbar("تم استيراد المنتجات بنجاح", "success");
   };
 
@@ -328,15 +312,16 @@ const ProductsPage: React.FC = () => {
       <Box
         className="dark:bg-gray-900 h-[calc(100vh-100px)] w-full max-w-none products-page-full-width"
         sx={{
-          width: "100%",
-          maxWidth: "none",
+          direction: 'rtl',
+          width: '100%',
+          maxWidth: 'none',
           margin: 0,
           padding: 0,
-          direction: "rtl",
-          "&": {
-            maxWidth: "none !important",
-            margin: "0 !important",
-          },
+          // Override any container constraints from parent layout
+          '&': {
+            maxWidth: 'none !important',
+            margin: '0 !important',
+          }
         }}
       >
    
@@ -358,61 +343,113 @@ const ProductsPage: React.FC = () => {
           component="h1"
           className="text-gray-800 dark:text-gray-100 font-semibold"
         >
-          المنتجات
+          إدارة المنتجات
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            variant={showOnlyInStock ? "contained" : "outlined"}
-            startIcon={<FilterListIcon />}
-            onClick={handleStockFilterToggle}
-            color={showOnlyInStock ? "primary" : "inherit"}
-          >
-            {showOnlyInStock ? "عرض كل المنتجات" : "عرض المنتجات المتوفرة فقط"}
-          </Button>
-          <Button
-            variant={showLowStockOnly ? "contained" : "outlined"}
-            startIcon={<FilterListIcon />}
-            onClick={handleLowStockFilterToggle}
-            color={showLowStockOnly ? "primary" : "inherit"}
-          >
-            {showLowStockOnly ? "عرض كل المنتجات" : "عرض المنتجات ذات المخزون المنخفض"}
-          </Button>
-          <Button
-            variant={showOutOfStockOnly ? "contained" : "outlined"}
-            startIcon={<FilterListIcon />}
-            onClick={handleOutOfStockFilterToggle}
-            color={showOutOfStockOnly ? "primary" : "inherit"}
-          >
-            {showOutOfStockOnly ? "عرض كل المنتجات" : "عرض المنتجات غير المتوفرة"}
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<PrintIcon />}
-            onClick={() => handlePrintProducts()}
-          >
-            طباعة المنتجات
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<TableChartIcon />}
-            onClick={() => handleExportExcel()}
-          >
-            تصدير إلى Excel
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<FileUploadIcon />}
-            onClick={() => setIsImportDialogOpen(true)}
-          >
-            استيراد المنتجات
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => openModal()}
-          >
-            إضافة منتج
-          </Button>
+        <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+          {/* Filter: In Stock Only */}
+          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <Tooltip title={showOnlyInStock ? "عرض كل المنتجات" : "عرض المنتجات المتوفرة فقط"}>
+              <IconButton
+                onClick={handleStockFilterToggle}
+                color={showOnlyInStock ? "primary" : "default"}
+                sx={{
+                  bgcolor: showOnlyInStock ? "primary.light" : "transparent",
+                  "&:hover": { bgcolor: "primary.light" },
+                }}
+              >
+                <FilterListIcon />
+              </IconButton>
+            </Tooltip>
+            <Typography variant="caption">
+              {showOnlyInStock ? "كل المنتجات" : "المتوفر فقط"}
+            </Typography>
+          </Box>
+
+          {/* Filter: Low Stock Only */}
+          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <Tooltip title={showLowStockOnly ? "عرض كل المنتجات" : "عرض المنتجات منخفضة المخزون فقط"}>
+              <IconButton
+                onClick={handleLowStockFilterToggle}
+                color={showLowStockOnly ? "primary" : "default"}
+                sx={{
+                  bgcolor: showLowStockOnly ? "primary.light" : "transparent",
+                  "&:hover": { bgcolor: "primary.light" },
+                }}
+              >
+                <FilterListIcon />
+              </IconButton>
+            </Tooltip>
+            <Typography variant="caption">
+              {showLowStockOnly ? "كل المنتجات" : "منخفض المخزون"}
+            </Typography>
+          </Box>
+
+          {/* Filter: Out of Stock Only */}
+          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <Tooltip title={showOutOfStockOnly ? "عرض كل المنتجات" : "عرض المنتجات غير المتوفرة"}>
+              <IconButton
+                onClick={handleOutOfStockFilterToggle}
+                color={showOutOfStockOnly ? "primary" : "default"}
+                sx={{
+                  bgcolor: showOutOfStockOnly ? "primary.light" : "transparent",
+                  "&:hover": { bgcolor: "primary.light" },
+                }}
+              >
+                <FilterListIcon />
+              </IconButton>
+            </Tooltip>
+            <Typography variant="caption">
+              {showOutOfStockOnly ? "كل المنتجات" : "غير المتوفر"}
+            </Typography>
+          </Box>
+
+          {/* Print Products */}
+          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <Tooltip title="طباعة تقرير المنتجات">
+              <IconButton onClick={() => handlePrintProducts()} color="default">
+                <PrintIcon />
+              </IconButton>
+            </Tooltip>
+            <Typography variant="caption">طباعة</Typography>
+          </Box>
+
+          {/* Export to Excel */}
+          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <Tooltip title="تصدير إلى Excel">
+              <IconButton onClick={() => handleExportExcel()} color="default">
+                <TableChartIcon />
+              </IconButton>
+            </Tooltip>
+            <Typography variant="caption">Excel</Typography>
+          </Box>
+
+          {/* Import from File */}
+          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <Tooltip title="استيراد من ملف">
+              <IconButton onClick={() => setIsImportDialogOpen(true)} color="default">
+                <FileUploadIcon />
+              </IconButton>
+            </Tooltip>
+            <Typography variant="caption">استيراد</Typography>
+          </Box>
+
+          {/* Add Product */}
+          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <Tooltip title="إضافة منتج جديد">
+              <IconButton
+                onClick={() => openModal()}
+                color="primary"
+                sx={{
+                  bgcolor: "primary.main",
+                  color: "primary.contrastText",
+                  "&:hover": { bgcolor: "primary.dark" },
+                }}
+              >
+                <AddIcon />
+              </IconButton>
+            </Tooltip>
+            <Typography variant="caption">إضافة</Typography>
+          </Box>
         </Box>
       </Box>
       {/* Search and Filters */}
@@ -424,7 +461,7 @@ const ProductsPage: React.FC = () => {
               fullWidth
               variant="outlined"
               size="small"
-                placeholder="ابحث عن منتج..."
+              placeholder="ابحث عن منتج..."
               value={searchTerm}
               onChange={handleSearchChange}
               InputProps={{
@@ -464,12 +501,12 @@ const ProductsPage: React.FC = () => {
           <Box sx={{ flex: { md: 1 } }}>
             <FormControl fullWidth size="small">
               <InputLabel className="dark:text-gray-300">
-                الفئة
+                تصفية حسب الفئة
               </InputLabel>
               <Select
                 value={selectedCategory || ""}
                 onChange={handleCategoryChange}
-                label="الفئة"
+                label="تصفية حسب الفئة"
                 disabled={loadingCategories}
                 sx={{
                   backgroundColor: (theme) =>
@@ -510,12 +547,12 @@ const ProductsPage: React.FC = () => {
           <Box sx={{ flex: { md: 1 } }}>
             <FormControl fullWidth size="small">
               <InputLabel className="dark:text-gray-300">
-                عدد الصفوف لكل صفحة
+                عدد الصفوف في الصفحة
               </InputLabel>
               <Select
                 value={rowsPerPage}
                 onChange={handleRowsPerPageChange}
-                label="عدد الصفوف لكل صفحة"
+                label="عدد الصفوف في الصفحة"
                 sx={{
                   backgroundColor: (theme) =>
                     theme.palette.mode === "dark"
@@ -599,7 +636,7 @@ const ProductsPage: React.FC = () => {
               sx={{ textAlign: "center", py: 5 }}
               className="text-gray-500 dark:text-gray-400"
             >
-              لا توجد منتجات حاليًا
+            لا توجد منتجات لعرضها.
             </Typography>
           )}
         </Box>

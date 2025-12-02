@@ -1,14 +1,24 @@
 // src/components/pos/TodaySalesColumn.tsx
 import React from "react";
-import { useTranslation } from "react-i18next";
 
-// shadcn/ui Components
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+// MUI Components
+import {
+  Card,
+  CardContent,
+  Badge,
+  Button,
+  Box,
+  Typography,
+  CircularProgress,
+} from "@mui/material";
 
-// Icons
-import { Receipt, ChevronLeft, ChevronRight, Check } from "lucide-react";
+// MUI Icons
+import {
+  Receipt as ReceiptIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  Check as CheckIcon,
+} from "@mui/icons-material";
 
 // Types
 import { Sale } from "./types";
@@ -36,7 +46,6 @@ export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
   loadingSaleId = null,
   isLoading = false,
 }) => {
-  const { t } = useTranslation(['pos', 'common']);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -49,218 +58,238 @@ export const TodaySalesColumn: React.FC<TodaySalesColumnProps> = ({
 
   if (isCollapsed) {
     return (
-      <div className="h-full flex flex-col border-l border-gray-200">
+      <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderLeft: '1px solid', borderColor: 'divider' }}>
         {/* Collapsed Header */}
-        <div className="p-2 border-b border-gray-200 bg-blue-50 flex items-center justify-between">
-          <div className="flex items-center space-x-1">
-            <Receipt className="h-3 w-3 text-blue-600" />
-           
-          </div>
+        <Box sx={{ p: 1, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'primary.light', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <ReceiptIcon sx={{ fontSize: 12, color: 'primary.main' }} />
+          </Box>
           <Button
-            variant="ghost"
-            size="sm"
-            className="h-4 w-4 p-0 hover:bg-blue-100"
+            variant="text"
+            size="small"
             onClick={onToggleCollapse}
+            sx={{ minWidth: 16, p: 0 }}
           >
-            <ChevronRight className="h-2.5 w-2.5 text-blue-600" />
+            <ChevronRightIcon sx={{ fontSize: 10, color: 'primary.main' }} />
           </Button>
-        </div>
+        </Box>
         
         {/* Collapsed Content */}
-        <div className="flex-1 flex flex-col items-center justify-center p-2">
-          <div className="text-center">
-            <Badge className="text-xs bg-green-100 text-green-800 border-green-200 mb-1">
-              {sales.length}
-            </Badge>
-            <p className="text-xs text-gray-600">
-              {selectedDate ? `Sales ${new Date(selectedDate).toLocaleDateString()}` : 'Sales Today'}
-            </p>
-            <p className="text-xs font-medium text-green-700">
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 1 }}>
+          <Box sx={{ textAlign: 'center' }}>
+            <Badge badgeContent={sales.length} color="success" sx={{ mb: 1 }} />
+            <Typography variant="caption" color="text.secondary">
+              {selectedDate ? `مبيعات ${new Date(selectedDate).toLocaleDateString('ar-SA')}` : 'مبيعات اليوم'}
+            </Typography>
+            <Typography variant="caption" fontWeight={500} color="success.main">
               {formatCurrency(sales.reduce((sum, sale) => sum + sale.total_amount, 0))}
-            </p>
-          </div>
-        </div>
-      </div>
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="h-full flex flex-col items-center justify-center border-l border-gray-200">
+      <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderLeft: '1px solid', borderColor: 'divider' }}>
         {/* Header */}
-        <div className="p-2 border-b border-gray-200 bg-blue-50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-1">
-              <Receipt className="h-3 w-3 text-blue-600" />
-              <span className="text-xs font-semibold text-blue-900">
-                {filterByCurrentUser ? 'My Sales' : (selectedDate ? `Sales ${new Date(selectedDate).toLocaleDateString()}` : 'Today\'s Sales')}
-              </span>
-            </div>
+        <Box sx={{ p: 1, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'primary.light', width: '100%' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <ReceiptIcon sx={{ fontSize: 12, color: 'primary.main' }} />
+              <Typography variant="caption" fontWeight={600} color="primary.dark">
+                {filterByCurrentUser ? 'مبيعاتي' : (selectedDate ? `مبيعات ${new Date(selectedDate).toLocaleDateString('ar-SA')}` : 'مبيعات اليوم')}
+              </Typography>
+            </Box>
             
-            <div className="flex items-center space-x-1">
-              <div className="h-4 w-12 bg-gray-200 rounded animate-pulse"></div>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Box sx={{ height: 16, width: 48, bgcolor: 'grey.300', borderRadius: 1, animation: 'pulse 1.5s ease-in-out infinite' }} />
               <Button
-                variant="ghost"
-                size="sm"
-                className="h-4 w-4 p-0 hover:bg-blue-100"
+                variant="text"
+                size="small"
                 onClick={onToggleCollapse}
+                sx={{ minWidth: 16, p: 0 }}
               >
-                <ChevronLeft className="h-2.5 w-2.5 text-blue-600" />
+                <ChevronLeftIcon sx={{ fontSize: 10, color: 'primary.main' }} />
               </Button>
-            </div>
-          </div>
-        </div>
+            </Box>
+          </Box>
+        </Box>
 
         {/* Skeleton Sales List */}
-        <div className="flex-1 p-1 overflow-y-auto h-full">
-          <div className="grid grid-cols-1 gap-2 p-2">
+        <Box sx={{ flex: 1, p: 0.5, overflowY: 'auto', height: '100%', width: '100%' }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr', gap: 1, p: 1 }}>
             {[...Array(8)].map((_, index) => (
-              <div key={index} className="relative">
-                <div className="w-[50px] h-[50px] bg-gray-200 rounded-lg animate-pulse mx-auto"></div>
-              </div>
+              <Box key={index} sx={{ position: 'relative' }}>
+                <Box sx={{ width: 50, height: 50, bgcolor: 'grey.300', borderRadius: 1, mx: 'auto', animation: 'pulse 1.5s ease-in-out infinite' }} />
+              </Box>
             ))}
-          </div>
-        </div>
-      </div>
+          </Box>
+        </Box>
+      </Box>
     );
   }
 
   if (sales.length === 0) {
     return (
-      <div className="h-full flex flex-col border-l border-gray-200">
+      <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderLeft: '1px solid', borderColor: 'divider' }}>
         {/* Header */}
-        <div className="p-2 border-b border-gray-200 bg-blue-50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-1">
-              <Receipt className="h-3 w-3 text-blue-600" />
-                          <span className="text-xs font-semibold text-blue-900">
-              {filterByCurrentUser ? 'My Sales' : (selectedDate ? `Sales ${new Date(selectedDate).toLocaleDateString()}` : 'Today\'s Sales')}
-            </span>
-            </div>
+        <Box sx={{ p: 1, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'primary.light' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <ReceiptIcon sx={{ fontSize: 12, color: 'primary.main' }} />
+              <Typography variant="caption" fontWeight={600} color="primary.dark">
+                {filterByCurrentUser ? 'مبيعاتي' : (selectedDate ? `مبيعات ${new Date(selectedDate).toLocaleDateString('ar-SA')}` : 'مبيعات اليوم')}
+              </Typography>
+            </Box>
             
-            <div className="flex items-center space-x-1">
-              <Badge className="text-xs bg-green-100 text-green-800 border-green-200">
-                {formatCurrency(sales.reduce((sum, sale) => sum + sale.total_amount, 0))}
-              </Badge>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Badge badgeContent={formatCurrency(sales.reduce((sum, sale) => sum + sale.total_amount, 0))} color="success" />
               <Button
-                variant="ghost"
-                size="sm"
-                className="h-4 w-4 p-0 hover:bg-blue-100"
+                variant="text"
+                size="small"
                 onClick={onToggleCollapse}
+                sx={{ minWidth: 16, p: 0 }}
               >
-                <ChevronLeft className="h-2.5 w-2.5 text-blue-600" />
+                <ChevronLeftIcon sx={{ fontSize: 10, color: 'primary.main' }} />
               </Button>
-            </div>
-          </div>
-        </div>
+            </Box>
+          </Box>
+        </Box>
 
         {/* Empty State */}
-        <div className="flex flex-col items-center justify-center py-4 text-gray-600">
-          <Receipt className="h-6 w-6 mb-2 opacity-50" />
-          <p className="text-xs text-center">{t('pos:noSalesToday')}</p>
-        </div>
-      </div>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 2, color: 'text.secondary' }}>
+          <ReceiptIcon sx={{ fontSize: 24, mb: 1, opacity: 0.5 }} />
+          <Typography variant="caption" textAlign="center">لا توجد مبيعات اليوم</Typography>
+        </Box>
+      </Box>
     );
   }
 
   return (
-    <div className="h-full flex flex-col border-l border-gray-200">
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderLeft: '1px solid', borderColor: 'divider' }}>
       {/* Header */}
-      <div className="p-2 border-b border-gray-200 bg-blue-50 rounded-t-lg flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-1">
-            <Receipt className="h-3 w-3 text-blue-600" />
-            <span className="text-xs font-semibold text-blue-900">
-              {filterByCurrentUser ? 'My Sales' : (selectedDate ? `Sales ${new Date(selectedDate).toLocaleDateString()}` : 'Today\'s Sales')}
-            </span>
-          </div>
+      <Box sx={{ p: 1, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'primary.light', borderRadius: '4px 4px 0 0', flexShrink: 0 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <ReceiptIcon sx={{ fontSize: 12, color: 'primary.main' }} />
+            <Typography variant="caption" fontWeight={600} color="primary.dark">
+              {filterByCurrentUser ? 'مبيعاتي' : (selectedDate ? `مبيعات ${new Date(selectedDate).toLocaleDateString('ar-SA')}` : 'مبيعات اليوم')}
+            </Typography>
+          </Box>
           
-          <div className="flex items-center space-x-1">
-            <Badge className="text-xs bg-green-100 text-green-800 border-gray-200">
-              {sales.length}
-            </Badge>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Badge badgeContent={sales.length} color="success" />
             <Button
-              variant="ghost"
-              size="sm"
-              className="h-4 w-4 p-0 hover:bg-blue-100"
+              variant="text"
+              size="small"
               onClick={onToggleCollapse}
+              sx={{ minWidth: 16, p: 0 }}
             >
-              <ChevronLeft className="h-2.5 w-2.5 text-blue-600" />
+              <ChevronLeftIcon sx={{ fontSize: 10, color: 'primary.main' }} />
             </Button>
-          </div>
-        </div>
-      </div>
+          </Box>
+        </Box>
+      </Box>
 
       {/* Sales List */}
-      <div className="flex-1 overflow-y-auto max-h-[calc(100vh-200px)]">
-        <div className="p-1">
-          <div className="grid grid-cols-1 gap-2 p-2">
+      <Box sx={{ flex: 1, overflowY: 'auto', maxHeight: 'calc(100vh - 200px)' }}>
+        <Box sx={{ p: 0.5 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr', gap: 1, p: 1 }}>
             {sales
               .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
               .map((sale) => (
-                <div key={sale.id} className="relative">
+                <Box key={sale.id} sx={{ position: 'relative' }}>
                   {/* Badge outside card - show 0 for empty sales */}
-                  <Badge className={`absolute -top-1 -right-1 z-10 text-xs ${
-                    sale.items.length === 0 
-                      ? 'bg-gray-100 text-gray-600 border-gray-200' 
-                      : 'bg-orange-100 text-orange-800 border-orange-200'
-                  }`}>
-                    {sale.items.length}
-                  </Badge>
+                  <Badge
+                    badgeContent={sale.items.length}
+                    color={sale.items.length === 0 ? 'default' : 'warning'}
+                    sx={{
+                      position: 'absolute',
+                      top: -4,
+                      right: -4,
+                      zIndex: 10,
+                    }}
+                  />
                   
                   <Card
-                    className={`cursor-pointer transition-all duration-200 hover:shadow-sm border w-[50px] h-[50px] ${
-                      loadingSaleId === sale.id
-                        ? 'ring-1 ring-yellow-500 border-yellow-300 bg-yellow-50'
+                    sx={{
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      width: 50,
+                      height: 50,
+                      border: '1px solid',
+                      ...(loadingSaleId === sale.id
+                        ? {
+                            borderColor: 'warning.main',
+                            bgcolor: 'warning.light',
+                            boxShadow: '0 0 0 1px',
+                            boxShadowColor: 'warning.main',
+                          }
                         : selectedSaleId === sale.id
-                        ? 'ring-1 ring-blue-500 border-blue-300 bg-blue-50'
+                        ? {
+                            borderColor: 'primary.main',
+                            bgcolor: 'primary.light',
+                            boxShadow: '0 0 0 1px',
+                            boxShadowColor: 'primary.main',
+                          }
                         : sale.status === 'draft'
-                        ? 'border-dashed border-gray-300 hover:border-gray-400 bg-gray-50'
-                        : 'border-gray-200 hover:border-gray-300 bg-white'
-                    }`}
+                        ? {
+                            borderColor: 'grey.300',
+                            borderStyle: 'dashed',
+                            bgcolor: 'grey.50',
+                            '&:hover': { borderColor: 'grey.400' },
+                          }
+                        : {
+                            borderColor: 'grey.200',
+                            bgcolor: 'white',
+                            '&:hover': { borderColor: 'grey.300', boxShadow: 1 },
+                          }),
+                      pointerEvents: (loadingSaleId === sale.id || selectedSaleId === sale.id) ? 'none' : 'auto',
+                    }}
                     onClick={async () => {
                       if (loadingSaleId !== sale.id && selectedSaleId !== sale.id) {
                         await onSaleSelect(sale);
                       }
                     }}
-                    style={{ pointerEvents: (loadingSaleId === sale.id || selectedSaleId === sale.id) ? 'none' : 'auto' }}
                   >
-                    <CardContent className="p-0 h-full flex items-center justify-center relative">
+                    <CardContent sx={{ p: 0, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                       {loadingSaleId === sale.id ? (
-                        <div className="text-center">
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-yellow-600 mx-auto mb-1"></div>
-                          <div className="text-xs text-yellow-700 font-medium">
-                            Loading...
-                          </div>
-                        </div>
+                        <Box sx={{ textAlign: 'center' }}>
+                          <CircularProgress size={16} sx={{ mb: 0.5, color: 'warning.main' }} />
+                          <Typography variant="caption" color="warning.dark" fontWeight={500}>
+                            جاري التحميل...
+                          </Typography>
+                        </Box>
                       ) : (
-                        <div className="text-center">
-                          <div className="font-bold text-sm text-gray-900">
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Typography variant="body2" fontWeight={700} color="text.primary">
                             {sale.sale_order_number || sale.id}
-                          </div>
+                          </Typography>
                           {!filterByCurrentUser && sale.user_name && (
-                            <div className="text-xs text-gray-500 mt-1 truncate">
+                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {sale.user_name}
-                            </div>
+                            </Typography>
                           )}
-                        </div>
+                        </Box>
                       )}
                      
                      {/* Green check mark when total amount equals total paid AND there are payments */}
                      {sale.total_amount === sale.paid_amount && sale.payments && sale.payments.length > 0 && (
-                       <div className="absolute bottom-0 left-0 p-1">
-                         <div className="h-3 w-3 bg-green-500 rounded-full flex items-center justify-center">
-                           <Check className="h-2 w-2 text-white" />
-                         </div>
-                       </div>
+                       <Box sx={{ position: 'absolute', bottom: 0, left: 0, p: 0.5 }}>
+                         <Box sx={{ height: 12, width: 12, bgcolor: 'success.main', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                           <CheckIcon sx={{ fontSize: 8, color: 'white' }} />
+                         </Box>
+                       </Box>
                      )}
                    </CardContent>
                  </Card>
-               </div>
+               </Box>
              ))}
-           </div>
-         </div>
-       </div>
-     </div>
+           </Box>
+         </Box>
+       </Box>
+     </Box>
    );
-}; 
+ };

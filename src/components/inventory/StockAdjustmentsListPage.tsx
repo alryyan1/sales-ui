@@ -1,142 +1,225 @@
-// src/pages/inventory/StockAdjustmentsListPage.tsx (example path)
+// src/components/inventory/StockAdjustmentsListPage.tsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useNavigate, useSearchParams, Link as RouterLink } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from "sonner";
 
-// shadcn/ui & Lucide Icons
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Pagination } from '@/components/ui/pagination';
-import { Loader2, AlertCircle, ArrowLeft, SlidersHorizontal, History, Plus } from 'lucide-react'; // Filter icon
+// MUI Components
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import Button from "@mui/material/Button";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import Alert from "@mui/material/Alert";
+import CircularProgress from "@mui/material/CircularProgress";
+import Pagination from "@mui/material/Pagination";
+import IconButton from "@mui/material/IconButton";
+import Tooltip from "@mui/material/Tooltip";
+import Chip from "@mui/material/Chip";
+
+// Icons
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import FilterListIcon from "@mui/icons-material/FilterList";
+import AddIcon from "@mui/icons-material/Add";
 
 // Services and Types
-import stockAdjustmentService, { StockAdjustment } from '../../services/stockAdjustmentService'; // Adjust path
-import { formatNumber } from '@/constants'; // Helpers
+import stockAdjustmentService, { StockAdjustment } from '../../services/stockAdjustmentService';
+import { formatNumber } from '@/constants';
 import { PaginatedResponse } from '@/services/clientService';
 import dayjs from 'dayjs';
 import StockAdjustmentFormModal from './StockAdjustmentFormModal';
 
+// Helper function to get reason label in Arabic
+const getReasonLabel = (reason: string): string => {
+  const reasonMap: Record<string, string> = {
+    'damage': 'تلف',
+    'expiry': 'انتهاء صلاحية',
+    'theft': 'سرقة',
+    'loss': 'فقدان',
+    'adjustment': 'تعديل',
+    'correction': 'تصحيح',
+    'other': 'أخرى',
+  };
+  return reasonMap[reason] || reason;
+};
+
 // --- Component ---
 const StockAdjustmentsListPage: React.FC = () => {
-    const { t } = useTranslation(['inventory', 'common', 'products', 'users']);
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams(); // Read params for filtering/pagination
+    const [searchParams] = useSearchParams();
 
     // --- State ---
     const [adjustmentsResponse, setAdjustmentsResponse] = useState<PaginatedResponse<StockAdjustment> | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [open,setOpen] = useState(false); // Modal state for adding adjustments
-    // Add filter states here if needed (e.g., productId, userId, dateRange)
+    const [open, setOpen] = useState(false);
 
     // --- Memoized values from URL ---
     const currentPage = useMemo(() => Number(searchParams.get('page') || '1'), [searchParams]);
-    // const currentProductId = useMemo(() => searchParams.get('productId') || null, [searchParams]); // Example filter
 
     // --- Data Fetching ---
-    const fetchAdjustments = useCallback(async (page: number /*, filters */) => {
-        setIsLoading(true); setError(null);
+    const fetchAdjustments = useCallback(async (page: number) => {
+        setIsLoading(true);
+        setError(null);
         try {
-            const data = await stockAdjustmentService.getAdjustments(page /*, filters */);
+            const data = await stockAdjustmentService.getAdjustments(page);
             setAdjustmentsResponse(data);
-        } catch (err) { setError(stockAdjustmentService.getErrorMessage(err)); }
-        finally { setIsLoading(false); }
+        } catch (err) {
+            setError(stockAdjustmentService.getErrorMessage(err));
+        } finally {
+            setIsLoading(false);
+        }
     }, []);
 
     // Fetch on page load or when relevant search params change
-    useEffect(() => { fetchAdjustments(currentPage /*, currentProductId, etc. */); }, [fetchAdjustments, currentPage /*, currentProductId */]);
+    useEffect(() => {
+        fetchAdjustments(currentPage);
+    }, [fetchAdjustments, currentPage]);
 
     // --- Handlers ---
-    const handlePageChange = (newPage: number) => {
+    const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
         const params = new URLSearchParams(searchParams.toString());
-        params.set('page', newPage.toString());
+        params.set('page', value.toString());
         navigate({ search: params.toString() });
     };
-    // Add filter handlers if implementing filters
-
 
     return (
-        <div className="p-4 md:p-6 lg:p-8 dark:bg-gray-950 min-h-screen pb-10">
+        <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, direction: "rtl" }} className="dark:bg-gray-950 min-h-screen">
             {/* Header */}
-            <div className="flex items-center mb-6 gap-2">
-                <Button variant="outline" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="h-4 w-4" /></Button>
-                <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 dark:text-gray-100">
-                    {t('inventory:adjustmentsHistoryTitle')} {/* Add key */}
-                </h1>
-                 {/* Optional: Button to open filter panel */}
-                 <Button variant="outline" size="sm" className="ms-auto"><SlidersHorizontal className=""/> {t('common:filters')}</Button>
-                 <Button onClick={()=>{
-                    setOpen(true);
-                 }} variant="outline" size="sm" className="ms-auto"><Plus className=""/> </Button>
-            </div>
-
-            {/* Add Filter Card Here if needed */}
+            <Box sx={{ display: "flex", alignItems: "center", mb: 3, gap: 2 }}>
+                <IconButton onClick={() => navigate(-1)} size="small">
+                    <ArrowBackIcon />
+                </IconButton>
+                <Typography variant="h4" component="h1" className="text-gray-800 dark:text-gray-100 font-semibold">
+                    سجل تعديلات المخزون
+                </Typography>
+                <Box sx={{ display: "flex", gap: 1, ml: "auto" }}>
+                    <Button variant="outlined" size="small" startIcon={<FilterListIcon />}>
+                        الفلاتر
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<AddIcon />}
+                        onClick={() => setOpen(true)}
+                    >
+                        إضافة تعديل
+                    </Button>
+                </Box>
+            </Box>
 
             {/* Loading / Error States */}
             {isLoading && (
-                <div className="flex justify-center items-center py-10">
-                    <Loader2 className="animate-spin h-6 w-6 text-gray-500" />
-                </div>
+                <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: 5 }}>
+                    <CircularProgress />
+                    <Typography sx={{ ml: 2 }} className="text-gray-600 dark:text-gray-400">
+                        جاري التحميل...
+                    </Typography>
+                </Box>
             )}
-            {!isLoading && error && ( <Alert variant={'destructive'} >{error}</Alert> )}
+            {!isLoading && error && (
+                <Alert severity="error" sx={{ my: 2 }}>
+                    {error}
+                </Alert>
+            )}
 
             {/* Adjustments Table */}
             {!isLoading && !error && adjustmentsResponse && (
                 <>
-                <Card className="dark:bg-gray-900">
-                    <CardContent className="p-0">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>{t('common:date')}</TableHead>
-                                    <TableHead>{t('products:product')}</TableHead>
-                                    <TableHead>{t('purchases:batchNumber')}</TableHead>
-                                    <TableHead className="text-center">{t('inventory:quantityChange')}</TableHead>
-                                    <TableHead className="text-center">{t('inventory:quantityBefore')}</TableHead>
-                                    <TableHead className="text-center">{t('inventory:quantityAfter')}</TableHead>
-                                    <TableHead>{t('inventory:reasonLabel')}</TableHead>
-                                    <TableHead>{t('common:recordedBy')}</TableHead>
-                                    {/* Maybe Notes column? */}
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                 {adjustmentsResponse.data.length === 0 && ( <TableRow><TableCell colSpan={8} className="h-24 text-center text-muted-foreground">{t('inventory:noAdjustments')}</TableCell></TableRow> )} {/* Add key */}
-                                {adjustmentsResponse.data.map((adj) => (
-                                    <TableRow key={adj.id}>
-                                        <TableCell>{dayjs(adj.created_at).format('YYYY-MM-DD')}</TableCell>
-                                        <TableCell>
-                                            <span className="font-medium">{adj.product?.name ?? `ID: ${adj.product_id}`}</span>
-                                            <br/><span className="text-xs text-muted-foreground">{adj.product?.sku}</span>
-                                        </TableCell>
-                                        <TableCell>{adj.purchaseItemBatch?.batch_number ?? (adj.purchase_item_id ? `Batch ID: ${adj.purchase_item_id}`: t('inventory:totalStockAdjusted'))}</TableCell> {/* Add key */}
-                                        <TableCell className={`text-center font-medium ${adj.quantity_change > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                             {adj.quantity_change > 0 ? '+' : ''}{formatNumber(adj.quantity_change)}
-                                         </TableCell>
-                                        <TableCell className="text-center">{formatNumber(adj.quantity_before)}</TableCell>
-                                        <TableCell className="text-center">{formatNumber(adj.quantity_after)}</TableCell>
-                                        <TableCell>{t(`inventory:reason_${adj.reason}`, { defaultValue: adj.reason })}</TableCell> {/* Translate reason key */}
-                                        <TableCell>{adj.user?.name ?? t('common:n/a')}</TableCell>
+                    <Card className="dark:bg-gray-900">
+                        <CardContent sx={{ p: 0 }}>
+                            <Table>
+                                <TableHead>
+                                    <TableRow>
+                                        <TableCell>التاريخ</TableCell>
+                                        <TableCell>المنتج</TableCell>
+                                        <TableCell>رقم الدفعة</TableCell>
+                                        <TableCell align="center">التغيير في الكمية</TableCell>
+                                        <TableCell align="center">الكمية قبل التعديل</TableCell>
+                                        <TableCell align="center">الكمية بعد التعديل</TableCell>
+                                        <TableCell>السبب</TableCell>
+                                        <TableCell>سجل بواسطة</TableCell>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
-                 {/* Pagination */}
-                 {adjustmentsResponse.last_page > 1 && ( '/* ... Pagination Component ... */' )}
+                                </TableHead>
+                                <TableBody>
+                                    {adjustmentsResponse.data.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+                                                <Typography color="text.secondary">
+                                                    لا توجد تعديلات مخزون مسجلة.
+                                                </Typography>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                    {adjustmentsResponse.data.map((adj) => (
+                                        <TableRow key={adj.id}>
+                                            <TableCell>{dayjs(adj.created_at).format('YYYY-MM-DD')}</TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                                    {adj.product?.name ?? `ID: ${adj.product_id}`}
+                                                </Typography>
+                                                {adj.product?.sku && (
+                                                    <Typography variant="caption" color="text.secondary" display="block">
+                                                        {adj.product.sku}
+                                                    </Typography>
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                {adj.purchaseItemBatch?.batch_number ?? 
+                                                 (adj.purchase_item_id ? `Batch ID: ${adj.purchase_item_id}` : 'تعديل المخزون الإجمالي')}
+                                            </TableCell>
+                                            <TableCell align="center">
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        fontWeight: 500,
+                                                        color: adj.quantity_change > 0 ? 'success.main' : 'error.main'
+                                                    }}
+                                                >
+                                                    {adj.quantity_change > 0 ? '+' : ''}{formatNumber(adj.quantity_change)}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell align="center">{formatNumber(adj.quantity_before)}</TableCell>
+                                            <TableCell align="center">{formatNumber(adj.quantity_after)}</TableCell>
+                                            <TableCell>{getReasonLabel(adj.reason)}</TableCell>
+                                            <TableCell>{adj.user?.name ?? '-'}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                    {/* Pagination */}
+                    {adjustmentsResponse.last_page > 1 && (
+                        <Box sx={{ display: "flex", justifyContent: "center", p: 2, mt: 3 }}>
+                            <Pagination
+                                count={adjustmentsResponse.last_page}
+                                page={currentPage}
+                                onChange={handlePageChange}
+                                color="primary"
+                                shape="rounded"
+                                showFirstButton
+                                showLastButton
+                                disabled={isLoading}
+                            />
+                        </Box>
+                    )}
                 </>
             )}
 
-            <StockAdjustmentFormModal onSaveSuccess={()=>{
-                toast.success(t('inventory:adjustmentSaved')); // Show success message
-                fetchAdjustments(currentPage); // Refresh adjustments list
-            }} isOpen={open} onClose={()=>{
-                setOpen(false);
-            }}/> {/* Modal for adding adjustments */}
-        </div>
+            <StockAdjustmentFormModal
+                onSaveSuccess={() => {
+                    toast.success("تم حفظ التعديل بنجاح");
+                    fetchAdjustments(currentPage);
+                }}
+                isOpen={open}
+                onClose={() => setOpen(false)}
+            />
+        </Box>
     );
 };
 

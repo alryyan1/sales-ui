@@ -1,6 +1,5 @@
 // src/components/purchases/PurchaseItemDetailsDialog.tsx
 import React from "react";
-import { useTranslation } from "react-i18next";
 
 // MUI Components
 import {
@@ -13,8 +12,6 @@ import {
   Box,
   Chip,
   Divider,
-} from "@mui/material";
-import {
   Table,
   TableBody,
   TableCell,
@@ -68,8 +65,6 @@ export const PurchaseItemDetailsDialog: React.FC<PurchaseItemDetailsDialogProps>
   purchases,
   isLoading = false,
 }) => {
-  const { t } = useTranslation(["purchases", "common"]);
-
   if (!product) return null;
 
   // Filter purchase items for this specific product
@@ -98,13 +93,13 @@ export const PurchaseItemDetailsDialog: React.FC<PurchaseItemDetailsDialogProps>
         },
       }}
     >
-      <DialogTitle>
+      <DialogTitle sx={{ direction: "rtl" }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           <Typography variant="h6" component="span">
-            {t("purchases:productPurchaseHistory")}
+            سجل مشتريات المنتج
           </Typography>
           <Chip
-            label={product.sku || t("common:n/a")}
+            label={product.sku || "-"}
             size="small"
             color="primary"
             variant="outlined"
@@ -115,15 +110,15 @@ export const PurchaseItemDetailsDialog: React.FC<PurchaseItemDetailsDialogProps>
         </Typography>
       </DialogTitle>
 
-      <DialogContent>
+      <DialogContent sx={{ direction: "rtl" }}>
         {isLoading ? (
           <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-            <Typography>{t("common:loading")}</Typography>
+            <Typography>جاري التحميل...</Typography>
           </Box>
         ) : productPurchaseItems.length === 0 ? (
           <Box sx={{ textAlign: "center", py: 4 }}>
             <Typography color="text.secondary">
-              {t("purchases:noPurchaseHistoryForProduct")}
+              لا يوجد سجل مشتريات لهذا المنتج.
             </Typography>
           </Box>
         ) : (
@@ -135,7 +130,7 @@ export const PurchaseItemDetailsDialog: React.FC<PurchaseItemDetailsDialogProps>
                   {formatNumber(totalQuantity)}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {t("purchases:totalQuantityPurchased")}
+                  إجمالي الكمية المشتراة
                 </Typography>
               </Paper>
               <Paper sx={{ p: 2, textAlign: "center" }}>
@@ -143,7 +138,7 @@ export const PurchaseItemDetailsDialog: React.FC<PurchaseItemDetailsDialogProps>
                   {formatCurrency(totalCost)}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {t("purchases:totalCost")}
+                  إجمالي تكلفة المشتريات
                 </Typography>
               </Paper>
               <Paper sx={{ p: 2, textAlign: "center" }}>
@@ -151,7 +146,7 @@ export const PurchaseItemDetailsDialog: React.FC<PurchaseItemDetailsDialogProps>
                   {formatCurrency(averageUnitCost)}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {t("purchases:averageUnitCost")}
+                  متوسط تكلفة الوحدة
                 </Typography>
               </Paper>
               <Paper sx={{ p: 2, textAlign: "center" }}>
@@ -159,7 +154,7 @@ export const PurchaseItemDetailsDialog: React.FC<PurchaseItemDetailsDialogProps>
                   {productPurchaseItems.length}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {t("purchases:totalPurchaseItems")}
+                  عدد بنود الشراء
                 </Typography>
               </Paper>
             </Box>
@@ -168,22 +163,22 @@ export const PurchaseItemDetailsDialog: React.FC<PurchaseItemDetailsDialogProps>
 
             {/* Purchase Items Table */}
             <Typography variant="h6" sx={{ mb: 2 }}>
-              {t("purchases:purchaseItemDetails")}
+              تفاصيل بنود الشراء
             </Typography>
             
             <TableContainer component={Paper} variant="outlined">
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell>{t("purchases:purchaseId")}</TableCell>
-                    <TableCell>{t("purchases:purchaseDate")}</TableCell>
-                    <TableCell>{t("purchases:supplier")}</TableCell>
-                    <TableCell>{t("purchases:batchNumber")}</TableCell>
-                    <TableCell>{t("purchases:quantity")}</TableCell>
-                    <TableCell>{t("purchases:unitCost")}</TableCell>
-                    <TableCell>{t("purchases:itemTotal")}</TableCell>
-                    <TableCell>{t("purchases:expiryDate")}</TableCell>
-                    <TableCell>{t("purchases:status")}</TableCell>
+                    <TableCell>رقم الشراء</TableCell>
+                    <TableCell>تاريخ الشراء</TableCell>
+                    <TableCell>المورد</TableCell>
+                    <TableCell>رقم الدفعة</TableCell>
+                    <TableCell>الكمية</TableCell>
+                    <TableCell>تكلفة الوحدة</TableCell>
+                    <TableCell>إجمالي البند</TableCell>
+                    <TableCell>تاريخ الانتهاء</TableCell>
+                    <TableCell>الحالة</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -204,18 +199,18 @@ export const PurchaseItemDetailsDialog: React.FC<PurchaseItemDetailsDialogProps>
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {item.purchase.supplier_name || t("common:n/a")}
+                          {item.purchase.supplier_name || "-"}
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        {item.batch_number || t("common:n/a")}
+                        {item.batch_number || "-"}
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" sx={{ fontWeight: 500 }}>
                           {formatNumber(item.quantity)}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {item.product.stocking_unit_name || t("common:unit")}
+                          {item.product.stocking_unit_name || "وحدة"}
                         </Typography>
                       </TableCell>
                       <TableCell>
@@ -227,11 +222,17 @@ export const PurchaseItemDetailsDialog: React.FC<PurchaseItemDetailsDialogProps>
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        {item.expiry_date ? dayjs(item.expiry_date).format("YYYY-MM-DD") : t("common:n/a")}
+                        {item.expiry_date ? dayjs(item.expiry_date).format("YYYY-MM-DD") : "-"}
                       </TableCell>
                       <TableCell>
                         <Chip
-                          label={t(`purchases:status_${item.purchase.status}`)}
+                          label={
+                            item.purchase.status === "received"
+                              ? "تم الاستلام"
+                              : item.purchase.status === "pending"
+                              ? "قيد الانتظار"
+                              : "تم الطلب"
+                          }
                           size="small"
                           color={
                             item.purchase.status === "received"
@@ -251,9 +252,9 @@ export const PurchaseItemDetailsDialog: React.FC<PurchaseItemDetailsDialogProps>
         )}
       </DialogContent>
 
-      <DialogActions>
+      <DialogActions sx={{ direction: "rtl" }}>
         <Button onClick={onClose} variant="outlined">
-          {t("common:close")}
+          إغلاق
         </Button>
       </DialogActions>
     </Dialog>

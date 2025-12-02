@@ -131,14 +131,14 @@ const RootLayout: React.FC = () => {
                 component="main"
                 sx={{
                     flexGrow: 1,
-                    p: 3,
+                    p: 1,
                     width: { sm: `calc(100% - ${DRAWER_WIDTH}px)` },
                     bgcolor: 'background.default',
                     minHeight: '100vh',
                     order: { sm: 1 },
                 }}
             >
-                <Toolbar />
+                {/* <Toolbar /> */}
                 <Outlet />
             </Box>
 

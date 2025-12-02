@@ -1,6 +1,5 @@
 // src/pages/PosPage.tsx
 import React, { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
 
 // Toast
 import { toast } from "sonner";
@@ -29,8 +28,14 @@ import { preciseCalculation } from "../constants";
 import { generateDailySalesPdf } from "../services/exportService";
 import { useAuth } from "@/context/AuthContext";
 
+// Utilities
+import {
+  transformBackendSaleToPOS,
+  transformBackendSalesToPOS,
+  extractCartItemsFromSale,
+} from "../utils/saleTransformers";
+
 const PosPage: React.FC = () => {
-  const { t } = useTranslation(['pos', 'common']);
   const { user } = useAuth(); // Get current user
 
   // State
@@ -73,70 +78,19 @@ const PosPage: React.FC = () => {
   // Refresh trigger for SalePaymentCard
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Load today's sales
+  // Load today's sales - Simplified using POS-optimized API
   const loadTodaySales = async () => {
     setIsLoadingSales(true);
     try {
-      const dbSales = await saleService.getTodaySalesByCreatedAt();
+      const userId = filterByCurrentUser && user?.id ? user.id : null;
+      const dbSales = await saleService.getTodaySalesPOS(userId);
       
-      // Apply client-side filtering for current user if needed
-      const filteredDbSales = filterByCurrentUser && user?.id 
-        ? dbSales.filter(sale => sale.user_id === user.id)
-        : dbSales;
-      
-      // Transform database sales to POS format
-      const transformedSales: Sale[] = filteredDbSales.map((dbSale) => ({
-        id: dbSale.id,
-        sale_order_number: dbSale.sale_order_number,
-        client_id: dbSale.client_id,
-        client_name: dbSale.client_name,
-        user_id: dbSale.user_id,
-        user_name: dbSale.user_name,
-        sale_date: dbSale.sale_date,
-        invoice_number: dbSale.invoice_number,
-        status: dbSale.status,
-        total_amount: Number(dbSale.total_amount),
-        paid_amount: Number(dbSale.paid_amount),
-        due_amount: Number(dbSale.due_amount || 0),
-        notes: dbSale.notes,
-        created_at: dbSale.created_at,
-        updated_at: dbSale.updated_at,
-        items: dbSale.items?.map(item => ({
-          id: item.id, // Add the missing ID field
-          product: {
-            id: item.product_id,
-            name: item.product_name || 'Unknown Product',
-            sku: item.product_sku || 'N/A',
-            suggested_sale_price_per_sellable_unit: Number(item.unit_price),
-            last_sale_price_per_sellable_unit: Number(item.unit_price),
-            stock_quantity: item.current_stock_quantity || 0,
-            stock_alert_level: item.stock_alert_level,
-            earliest_expiry_date: item.earliest_expiry_date,
-            current_stock_quantity: item.current_stock_quantity || 0,
-            sellable_unit_name: item.sellable_unit_name || 'Piece'
-          } as Product,
-          quantity: item.quantity,
-          unitPrice: Number(item.unit_price),
-          total: Number(item.total_price || item.quantity * Number(item.unit_price))
-        })) || [],
-        payments: dbSale.payments?.map(payment => ({
-          id: payment.id,
-          sale_id: payment.sale_id,
-          user_name: payment.user_name,
-          method: payment.method,
-          amount: Number(payment.amount),
-          payment_date: payment.payment_date,
-          reference_number: payment.reference_number || undefined,
-          notes: payment.notes || undefined,
-          created_at: payment.created_at
-        })) || [],
-        // timestamp removed - not part of Sale type
-      }));
+      // Transform to POS format (if backend doesn't return POS format yet)
+      const transformedSales = transformBackendSalesToPOS(dbSales);
       
       setTodaySales(transformedSales);
     } catch (error) {
       console.error('Failed to load today\'s sales:', error);
-      // Fallback to empty array if API fails
       setTodaySales([]);
     } finally {
       setIsLoadingSales(false);
@@ -172,7 +126,7 @@ const PosPage: React.FC = () => {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [paymentDialogOpen]);
 
   const showToast = (message: string, severity: 'success' | 'error') => {
     if (severity === 'success') {
@@ -195,343 +149,40 @@ const PosPage: React.FC = () => {
     await addProductToSale(product);
   };
 
+  // Helper: Update sale state from backend response
+  const updateSaleFromBackend = (backendSale: import('../services/saleService').Sale) => {
+    const transformedSale = transformBackendSaleToPOS(backendSale);
+    setSelectedSale(transformedSale);
+    setSelectedSaleId(transformedSale.id);
+    setCurrentSaleItems(extractCartItemsFromSale(transformedSale));
+    setTodaySales(prevSales =>
+      prevSales.map(sale =>
+        sale.id === transformedSale.id ? transformedSale : sale
+      )
+    );
+  };
+
+  // Simplified: Add product to sale using POS-optimized API
   const addProductToSale = async (product: Product, selectedBatchId?: number | null) => {
-    // Always ensure we have a sale on the backend before adding items
-    if (!selectedSale) {
-      // Create an empty sale first
-      try {
-        const emptySaleData = {
-          client_id: null,
-          sale_date: new Date().toISOString().split('T')[0], // Today's date
-          notes: null
-        };
-
-        const newSale = await saleService.createEmptySale(emptySaleData);
-        
-        // Transform the backend sale to POS format
-        const transformedSale: Sale = {
-          id: newSale.id,
-          sale_order_number: newSale.sale_order_number,
-          client_id: newSale.client_id,
-          client_name: newSale.client_name,
-          user_id: newSale.user_id,
-          user_name: newSale.user_name,
-          sale_date: newSale.sale_date,
-          invoice_number: newSale.invoice_number,
-          status: newSale.status,
-          total_amount: Number(newSale.total_amount),
-          paid_amount: Number(newSale.paid_amount),
-          due_amount: Number(newSale.due_amount || 0),
-          notes: newSale.notes,
-          created_at: newSale.created_at,
-          updated_at: newSale.updated_at,
-          items: newSale.items?.map(item => ({
-            id: item.id,
-            product: {
-              id: item.product_id,
-              name: item.product_name || 'Unknown Product',
-              sku: item.product_sku || 'N/A',
-              suggested_sale_price_per_sellable_unit: Number(item.unit_price),
-              last_sale_price_per_sellable_unit: Number(item.unit_price),
-              stock_quantity: item.current_stock_quantity || 0,
-              stock_alert_level: item.stock_alert_level,
-              earliest_expiry_date: item.earliest_expiry_date,
-              current_stock_quantity: item.current_stock_quantity || 0,
-              sellable_unit_name: item.sellable_unit_name || 'Piece'
-            } as Product,
-            quantity: item.quantity,
-            unitPrice: Number(item.unit_price),
-            total: Number(item.total_price || item.quantity * Number(item.unit_price))
-          })) || [],
-          payments: newSale.payments?.map(payment => ({
-            id: payment.id,
-            sale_id: payment.sale_id,
-            user_name: payment.user_name,
-            method: payment.method,
-            amount: Number(payment.amount),
-            payment_date: payment.payment_date,
-            reference_number: payment.reference_number || undefined,
-            notes: payment.notes || undefined,
-            created_at: payment.created_at
-          })) || [],
-          // timestamp removed - not part of Sale type
-        };
-
-        // Select the new sale
-        setSelectedSale(transformedSale);
-        setSelectedSaleId(transformedSale.id);
-        
-        // Add the new sale to today's sales
-        setTodaySales(prevSales => [transformedSale, ...prevSales]);
-        
-        // If there are existing items in currentSaleItems without IDs, add them to the backend sale
-        const existingItemsWithoutIds = currentSaleItems.filter(item => !item.id);
-        if (existingItemsWithoutIds.length > 0) {
-          console.log('Adding existing items without IDs to backend sale:', existingItemsWithoutIds);
-          
-          // Add each existing item to the backend sale
-          for (const existingItem of existingItemsWithoutIds) {
-            try {
-              const itemData = {
-                product_id: existingItem.product.id,
-                quantity: existingItem.quantity,
-                unit_price: existingItem.unitPrice
-              };
-
-              await saleService.addSaleItem(transformedSale.id, itemData);
-            } catch (error) {
-              console.error('Error adding existing item to backend sale:', error);
-              // Continue with other items even if one fails
-            }
-          }
-          
-          // Reload the sale data to get updated items with IDs
-          const updatedSale = await saleService.getSale(transformedSale.id);
-          
-          const updatedItems: CartItem[] = (updatedSale.items || []).map((item: import('../services/saleService').SaleItem) => ({
-            id: item.id,
-            product: item.product || {
-              id: item.product_id,
-              name: item.product_name || 'Unknown Product',
-              sku: item.product_sku || 'N/A',
-              suggested_sale_price_per_sellable_unit: Number(item.unit_price),
-              last_sale_price_per_sellable_unit: Number(item.unit_price),
-              stock_quantity: item.current_stock_quantity || 0,
-              stock_alert_level: item.stock_alert_level,
-              earliest_expiry_date: item.earliest_expiry_date,
-              current_stock_quantity: item.current_stock_quantity || 0,
-              sellable_unit_name: item.sellable_unit_name || 'Piece'
-            } as Product,
-            quantity: item.quantity,
-            unitPrice: Number(item.unit_price),
-            total: Number(item.total_price || item.quantity * Number(item.unit_price)),
-            selectedBatchId: item.purchase_item_id || null,
-            selectedBatchNumber: item.batch_number_sold || null,
-            selectedBatchExpiryDate: item.purchaseItemBatch?.expiry_date || null
-          }));
-          
-          setCurrentSaleItems(updatedItems);
-          
-          const finalTransformedSale: Sale = {
-            id: updatedSale.id,
-            sale_order_number: updatedSale.sale_order_number,
-            client_id: updatedSale.client_id,
-            client_name: updatedSale.client_name,
-            user_id: updatedSale.user_id,
-            user_name: updatedSale.user_name,
-            sale_date: updatedSale.sale_date,
-            invoice_number: updatedSale.invoice_number,
-            status: updatedSale.status,
-            total_amount: Number(updatedSale.total_amount),
-            paid_amount: Number(updatedSale.paid_amount),
-            due_amount: Number(updatedSale.due_amount || 0),
-            notes: updatedSale.notes,
-            created_at: updatedSale.created_at,
-            updated_at: updatedSale.updated_at,
-            items: updatedItems,
-            payments: updatedSale.payments?.map((payment: import('../services/saleService').Payment) => ({
-              id: payment.id,
-              sale_id: payment.sale_id,
-              user_name: payment.user_name,
-              method: payment.method,
-              amount: Number(payment.amount),
-              payment_date: payment.payment_date,
-              reference_number: payment.reference_number || undefined,
-              notes: payment.notes || undefined,
-              created_at: payment.created_at
-            })) || [],
-            // timestamp removed - not part of Sale type
-          };
-          
-          setSelectedSale(finalTransformedSale);
-          
-          // Update today's sales list
-          setTodaySales(prevSales => 
-            prevSales.map(sale => 
-              sale.id === finalTransformedSale.id ? finalTransformedSale : sale
-            )
-          );
-          
-          // Now add the new product
-          const itemData = {
-            product_id: product.id,
-            quantity: 1,
-            unit_price: product.last_sale_price_per_sellable_unit || product.suggested_sale_price_per_sellable_unit || 0,
-            purchase_item_id: selectedBatchId || null
-          };
-
-          const response = await saleService.addSaleItem(finalTransformedSale.id, itemData);
-          
-          // Check if the response indicates product already exists
-          if (response.message === 'Product already exists in sale') {
-            showToast(`${product.name} ${t('pos:alreadyInCart')}`, 'success');
-            return;
-          }
-          
-          // Update with the final response
-          const finalItems: CartItem[] = (response.sale.items || []).map(item => ({
-            id: item.id,
-            product: {
-              id: item.product_id,
-              name: item.product_name || 'Unknown Product',
-              sku: item.product_sku || 'N/A',
-              suggested_sale_price_per_sellable_unit: Number(item.unit_price),
-              last_sale_price_per_sellable_unit: Number(item.unit_price),
-              stock_quantity: item.current_stock_quantity || 0,
-              stock_alert_level: item.stock_alert_level,
-              earliest_expiry_date: item.earliest_expiry_date,
-              current_stock_quantity: item.current_stock_quantity || 0,
-              sellable_unit_name: item.sellable_unit_name || 'Piece'
-            } as Product,
-            quantity: item.quantity,
-            unitPrice: Number(item.unit_price),
-            total: Number(item.total_price || item.quantity * Number(item.unit_price))
-          }));
-          
-          setCurrentSaleItems(finalItems);
-          
-          const finalSale: Sale = {
-            id: response.sale.id,
-            sale_order_number: response.sale.sale_order_number,
-            client_id: response.sale.client_id,
-            client_name: response.sale.client_name,
-            user_id: response.sale.user_id,
-            user_name: response.sale.user_name,
-            sale_date: response.sale.sale_date,
-            invoice_number: response.sale.invoice_number,
-            status: response.sale.status,
-            total_amount: Number(response.sale.total_amount),
-            paid_amount: Number(response.sale.paid_amount),
-            due_amount: Number(response.sale.due_amount || 0),
-            notes: response.sale.notes,
-            created_at: response.sale.created_at,
-            updated_at: response.sale.updated_at,
-            items: finalItems,
-            payments: response.sale.payments?.map(payment => ({
-              id: payment.id,
-              sale_id: payment.sale_id,
-              user_name: payment.user_name,
-              method: payment.method,
-              amount: Number(payment.amount),
-              payment_date: payment.payment_date,
-              reference_number: payment.reference_number || undefined,
-              notes: payment.notes || undefined,
-              created_at: payment.created_at
-            })) || [],
-            // timestamp removed - not part of Sale type
-          };
-          
-          setSelectedSale(finalSale);
-          
-          // Update today's sales list
-          setTodaySales(prevSales => 
-            prevSales.map(sale => 
-              sale.id === finalSale.id ? finalSale : sale
-            )
-          );
-          
-          showToast(`${product.name} ${t('pos:addedToCart')}`, 'success');
-          
-          // Increment refresh trigger to force SalePaymentCard to refetch sale data
-          setRefreshTrigger(prev => prev + 1);
-          return;
-        }
-        
-        // Now continue with adding the product to this sale
-      } catch (error) {
-        console.error('Error creating empty sale:', error);
-        const errorMessage = saleService.getErrorMessage(error);
-        showToast(errorMessage, 'error');
-        return;
-      }
-    }
-
-    // Now we always have a selectedSale, so add the product to this sale
     try {
-      const itemData = {
-        product_id: product.id,
-        quantity: 1,
-        unit_price: product.last_sale_price_per_sellable_unit || product.suggested_sale_price_per_sellable_unit || 0,
-        purchase_item_id: selectedBatchId || null
-      };
+      const response = await saleService.addProductToSalePOS(
+        selectedSale?.id || null,
+        {
+          product_id: product.id,
+          quantity: 1,
+          purchase_item_id: selectedBatchId || null
+        }
+      );
 
-      const response = await saleService.addSaleItem(selectedSale!.id, itemData);
-      
-      // Check if the response indicates product already exists
+      // Check if product already exists
       if (response.message === 'Product already exists in sale') {
-        showToast(`${product.name} ${t('pos:alreadyInCart')}`, 'success');
+        showToast(`${product.name} موجود بالفعل في السلة`, 'success');
         return;
       }
-      
-      // Update the current sale items with the new data from backend
-      const items: CartItem[] = (response.sale.items || []).map((item: import('../services/saleService').SaleItem) => ({
-        id: item.id,
-        product: item.product || {
-          id: item.product_id,
-          name: item.product_name || 'Unknown Product',
-          sku: item.product_sku || 'N/A',
-          suggested_sale_price_per_sellable_unit: Number(item.unit_price),
-          last_sale_price_per_sellable_unit: Number(item.unit_price),
-          stock_quantity: item.current_stock_quantity || 0,
-          stock_alert_level: item.stock_alert_level,
-          earliest_expiry_date: item.earliest_expiry_date,
-          current_stock_quantity: item.current_stock_quantity || 0,
-          sellable_unit_name: item.sellable_unit_name || 'Piece'
-        } as Product,
-        quantity: item.quantity,
-        unitPrice: Number(item.unit_price),
-        total: Number(item.total_price || item.quantity * Number(item.unit_price)),
-        selectedBatchId: item.purchase_item_id || null,
-        selectedBatchNumber: item.batch_number_sold || null,
-        selectedBatchExpiryDate: item.purchaseItemBatch?.expiry_date || null
-      }));
-      
-      setCurrentSaleItems(items);
-      
-      // Update the selected sale with new data
-      const transformedSale: Sale = {
-        id: response.sale.id,
-        sale_order_number: response.sale.sale_order_number,
-        client_id: response.sale.client_id,
-        client_name: response.sale.client_name,
-        user_id: response.sale.user_id,
-        user_name: response.sale.user_name,
-        sale_date: response.sale.sale_date,
-        invoice_number: response.sale.invoice_number,
-        status: response.sale.status,
-        total_amount: Number(response.sale.total_amount),
-        paid_amount: Number(response.sale.paid_amount),
-        due_amount: Number(response.sale.due_amount || 0),
-        notes: response.sale.notes,
-        created_at: response.sale.created_at,
-        updated_at: response.sale.updated_at,
-        items: items,
-        payments: response.sale.payments?.map(payment => ({
-          id: payment.id,
-          sale_id: payment.sale_id,
-          user_name: payment.user_name,
-          method: payment.method,
-          amount: Number(payment.amount),
-          payment_date: payment.payment_date,
-          reference_number: payment.reference_number || undefined,
-          notes: payment.notes || undefined,
-          created_at: payment.created_at
-        })) || [],
-        // timestamp removed - not part of Sale type
-      };
-      
-      setSelectedSale(transformedSale);
-      
-      // Update today's sales list
-      setTodaySales(prevSales => 
-        prevSales.map(sale => 
-          sale.id === selectedSale!.id ? transformedSale : sale
-        )
-      );
-      
-      showToast(`${product.name} ${t('pos:addedToCart')}`, 'success');
-      
-      // Increment refresh trigger to force SalePaymentCard to refetch sale data
+
+      // Update state from backend response
+      updateSaleFromBackend(response.sale);
+      showToast(`${product.name} تمت الإضافة إلى السلة`, 'success');
       setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       console.error('Error adding product to sale:', error);
@@ -609,7 +260,7 @@ const PosPage: React.FC = () => {
         setTodaySales(prevSales => [transformedSale, ...prevSales]);
       } catch (error) {
         console.error('Error creating empty sale:', error);
-        showToast(t('pos:failedToCreateSale'), 'error');
+        showToast('فشل إنشاء البيع', 'error');
         return;
       }
     }
@@ -706,112 +357,39 @@ const PosPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error adding multiple products to sale:', error);
-      showToast(t('pos:failedToAddProduct'), 'error');
+      showToast('فشل إضافة المنتج', 'error');
     }
   };
 
+  // Simplified: Update quantity
   const updateQuantity = async (productId: number, newQuantity: number) => {
     if (newQuantity <= 0) {
       await removeFromCurrentSale(productId);
       return;
     }
 
-    // Set loading state for this item
     setUpdatingItems(prev => new Set(prev).add(productId));
 
-    // If we have a selected sale (edit mode), update on backend
     if (selectedSale) {
       try {
-        // Find the sale item to update
         const itemToUpdate = currentSaleItems.find(item => item.product.id === productId);
-        if (!itemToUpdate || !itemToUpdate.id) {
-          showToast(t('pos:itemNotFound'), 'error');
+        if (!itemToUpdate?.id) {
+          showToast('العنصر غير موجود', 'error');
           return;
         }
 
-        const itemData = {
+        const updatedSale = await saleService.updateSaleItem(selectedSale.id, itemToUpdate.id, {
           quantity: newQuantity,
           unit_price: itemToUpdate.unitPrice
-        };
+        });
 
-        const updatedSale = await saleService.updateSaleItem(selectedSale.id, itemToUpdate.id, itemData);
-        
-        // Update the current sale items with the new data from backend
-        const items: CartItem[] = (updatedSale.items || []).map((item: import('../services/saleService').SaleItem) => ({
-          id: item.id,
-          product: item.product || {
-            id: item.product_id,
-            name: item.product_name || 'Unknown Product',
-            sku: item.product_sku || 'N/A',
-            suggested_sale_price_per_sellable_unit: Number(item.unit_price),
-            last_sale_price_per_sellable_unit: Number(item.unit_price),
-            stock_quantity: item.current_stock_quantity || 0,
-            stock_alert_level: item.stock_alert_level,
-            earliest_expiry_date: item.earliest_expiry_date,
-            current_stock_quantity: item.current_stock_quantity || 0,
-            sellable_unit_name: item.sellable_unit_name || 'Piece'
-          } as Product,
-          quantity: item.quantity,
-          unitPrice: Number(item.unit_price),
-          total: Number(item.total_price || item.quantity * Number(item.unit_price)),
-          selectedBatchId: item.purchase_item_id || null,
-          selectedBatchNumber: item.batch_number_sold || null,
-          selectedBatchExpiryDate: item.purchaseItemBatch?.expiry_date || null
-        }));
-        
-        setCurrentSaleItems(items);
-        
-        // Update the selected sale with new data
-        const transformedSale: Sale = {
-          id: updatedSale.id,
-          sale_order_number: updatedSale.sale_order_number,
-          client_id: updatedSale.client_id,
-          client_name: updatedSale.client_name,
-          user_id: updatedSale.user_id,
-          user_name: updatedSale.user_name,
-          sale_date: updatedSale.sale_date,
-          invoice_number: updatedSale.invoice_number,
-          status: updatedSale.status,
-          total_amount: Number(updatedSale.total_amount),
-          paid_amount: Number(updatedSale.paid_amount),
-          due_amount: Number(updatedSale.due_amount || 0),
-          notes: updatedSale.notes,
-          created_at: updatedSale.created_at,
-          updated_at: updatedSale.updated_at,
-          items: items,
-          payments: updatedSale.payments?.map(payment => ({
-            id: payment.id,
-            sale_id: payment.sale_id,
-            user_name: payment.user_name,
-            method: payment.method,
-            amount: Number(payment.amount),
-            payment_date: payment.payment_date,
-            reference_number: payment.reference_number || undefined,
-            notes: payment.notes || undefined,
-            created_at: payment.created_at
-          })) || [],
-                  // timestamp removed - not part of Sale type
-      };
-        
-        setSelectedSale(transformedSale);
-        
-        // Update today's sales list
-        setTodaySales(prevSales => 
-          prevSales.map(sale => 
-            sale.id === selectedSale.id ? transformedSale : sale
-          )
-        );
-
-        // Trigger refresh for SaleSummaryColumn and PaymentDialog
+        updateSaleFromBackend(updatedSale);
         setRefreshTrigger(prev => prev + 1);
-        
-        showToast(t('pos:quantityUpdated'), 'success');
+        showToast('تم تحديث الكمية', 'success');
       } catch (error) {
         console.error('Error updating sale item quantity:', error);
-        const errorMessage = saleService.getErrorMessage(error);
-          showToast(errorMessage, 'error');
+        showToast(saleService.getErrorMessage(error), 'error');
       } finally {
-        // Clear loading state for this item
         setUpdatingItems(prev => {
           const newSet = new Set(prev);
           newSet.delete(productId);
@@ -819,7 +397,7 @@ const PosPage: React.FC = () => {
         });
       }
     } else {
-      // For new sales, update frontend state
+      // For new sales without backend, update frontend state
       setCurrentSaleItems(prevItems =>
         prevItems.map(item =>
           item.product.id === productId
@@ -831,8 +409,6 @@ const PosPage: React.FC = () => {
             : item
         )
       );
-      
-      // Clear loading state for this item
       setUpdatingItems(prev => {
         const newSet = new Set(prev);
         newSet.delete(productId);
@@ -841,100 +417,33 @@ const PosPage: React.FC = () => {
     }
   };
 
-  const updateBatch = async (productId: number, batchId: number | null, batchNumber: string | null, expiryDate: string | null, unitPrice: number) => {
+  // Simplified: Update batch using POS-optimized API
+  const updateBatch = async (productId: number, batchId: number | null, _batchNumber: string | null, _expiryDate: string | null, unitPrice: number) => {
     if (!selectedSale) return;
     
     try {
-      // Find the sale item to update
       const saleItem = currentSaleItems.find(item => item.product.id === productId);
       if (!saleItem || !saleItem.id) {
-        console.error('Sale item not found or has no ID');
+        showToast('العنصر غير موجود', 'error');
         return;
       }
 
-      // Update the sale item with batch information
-      await saleService.updateSaleItem(selectedSale.id, saleItem.id, {
-        quantity: saleItem.quantity,
-        unit_price: unitPrice,
-        purchase_item_id: batchId
-      });
-
-      // Reload the sale to get updated data
-      const updatedSale = await saleService.getSale(selectedSale.id);
-      
-      // Update the current sale items with the new data
-      const updatedItems: CartItem[] = (updatedSale.items || []).map((item: import('../services/saleService').SaleItem) => ({
-        id: item.id,
-        product: item.product || {
-          id: item.product_id,
-          name: item.product_name || 'Unknown Product',
-          sku: item.product_sku || 'N/A',
-          suggested_sale_price_per_sellable_unit: Number(item.unit_price),
-          last_sale_price_per_sellable_unit: Number(item.unit_price),
-          stock_quantity: item.current_stock_quantity || 0,
-          stock_alert_level: item.stock_alert_level,
-          earliest_expiry_date: item.earliest_expiry_date,
-          current_stock_quantity: item.current_stock_quantity || 0,
-          sellable_unit_name: item.sellable_unit_name || 'Piece'
-        } as Product,
-        quantity: item.quantity,
-        unitPrice: Number(item.unit_price),
-        total: Number(item.total_price || item.quantity * Number(item.unit_price)),
-        selectedBatchId: item.purchase_item_id || null,
-        selectedBatchNumber: item.batch_number_sold || null,
-        selectedBatchExpiryDate: item.purchaseItemBatch?.expiry_date || null
-      }));
-      
-      setCurrentSaleItems(updatedItems);
-      
-      // Update the selected sale
-      const finalTransformedSale: Sale = {
-        id: updatedSale.id,
-        sale_order_number: updatedSale.sale_order_number,
-        client_id: updatedSale.client_id,
-        client_name: updatedSale.client_name,
-        user_id: updatedSale.user_id,
-        user_name: updatedSale.user_name,
-        sale_date: updatedSale.sale_date,
-        invoice_number: updatedSale.invoice_number,
-        status: updatedSale.status,
-        total_amount: Number(updatedSale.total_amount),
-        paid_amount: Number(updatedSale.paid_amount),
-        due_amount: Number(updatedSale.due_amount || 0),
-        notes: updatedSale.notes,
-        created_at: updatedSale.created_at,
-        updated_at: updatedSale.updated_at,
-        items: updatedItems,
-        payments: updatedSale.payments?.map((payment: import('../services/saleService').Payment) => ({
-          id: payment.id,
-          sale_id: payment.sale_id,
-          user_name: payment.user_name,
-          method: payment.method,
-          amount: Number(payment.amount),
-          payment_date: payment.payment_date,
-          reference_number: payment.reference_number || undefined,
-          notes: payment.notes || undefined,
-          created_at: payment.created_at
-        })) || [],
-      };
-      
-      setSelectedSale(finalTransformedSale);
-      
-      // Update today's sales list
-      setTodaySales(prevSales => 
-        prevSales.map(sale => 
-          sale.id === finalTransformedSale.id ? finalTransformedSale : sale
-        )
+      // Use POS-optimized API that returns updated Sale
+      const updatedSale = await saleService.updateBatchPOS(
+        selectedSale.id,
+        saleItem.id,
+        {
+          purchase_item_id: batchId,
+          unit_price: unitPrice
+        }
       );
       
-      // Trigger refresh for SaleSummaryColumn and PaymentDialog
+      updateSaleFromBackend(updatedSale);
       setRefreshTrigger(prev => prev + 1);
-      
-      showToast(t('pos:batchUpdated'), 'success');
-      
+      showToast('تم تحديث الدفعة', 'success');
     } catch (error) {
       console.error('Error updating batch:', error);
-      showToast(t('pos:batchUpdateFailed'), 'error');
+      showToast('فشل تحديث الدفعة', 'error');
     }
   };
 
@@ -943,13 +452,8 @@ const PosPage: React.FC = () => {
     // Find the item to get its ID for backend deletion
     const itemToRemove = currentSaleItems.find(item => item.product.id === productId);
     
-    if (!itemToRemove) {
-      showToast(t('pos:itemNotFound'), 'error');
-      return;
-    }
-
-    if (!itemToRemove.id) {
-      showToast(t('pos:itemNotFound'), 'error');
+    if (!itemToRemove || !itemToRemove.id) {
+      showToast('العنصر غير موجود', 'error');
       return;
     }
 
@@ -961,7 +465,7 @@ const PosPage: React.FC = () => {
       await handleDeleteSaleItem(itemToRemove.id);
     } catch (error) {
       console.error('Error removing item from sale:', error);
-      showToast(t('pos:itemRemovalFailed'), 'error');
+      showToast('فشل إزالة العنصر', 'error');
     } finally {
       // Clear loading state for this item
       setDeletingItems(prev => {
@@ -972,115 +476,35 @@ const PosPage: React.FC = () => {
     }
   };
 
+  // Simplified: Delete sale item using POS-optimized API
   const handleDeleteSaleItem = async (saleItemId: number) => {
     if (!selectedSale) {
-      showToast(t('pos:noSaleSelected'), 'error');
+      showToast('لم يتم اختيار بيع', 'error');
       return;
     }
 
     try {
-      const result = await saleService.deleteSaleItem(selectedSale.id, saleItemId);
+      // Use POS-optimized API that returns updated Sale
+      const updatedSale = await saleService.removeItemPOS(selectedSale.id, saleItemId);
       
-
-      
-      // Show success message
-      showToast(result.message, 'success');
-      
-      // Trigger refresh for SaleSummaryColumn and PaymentDialog
-      setRefreshTrigger(prev => prev + 1);
-      
-      // Check if there are no items remaining - if so, clear the selection
-      if (result.remaining_items_count === 0) {
+      // If no items remaining, clear selection
+      if (updatedSale.items?.length === 0) {
         setSelectedSale(null);
         setSelectedSaleId(null);
         setCurrentSaleItems([]);
-        // Reset payment state - now handled by SalePaymentCard
         setDiscountAmount(0);
         setDiscountType('fixed');
-        showToast(t('pos:saleCancelled'), 'success');
-        
-        // Reload today's sales after clearing selection
+        showToast('تم إلغاء البيع', 'success');
         await loadTodaySales();
       } else {
-        // Update the selected sale with new data from the backend response
-        // Get the updated sale data directly from the backend to ensure accuracy
-        try {
-          // Small delay to ensure database transaction is committed
-          await new Promise(resolve => setTimeout(resolve, 100));
-          
-          const updatedSale = await saleService.getSale(selectedSale.id);
-          
-          // Transform the backend sale to POS format
-          const transformedSale: Sale = {
-            id: updatedSale.id,
-            sale_order_number: updatedSale.sale_order_number,
-            client_id: updatedSale.client_id,
-            client_name: updatedSale.client_name,
-            user_id: updatedSale.user_id,
-            user_name: updatedSale.user_name,
-            sale_date: updatedSale.sale_date,
-            invoice_number: updatedSale.invoice_number,
-            status: updatedSale.status,
-            total_amount: Number(updatedSale.total_amount),
-            paid_amount: Number(updatedSale.paid_amount),
-            due_amount: Number(updatedSale.due_amount || 0),
-            notes: updatedSale.notes,
-            created_at: updatedSale.created_at,
-            updated_at: updatedSale.updated_at,
-            items: updatedSale.items?.map(item => ({
-              id: item.id,
-              product: {
-                id: item.product_id,
-                name: item.product_name || 'Unknown Product',
-                sku: item.product_sku || 'N/A',
-                suggested_sale_price_per_sellable_unit: Number(item.unit_price),
-                last_sale_price_per_sellable_unit: Number(item.unit_price),
-                stock_quantity: item.current_stock_quantity || 0,
-                stock_alert_level: item.stock_alert_level,
-                earliest_expiry_date: item.earliest_expiry_date,
-                current_stock_quantity: item.current_stock_quantity || 0,
-                sellable_unit_name: item.sellable_unit_name || 'Piece'
-              } as Product,
-              quantity: item.quantity,
-              unitPrice: Number(item.unit_price),
-              total: Number(item.total_price || item.quantity * Number(item.unit_price))
-            })) || [],
-            payments: updatedSale.payments?.map(payment => ({
-              id: payment.id,
-              sale_id: payment.sale_id,
-              user_name: payment.user_name,
-              method: payment.method,
-              amount: Number(payment.amount),
-              payment_date: payment.payment_date,
-              reference_number: payment.reference_number || undefined,
-              notes: payment.notes || undefined,
-              created_at: payment.created_at
-            })) || [],
-          };
-          
-          // Update the selected sale and current sale items
-          setSelectedSale(transformedSale);
-          setCurrentSaleItems(transformedSale.items);
-          
-          // Update today's sales list to reflect the changes
-          setTodaySales(prevSales => 
-            prevSales.map(sale => 
-              sale.id === transformedSale.id ? transformedSale : sale
-            )
-          );
-        } catch (error) {
-          console.error('Error fetching updated sale data:', error);
-          // Fallback to finding the sale in today's sales
-          const updatedSale = todaySales.find(sale => sale.id === selectedSale.id);
-          if (updatedSale) {
-            handleSaleSelect(updatedSale);
-          }
-        }
+        updateSaleFromBackend(updatedSale);
+        showToast('تم حذف العنصر', 'success');
       }
+      
+      setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       console.error('Error deleting sale item:', error);
-      const errorMessage = saleService.getErrorMessage(error);
-      showToast(errorMessage, 'error');
+      showToast(saleService.getErrorMessage(error), 'error');
     }
   };
 
@@ -1100,7 +524,7 @@ const PosPage: React.FC = () => {
         // Reset payment state - now handled by SalePaymentCard
         setDiscountAmount(0);
         setDiscountType('fixed');
-        showToast(t('pos:saleUpdated'), 'success');
+        showToast('تم تحديث البيع', 'success');
         
         // Refresh the sale data to get updated payment information
         const updatedSale = await saleService.getSale(selectedSale.id);
@@ -1253,21 +677,21 @@ const PosPage: React.FC = () => {
           }, 500); // Small delay to ensure the sale data is updated
         }
         
-        showToast(t('pos:saleCompleted'), 'success');
+        showToast('تم إكمال البيع', 'success');
       }
     }
   };
 
+  // Simplified: Select sale using POS-optimized API
   const handleSaleSelect = async (sale: Sale) => {
-    // Set loading state
     setLoadingSaleId(sale.id);
     setIsLoadingSaleItems(true);
-    
-    try {
-      // Fetch the latest sale data from the backend
-      const latestSale = await saleService.getSale(sale.id);
 
-      // Set selected client from latest sale if available
+    try {
+      // Use POS-optimized API if available, otherwise fallback to regular getSale
+      const latestSale = await (saleService.getSaleForPOS || saleService.getSale)(sale.id);
+
+      // Set selected client if available
       try {
         if (latestSale.client) {
           setSelectedClient(latestSale.client);
@@ -1280,108 +704,18 @@ const PosPage: React.FC = () => {
       } catch {
         // ignore client fetch errors
       }
-      
-      // Transform the backend sale to POS format
-      const transformedSale: Sale = {
-        id: latestSale.id,
-        sale_order_number: latestSale.sale_order_number,
-        client_id: latestSale.client_id,
-        client_name: latestSale.client_name,
-        user_id: latestSale.user_id,
-        user_name: latestSale.user_name,
-        sale_date: latestSale.sale_date,
-        invoice_number: latestSale.invoice_number,
-        status: latestSale.status,
-        total_amount: Number(latestSale.total_amount),
-        paid_amount: Number(latestSale.paid_amount),
-        due_amount: Number(latestSale.due_amount || 0),
-        notes: latestSale.notes,
-        created_at: latestSale.created_at,
-        updated_at: latestSale.updated_at,
-        items: latestSale.items?.map(item => ({
-          id: item.id,
-          product: item.product || {
-            id: item.product_id,
-            name: item.product_name || 'Unknown Product',
-            sku: item.product_sku || 'N/A',
-            scientific_name: '',
-            description: '',
-            suggested_sale_price_per_sellable_unit: Number(item.unit_price),
-            last_sale_price_per_sellable_unit: Number(item.unit_price),
-            stock_quantity: item.current_stock_quantity || 0,
-            stock_alert_level: item.stock_alert_level,
-            earliest_expiry_date: item.earliest_expiry_date,
-            current_stock_quantity: item.current_stock_quantity || 0,
-            sellable_unit_name: item.sellable_unit_name || 'Piece',
-            created_at: item.created_at || new Date().toISOString(),
-            updated_at: item.updated_at || new Date().toISOString(),
-            available_batches: []
-          } as Product,
-          quantity: item.quantity,
-          unitPrice: Number(item.unit_price),
-          total: Number(item.total_price || item.quantity * Number(item.unit_price)),
-          selectedBatchId: item.purchase_item_id || null,
-          selectedBatchNumber: item.batch_number_sold || null,
-          selectedBatchExpiryDate: item.purchaseItemBatch?.expiry_date || null
-        })) || [],
-        payments: latestSale.payments?.map(payment => ({
-          id: payment.id,
-          sale_id: payment.sale_id,
-          user_name: payment.user_name,
-          method: payment.method,
-          amount: Number(payment.amount),
-          payment_date: payment.payment_date,
-          reference_number: payment.reference_number || undefined,
-          notes: payment.notes || undefined,
-          created_at: payment.created_at
-        })) || [],
-      };
-      
-      // Set the selected sale with fresh data
-      setSelectedSale(transformedSale);
-      setSelectedSaleId(transformedSale.id);
-      
-      // Convert sale items to current sale items format
-      const items: CartItem[] = transformedSale.items.map(item => ({
-        id: item.id, // Preserve the sale item ID for deletion
-        product: item.product,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        total: item.total,
-        selectedBatchId: item.selectedBatchId,
-        selectedBatchNumber: item.selectedBatchNumber,
-        selectedBatchExpiryDate: item.selectedBatchExpiryDate
-      }));
-      setCurrentSaleItems(items);
-      
-      // Update the sale in today's sales list with fresh data
-      setTodaySales(prevSales => 
-        prevSales.map(s => 
-          s.id === transformedSale.id ? transformedSale : s
-        )
-      );
-      
+
+      // Update sale state using transformer
+      updateSaleFromBackend(latestSale);
     } catch (error) {
       console.error('Error fetching latest sale data:', error);
-      // Fallback to using the sale data from props if fetch fails
-      setSelectedSale(sale);
+      // Fallback to using provided sale data
+      const transformedSale = transformBackendSaleToPOS(sale as any);
+      setSelectedSale(transformedSale);
       setSelectedSaleId(sale.id);
-      
-      const items: CartItem[] = sale.items.map(item => ({
-        id: item.id,
-        product: item.product,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        total: item.total,
-        selectedBatchId: item.selectedBatchId,
-        selectedBatchNumber: item.selectedBatchNumber,
-        selectedBatchExpiryDate: item.selectedBatchExpiryDate
-      }));
-      setCurrentSaleItems(items);
-      
-      showToast(t('pos:failedToFetchSaleData'), 'error');
+      setCurrentSaleItems(extractCartItemsFromSale(transformedSale));
+      showToast('فشل جلب بيانات البيع', 'error');
     } finally {
-      // Clear loading state
       setLoadingSaleId(null);
       setIsLoadingSaleItems(false);
     }
@@ -1389,77 +723,25 @@ const PosPage: React.FC = () => {
 
 
 
+  // Simplified: Create empty sale
   const handleCreateEmptySale = async () => {
     try {
-      // Create an empty sale on the backend using the dedicated endpoint
       const emptySaleData = {
         client_id: null,
-        sale_date: new Date().toISOString().split('T')[0], // Today's date
+        sale_date: new Date().toISOString().split('T')[0],
         notes: null
       };
 
       const newSale = await saleService.createEmptySale(emptySaleData);
-      
-      // Transform the backend sale to POS format
-      const transformedSale: Sale = {
-        id: newSale.id,
-        sale_order_number: newSale.sale_order_number,
-        client_id: newSale.client_id,
-        client_name: newSale.client_name,
-        user_id: newSale.user_id,
-        user_name: newSale.user_name,
-        sale_date: newSale.sale_date,
-        invoice_number: newSale.invoice_number,
-        status: newSale.status,
-        total_amount: Number(newSale.total_amount),
-        paid_amount: Number(newSale.paid_amount),
-        due_amount: Number(newSale.due_amount || 0),
-        notes: newSale.notes,
-        created_at: newSale.created_at,
-        updated_at: newSale.updated_at,
-        items: newSale.items?.map(item => ({
-          id: item.id,
-          product: {
-            id: item.product_id,
-            name: item.product_name || 'Unknown Product',
-            sku: item.product_sku || 'N/A',
-            suggested_sale_price_per_sellable_unit: Number(item.unit_price),
-            last_sale_price_per_sellable_unit: Number(item.unit_price),
-            stock_quantity: item.current_stock_quantity || 0,
-            stock_alert_level: item.stock_alert_level,
-            earliest_expiry_date: item.earliest_expiry_date,
-            current_stock_quantity: item.current_stock_quantity || 0,
-            sellable_unit_name: item.sellable_unit_name || 'Piece'
-          } as Product,
-          quantity: item.quantity,
-          unitPrice: Number(item.unit_price),
-          total: Number(item.total_price || item.quantity * Number(item.unit_price))
-        })) || [],
-        payments: newSale.payments?.map(payment => ({
-          id: payment.id,
-          sale_id: payment.sale_id,
-          user_name: payment.user_name,
-          method: payment.method,
-          amount: Number(payment.amount),
-          payment_date: payment.payment_date,
-          reference_number: payment.reference_number || undefined,
-          notes: payment.notes || undefined,
-          created_at: payment.created_at
-        })) || [],
-        // timestamp removed - not part of Sale type
-      };
+      const transformedSale = transformBackendSaleToPOS(newSale);
 
       // Select the new sale
-      handleSaleSelect(transformedSale);
-      
-      // Refresh today's sales to ensure consistency and get the most up-to-date data
+      await handleSaleSelect(transformedSale);
       await loadTodaySales();
-      
-      showToast(t('pos:emptySaleCreated'), 'success');
+      showToast('تم إنشاء بيع فارغ', 'success');
     } catch (error) {
       console.error('Error creating empty sale:', error);
-      const errorMessage = saleService.getErrorMessage(error);
-      showToast(errorMessage, 'error');
+      showToast(saleService.getErrorMessage(error), 'error');
     }
   };
 
@@ -1477,7 +759,7 @@ const PosPage: React.FC = () => {
 
   const handlePrintThermalInvoice = () => {
     if (!selectedSale) {
-      showToast(t('pos:noSaleSelected'), 'error');
+      showToast('لم يتم اختيار بيع', 'error');
       return;
     }
     setThermalDialogOpen(true);
@@ -1486,9 +768,9 @@ const PosPage: React.FC = () => {
   const handleGenerateDailySalesPdf = async () => {
     try {
       await generateDailySalesPdf();
-      showToast(t('pos:pdfGenerated'), 'success');
+      showToast('تم إنشاء PDF', 'success');
     } catch {
-      showToast(t('pos:pdfGenerationFailed'), 'error');
+      showToast('فشل إنشاء PDF', 'error');
     }
   };
 
@@ -1513,7 +795,7 @@ const PosPage: React.FC = () => {
         }
       }
       
-      showToast(t('pos:saleDateUpdated'), 'success');
+      showToast('تم تحديث تاريخ البيع', 'success');
     } catch (error) {
       console.error('Failed to update sale date:', error);
       const errorMessage = saleService.getErrorMessage(error);
@@ -1536,7 +818,7 @@ const PosPage: React.FC = () => {
       setSelectedSale(prev => prev ? { ...prev, client_id: client.id, client_name: client.name } : prev);
       setTodaySales(prev => prev.map(s => s.id === selectedSale.id ? { ...s, client_id: client.id, client_name: client.name } : s));
 
-      showToast(t('pos:saleUpdated'), 'success');
+      showToast('تم تحديث البيع', 'success');
     } catch (error) {
       const errorMessage = saleService.getErrorMessage(error);
       showToast(errorMessage, 'error');

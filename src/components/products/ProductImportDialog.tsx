@@ -149,17 +149,17 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const steps = [
-    'رفع الملف',
+    'اختيار الملف',
     'تعيين الأعمدة',
     'معاينة البيانات',
-    'تنفيذ الاستيراد',
+    'تأكيد الاستيراد',
   ];
 
   const productFields = [
     { key: 'name', label: 'اسم المنتج', required: true },
-    { key: 'sku', label: 'رمز المنتج (SKU)', required: false },
+    { key: 'sku', label: 'الرمز (SKU)', required: false },
     { key: 'scientific_name', label: 'الاسم العلمي', required: false },
-    { key: 'stock_quantity', label: 'الكمية بالمخزون', required: false },
+    { key: 'stock_quantity', label: 'كمية المخزون', required: false },
   ];
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -167,7 +167,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
     if (!selectedFile) return;
 
     if (!selectedFile.name.match(/\.(xlsx|xls)$/)) {
-      setError('نوع الملف غير مدعوم، الرجاء استخدام ملف Excel (xlsx أو xls)');
+      setError('نوع الملف غير مدعوم. يرجى اختيار ملف Excel بصيغة xlsx أو xls.');
       return;
     }
 
@@ -186,7 +186,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
       
       setActiveStep(1);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'فشل في رفع الملف، يرجى المحاولة مرة أخرى.');
+      setError(err instanceof Error ? err.message : 'فشل في رفع الملف. يرجى المحاولة مرة أخرى.');
     } finally {
       setLoading(false);
     }
@@ -212,7 +212,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
       const unmappedRequired = requiredFields.filter(field => !columnMapping[field.key as keyof ColumnMapping]);
       
       if (unmappedRequired.length > 0) {
-        setError('بعض الحقول الإلزامية لم يتم تعيينها، يرجى إكمال التعيين.');
+        setError('بعض الحقول الإلزامية لم يتم تعيينها. يرجى تعيينها قبل المتابعة.');
         return;
       }
       
@@ -238,7 +238,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
       const result = await productService.importProductsPreview(file, columnMapping, skipHeader);
       setPreviewData(result.preview || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('products:import.previewError'));
+      setError(err instanceof Error ? err.message : 'فشل في إنشاء المعاينة. يرجى التحقق من تعيين الأعمدة.');
     } finally {
       setPreviewLoading(false);
     }
@@ -255,14 +255,14 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
       setImportResult(result);
       onImportSuccess();
     } catch (err) {
-      let errorMessage = 'حدث خطأ أثناء تنفيذ عملية الاستيراد.';
+      let errorMessage = 'حدث خطأ أثناء عملية الاستيراد.';
       
       if (err instanceof Error) {
         // Handle specific error types
         if (err.message.includes('timeout') || err.message.includes('Network Error')) {
-          errorMessage = 'انتهت مهلة الاستيراد، الرجاء المحاولة لاحقًا أو استخدام ملف أصغر.';
+          errorMessage = 'انتهت مهلة الاستيراد. يرجى المحاولة باستخدام ملف أصغر أو التحقق من الاتصال.';
         } else if (err.message.includes('413')) {
-          errorMessage = 'حجم الملف كبير جدًا، الرجاء استخدام ملف Excel أصغر.';
+          errorMessage = 'حجم الملف كبير جداً. يرجى استخدام ملف Excel أصغر.';
         } else {
           errorMessage = err.message;
         }
@@ -294,7 +294,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
   const renderStep1 = () => (
     <Box>
       <Typography variant="body1" sx={{ mb: 2 }}>
-        اختر ملف Excel يحتوي على المنتجات التي تريد استيرادها.
+        قم برفع ملف Excel يحتوي على بيانات المنتجات التي تريد استيرادها.
       </Typography>
       
       <Box
@@ -312,7 +312,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
       >
         <CloudUploadIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
         <Typography variant="h6" sx={{ mb: 1 }}>
-          رفع ملف المنتجات
+          اختر ملف الاستيراد
         </Typography>
         <Typography variant="body2" color="text.secondary">
           الصيغ المدعومة: ‎.xlsx, ‎.xls
@@ -338,13 +338,13 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
   const renderStep2 = () => (
     <Box>
       <Typography variant="body1" sx={{ mb: 2 }}>
-        قم بتعيين أعمدة ملف Excel إلى حقول المنتج.
+        قم بربط أعمدة ملف Excel مع حقول المنتج في النظام.
       </Typography>
       
       {autoMapped && (
         <Alert severity="info" sx={{ mb: 2 }}>
           <Typography variant="body2">
-            تم تعيين الأعمدة تلقائيًا بناءً على الأسماء، يرجى المراجعة والتعديل إذا لزم الأمر.
+            {t('products:import.autoMappedMessage') || 'Columns have been automatically mapped based on similarity. Please review and adjust if needed.'}
           </Typography>
         </Alert>
       )}
@@ -357,7 +357,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
               onChange={(e) => setSkipHeader(e.target.checked)}
             />
           }
-          label="تجاهل صف العناوين في أول الصفوف"
+          label="تجاهل الصف الأول (عناوين الأعمدة)"
         />
         
         <Button
@@ -366,7 +366,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
           onClick={handleAutoMap}
           sx={{ ml: 'auto' }}
         >
-          تعيين الأعمدة تلقائيًا
+          تعيين الأعمدة تلقائياً
         </Button>
         <Button
           variant="outlined"
@@ -387,7 +387,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
           <TableHead>
             <TableRow>
               <TableCell>حقل المنتج</TableCell>
-              <TableCell>عمود Excel</TableCell>
+              <TableCell>عمود في Excel</TableCell>
               <TableCell>إلزامي</TableCell>
             </TableRow>
           </TableHead>
@@ -403,7 +403,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
                       displayEmpty
                     >
                       <MenuItem value="">
-                        <em>اختر عمودًا</em>
+                        <em>اختر عموداً</em>
                       </MenuItem>
                       <MenuItem value="skip">تجاهل هذا الحقل</MenuItem>
                       {headers.map((header) => (
@@ -436,14 +436,14 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
   const renderStep3 = () => (
     <Box>
       <Typography variant="body1" sx={{ mb: 2 }}>
-        معاينة البيانات التي سيتم استيرادها قبل التنفيذ.
+        راجع بيانات المعاينة قبل تنفيذ عملية الاستيراد.
       </Typography>
       
       {previewLoading && (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 3 }}>
           <CircularProgress size={60} />
           <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-            يتم توليد المعاينة...
+            جاري إنشاء المعاينة...
           </Typography>
         </Box>
       )}
@@ -457,10 +457,10 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>{t('products:fields.name')}</TableCell>
-                  <TableCell>{t('products:fields.sku')}</TableCell>
-                  <TableCell>{t('products:fields.scientificName')}</TableCell>
-                  <TableCell>{t('products:fields.stockQuantity')}</TableCell>
+                  <TableCell>اسم المنتج</TableCell>
+                  <TableCell>الرمز (SKU)</TableCell>
+                  <TableCell>الاسم العلمي</TableCell>
+                  <TableCell>كمية المخزون</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -483,7 +483,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
       
       {!previewLoading && previewData.length === 0 && (
         <Alert severity="warning" sx={{ mb: 2 }}>
-          لا توجد بيانات للمعاينة، يرجى التحقق من تعيين الأعمدة.
+          لا توجد بيانات للمعاينة. يرجى التحقق من تعيين الأعمدة.
         </Alert>
       )}
     </Box>
@@ -492,17 +492,17 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
   const renderStep4 = () => (
     <Box>
       <Typography variant="body1" sx={{ mb: 2 }}>
-        راجع تفاصيل الاستيراد ثم قم بتأكيد العملية.
+        راجع النتائج ثم قم بتأكيد عملية الاستيراد.
       </Typography>
       
       {loading && (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 3 }}>
           <CircularProgress size={60} />
           <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-            يتم تنفيذ عملية الاستيراد...
+            جاري تنفيذ عملية الاستيراد...
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
-            قد تستغرق العملية عدة دقائق مع الملفات الكبيرة، يرجى عدم إغلاق هذه الشاشة.
+            قد تستغرق العملية بعض الوقت عند استخدام ملفات كبيرة. يرجى عدم إغلاق هذه النافذة.
           </Typography>
         </Box>
       )}
@@ -510,7 +510,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
       {importResult && !loading && (
         <Alert severity={importResult.errors === 0 ? 'success' : 'warning'} sx={{ mb: 2 }}>
           <Typography variant="body2">
-            تم استيراد {importResult.imported} صفًا، مع وجود {importResult.errors} صفوف بها أخطاء.
+            تم استيراد {importResult.imported} صفاً بنجاح، مع وجود {importResult.errors} صفوف تحتوي على أخطاء.
           </Typography>
         </Alert>
       )}
@@ -524,7 +524,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>الصف</TableCell>
+                  <TableCell>رقم الصف</TableCell>
                   <TableCell>الأخطاء</TableCell>
                 </TableRow>
               </TableHead>
@@ -568,7 +568,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="h6">استيراد المنتجات من ملف Excel</Typography>
+          <Typography variant="h6">استيراد المنتجات من Excel</Typography>
           <Stepper activeStep={activeStep} sx={{ flex: 1, mx: 2 }}>
             {steps.map((label) => (
               <Step key={label}>

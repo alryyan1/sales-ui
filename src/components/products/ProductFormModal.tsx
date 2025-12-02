@@ -1,17 +1,24 @@
 // src/components/products/ProductFormModal.tsx
 import React, { useEffect, useState, useCallback } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { toast } from "sonner";
+
+// MUI components
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
+  DialogTitle,
   DialogActions,
   TextField,
   Button,
   Box,
   Alert,
   AlertTitle,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Typography,
 } from "@mui/material";
 import { Loader2, AlertCircle, RefreshCw, Plus } from "lucide-react";
 
@@ -98,16 +105,16 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setCategories(data as Category[]);
     } catch (error) {
       console.error("Error fetching categories for product form:", error);
-      toast.error(t("common:error"), {
+      toast.error("خطأ", {
         description: categoryService.getErrorMessage(
           error,
-          t("categories:fetchError")
+          "فشل تحميل الفئات"
         ),
       });
     } finally {
       setLoadingCategories(false);
     }
-  }, [t]);
+  }, []);
 
   // --- Fetch Units for Dropdown ---
   const fetchUnitsForSelect = useCallback(async () => {
@@ -121,16 +128,16 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setSellableUnits(sellableData);
     } catch (error) {
       console.error("Error fetching units for product form:", error);
-      toast.error(t("common:error"), {
+      toast.error("خطأ", {
         description: unitService.getErrorMessage(
           error,
-          t("units:fetchError")
+          "فشل تحميل الوحدات"
         ),
       });
     } finally {
       setLoadingUnits(false);
     }
-  }, [t]);
+  }, []);
 
   // --- Handle Category Creation Success ---
   const handleCategoryCreated = useCallback((newCategory: Category) => {
@@ -230,12 +237,10 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       }
       console.log("Save successful:", savedProduct);
 
-      toast.success("تم الحفظ بنجاح", {
-        description: isEditMode
-          ? "تم تحديث بيانات المنتج بنجاح"
-          : "تم إضافة المنتج بنجاح",
-        duration: 3000,
-      });
+      toast.success(
+        isEditMode ? "تم تحديث المنتج بنجاح" : "تم إنشاء المنتج بنجاح",
+        { duration: 3000 }
+      );
 
       onSaveSuccess(savedProduct);
       onClose();
@@ -254,7 +259,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
         Object.entries(apiErrors).forEach(([field, messages]) => {
           setError(field as keyof typeof data, {
             type: "server",
-            message: messages[0],
+            message: Array.isArray(messages) ? messages[0] : String(messages),
           });
         });
         setServerError("يرجى التحقق من الحقول المدخلة.");
@@ -266,24 +271,41 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <Dialog open={isOpen} onClose={onClose} fullWidth maxWidth="md">
-      <DialogTitle>
-        {isEditMode ? "تعديل منتج" : "إضافة منتج"}
+    <Dialog
+      open={isOpen}
+      onClose={onClose}
+      fullWidth
+      maxWidth="md"
+    >
+      <DialogTitle sx={{ pb: 1, direction: "rtl" }}>
+        {isEditMode ? "تعديل منتج" : "إضافة منتج جديد"}
       </DialogTitle>
-      <DialogContent dividers>
+      <DialogContent
+        sx={{
+          pt: 1,
+          maxHeight: "70vh",
+          overflowY: "auto",
+          direction: "rtl",
+        }}
+      >
         <Box
           component="form"
           onSubmit={handleSubmit(onSubmit)}
           noValidate
           sx={{ mt: 1 }}
         >
+          {/* General Server Error Alert */}
           {serverError && !isSubmitting && (
             <Alert severity="error" sx={{ mb: 2 }}>
-              <AlertTitle>خطأ</AlertTitle>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>خطأ</AlertTitle>
+              </Box>
               {serverError}
             </Alert>
           )}
 
+          {/* Grid layout for fields */}
           <Box
             sx={{
               display: "grid",
@@ -291,97 +313,316 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
               gap: 2,
             }}
           >
-            <TextField
-              label="اسم المنتج"
-              fullWidth
-              required
-              placeholder="أدخل اسم المنتج"
-              disabled={isSubmitting}
-              {...form.register("name")}
+            {/* Name Field */}
+            <Controller
+              control={control}
+              name="name"
+              render={({ field, fieldState }) => (
+                <TextField
+                  {...field}
+                  label="اسم المنتج"
+                  placeholder="اكتب اسم المنتج"
+                  fullWidth
+                  disabled={isSubmitting}
+                  error={!!fieldState.error}
+                  helperText={fieldState.error?.message}
+                />
+              )}
             />
 
-            <TextField
-              label="الاسم العلمي"
-              fullWidth
-              placeholder="أدخل الاسم العلمي (اختياري)"
-              disabled={isSubmitting}
-              {...form.register("scientific_name")}
+            {/* Scientific Name Field */}
+            <Controller
+              control={control}
+              name="scientific_name"
+              render={({ field, fieldState }) => (
+                <TextField
+                  {...field}
+                  label="الاسم العلمي"
+                  placeholder="(اختياري) الاسم العلمي للمنتج"
+                  fullWidth
+                  disabled={isSubmitting}
+                  error={!!fieldState.error}
+                  helperText={fieldState.error?.message}
+                />
+              )}
             />
 
-            <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-              <TextField
-                label="SKU"
-                fullWidth
-                placeholder="رمز المنتج (اختياري)"
-                disabled={isSubmitting || isEditMode}
-                {...form.register("sku")}
-              />
-              <Button
-                type="button"
-                variant="outlined"
-                size="small"
-                onClick={() => {
-                  const randomSKU = generateRandomSKU("PROD", 6);
-                  form.setValue("sku", randomSKU);
-                }}
-                disabled={isSubmitting || isEditMode}
-              >
-                <RefreshCw className="h-4 w-4 mr-1" />
-              </Button>
-            </Box>
+            {/* SKU Field (locked when editing) */}
+            <Controller
+              control={control}
+              name="sku"
+              render={({ field, fieldState }) => (
+                <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
+                  <TextField
+                    {...field}
+                    value={field.value ?? ""}
+                    label="الرمز (SKU)"
+                    placeholder="(اختياري) رمز المنتج في النظام"
+                    fullWidth
+                    disabled={isSubmitting || isEditMode}
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message}
+                  />
+                  <Button
+                    type="button"
+                    variant="outlined"
+                    onClick={() => {
+                      const randomSKU = generateRandomSKU("PROD", 6);
+                      field.onChange(randomSKU);
+                    }}
+                    disabled={isSubmitting || isEditMode}
+                    sx={{ minWidth: 0, px: 1.5 }}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </Box>
+              )}
+            />
 
-            <TextField
-              select
-              label="الفئة"
-              fullWidth
-              disabled={isSubmitting || loadingCategories}
-              {...form.register("category_id")}
-              SelectProps={{ native: false }}
-            >
-              <MenuItem value="">
-                <em>بدون فئة</em>
-              </MenuItem>
-              {categories.map((cat) => (
-                <MenuItem key={cat.id} value={String(cat.id)}>
-                  {cat.name}
-                </MenuItem>
-              ))}
-            </TextField>
+            {/* Category Select */}
+            <Controller
+              control={control}
+              name="category_id"
+              render={({ field, fieldState }) => (
+                <Box sx={{ display: "flex", gap: 1 }}>
+                  <FormControl fullWidth size="small" disabled={isSubmitting || loadingCategories}>
+                    <InputLabel>الفئة</InputLabel>
+                    <Select
+                      {...field}
+                      label="الفئة"
+                      value={field.value}
+                    >
+                      <MenuItem value="">
+                        <em>بدون فئة</em>
+                      </MenuItem>
+                      {categories.map((cat) => (
+                        <MenuItem key={cat.id} value={String(cat.id)}>
+                          {cat.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    {fieldState.error && (
+                      <Typography variant="caption" color="error">
+                        {fieldState.error.message}
+                      </Typography>
+                    )}
+                  </FormControl>
+                  <Button
+                    type="button"
+                    variant="outlined"
+                    onClick={() => setIsCategoryModalOpen(true)}
+                    disabled={isSubmitting}
+                    sx={{ minWidth: 0, px: 1.5 }}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </Box>
+              )}
+            />
 
-            {/* يمكن لاحقًا إضافة حقول الوحدات والمخزون بالعربية بنفس النمط */}
+            {/* Stocking Unit Select */}
+            <Controller
+              control={control}
+              name="stocking_unit_id"
+              render={({ field, fieldState }) => (
+                <Box sx={{ display: "flex", gap: 1 }}>
+                  <FormControl fullWidth size="small" disabled={isSubmitting || loadingUnits}>
+                    <InputLabel>وحدة التخزين</InputLabel>
+                    <Select
+                      {...field}
+                      label="وحدة التخزين"
+                      value={field.value}
+                    >
+                      <MenuItem value="">
+                        <em>بدون وحدة تخزين</em>
+                      </MenuItem>
+                      {stockingUnits.map((unit) => (
+                        <MenuItem key={unit.id} value={String(unit.id)}>
+                          {unit.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    {fieldState.error && (
+                      <Typography variant="caption" color="error">
+                        {fieldState.error.message}
+                      </Typography>
+                    )}
+                  </FormControl>
+                  <Button
+                    type="button"
+                    variant="outlined"
+                    onClick={() => setIsStockingUnitModalOpen(true)}
+                    disabled={isSubmitting}
+                    sx={{ minWidth: 0, px: 1.5 }}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </Box>
+              )}
+            />
 
-            <Box sx={{ gridColumn: { xs: "span 1", sm: "span 2" } }}>
-              <TextField
-                label="الوصف"
-                fullWidth
-                multiline
-                minRows={3}
-                placeholder="وصف مختصر للمنتج (اختياري)"
-                disabled={isSubmitting}
-                {...form.register("description")}
-              />
-            </Box>
+            {/* Sellable Unit Select */}
+            <Controller
+              control={control}
+              name="sellable_unit_id"
+              render={({ field, fieldState }) => (
+                <Box sx={{ display: "flex", gap: 1 }}>
+                  <FormControl fullWidth size="small" disabled={isSubmitting || loadingUnits}>
+                    <InputLabel>وحدة البيع</InputLabel>
+                    <Select
+                      {...field}
+                      label="وحدة البيع"
+                      value={field.value}
+                    >
+                      <MenuItem value="">
+                        <em>بدون وحدة بيع</em>
+                      </MenuItem>
+                      {sellableUnits.map((unit) => (
+                        <MenuItem key={unit.id} value={String(unit.id)}>
+                          {unit.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    {fieldState.error && (
+                      <Typography variant="caption" color="error">
+                        {fieldState.error.message}
+                      </Typography>
+                    )}
+                  </FormControl>
+                  <Button
+                    type="button"
+                    variant="outlined"
+                    onClick={() => setIsSellableUnitModalOpen(true)}
+                    disabled={isSubmitting}
+                    sx={{ minWidth: 0, px: 1.5 }}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </Box>
+              )}
+            />
+
+            {/* Units Per Stocking Unit */}
+            <Controller
+              control={control}
+              name="units_per_stocking_unit"
+              render={({ field, fieldState }) => (
+                <TextField
+                  {...field}
+                  label="عدد الوحدات في وحدة التخزين"
+                  type="number"
+                  fullWidth
+                  inputProps={{ min: 1, step: 1 }}
+                  disabled={isSubmitting}
+                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
+                  helperText={
+                    fieldState.error?.message ||
+                    "عدد الوحدات البيعية داخل وحدة التخزين (مثال: 12 حبة في كرتونة)."
+                  }
+                  error={!!fieldState.error}
+                />
+              )}
+            />
+
+            {/* Initial Stock Quantity */}
+            <Controller
+              control={control}
+              name="stock_quantity"
+              render={({ field, fieldState }) => (
+                <TextField
+                  {...field}
+                  label="الكمية الابتدائية في المخزون"
+                  type="number"
+                  fullWidth
+                  inputProps={{ min: 0, step: 1 }}
+                  disabled={isSubmitting}
+                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
+                  helperText={
+                    fieldState.error?.message ||
+                    "الكمية الحالية من المنتج في المخزون (بوحدة البيع)."
+                  }
+                  error={!!fieldState.error}
+                />
+              )}
+            />
+
+            {/* Stock Alert Level Field */}
+            <Controller
+              control={control}
+              name="stock_alert_level"
+              render={({ field, fieldState }) => (
+                <TextField
+                  {...field}
+                  label="حد تنبيه انخفاض المخزون"
+                  type="number"
+                  fullWidth
+                  inputProps={{ min: 0, step: 1 }}
+                  disabled={isSubmitting}
+                  onFocus={(e) => e.target.select()}
+                  value={field.value ?? ""}
+                  onChange={(e) =>
+                    field.onChange(
+                      e.target.value ? Number(e.target.value) : null
+                    )
+                  }
+                  helperText={
+                    fieldState.error?.message ||
+                    "عند الوصول لهذه الكمية سيتم إظهار تنبيه بانخفاض المخزون (اختياري)."
+                  }
+                  error={!!fieldState.error}
+                />
+              )}
+            />
+
+            {/* Description Field */}
+            <Controller
+              control={control}
+              name="description"
+              render={({ field, fieldState }) => (
+                <TextField
+                  {...field}
+                  label="الوصف"
+                  placeholder="(اختياري) تفاصيل إضافية عن المنتج"
+                  fullWidth
+                  multiline
+                  minRows={3}
+                  disabled={isSubmitting}
+                  value={field.value ?? ""}
+                  error={!!fieldState.error}
+                  helperText={fieldState.error?.message}
+                  sx={{ gridColumn: { xs: "1 / -1", sm: "1 / -1" } }}
+                />
+              )}
+            />
           </Box>
 
           <DialogActions sx={{ mt: 2 }}>
             <Button
               type="button"
-              variant="outlined"
               onClick={onClose}
+              color="inherit"
               disabled={isSubmitting}
             >
               إلغاء
             </Button>
-            <Button type="submit" variant="contained" disabled={isSubmitting}>
-              {isSubmitting && (
-                <Loader2 className="me-2 h-4 w-4 animate-spin" />
-              )}
-              حفظ
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={isSubmitting}
+              startIcon={
+                isSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : undefined
+              }
+            >
+              {isEditMode ? "تحديث" : "حفظ"}
             </Button>
           </DialogActions>
         </Box>
       </DialogContent>
-
+      
       {/* Category Creation Modal */}
       <CategoryFormModal
         isOpen={isCategoryModalOpen}
