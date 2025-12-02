@@ -116,6 +116,8 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: "Tajawal", "Arial", sans-serif;
+    direction: rtl;
   }
 }
 

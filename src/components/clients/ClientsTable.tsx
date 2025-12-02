@@ -1,26 +1,25 @@
 // src/components/clients/ClientsTable.tsx
 import React from "react";
-import { useTranslation } from "react-i18next";
 
-// MUI Components for Table
-import Tooltip from "@mui/material/Tooltip"; // To show hints on icons
-import Box from "@mui/material/Box";
-
-// MUI Icons
-
-// Import the Client type from clientService
-import { Client } from "../../services/clientService"; // Adjust the path as needed
-import { Edit, Trash2, FileText } from "lucide-react";
-import { Button } from "../ui/button";
-import { Card } from "../ui/card";
-import { CardContent } from "@mui/material";
+// MUI Components
 import {
+  Box,
+  Tooltip,
+  Card,
+  CardContent,
   Table,
   TableBody,
   TableCell,
-  TableHeader,
+  TableHead,
   TableRow,
-} from "../ui/table";
+  IconButton,
+} from "@mui/material";
+
+// Icons
+import { Edit, Trash2, FileText } from "lucide-react";
+
+// Types
+import { Client } from "../../services/clientService";
 
 // Define the props the component will receive
 interface ClientsTableProps {
@@ -44,13 +43,11 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
   onViewLedger,
   canViewLedger = true,
 }) => {
-  const { t } = useTranslation(["clients", "common"]); // Load necessary namespaces
-
   // Handle case where there are no clients to display
   if (!isLoading && clients.length === 0) {
     return (
       <div className="text-sm text-muted-foreground">
-        {t("clients:noClients")}
+        لا يوجد عملاء حاليًا
       </div>
     );
   }
@@ -61,25 +58,19 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
   // }
 
   return (
-    <Card>
-      
-      {/* Add elevation for visual separation */}
+    <Card style={{direction: 'rtl'}}>
       <CardContent>
-        <Table aria-label={t("clients:pageTitle")}>
-          <TableHeader>
-            
-            {/* Header background color */}
+        <Table aria-label="جدول العملاء">
+          <TableHead>
             <TableRow>
-              {/* Define table headers using translations */}
-              <TableCell align="center">{t("clients:id")}</TableCell>
-              <TableCell>{t("clients:name")}</TableCell>
-              <TableCell align="center">{t("clients:email")}</TableCell>
-              <TableCell align="center">{t("clients:phone")}</TableCell>
-              <TableCell align="center">{t("clients:address")}</TableCell>
-              <TableCell align="center">{t("common:actions")}</TableCell>
-              {/* Actions column */}
+              <TableCell align="center">#</TableCell>
+              <TableCell>الاسم</TableCell>
+              <TableCell align="center">البريد الإلكتروني</TableCell>
+              <TableCell align="center">رقم الهاتف</TableCell>
+              <TableCell align="center">العنوان</TableCell>
+              <TableCell align="center">الإجراءات</TableCell>
             </TableRow>
-          </TableHeader>
+          </TableHead>
           <TableBody>
             {clients.map((client) => (
               <TableRow
@@ -101,47 +92,38 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
                   <Box
                     sx={{ display: "flex", justifyContent: "center", gap: 1 }}
                   >
-                    {/* View Ledger Button */}
                     {onViewLedger && canViewLedger && (
-                      <Tooltip title={t("clients:ledger") || "Ledger"}>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
+                      <Tooltip title="كشف حساب">
+                        <IconButton
+                          size="small"
                           onClick={() => onViewLedger(client.id)}
                           disabled={isLoading}
                         >
                           <FileText className="h-4 w-4" />
-                        </Button>
+                        </IconButton>
                       </Tooltip>
                     )}
-                    {/* Edit Button */}
-                    {/* Conditionally render Edit button */}
                     {canEdit && (
-                      <Tooltip title={t("common:edit") || ""}>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
+                      <Tooltip title="تعديل">
+                        <IconButton
+                          size="small"
                           onClick={() => onEdit(client)}
                           disabled={isLoading}
                         >
                           <Edit className="h-4 w-4" />
-                        </Button>
+                        </IconButton>
                       </Tooltip>
                     )}
-                    {/* Conditionally render Delete button */}
                     {canDelete && (
-                      <Tooltip title={t("common:delete") || ""}>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-red-600 hover:text-red-700"
+                      <Tooltip title="حذف">
+                        <IconButton
+                          size="small"
+                          sx={{ color: "error.main" }}
                           onClick={() => onDelete(client.id)}
                           disabled={isLoading}
                         >
                           <Trash2 className="h-4 w-4" />
-                        </Button>
+                        </IconButton>
                       </Tooltip>
                     )}
                   </Box>

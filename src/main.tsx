@@ -11,7 +11,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 
 // استيراد الإعدادات المخصصة
-import theme from "./theme"; // استيراد Theme الـ MUI المخصص (مع RTL)
+import theme, { cacheRtl } from "./theme"; // استيراد Theme الـ MUI المخصص (مع RTL)
+import { CacheProvider } from "@emotion/react";
 import "./index.css"; // استيراد CSS العام (اختياري)
 import router from "./router";
 import { SettingsProvider } from "./context/SettingsContext";
@@ -48,12 +49,14 @@ ReactDOM.createRoot(rootElement).render(
     <QueryClientProvider client={queryClient}>
       <SettingsProvider>
         <TailwindTheme  defaultTheme="system" storageKey="app-ui-theme">
-        <LocalizationProvider dateAdapter={AdapterDateFns}>
-          <ThemeProvider theme={theme}>
-            <CssBaseline />
-            <RouterProvider router={router} />
-          </ThemeProvider>
-        </LocalizationProvider>
+        <CacheProvider value={cacheRtl}>
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <ThemeProvider theme={theme}>
+              <CssBaseline />
+              <RouterProvider router={router} />
+            </ThemeProvider>
+          </LocalizationProvider>
+        </CacheProvider>
         </TailwindTheme>
       </SettingsProvider>
       <ReactQueryDevtools initialIsOpen={false} />

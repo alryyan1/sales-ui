@@ -20,6 +20,7 @@ import PurchaseReportPage from "./pages/reports/PurchaseReportPage"; // Assuming
 import InventoryReportPage from "./pages/reports/InventoryReportPage"; // Assuming created
 import NotFoundPage from "./pages/NotFoundPage";
 import { useAuthorization } from "./hooks/useAuthorization";
+import { useAuth } from "./context/AuthContext";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import PurchaseFormPage from "./pages/PurchaseFormPage";
@@ -60,7 +61,8 @@ import ExpensesPage from "./pages/admin/ExpensesPage";
 const AdminRouteGuard: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { hasRole, isLoading, isLoggedIn } = useAuthorization(); // Use your auth hook
+  const { hasRole, isLoggedIn } = useAuthorization(); // Use your auth hook
+  const { isLoading } = useAuth(); // Get loading state from auth context
 
   if (isLoading) {
     return (
@@ -84,6 +86,24 @@ const AdminRouteGuard: React.FC<{ children: React.ReactNode }> = ({
 // --- End Admin Route Guard ---
 
 const router = createHashRouter([
+  // Auth routes (without navbar)
+  {
+    path: "/login",
+    element: (
+      <AuthProvider>
+        <LoginPage />
+      </AuthProvider>
+    ),
+  },
+  {
+    path: "/register",
+    element: (
+      <AuthProvider>
+        <RegisterPage />
+      </AuthProvider>
+    ),
+  },
+  // Main app routes (with navbar)
   {
     path: "/",
     element: (
@@ -93,8 +113,6 @@ const router = createHashRouter([
     ),
     errorElement: <NotFoundPage />,
     children: [
-      { path: "login", element: <LoginPage /> },
-      { path: "register", element: <RegisterPage /> }, // Ensure props removed if using context
       {
         element: <ProtectedRoute />, // Ensures user is logged in
         children: [

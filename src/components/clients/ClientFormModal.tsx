@@ -1,42 +1,40 @@
 // src/components/clients/ClientFormModal.tsx
 import React, { useEffect, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
-import { useTranslation } from "react-i18next";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-
-// shadcn/ui & Lucide Icons
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
-  DialogClose,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Loader2, AlertCircle } from "lucide-react";
-// No Alert component added via shadcn add initially, use styled div or add it
-// import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button,
+  Box,
+  Alert,
+} from "@mui/material";
+import { Loader2 } from "lucide-react";
 
 // Services and Types
-import clientService, {
-  Client,
-} from "../../services/clientService"; // Adjust path
+import clientService, { Client } from "../../services/clientService";
 
 
+
+// --- Zod Schema for Validation ---
+const clientFormSchema = z.object({
+  name: z.string().min(1, { message: "الاسم مطلوب" }),
+  email: z
+    .string()
+    .email({ message: "صيغة البريد الإلكتروني غير صحيحة" })
+    .nullable()
+    .or(z.literal(""))
+    .optional(),
+  phone: z.string().nullable().optional(),
+  address: z.string().nullable().optional(),
+});
+
+type ClientFormValues = z.infer<typeof clientFormSchema>;
 
 // --- Component Props ---
 interface ClientFormModalProps {
@@ -53,34 +51,14 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
   clientToEdit,
   onSaveSuccess,
 }) => {
-  const { t } = useTranslation(["clients", "common", "validation"]);
   const isEditMode = Boolean(clientToEdit);
-// --- Zod Schema for Validation ---
-const clientFormSchema = z.object({
-  name: z.string().min(1, { message: t("validation:required") }),
-  // Email: optional, but if present, must be valid email format
-  email: z
-    .string()
-    .email({ message:t( "validation:email") })
-    .nullable()
-    .or(z.literal("")) // Allow empty string from input, treat as null/undefined later
-    .optional(),
-  phone: z.string().nullable().optional(), // Optional string
-  address: z.string().nullable().optional(), // Optional string
-});
-
-// Infer TypeScript type from the Zod schema
-type ClientFormValues = z.infer<typeof clientFormSchema>;
-  // State for general API errors
   const [serverError, setServerError] = useState<string | null>(null);
 
-  // --- React Hook Form Setup with Zod ---
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientFormSchema),
     defaultValues: {
-      // Match schema expectations
       name: "",
-      email: "", // Zod handles nullable/optional/empty string
+      email: "",
       phone: "",
       address: "",
     },
@@ -88,30 +66,27 @@ type ClientFormValues = z.infer<typeof clientFormSchema>;
 
   const {
     handleSubmit,
-    control,
     reset,
-    formState: { isSubmitting },
+    register,
+    formState: { isSubmitting, errors },
     setError,
   } = form;
 
   // --- Effect to Populate/Reset Form ---
   useEffect(() => {
     if (isOpen) {
-      setServerError(null); // Clear server errors on open
+      setServerError(null);
       if (isEditMode && clientToEdit) {
-        // Populate form with existing data
         reset({
           name: clientToEdit.name || "",
-          email: clientToEdit.email || "", // Use empty string for null from API
+          email: clientToEdit.email || "",
           phone: clientToEdit.phone || "",
           address: clientToEdit.address || "",
         });
       } else {
-        // Reset to default values for adding
         reset({
-          // Match schema expectations
           name: "",
-          email: "", // Zod handles nullable/optional/empty string
+          email: "",
           phone: "",
           address: "",
         });
@@ -144,31 +119,27 @@ type ClientFormValues = z.infer<typeof clientFormSchema>;
       }
       console.log("Save successful:", savedClient);
 
-      // Show success toast using Sonner
-      toast.success(t("common:success"), {
-        description: t(
-          isEditMode ? "clients:saveSuccess" : "clients:saveSuccess"
-        ),
+      toast.success("تم الحفظ بنجاح", {
+        description: isEditMode
+          ? "تم تحديث بيانات العميل بنجاح"
+          : "تم إضافة العميل بنجاح",
         duration: 3000,
       });
 
-      onSaveSuccess(); // Call parent callback
-      onClose(); // Close the modal
+      onSaveSuccess();
+      onClose();
     } catch (err) {
       console.error("Failed to save client:", err);
       const generalError = clientService.getErrorMessage(err);
       const apiErrors = clientService.getValidationErrors(err);
 
-      // Show error toast using Sonner
-      toast.error(t("common:error"), {
+      toast.error("خطأ", {
         description: generalError,
         duration: 5000,
       });
 
-      // Display general error within the modal
       setServerError(generalError);
 
-      // Map API validation errors back to form fields
       if (apiErrors) {
         Object.entries(apiErrors).forEach(([field, messages]) => {
           if (field in ({} as ClientFormValues)) {
@@ -178,154 +149,110 @@ type ClientFormValues = z.infer<typeof clientFormSchema>;
             });
           }
         });
-        // Optionally update general error message
-        setServerError(t("validation:checkFields"));
+        setServerError("يرجى التحقق من الحقول المدخلة.");
       }
     }
-    // isSubmitting automatically handled by RHF
   };
 
   // --- Render Modal ---
   if (!isOpen) return null;
 
   return (
-    // shadcn Dialog component
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-xl p-0">
-        
-        {/* Adjusted max-width, remove default padding */}
-        <Form {...form}>
-          {/* Standard form tag for RHF */}
-          <form onSubmit={handleSubmit(onSubmit)} noValidate>
-            {/* Dialog Header */}
-            <DialogHeader className="p-6 pb-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-              <DialogTitle className="text-lg font-medium text-gray-900 dark:text-gray-100">
-          {isEditMode ? t("clients:editClient") : t("clients:addClient")}
-              </DialogTitle>
-            </DialogHeader>
-            {/* Scrollable Content Area */}
-            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto bg-white dark:bg-gray-900">
-              {/* General Server Error Alert (Using styled div as Alert might not be added) */}
-              {serverError && !isSubmitting && (
-          <div
-            className="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 rounded mb-4 dark:bg-red-900 dark:text-red-200 dark:border-red-600"
-            role="alert"
-          >
-            <div className="flex items-center">
-              <AlertCircle className="h-4 w-4 me-2" />
-              <p>{serverError}</p>
-            </div>
-          </div>
-              )}
-              {/* Grid layout for fields using Tailwind */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {/* Name Field */}
-          <FormField
-            control={control}
-            name="name"
-            render={({ field }) => (
-              <FormItem className="sm:col-span-2">
-                <FormLabel className="text-gray-900 dark:text-gray-100">
-            {t("clients:name")}
-            <span className="text-red-500">*</span>
-                </FormLabel>
-                <FormControl>
-            <Input
-              placeholder={t("clients:namePlaceholder")}
-              {...field}
-              disabled={isSubmitting}
-              className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-700 placeholder-gray-400 dark:placeholder-gray-500"
-            />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Email Field */}
-          <FormField
-            control={control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-gray-900 dark:text-gray-100">{t("clients:email")}</FormLabel>
-                <FormControl>
-            <Input
-              type="email"
-              placeholder={t("clients:emailPlaceholder")}
-              {...field}
-              value={field.value ?? ""}
-              disabled={isSubmitting}
-              className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-700 placeholder-gray-400 dark:placeholder-gray-500"
-            />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Phone Field */}
-          <FormField
-            control={control}
-            name="phone"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-gray-900 dark:text-gray-100">{t("clients:phone")}</FormLabel>
-                <FormControl>
-            <Input
-              type="tel"
-              placeholder={t("clients:phonePlaceholder")}
-              {...field}
-              value={field.value ?? ""}
-              disabled={isSubmitting}
-              className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-700 placeholder-gray-400 dark:placeholder-gray-500"
-            />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Address Field */}
-          <FormField
-            control={control}
-            name="address"
-            render={({ field }) => (
-              <FormItem className="sm:col-span-2">
-                <FormLabel className="text-gray-900 dark:text-gray-100">{t("clients:address")}</FormLabel>
-                <FormControl>
-            <Textarea
-              placeholder={t("clients:addressPlaceholder")}
-              className="resize-y min-h-[80px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-700 placeholder-gray-400 dark:placeholder-gray-500"
-              {...field}
-              value={field.value ?? ""}
-              disabled={isSubmitting}
-            />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-              </div>
-              {/* End Grid */}
-            </div>
-            {/* End Scrollable Content */}
-            {/* Dialog Footer with Actions */}
-            <DialogFooter className="p-6 pt-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-              <DialogClose asChild>
-          <Button type="button" variant="ghost" disabled={isSubmitting}>
-            {t("common:cancel")}
-          </Button>
-              </DialogClose>
-              <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting && (
-            <Loader2 className="me-2 h-4 w-4 animate-spin" />
+    <Dialog open={isOpen} onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>
+        {isEditMode ? "تعديل عميل" : "إضافة عميل"}
+      </DialogTitle>
+      <DialogContent dividers>
+        <Box
+          component="form"
+          onSubmit={handleSubmit(onSubmit)}
+          noValidate
+          sx={{ mt: 1 }}
+        >
+          {serverError && !isSubmitting && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {serverError}
+            </Alert>
           )}
-          {t("common:save")}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+              gap: 2,
+            }}
+          >
+            <Box sx={{ gridColumn: { xs: "span 1", sm: "span 2" } }}>
+              <TextField
+                label="الاسم"
+                fullWidth
+                required
+                placeholder="أدخل اسم العميل"
+                disabled={isSubmitting}
+                {...register("name")}
+                error={!!errors.name}
+                helperText={errors.name?.message}
+              />
+            </Box>
+
+            <TextField
+              label="البريد الإلكتروني"
+              type="email"
+              fullWidth
+              placeholder="example@email.com"
+              disabled={isSubmitting}
+              {...register("email")}
+              error={!!errors.email}
+              helperText={errors.email?.message}
+            />
+
+            <TextField
+              label="رقم الهاتف"
+              type="tel"
+              fullWidth
+              placeholder="05xxxxxxxx"
+              disabled={isSubmitting}
+              {...register("phone")}
+              error={!!errors.phone}
+              helperText={errors.phone?.message}
+            />
+
+            <Box sx={{ gridColumn: { xs: "span 1", sm: "span 2" } }}>
+              <TextField
+                label="العنوان"
+                fullWidth
+                multiline
+                minRows={3}
+                placeholder="أدخل عنوان العميل"
+                disabled={isSubmitting}
+                {...register("address")}
+                error={!!errors.address}
+                helperText={errors.address?.message}
+              />
+            </Box>
+          </Box>
+
+          <DialogActions sx={{ mt: 2 }}>
+            <Button
+              type="button"
+              variant="outlined"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
+              إلغاء
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={isSubmitting}
+            >
+              {isSubmitting && (
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
+              )}
+              حفظ
+            </Button>
+          </DialogActions>
+        </Box>
       </DialogContent>
     </Dialog>
   );

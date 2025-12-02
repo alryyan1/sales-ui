@@ -26,7 +26,6 @@ import {
   TableHead,
   TableRow,
 } from '@mui/material';
-import { useTranslation } from 'react-i18next';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import productService from '../../services/productService';
 
@@ -126,7 +125,6 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
   onClose,
   onImportSuccess,
 }) => {
-  const { t } = useTranslation(['products', 'common']);
   const [activeStep, setActiveStep] = useState(0);
   const [file, setFile] = useState<File | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
@@ -151,17 +149,17 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const steps = [
-    t('products:import.step1'),
-    t('products:import.step2'),
-    t('products:import.step3'),
-    t('products:import.step4'),
+    'رفع الملف',
+    'تعيين الأعمدة',
+    'معاينة البيانات',
+    'تنفيذ الاستيراد',
   ];
 
   const productFields = [
-    { key: 'name', label: t('products:fields.name'), required: true },
-    { key: 'sku', label: t('products:fields.sku'), required: false },
-    { key: 'scientific_name', label: t('products:fields.scientificName'), required: false },
-    { key: 'stock_quantity', label: t('products:fields.stockQuantity'), required: false },
+    { key: 'name', label: 'اسم المنتج', required: true },
+    { key: 'sku', label: 'رمز المنتج (SKU)', required: false },
+    { key: 'scientific_name', label: 'الاسم العلمي', required: false },
+    { key: 'stock_quantity', label: 'الكمية بالمخزون', required: false },
   ];
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -169,7 +167,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
     if (!selectedFile) return;
 
     if (!selectedFile.name.match(/\.(xlsx|xls)$/)) {
-      setError(t('products:import.invalidFileType'));
+      setError('نوع الملف غير مدعوم، الرجاء استخدام ملف Excel (xlsx أو xls)');
       return;
     }
 
@@ -188,7 +186,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
       
       setActiveStep(1);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('products:import.uploadError'));
+      setError(err instanceof Error ? err.message : 'فشل في رفع الملف، يرجى المحاولة مرة أخرى.');
     } finally {
       setLoading(false);
     }
@@ -214,7 +212,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
       const unmappedRequired = requiredFields.filter(field => !columnMapping[field.key as keyof ColumnMapping]);
       
       if (unmappedRequired.length > 0) {
-        setError(t('products:import.requiredFieldsNotMapped'));
+        setError('بعض الحقول الإلزامية لم يتم تعيينها، يرجى إكمال التعيين.');
         return;
       }
       
@@ -257,14 +255,14 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
       setImportResult(result);
       onImportSuccess();
     } catch (err) {
-      let errorMessage = t('products:import.processError');
+      let errorMessage = 'حدث خطأ أثناء تنفيذ عملية الاستيراد.';
       
       if (err instanceof Error) {
         // Handle specific error types
         if (err.message.includes('timeout') || err.message.includes('Network Error')) {
-          errorMessage = t('products:import.timeoutError') || 'Import timed out. Please try with a smaller file or check your connection.';
+          errorMessage = 'انتهت مهلة الاستيراد، الرجاء المحاولة لاحقًا أو استخدام ملف أصغر.';
         } else if (err.message.includes('413')) {
-          errorMessage = t('products:import.fileTooLarge') || 'File is too large. Please use a smaller Excel file.';
+          errorMessage = 'حجم الملف كبير جدًا، الرجاء استخدام ملف Excel أصغر.';
         } else {
           errorMessage = err.message;
         }
@@ -296,7 +294,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
   const renderStep1 = () => (
     <Box>
       <Typography variant="body1" sx={{ mb: 2 }}>
-        {t('products:import.step1Description')}
+        اختر ملف Excel يحتوي على المنتجات التي تريد استيرادها.
       </Typography>
       
       <Box
@@ -314,10 +312,10 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
       >
         <CloudUploadIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
         <Typography variant="h6" sx={{ mb: 1 }}>
-          {t('products:import.uploadFile')}
+          رفع ملف المنتجات
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          {t('products:import.supportedFormats')}
+          الصيغ المدعومة: ‎.xlsx, ‎.xls
         </Typography>
       </Box>
       
@@ -331,7 +329,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
       
       {file && (
         <Alert severity="success" sx={{ mt: 2 }}>
-          {t('products:import.fileSelected', { fileName: file.name })}
+          تم اختيار الملف: {file.name}
         </Alert>
       )}
     </Box>
@@ -340,13 +338,13 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
   const renderStep2 = () => (
     <Box>
       <Typography variant="body1" sx={{ mb: 2 }}>
-        {t('products:import.step2Description')}
+        قم بتعيين أعمدة ملف Excel إلى حقول المنتج.
       </Typography>
       
       {autoMapped && (
         <Alert severity="info" sx={{ mb: 2 }}>
           <Typography variant="body2">
-            {t('products:import.autoMappedMessage') || 'Columns have been automatically mapped based on similarity. Please review and adjust if needed.'}
+            تم تعيين الأعمدة تلقائيًا بناءً على الأسماء، يرجى المراجعة والتعديل إذا لزم الأمر.
           </Typography>
         </Alert>
       )}
@@ -359,7 +357,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
               onChange={(e) => setSkipHeader(e.target.checked)}
             />
           }
-          label={t('products:import.skipHeaderRow')}
+          label="تجاهل صف العناوين في أول الصفوف"
         />
         
         <Button
@@ -368,7 +366,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
           onClick={handleAutoMap}
           sx={{ ml: 'auto' }}
         >
-          {t('products:import.autoMapColumns') || 'Auto-Map Columns'}
+          تعيين الأعمدة تلقائيًا
         </Button>
         <Button
           variant="outlined"
@@ -388,9 +386,9 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
         <Table stickyHeader size="small">
           <TableHead>
             <TableRow>
-              <TableCell>{t('products:import.productField')}</TableCell>
-              <TableCell>{t('products:import.excelColumn')}</TableCell>
-              <TableCell>{t('products:import.required')}</TableCell>
+              <TableCell>حقل المنتج</TableCell>
+              <TableCell>عمود Excel</TableCell>
+              <TableCell>إلزامي</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -405,9 +403,9 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
                       displayEmpty
                     >
                       <MenuItem value="">
-                        <em>{t('products:import.selectColumn')}</em>
+                        <em>اختر عمودًا</em>
                       </MenuItem>
-                      <MenuItem value="skip">{t('products:import.skipColumn')}</MenuItem>
+                      <MenuItem value="skip">تجاهل هذا الحقل</MenuItem>
                       {headers.map((header) => (
                         <MenuItem key={header} value={header}>
                           {header}
@@ -419,11 +417,11 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
                 <TableCell>
                   {field.required ? (
                     <Typography color="error" variant="caption">
-                      {t('common:required')}
+                      مطلوب
                     </Typography>
                   ) : (
                     <Typography color="text.secondary" variant="caption">
-                      {t('common:optional')}
+                      اختياري
                     </Typography>
                   )}
                 </TableCell>
@@ -438,14 +436,14 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
   const renderStep3 = () => (
     <Box>
       <Typography variant="body1" sx={{ mb: 2 }}>
-        {t('products:import.step3Description') || 'Preview the data that will be imported'}
+        معاينة البيانات التي سيتم استيرادها قبل التنفيذ.
       </Typography>
       
       {previewLoading && (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 3 }}>
           <CircularProgress size={60} />
           <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-            {t('products:import.generatingPreview') || 'Generating Preview...'}
+            يتم توليد المعاينة...
           </Typography>
         </Box>
       )}
@@ -453,7 +451,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
       {!previewLoading && previewData.length > 0 && (
         <Box>
           <Typography variant="h6" sx={{ mb: 2 }}>
-            {t('products:import.previewTitle') || 'Preview Data (First 10 rows)'}
+            معاينة البيانات (أول 10 صفوف)
           </Typography>
           <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
             <Table size="small">
@@ -478,14 +476,14 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
             </Table>
           </TableContainer>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            {t('products:import.previewNote', { count: previewData.length }) || 'Showing first 10 rows. Total rows to import: ' + previewData.length}
+            يتم عرض أول 10 صفوف فقط. إجمالي الصفوف التي سيتم استيرادها: {previewData.length}
           </Typography>
         </Box>
       )}
       
       {!previewLoading && previewData.length === 0 && (
         <Alert severity="warning" sx={{ mb: 2 }}>
-          {t('products:import.noPreviewData') || 'No data found to preview. Please check your column mapping.'}
+          لا توجد بيانات للمعاينة، يرجى التحقق من تعيين الأعمدة.
         </Alert>
       )}
     </Box>
@@ -494,17 +492,17 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
   const renderStep4 = () => (
     <Box>
       <Typography variant="body1" sx={{ mb: 2 }}>
-        {t('products:import.step4Description') || 'Review and confirm the import'}
+        راجع تفاصيل الاستيراد ثم قم بتأكيد العملية.
       </Typography>
       
       {loading && (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 3 }}>
           <CircularProgress size={60} />
           <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-            {t('products:import.processing') || 'Processing Import...'}
+            يتم تنفيذ عملية الاستيراد...
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
-            {t('products:import.processingDescription') || 'This may take a few minutes for large files. Please do not close this dialog.'}
+            قد تستغرق العملية عدة دقائق مع الملفات الكبيرة، يرجى عدم إغلاق هذه الشاشة.
           </Typography>
         </Box>
       )}
@@ -512,10 +510,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
       {importResult && !loading && (
         <Alert severity={importResult.errors === 0 ? 'success' : 'warning'} sx={{ mb: 2 }}>
           <Typography variant="body2">
-            {t('products:import.result', {
-              imported: importResult.imported,
-              errors: importResult.errors,
-            })}
+            تم استيراد {importResult.imported} صفًا، مع وجود {importResult.errors} صفوف بها أخطاء.
           </Typography>
         </Alert>
       )}
@@ -523,14 +518,14 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
       {importResult?.errorDetails && importResult.errorDetails.length > 0 && (
         <Box sx={{ mt: 2 }}>
           <Typography variant="h6" sx={{ mb: 1 }}>
-            {t('products:import.errorDetails')}
+            تفاصيل الأخطاء
           </Typography>
           <TableContainer component={Paper} sx={{ maxHeight: 200 }}>
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>{t('products:import.row')}</TableCell>
-                  <TableCell>{t('products:import.errors')}</TableCell>
+                  <TableCell>الصف</TableCell>
+                  <TableCell>الأخطاء</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -573,7 +568,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="h6">{t('products:import.title')}</Typography>
+          <Typography variant="h6">استيراد المنتجات من ملف Excel</Typography>
           <Stepper activeStep={activeStep} sx={{ flex: 1, mx: 2 }}>
             {steps.map((label) => (
               <Step key={label}>
@@ -602,31 +597,31 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
       
       <DialogActions>
         <Button onClick={handleClose}>
-          {activeStep === 3 ? t('common:close') : t('common:cancel')}
+          {activeStep === 3 ? 'إغلاق' : 'إلغاء'}
         </Button>
 
         {/* Back button: show on steps 1 and 2 (activeStep > 0) */}
         {activeStep > 0 && (
           <Button onClick={handleBack}>
-            {t('common:back')}
+            رجوع
           </Button>
         )}
         
         {activeStep === 1 && (
           <Button onClick={handleNext} variant="contained">
-            {t('common:next')}
+            التالي
           </Button>
         )}
         
         {activeStep === 2 && (
           <Button onClick={handleNext} variant="contained">
-            {t('common:next')}
+            التالي
           </Button>
         )}
         
         {activeStep === 3 && !importResult && (
           <Button onClick={handleImport} variant="contained" disabled={loading}>
-            {loading ? t('common:importing') : t('common:import')}
+            {loading ? 'جاري الاستيراد...' : 'تنفيذ الاستيراد'}
           </Button>
         )}
       </DialogActions>

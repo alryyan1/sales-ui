@@ -1,42 +1,37 @@
 // src/pages/suppliers/SupplierLedgerPage.tsx
 import React, { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-
-// Icons
-import { ArrowLeft, Plus, Edit, Trash2 } from 'lucide-react';
-
-// UI Components
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  Typography,
   Table,
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import LoadingSpinner from '@/components/LoadingSpinner';
+  Chip,
+  Alert,
+  AlertTitle,
+} from '@mui/material';
+import { ArrowLeft, Plus, Edit, Trash2 } from 'lucide-react';
 
-// Services
-import supplierPaymentService, { 
-  SupplierLedger, 
+import LoadingSpinner from '@/components/LoadingSpinner';
+import supplierPaymentService, {
+  SupplierLedger,
   SupplierPayment,
   PaymentMethod,
-  PaymentType 
+  PaymentType,
 } from '@/services/supplierPaymentService';
 import { formatCurrency } from '@/constants';
-
-// Components
 import PaymentFormModal from '@/components/suppliers/PaymentFormModal';
 import ConfirmationDialog from '@/components/common/ConfirmationDialog';
 
 const SupplierLedgerPage: React.FC = () => {
-  const { t } = useTranslation(['suppliers', 'common']);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const supplierId = Number(id);
@@ -126,20 +121,20 @@ const SupplierLedgerPage: React.FC = () => {
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'purchase':
-        return 'destructive';
+        return 'error';
       case 'payment':
-        return 'default';
+        return 'success';
       default:
-        return 'secondary';
+        return 'default';
     }
   };
 
   const getTypeLabel = (type: string) => {
     switch (type) {
       case 'purchase':
-        return t('suppliers:purchase');
+        return 'شراء';
       case 'payment':
-        return t('suppliers:payment');
+        return 'دفعة';
       default:
         return type;
     }
@@ -147,48 +142,49 @@ const SupplierLedgerPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-10">
+      <Box className="flex justify-center items-center py-10">
         <LoadingSpinner />
         <span className="ml-2 text-gray-600 dark:text-gray-400">
-          {t('common:loading')}
+          جاري التحميل...
         </span>
-      </div>
+      </Box>
     );
   }
 
   if (error) {
     return (
-      <Alert variant="destructive" className="my-4">
-        <AlertDescription>{error}</AlertDescription>
+      <Alert severity="error" className="my-4">
+        <AlertTitle>خطأ</AlertTitle>
+        {error}
       </Alert>
     );
   }
 
   if (!ledger) {
     return (
-      <Alert className="my-4">
-        <AlertDescription>{t('suppliers:ledgerNotFound')}</AlertDescription>
+      <Alert className="my-4" severity="info">
+        كشف حساب هذا المورد غير متوفر.
       </Alert>
     );
   }
 
   return (
-    <div className="p-4 md:p-6">
+    <Box className="p-4 md:p-6" sx={{ direction: 'rtl' }}>
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <Button
-          variant="outline"
-          size="icon"
+          variant="outlined"
+          size="small"
           onClick={() => navigate('/suppliers')}
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          {t('suppliers:ledgerTitle')} - {ledger.supplier.name}
+          كشف حساب المورد - {ledger.supplier.name}
         </h1>
-        <Button onClick={handleAddPayment} className="mr-auto">
+        <Button onClick={handleAddPayment} className="mr-auto" variant="contained">
           <Plus className="mr-2 h-4 w-4" />
-          {t('suppliers:addPayment')}
+          إضافة دفعة
         </Button>
       </div>
 
@@ -199,30 +195,32 @@ const SupplierLedgerPage: React.FC = () => {
           {/* Ledger Table */}
           <Card>
             <CardHeader>
-              <CardTitle>{t('suppliers:ledgerEntries')}</CardTitle>
+              <Typography variant="h6">حركات الحساب</Typography>
             </CardHeader>
             <CardContent>
               <Table>
-                <TableHeader>
+                <TableHead>
                   <TableRow>
-                    <TableHead className="text-center">{t('common:date')}</TableHead>
-                    <TableHead className="text-center">{t('common:type')}</TableHead>
-                    <TableHead className="text-center">{t('common:description')}</TableHead>
-                    <TableHead className="text-center">{t('suppliers:debit')}</TableHead>
-                    <TableHead className="text-center">{t('suppliers:credit')}</TableHead>
-                    <TableHead className="text-center">{t('suppliers:balance')}</TableHead>
-                    <TableHead className="text-center">{t('common:reference')}</TableHead>
-                    <TableHead className="text-center">{t('common:actions')}</TableHead>
+                    <TableCell className="text-center">التاريخ</TableCell>
+                    <TableCell className="text-center">النوع</TableCell>
+                    <TableCell className="text-center">الوصف</TableCell>
+                    <TableCell className="text-center">مدين</TableCell>
+                    <TableCell className="text-center">دائن</TableCell>
+                    <TableCell className="text-center">الرصيد</TableCell>
+                    <TableCell className="text-center">المرجع</TableCell>
+                    <TableCell className="text-center">الإجراءات</TableCell>
                   </TableRow>
-                </TableHeader>
+                </TableHead>
                 <TableBody>
                   {ledger.ledger_entries.map((entry) => (
                     <TableRow key={entry.id}>
                       <TableCell className="text-center">{format(new Date(entry.date), 'yyyy-MM-dd')}</TableCell>
                       <TableCell className="text-center">
-                        <Badge variant={getTypeColor(entry.type)}>
-                          {getTypeLabel(entry.type)}
-                        </Badge>
+                        <Chip
+                          label={getTypeLabel(entry.type)}
+                          color={getTypeColor(entry.type) as any}
+                          size="small"
+                        />
                       </TableCell>
                       <TableCell className="text-center">{entry.description}</TableCell>
                       <TableCell className="text-center">
@@ -265,7 +263,7 @@ const SupplierLedgerPage: React.FC = () => {
 
               {ledger.ledger_entries.length === 0 && (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  {t('suppliers:noLedgerEntries')}
+                  لا توجد حركات في كشف الحساب لهذا المورد.
                 </div>
               )}
             </CardContent>
@@ -279,7 +277,7 @@ const SupplierLedgerPage: React.FC = () => {
             <Card>
               <CardContent className="p-6">
                 <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                  {t('suppliers:totalPurchases')}
+                  إجمالي المشتريات
                 </h3>
                 <p className="text-3xl font-bold text-red-600">
                   {formatCurrency(ledger.summary.total_purchases)}
@@ -290,7 +288,7 @@ const SupplierLedgerPage: React.FC = () => {
             <Card>
               <CardContent className="p-6">
                 <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                  {t('suppliers:totalPayments')}
+                  إجمالي المدفوعات
                 </h3>
                 <p className="text-3xl font-bold text-green-600">
                   {formatCurrency(ledger.summary.total_payments)}
@@ -301,7 +299,7 @@ const SupplierLedgerPage: React.FC = () => {
             <Card>
               <CardContent className="p-6">
                 <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                  {t('suppliers:balance')}
+                  الرصيد الحالي
                 </h3>
                 <p className={`text-3xl font-bold ${ledger.summary.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
                   {formatCurrency(ledger.summary.balance)}
@@ -313,32 +311,32 @@ const SupplierLedgerPage: React.FC = () => {
           {/* Supplier Info */}
           <Card>
             <CardHeader>
-              <CardTitle>{t('suppliers:supplierInfo')}</CardTitle>
+              <Typography variant="h6">بيانات المورد</Typography>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
-                    {t('suppliers:contactPerson')}
+                    مسؤول التواصل
                   </p>
                   <p className="text-gray-900 dark:text-gray-100">
-                    {ledger.supplier.contact_person || t('common:n/a')}
+                    {ledger.supplier.contact_person || '-'}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
-                    {t('suppliers:email')}
+                    البريد الإلكتروني
                   </p>
                   <p className="text-gray-900 dark:text-gray-100">
-                    {ledger.supplier.email || t('common:n/a')}
+                    {ledger.supplier.email || '-'}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
-                    {t('suppliers:phone')}
+                    رقم الهاتف
                   </p>
                   <p className="text-gray-900 dark:text-gray-100">
-                    {ledger.supplier.phone || t('common:n/a')}
+                    {ledger.supplier.phone || '-'}
                   </p>
                 </div>
               </div>
@@ -363,12 +361,12 @@ const SupplierLedgerPage: React.FC = () => {
         open={isConfirmOpen}
         onClose={() => setIsConfirmOpen(false)}
         onConfirm={handleConfirmDelete}
-        title={t('common:confirmDeleteTitle')}
-        message={t('suppliers:deletePaymentConfirm')}
-        confirmText={t('common:delete')}
-        cancelText={t('common:cancel')}
+        title="تأكيد الحذف"
+        message="هل أنت متأكد من حذف هذه الدفعة؟ لا يمكن التراجع عن هذه العملية."
+        confirmText="حذف"
+        cancelText="إلغاء"
       />
-    </div>
+    </Box>
   );
 };
 

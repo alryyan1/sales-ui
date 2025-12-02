@@ -1,59 +1,41 @@
 // src/components/suppliers/SupplierFormModal.tsx
 import React, { useEffect, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
-import { useTranslation } from "react-i18next";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-
-// shadcn/ui & Lucide Icons
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
-  DialogClose,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Loader2, AlertCircle } from "lucide-react";
-// Optional: Add shadcn Alert if needed for server errors
-// import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button,
+  Box,
+  Alert,
+} from "@mui/material";
+import { Loader2 } from "lucide-react";
 
 // Services and Types
 import supplierService, {
   Supplier,
   SupplierFormData,
-} from "../../services/supplierService"; // Adjust path
+} from "../../services/supplierService";
 
 // --- Zod Schema for Validation ---
 const supplierFormSchema = z.object({
-  name: z.string().min(1, { message: "validation:required" }),
+  name: z.string().min(1, { message: "اسم المورد مطلوب" }),
   contact_person: z.string().nullable().optional(),
   email: z
     .string()
-    .email({ message: "validation:email" })
+    .email({ message: "صيغة البريد الإلكتروني غير صحيحة" })
     .nullable()
     .or(z.literal(""))
     .optional(),
   phone: z.string().nullable().optional(),
   address: z.string().nullable().optional(),
-  // Add website, notes schema if those fields exist
 });
 
-// Infer TypeScript type
 type SupplierFormValues = z.infer<typeof supplierFormSchema>;
 
 // --- Component Props ---
@@ -71,19 +53,15 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
   supplierToEdit,
   onSaveSuccess,
 }) => {
-  const { t } = useTranslation(["suppliers", "common", "validation"]);
   const isEditMode = Boolean(supplierToEdit);
 
-  // State for general API errors
   const [serverError, setServerError] = useState<string | null>(null);
 
-  // --- React Hook Form Setup with Zod ---
   const form = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierFormSchema),
     defaultValues: {
-      // Match schema
       name: "",
-      contact_person: "", // Handles nullable/optional/empty string
+      contact_person: "",
       email: "",
       phone: "",
       address: "",
@@ -92,9 +70,9 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
 
   const {
     handleSubmit,
-    control,
     reset,
-    formState: { isSubmitting },
+    register,
+    formState: { isSubmitting, errors },
     setError,
   } = form;
 
@@ -104,7 +82,6 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
       setServerError(null);
       if (isEditMode && supplierToEdit) {
         reset({
-          // Populate with existing data
           name: supplierToEdit.name || "",
           contact_person: supplierToEdit.contact_person || "",
           email: supplierToEdit.email || "",
@@ -113,9 +90,8 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
         });
       } else {
         reset({
-          // Match schema
           name: "",
-          contact_person: "", // Handles nullable/optional/empty string
+          contact_person: "",
           email: "",
           phone: "",
           address: "",
@@ -150,10 +126,10 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
       }
       console.log("Save successful:", savedSupplier);
 
-      toast.success(t("common:success"), {
-        description: t(
-          isEditMode ? "suppliers:saveSuccess" : "suppliers:saveSuccess"
-        ),
+      toast.success("تم الحفظ بنجاح", {
+        description: isEditMode
+          ? "تم تحديث بيانات المورد بنجاح"
+          : "تم إضافة المورد بنجاح",
         duration: 3000,
       });
 
@@ -164,7 +140,7 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
       const generalError = supplierService.getErrorMessage(err);
       const apiErrors = supplierService.getValidationErrors(err);
 
-      toast.error(t("common:error"), {
+      toast.error("خطأ", {
         description: generalError,
         duration: 5000,
       });
@@ -179,7 +155,7 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
             });
           }
         });
-        setServerError(t("validation:checkFields"));
+        setServerError("يرجى التحقق من الحقول المدخلة.");
       }
     }
   };
@@ -188,170 +164,111 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-xl p-0">
-        
-        {/* Standard modal width */}
-        <Form {...form}>
-          <form onSubmit={handleSubmit(onSubmit)} noValidate>
-            {/* Dialog Header */}
-            <DialogHeader className="p-6 pb-4 border-b dark:border-gray-700">
-              <DialogTitle className="text-lg font-medium text-gray-900 dark:text-white">
-            {isEditMode
-              ? t("suppliers:editSupplier")
-              : t("suppliers:addSupplier")}
-              </DialogTitle>
-            </DialogHeader>
-            {/* Scrollable Content Area */}
-            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-              {/* General Server Error Alert */}
-              {serverError && !isSubmitting && (
-            <div
-              className="bg-red-200 border-l-4 border-red-500 text-red-700 p-3 rounded mb-4 dark:bg-red-900 dark:text-red-200 dark:border-red-600"
-              role="alert"
+    <Dialog open={isOpen} onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>
+        {isEditMode ? "تعديل مورد" : "إضافة مورد"}
+      </DialogTitle>
+      <DialogContent dividers>
+        <Box
+          component="form"
+          onSubmit={handleSubmit(onSubmit)}
+          noValidate
+          sx={{ mt: 1 }}
+        >
+          {serverError && !isSubmitting && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {serverError}
+            </Alert>
+          )}
+
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+              gap: 2,
+            }}
+          >
+            <Box sx={{ gridColumn: { xs: "span 1", sm: "span 2" } }}>
+              <TextField
+                label="اسم المورد"
+                fullWidth
+                required
+                placeholder="أدخل اسم المورد"
+                disabled={isSubmitting}
+                {...register("name")}
+                error={!!errors.name}
+                helperText={errors.name?.message}
+              />
+            </Box>
+
+            <TextField
+              label="مسؤول التواصل"
+              fullWidth
+              placeholder="اسم الشخص المسؤول"
+              disabled={isSubmitting}
+              {...register("contact_person")}
+              error={!!errors.contact_person}
+              helperText={errors.contact_person?.message}
+            />
+
+            <TextField
+              label="البريد الإلكتروني"
+              type="email"
+              fullWidth
+              placeholder="example@email.com"
+              disabled={isSubmitting}
+              {...register("email")}
+              error={!!errors.email}
+              helperText={errors.email?.message}
+            />
+
+            <TextField
+              label="رقم الهاتف"
+              type="tel"
+              fullWidth
+              placeholder="05xxxxxxxx"
+              disabled={isSubmitting}
+              {...register("phone")}
+              error={!!errors.phone}
+              helperText={errors.phone?.message}
+            />
+
+            <Box sx={{ gridColumn: { xs: "span 1", sm: "span 2" } }}>
+              <TextField
+                label="العنوان"
+                fullWidth
+                multiline
+                minRows={3}
+                placeholder="أدخل عنوان المورد"
+                disabled={isSubmitting}
+                {...register("address")}
+                error={!!errors.address}
+                helperText={errors.address?.message}
+              />
+            </Box>
+          </Box>
+
+          <DialogActions sx={{ mt: 2 }}>
+            <Button
+              type="button"
+              variant="outlined"
+              onClick={onClose}
+              disabled={isSubmitting}
             >
-              <div className="flex items-center">
-                <AlertCircle className="h-4 w-4 me-2" />
-                <p>{serverError}</p>
-              </div>
-            </div>
-            // Or shadcn Alert: <Alert variant="destructive">...</Alert>
-              )}
-              {/* Grid layout for fields */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {/* Supplier Name Field */}
-            <FormField
-              control={control}
-              name="name"
-              render={({ field }) => (
-                <FormItem className="sm:col-span-2">
-                  
-                  {/* Span full width */}
-                  <FormLabel className="dark:text-white">
-                {t("suppliers:name")}
-                <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <FormControl>
-                <Input
-                  placeholder={t("suppliers:namePlaceholder")}
-                  {...field}
-                  disabled={isSubmitting}
-                  className="dark:bg-gray-800 dark:text-white dark:border-gray-700"
-                />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Contact Person Field */}
-            <FormField
-              control={control}
-              name="contact_person"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="dark:text-white">{t("suppliers:contactPerson")}</FormLabel>
-                  <FormControl>
-                <Input
-                  placeholder={t("suppliers:contactPersonPlaceholder")}
-                  {...field}
-                  value={field.value ?? ""}
-                  disabled={isSubmitting}
-                  className="dark:bg-gray-800 dark:text-white dark:border-gray-700"
-                />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Email Field */}
-            <FormField
-              control={control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="dark:text-white">{t("suppliers:email")}</FormLabel>
-                  <FormControl>
-                <Input
-                  type="email"
-                  placeholder={t("suppliers:emailPlaceholder")}
-                  {...field}
-                  value={field.value ?? ""}
-                  disabled={isSubmitting}
-                  className="dark:bg-gray-800 dark:text-white dark:border-gray-700"
-                />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Phone Field */}
-            <FormField
-              control={control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="dark:text-white">{t("suppliers:phone")}</FormLabel>
-                  <FormControl>
-                <Input
-                  type="tel"
-                  placeholder={t("suppliers:phonePlaceholder")}
-                  {...field}
-                  value={field.value ?? ""}
-                  disabled={isSubmitting}
-                  className="dark:bg-gray-800 dark:text-white dark:border-gray-700"
-                />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Address Field */}
-            <FormField
-              control={control}
-              name="address"
-              render={({ field }) => (
-                <FormItem className="sm:col-span-2">
-                  
-                  {/* Span full width */}
-                  <FormLabel className="dark:text-white">{t("suppliers:address")}</FormLabel>
-                  <FormControl>
-                <Textarea
-                  placeholder={t("suppliers:addressPlaceholder")}
-                  className="resize-y min-h-[80px] dark:bg-gray-800 dark:text-white dark:border-gray-700"
-                  {...field}
-                  value={field.value ?? ""}
-                  disabled={isSubmitting}
-                />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {/* Add website/notes fields here similarly if needed */}
-              </div>
-              {/* End Grid */}
-            </div>
-            {/* End Scrollable Content */}
-            {/* Dialog Footer */}
-            <DialogFooter className="p-6 pt-4 border-t dark:border-gray-700">
-              <DialogClose asChild>
-            <Button type="button" variant="ghost" disabled={isSubmitting}>
-              {t("common:cancel")}
+              إلغاء
             </Button>
-              </DialogClose>
-              <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting && (
-              <Loader2 className="me-2 h-4 w-4 animate-spin" />
-            )}
-            {t("common:save")}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={isSubmitting}
+            >
+              {isSubmitting && (
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
+              )}
+              حفظ
+            </Button>
+          </DialogActions>
+        </Box>
       </DialogContent>
     </Dialog>
   );

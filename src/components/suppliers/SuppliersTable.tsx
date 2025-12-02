@@ -1,30 +1,29 @@
 // src/components/suppliers/SuppliersTable.tsx
 import React from "react";
-import { useTranslation } from "react-i18next";
 
 // MUI Components
-import TableContainer from "@mui/material/TableContainer";
-import Typography from "@mui/material/Typography"; // For empty state message
-
-// MUI Icons
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
-
-// Import Supplier type
-import { Supplier } from "../../services/supplierService"; // Adjust path
-import { Card, CardContent } from "../ui/card";
-// import { Box, CardContent, IconButton, Paper, Tooltip } from "@mui/material";
 import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
   Table,
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
-} from "../ui/table";
+  IconButton,
+  Paper,
+  Tooltip,
+} from "@mui/material";
+
+// MUI Icons
+import EditIcon from "@mui/icons-material/Edit";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+
+// Types & hooks
+import { Supplier } from "../../services/supplierService";
 import { useAuthorization } from "@/hooks/useAuthorization";
-import { Box, IconButton, Paper, Tooltip } from "@mui/material";
 
 // Component Props
 interface SuppliersTableProps {
@@ -42,42 +41,28 @@ const SuppliersTable: React.FC<SuppliersTableProps> = ({
   onViewLedger,
   isLoading = false,
 }) => {
-  const { t } = useTranslation(["suppliers", "common"]); // Load namespaces
-  const { can, isAdmin } = useAuthorization();
+  const { can } = useAuthorization();
   if (suppliers.length === 0) {
     return (
       <Paper sx={{ p: 3, textAlign: "center", mt: 2 }}>
-        <Typography variant="body1">{t("suppliers:noSuppliers")}</Typography>{" "}
-        {/* Add noSuppliers key */}
+        <Typography variant="body1">لا يوجد موردون حاليًا</Typography>
       </Paper>
     );
   }
 
   return (
     <Card>
-      {/* Use subtle elevation */}
       <CardContent>
-        <Table aria-label={t("suppliers:pageTitle")}>
-          {/* Add pageTitle key */}
-          <TableHeader>
+        <Table aria-label="جدول الموردين">
+          <TableHead>
             <TableRow>
-              <TableHead className="text-center" align="center">
-                {t("suppliers:name")}
-              </TableHead>
-              <TableHead className="text-center">
-                {t("suppliers:contactPerson")}
-              </TableHead>
-              <TableHead className="text-center">
-                {t("suppliers:email")}
-              </TableHead>
-              <TableHead className="text-center">
-                {t("suppliers:phone")}
-              </TableHead>
-              <TableHead className="text-center">
-                {t("common:actions")}
-              </TableHead>
+              <TableCell align="center">الاسم</TableCell>
+              <TableCell align="center">مسؤول التواصل</TableCell>
+              <TableCell align="center">البريد الإلكتروني</TableCell>
+              <TableCell align="center">رقم الهاتف</TableCell>
+              <TableCell align="center">الإجراءات</TableCell>
             </TableRow>
-          </TableHeader>
+          </TableHead>
           <TableBody>
             {suppliers.map((supplier) => (
               <TableRow key={supplier.id}>
@@ -93,10 +78,9 @@ const SuppliersTable: React.FC<SuppliersTableProps> = ({
                   <Box
                     sx={{ display: "flex", justifyContent: "center", gap: 0.5 }}
                   >
-                    {/* View Ledger Button */}
-                    <Tooltip title={t("suppliers:viewLedger") || ""}>
+                    <Tooltip title="كشف حساب المورد">
                       <IconButton
-                        aria-label={t("suppliers:viewLedger") || "View Ledger"}
+                        aria-label="كشف حساب المورد"
                         color="info"
                         size="small"
                         onClick={() => onViewLedger(supplier)}
@@ -105,14 +89,12 @@ const SuppliersTable: React.FC<SuppliersTableProps> = ({
                         <AccountBalanceIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                    
-                    {/* Edit Button */}
+
                     {can("edit-suppliers") && (
-                      <Tooltip title={t("common:edit") || ""}>
+                      <Tooltip title="تعديل">
                         <span>
-                          {/* Span needed for tooltip when button is disabled */}
                           <IconButton
-                            aria-label={t("common:edit") || "Edit"}
+                            aria-label="تعديل"
                             color="primary"
                             size="small"
                             onClick={() => onEdit(supplier)}
@@ -123,8 +105,6 @@ const SuppliersTable: React.FC<SuppliersTableProps> = ({
                         </span>
                       </Tooltip>
                     )}
-                    
-          
                   </Box>
                 </TableCell>
               </TableRow>

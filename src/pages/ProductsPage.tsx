@@ -1,6 +1,5 @@
 // src/pages/ProductsPage.tsx
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useTranslation } from "react-i18next";
 
 // MUI Components
 import Box from "@mui/material/Box";
@@ -84,8 +83,6 @@ type ProductTableItem = {
 };
 
 const ProductsPage: React.FC = () => {
-  const { t } = useTranslation(["products", "common", "validation"]);
-
   // --- State ---
   const [productsResponse, setProductsResponse] =
     useState<ProductPaginatedResponse | null>(null);
@@ -198,7 +195,7 @@ const ProductsPage: React.FC = () => {
     });
   };
   const handleSnackbarClose = (
-    event?: React.SyntheticEvent | Event,
+    _event?: React.SyntheticEvent | Event,
     reason?: string
   ) => {
     if (reason === 'clickaway') {
@@ -216,11 +213,11 @@ const ProductsPage: React.FC = () => {
     setIsModalOpen(false);
   };
   const handleSaveSuccess = () => {
-    const messageKey = editingProduct
-      ? "products:saveSuccess"
-      : "products:saveSuccess"; // Add keys
     closeModal();
-    showSnackbar(t(messageKey), "success");
+    showSnackbar(
+      editingProduct ? "تم تحديث بيانات المنتج بنجاح" : "تم إضافة المنتج بنجاح",
+      "success"
+    );
     const pageToFetch = editingProduct ? currentPage : 1;
     fetchProducts(pageToFetch, debouncedSearchTerm, selectedCategory, rowsPerPage, showOnlyInStock, showLowStockOnly, showOutOfStockOnly); // Refetch
     if (!editingProduct) setCurrentPage(1);
@@ -228,7 +225,7 @@ const ProductsPage: React.FC = () => {
 
   // --- Pagination & Search Handlers ---
   const handlePageChange = (
-    event: React.ChangeEvent<unknown>,
+    _event: React.ChangeEvent<unknown>,
     value: number
   ) => {
     setCurrentPage(value);
@@ -272,9 +269,12 @@ const ProductsPage: React.FC = () => {
       };
       
       await exportService.exportProductsPdf(filters);
-      showSnackbar(t("products:printSuccess"), "success");
+      showSnackbar("تم توليد ملف PDF للمنتجات بنجاح", "success");
     } catch (err) {
-      showSnackbar(err instanceof Error ? err.message : "Failed to export PDF", "error");
+      showSnackbar(
+        err instanceof Error ? err.message : "فشل في تصدير ملف PDF",
+        "error"
+      );
     }
   };
 
@@ -289,16 +289,27 @@ const ProductsPage: React.FC = () => {
       };
       
       await exportService.exportProductsExcel(filters);
-      showSnackbar(t("products:excelSuccess"), "success");
+      showSnackbar("تم تصدير المنتجات إلى Excel بنجاح", "success");
     } catch (err) {
-      showSnackbar(err instanceof Error ? err.message : "Failed to export Excel", "error");
+      showSnackbar(
+        err instanceof Error ? err.message : "فشل في تصدير ملف Excel",
+        "error"
+      );
     }
   };
 
   const handleImportSuccess = () => {
     // Refresh the products list after successful import
-    fetchProducts(currentPage, debouncedSearchTerm, selectedCategory, rowsPerPage, showOnlyInStock, showLowStockOnly);
-    showSnackbar(t("products:importSuccess"), "success");
+    fetchProducts(
+      currentPage,
+      debouncedSearchTerm,
+      selectedCategory,
+      rowsPerPage,
+      showOnlyInStock,
+      showLowStockOnly,
+      showOutOfStockOnly
+    );
+    showSnackbar("تم استيراد المنتجات بنجاح", "success");
   };
 
   // --- Render ---
@@ -317,15 +328,15 @@ const ProductsPage: React.FC = () => {
       <Box
         className="dark:bg-gray-900 h-[calc(100vh-100px)] w-full max-w-none products-page-full-width"
         sx={{
-          width: '100%',
-          maxWidth: 'none',
+          width: "100%",
+          maxWidth: "none",
           margin: 0,
           padding: 0,
-          // Override any container constraints from parent layout
-          '&': {
-            maxWidth: 'none !important',
-            margin: '0 !important',
-          }
+          direction: "rtl",
+          "&": {
+            maxWidth: "none !important",
+            margin: "0 !important",
+          },
         }}
       >
    
@@ -347,7 +358,7 @@ const ProductsPage: React.FC = () => {
           component="h1"
           className="text-gray-800 dark:text-gray-100 font-semibold"
         >
-          {t("products:pageTitle")} {/* Add key */}
+          المنتجات
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
@@ -356,7 +367,7 @@ const ProductsPage: React.FC = () => {
             onClick={handleStockFilterToggle}
             color={showOnlyInStock ? "primary" : "inherit"}
           >
-            {showOnlyInStock ? t("products:showAllProducts") : t("products:showInStockOnly")}
+            {showOnlyInStock ? "عرض كل المنتجات" : "عرض المنتجات المتوفرة فقط"}
           </Button>
           <Button
             variant={showLowStockOnly ? "contained" : "outlined"}
@@ -364,7 +375,7 @@ const ProductsPage: React.FC = () => {
             onClick={handleLowStockFilterToggle}
             color={showLowStockOnly ? "primary" : "inherit"}
           >
-            {showLowStockOnly ? t("products:showAllProducts") : t("products:showLowStockOnly")}
+            {showLowStockOnly ? "عرض كل المنتجات" : "عرض المنتجات ذات المخزون المنخفض"}
           </Button>
           <Button
             variant={showOutOfStockOnly ? "contained" : "outlined"}
@@ -372,35 +383,35 @@ const ProductsPage: React.FC = () => {
             onClick={handleOutOfStockFilterToggle}
             color={showOutOfStockOnly ? "primary" : "inherit"}
           >
-            {showOutOfStockOnly ? t("products:showAllProducts") : t("products:showOutOfStockOnly", "Show Out of Stock")}
+            {showOutOfStockOnly ? "عرض كل المنتجات" : "عرض المنتجات غير المتوفرة"}
           </Button>
           <Button
             variant="outlined"
             startIcon={<PrintIcon />}
             onClick={() => handlePrintProducts()}
           >
-            {t("products:printProducts")}
+            طباعة المنتجات
           </Button>
           <Button
             variant="outlined"
             startIcon={<TableChartIcon />}
             onClick={() => handleExportExcel()}
           >
-            {t("products:exportExcel")}
+            تصدير إلى Excel
           </Button>
           <Button
             variant="outlined"
             startIcon={<FileUploadIcon />}
             onClick={() => setIsImportDialogOpen(true)}
           >
-            {t("products:importProducts")}
+            استيراد المنتجات
           </Button>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => openModal()}
           >
-            {t("products:addProduct")}
+            إضافة منتج
           </Button>
         </Box>
       </Box>
@@ -413,7 +424,7 @@ const ProductsPage: React.FC = () => {
               fullWidth
               variant="outlined"
               size="small"
-              placeholder={t("products:searchPlaceholder") || "Search Products..."}
+                placeholder="ابحث عن منتج..."
               value={searchTerm}
               onChange={handleSearchChange}
               InputProps={{
@@ -453,12 +464,12 @@ const ProductsPage: React.FC = () => {
           <Box sx={{ flex: { md: 1 } }}>
             <FormControl fullWidth size="small">
               <InputLabel className="dark:text-gray-300">
-                {t("products:filterByCategory")}
+                الفئة
               </InputLabel>
               <Select
                 value={selectedCategory || ""}
                 onChange={handleCategoryChange}
-                label={t("products:filterByCategory")}
+                label="الفئة"
                 disabled={loadingCategories}
                 sx={{
                   backgroundColor: (theme) =>
@@ -484,7 +495,7 @@ const ProductsPage: React.FC = () => {
                 }}
               >
                 <MenuItem value="">
-                  <em>{t("products:allCategories")}</em>
+                  <em>كل الفئات</em>
                 </MenuItem>
                 {categories.map((category) => (
                   <MenuItem key={category.id} value={category.id}>
@@ -499,12 +510,12 @@ const ProductsPage: React.FC = () => {
           <Box sx={{ flex: { md: 1 } }}>
             <FormControl fullWidth size="small">
               <InputLabel className="dark:text-gray-300">
-                {t("products:rowsPerPage")}
+                عدد الصفوف لكل صفحة
               </InputLabel>
               <Select
                 value={rowsPerPage}
                 onChange={handleRowsPerPageChange}
-                label={t("products:rowsPerPage")}
+                label="عدد الصفوف لكل صفحة"
                 sx={{
                   backgroundColor: (theme) =>
                     theme.palette.mode === "dark"
@@ -547,7 +558,7 @@ const ProductsPage: React.FC = () => {
             sx={{ ml: 2 }}
             className="text-gray-600 dark:text-gray-400"
           >
-            {t("common:loading")}
+            جاري التحميل...
           </Typography>
         </Box>
       )}
@@ -588,7 +599,7 @@ const ProductsPage: React.FC = () => {
               sx={{ textAlign: "center", py: 5 }}
               className="text-gray-500 dark:text-gray-400"
             >
-              {t("products:noProducts")}
+              لا توجد منتجات حاليًا
             </Typography>
           )}
         </Box>

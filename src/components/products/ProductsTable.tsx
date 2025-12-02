@@ -1,16 +1,21 @@
 // src/components/products/ProductsTable.tsx
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { cn } from "@/lib/utils";
-
-// shadcn/ui & Lucide Icons
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import {
+  Box,
+  Card,
+  CardContent,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  IconButton,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 import { Edit, AlertTriangle, PackageSearch, Copy, Check } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Import Tooltip
 
-// Types
-import { Product as ProductType } from '@/services/productService'; // Ensure ProductType is up-to-date
+import { Product as ProductType } from '@/services/productService';
 import { formatNumber, formatCurrency } from '@/constants';
 
 // Interface for Product with potentially loaded batches (though not directly used for display in this table)
@@ -41,7 +46,6 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
     isLoading = false,
     onEdit,
 }) => {
-    const { t } = useTranslation(['products', 'common', 'inventory']); // Added inventory for stock adjustment
     const [copiedSku, setCopiedSku] = useState<string | null>(null);
 
     const copyToClipboard = async (sku: string) => {
@@ -56,30 +60,30 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
 
     if (products.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground dark:text-gray-400">
+            <Box className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground dark:text-gray-400">
                 <PackageSearch className="h-12 w-12 mb-3 text-gray-400 dark:text-gray-500" />
-                <p>{t('products:noProducts')}</p>
-            </div>
+                <p>لا توجد منتجات حاليًا</p>
+            </Box>
         );
     }
 
     return (
-        <TooltipProvider delayDuration={100}> {/* Wrap table with TooltipProvider */}
-            <div className="rounded-md border dark:border-gray-700 w-full">
+        <Card>
+            <CardContent className="w-full overflow-x-auto">
                 <Table className="w-full">
-                    <TableHeader>
+                    <TableHead>
                         <TableRow className="dark:border-gray-700">
-                            <TableHead className="text-center px-3 py-3 w-[60px]">#</TableHead>
-                            <TableHead className="hidden sm:table-cell px-3 py-3 text-center">{t('products:sku')}</TableHead>
-                            <TableHead className="px-3 py-3 min-w-[200px] text-center">{t('products:name')}</TableHead>
-                            <TableHead className="hidden lg:table-cell px-3 py-3 text-center">{t('products:scientificName')}</TableHead>
-                            <TableHead className="hidden md:table-cell px-3 py-3 text-center">{t('products:category')}</TableHead>
-                            <TableHead className="text-center px-3 py-3">{t('products:totalStock')}</TableHead>
-                            <TableHead className="hidden lg:table-cell text-right px-3 py-3">{t('products:latestCostPerSellableUnit')}</TableHead>
-                            <TableHead className="hidden lg:table-cell text-right px-3 py-3">{t('products:lastSalePricePerSellableUnit')}</TableHead>
-                            <TableHead className="text-center px-3 py-3 w-[80px]">{t('common:actions')}</TableHead>
+                            <TableCell className="text-center px-3 py-3 w-[60px]">#</TableCell>
+                            <TableCell className="hidden sm:table-cell px-3 py-3 text-center">الرمز (SKU)</TableCell>
+                            <TableCell className="px-3 py-3 min-w-[200px] text-center">اسم المنتج</TableCell>
+                            <TableCell className="hidden lg:table-cell px-3 py-3 text-center">الاسم العلمي</TableCell>
+                            <TableCell className="hidden md:table-cell px-3 py-3 text-center">الفئة</TableCell>
+                            <TableCell className="text-center px-3 py-3">المخزون الكلي</TableCell>
+                            <TableCell className="hidden lg:table-cell text-right px-3 py-3">أحدث تكلفة للوحدة</TableCell>
+                            <TableCell className="hidden lg:table-cell text-right px-3 py-3">آخر سعر بيع للوحدة</TableCell>
+                            <TableCell className="text-center px-3 py-3 w-[80px]">الإجراءات</TableCell>
                         </TableRow>
-                    </TableHeader>
+                    </TableHead>
                     <TableBody>
                         {products.map((product) => {
                             const stockQty = Number(
@@ -105,25 +109,19 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                                         {product.sku ? (
                                             <div className="flex items-center justify-center gap-2">
                                                 <span>{product.sku}</span>
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                                            onClick={() => copyToClipboard(product.sku!)}
-                                                            disabled={isLoading}
-                                                        >
-                                                            {copiedSku === product.sku ? (
-                                                                <Check className="h-3 w-3 text-green-600" />
-                                                            ) : (
-                                                                <Copy className="h-3 w-3" />
-                                                            )}
-                                                        </Button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p>{copiedSku === product.sku ? t('common:copied') : t('common:copySku')}</p>
-                                                    </TooltipContent>
+                                                <Tooltip title={copiedSku === product.sku ? "تم النسخ" : "نسخ SKU"}>
+                                                    <IconButton
+                                                        size="small"
+                                                        className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                        onClick={() => copyToClipboard(product.sku!)}
+                                                        disabled={isLoading}
+                                                    >
+                                                        {copiedSku === product.sku ? (
+                                                            <Check className="h-3 w-3 text-green-600" />
+                                                        ) : (
+                                                            <Copy className="h-3 w-3" />
+                                                        )}
+                                                    </IconButton>
                                                 </Tooltip>
                                             </div>
                                         ) : (
@@ -135,10 +133,10 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                                         {/* Mobile: Show SKU and Category below name */}
                                         <div className="sm:hidden text-xs text-muted-foreground dark:text-gray-400 text-center space-y-0.5 mt-1">
                                             <p>SKU: {product.sku || '---'}</p>
-                                            {product.scientific_name && <p>{t('products:scientificName')}: {product.scientific_name}</p>}
-                                            {product.category_name && <p>{t('products:category')}: {product.category_name}</p>}
+                                            {product.scientific_name && <p>الاسم العلمي: {product.scientific_name}</p>}
+                                            {product.category_name && <p>الفئة: {product.category_name}</p>}
                                             {/* Show stock on mobile if other columns are hidden */}
-                                            <p className="lg:hidden text-xs">{t('products:stock')}: {formatNumber(stockQty)}</p>
+                                            <p className="lg:hidden text-xs">المخزون: {formatNumber(stockQty)}</p>
                                         </div>
                                     </TableCell>
                                     <TableCell className="hidden lg:table-cell px-3 py-2 dark:text-gray-300 text-center text-sm">
@@ -153,13 +151,8 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                                                 {formatNumber(stockQty)}
                                             </div>
                                             {(isLow || isOutOfStock) && (
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <AlertTriangle className={`inline ms-1 h-4 w-4 ${isOutOfStock ? 'text-red-500' : 'text-orange-500'}`}/>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p>{isOutOfStock ? t('products:outOfStock') : t('products:lowStockAlert')}</p>
-                                                    </TooltipContent>
+                                                <Tooltip title={isOutOfStock ? "غير متوفر" : "مخزون منخفض"}>
+                                                    <AlertTriangle className={`inline ms-1 h-4 w-4 ${isOutOfStock ? 'text-red-500' : 'text-orange-500'}`} />
                                                 </Tooltip>
                                             )}
                                         </div>
@@ -171,17 +164,21 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                                         {product.last_sale_price_per_sellable_unit ? formatCurrency(product.last_sale_price_per_sellable_unit) : '---'}
                                     </TableCell>
                                     <TableCell className="text-center px-3 py-2">
-                                        <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => onEdit(product)} disabled={isLoading}>
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => onEdit(product)}
+                                            disabled={isLoading}
+                                        >
                                             <Edit className="h-4 w-4" />
-                                        </Button>
+                                        </IconButton>
                                     </TableCell>
                                 </TableRow>
                             );
                         })}
                     </TableBody>
                 </Table>
-            </div>
-        </TooltipProvider>
+            </CardContent>
+        </Card>
     );
 };
 

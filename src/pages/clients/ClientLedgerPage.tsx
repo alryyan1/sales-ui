@@ -1,26 +1,40 @@
 // src/pages/clients/ClientLedgerPage.tsx
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
-
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Chip,
+  Alert,
+  AlertTitle,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  MenuItem,
+  Select,
+  InputLabel,
+  FormControl,
+  Stack,
+} from '@mui/material';
 import { ArrowLeft, FileText } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import LoadingSpinner from '@/components/LoadingSpinner';
 
+import LoadingSpinner from '@/components/LoadingSpinner';
 import clientLedgerService, { ClientLedger, ClientLedgerEntry } from '@/services/clientLedgerService';
 import { formatCurrency } from '@/constants';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 const ClientLedgerPage: React.FC = () => {
-  const { t } = useTranslation(['clients', 'common']);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const clientId = Number(id);
@@ -72,7 +86,7 @@ const ClientLedgerPage: React.FC = () => {
     if (!clientId) return;
     const amountNum = parseFloat(settleAmount);
     if (!amountNum || amountNum <= 0) {
-      setError(t('common:invalidAmount') || 'Invalid amount');
+      setError('المبلغ غير صالح');
       return;
     }
     setIsSubmitting(true);
@@ -99,20 +113,20 @@ const ClientLedgerPage: React.FC = () => {
   const getTypeColor = (type: ClientLedgerEntry['type']) => {
     switch (type) {
       case 'sale':
-        return 'destructive';
+        return 'error';
       case 'payment':
-        return 'default';
+        return 'success';
       default:
-        return 'secondary';
+        return 'default';
     }
   };
 
   const getTypeLabel = (type: ClientLedgerEntry['type']) => {
     switch (type) {
       case 'sale':
-        return t('clients:sale');
+        return 'عملية بيع';
       case 'payment':
-        return t('clients:payment');
+        return 'دفعة';
       default:
         return type;
     }
@@ -120,45 +134,46 @@ const ClientLedgerPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-10">
+      <Box className="flex justify-center items-center py-10">
         <LoadingSpinner />
-        <span className="ml-2 text-gray-600 dark:text-gray-400">{t('common:loading')}</span>
-      </div>
+        <span className="ml-2 text-gray-600 dark:text-gray-400">جاري التحميل...</span>
+      </Box>
     );
   }
 
   if (error) {
     return (
-      <Alert variant="destructive" className="my-4">
-        <AlertDescription>{error}</AlertDescription>
+      <Alert severity="error" className="my-4">
+        <AlertTitle>خطأ</AlertTitle>
+        {error}
       </Alert>
     );
   }
 
   if (!ledger) {
     return (
-      <Alert className="my-4">
-        <AlertDescription>{t('clients:ledgerNotFound')}</AlertDescription>
+      <Alert className="my-4" severity="info">
+        كشف الحساب غير متوفر لهذا العميل.
       </Alert>
     );
   }
 
   return (
-    <div className="p-2 md:p-3 h-full overflow-hidden">
+    <Box className="p-2 md:p-3 h-full overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
-        <Button variant="outline" size="icon" onClick={() => navigate('/clients')}>
+        <Button variant="outlined" size="small" onClick={() => navigate('/clients')}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          {t('clients:ledgerTitle')} - {ledger.client.name}
+          كشف حساب العميل - {ledger.client.name}
         </h1>
         <div className="ml-auto flex items-center gap-2">
-          <Button variant="outline" onClick={handleDownloadPdf} disabled={isGeneratingPdf}>
-            <FileText className="h-4 w-4 mr-2" /> {t('reports:generatePdf', 'Generate PDF')}
+          <Button variant="outlined" onClick={handleDownloadPdf} disabled={isGeneratingPdf}>
+            <FileText className="h-4 w-4 mr-2" /> تحميل PDF
           </Button>
           <Button onClick={() => setDialogOpen(true)}>
-          {t('clients:settleDebt')}
+            تسوية الدين
           </Button>
         </div>
       </div>
@@ -168,27 +183,31 @@ const ClientLedgerPage: React.FC = () => {
         <div className="lg:col-span-2 min-h-0">
           <Card>
             <CardHeader>
-              <CardTitle>{t('clients:ledgerEntries')}</CardTitle>
+              <Typography variant="h6">حركات الحساب</Typography>
             </CardHeader>
             <CardContent className="h-[calc(100%-56px)] overflow-auto">
               <Table>
-                <TableHeader>
+                <TableHead>
                   <TableRow>
-                    <TableHead className="text-center">{t('common:date')}</TableHead>
-                    <TableHead className="text-center">{t('common:type')}</TableHead>
-                    <TableHead className="text-center">{t('common:description')}</TableHead>
-                    <TableHead className="text-center">{t('clients:debit')}</TableHead>
-                    <TableHead className="text-center">{t('clients:credit')}</TableHead>
-                    <TableHead className="text-center">{t('clients:balance')}</TableHead>
-                    <TableHead className="text-center">{t('common:reference')}</TableHead>
+                    <TableCell className="text-center">التاريخ</TableCell>
+                    <TableCell className="text-center">النوع</TableCell>
+                    <TableCell className="text-center">الوصف</TableCell>
+                    <TableCell className="text-center">مدين</TableCell>
+                    <TableCell className="text-center">دائن</TableCell>
+                    <TableCell className="text-center">الرصيد</TableCell>
+                    <TableCell className="text-center">المرجع</TableCell>
                   </TableRow>
-                </TableHeader>
+                </TableHead>
                 <TableBody>
                   {ledger.ledger_entries.map((entry) => (
                     <TableRow key={entry.id}>
                       <TableCell className="text-center">{format(new Date(entry.date), 'yyyy-MM-dd')}</TableCell>
                       <TableCell className="text-center">
-                        <Badge variant={getTypeColor(entry.type)}>{getTypeLabel(entry.type)}</Badge>
+                        <Chip
+                          label={getTypeLabel(entry.type)}
+                          color={getTypeColor(entry.type) as any}
+                          size="small"
+                        />
                       </TableCell>
                       <TableCell className="text-center">{entry.description}</TableCell>
                       <TableCell className="text-center">{entry.debit > 0 ? formatCurrency(entry.debit) : '-'}</TableCell>
@@ -205,7 +224,9 @@ const ClientLedgerPage: React.FC = () => {
               </Table>
 
               {ledger.ledger_entries.length === 0 && (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">{t('clients:noLedgerEntries')}</div>
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  لا توجد حركات في كشف الحساب.
+                </div>
               )}
             </CardContent>
           </Card>
@@ -216,19 +237,25 @@ const ClientLedgerPage: React.FC = () => {
           <div className="space-y-4">
             <Card>
               <CardContent className="p-4">
-                <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">{t('clients:totalSales')}</h3>
+                <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                  إجمالي المبيعات
+                </h3>
                 <p className="text-3xl font-bold text-red-600">{formatCurrency(ledger.summary.total_sales)}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4">
-                <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">{t('clients:totalPayments')}</h3>
+                <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                  إجمالي الدفعات
+                </h3>
                 <p className="text-3xl font-bold text-green-600">{formatCurrency(ledger.summary.total_payments)}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4">
-                <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">{t('clients:balance')}</h3>
+                <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                  الرصيد الحالي
+                </h3>
                 <p className={`text-3xl font-bold ${ledger.summary.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
                   {formatCurrency(ledger.summary.balance)}
                 </p>
@@ -238,21 +265,21 @@ const ClientLedgerPage: React.FC = () => {
 
           <Card>
             <CardHeader className="py-3">
-              <CardTitle>{t('clients:clientInfo')}</CardTitle>
+              <Typography variant="h6">بيانات العميل</Typography>
             </CardHeader>
             <CardContent className="p-4">
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{t('clients:email')}</p>
-                  <p className="text-gray-900 dark:text-gray-100">{ledger.client.email || t('common:n/a')}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">البريد الإلكتروني</p>
+                  <p className="text-gray-900 dark:text-gray-100">{ledger.client.email || '-'}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{t('clients:phone')}</p>
-                  <p className="text-gray-900 dark:text-gray-100">{ledger.client.phone || t('common:n/a')}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">رقم الهاتف</p>
+                  <p className="text-gray-900 dark:text-gray-100">{ledger.client.phone || '-'}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{t('clients:address')}</p>
-                  <p className="text-gray-900 dark:text-gray-100">{ledger.client.address || t('common:n/a')}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">العنوان</p>
+                  <p className="text-gray-900 dark:text-gray-100">{ledger.client.address || '-'}</p>
                 </div>
               </div>
             </CardContent>
@@ -260,56 +287,80 @@ const ClientLedgerPage: React.FC = () => {
         </div>
             </div>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[480px]">
-          <DialogHeader>
-            <DialogTitle>{t('clients:settleDebt')}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="amount">{t('clients:amount')}</Label>
-              <Input id="amount" type="number" min="0" step="0.01" value={settleAmount} onChange={(e) => setSettleAmount(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="date">{t('clients:paymentDate')}</Label>
-              <Input id="date" type="date" value={settleDate} onChange={(e) => setSettleDate(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('clients:paymentMethod')}</Label>
-              <Select value={settleMethod} onValueChange={setSettleMethod}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t('clients:paymentMethod')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash">{t('paymentMethods:cash') || 'Cash'}</SelectItem>
-                  <SelectItem value="bank_transfer">{t('paymentMethods:bank_transfer') || 'Bank Transfer'}</SelectItem>
-                  <SelectItem value="visa">{t('paymentMethods:visa') || 'Visa'}</SelectItem>
-                  <SelectItem value="mastercard">{t('paymentMethods:mastercard') || 'MasterCard'}</SelectItem>
-                  <SelectItem value="mada">{t('paymentMethods:mada') || 'Mada'}</SelectItem>
-                  <SelectItem value="other">{t('paymentMethods:other') || 'Other'}</SelectItem>
-                </SelectContent>
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>تسوية دين العميل</DialogTitle>
+        <DialogContent dividers>
+          <Stack direction="column" spacing={2} className="space-y-4">
+            <TextField
+              id="amount"
+              label="المبلغ"
+              type="number"
+              fullWidth
+              inputProps={{ min: 0, step: 0.01 }}
+              value={settleAmount}
+              onChange={(e) => setSettleAmount(e.target.value)}
+            />
+            <TextField
+              id="date"
+              label="تاريخ الدفع"
+              type="date"
+              fullWidth
+              value={settleDate}
+              onChange={(e) => setSettleDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+            <FormControl fullWidth>
+              <InputLabel id="method-label">طريقة الدفع</InputLabel>
+              <Select
+                labelId="method-label"
+                value={settleMethod}
+                label="طريقة الدفع"
+                onChange={(e) => setSettleMethod(e.target.value)}
+              >
+                <MenuItem value="cash">نقدًا</MenuItem>
+                <MenuItem value="bank_transfer">تحويل بنكي</MenuItem>
+                <MenuItem value="visa">فيزا</MenuItem>
+                <MenuItem value="mastercard">ماستركارد</MenuItem>
+                <MenuItem value="mada">مدى</MenuItem>
+                <MenuItem value="other">أخرى</MenuItem>
               </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="reference">{t('clients:reference')}</Label>
-              <Input id="reference" value={reference} onChange={(e) => setReference(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="notes">{t('clients:notes')}</Label>
-              <Input id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isSubmitting}>
-              {t('common:cancel')}
-            </Button>
-            <Button onClick={handleSettle} disabled={isSubmitting}>
-              {t('clients:confirmSettle')}
-            </Button>
-          </DialogFooter>
+            </FormControl>
+            <TextField
+              id="reference"
+              label="المرجع"
+              fullWidth
+              value={reference}
+              onChange={(e) => setReference(e.target.value)}
+            />
+            <TextField
+              id="notes"
+              label="ملاحظات"
+              fullWidth
+              multiline
+              minRows={2}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </Stack>
         </DialogContent>
+        <DialogActions className='flex justify-between gap-1' >
+          <Button
+            variant="outlined"
+            onClick={() => setDialogOpen(false)}
+            disabled={isSubmitting}
+          >
+            إلغاء
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSettle}
+            disabled={isSubmitting}
+          >
+            تأكيد التسوية
+          </Button>
+        </DialogActions>
       </Dialog>
-    </div>
+    </Box>
   );
 };
 

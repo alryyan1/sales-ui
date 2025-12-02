@@ -19,7 +19,7 @@ export interface User {
 
 // Define types for login/register credentials
 interface LoginCredentials {
-  email: string;
+  username: string;
   password: string;
   remember?: boolean; // Optional 'remember me' flag
 }

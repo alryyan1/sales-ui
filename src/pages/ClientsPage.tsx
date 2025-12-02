@@ -1,28 +1,26 @@
 // src/pages/ClientsPage.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
 
-// MUI Components (Import necessary components)
+// MUI Components
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
-import Pagination from '@mui/material/Pagination'; // MUI Pagination
-
-// Services and Types
-import clientService, { Client, PaginatedResponse } from '../services/clientService'; // Adjust path if needed
-
-// Custom Components
-import ClientsTable from '../components/clients/ClientsTable';         // Assuming this is ready
-import ClientFormModal from '../components/clients/ClientFormModal'; // The hybrid modal
-import ConfirmationDialog from '../components/common/ConfirmationDialog'; // The reusable dialog
-import { useAuthorization } from '@/hooks/useAuthorization';
-import { PlusIcon } from 'lucide-react';
+import Pagination from '@mui/material/Pagination';
+import Button from '@mui/material/Button';
 import { CircularProgress } from '@mui/material';
 
+// Services and Types
+import clientService, { Client, PaginatedResponse } from '../services/clientService';
+
+// Custom Components
+import ClientsTable from '../components/clients/ClientsTable';
+import ClientFormModal from '../components/clients/ClientFormModal';
+import ConfirmationDialog from '../components/common/ConfirmationDialog';
+import { useAuthorization } from '@/hooks/useAuthorization';
+import { PlusIcon } from 'lucide-react';
+
 const ClientsPage: React.FC = () => {
-    // Translations - Load namespaces needed
-    const { t } = useTranslation(['clients', 'common', 'validation']);
-    const { can ,isAdmin} = useAuthorization(); // <-- Get the 'can' function
+    const { can } = useAuthorization();
 
     // --- State Management ---
     const [clientsResponse, setClientsResponse] = useState<PaginatedResponse<Client> | null>(null);
@@ -108,7 +106,7 @@ const ClientsPage: React.FC = () => {
             } else {
                 fetchClients(currentPage);
             }
-        } catch (e) {
+        } catch {
             // Keep dialog open on error? Or close? Closing for now.
             closeConfirmDialog();
         } finally {
@@ -117,54 +115,52 @@ const ClientsPage: React.FC = () => {
     };
 
     // --- Pagination Handler (for MUI Pagination) ---
-    const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
+    const handlePageChange = (_: React.ChangeEvent<unknown>, value: number) => {
         setCurrentPage(value);
     };
 
     // --- Render Component ---
     return (
         <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }} className="dark:bg-gray-900 min-h-screen">
-            {/* Header */}
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: 'center', mb: 3, gap: 2 }}>
-                <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
-                    {t('clients:pageTitle')}
-                </h1>
-                {/* Conditionally render Add button */}
+                <Typography variant="h4" className="text-gray-800 dark:text-gray-100" sx={{ fontWeight: 700 }}>
+                    العملاء
+                </Typography>
                 {can('create-clients') && (
-                    <button
+                    <Button
                         onClick={() => openModal()}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 dark:bg-blue-500 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                        variant="contained"
+                        color="primary"
+                        startIcon={<PlusIcon className="h-5 w-5" />}
+                        sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
                     >
-                        <PlusIcon className="h-5 w-5" />
-                        {t('clients:addClient')}
-                    </button>
+                        إضافة عميل
+                    </Button>
                 )}
                 
             </Box>
 
-            {/* Loading State */}
             {isLoading && (
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
                     <CircularProgress />
-                    <Typography sx={{ ml: 2 }} className="text-gray-600 dark:text-gray-400">{t('common:loading')}</Typography>
+                    <Typography sx={{ ml: 2 }} className="text-gray-600 dark:text-gray-400">
+                        جاري التحميل...
+                    </Typography>
                 </Box>
             )}
 
-            {/* Error State */}
             {!isLoading && error && (
                 <Alert severity="error" sx={{ my: 2 }}>
                     {error}
                 </Alert>
             )}
 
-            {/* Content Area: Table and Pagination */}
             {!isLoading && !error && clientsResponse && (
-                <Box sx={{mt: 2}}> {/* Added Box wrapper with margin-top */}
-                    {/* --- Clients Table --- */}
+                <Box sx={{ mt: 2 }}>
                     <ClientsTable
                         clients={clientsResponse.data}
-                        canDelete={can('delete-clients')} // Pass permission check
-                        canEdit ={can('edit-clients')} // Pass permission check
+                        canDelete={can('delete-clients')}
+                        canEdit={can('edit-clients')}
                         onEdit={openModal}
                         onDelete={openConfirmDialog}
                         onViewLedger={(id) => window.location.hash = `#/clients/${id}/ledger`}
@@ -172,32 +168,27 @@ const ClientsPage: React.FC = () => {
                         isLoading={isDeleting}
                     />
 
-                    {/* --- MUI Pagination --- */}
                     {clientsResponse.last_page > 1 && (
-                        <Box sx={{ display: 'flex', justifyContent: 'center', p: 2, mt: 3 }}> {/* Increased top margin */}
+                        <Box sx={{ display: 'flex', justifyContent: 'center', p: 2, mt: 3 }}>
                             <Pagination
                                 count={clientsResponse.last_page}
                                 page={currentPage}
                                 onChange={handlePageChange}
-                                color="primary" // MUI color prop
-                                shape="rounded" // Optional shape
+                                color="primary"
+                                shape="rounded"
                                 showFirstButton
                                 showLastButton
-                                // Apply Tailwind classes for specific styling if needed:
-                                // className="[&>ul]:gap-2" // Example: target inner ul for gap
                             />
                         </Box>
                     )}
-                     {/* Message if table is empty */}
                      {clientsResponse.data.length === 0 && (
                          <Typography sx={{ textAlign: 'center', py: 5 }} className="text-gray-500 dark:text-gray-400">
-                             {t('clients:noClients')}
+                             لا يوجد عملاء حاليًا
                          </Typography>
                      )}
                 </Box>
             )}
 
-            {/* --- Client Add/Edit Modal --- */}
             <ClientFormModal
                 isOpen={isModalOpen}
                 onClose={closeModal}
@@ -205,21 +196,20 @@ const ClientsPage: React.FC = () => {
                 onSaveSuccess={handleSaveSuccess}
             />
 
-            {/* --- Confirmation Dialog --- */}
             <ConfirmationDialog
                 open={isConfirmOpen}
                 onClose={closeConfirmDialog}
                 onConfirm={handleDeleteConfirm}
-                title={t('common:confirmDeleteTitle') || "Confirm Deletion"} // Ensure key exists
-                message={t('clients:deleteClientConfirm')}
-                confirmText={t('common:delete')}
-                cancelText={t('common:cancel')}
+                title="تأكيد الحذف"
+                message="هل أنت متأكد من حذف هذا العميل؟ لا يمكن التراجع عن هذه العملية."
+                confirmText="حذف"
+                cancelText="إلغاء"
                 isLoading={isDeleting}
             />
 
          
 
-        </Box> // End main page container
+        </Box>
     );
 };
 

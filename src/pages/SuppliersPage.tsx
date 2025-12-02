@@ -1,6 +1,5 @@
 // src/pages/SuppliersPage.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 // MUI Components
@@ -8,26 +7,25 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
-import Pagination from '@mui/material/Pagination'; // MUI Pagination
+import Pagination from '@mui/material/Pagination';
 import AddIcon from '@mui/icons-material/Add';
-import Snackbar from '@mui/material/Snackbar'; // MUI Snackbar
+import Snackbar from '@mui/material/Snackbar';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 import SearchIcon from '@mui/icons-material/Search';
+import Button from '@mui/material/Button';
 
 // Services and Types
-import supplierService, { Supplier, PaginatedResponse } from '../services/supplierService'; // Adjust path if needed
+import supplierService, { Supplier } from '../services/supplierService';
+import { PaginatedResponse } from '../services/clientService';
 
 // Custom Components
-import SuppliersTable from '../components/suppliers/SuppliersTable';     // Your suppliers table component
-import SupplierFormModal from '../components/suppliers/SupplierFormModal'; // Your supplier form modal component
-import ConfirmationDialog from '../components/common/ConfirmationDialog'; // Reusable confirmation dialog
-import { Button } from '@/components/ui/button';
+import SuppliersTable from '../components/suppliers/SuppliersTable';
+import SupplierFormModal from '../components/suppliers/SupplierFormModal';
+import ConfirmationDialog from '../components/common/ConfirmationDialog';
 import { useAuthorization } from '@/hooks/useAuthorization';
 
 const SuppliersPage: React.FC = () => {
-    // Load necessary translation namespaces
-    const { t } = useTranslation(['suppliers', 'common', 'validation']);
     const { can } = useAuthorization(); // Assuming you have a hook for permissions
     const navigate = useNavigate();
     // --- State Management ---
@@ -92,7 +90,7 @@ const SuppliersPage: React.FC = () => {
         setSnackbarOpen(true);
     };
 
-    const handleSnackbarClose = (event?: React.SyntheticEvent | Event, reason?: string) => {
+    const handleSnackbarClose = (_event?: React.SyntheticEvent | Event, reason?: string) => {
         if (reason === 'clickaway') return;
         setSnackbarOpen(false);
     };
@@ -109,13 +107,14 @@ const SuppliersPage: React.FC = () => {
     };
 
     const handleSaveSuccess = () => {
-        const messageKey = editingSupplier ? 'suppliers:saveSuccess' : 'suppliers:saveSuccess'; // Differentiate later if needed
-        closeModal(); // Close the modal
-        showSnackbar(t(messageKey), 'success'); // Show success message
-        // Refetch logic: Fetch page 1 if adding, current page if editing
+        closeModal();
+        showSnackbar(
+            editingSupplier ? 'تم تحديث بيانات المورد بنجاح' : 'تم إضافة المورد بنجاح',
+            'success'
+        );
         const pageToFetch = editingSupplier ? currentPage : 1;
-        fetchSuppliers(pageToFetch, debouncedSearchTerm); // Refetch with current search term
-        if (!editingSupplier) setCurrentPage(1); // Reset to page 1 if adding
+        fetchSuppliers(pageToFetch, debouncedSearchTerm);
+        if (!editingSupplier) setCurrentPage(1);
     };
 
     // --- Deletion Handlers ---
@@ -136,7 +135,7 @@ const SuppliersPage: React.FC = () => {
 
         try {
             await supplierService.deleteSupplier(supplierToDeleteId);
-            showSnackbar(t('suppliers:deleteSuccess'), 'success');
+            showSnackbar('تم حذف المورد بنجاح', 'success');
             closeConfirmDialog(); // Close confirmation dialog
 
             // Smart refetch/pagination adjustment
@@ -155,13 +154,13 @@ const SuppliersPage: React.FC = () => {
     };
 
     // --- Pagination Handler ---
-    const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
+    const handlePageChange = (_: React.ChangeEvent<unknown>, value: number) => {
         setCurrentPage(value);
     };
 
      // --- Search Handler ---
-    const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setSearchTerm(event.target.value);
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchTerm(e.target.value);
     };
 
     // --- Ledger Handler ---
@@ -171,28 +170,28 @@ const SuppliersPage: React.FC = () => {
 
     // --- Render Component ---
     return (
-        <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }} className="dark:bg-gray-900 min-h-screen">
-            {/* Header & Add Button */}
+        <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }} className="dark:bg-gray-900 min-h-screen" style={{direction: 'rtl'}}>
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: 'center', mb: 3, gap: 2 }}>
                 <Typography variant="h4" component="h1" className="text-gray-800 dark:text-gray-100 font-semibold">
-                    {t('suppliers:pageTitle')}
+                    الموردون
                 </Typography>
                 {can('create-suppliers') && <Button
-                  
                     onClick={() => openModal()}
+                    variant="contained"
+                    color="primary"
+                    startIcon={<AddIcon />}
+                    sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
                 >
-                    <AddIcon className="mr-2" />
-                    {t('suppliers:addSupplier')}
+                    إضافة مورد
                 </Button>}
             </Box>
 
-             {/* Search Input */}
              <Box sx={{ mb: 3 }}>
                  <TextField
                     fullWidth
                     variant="outlined"
                     size="small"
-                    placeholder={t('suppliers:searchPlaceholder') || "Search Suppliers..."}
+                    placeholder="ابحث عن مورد..."
                     value={searchTerm}
                     onChange={handleSearchChange}
                     InputProps={{
@@ -210,7 +209,9 @@ const SuppliersPage: React.FC = () => {
             {isLoading && (
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
                     <CircularProgress />
-                    <Typography sx={{ ml: 2 }} className="text-gray-600 dark:text-gray-400">{t('common:loading')}</Typography>
+                    <Typography sx={{ ml: 2 }} className="text-gray-600 dark:text-gray-400">
+                        جاري التحميل...
+                    </Typography>
                 </Box>
             )}
 
@@ -250,7 +251,7 @@ const SuppliersPage: React.FC = () => {
                     {/* No Suppliers Message */}
                     {suppliersResponse.data.length === 0 && (
                         <Typography sx={{ textAlign: 'center', py: 5 }} className="text-gray-500 dark:text-gray-400">
-                            {t('suppliers:noSuppliers')}
+                            لا يوجد موردون حاليًا
                         </Typography>
                     )}
                 </Box>
@@ -269,10 +270,10 @@ const SuppliersPage: React.FC = () => {
                 open={isConfirmOpen}
                 onClose={closeConfirmDialog}
                 onConfirm={handleDeleteConfirm}
-                title={t('common:confirmDeleteTitle') || "Confirm Deletion"} // Add/verify key
-                message={t('suppliers:deleteConfirm')} // Add/verify key
-                confirmText={t('common:delete')}
-                cancelText={t('common:cancel')}
+                title="تأكيد الحذف"
+                message="هل أنت متأكد من حذف هذا المورد؟ لا يمكن التراجع عن هذه العملية."
+                confirmText="حذف"
+                cancelText="إلغاء"
                 isLoading={isDeleting}
             />
 
@@ -289,7 +290,7 @@ const SuppliersPage: React.FC = () => {
                 </Alert>
             </Snackbar>
 
-        </Box> // End main page container
+        </Box>
     );
 };
 
