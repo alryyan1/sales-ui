@@ -66,7 +66,8 @@ export interface Sale {
 
     sale_date: string; // YYYY-MM-DD
     invoice_number: string | null;
-    status: 'completed' | 'pending' | 'draft' | 'cancelled';
+    // Status column was removed from the backend; keep optional for backward compatibility
+    status?: 'completed' | 'pending' | 'draft' | 'cancelled';
     total_amount: string | number;
     paid_amount: string | number; // Sum of payments
     due_amount?: string | number;  // Calculated (total_amount - paid_amount)
@@ -576,16 +577,21 @@ const saleService = {
 
     /**
      * Remove item and return updated Sale
+     * Note: Backend returns metadata, not the sale object, so we fetch it separately
      */
     removeItemPOS: async (
         saleId: number,
         itemId: number
     ): Promise<Sale> => {
         try {
-            const response = await apiClient.delete<{ sale: Sale }>(
-                `/sales/${saleId}/items/${itemId}`
-            );
+            // Delete the item
+            await apiClient.delete(`/sales/${saleId}/items/${itemId}`);
+            // Fetch the updated sale - use the getSale method defined above
+            const response = await apiClient.get<{ sale: Sale } | Sale>(`/sales/${saleId}`);
+            if ('sale' in response.data) {
             return response.data.sale;
+            }
+            return response.data as Sale;
         } catch (error) {
             console.error(`Error removing item (POS):`, error);
             throw error;

@@ -1,15 +1,25 @@
 // src/components/pos/SaleSummaryColumn.tsx
-import React, { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
+import React, { useState, useEffect, useCallback } from "react";
 
-// Shadcn Components
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Input } from "@/components/ui/input";
+// MUI Components
+import {
+  Card,
+  CardContent,
+  Button,
+  Divider,
+  TextField,
+  Box,
+  Typography,
+  Skeleton,
+} from "@mui/material";
 
-// Icons
-import { Percent, Edit2, Check, X } from "lucide-react";
+// MUI Icons
+import {
+  Percent as PercentIcon,
+  Edit as EditIcon,
+  Check as CheckIcon,
+  Close as CloseIcon,
+} from "@mui/icons-material";
 
 // Types
 import { CartItem, Sale } from "./types";
@@ -35,6 +45,7 @@ interface SaleSummaryColumnProps {
   paymentDialogOpen?: boolean;
   onPaymentDialogOpenChange?: (open: boolean) => void;
   paymentSubmitTrigger?: number;
+  isLoading?: boolean;
 }
 
 export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
@@ -49,11 +60,11 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
   paymentDialogOpen,
   onPaymentDialogOpenChange,
   paymentSubmitTrigger,
+  isLoading = false,
 }) => {
-  const { t } = useTranslation(['pos', 'common']);
-
   // State for sale info
   const [saleInfo, setSaleInfo] = useState<Sale | null>(null);
+  const [isFetchingSaleInfo, setIsFetchingSaleInfo] = useState(false);
   
   // Dialog states
   const [isPaymentDialogOpenInternal, setIsPaymentDialogOpenInternal] = useState(false);
@@ -91,18 +102,10 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
     ? preciseSum(saleInfo.payments.map(payment => Number(payment.amount)), 2)
     : 0;
 
-  // Fetch sale info when saleId changes
-  useEffect(() => {
-    if (saleId) {
-      fetchSaleInfo();
-    } else {
-      setSaleInfo(null);
-    }
-  }, [saleId, refreshTrigger]);
-
-  const fetchSaleInfo = async () => {
+  const fetchSaleInfo = useCallback(async () => {
     if (!saleId) return;
 
+    setIsFetchingSaleInfo(true);
     try {
       const saleData = await saleService.getSale(saleId);
       
@@ -162,8 +165,19 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
     } catch (error) {
       console.error('Failed to fetch sale info:', error);
       setSaleInfo(null);
+    } finally {
+      setIsFetchingSaleInfo(false);
     }
-  };
+  }, [saleId]);
+
+  // Fetch sale info when saleId changes
+  useEffect(() => {
+    if (saleId) {
+      fetchSaleInfo();
+    } else {
+      setSaleInfo(null);
+    }
+  }, [saleId, refreshTrigger, fetchSaleInfo]);
 
   // Sync discount state with external changes
   useEffect(() => {
@@ -276,153 +290,242 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
     setEditingDate('');
   };
 
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  };
+  const isCurrentlyLoading = isLoading || isFetchingSaleInfo;
 
   return (
-    <div className="w-full flex flex-col p-2 space-y-2 overflow-y-auto h-full">
+    <Box sx={{  width: '100%', display: 'flex', flexDirection: 'column', p: 2, gap: 2, overflowY: 'auto', height: '100%' }}>
       <Card>
-        <CardContent className="space-y-4">
+        <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {isCurrentlyLoading ? (
+            // Skeleton loading state
+            <>
+              {/* Sale ID Skeleton */}
+              <Skeleton variant="rectangular" height={64} sx={{ borderRadius: 1 }} />
+              
+              {/* Date/Time Row Skeleton */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'blue.50', p: 2, borderRadius: 1 }}>
+                <Skeleton variant="rectangular" width={96} height={48} />
+                <Skeleton variant="rectangular" width={96} height={48} />
+                <Skeleton variant="rectangular" width={96} height={48} />
+              </Box>
+
+              <Divider />
+
+              {/* Monetary Info Skeleton */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Skeleton variant="text" width={80} />
+                  <Skeleton variant="text" width={96} />
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Skeleton variant="text" width={64} />
+                  <Skeleton variant="text" width={80} />
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', pt: 1, borderTop: 1, borderColor: 'divider' }}>
+                  <Skeleton variant="text" width={48} />
+                  <Skeleton variant="text" width={112} />
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Skeleton variant="text" width={48} />
+                  <Skeleton variant="text" width={80} />
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Skeleton variant="text" width={48} />
+                  <Skeleton variant="text" width={80} />
+                </Box>
+              </Box>
+
+              <Divider />
+
+              {/* Button Skeleton */}
+              <Skeleton variant="rectangular" height={48} />
+            </>
+          ) : (
+            <>
+              <Box
+                sx={{
+                  textAlign: 'center',
+                  fontSize: '3rem',
+                  fontWeight: 'bold',
+                  border: 1,
+                  borderBottom: 2,
+                  background: 'linear-gradient(90deg, #3b82f6 0%, #6366f1 100%)',
+                  color: 'white',
+                  borderRadius: 1,
+                  py: 1,
+                }}
+              >
+                {saleInfo?.id}
+              </Box>
           
-          {/* Row 1: Sale ID, Date/Time, and Time */}
-          <div className="flex justify-between items-center bg-blue-50 p-3 rounded-lg">
-            <div className="flex flex-col">
-              <span className="text-sm text-gray-600">{t('pos:saleId')}</span>
-              <span className="font-bold text-lg text-blue-600">
-                #{saleInfo?.id || saleId || 'New'}
-              </span>
-            </div>
-            
-            {/* Center - Time */}
-            <div className="flex flex-col text-center">
-              <span className="text-sm text-gray-600">{t('pos:time')}</span>
-              <span className="font-semibold text-sm">
-                {dayjs(saleInfo?.created_at).format('HH:mm A')}
-              </span>
-            </div>
-            
-            {/* Right - Date with edit icon */}
-            <div className="flex flex-col text-right">
-              <span className="text-sm text-gray-600">{t('pos:date')}</span>
-              {isDateEditing ? (
-                <div className="flex items-center space-x-1">
-                  <Input
-                    type="date"
-                    value={editingDate}
-                    onChange={(e) => setEditingDate(e.target.value)}
-                    className="w-24 h-6 text-xs"
-                  />
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={handleDateSave}
-                    className="h-6 w-6 p-0"
-                  >
-                    <Check className="h-3 w-3 text-green-600" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={handleDateCancel}
-                    className="h-6 w-6 p-0"
-                  >
-                    <X className="h-3 w-3 text-red-600" />
-                  </Button>
-                </div>
-              ) : (
-                <div 
-                  className="cursor-pointer hover:bg-blue-100 px-2 py-1 rounded transition-colors flex items-center justify-end space-x-1"
-                  onClick={handleDateClick}
-                  title={t('pos:clickToEditDate')}
-                >
-                  <span className="font-semibold text-sm">
-                    {saleInfo?.sale_date}
-                  </span>
-                  <Edit2 className="h-3 w-3 text-blue-500" />
-                </div>
-              )}
-            </div>
-          </div>
+              {/* Row 1: Date/Time */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'blue.50', p: 2, borderRadius: 1 }}>
+                {/* Center - Time */}
+                <Box sx={{ display: 'flex', flexDirection: 'column', textAlign: 'center' }}>
+                  <Typography variant="caption" color="text.secondary">
+                    الوقت
+                  </Typography>
+                  <Typography variant="body2" fontWeight="semibold">
+                    {dayjs(saleInfo?.created_at).format('HH:mm A')}
+                  </Typography>
+                </Box>
+                
+                {/* Right - Date with edit icon */}
+                <Box sx={{ display: 'flex', flexDirection: 'column', textAlign: 'right' }}>
+                  <Typography variant="caption" color="text.secondary">
+                    التاريخ
+                  </Typography>
+                  {isDateEditing ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <TextField
+                        type="date"
+                        value={editingDate}
+                        onChange={(e) => setEditingDate(e.target.value)}
+                        size="small"
+                        sx={{ width: 120 }}
+                        inputProps={{ style: { fontSize: '0.75rem' } }}
+                      />
+                      <Button
+                        size="small"
+                        variant="text"
+                        onClick={handleDateSave}
+                        sx={{ minWidth: 'auto', p: 0.5 }}
+                      >
+                        <CheckIcon fontSize="small" sx={{ color: 'success.main' }} />
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="text"
+                        onClick={handleDateCancel}
+                        sx={{ minWidth: 'auto', p: 0.5 }}
+                      >
+                        <CloseIcon fontSize="small" sx={{ color: 'error.main' }} />
+                      </Button>
+                    </Box>
+                  ) : (
+                    <Box
+                      onClick={handleDateClick}
+                      sx={{
+                        cursor: 'pointer',
+                        '&:hover': { bgcolor: 'blue.100' },
+                        px: 1,
+                        py: 0.5,
+                        borderRadius: 1,
+                        transition: 'background-color 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'flex-end',
+                        gap: 0.5,
+                      }}
+                      title="انقر لتعديل التاريخ"
+                    >
+                      <Typography variant="body2" fontWeight="semibold">
+                        {saleInfo?.sale_date}
+                      </Typography>
+                      <EditIcon fontSize="small" sx={{ color: 'primary.main' }} />
+                    </Box>
+                  )}
+                </Box>
+              </Box>
 
-          <Separator />
+              <Divider />
 
-          {/* Row 3: Monetary Info */}
-          <div className="space-y-3">
-            {/* Items count and subtotal */}
-            <div className="flex justify-between">
-              <span className="text-gray-600">{t('pos:items')} ({itemsToUse.length})</span>
-              <span className="font-medium">{formatNumber(subtotal)}</span>
-            </div>
+              {/* Row 3: Monetary Info */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                {/* Items count and subtotal */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2" color="text.secondary">
+                    العناصر ({itemsToUse.length})
+                  </Typography>
+                  <Typography variant="body2" fontWeight="medium">
+                    {formatNumber(subtotal)}
+                  </Typography>
+                </Box>
 
-            {/* Discount row with button */}
-            <div className="flex justify-between items-center">
-              <div className="flex items-center space-x-2">
-                <span className="text-gray-600">{t('pos:discount')}</span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setIsDiscountDialogOpen(true)}
-                  className={`h-6 px-2 ${isDiscountApplied ? 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100' : ''}`}
-                  title={isDiscountApplied ? `${t('pos:discount')}: ${formatNumber(actualDiscountValue)}` : t('pos:setDiscount')}
-                >
-                  <Percent className={`h-3 w-3 ${isDiscountApplied ? 'text-red-600' : ''}`} />
-                </Button>
-              </div>
-              <span className="font-medium text-red-600">
-                {actualDiscountValue > 0 ? `-${formatNumber(actualDiscountValue)}` : '0.00'}
-              </span>
-            </div>
+                {/* Discount row with button */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      الخصم
+                    </Typography>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => setIsDiscountDialogOpen(true)}
+                      sx={{
+                        minWidth: 'auto',
+                        px: 1,
+                        height: 24,
+                        ...(isDiscountApplied && {
+                          bgcolor: 'error.50',
+                          color: 'error.700',
+                          borderColor: 'error.300',
+                          '&:hover': { bgcolor: 'error.100' },
+                        }),
+                      }}
+                      title={isDiscountApplied ? `الخصم: ${formatNumber(actualDiscountValue)}` : 'تعيين الخصم'}
+                    >
+                      <PercentIcon fontSize="small" sx={{ fontSize: 12, color: isDiscountApplied ? 'error.main' : 'inherit' }} />
+                    </Button>
+                  </Box>
+                  <Typography variant="body2" fontWeight="medium" color="error.main">
+                    {actualDiscountValue > 0 ? `-${formatNumber(actualDiscountValue)}` : '0.00'}
+                  </Typography>
+                </Box>
 
-            {/* Total Amount */}
-            <div className="flex justify-between text-lg font-bold border-t pt-2">
-              <span>{t('pos:total')}</span>
-              <span className="text-green-600">{formatNumber(grandTotal)}</span>
-            </div>
+                {/* Total Amount */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.125rem', fontWeight: 'bold', borderTop: 1, borderColor: 'divider', pt: 1 }}>
+                  <Typography variant="h6" fontWeight="bold">
+                    الإجمالي
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold" color="success.main">
+                    {formatNumber(grandTotal)}
+                  </Typography>
+                </Box>
 
-            {/* Paid Amount */}
-            <div className="flex justify-between">
-              <span className="text-gray-600">{t('pos:paid')}</span>
-              <span className="font-medium text-blue-600">{formatNumber(paidAmount)}</span>
-            </div>
+                {/* Paid Amount */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2" color="text.secondary">
+                    المدفوع
+                  </Typography>
+                  <Typography variant="body2" fontWeight="medium" color="info.main">
+                    {formatNumber(paidAmount)}
+                  </Typography>
+                </Box>
 
-            {/* Due Amount */}
-            {(grandTotal - paidAmount) > 0 && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">{t('pos:due')}</span>
-                <span className="font-medium text-orange-600">{formatNumber(grandTotal - paidAmount)}</span>
-              </div>
-            )}
-          </div>
+                {/* Due Amount */}
+                {(grandTotal - paidAmount) > 0 && (
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="text.secondary">
+                      المستحق
+                    </Typography>
+                    <Typography variant="body2" fontWeight="medium" color="warning.main">
+                      {formatNumber(grandTotal - paidAmount)}
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
 
-          <Separator />
+              <Divider />
 
-          {/* Add Payment Button */}
-            <Button
-            onClick={() => setPaymentDialogOpen(true)}
-            className={`w-full ${
-              paidAmount > 0 
-                ? 'bg-green-600 hover:bg-green-700 text-white' 
-                : ''
-            }`}
-            disabled={!saleId || grandTotal <= 0}
-            size="lg"
-          >
-            {paidAmount > 0 ? t('pos:payments') : t('pos:addPayment')}
-          </Button>
-
+              {/* Add Payment Button */}
+              <Button
+                onClick={() => setPaymentDialogOpen(true)}
+                variant="contained"
+                fullWidth
+                size="large"
+                disabled={!saleId || grandTotal <= 0}
+                sx={{
+                  ...(paidAmount > 0 && {
+                    bgcolor: 'success.main',
+                    '&:hover': { bgcolor: 'success.dark' },
+                  }),
+                }}
+              >
+                {paidAmount > 0 ? 'المدفوعات' : 'إضافة دفعة'}
+              </Button>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -448,6 +551,6 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
         dueAmount={Math.max(0, grandTotal - paidAmount)}
         onSave={handleDiscountUpdate}
       />
-    </div>
+    </Box>
   );
 };

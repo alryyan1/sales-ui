@@ -1,6 +1,5 @@
 // src/components/pos/CalculatorDialog.tsx
 import React, { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
 
 // MUI Components
 import {
@@ -18,11 +17,21 @@ import {
   Alert,
   AlertTitle,
   Box,
-  TextField
+  TextField,
+  CircularProgress,
 } from "@mui/material";
 
-// Icons
-import { Calculator, Calendar, User, TrendingUp, CreditCard, Banknote, Receipt } from "lucide-react";
+// MUI Icons
+import {
+  Calculate as CalculateIcon,
+  CalendarToday as CalendarIcon,
+  Person as PersonIcon,
+  TrendingUp as TrendingUpIcon,
+  CreditCard as CreditCardIcon,
+  AccountBalanceWallet as WalletIcon,
+  Receipt as ReceiptIcon,
+  AttachMoney as DollarSignIcon,
+} from "@mui/icons-material";
 
 // Services
 import apiClient from "@/lib/axios";
@@ -60,8 +69,12 @@ interface CalculatorDialogProps {
   filterByCurrentUser?: boolean;
 }
 
-export const CalculatorDialog: React.FC<CalculatorDialogProps> = ({ open, onOpenChange, currentUserId, filterByCurrentUser = false }) => {
-  const { t } = useTranslation(['pos', 'common']);
+export const CalculatorDialog: React.FC<CalculatorDialogProps> = ({ 
+  open, 
+  onOpenChange, 
+  currentUserId, 
+  filterByCurrentUser = false 
+}) => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<CalculatorData | null>(null);
   const [users, setUsers] = useState<User[]>([]);
@@ -94,7 +107,7 @@ export const CalculatorDialog: React.FC<CalculatorDialogProps> = ({ open, onOpen
       setData(response.data);
     } catch (error) {
       console.error('Failed to fetch calculator data:', error);
-      setError('Failed to load financial data');
+      setError('فشل تحميل البيانات المالية');
     } finally {
       setLoading(false);
     }
@@ -105,6 +118,7 @@ export const CalculatorDialog: React.FC<CalculatorDialogProps> = ({ open, onOpen
       fetchUsers();
       fetchCalculatorData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, selectedDate, selectedUser]);
 
   // Update selected user when filter changes
@@ -119,19 +133,17 @@ export const CalculatorDialog: React.FC<CalculatorDialogProps> = ({ open, onOpen
   const getPaymentMethodIcon = (method: string) => {
     switch (method.toLowerCase()) {
       case 'cash':
-        return <Banknote className="h-4 w-4" />;
+        return <WalletIcon sx={{ fontSize: 16 }} />;
       case 'visa':
       case 'mastercard':
       case 'mada':
-        return <CreditCard className="h-4 w-4" />;
+        return <CreditCardIcon sx={{ fontSize: 16 }} />;
       case 'bank_transfer':
-        return <Receipt className="h-4 w-4" />;
+        return <ReceiptIcon sx={{ fontSize: 16 }} />;
       default:
-        return <DollarSign className="h-4 w-4" />;
+        return <DollarSignIcon sx={{ fontSize: 16 }} />;
     }
   };
-
-
 
   return (
     <Dialog 
@@ -148,15 +160,15 @@ export const CalculatorDialog: React.FC<CalculatorDialogProps> = ({ open, onOpen
       }}
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Calculator style={{ height: '20px', width: '20px' }} />
-        {t('pos:financialCalculator')}
+        <CalculateIcon />
+        <span>الحاسبة المالية</span>
       </DialogTitle>
       
       <DialogContent>
         {/* Filters */}
         <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Calendar style={{ height: '16px', width: '16px', color: '#6b7280' }} />
+            <CalendarIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
             <TextField
               type="date"
               value={selectedDate}
@@ -167,15 +179,15 @@ export const CalculatorDialog: React.FC<CalculatorDialogProps> = ({ open, onOpen
           </Box>
           
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <User style={{ height: '16px', width: '16px', color: '#6b7280' }} />
+            <PersonIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
             <FormControl size="small" sx={{ minWidth: 200 }}>
-              <InputLabel>{t('pos:selectUser')}</InputLabel>
+              <InputLabel>اختر المستخدم</InputLabel>
               <Select
                 value={selectedUser}
                 onChange={(e) => setSelectedUser(e.target.value)}
-                label={t('pos:selectUser')}
+                label="اختر المستخدم"
               >
-                <MenuItem value="all">{t('pos:allUsers')}</MenuItem>
+                <MenuItem value="all">جميع المستخدمين</MenuItem>
                 {users.map((user) => (
                   <MenuItem key={user.id} value={user.id.toString()}>
                     {user.name}
@@ -188,14 +200,14 @@ export const CalculatorDialog: React.FC<CalculatorDialogProps> = ({ open, onOpen
 
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
-            <AlertTitle>Error</AlertTitle>
+            <AlertTitle>خطأ</AlertTitle>
             {error}
           </Alert>
         )}
 
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <CircularProgress />
           </Box>
         ) : data ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -205,9 +217,9 @@ export const CalculatorDialog: React.FC<CalculatorDialogProps> = ({ open, onOpen
                 <CardHeader
                   title={
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <TrendingUp style={{ height: '16px', width: '16px' }} />
+                      <TrendingUpIcon sx={{ fontSize: 16 }} />
                       <Typography variant="body2" color="text.secondary">
-                        {t('pos:totalIncome')}
+                        إجمالي الدخل
                       </Typography>
                     </Box>
                   }
@@ -224,9 +236,9 @@ export const CalculatorDialog: React.FC<CalculatorDialogProps> = ({ open, onOpen
                 <CardHeader
                   title={
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Receipt style={{ height: '16px', width: '16px' }} />
+                      <ReceiptIcon sx={{ fontSize: 16 }} />
                       <Typography variant="body2" color="text.secondary">
-                        {t('pos:totalSales')}
+                        إجمالي المبيعات
                       </Typography>
                     </Box>
                   }
@@ -238,8 +250,6 @@ export const CalculatorDialog: React.FC<CalculatorDialogProps> = ({ open, onOpen
                   </Typography>
                 </CardContent>
               </Card>
-
-
             </Box>
 
             {/* Payment Breakdown */}
@@ -247,14 +257,24 @@ export const CalculatorDialog: React.FC<CalculatorDialogProps> = ({ open, onOpen
               <CardHeader
                 title={
                   <Typography variant="h6">
-                    {t('pos:paymentBreakdown')}
+                    تفصيل طرق الدفع
                   </Typography>
                 }
               />
               <CardContent>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {data.payment_breakdown.map((payment, index) => (
-                    <Box key={index} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                    <Box 
+                      key={index} 
+                      sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'space-between', 
+                        p: 2, 
+                        bgcolor: 'grey.50', 
+                        borderRadius: 1 
+                      }}
+                    >
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         {getPaymentMethodIcon(payment.method)}
                         <Box>
@@ -262,7 +282,7 @@ export const CalculatorDialog: React.FC<CalculatorDialogProps> = ({ open, onOpen
                             {payment.method.replace('_', ' ')}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            {payment.count} {t('pos:transactions')}
+                            {payment.count} معاملة
                           </Typography>
                         </Box>
                       </Box>
@@ -286,22 +306,32 @@ export const CalculatorDialog: React.FC<CalculatorDialogProps> = ({ open, onOpen
                 <CardHeader
                   title={
                     <Typography variant="h6">
-                      {t('pos:userBreakdown')}
+                      تفصيل المستخدمين
                     </Typography>
                   }
                 />
                 <CardContent>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {data.user_payments.map((user, index) => (
-                      <Box key={index} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                      <Box 
+                        key={index} 
+                        sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'space-between', 
+                          p: 2, 
+                          bgcolor: 'grey.50', 
+                          borderRadius: 1 
+                        }}
+                      >
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <User style={{ height: '16px', width: '16px', color: '#6b7280' }} />
+                          <PersonIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
                           <Box>
                             <Typography variant="body1" fontWeight="medium">
                               {user.user_name}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                              {user.payment_count} {t('pos:sales')}
+                              {user.payment_count} مبيعة
                             </Typography>
                           </Box>
                         </Box>
@@ -324,4 +354,4 @@ export const CalculatorDialog: React.FC<CalculatorDialogProps> = ({ open, onOpen
       </DialogContent>
     </Dialog>
   );
-}; 
+};

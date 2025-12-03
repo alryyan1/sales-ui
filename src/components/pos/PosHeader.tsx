@@ -7,19 +7,21 @@ import {
   TextField,
   Autocomplete,
   Typography,
-  Button,
   Tooltip,
+  Chip,
 } from "@mui/material";
 
-// MUI Icons
+// shadcn UI
+import { Button } from "@/components/ui/button";
+
+// Icons
 import {
-    Add as AddIcon,
-    Calculate as CalculateIcon,
-    PictureAsPdf as PdfIcon,
-    Description as InvoiceIcon,
-    Print as PrintIcon,
-    Description as FileTextIcon,
-} from "@mui/icons-material";
+  Plus,
+  Calculator,
+  FileText,
+  Printer,
+  FilePenLine,
+} from "lucide-react";
 
 // Types
 import { Product } from "../../services/productService";
@@ -40,8 +42,6 @@ interface PosHeaderProps {
   hasSelectedSale?: boolean;
   selectedClient?: Client | null;
   onClientChange?: (client: Client | null) => void;
-  filterByCurrentUser?: boolean;
-  onToggleUserFilter?: () => void;
   selectedDate?: string;
   onDateChange?: (date: string) => void;
 }
@@ -59,8 +59,6 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
   hasSelectedSale, 
   selectedClient, 
   onClientChange, 
-  filterByCurrentUser, 
-  onToggleUserFilter, 
   selectedDate, 
   onDateChange 
 }) => {
@@ -70,6 +68,15 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
+
+  // Shift state
+  const [shift, setShift] = useState<{
+    id: number;
+    opened_at: string | null;
+    closed_at: string | null;
+    is_open: boolean;
+  } | null>(null);
+  const [shiftLoading, setShiftLoading] = useState(false);
 
   const handleSearch = async (input: string) => {
     if (!input.trim()) {
@@ -173,6 +180,56 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Load current shift on mount
+  useEffect(() => {
+    const fetchShift = async () => {
+      try {
+        setShiftLoading(true);
+        const response = await apiClient.get("/shifts/current");
+        // 204 means no content / no active shift
+        if (response.status === 200) {
+          setShift(response.data.data || response.data);
+        } else {
+          setShift(null);
+        }
+      } catch (error) {
+        // @ts-expect-error axios error narrow
+        if (error?.response?.status === 204) {
+          setShift(null);
+        } else {
+          console.error("Failed to load current shift:", error);
+        }
+      } finally {
+        setShiftLoading(false);
+      }
+    };
+    fetchShift();
+  }, []);
+
+  const handleOpenShift = async () => {
+    try {
+      setShiftLoading(true);
+      const response = await apiClient.post("/shifts/open");
+      setShift(response.data.data || response.data);
+    } catch (error) {
+      console.error("Failed to open shift:", error);
+    } finally {
+      setShiftLoading(false);
+    }
+  };
+
+  const handleCloseShift = async () => {
+    try {
+      setShiftLoading(true);
+      const response = await apiClient.post("/shifts/close");
+      setShift(response.data.data || response.data);
+    } catch (error) {
+      console.error("Failed to close shift:", error);
+    } finally {
+      setShiftLoading(false);
+    }
+  };
+
   // When selectedClient changes from parent, ensure it's present in options
   useEffect(() => {
     if (selectedClient && !clients.find(c => c.id === selectedClient.id)) {
@@ -212,16 +269,17 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
         {/* Left side - Create Empty Sale Button and Date Selection */}
         <div className="flex items-center space-x-1">
           <Tooltip title="إنشاء بيع فارغ">
-            <Button
-              variant="contained"
-              size="small"
-              onClick={onCreateEmptySale}
-              disabled={loading}
-              startIcon={<AddIcon />}
-              sx={{ bgcolor: 'primary.main', '&:hover': { bgcolor: 'primary.dark' } }}
-            >
-              إنشاء بيع فارغ
-            </Button>
+            <div>
+              <Button
+                type="button"
+                size="icon"
+                disabled={loading}
+                className="h-8 w-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={onCreateEmptySale}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
           </Tooltip>
 
           {/* Date Selection */}
@@ -362,15 +420,18 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
                 />
                 
                 <Tooltip title={selectedProducts.length > 1 ? "إضافة المنتجات" : "إضافة منتج"}>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={handleAddProducts}
-                    disabled={selectedProducts.length === 0 || loading}
-                    startIcon={<AddIcon />}
-                  >
-                    {selectedProducts.length > 1 ? "إضافة المنتجات" : "إضافة منتج"}
-                  </Button>
+                  <div>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="outline"
+                      disabled={selectedProducts.length === 0 || loading}
+                      className="h-8 w-8 rounded-full"
+                      onClick={handleAddProducts}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </Tooltip>
               </Box>
 
@@ -381,78 +442,122 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
           )}
         </div>
 
-        {/* Right side - Action Buttons */}
+        {/* Right side - Shift + Action Buttons */}
         <div className="flex items-center space-x-2">
-          {/* User Filter Button */}
-        
+          {/* Shift status / actions */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 1 }}>
+            {shift && shift.is_open ? (
+              <>
+                <Chip
+                  label="وردية مفتوحة"
+                  color="success"
+                  size="small"
+                  variant="outlined"
+                />
+                <Tooltip title="إغلاق الوردية">
+                  <div>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="destructive"
+                      disabled={shiftLoading}
+                      className="h-7 w-7 rounded-full"
+                      onClick={handleCloseShift}
+                    >
+                      <span className="text-xs font-bold">×</span>
+                    </Button>
+                  </div>
+                </Tooltip>
+              </>
+            ) : (
+              <Tooltip title="فتح وردية جديدة">
+                <div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={shiftLoading}
+                    className="h-7 rounded-full bg-emerald-600 hover:bg-emerald-700 px-3 text-xs font-semibold text-white"
+                    onClick={handleOpenShift}
+                  >
+                    وردية
+                  </Button>
+                </div>
+              </Tooltip>
+            )}
+          </Box>
 
           {/* Calculator Button */}
           <Tooltip title="الآلة الحاسبة">
-            <Button
-              variant="contained"
-              size="small"
-              onClick={onOpenCalculator}
-              startIcon={<CalculateIcon />}
-              sx={{ bgcolor: 'orange.main', '&:hover': { bgcolor: 'orange.dark' } }}
-            >
-              الآلة الحاسبة
-            </Button>
+            <div>
+              <Button
+                type="button"
+                size="icon"
+                className="h-8 w-8 rounded-full bg-orange-500 text-white hover:bg-orange-600"
+                onClick={onOpenCalculator}
+              >
+                <Calculator className="h-4 w-4" />
+              </Button>
+            </div>
           </Tooltip>
 
           {/* Preview PDF Button */}
           <Tooltip title="معاينة PDF">
-            <Button
-              variant="contained"
-              size="small"
-              onClick={onPreviewPdf}
-              startIcon={<PdfIcon />}
-              sx={{ bgcolor: 'purple.main', '&:hover': { bgcolor: 'purple.dark' } }}
-            >
-              معاينة PDF
-            </Button>
+            <div>
+              <Button
+                type="button"
+                size="icon"
+                className="h-8 w-8 rounded-full bg-purple-600 text-white hover:bg-purple-700"
+                onClick={onPreviewPdf}
+              >
+                <FileText className="h-4 w-4" />
+              </Button>
+            </div>
           </Tooltip>
 
           {/* Invoice PDF Button - Only show when sale is selected */}
           {hasSelectedSale && (
             <Tooltip title="إنشاء فاتورة">
-              <Button
-                variant="contained"
-                size="small"
-                onClick={onGenerateInvoice}
-                startIcon={<InvoiceIcon />}
-                sx={{ bgcolor: 'success.main', '&:hover': { bgcolor: 'success.dark' } }}
-              >
-                إنشاء فاتورة
-              </Button>
+              <div>
+                <Button
+                  type="button"
+                  size="icon"
+                  className="h-8 w-8 rounded-full bg-emerald-600 text-white hover:bg-emerald-700"
+                  onClick={onGenerateInvoice}
+                >
+                  <FilePenLine className="h-4 w-4" />
+                </Button>
+              </div>
             </Tooltip>
           )}
 
           {/* Thermal Invoice Button - Only show when sale is selected */}
           {hasSelectedSale && (
             <Tooltip title="طباعة فاتورة حرارية">
-              <Button
-                variant="contained"
-                size="small"
-                onClick={onPrintThermalInvoice}
-                startIcon={<PrintIcon />}
-                sx={{ bgcolor: 'orange.main', '&:hover': { bgcolor: 'orange.dark' } }}
-              >
-                طباعة فاتورة حرارية
-              </Button>
+              <div>
+                <Button
+                  type="button"
+                  size="icon"
+                  className="h-8 w-8 rounded-full bg-orange-500 text-white hover:bg-orange-600"
+                  onClick={onPrintThermalInvoice}
+                >
+                  <Printer className="h-4 w-4" />
+                </Button>
+              </div>
             </Tooltip>
           )}
 
           {/* PDF Report Button */}
           <Tooltip title="إنشاء PDF">
-            <Button
-              variant="contained"
-              size="small"
-              onClick={onGeneratePdf}
-              startIcon={<FileTextIcon />}
-              sx={{ bgcolor: 'primary.main', '&:hover': { bgcolor: 'primary.dark' } }}
-            >
-              إنشاء PDF
-            </Button>
+            <div>
+              <Button
+                type="button"
+                size="icon"
+                className="h-8 w-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={onGeneratePdf}
+              >
+                <FileText className="h-4 w-4" />
+              </Button>
+            </div>
           </Tooltip>
         </div>
         </div>

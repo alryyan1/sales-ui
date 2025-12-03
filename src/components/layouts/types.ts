@@ -18,5 +18,5 @@ export interface CollapsibleNavItemProps {
     location: Location;
 }
 
-export const DRAWER_WIDTH = 280;
+export const DRAWER_WIDTH = 250;
 

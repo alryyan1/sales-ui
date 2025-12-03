@@ -1,32 +1,34 @@
 // src/components/pos/PaymentDialog.tsx
 import React, { useState, useEffect, useRef } from "react";
-import { useTranslation } from "react-i18next";
 
-// Shadcn Components
+// MUI Components
 import {
   Dialog,
-  DialogContent,
-  DialogHeader,
   DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-// import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Separator } from "@/components/ui/separator";
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Box,
+  Typography,
+  Alert,
+  Divider,
+  Chip,
+  CircularProgress,
+  Paper,
+} from "@mui/material";
 
-// Icons
-import { CreditCard, Trash2, Plus, AlertCircle } from "lucide-react";
+// MUI Icons
+import {
+  CreditCard as CreditCardIcon,
+  Delete as DeleteIcon,
+  Add as AddIcon,
+  ErrorOutline as ErrorIcon,
+} from "@mui/icons-material";
 
 // Types and Services
 import { PaymentMethod } from "./types";
@@ -35,13 +37,13 @@ import saleService from "../../services/saleService";
 
 // Payment Method Options
 const paymentMethodOptions = [
-  { value: 'cash', labelKey: 'paymentMethods:cash' },
-  { value: 'visa', labelKey: 'paymentMethods:visa' },
-  { value: 'mastercard', labelKey: 'paymentMethods:mastercard' },
-  { value: 'bank_transfer', labelKey: 'paymentMethods:bank_transfer' },
-  { value: 'mada', labelKey: 'paymentMethods:mada' },
-  { value: 'store_credit', labelKey: 'paymentMethods:store_credit' },
-  { value: 'other', labelKey: 'paymentMethods:other' },
+  { value: 'cash', label: 'نقدي' },
+  { value: 'visa', label: 'فيزا' },
+  { value: 'mastercard', label: 'ماستركارد' },
+  { value: 'bank_transfer', label: 'تحويل بنكي' },
+  { value: 'mada', label: 'مدى' },
+  { value: 'store_credit', label: 'رصيد متجر' },
+  { value: 'other', label: 'أخرى' },
 ];
 
 interface PaymentDialogProps {
@@ -65,8 +67,6 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
   submitTrigger,
   onSuccess,
 }) => {
-  const { t } = useTranslation(['pos', 'common', 'paymentMethods']);
-
   // State for existing payments
   const [payments, setPayments] = useState<import('../../services/saleService').Payment[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
@@ -81,6 +81,22 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const [error, setError] = useState<string | null>(null);
   const addButtonRef = useRef<HTMLButtonElement | null>(null);
 
+  const loadPayments = React.useCallback(async () => {
+    if (!saleId) return;
+
+    setLoadingPayments(true);
+    setError(null);
+    try {
+      const saleData = await saleService.getSale(saleId);
+      setPayments(saleData.payments || []);
+    } catch (err) {
+      console.error('Failed to load payments:', err);
+      setError('فشل تحميل المدفوعات');
+    } finally {
+      setLoadingPayments(false);
+    }
+  }, [saleId]);
+
   // Load payments when dialog opens
   useEffect(() => {
     if (open && saleId) {
@@ -94,7 +110,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
       // Reset form when dialog closes
       resetForm();
     }
-  }, [open, saleId, grandTotal, paidAmount]);
+  }, [open, saleId, grandTotal, paidAmount, loadPayments]);
 
   // Focus Add Payment button when dialog opens
   useEffect(() => {
@@ -118,22 +134,6 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [submitTrigger]);
 
-  const loadPayments = async () => {
-    if (!saleId) return;
-
-    setLoadingPayments(true);
-    setError(null);
-    try {
-      const saleData = await saleService.getSale(saleId);
-      setPayments(saleData.payments || []);
-    } catch (err) {
-      console.error('Failed to load payments:', err);
-      setError(t('pos:failedToLoadPayments'));
-    } finally {
-      setLoadingPayments(false);
-    }
-  };
-
   const resetForm = () => {
     setPaymentMethod('cash');
     setPaymentAmount('');
@@ -145,14 +145,14 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
 
     const amount = parseFloat(paymentAmount);
     if (amount <= 0) {
-      setError(t('pos:invalidPaymentAmount'));
+      setError('مبلغ الدفع غير صحيح');
       return;
     }
 
     // Check if payment amount exceeds remaining due
     const remainingDue = grandTotal - preciseSum(payments.map(p => Number(p.amount)), 2);
     if (amount > remainingDue) {
-      setError(t('pos:paymentExceedsRemainingDue'));
+      setError('مبلغ الدفع يتجاوز المبلغ المستحق المتبقي');
       return;
     }
 
@@ -202,13 +202,13 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
       console.error('Failed to delete payment:', err);
       const errorMessage = saleService.getErrorMessage(err);
       setError(errorMessage);
-      } finally {
+    } finally {
       setDeletingPaymentId(null);
     }
   };
 
   const formatPaymentDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString('ar-SA', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -220,166 +220,239 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
 
   const totalPaid = preciseSum(payments.map(p => Number(p.amount)), 2);
   const remainingDue = Math.max(0, grandTotal - totalPaid);
-  // const subtotal = preciseSum([grandTotal, discountAmount], 2);
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <CreditCard className="h-5 w-5" />
-            <span>{t('pos:managePayments')}</span>
-            {saleId && <span className="text-sm text-gray-500">- Sale #{saleId}</span>}
+    <Dialog 
+      open={open} 
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      dir="rtl"
+    >
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <CreditCardIcon />
+        <span>إدارة المدفوعات</span>
+        {saleId && <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+          - بيع #{saleId}
+        </Typography>}
       </DialogTitle>
-        </DialogHeader>
 
-        <div className="space-y-6">
+      <DialogContent>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {/* Payment Summary - Colored Cards Row */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' }, gap: 2 }}>
             {/* Total */}
-            <div className="rounded-lg p-3 text-center bg-blue-50 border border-blue-100">
-              <div className="text-xs font-medium text-blue-700">{t('pos:total')}</div>
-              <div className="text-xl font-extrabold text-blue-700">{formatNumber(grandTotal)}</div>
-            </div>
+            <Paper 
+              elevation={0}
+              sx={{ 
+                p: 2, 
+                textAlign: 'center',
+                bgcolor: 'blue.50',
+                border: '1px solid',
+                borderColor: 'blue.100'
+              }}
+            >
+              <Typography variant="caption" color="blue.700" fontWeight="medium">
+                الإجمالي
+              </Typography>
+              <Typography variant="h5" fontWeight="bold" color="blue.700">
+                {formatNumber(grandTotal)}
+              </Typography>
+            </Paper>
             {/* Discount */}
-            <div className="rounded-lg p-3 text-center bg-red-50 border border-red-100">
-              <div className="text-xs font-medium text-red-700">{t('pos:discount')}</div>
-              <div className="text-xl font-extrabold text-red-700">-{formatNumber(discountAmount)}</div>
-            </div>
+            <Paper 
+              elevation={0}
+              sx={{ 
+                p: 2, 
+                textAlign: 'center',
+                bgcolor: 'red.50',
+                border: '1px solid',
+                borderColor: 'red.100'
+              }}
+            >
+              <Typography variant="caption" color="red.700" fontWeight="medium">
+                الخصم
+              </Typography>
+              <Typography variant="h5" fontWeight="bold" color="red.700">
+                -{formatNumber(discountAmount)}
+              </Typography>
+            </Paper>
             {/* Paid */}
-            <div className="rounded-lg p-3 text-center bg-green-50 border border-green-100">
-              <div className="text-xs font-medium text-green-700">{t('pos:paid')}</div>
-              <div className="text-xl font-extrabold text-green-700">{formatNumber(totalPaid)}</div>
-            </div>
+            <Paper 
+              elevation={0}
+              sx={{ 
+                p: 2, 
+                textAlign: 'center',
+                bgcolor: 'green.50',
+                border: '1px solid',
+                borderColor: 'green.100'
+              }}
+            >
+              <Typography variant="caption" color="green.700" fontWeight="medium">
+                المدفوع
+              </Typography>
+              <Typography variant="h5" fontWeight="bold" color="green.700">
+                {formatNumber(totalPaid)}
+              </Typography>
+            </Paper>
             {/* Due */}
-            <div className="rounded-lg p-3 text-center bg-orange-50 border border-orange-100">
-              <div className="text-xs font-medium text-orange-700">{t('pos:due')}</div>
-              <div className="text-xl font-extrabold text-orange-700">{formatNumber(remainingDue)}</div>
-            </div>
-          </div>
+            <Paper 
+              elevation={0}
+              sx={{ 
+                p: 2, 
+                textAlign: 'center',
+                bgcolor: 'orange.50',
+                border: '1px solid',
+                borderColor: 'orange.100'
+              }}
+            >
+              <Typography variant="caption" color="orange.700" fontWeight="medium">
+                المستحق
+              </Typography>
+              <Typography variant="h5" fontWeight="bold" color="orange.700">
+                {formatNumber(remainingDue)}
+              </Typography>
+            </Paper>
+          </Box>
 
           {/* Error Alert */}
           {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+            <Alert severity="error" icon={<ErrorIcon />}>
+              {error}
             </Alert>
           )}
 
           {/* Existing Payments */}
-          <div>
-            <h3 className="text-lg font-semibold mb-3">{t('pos:existingPayments')}</h3>
+          <Box>
+            <Typography variant="h6" fontWeight="semibold" sx={{ mb: 2 }}>
+              المدفوعات الحالية
+            </Typography>
             {loadingPayments ? (
-              <div className="text-center py-4">
-                <span className="text-gray-500">{t('common:loading')}...</span>
-              </div>
+              <Box sx={{ textAlign: 'center', py: 2 }}>
+                <CircularProgress size={24} />
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  جاري التحميل...
+                </Typography>
+              </Box>
             ) : payments.length === 0 ? (
-              <div className="text-center py-4 text-gray-500">
-                {t('pos:noPaymentsYet')}
-              </div>
+              <Box sx={{ textAlign: 'center', py: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  لا توجد مدفوعات بعد
+                </Typography>
+              </Box>
             ) : (
-              <div className="space-y-2">
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 {payments.map((payment) => (
-                  <div key={payment.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="outline">
-                          {t(`paymentMethods:${payment.method}`)}
-                        </Badge>
-                        <span className="font-semibold">{formatNumber(Number(payment.amount))}</span>
-                      </div>
-                      <div className="text-sm text-gray-600">
+                  <Paper
+                    key={payment.id}
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      bgcolor: 'grey.50',
+                      borderRadius: 1
+                    }}
+                  >
+                    <Box sx={{ flex: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                        <Chip
+                          label={paymentMethodOptions.find(opt => opt.value === payment.method)?.label || payment.method}
+                          size="small"
+                          variant="outlined"
+                        />
+                        <Typography variant="body1" fontWeight="semibold">
+                          {formatNumber(Number(payment.amount))}
+                        </Typography>
+                      </Box>
+                      <Typography variant="caption" color="text.secondary">
                         {payment.created_at && formatPaymentDate(payment.created_at)}
                         {payment.user_name && ` • ${payment.user_name}`}
-                      </div>
-                    </div>
+                      </Typography>
+                    </Box>
                     <Button
-                      variant="ghost"
-                      size="sm"
+                      variant="text"
+                      size="small"
                       onClick={() => payment.id && handleDeletePayment(payment.id)}
                       disabled={deletingPaymentId === payment.id}
-                      className="text-red-600 hover:text-red-700"
+                      sx={{ color: 'error.main', minWidth: 'auto' }}
                     >
                       {deletingPaymentId === payment.id ? (
-                        <span className="text-xs">...</span>
+                        <CircularProgress size={16} />
                       ) : (
-                        <Trash2 className="h-4 w-4" />
+                        <DeleteIcon fontSize="small" />
                       )}
                     </Button>
-                  </div>
+                  </Paper>
                 ))}
-              </div>
+              </Box>
             )}
-          </div>
+          </Box>
 
           {/* Add New Payment */}
           {remainingDue > 0 && (
             <>
-              <Separator />
-              <div>
-                <h3 className="text-lg font-semibold mb-3 flex items-center space-x-2">
-                  <Plus className="h-5 w-5" />
-                  <span>{t('pos:addNewPayment')}</span>
-                </h3>
+              <Divider />
+              <Box>
+                <Typography variant="h6" fontWeight="semibold" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <AddIcon />
+                  إضافة دفعة جديدة
+                </Typography>
                 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="paymentMethod">{t('pos:paymentMethod')}</Label>
-                    <Select value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {paymentMethodOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {t(option.labelKey)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                      </Select>
-                  </div>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 2 }}>
+                  <FormControl fullWidth>
+                    <InputLabel>طريقة الدفع</InputLabel>
+                    <Select
+                      value={paymentMethod}
+                      label="طريقة الدفع"
+                      onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                    >
+                      {paymentMethodOptions.map((option) => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {option.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
 
-                  <div>
-                    <Label htmlFor="paymentAmount">{t('pos:amount')}</Label>
-                    <Input
-                      id="paymentAmount"
-                       type="number"
-                      step="0.01"
-                      min="0"
-                      max={remainingDue}
-                      value={paymentAmount}
-                      onChange={(e) => setPaymentAmount(e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </div>
-                </div>
+                  <TextField
+                    fullWidth
+                    label="المبلغ"
+                    type="number"
+                    inputProps={{
+                      step: "0.01",
+                      min: "0",
+                      max: remainingDue
+                    }}
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </Box>
 
                 <Button
                   ref={addButtonRef}
+                  variant="contained"
                   onClick={handleAddPayment}
                   disabled={addingPayment || !paymentAmount || parseFloat(paymentAmount) <= 0}
-                  className="w-full mt-4"
+                  fullWidth
+                  startIcon={addingPayment ? <CircularProgress size={16} /> : <AddIcon />}
+                  sx={{ mt: 2 }}
                 >
-                  {addingPayment ? (
-                    <span>{t('common:saving')}...</span>
-                  ) : (
-                    <>
-                      <Plus className="h-4 w-4 mr-2" />
-                      {t('pos:addPayment')}
-                    </>
-                  )}
+                  {addingPayment ? 'جاري الحفظ...' : 'إضافة دفعة'}
                 </Button>
-              </div>
+              </Box>
             </>
           )}
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            {t('common:close')}
-          </Button>
-        </DialogFooter>
+        </Box>
       </DialogContent>
+
+      <DialogActions>
+        <Button onClick={onClose} variant="outlined">
+          إغلاق
+        </Button>
+      </DialogActions>
     </Dialog>
   );
-}; 
+};

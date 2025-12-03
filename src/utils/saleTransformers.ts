@@ -58,7 +58,7 @@ export const transformBackendSaleToPOS = (dbSale: BackendSale): POSSale => {
       id: payment.id,
       sale_id: payment.sale_id,
       user_name: payment.user_name,
-      method: payment.method as POSSale['payments'][0]['method'],
+      method: payment.method as 'cash' | 'visa' | 'mastercard' | 'bank_transfer' | 'mada' | 'other' | 'store_credit' | 'refund',
       amount: Number(payment.amount),
       payment_date: payment.payment_date,
       reference_number: payment.reference_number || undefined,
@@ -79,6 +79,7 @@ export const transformBackendSalesToPOS = (dbSales: BackendSale[]): POSSale[] =>
  * Extract CartItems from a Sale
  */
 export const extractCartItemsFromSale = (sale: POSSale): CartItem[] => {
-  return sale.items?.map(transformSaleItemToCartItem) || [];
+  // Items are already CartItems, just return them directly
+  return sale.items || [];
 };
 

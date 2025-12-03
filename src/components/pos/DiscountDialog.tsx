@@ -1,29 +1,28 @@
 // src/components/pos/DiscountDialog.tsx
 import React, { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
 
-// Shadcn Components
+// MUI Components
 import {
   Dialog,
-  DialogContent,
-  DialogHeader,
   DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  FormLabel,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+  MenuItem,
+  FormControl,
+  Alert,
+  Box,
+  Typography,
+  Paper,
+} from "@mui/material";
 
-// Icons
-import { Percent, AlertCircle } from "lucide-react";
+// MUI Icons
+import {
+  Percent as PercentIcon,
+} from "@mui/icons-material";
 
 // Utils
 import { formatNumber, preciseCalculation } from "@/constants";
@@ -47,8 +46,6 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
   dueAmount = Infinity,
   onSave,
 }) => {
-  const { t } = useTranslation(['pos', 'common']);
-
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>(currentType);
   const [discountAmount, setDiscountAmount] = useState<string>(currentAmount.toString());
   const [error, setError] = useState<string | null>(null);
@@ -74,17 +71,17 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
   // Validation
   const validateDiscount = () => {
     if (numericAmount < 0) {
-      setError(t('pos:discountCannotBeNegative'));
+      setError('الخصم لا يمكن أن يكون سالباً');
       return false;
     }
 
     if (discountType === 'percentage' && numericAmount > 100) {
-      setError(t('pos:discountCannotExceed100Percent'));
+      setError('الخصم لا يمكن أن يتجاوز 100%');
       return false;
     }
 
     if (discountType === 'fixed' && numericAmount > maxAmount) {
-      setError(t('pos:discountCannotExceedSubtotal'));
+      setError('الخصم لا يمكن أن يتجاوز المجموع الفرعي');
       return false;
     }
 
@@ -94,7 +91,7 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
       : numericAmount;
     const maxByDue = Math.max(0, dueAmount);
     if (computedDiscount > maxByDue) {
-      setError('Discount cannot exceed remaining due.');
+      setError('الخصم لا يمكن أن يتجاوز المبلغ المتبقي');
       return false;
     }
 
@@ -111,11 +108,11 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
     if (newType === 'percentage' && discountType === 'fixed') {
       // Convert from fixed to percentage
       const percentage = maxAmount > 0 ? (numericAmount / maxAmount) * 100 : 0;
-              setDiscountAmount(Math.min(percentage, 100).toFixed(0));
+      setDiscountAmount(Math.min(percentage, 100).toFixed(0));
     } else if (newType === 'fixed' && discountType === 'percentage') {
       // Convert from percentage to fixed
       const fixedAmount = preciseCalculation(maxAmount, numericAmount / 100, 'multiply', 2);
-              setDiscountAmount(fixedAmount.toFixed(0));
+      setDiscountAmount(fixedAmount.toFixed(0));
     }
   };
 
@@ -143,45 +140,42 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
   const maxAllowedValue = discountType === 'percentage' ? 100 : Math.min(maxAmount, cappedMaxByDue);
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <Percent className="h-5 w-5" />
-            <span>{t('pos:setDiscount')}</span>
-          </DialogTitle>
-        </DialogHeader>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <PercentIcon />
+        <span>تعيين الخصم</span>
+      </DialogTitle>
 
-        <div className="space-y-4">
+      <DialogContent>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 2 }}>
           {/* Discount Type Selection */}
-          <div>
-            <Label htmlFor="discountType">{t('pos:discountType')}</Label>
-            <Select value={discountType} onValueChange={handleTypeChange}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="percentage">{t('pos:percentage')} (%)</SelectItem>
-                <SelectItem value="fixed">{t('pos:fixedAmount')} ($)</SelectItem>
-              </SelectContent>
+          <FormControl fullWidth>
+            <FormLabel htmlFor="discountType">نوع الخصم</FormLabel>
+            <Select
+              id="discountType"
+              value={discountType}
+              onChange={(e) => handleTypeChange(e.target.value as 'percentage' | 'fixed')}
+              sx={{ mt: 1 }}
+            >
+              <MenuItem value="percentage">نسبة مئوية (%)</MenuItem>
+              <MenuItem value="fixed">مبلغ ثابت ($)</MenuItem>
             </Select>
-          </div>
+          </FormControl>
 
           {/* Discount Amount */}
-          <div>
-            <Label htmlFor="discountAmount">
-              {discountType === 'percentage' 
-                ? t('pos:discountPercentage') 
-                : t('pos:discountAmount')
-              }
-            </Label>
-            <Input
+          <FormControl fullWidth>
+            <FormLabel htmlFor="discountAmount">
+              {discountType === 'percentage' ? 'نسبة الخصم' : 'مبلغ الخصم'}
+            </FormLabel>
+            <TextField
               onFocus={(e) => e.target.select()}
               id="discountAmount"
               type="number"
-              step="0.01"
-              min="0"
-              max={maxAllowedValue}
+              inputProps={{
+                step: "0.01",
+                min: "0",
+                max: maxAllowedValue,
+              }}
               value={discountAmount}
               onChange={(e) => handleAmountChange(e.target.value)}
               onKeyDown={(e) => {
@@ -191,61 +185,69 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
                 }
               }}
               placeholder="0"
-              className={error ? "border-red-500" : ""}
+              error={!!error}
+              sx={{ mt: 1 }}
+              fullWidth
             />
-            <div className="text-xs text-gray-500 mt-1">
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
               {discountType === 'percentage' 
-                ? t('pos:maxPercentage', { max: 100 })
-                : `${t('pos:maxAmount', { max: formatNumber(Math.min(maxAmount, cappedMaxByDue)) })}`
+                ? `الحد الأقصى: 100%`
+                : `الحد الأقصى: ${formatNumber(Math.min(maxAmount, cappedMaxByDue))}`
               }
-            </div>
-          </div>
+            </Typography>
+          </FormControl>
 
           {/* Error Message */}
           {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+            <Alert severity="error">
+              {error}
             </Alert>
           )}
 
           {/* Preview */}
-          <div className="bg-gray-50 p-3 rounded-lg space-y-2">
-            <div className="text-sm font-semibold text-gray-700">{t('pos:preview')}</div>
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span>{t('pos:subtotal')}:</span>
-                <span>{formatNumber(maxAmount)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>{t('pos:discount')}:</span>
-                <span className="text-red-600">-{formatNumber(actualDiscountValue)}</span>
-              </div>
-              <div className="flex justify-between font-semibold border-t pt-1">
-                <span>{t('pos:total')}:</span>
-                <span className="text-green-600">{formatNumber(finalTotal)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <DialogFooter className="flex justify-between">
-          <Button variant="outline" onClick={handleClear}>
-            {t('pos:clearDiscount')}
-          </Button>
-          <div className="space-x-2">
-            <Button variant="outline" onClick={onClose}>
-              {t('common:cancel')}
-            </Button>
-            <Button 
-              onClick={handleSave} 
-              disabled={!!error || numericAmount < 0}
-            >
-              {t('common:save')}
-            </Button>
-          </div>
-        </DialogFooter>
+          <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
+            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+              معاينة
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Typography variant="body2">المجموع الفرعي:</Typography>
+                <Typography variant="body2">{formatNumber(maxAmount)}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Typography variant="body2">الخصم:</Typography>
+                <Typography variant="body2" color="error">
+                  -{formatNumber(actualDiscountValue)}
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', borderTop: 1, borderColor: 'divider', pt: 1, mt: 0.5 }}>
+                <Typography variant="body2" fontWeight={600}>الإجمالي:</Typography>
+                <Typography variant="body2" fontWeight={600} color="success.main">
+                  {formatNumber(finalTotal)}
+                </Typography>
+              </Box>
+            </Box>
+          </Paper>
+        </Box>
       </DialogContent>
+
+      <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'space-between' }}>
+        <Button variant="outlined" onClick={handleClear}>
+          مسح الخصم
+        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button variant="outlined" onClick={onClose}>
+            إلغاء
+          </Button>
+          <Button 
+            variant="contained"
+            onClick={handleSave} 
+            disabled={!!error || numericAmount < 0}
+          >
+            حفظ
+          </Button>
+        </Box>
+      </DialogActions>
     </Dialog>
   );
 };

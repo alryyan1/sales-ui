@@ -1,6 +1,5 @@
 // src/components/pos/CurrentSaleItemsColumn.tsx
 import React, { useState } from "react";
-import { useTranslation } from "react-i18next";
 
 // shadcn/ui Components
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,7 +15,6 @@ import {
   Minus, 
   Trash2, 
   Package, 
-  Calendar,
   Check,
   X,
   Layers
@@ -30,6 +28,7 @@ import { BatchSelectionDialog } from "./BatchSelectionDialog";
 interface CurrentSaleItemsColumnProps {
   currentSaleItems: CartItem[];
   onUpdateQuantity: (productId: number, newQuantity: number) => Promise<void>;
+  onUpdateUnitPrice?: (productId: number, newUnitPrice: number) => Promise<void>;
   onRemoveItem: (productId: number) => Promise<void>;
   onUpdateBatch?: (productId: number, batchId: number | null, batchNumber: string | null, expiryDate: string | null, unitPrice: number) => Promise<void>;
   isSalePaid?: boolean;
@@ -41,6 +40,7 @@ interface CurrentSaleItemsColumnProps {
 export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
   currentSaleItems,
   onUpdateQuantity,
+  onUpdateUnitPrice,
   onRemoveItem,
   onUpdateBatch,
   isSalePaid = false,
@@ -48,12 +48,12 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
   updatingItems = new Set(),
   isLoading = false,
 }) => {
-  const { t } = useTranslation(['pos', 'common']);
-  
   // State for editing quantity
   const [editingQuantity, setEditingQuantity] = useState<number | null>(null);
   const [editValue, setEditValue] = useState<string>("");
-  const [stockingMode, setStockingMode] = useState<Set<number>>(new Set()); // productIds in stocking mode
+  // State for editing unit price
+  const [editingUnitPrice, setEditingUnitPrice] = useState<number | null>(null);
+  const [editUnitPriceValue, setEditUnitPriceValue] = useState<string>("");
   
   // State for batch selection
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
@@ -68,11 +68,19 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
     });
   };
   console.log(currentSaleItems, 'currentSaleItems');
-  const isExpiringSoon = (dateString: string) => {
-    const expiryDate = new Date(dateString);
+
+  const isExpired = (item: CartItem) => {
+    const expiryDate = item.selectedBatchExpiryDate || item.product.earliest_expiry_date;
+    if (!expiryDate) return false;
+    const expiry = new Date(expiryDate);
     const today = new Date();
-    const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    return daysUntilExpiry <= 30;
+    today.setHours(0, 0, 0, 0);
+    expiry.setHours(0, 0, 0, 0);
+    return expiry < today;
+  };
+
+  const getExpiryDate = (item: CartItem) => {
+    return item.selectedBatchExpiryDate || item.product.earliest_expiry_date;
   };
 
   const isLowStock = (stockQuantity: number, alertLevel: number | null) => {
@@ -95,16 +103,7 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
       return;
     }
 
-    // If stocking mode is on, interpret editValue as stocking units
-    const isStocking = stockingMode.has(productId);
-    const unitsPerStocking = (() => {
-      const item = currentSaleItems.find(ci => ci.product.id === productId);
-      // Fallback to 1 if missing
-      return item && (Number((item as unknown as { product: { units_per_stocking_unit?: number } }).product.units_per_stocking_unit) || 1);
-    })();
-    const targetSellableQty = isStocking ? (newQuantity * (Number(unitsPerStocking) || 1)) : newQuantity;
-
-    await onUpdateQuantity(productId, targetSellableQty);
+    await onUpdateQuantity(productId, newQuantity);
     setEditingQuantity(null);
     setEditValue("");
   };
@@ -114,21 +113,57 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
     setEditValue("");
   };
 
+  const handleUnitPriceClick = (item: CartItem) => {
+    if (isSalePaid || !onUpdateUnitPrice) return;
+    setEditingUnitPrice(item.product.id);
+    setEditUnitPriceValue(item.unitPrice.toString());
+  };
+
+  const handleUnitPriceSave = async (productId: number) => {
+    if (!onUpdateUnitPrice) return;
+    const newUnitPrice = parseFloat(editUnitPriceValue);
+    if (isNaN(newUnitPrice) || newUnitPrice < 0) {
+      // Reset to original value if invalid
+      setEditingUnitPrice(null);
+      setEditUnitPriceValue("");
+      return;
+    }
+
+    await onUpdateUnitPrice(productId, newUnitPrice);
+    setEditingUnitPrice(null);
+    setEditUnitPriceValue("");
+  };
+
+  const handleUnitPriceCancel = () => {
+    setEditingUnitPrice(null);
+    setEditUnitPriceValue("");
+  };
+
   const handleKeyDown = (event: React.KeyboardEvent, productId: number) => {
     if (event.key === 'Enter') {
       event.preventDefault();
-      handleQuantitySave(productId);
+      if (editingQuantity === productId) {
+        handleQuantitySave(productId);
+      } else if (editingUnitPrice === productId) {
+        handleUnitPriceSave(productId);
+      }
     } else if (event.key === 'Escape') {
       event.preventDefault();
-      handleQuantityCancel();
+      if (editingQuantity === productId) {
+        handleQuantityCancel();
+      } else if (editingUnitPrice === productId) {
+        handleUnitPriceCancel();
+      }
     }
   };
 
-  const handleInputBlur = (productId: number) => {
+  const handleInputBlur = (productId: number, type: 'quantity' | 'unitPrice') => {
     // Small delay to allow button clicks to register
     setTimeout(() => {
-      if (editingQuantity === productId) {
+      if (type === 'quantity' && editingQuantity === productId) {
         handleQuantityCancel();
+      } else if (type === 'unitPrice' && editingUnitPrice === productId) {
+        handleUnitPriceCancel();
       }
     }, 100);
   };
@@ -174,14 +209,13 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-center">No.</TableHead>
-                      <TableHead className="text-center">Product</TableHead>
-                      <TableHead className="text-center">Quantity</TableHead>
-                      <TableHead className="text-center">Unit Price</TableHead>
-                      <TableHead className="text-center">Total</TableHead>
-                      <TableHead className="text-center">Stock</TableHead>
-                      <TableHead className="text-center">Expiry</TableHead>
-                      <TableHead className="text-center">Actions</TableHead>
+                      <TableHead className="text-center">الرقم</TableHead>
+                      <TableHead className="text-center">المنتج</TableHead>
+                      <TableHead className="text-center">الكمية</TableHead>
+                      <TableHead className="text-center">سعر الوحدة</TableHead>
+                      <TableHead className="text-center">الإجمالي</TableHead>
+                      <TableHead className="text-center">المخزون</TableHead>
+                      <TableHead className="text-center">الإجراءات</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -209,9 +243,6 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                           <div className="h-4 bg-gray-200 rounded animate-pulse w-12 mx-auto"></div>
                         </TableCell>
                         <TableCell className="text-center">
-                          <div className="h-4 bg-gray-200 rounded animate-pulse w-16 mx-auto"></div>
-                        </TableCell>
-                        <TableCell className="text-center">
                           <div className="flex justify-center space-x-1">
                             <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
                             <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
@@ -227,8 +258,8 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
           ) : currentSaleItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-gray-500">
               <ShoppingCart className="h-16 w-16 mb-4 opacity-50" />
-              <h3 className="text-xl font-medium mb-2">{t('pos:noItemsInSale')}</h3>
-              <p className="text-base">{t('pos:addProductsToStart')}</p>
+              <h3 className="text-xl font-medium mb-2">لا توجد عناصر في البيع</h3>
+              <p className="text-base">أضف المنتجات للبدء</p>
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto max-h-[calc(100vh-200px)]">
@@ -236,22 +267,28 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-center">No.</TableHead>
-                      <TableHead className="text-center">Product</TableHead>
-                      <TableHead className="text-center">Quantity</TableHead>
-                      <TableHead className="text-center">Unit Price</TableHead>
-                      <TableHead className="text-center">Total</TableHead>
-                      <TableHead className="text-center">Stock</TableHead>
-                      <TableHead className="text-center">Expiry</TableHead>
-                      <TableHead className="text-center">Actions</TableHead>
+                      <TableHead className="text-center">الرقم</TableHead>
+                      <TableHead className="text-center">المنتج</TableHead>
+                      <TableHead className="text-center">الكمية</TableHead>
+                      <TableHead className="text-center">سعر الوحدة</TableHead>
+                      <TableHead className="text-center">الإجمالي</TableHead>
+                      <TableHead className="text-center">المخزون</TableHead>
+                      <TableHead className="text-center">الإجراءات</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {currentSaleItems.map((item) => (
                       <TableRow key={item.product.id}>
                         <TableCell className="text-center">
-                          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center mx-auto">
-                            <span className="text-sm font-bold text-blue-600">
+                          <div className={`h-10 w-10 rounded-full flex items-center justify-center mx-auto ${
+                            isExpired(item) ? 'bg-red-100' : 'bg-blue-100'
+                          }`}>
+                            <span 
+                              className={`text-sm font-bold ${
+                                isExpired(item) ? 'text-red-600' : 'text-blue-600'
+                              }`}
+                              title={getExpiryDate(item) ? `انتهاء الصلاحية: ${formatExpiryDate(getExpiryDate(item)!)}` : undefined}
+                            >
                               {currentSaleItems.indexOf(item) + 1}
                             </span>
                           </div>
@@ -266,17 +303,17 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                                   size="sm"
                                   onClick={() => handleBatchSelection(item)}
                                   className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
-                                  title={t('pos:selectBatch')}
+                                  title="اختر الدفعة"
                                 >
                                   <Layers className="h-4 w-4 animate-bounce" />
                                 </Button>
                               )}
                             </div>
-                            <div className="text-sm text-gray-500">SKU: {item.product.sku || 'N/A'}</div>
+                            <div className="text-sm text-gray-500">رمز المنتج: {item.product.sku || 'غير متوفر'}</div>
                             {item.selectedBatchNumber && (
                               <div className="text-xs text-blue-600 mt-1">
                                 <Badge variant="outline" className="text-xs">
-                                  {t('pos:batch')}: {item.selectedBatchNumber}
+                                  الدفعة: {item.selectedBatchNumber}
                                 </Badge>
                               </div>
                             )}
@@ -288,9 +325,7 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                               variant="outline"
                               size="sm"
                               onClick={async () => {
-                                const units = Number((item as unknown as { product: { units_per_stocking_unit?: number } }).product.units_per_stocking_unit) || 1;
-                                const step = stockingMode.has(item.product.id) ? Math.max(1, Number(units) || 1) : 1;
-                                await onUpdateQuantity(item.product.id, Math.max(1, item.quantity - step));
+                                await onUpdateQuantity(item.product.id, Math.max(1, item.quantity - 1));
                               }}
                               disabled={item.quantity <= 1 || isSalePaid || updatingItems.has(item.product.id)}
                               className={`h-8 w-8 p-0 ${
@@ -311,7 +346,7 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                                   value={editValue}
                                   onChange={(e) => setEditValue(e.target.value)}
                                   onKeyDown={(e) => handleKeyDown(e, item.product.id)}
-                                  onBlur={() => handleInputBlur(item.product.id)}
+                                  onBlur={() => handleInputBlur(item.product.id, 'quantity')}
                                   className="w-16 h-8 text-center text-sm"
                                   min="1"
                                   autoFocus
@@ -338,11 +373,9 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                               <span
                                 className="w-14 text-center font-medium text-base cursor-pointer hover:bg-gray-100 rounded px-1 py-1 transition-colors"
                                 onClick={() => handleQuantityClick(item)}
-                                title={isSalePaid ? t('pos:salePaidCannotModify') : t('pos:clickToEditQuantity')}
+                                title={isSalePaid ? 'تم الدفع، لا يمكن التعديل' : 'انقر لتعديل الكمية'}
                               >
-                                {stockingMode.has(item.product.id)
-                                  ? Math.max(1, Math.round(item.quantity / (Number((item as unknown as { product: { units_per_stocking_unit?: number } }).product.units_per_stocking_unit) || 1)))
-                                  : item.quantity}
+                                {item.quantity}
                               </span>
                             )}
                             
@@ -350,9 +383,7 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                               variant="outline"
                               size="sm"
                               onClick={async () => {
-                                const units = Number((item as unknown as { product: { units_per_stocking_unit?: number } }).product.units_per_stocking_unit) || 1;
-                                const step = stockingMode.has(item.product.id) ? Math.max(1, Number(units) || 1) : 1;
-                                await onUpdateQuantity(item.product.id, item.quantity + step);
+                                await onUpdateQuantity(item.product.id, item.quantity + 1);
                               }}
                               disabled={isSalePaid || updatingItems.has(item.product.id)}
                               className={`h-8 w-8 p-0 ${
@@ -369,7 +400,46 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="text-center">
-                            <div className="font-medium text-base">{formatNumber(item.unitPrice)}</div>
+                            {editingUnitPrice === item.product.id ? (
+                              <div className="flex items-center justify-center space-x-1">
+                                <Input
+                                  type="number"
+                                  value={editUnitPriceValue}
+                                  onChange={(e) => setEditUnitPriceValue(e.target.value)}
+                                  onKeyDown={(e) => handleKeyDown(e, item.product.id)}
+                                  onBlur={() => handleInputBlur(item.product.id, 'unitPrice')}
+                                  className="w-20 h-8 text-center text-sm"
+                                  min="0"
+                                  step="0.01"
+                                  autoFocus
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleUnitPriceSave(item.product.id)}
+                                  disabled={updatingItems.has(item.product.id)}
+                                  className="h-6 w-6 p-0 text-green-600 hover:text-green-700"
+                                >
+                                  <Check className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={handleUnitPriceCancel}
+                                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <span
+                                className="font-medium text-base cursor-pointer hover:bg-gray-100 rounded px-2 py-1 transition-colors"
+                                onClick={() => handleUnitPriceClick(item)}
+                                title={isSalePaid || !onUpdateUnitPrice ? 'تم الدفع، لا يمكن التعديل' : 'انقر لتعديل السعر'}
+                              >
+                                {formatNumber(item.unitPrice)}
+                              </span>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
@@ -400,34 +470,13 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                             </div>
                             {item.selectedBatchId && (
                               <span className="text-xs text-blue-600">
-                                {item.selectedBatchNumber ? `Batch: ${item.selectedBatchNumber}` : 'Selected Batch'}
+                                {item.selectedBatchNumber ? `الدفعة: ${item.selectedBatchNumber}` : 'الدفعة المحددة'}
                               </span>
                             )}
                             {!item.selectedBatchId && isLowStock(item.product.stock_quantity, item.product.stock_alert_level) && (
-                              <span className="text-sm text-red-500">Low Stock</span>
+                              <span className="text-sm text-red-500">مخزون منخفض</span>
                             )}
                           </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {item.product.earliest_expiry_date ? (
-                            <div className="flex flex-col items-center space-y-1">
-                              <div className="flex items-center space-x-1">
-                                <Calendar className="h-3 w-3 text-gray-500" />
-                                <span className={`text-base font-medium ${
-                                  isExpiringSoon(item.product.earliest_expiry_date) 
-                                    ? 'text-red-600' 
-                                    : 'text-gray-700'
-                                }`}>
-                                  {formatExpiryDate(item.product.earliest_expiry_date)}
-                                </span>
-                              </div>
-                              {isExpiringSoon(item.product.earliest_expiry_date) && (
-                                <span className="text-sm text-red-500">Expiring Soon</span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-base text-gray-500">No Expiry</span>
-                          )}
                         </TableCell>
                         <TableCell className="text-center">
                           <Button
@@ -446,29 +495,13 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                                 ? 'text-gray-400 cursor-not-allowed'
                                 : 'text-red-500 hover:text-red-700'
                             }`}
-                            title={isSalePaid ? t('pos:salePaidCannotModify') : t('pos:removeItem')}
+                            title={isSalePaid ? 'تم الدفع، لا يمكن التعديل' : 'إزالة العنصر'}
                           >
                             {deletingItems.has(item.product.id) ? (
                               <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-red-600"></div>
                             ) : (
                               <Trash2 className="h-5 w-5" />
                             )}
-                          </Button>
-                          {/* Toggle sellable/stocking unit mode */}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              const next = new Set(stockingMode);
-                              if (next.has(item.product.id)) next.delete(item.product.id);
-                              else next.add(item.product.id);
-                              setStockingMode(next);
-                            }}
-                            className="h-10 px-2 ms-2"
-                            title={stockingMode.has(item.product.id) ? 'Selling by stocking unit' : 'Selling by sellable unit'}
-                            disabled={isSalePaid}
-                          >
-                            {stockingMode.has(item.product.id) ? 'Stocking' : 'Sellable'}
                           </Button>
                         </TableCell>
                       </TableRow>

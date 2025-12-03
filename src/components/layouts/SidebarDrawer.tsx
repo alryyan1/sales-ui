@@ -10,10 +10,11 @@ import {
     ListItemText,
     Typography,
     Avatar,
+    IconButton,
     useTheme,
     alpha,
 } from '@mui/material';
-import { BarChart3, Settings, TrendingUp } from 'lucide-react';
+import { BarChart3, Settings, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useAuthorization } from '@/hooks/useAuthorization';
 import CollapsibleNavItem from './CollapsibleNavItem';
@@ -26,6 +27,8 @@ interface SidebarDrawerProps {
     openSections: Record<string, boolean>;
     onSectionToggle: (section: string) => void;
     onMenuOpen: (event: React.MouseEvent<HTMLElement>) => void;
+    isCollapsed?: boolean;
+    onToggleCollapse?: () => void;
 }
 
 const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
@@ -35,6 +38,8 @@ const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
     openSections,
     onSectionToggle,
     onMenuOpen,
+    isCollapsed = false,
+    onToggleCollapse,
 }) => {
     const theme = useTheme();
     const location = useLocation();
@@ -58,7 +63,8 @@ const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                     p: 2,
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 2,
+                    justifyContent: isCollapsed ? 'center' : 'space-between',
+                    gap: isCollapsed ? 1 : 2,
                     borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
                 }}
             >
@@ -73,21 +79,46 @@ const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                         justifyContent: 'center',
                     }}
                 >
-                    <TrendingUp size={24} color="white" />
+                   {isCollapsed ? '' : <TrendingUp size={24} color="white" />}
                 </Box>
-                <Typography
-                    variant="h6"
-                    sx={{
-                        fontWeight: 700,
-                        fontSize: '1.125rem',
-                        background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                        backgroundClip: 'text',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                    }}
-                >
-                    نظام إدارة المبيعات
-                </Typography>
+                {!isCollapsed && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography
+                            variant="h6"
+                            sx={{
+                                fontWeight: 700,
+                                fontSize: '1.0rem',
+                                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                                backgroundClip: 'text',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                            }}
+                        >
+                            جوده للمبيعات
+                        </Typography>
+                        {onToggleCollapse && (
+                            <IconButton
+                                size="small"
+                                edge="end"
+                                aria-label="collapse sidebar"
+                                onClick={onToggleCollapse}
+                            >
+                                <ChevronLeft size={18} />
+                            </IconButton>
+                        )}
+                    </Box>
+                )}
+                {isCollapsed && onToggleCollapse && (
+                    <IconButton
+                        size="small"
+                        edge="end"
+                        aria-label="expand sidebar"
+                        onClick={onToggleCollapse}
+                        sx={{ ml: 1 }}
+                    >
+                        <ChevronRight size={18} />
+                    </IconButton>
+                )}
             </Box>
 
             {/* Navigation Items */}
@@ -124,7 +155,7 @@ const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                                         sx={{
                                             minWidth: 0,
                                             justifyContent: 'center',
-                                            mr: 2,
+                                            // mr: 2,
                                             color: isActive
                                                 ? theme.palette.primary.main
                                                 : 'text.secondary',
@@ -132,20 +163,22 @@ const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                                     >
                                         {item.icon && <item.icon size={20} />}
                                     </ListItemIcon>
-                                    <ListItemText
-                                        primary={item.label}
-                                        primaryTypographyProps={{
-                                            fontSize: '0.875rem',
-                                            fontWeight: isActive ? 600 : 400,
-                                        }}
-                                    />
+                                    {!isCollapsed && (
+                                        <ListItemText
+                                            primary={item.label}
+                                            primaryTypographyProps={{
+                                                fontSize: '0.875rem',
+                                                fontWeight: isActive ? 600 : 400,
+                                            }}
+                                        />
+                                    )}
                                 </ListItemButton>
                             </ListItem>
                         );
                     })}
 
                     {/* Reports Section */}
-                    {canViewAnyReport && (
+                    {canViewAnyReport && !isCollapsed && (
                         <CollapsibleNavItem
                             item={{
                                 to: '#',
@@ -162,7 +195,7 @@ const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                     )}
 
                     {/* Admin Section */}
-                    {canManageAdmin && (
+                    {canManageAdmin && !isCollapsed && (
                         <CollapsibleNavItem
                             item={{
                                 to: '#',
@@ -192,7 +225,8 @@ const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                         sx={{
                             display: 'flex',
                             alignItems: 'center',
-                            gap: 1.5,
+                            gap: isCollapsed ? 0 : 1.5,
+                            justifyContent: isCollapsed ? 'center' : 'flex-start',
                             p: 1.5,
                             borderRadius: 1,
                             bgcolor: alpha(theme.palette.primary.main, 0.05),
@@ -212,33 +246,35 @@ const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                         >
                             {user.name.substring(0, 2).toUpperCase()}
                         </Avatar>
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Typography
-                                variant="body2"
-                                sx={{
-                                    fontWeight: 600,
-                                    fontSize: '0.8125rem',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                }}
-                            >
-                                {user.name}
-                            </Typography>
-                            <Typography
-                                variant="caption"
-                                sx={{
-                                    color: 'text.secondary',
-                                    fontSize: '0.75rem',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                    display: 'block',
-                                }}
-                            >
-                                {user.email}
-                            </Typography>
-                        </Box>
+                        {!isCollapsed && (
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography
+                                    variant="body2"
+                                    sx={{
+                                        fontWeight: 600,
+                                        fontSize: '0.8125rem',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                    }}
+                                >
+                                    {user.name}
+                                </Typography>
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        color: 'text.secondary',
+                                        fontSize: '0.75rem',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                        display: 'block',
+                                    }}
+                                >
+                                    {user.email}
+                                </Typography>
+                            </Box>
+                        )}
                     </Box>
                 </Box>
             )}
