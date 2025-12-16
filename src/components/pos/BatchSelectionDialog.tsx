@@ -1,21 +1,29 @@
 // src/components/pos/BatchSelectionDialog.tsx
 import React, { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
 
-// shadcn/ui Components
+// MUI Components
 import {
   Dialog,
-  DialogContent,
-  DialogHeader,
   DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+  DialogContent,
+  DialogActions,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Chip,
+  Box,
+  Typography,
+  CircularProgress,
+  Radio,
+} from "@mui/material";
 
-// Icons
-import { Package, Calendar, AlertTriangle, Check } from "lucide-react";
+// MUI Icons
+import InventoryIcon from '@mui/icons-material/Inventory';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import WarningIcon from '@mui/icons-material/Warning';
 
 // Types
 import { Product } from "../../services/productService";
@@ -45,7 +53,6 @@ export const BatchSelectionDialog: React.FC<BatchSelectionDialogProps> = ({
   onBatchSelect,
   selectedBatchId,
 }) => {
-  const { t } = useTranslation(['pos', 'common']);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null);
@@ -54,6 +61,7 @@ export const BatchSelectionDialog: React.FC<BatchSelectionDialogProps> = ({
     if (open && product) {
       loadBatches();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, product]);
 
   useEffect(() => {
@@ -90,13 +98,9 @@ export const BatchSelectionDialog: React.FC<BatchSelectionDialogProps> = ({
   };
 
   const formatExpiryDate = (dateString: string | null) => {
-    if (!dateString) return t('common:n/a');
+    if (!dateString) return 'غير محدد';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    });
+    return date.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   const isExpiringSoon = (dateString: string | null) => {
@@ -104,7 +108,7 @@ export const BatchSelectionDialog: React.FC<BatchSelectionDialogProps> = ({
     const expiryDate = new Date(dateString);
     const today = new Date();
     const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    return daysUntilExpiry <= 30;
+    return daysUntilExpiry <= 30 && daysUntilExpiry > 0;
   };
 
   const isExpired = (dateString: string | null) => {
@@ -120,152 +124,125 @@ export const BatchSelectionDialog: React.FC<BatchSelectionDialogProps> = ({
     return 'good';
   };
 
-  const getExpiryColor = (status: string) => {
-    switch (status) {
-      case 'expired': return 'text-red-600';
-      case 'expiring-soon': return 'text-orange-600';
-      default: return 'text-green-600';
-    }
-  };
-
-  const getExpiryIcon = (status: string) => {
-    switch (status) {
-      case 'expired': return <AlertTriangle className="h-4 w-4 text-red-600" />;
-      case 'expiring-soon': return <AlertTriangle className="h-4 w-4 text-orange-600" />;
-      default: return <Calendar className="h-4 w-4 text-green-600" />;
-    }
-  };
-
   if (!product) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[90vw] !max-w-[1200px] max-h-[80vh] overflow-hidden flex flex-col" style={{ width: '90vw', maxWidth: '1200px' }}>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            {t('pos:selectBatch')} - {product.name}
-          </DialogTitle>
-        </DialogHeader>
+    <Dialog open={open} onClose={() => onOpenChange(false)} maxWidth="lg" fullWidth>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <InventoryIcon color="primary" />
+        <Typography variant="h6">اختيار الدفعة - {product.name}</Typography>
+      </DialogTitle>
 
-        <div className="flex-1 overflow-hidden">
-          {loading ? (
-            <div className="flex items-center justify-center h-32">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
-          ) : batches.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-32 text-gray-500">
-              <Package className="h-12 w-12 mb-4 opacity-50" />
-              <p className="text-lg font-medium">{t('pos:noBatchesAvailable')}</p>
-              <p className="text-sm">{t('pos:noStockForProduct')}</p>
-            </div>
-          ) : (
-            <div className="overflow-y-auto max-h-[60vh]">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-center">{t('pos:select')}</TableHead>
-                    <TableHead className="text-center">{t('pos:batchNumber')}</TableHead>
-                    <TableHead className="text-center">{t('pos:availableStock')}</TableHead>
-                    <TableHead className="text-center">{t('pos:expiryDate')}</TableHead>
-                    <TableHead className="text-center">{t('pos:salePrice')}</TableHead>
-                    <TableHead className="text-center">{t('pos:unitCost')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {batches.map((batch) => {
-                    const expiryStatus = getExpiryStatus(batch.expiry_date);
-                    const isSelected = selectedBatch?.id === batch.id;
-                    
-                    return (
-                      <TableRow 
-                        key={batch.id}
-                        className={`cursor-pointer hover:bg-gray-50 ${
-                          isSelected ? 'bg-blue-50 border-blue-200' : ''
-                        }`}
-                        onClick={() => handleBatchSelect(batch)}
-                      >
-                        <TableCell className="text-center">
-                          <div className="flex justify-center">
-                            {isSelected ? (
-                              <div className="h-5 w-5 rounded-full bg-blue-600 flex items-center justify-center">
-                                <Check className="h-3 w-3 text-white" />
-                              </div>
-                            ) : (
-                              <div className="h-5 w-5 rounded-full border-2 border-gray-300"></div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="outline" className="font-mono">
-                            {batch.batch_number || `ID: ${batch.id}`}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <Package className="h-4 w-4 text-gray-500" />
-                            <span className="font-medium">{batch.remaining_quantity}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            {getExpiryIcon(expiryStatus)}
-                            <span className={getExpiryColor(expiryStatus)}>
+      <DialogContent dividers>
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : batches.length === 0 ? (
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 4, color: 'text.secondary' }}>
+            <InventoryIcon sx={{ fontSize: 48, mb: 2, opacity: 0.5 }} />
+            <Typography variant="h6">لا توجد دفعات متاحة</Typography>
+            <Typography variant="body2">لا يوجد مخزون لهذا المنتج</Typography>
+          </Box>
+        ) : (
+          <Box sx={{ overflowX: 'auto' }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell align="center" sx={{ fontWeight: 'bold' }}>اختيار</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 'bold' }}>رقم الدفعة</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 'bold' }}>الكمية المتاحة</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 'bold' }}>تاريخ الانتهاء</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 'bold' }}>سعر البيع</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 'bold' }}>سعر التكلفة</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {batches.map((batch) => {
+                  const expiryStatus = getExpiryStatus(batch.expiry_date);
+                  const isSelected = selectedBatch?.id === batch.id;
+                  
+                  return (
+                    <TableRow
+                      key={batch.id}
+                      hover
+                      selected={isSelected}
+                      onClick={() => handleBatchSelect(batch)}
+                      sx={{ cursor: 'pointer' }}
+                    >
+                      <TableCell align="center">
+                        <Radio checked={isSelected} size="small" />
+                      </TableCell>
+                      <TableCell align="center">
+                        <Chip
+                          label={batch.batch_number || `ID: ${batch.id}`}
+                          variant="outlined"
+                          size="small"
+                          sx={{ fontFamily: 'monospace' }}
+                        />
+                      </TableCell>
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                          <InventoryIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                          <Typography variant="body2" fontWeight="medium">{batch.remaining_quantity}</Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            {expiryStatus === 'expired' && <WarningIcon sx={{ fontSize: 16, color: 'error.main' }} />}
+                            {expiryStatus === 'expiring-soon' && <WarningIcon sx={{ fontSize: 16, color: 'warning.main' }} />}
+                            {expiryStatus === 'good' && <CalendarTodayIcon sx={{ fontSize: 16, color: 'success.main' }} />}
+                            <Typography
+                              variant="body2"
+                              color={
+                                expiryStatus === 'expired' ? 'error.main' :
+                                expiryStatus === 'expiring-soon' ? 'warning.main' : 'success.main'
+                              }
+                            >
                               {formatExpiryDate(batch.expiry_date)}
-                            </span>
-                          </div>
+                            </Typography>
+                          </Box>
                           {expiryStatus === 'expired' && (
-                            <Badge variant="destructive" className="text-xs mt-1">
-                              {t('pos:expired')}
-                            </Badge>
+                            <Chip label="منتهي الصلاحية" size="small" color="error" />
                           )}
                           {expiryStatus === 'expiring-soon' && (
-                            <Badge variant="secondary" className="text-xs mt-1 bg-orange-100 text-orange-800">
-                              {t('pos:expiringSoon')}
-                            </Badge>
+                            <Chip label="قريب الانتهاء" size="small" color="warning" />
                           )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <span className="font-medium">
-                            {batch.sale_price}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <span className="text-sm text-gray-600">
-                            {batch.unit_cost}
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </div>
-
-        <DialogFooter className="flex justify-between">
-          <div className="text-sm text-gray-600">
-            {batches.length > 0 && (
-              <p>{t('pos:totalBatchesAvailable', { count: batches.length })}</p>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              {t('common:cancel')}
-            </Button>
-            <Button
-              onClick={handleConfirm}
-              disabled={!selectedBatch || batches.length === 0}
-            >
-              {t('pos:selectBatch')}
-            </Button>
-          </div>
-        </DialogFooter>
+                        </Box>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Typography variant="body2" fontWeight="medium">{batch.sale_price}</Typography>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Typography variant="body2" color="text.secondary">{batch.unit_cost}</Typography>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </Box>
+        )}
       </DialogContent>
+
+      <DialogActions sx={{ justifyContent: 'space-between', px: 3, py: 2 }}>
+        <Typography variant="body2" color="text.secondary">
+          {batches.length > 0 && `إجمالي الدفعات المتاحة: ${batches.length}`}
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button variant="outlined" onClick={() => onOpenChange(false)}>
+            إلغاء
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleConfirm}
+            disabled={!selectedBatch || batches.length === 0}
+          >
+            اختيار الدفعة
+          </Button>
+        </Box>
+      </DialogActions>
     </Dialog>
   );
 };

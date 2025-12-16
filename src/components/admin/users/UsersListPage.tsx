@@ -29,7 +29,7 @@ const UsersListPage: React.FC = () => {
     const { t } = useTranslation(['users', 'roles', 'common']);
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-    const { can, user: currentUser } = useAuthorization(); // Check permissions and current user
+    const { user: currentUser } = useAuthorization(); // Get current user
 
     // --- State ---
     const [usersResponse, setUsersResponse] = useState<PaginatedResponse<User> | null>(null);
@@ -95,7 +95,7 @@ const UsersListPage: React.FC = () => {
             {/* Header & Add Button */}
             <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
                 <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 dark:text-gray-100">{t('users:manageTitle')}</h1>
-                {can('create-users') && ( <Button onClick={() => openModal()}><Plus className="me-2 h-4 w-4" /> {t('users:addUser')}</Button> )}
+                <Button onClick={() => openModal()}><Plus className="me-2 h-4 w-4" /> {t('users:addUser')}</Button>
             </div>
              {/* Search Input */}
              <div className="mb-4 max-w-sm"><Input placeholder={t('users:searchPlaceholder')} value={searchTerm} onChange={handleSearchChange} startIcon={<Search className="h-4 w-4 text-muted-foreground" />}/></div> {/* Add startIcon to Input if supported */}
@@ -128,7 +128,7 @@ const UsersListPage: React.FC = () => {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="text-center">{t('users:nameLabel')}</TableHead>
-                                    <TableHead className="text-center">{t('users:emailLabel')}</TableHead>
+                                    <TableHead className="text-center">{t('users:usernameLabel')}</TableHead>
                                     <TableHead className="text-center">{t('roles:roles')}</TableHead> {/* Use roles namespace */}
                                     <TableHead className="text-center">{t('common:actions')}</TableHead>
                                 </TableRow>
@@ -138,7 +138,7 @@ const UsersListPage: React.FC = () => {
                                 {usersResponse.data.map((user) => (
                                     <TableRow key={user.id}>
                                         <TableCell className="font-medium text-center">{user.name}</TableCell>
-                                        <TableCell className="text-center">{user.email}</TableCell>
+                                        <TableCell className="text-center">{user.username}</TableCell>
                                         <TableCell className="text-center">
                                             <div className="flex flex-wrap justify-center gap-1">
                                                  {(user.roles ?? []).map(roleName => (
@@ -148,9 +148,9 @@ const UsersListPage: React.FC = () => {
                                         </TableCell>
                                         <TableCell className="text-center">
                                             <div className="flex justify-center items-center gap-1">
-                                                 {can('edit-users') && <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openModal(user)}><Edit className="h-4 w-4" /></Button>}
-                                                 {/* Prevent self-deletion and check permission */}
-                                                 {can('delete-users') && currentUser?.id !== user.id && <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600 hover:text-red-700" onClick={() => openConfirmDialog(user.id)} disabled={isDeleting}><Trash2 className="h-4 w-4" /></Button>}
+                                                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openModal(user)}><Edit className="h-4 w-4" /></Button>
+                                                 {/* Prevent self-deletion */}
+                                                 {currentUser?.id !== user.id && <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600 hover:text-red-700" onClick={() => openConfirmDialog(user.id)} disabled={isDeleting}><Trash2 className="h-4 w-4" /></Button>}
                                             </div>
                                         </TableCell>
                                     </TableRow>

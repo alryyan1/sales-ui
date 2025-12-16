@@ -10,8 +10,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 // Services and Types
 import roleService, { RoleWithPermissions, Permission } from '../../services/roleService'; // Adjust path
-import { useAuthorization } from '@/hooks/useAuthorization';
-
 // Custom Components
 import ConfirmationDialog from '../../components/common/ConfirmationDialog'; // Adjust path
 import RoleFormModal from '@/components/admin/users/roles/RoleFormModal';
@@ -21,7 +19,6 @@ import { Edit, Loader2, Plus, Trash2 } from 'lucide-react';
 // --- Component ---
 const RolesListPage: React.FC = () => {
     const { t } = useTranslation(['roles', 'common', 'permissions']);
-    const { can } = useAuthorization(); // Permission checks
 
     // --- State ---
     const [rolesResponse, setRolesResponse] = useState<PaginatedResponse<RoleWithPermissions> | null>(null);
@@ -89,7 +86,7 @@ const RolesListPage: React.FC = () => {
              <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
                 <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 dark:text-gray-100">{t('roles:manageTitle')}</h1>
                  {/* Check permission to create roles */}
-                 {can('manage-roles') && ( <Button onClick={() => openModal()} disabled={loadingPermissions}><Plus className="me-2 h-4 w-4" /> {t('roles:addRole')}</Button> )}
+                 <Button onClick={() => openModal()} disabled={loadingPermissions}><Plus className="me-2 h-4 w-4" /> {t('roles:addRole')}</Button>
             </div>
 
              {/* Loading / Error */}
@@ -134,9 +131,9 @@ const RolesListPage: React.FC = () => {
                                         <TableCell className="text-center">
                                             <div className="flex justify-center items-center gap-1">
                                                 {/* Edit action needs permission check */}
-                                                 {can('manage-roles') && <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openModal(role)} disabled={loadingPermissions}><Edit className="h-4 w-4" /></Button>}
-                                                 {/* Delete action needs permission check & prevent deleting admin role */}
-                                                 {can('manage-roles') && role.name !== 'admin' && <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600 hover:text-red-700" onClick={() => openConfirmDialog(role.id)} disabled={isDeleting}><Trash2 className="h-4 w-4" /></Button>}
+                                                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openModal(role)} disabled={loadingPermissions}><Edit className="h-4 w-4" /></Button>
+                                                 {/* Prevent deleting admin role */}
+                                                 {role.name !== 'admin' && <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600 hover:text-red-700" onClick={() => openConfirmDialog(role.id)} disabled={isDeleting}><Trash2 className="h-4 w-4" /></Button>}
                                             </div>
                                         </TableCell>
                                     </TableRow>

@@ -83,7 +83,6 @@ import { Badge } from "@/components/ui/badge"; // For status
 
 // Services and Types
 import { User } from "../../../services/authService"; // For requester filter if implemented
-import { useAuthorization } from "@/hooks/useAuthorization";
 // import userService from '../../../services/userService'; // If fetching users for filter
 
 // Helpers
@@ -124,7 +123,6 @@ const ManageStockRequisitionsListPage: React.FC = () => {
   const { t } = useTranslation(["inventory", "common", "users", "validation"]);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { can } = useAuthorization(); // For permission checks
 
   // --- State ---
   const [requisitionsResponse, setRequisitionsResponse] =
@@ -522,8 +520,7 @@ const ManageStockRequisitionsListPage: React.FC = () => {
                         {/* Show "Process" button for pending/partially issued, "View" for others */}
                         {(req.status === "pending_approval" ||
                           req.status === "approved" ||
-                          req.status === "partially_issued") &&
-                        can("process-stock-requisitions") ? (
+                          req.status === "partially_issued") ? (
                           <Button
                             variant="outline"
                             size="sm"

@@ -16,11 +16,9 @@ import clientService, { Client, PaginatedResponse } from '../services/clientServ
 import ClientsTable from '../components/clients/ClientsTable';
 import ClientFormModal from '../components/clients/ClientFormModal';
 import ConfirmationDialog from '../components/common/ConfirmationDialog';
-import { useAuthorization } from '@/hooks/useAuthorization';
 import { PlusIcon } from 'lucide-react';
 
 const ClientsPage: React.FC = () => {
-    const { can } = useAuthorization();
 
     // --- State Management ---
     const [clientsResponse, setClientsResponse] = useState<PaginatedResponse<Client> | null>(null);
@@ -126,17 +124,15 @@ const ClientsPage: React.FC = () => {
                 <Typography variant="h4" className="text-gray-800 dark:text-gray-100" sx={{ fontWeight: 700 }}>
                     العملاء
                 </Typography>
-                {can('create-clients') && (
-                    <Button
-                        onClick={() => openModal()}
-                        variant="contained"
-                        color="primary"
-                        startIcon={<PlusIcon className="h-5 w-5" />}
-                        sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
-                    >
-                        إضافة عميل
-                    </Button>
-                )}
+                <Button
+                    onClick={() => openModal()}
+                    variant="contained"
+                    color="primary"
+                    startIcon={<PlusIcon className="h-5 w-5" />}
+                    sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+                >
+                    إضافة عميل
+                </Button>
                 
             </Box>
 
@@ -159,8 +155,8 @@ const ClientsPage: React.FC = () => {
                 <Box sx={{ mt: 2 }}>
                     <ClientsTable
                         clients={clientsResponse.data}
-                        canDelete={can('delete-clients')}
-                        canEdit={can('edit-clients')}
+                        canDelete={true}
+                        canEdit={true}
                         onEdit={openModal}
                         onDelete={openConfirmDialog}
                         onViewLedger={(id) => window.location.hash = `#/clients/${id}/ledger`}

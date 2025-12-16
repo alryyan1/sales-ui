@@ -6,9 +6,6 @@ import {
   SubmitHandler,
   useWatch,
 } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
@@ -18,12 +15,25 @@ import { PurchaseHeaderFormSection } from "../components/purchases/PurchaseHeade
 import { PurchaseItemsList } from "../components/purchases/PurchaseItemsList";
 import PurchaseItemsImportDialog from "../components/purchases/PurchaseItemsImportDialog";
 
-// shadcn/ui & Lucide Icons
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, ArrowLeft, AlertCircle, FileText, Upload } from "lucide-react";
+// MUI Components
+import {
+  Button,
+  Card,
+  CardContent,
+  Divider,
+  Alert,
+  AlertTitle,
+  Box,
+  Typography,
+  IconButton,
+  CircularProgress,
+  Paper,
+  Chip,
+  Container,
+  Fade,
+  Skeleton,
+} from "@mui/material";
+import { ArrowLeft, AlertCircle, FileText, Upload, CheckCircle2 } from "lucide-react";
 
 // Services and Types
 import purchaseService, {
@@ -36,71 +46,15 @@ import exportService from "../services/exportService";
 import { formatNumber, preciseCalculation } from "@/constants";
 import apiClient from "@/lib/axios";
 
-// --- Zod Schema Definition ---
-const purchaseItemSchema = z.object({
-  id: z.number().nullable().optional(),
-  product_id: z
-    .number({ required_error: "validation:required" })
-    .positive({ message: "validation:selectProduct" }),
-  product: z.custom<Product>().optional(),
-  batch_number: z
-    .string()
-    .max(100, { message: "validation:maxLengthHundred" })
-    .nullable()
-    .optional(),
-  quantity: z.coerce
-    .number({ invalid_type_error: "validation:invalidInteger" })
-    .int({ message: "validation:invalidInteger" })
-    .min(1, { message: "validation:minQuantity" }),
-  unit_cost: z.coerce
-    .number({ invalid_type_error: "validation:invalidPrice" })
-    .min(0, { message: "validation:minZero" }),
-  total_sellable_units_display: z.number().optional(),
-  cost_per_sellable_unit_display: z.number().optional(),
-  sale_price: z.union([
-    z.number().min(0, { message: "validation:minZero" }),
-    z.null(),
-    z.undefined()
-  ]).optional(),
-  expiry_date: z
-    .date({ invalid_type_error: "validation:invalidDate" })
-    .nullable()
-    .optional(),
-});
-
-// Base schema for purchase header
-const basePurchaseFormSchema = z.object({
-  supplier_id: z
-    .number({ required_error: "validation:required" })
-    .positive({ message: "validation:selectSupplier" }),
-  purchase_date: z.date({
-    required_error: "validation:required",
-    invalid_type_error: "validation:invalidDate",
-  }),
-  status: z.enum(["received", "pending", "ordered"], {
-    required_error: "validation:required",
-  }),
-  reference_number: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
-});
-
-// Schema for creating new purchases (items are optional)
-const createPurchaseFormSchema = basePurchaseFormSchema.extend({
-  items: z.array(purchaseItemSchema).optional().default([]),
-});
-
-// Schema for editing existing purchases (items required)
-const editPurchaseFormSchema = basePurchaseFormSchema.extend({
-  items: z
-    .array(purchaseItemSchema)
-    .min(1, { message: "purchases:errorItemsRequired" }),
-});
-
-// Dynamic schema based on mode
-const getPurchaseFormSchema = (isEditMode: boolean) => 
-  isEditMode ? editPurchaseFormSchema : createPurchaseFormSchema;
-
-export type PurchaseFormValues = z.infer<typeof editPurchaseFormSchema>;
+// --- Type Definitions ---
+export type PurchaseFormValues = {
+  supplier_id: number;
+  purchase_date: Date;
+  status: "received" | "pending" | "ordered";
+  reference_number?: string | null;
+  notes?: string | null;
+  items: PurchaseItemFormValues[];
+};
 
 export type PurchaseItemFormValues = {
   id?: number | null;
@@ -117,13 +71,6 @@ export type PurchaseItemFormValues = {
 
 // --- Component ---
 const PurchaseFormPage: React.FC = () => {
-  const { t } = useTranslation([
-    "purchases",
-    "common",
-    "validation",
-    "suppliers",
-    "products",
-  ]);
   const navigate = useNavigate();
   const { id: purchaseIdParam } = useParams<{ id?: string }>();
   const purchaseId = purchaseIdParam ? Number(purchaseIdParam) : null;
@@ -147,11 +94,10 @@ const PurchaseFormPage: React.FC = () => {
 
   // --- React Hook Form Setup ---
   const formMethods = useForm<PurchaseFormValues>({
-    resolver: zodResolver(getPurchaseFormSchema(isEditMode)),
     defaultValues: {
-      supplier_id: undefined,
+      supplier_id: undefined as any,
       purchase_date: new Date(),
-      status: "pending",
+      status: "pending" as const,
       reference_number: "",
       notes: "",
       items: isEditMode ? [
@@ -166,6 +112,7 @@ const PurchaseFormPage: React.FC = () => {
         },
       ] : [],
     },
+    mode: "onChange",
   });
   
   const {
@@ -193,6 +140,26 @@ const PurchaseFormPage: React.FC = () => {
     [watchedItems]
   );
 
+  // --- Initial suppliers load (for dropdown opening with data) ---
+  useEffect(() => {
+    const loadInitialSuppliers = async () => {
+      setLoadingSuppliers(true);
+      try {
+        const response = await supplierService.getSuppliers(1, "");
+        setSuppliers(response.data ?? []);
+      } catch (error) {
+        console.error("Failed to load initial suppliers:", error);
+        toast.error("خطأ", {
+          description: supplierService.getErrorMessage(error),
+        });
+      } finally {
+        setLoadingSuppliers(false);
+      }
+    };
+
+    loadInitialSuppliers();
+  }, []);
+
   // --- Debounce Effects ---
   useEffect(() => {
     if (supplierDebounceRef.current) clearTimeout(supplierDebounceRef.current);
@@ -204,7 +171,7 @@ const PurchaseFormPage: React.FC = () => {
         clearTimeout(supplierDebounceRef.current);
     };
   }, [supplierSearchInput]);
-
+  
   // Memoized supplier search effect
   useEffect(() => {
     if (debouncedSupplierSearch !== '' && debouncedSupplierSearch !== lastSupplierSearchRef.current) {
@@ -216,9 +183,9 @@ const PurchaseFormPage: React.FC = () => {
           const response = await apiClient.get<{ data: Supplier[] }>(
             `/suppliers?search=${encodeURIComponent(debouncedSupplierSearch)}&limit=15`
           );
-          setSuppliers(response.data.data ?? response.data);
+          setSuppliers((response.data as any).data ?? response.data);
         } catch (error) {
-          toast.error(t("common:error"), {
+          toast.error("خطأ", {
             description: supplierService.getErrorMessage(error),
           });
           setSuppliers([]);
@@ -228,7 +195,7 @@ const PurchaseFormPage: React.FC = () => {
       };
       searchSuppliers();
     }
-  }, [debouncedSupplierSearch, t]);
+  }, [debouncedSupplierSearch]);
 
   // --- Fetch Existing Purchase Data for Edit Mode ---
   useEffect(() => {
@@ -299,7 +266,7 @@ const PurchaseFormPage: React.FC = () => {
         console.error("Failed to load purchase data:", err);
         const errorMsg = purchaseService.getErrorMessage(err);
         setError("root", { type: "manual", message: errorMsg });
-        toast.error(t("common:error"), { description: errorMsg });
+        toast.error("خطأ", { description: errorMsg });
         navigate("/purchases");
       } finally {
         setLoadingData(false);
@@ -311,11 +278,65 @@ const PurchaseFormPage: React.FC = () => {
     } else {
       setLoadingData(false);
     }
-  }, [isEditMode, purchaseId, reset, navigate, t, setError]);
+  }, [isEditMode, purchaseId, reset, navigate, setError]);
 
   // --- Form Submission ---
   const onSubmit: SubmitHandler<PurchaseFormValues> = useCallback(async (data) => {
     setServerError(null);
+    
+    // Manual validation
+    if (!data.supplier_id || data.supplier_id <= 0) {
+      setError("supplier_id", { type: "manual", message: "يرجى اختيار مورد" });
+      return;
+    }
+    
+    if (!data.purchase_date) {
+      setError("purchase_date", { type: "manual", message: "هذا الحقل مطلوب" });
+      return;
+    }
+    
+    if (!data.status) {
+      setError("status", { type: "manual", message: "هذا الحقل مطلوب" });
+      return;
+    }
+    
+    // Validate items for edit mode
+    if (isEditMode && (!data.items || data.items.length === 0)) {
+      setError("items", { type: "manual", message: "يجب إضافة عنصر واحد على الأقل" });
+      return;
+    }
+    
+    // Validate each item
+    let hasItemErrors = false;
+    if (data.items && data.items.length > 0) {
+      data.items.forEach((item, index) => {
+        if (!item.product_id || item.product_id <= 0) {
+          setError(`items.${index}.product_id` as any, { type: "manual", message: "يرجى اختيار منتج" });
+          hasItemErrors = true;
+        }
+        if (!item.quantity || item.quantity < 1) {
+          setError(`items.${index}.quantity` as any, { type: "manual", message: "الحد الأدنى للكمية هو 1" });
+          hasItemErrors = true;
+        }
+        if (item.batch_number && item.batch_number.length > 100) {
+          setError(`items.${index}.batch_number` as any, { type: "manual", message: "الحد الأقصى 100 حرف" });
+          hasItemErrors = true;
+        }
+        if (item.unit_cost < 0) {
+          setError(`items.${index}.unit_cost` as any, { type: "manual", message: "يجب أن يكون أكبر من أو يساوي صفر" });
+          hasItemErrors = true;
+        }
+        if (item.sale_price !== null && item.sale_price !== undefined && item.sale_price < 0) {
+          setError(`items.${index}.sale_price` as any, { type: "manual", message: "يجب أن يكون أكبر من أو يساوي صفر" });
+          hasItemErrors = true;
+        }
+      });
+      
+      if (hasItemErrors) {
+        setServerError("يرجى التحقق من الحقول");
+        return;
+      }
+    }
     const apiData: CreatePurchaseData | UpdatePurchaseData = {
       ...data,
       purchase_date: format(data.purchase_date as Date, "yyyy-MM-dd"),
@@ -351,8 +372,8 @@ const PurchaseFormPage: React.FC = () => {
         createdPurchase = await purchaseService.createPurchase(apiData as CreatePurchaseData);
       }
       
-      toast.success(t("common:success"), {
-        description: t("purchases:saveSuccess"),
+      toast.success("نجح", {
+        description: "تم حفظ المشتريات بنجاح",
       });
       
       // For new purchases, redirect to manage items page to add products
@@ -370,7 +391,7 @@ const PurchaseFormPage: React.FC = () => {
       );
       const generalError = purchaseService.getErrorMessage(err);
       const apiErrors = purchaseService.getValidationErrors(err);
-      toast.error(t("common:error"), { description: generalError });
+      toast.error("خطأ", { description: generalError });
       setServerError(generalError);
       if (apiErrors) {
         Object.entries(apiErrors).forEach(([key, messages]) => {
@@ -388,10 +409,10 @@ const PurchaseFormPage: React.FC = () => {
             });
           }
         });
-        setServerError(t("validation:checkFields"));
+        setServerError("يرجى التحقق من الحقول");
       }
     }
-  }, [isEditMode, purchaseId, navigate, t, setError]);
+  }, [isEditMode, purchaseId, navigate, setError]);
 
   // --- PDF Export Handler ---
   const handleViewPdf = useCallback(async () => {
@@ -400,11 +421,11 @@ const PurchaseFormPage: React.FC = () => {
     try {
       await exportService.exportPurchasePdf(purchaseId);
     } catch (err) {
-      toast.error(t("common:error"), {
-        description: err instanceof Error ? err.message : "Failed to open PDF",
+      toast.error("خطأ", {
+        description: err instanceof Error ? err.message : "فشل فتح ملف PDF",
       });
     }
-  }, [purchaseId, t]);
+  }, [purchaseId]);
 
   // --- Import Success Handler ---
   const handleImportSuccess = useCallback(async () => {
@@ -473,173 +494,358 @@ const PurchaseFormPage: React.FC = () => {
       console.error("Failed to load purchase data:", err);
       const errorMsg = purchaseService.getErrorMessage(err);
       setError("root", { type: "manual", message: errorMsg });
-      toast.error(t("common:error"), { description: errorMsg });
+      toast.error("خطأ", { description: errorMsg });
     }
-  }, [purchaseId, reset, setError, t]);
+  }, [purchaseId, reset, setError]);
+
+  if (loadingData && isEditMode) {
+    return (
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <Skeleton variant="rectangular" height={80} sx={{ borderRadius: 2 }} />
+          <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 2 }} />
+        </Box>
+      </Container>
+    );
+  }
 
   return (
-    <div className="dark:bg-gray-950 min-h-screen pb-10">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => navigate("/purchases")}
+    <Box sx={{ 
+      minHeight: '100vh', 
+      bgcolor: 'grey.50',
+      pb: 6,
+      pt: { xs: 2, sm: 3 }
+    }}>
+      <Container maxWidth="xl">
+        {/* Header Section */}
+        <Fade in timeout={300}>
+          <Paper
+            elevation={0}
+            sx={{
+              bgcolor: 'background.paper',
+              borderRadius: 3,
+              p: { xs: 2.5, sm: 3, md: 4 },
+              mb: 3,
+              border: '1px solid',
+              borderColor: 'divider',
+              background: 'linear-gradient(to bottom, rgba(255,255,255,1) 0%, rgba(250,250,250,1) 100%)'
+            }}
           >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex flex-col">
-            <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 dark:text-gray-100">
-              {isEditMode
-                ? t("purchases:editPurchaseTitle")
-                : t("purchases:addPageTitle")}{" "}
-              {isEditMode && purchaseId && ` #${purchaseId}`}
-            </h1>
-            {isPurchaseReceived && (
-              <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
-                {t("purchases:purchaseReceivedReadOnly")}
-              </p>
-            )}
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {isEditMode && purchaseId && !isPurchaseReceived && (
-            <Button
-              variant="outline"
-              onClick={() => setIsImportDialogOpen(true)}
-              className="flex items-center gap-2"
-            >
-              <Upload className="h-4 w-4" />
-              {t("purchases:importItems")}
-            </Button>
-          )}
-          
-          {isEditMode && purchaseId && (
-            <Button
-              variant="outline"
-              onClick={handleViewPdf}
-              className="flex items-center gap-2"
-            >
-              <FileText className="h-4 w-4" />
-              {t("purchases:viewPdf")}
-            </Button>
-          )}
-          
-          <Button
-            type="submit"
-            disabled={isSubmitting || (loadingData && isEditMode)}
-            size="lg"
-            onClick={handleSubmit(onSubmit)}
-          >
-            {isSubmitting && (
-              <Loader2 className="me-2 h-4 w-4 animate-spin" />
-            )}
-            {isEditMode
-              ? t("common:update")
-              : t("purchases:submitPurchase")}
-          </Button>
-        </div>
-      </div>
-
-      <Card className="dark:bg-gray-900">
-        <FormProvider {...formMethods}>
-          <form onSubmit={handleSubmit(onSubmit)} noValidate>
-            <CardContent className="pt-1">
-              {serverError && !isSubmitting && (
-                <Alert variant="destructive" className="mb-6">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>{t("common:error")}</AlertTitle>
-                  <AlertDescription>{serverError}</AlertDescription>
-                </Alert>
-              )}
-
-              <PurchaseHeaderFormSection
-                suppliers={suppliers}
-                loadingSuppliers={loadingSuppliers}
-                supplierSearchInput={supplierSearchInput}
-                onSupplierSearchInputChange={setSupplierSearchInput}
-                isSubmitting={isSubmitting}
-                selectedSupplier={selectedSupplier}
-                onSupplierSelect={setSelectedSupplier}
-                isPurchaseReceived={isPurchaseReceived}
-              />
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: { xs: 'column', sm: 'row' },
+              alignItems: { xs: 'flex-start', sm: 'center' },
+              justifyContent: 'space-between',
+              gap: 3
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2.5, flex: 1 }}>
+                <IconButton
+                  onClick={() => navigate("/purchases")}
+                  sx={{ 
+                    bgcolor: 'grey.100',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    '&:hover': {
+                      bgcolor: 'primary.light',
+                      borderColor: 'primary.main',
+                      color: 'primary.main',
+                      transform: 'translateX(-2px)'
+                    },
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                  }}
+                >
+                  <ArrowLeft size={20} />
+                </IconButton>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, flex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                    <Typography 
+                      variant="h4" 
+                      component="h1"
+                      sx={{ 
+                        fontWeight: 800,
+                        fontSize: { xs: '1.5rem', sm: '1.875rem', md: '2.25rem' },
+                        color: 'text.primary',
+                        lineHeight: 1.2,
+                        letterSpacing: '-0.02em'
+                      }}
+                    >
+                      {isEditMode ? "تعديل مشتريات" : "إضافة مشتريات جديدة"}
+                    </Typography>
+                    {isEditMode && purchaseId && (
+                      <Chip
+                        label={`#${purchaseId}`}
+                        size="small"
+                        sx={{
+                          bgcolor: 'primary.50',
+                          color: 'primary.main',
+                          fontWeight: 600,
+                          fontSize: '0.75rem',
+                          height: 24
+                        }}
+                      />
+                    )}
+                  </Box>
+                  {isPurchaseReceived && (
+                    <Box sx={{ 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      gap: 1,
+                      px: 1.5,
+                      py: 0.75,
+                      bgcolor: 'warning.50',
+                      borderRadius: 2,
+                      border: '1px solid',
+                      borderColor: 'warning.200',
+                      width: 'fit-content'
+                    }}>
+                      <AlertCircle size={16} style={{ color: '#ed6c02' }} />
+                      <Typography 
+                        variant="body2"
+                        sx={{ 
+                          color: 'warning.dark',
+                          fontWeight: 600,
+                          fontSize: '0.8125rem'
+                        }}
+                      >
+                        تم استلام هذه المشتريات - للقراءة فقط
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Box>
               
-              {/* Workflow info for new purchases */}
-              {!isEditMode && (
-                <>
-                  <Separator className="my-6" />
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center">
-                        <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">1</span>
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
-                          {t("purchases:createPurchaseFirst")}
-                        </h3>
-                        <p className="text-sm text-blue-700 dark:text-blue-300">
-                          {t("purchases:createPurchaseFirstDescription")}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3 mt-3">
-                      <div className="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center">
-                        <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">2</span>
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
-                          {t("purchases:manageItemsNext")}
-                        </h3>
-                        <p className="text-sm text-blue-700 dark:text-blue-300">
-                          {t("purchases:manageItemsNextDescription")}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-              
-              {/* Only show items section for edit mode */}
-              {isEditMode && (
-                <>
-                  <Separator className="my-6" />
-                  <PurchaseItemsList
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1.5, 
+                flexWrap: 'wrap',
+                width: { xs: '100%', sm: 'auto' },
+                justifyContent: { xs: 'flex-start', sm: 'flex-end' }
+              }}>
+                {isEditMode && purchaseId && !isPurchaseReceived && (
+                  <Button
+                    variant="outlined"
+                    onClick={() => setIsImportDialogOpen(true)}
+                    startIcon={<Upload size={18} />}
+                    sx={{ 
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      borderColor: 'primary.main',
+                      color: 'primary.main',
+                      px: 2.5,
+                      '&:hover': {
+                        borderColor: 'primary.dark',
+                        bgcolor: 'primary.50',
+                        transform: 'translateY(-1px)',
+                        boxShadow: 2
+                      },
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                    }}
+                  >
+                    استيراد العناصر
+                  </Button>
+                )}
+                
+                {isEditMode && purchaseId && (
+                  <Button
+                    variant="outlined"
+                    onClick={handleViewPdf}
+                    startIcon={<FileText size={18} />}
+                    sx={{ 
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      borderColor: 'grey.300',
+                      color: 'text.secondary',
+                      px: 2.5,
+                      '&:hover': {
+                        borderColor: 'grey.400',
+                        bgcolor: 'grey.50',
+                        transform: 'translateY(-1px)',
+                        boxShadow: 1
+                      },
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                    }}
+                  >
+                    عرض PDF
+                  </Button>
+                )}
+                
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={isSubmitting || (loadingData && isEditMode)}
+                  size="large"
+                  onClick={handleSubmit(onSubmit)}
+                  startIcon={isSubmitting ? <CircularProgress size={18} color="inherit" /> : <CheckCircle2 size={18} />}
+                  sx={{ 
+                    textTransform: 'none', 
+                    fontWeight: 700,
+                    px: 4,
+                    py: 1.25,
+                    boxShadow: '0 4px 12px rgba(25, 118, 210, 0.3)',
+                    '&:hover': {
+                      boxShadow: '0 6px 16px rgba(25, 118, 210, 0.4)',
+                      transform: 'translateY(-2px)'
+                    },
+                    '&:disabled': {
+                      boxShadow: 'none'
+                    },
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                  }}
+                >
+                  {isSubmitting 
+                    ? "جاري الحفظ..."
+                    : isEditMode
+                      ? "تحديث المشتريات"
+                      : "إنشاء المشتريات"}
+                </Button>
+              </Box>
+            </Box>
+          </Paper>
+        </Fade>
+
+        {/* Main Form Card */}
+        <Fade in timeout={400}>
+          <Card sx={{ 
+            bgcolor: 'background.paper',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            borderRadius: 3,
+            overflow: 'hidden',
+            border: '1px solid',
+            borderColor: 'divider'
+          }}>
+            <FormProvider {...formMethods}>
+              <form onSubmit={handleSubmit(onSubmit)} noValidate>
+                <CardContent sx={{ p: { xs: 3, sm: 4, md: 5 } }}>
+                  {serverError && !isSubmitting && (
+                    <Fade in>
+                      <Alert 
+                        severity="error" 
+                        icon={<AlertCircle size={22} />}
+                        sx={{ 
+                          mb: 4,
+                          borderRadius: 2,
+                          bgcolor: 'error.50',
+                          border: '1px solid',
+                          borderColor: 'error.200',
+                          '& .MuiAlert-icon': {
+                            color: 'error.main'
+                          },
+                          '& .MuiAlert-message': {
+                            width: '100%'
+                          }
+                        }}
+                      >
+                        <AlertTitle sx={{ fontWeight: 700, mb: 0.5, fontSize: '1rem' }}>
+                          خطأ في التحقق
+                        </AlertTitle>
+                        <Typography variant="body2" sx={{ color: 'error.dark' }}>
+                          {serverError}
+                        </Typography>
+                      </Alert>
+                    </Fade>
+                  )}
+
+                  {/* Header Form Section */}
+                  <PurchaseHeaderFormSection
+                    suppliers={suppliers}
+                    loadingSuppliers={loadingSuppliers}
+                    supplierSearchInput={supplierSearchInput}
+                    onSupplierSearchInputChange={setSupplierSearchInput}
                     isSubmitting={isSubmitting}
+                    selectedSupplier={selectedSupplier}
+                    onSupplierSelect={setSelectedSupplier}
                     isPurchaseReceived={isPurchaseReceived}
                   />
-                  <Separator className="my-6" />
-              
-                  {/* Totals Display */}
-                  <div className="flex justify-end mb-6">
-                    <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-                      {t("purchases:grandTotal")}: {formatNumber(grandTotal)}
-                    </p>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </form>
-        </FormProvider>
-      </Card>
+                 
+                  {/* Items Section for Edit Mode */}
+                  {isEditMode && (
+                    <>
+                      <Divider sx={{ my: 5, borderColor: 'divider' }} />
+                      <PurchaseItemsList
+                        isSubmitting={isSubmitting}
+                        isPurchaseReceived={isPurchaseReceived}
+                      />
+                      <Divider sx={{ my: 5, borderColor: 'divider' }} />
+                  
+                      {/* Totals Display */}
+                      <Fade in timeout={300}>
+                        <Paper
+                          elevation={0}
+                          sx={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            gap: 3,
+                            p: { xs: 2.5, sm: 3 },
+                            bgcolor: 'grey.50',
+                            borderRadius: 2,
+                            border: '2px solid',
+                            borderColor: 'primary.200',
+                            background: 'linear-gradient(to left, rgba(25, 118, 210, 0.04) 0%, transparent 100%)'
+                          }}
+                        >
+                          <Typography 
+                            variant="h6" 
+                            sx={{ 
+                              color: 'text.secondary', 
+                              fontWeight: 600,
+                              fontSize: '1rem'
+                            }}
+                          >
+                            الإجمالي الكلي:
+                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+                            <Typography 
+                              variant="h4" 
+                              sx={{ 
+                                fontWeight: 800, 
+                                color: 'primary.main',
+                                fontSize: { xs: '1.5rem', sm: '2rem' },
+                                letterSpacing: '-0.02em'
+                              }}
+                            >
+                              {formatNumber(grandTotal)}
+                            </Typography>
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                color: 'text.secondary',
+                                fontWeight: 500,
+                                fontSize: '0.875rem'
+                              }}
+                            >
+                              ر.س
+                            </Typography>
+                          </Box>
+                        </Paper>
+                      </Fade>
+                    </>
+                  )}
+                </CardContent>
+              </form>
+            </FormProvider>
+          </Card>
+        </Fade>
+      </Container>
 
-      {/* Purchase Items Import Dialog */}
-      {isEditMode && purchaseId && (
-        <PurchaseItemsImportDialog
-          open={isImportDialogOpen}
-          onClose={() => setIsImportDialogOpen(false)}
-          purchaseId={purchaseId}
-          onImportSuccess={() => {
-            handleImportSuccess();
-            setIsImportDialogOpen(false);
-            toast.success(t("common:success"), {
-              description: t("purchases:importItemsSuccess"),
-            });
-          }}
-        />
-      )}
-    </div>
-  );
-};
+        {/* Purchase Items Import Dialog */}
+        {isEditMode && purchaseId && (
+          <PurchaseItemsImportDialog
+            open={isImportDialogOpen}
+            onClose={() => setIsImportDialogOpen(false)}
+            purchaseId={purchaseId}
+            onImportSuccess={() => {
+              handleImportSuccess();
+              setIsImportDialogOpen(false);
+              toast.success("نجح", {
+                description: "تم استيراد العناصر بنجاح",
+              });
+            }}
+          />
+        )}
+      </Box>
+    );
+  };
 
 export default PurchaseFormPage;

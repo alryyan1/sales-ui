@@ -22,7 +22,6 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import saleService, { Sale } from "../../services/saleService"; // Import Sale type and service
 import dayjs from "dayjs";
 import { formatCurrency, formatDate, formatNumber } from "@/constants";
-import { useAuthorization } from "@/hooks/useAuthorization";
 import {
   Banknote,
   CircleDollarSign,
@@ -51,7 +50,6 @@ const SaleDetailsPage: React.FC = () => {
   const { t } = useTranslation(["sales", "common", "products", "clients"]); // Load necessary namespaces
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>(); // Get the 'id' parameter
-  const { can } = useAuthorization();
   // State
   const [sale, setSale] = useState<Sale | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -125,7 +123,7 @@ const SaleDetailsPage: React.FC = () => {
 
   // Determine if a return can be created for this sale
   const canCreateReturn =
-    sale?.status === "completed" && can("create-sale-returns"); // Example condition
+    sale?.status === "completed"; // Example condition
   // --- Render Logic ---
   const getPaymentMethodIcon = (method: string) => {
     switch (method.toLowerCase()) {
@@ -242,7 +240,7 @@ const SaleDetailsPage: React.FC = () => {
       <Card>
         <CardContent>
           <Grid container spacing={3}>
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid xs={12} sm={6} md={4}>
               <Typography
                 variant="overline"
                 color="text.secondary"
@@ -254,7 +252,7 @@ const SaleDetailsPage: React.FC = () => {
                 {sale.client_name || t("common:n/a")}
               </Typography>
             </Grid>
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid xs={12} sm={6} md={4}>
               <Typography
                 variant="overline"
                 color="text.secondary"
@@ -266,7 +264,7 @@ const SaleDetailsPage: React.FC = () => {
                 {dayjs(sale?.sale_date).format("YYYY-MM-DD")}
               </Typography>
             </Grid>
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid xs={12} sm={6} md={4}>
               <Typography
                 variant="overline"
                 color="text.secondary"
@@ -278,7 +276,7 @@ const SaleDetailsPage: React.FC = () => {
                 {sale.invoice_number || "---"}
               </Typography>
             </Grid>
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid xs={12} sm={6} md={4}>
               <Typography
                 variant="overline"
                 color="text.secondary"
@@ -302,7 +300,7 @@ const SaleDetailsPage: React.FC = () => {
                 />
               </Box>
             </Grid>
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid xs={12} sm={6} md={4}>
               <Typography
                 variant="overline"
                 color="text.secondary"
@@ -314,7 +312,7 @@ const SaleDetailsPage: React.FC = () => {
                 {sale.user_name || t("common:n/a")}
               </Typography>
             </Grid>
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid xs={12} sm={6} md={4}>
               <Typography
                 variant="overline"
                 color="text.secondary"
@@ -327,7 +325,7 @@ const SaleDetailsPage: React.FC = () => {
               </Typography>
             </Grid>
             {sale.notes && (
-              <Grid item xs={12}>
+              <Grid xs={12}>
                 <Typography
                   variant="overline"
                   color="text.secondary"

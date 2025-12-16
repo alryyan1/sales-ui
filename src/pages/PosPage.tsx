@@ -1,6 +1,9 @@
 // src/pages/PosPage.tsx
 import React, { useState, useEffect, useCallback } from "react";
 
+// MUI Components
+import { Box, Paper } from "@mui/material";
+
 // POS Components
 import {
   SaleEditor,
@@ -135,7 +138,6 @@ const PosPage: React.FC = () => {
     loadingState.setDeletingItem(productId, true);
     try {
       await saleOperations.removeFromCurrentSale(productId);
-      // Check if sale is now empty after deletion
       const remainingItems = saleState.currentSaleItems.filter(item => item.product.id !== productId);
       if (remainingItems.length === 0) {
         saleState.resetSale();
@@ -145,7 +147,6 @@ const PosPage: React.FC = () => {
       loadingState.setDeletingItem(productId, false);
     }
   }, [saleOperations, loadingState, saleState, loadTodaySales]);
-
 
   // Payment completion handler
   const handlePaymentComplete = useCallback(async (errorMessage?: string) => {
@@ -205,7 +206,7 @@ const PosPage: React.FC = () => {
 
       await selectSale(transformedSale);
       await loadTodaySales();
-      saleOperations.showToast('تم   انشاء عمليه جديده', 'success');
+      saleOperations.showToast('تم إنشاء عملية جديدة', 'success');
     } catch (error) {
       console.error('Error creating empty sale:', error);
       saleOperations.showToast(saleService.getErrorMessage(error), 'error');
@@ -258,34 +259,34 @@ const PosPage: React.FC = () => {
   }, [saleState, saleOperations, dialogs]);
 
   return (
-    <div className="h-[calc(100vh-10px)] flex flex-col bg-gray-50">
+    <Box sx={{ height: 'calc(100vh - 10px)', display: 'flex', flexDirection: 'column', bgcolor: 'grey.100' }}>
       {/* Header */}
-          <PosHeader
-            key={saleState.selectedSale?.id ?? 'no-sale'}
-            onAddProduct={addToCurrentSale}
-            onAddMultipleProducts={saleOperations.addMultipleToCurrentSale}
-            loading={false}
-            onCreateEmptySale={handleCreateEmptySale}
-            onOpenCalculator={dialogs.openCalculator}
-            onGeneratePdf={handleGenerateDailySalesPdf}
-            onPreviewPdf={dialogs.openPdfDialog}
-            onGenerateInvoice={dialogs.openInvoiceDialog}
-            onPrintThermalInvoice={handlePrintThermalInvoice}
-            hasSelectedSale={!!saleState.selectedSale}
-            selectedClient={saleState.selectedClient}
-            onClientChange={handleClientChange}
-            filterByCurrentUser={filterByCurrentUser}
-            onToggleUserFilter={() => setFilterByCurrentUser(!filterByCurrentUser)}
-            selectedDate={selectedDate}
-            onDateChange={setSelectedDate}
-          />
+      <PosHeader
+        key={saleState.selectedSale?.id ?? 'no-sale'}
+        onAddProduct={addToCurrentSale}
+        onAddMultipleProducts={saleOperations.addMultipleToCurrentSale}
+        loading={false}
+        onCreateEmptySale={handleCreateEmptySale}
+        onOpenCalculator={dialogs.openCalculator}
+        onGeneratePdf={handleGenerateDailySalesPdf}
+        onPreviewPdf={dialogs.openPdfDialog}
+        onGenerateInvoice={dialogs.openInvoiceDialog}
+        onPrintThermalInvoice={handlePrintThermalInvoice}
+        hasSelectedSale={!!saleState.selectedSale}
+        selectedClient={saleState.selectedClient}
+        onClientChange={handleClientChange}
+        filterByCurrentUser={filterByCurrentUser}
+        onToggleUserFilter={() => setFilterByCurrentUser(!filterByCurrentUser)}
+        selectedDate={selectedDate}
+        onDateChange={setSelectedDate}
+      />
 
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden px-3 sm:px-4 lg:px-6 py-3">
-        <div className="h-full flex flex-col md:flex-row gap-3">
+      <Box sx={{ flex: 1, overflow: 'hidden', px: { xs: 1, sm: 2, lg: 3 }, py: 1.5 }}>
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 1.5 }}>
           {/* Column 1 - Today's Sales */}
-          <div className="hidden md:block w-[90px] shrink-0">
-            <div className="h-full rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden sticky top-20">
+          <Box sx={{ display: { xs: 'none', md: 'block' }, width: 90, flexShrink: 0 }}>
+            <Paper sx={{ height: '100%', overflow: 'hidden', position: 'sticky', top: 80 }}>
               <TodaySalesColumn
                 sales={saleState.todaySales}
                 selectedSaleId={saleState.selectedSale?.id || null}
@@ -297,12 +298,12 @@ const PosPage: React.FC = () => {
                 loadingSaleId={loadingState.loadingSaleId}
                 isLoading={loadingState.isLoadingSales}
               />
-            </div>
-          </div>
+            </Paper>
+          </Box>
 
-          {/* Column 2 - Current Sale Items (fills remaining width) */}
-          <div className="flex-1 min-w-0">
-            <div className="h-full shadow-sm overflow-hidden">
+          {/* Column 2 - Current Sale Items */}
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Paper sx={{ height: '100%', overflow: 'hidden' }}>
               <CurrentSaleItemsColumn
                 currentSaleItems={saleState.currentSaleItems}
                 onUpdateQuantity={updateQuantity}
@@ -314,13 +315,13 @@ const PosPage: React.FC = () => {
                 updatingItems={loadingState.updatingItems}
                 isLoading={loadingState.isLoadingSaleItems}
               />
-            </div>
-          </div>
+            </Paper>
+          </Box>
 
           {/* Column 3 - Summary and Actions */}
           {saleState.selectedSale && (
-            <div className="md:w-[320px] xl:w-[360px] w-full shrink-0">
-              <div className="h-full rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden md:sticky md:top-20">
+            <Box sx={{ width: { xs: '100%', md: 320, xl: 360 }, flexShrink: 0 }}>
+              <Paper sx={{ height: '100%', overflow: 'hidden', position: { md: 'sticky' }, top: { md: 80 } }}>
                 <SaleSummaryColumn
                   currentSaleItems={saleState.currentSaleItems}
                   discountAmount={saleState.discountAmount}
@@ -338,11 +339,11 @@ const PosPage: React.FC = () => {
                   onPaymentDialogOpenChange={dialogs.setPaymentDialogOpen}
                   paymentSubmitTrigger={paymentSubmitTrigger}
                 />
-              </div>
-            </div>
+              </Paper>
+            </Box>
           )}
-        </div>
-      </div>
+        </Box>
+      </Box>
 
       {/* Sale Editor */}
       <SaleEditor
@@ -376,8 +377,8 @@ const PosPage: React.FC = () => {
         product={dialogs.batchSelectionProduct}
         onBatchSelect={handleBatchSelect}
       />
-    </div>
+    </Box>
   );
 };
 
-export default PosPage; 
+export default PosPage;

@@ -16,7 +16,6 @@ import {
 } from '@mui/material';
 import { BarChart3, Settings, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { useAuthorization } from '@/hooks/useAuthorization';
 import CollapsibleNavItem from './CollapsibleNavItem';
 import { NavItem } from './types';
 
@@ -44,14 +43,9 @@ const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
     const theme = useTheme();
     const location = useLocation();
     const { user } = useAuth();
-    const { can } = useAuthorization();
 
-    const visibleReportItems = reportItems.filter(
-        (item) => item.permission !== null && can(item.permission)
-    );
-    const visibleAdminItems = adminItems.filter(
-        (item) => item.permission !== null && can(item.permission)
-    );
+    const visibleReportItems = reportItems;
+    const visibleAdminItems = adminItems;
     const canViewAnyReport = visibleReportItems.length > 0;
     const canManageAdmin = visibleAdminItems.length > 0;
 
@@ -125,9 +119,6 @@ const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
             <Box sx={{ flex: 1, overflow: 'auto', py: 1 }}>
                 <List>
                     {navItems.map((item) => {
-                        if (item.permission && !can(item.permission)) {
-                            return null;
-                        }
                         const isActive = location.pathname === item.to;
                         return (
                             <ListItem key={item.to} disablePadding>
@@ -184,12 +175,11 @@ const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                                 to: '#',
                                 label: 'التقارير',
                                 icon: BarChart3,
-                                permission: 'view-reports',
+                                permission: null,
                                 children: visibleReportItems,
                             }}
                             open={openSections.reports}
                             onToggle={() => onSectionToggle('reports')}
-                            can={can}
                             location={location}
                         />
                     )}
@@ -201,12 +191,11 @@ const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                                 to: '#',
                                 label: 'الإدارة',
                                 icon: Settings,
-                                permission: 'manage-settings',
+                                permission: null,
                                 children: visibleAdminItems,
                             }}
                             open={openSections.admin}
                             onToggle={() => onSectionToggle('admin')}
-                            can={can}
                             location={location}
                         />
                     )}
@@ -271,7 +260,7 @@ const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                                         display: 'block',
                                     }}
                                 >
-                                    {user.email}
+                                    {user.username}
                                 </Typography>
                             </Box>
                         )}

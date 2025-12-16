@@ -334,25 +334,40 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
   // Memoized render functions for better performance
   const renderStep1 = useMemo(() => (
     <Box>
-      <Typography variant="body1" sx={{ mb: 2 }}>
+      <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary', lineHeight: 1.6 }}>
         {t('purchases:import.step1Description')}
       </Typography>
       
       <Box
         sx={{
-          border: '2px dashed #ccc',
-          borderRadius: 2,
-          p: 3,
+          border: '2px dashed',
+          borderColor: 'divider',
+          borderRadius: 3,
+          p: 4,
           textAlign: 'center',
           cursor: 'pointer',
+          bgcolor: 'grey.50',
+          transition: 'all 0.2s ease-in-out',
           '&:hover': {
             borderColor: 'primary.main',
+            bgcolor: 'primary.light',
+            '& .upload-icon': {
+              color: 'primary.main'
+            }
           },
         }}
         onClick={() => fileInputRef.current?.click()}
       >
-        <CloudUploadIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
-        <Typography variant="h6" sx={{ mb: 1 }}>
+        <CloudUploadIcon 
+          className="upload-icon"
+          sx={{ 
+            fontSize: 64, 
+            color: 'text.secondary', 
+            mb: 2,
+            transition: 'color 0.2s ease-in-out'
+          }} 
+        />
+        <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
           {t('purchases:import.uploadFile')}
         </Typography>
         <Typography variant="body2" color="text.secondary">
@@ -369,7 +384,15 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
       />
       
       {file && (
-        <Alert severity="success" sx={{ mt: 2 }}>
+        <Alert 
+          severity="success" 
+          sx={{ 
+            mt: 3,
+            borderRadius: 2,
+            border: 1,
+            borderColor: 'success.main'
+          }}
+        >
           {t('purchases:import.fileSelected', { fileName: file.name })}
         </Alert>
       )}
@@ -411,13 +434,28 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
         </Button>
       </Box>
       
-      <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+      <TableContainer 
+        component={Paper} 
+        sx={{ 
+          maxHeight: 400,
+          borderRadius: 2,
+          border: 1,
+          borderColor: 'divider',
+          boxShadow: 1
+        }}
+      >
         <Table stickyHeader size="small">
           <TableHead>
             <TableRow>
-              <TableCell>{t('purchases:import.purchaseItemField')}</TableCell>
-              <TableCell>{t('purchases:import.excelColumn')}</TableCell>
-              <TableCell>{t('purchases:import.required')}</TableCell>
+              <TableCell sx={{ fontWeight: 600, bgcolor: 'grey.100' }}>
+                {t('purchases:import.purchaseItemField')}
+              </TableCell>
+              <TableCell sx={{ fontWeight: 600, bgcolor: 'grey.100' }}>
+                {t('purchases:import.excelColumn')}
+              </TableCell>
+              <TableCell sx={{ fontWeight: 600, bgcolor: 'grey.100' }}>
+                {t('purchases:import.required')}
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -609,61 +647,152 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
   }, [activeStep, renderStep1, renderStep2, renderStep3, renderStep4]);
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <DialogTitle>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="h6">{t('purchases:import.title')}</Typography>
-          <Stepper activeStep={activeStep} sx={{ flex: 1, mx: 2 }}>
-            {steps.map((label) => (
-              <Step key={label}>
-                <StepLabel>{label}</StepLabel>
+    <Dialog 
+      open={open} 
+      onClose={handleClose} 
+      maxWidth="md" 
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          boxShadow: 4
+        }
+      }}
+    >
+      <DialogTitle sx={{ 
+        pb: 2,
+        borderBottom: 1,
+        borderColor: 'divider',
+        bgcolor: 'grey.50'
+      }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            {t('purchases:import.title')}
+          </Typography>
+          <Stepper 
+            activeStep={activeStep} 
+            sx={{ 
+              '& .MuiStepLabel-root .Mui-completed': {
+                color: 'success.main'
+              },
+              '& .MuiStepLabel-root .Mui-active': {
+                color: 'primary.main'
+              }
+            }}
+          >
+            {steps.map((label, index) => (
+              <Step key={label} completed={index < activeStep}>
+                <StepLabel 
+                  sx={{
+                    '& .MuiStepLabel-label': {
+                      fontSize: '0.75rem',
+                      fontWeight: index === activeStep ? 600 : 400
+                    }
+                  }}
+                >
+                  {label}
+                </StepLabel>
               </Step>
             ))}
           </Stepper>
         </Box>
       </DialogTitle>
       
-      <DialogContent>
+      <DialogContent sx={{ p: 3, mt: 2 }}>
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert 
+            severity="error" 
+            sx={{ 
+              mb: 3,
+              borderRadius: 2,
+              border: 1,
+              borderColor: 'error.main'
+            }}
+          >
+            <AlertTitle sx={{ fontWeight: 600 }}>{t('common:error')}</AlertTitle>
             {error}
           </Alert>
         )}
         
         {loading && activeStep !== 3 && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-            <CircularProgress />
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 4 }}>
+            <CircularProgress size={48} />
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+              {t('common:loading')}
+            </Typography>
           </Box>
         )}
         
         {!loading && renderStepContent}
       </DialogContent>
       
-      <DialogActions>
-        <Button onClick={handleClose}>
+      <DialogActions sx={{ 
+        p: 3,
+        pt: 2,
+        borderTop: 1,
+        borderColor: 'divider',
+        bgcolor: 'grey.50',
+        gap: 1
+      }}>
+        <Button 
+          onClick={handleClose}
+          sx={{ textTransform: 'none', fontWeight: 500 }}
+        >
           {activeStep === 3 ? t('common:close') : t('common:cancel')}
         </Button>
 
         {activeStep > 0 && (
-          <Button onClick={handleBack}>
+          <Button 
+            onClick={handleBack}
+            variant="outlined"
+            sx={{ textTransform: 'none', fontWeight: 500 }}
+          >
             {t('common:back')}
           </Button>
         )}
         
         {activeStep === 1 && (
-          <Button onClick={handleNext} variant="contained">
+          <Button 
+            onClick={handleNext} 
+            variant="contained"
+            sx={{ 
+              textTransform: 'none', 
+              fontWeight: 600,
+              px: 3,
+              boxShadow: 2
+            }}
+          >
             {t('common:next')}
           </Button>
         )}
         
         {activeStep === 2 && (
-          <Button onClick={handleNext} variant="contained">
+          <Button 
+            onClick={handleNext} 
+            variant="contained"
+            sx={{ 
+              textTransform: 'none', 
+              fontWeight: 600,
+              px: 3,
+              boxShadow: 2
+            }}
+          >
             {t('common:next')}
           </Button>
         )}
         
         {activeStep === 3 && !importResult && (
-          <Button onClick={handleImport} variant="contained" disabled={loading}>
+          <Button 
+            onClick={handleImport} 
+            variant="contained" 
+            disabled={loading}
+            sx={{ 
+              textTransform: 'none', 
+              fontWeight: 600,
+              px: 3,
+              boxShadow: 2
+            }}
+          >
             {loading ? t('common:importing') : t('common:import')}
           </Button>
         )}

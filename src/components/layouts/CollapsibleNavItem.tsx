@@ -18,7 +18,6 @@ const CollapsibleNavItem: React.FC<CollapsibleNavItemProps> = ({
     item,
     open,
     onToggle,
-    can,
     location,
 }) => {
     const theme = useTheme();
@@ -77,9 +76,6 @@ const CollapsibleNavItem: React.FC<CollapsibleNavItemProps> = ({
             <Collapse in={isOpen} timeout="auto" unmountOnExit>
                 <List component="div" disablePadding>
                     {item.children?.map((child) => {
-                        if (child.permission && !can(child.permission)) {
-                            return null;
-                        }
                         const isActive = location.pathname === child.to;
                         return (
                             <ListItem key={child.to} disablePadding>

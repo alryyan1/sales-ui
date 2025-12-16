@@ -7,13 +7,11 @@ import axios, { AxiosError } from "axios"; // Import AxiosError for type checkin
 export interface User {
   id: number;
   name: string;
-  email: string;
-  email_verified_at?: string | null; // Optional based on your API response
+  username: string;
   created_at?: string; // Optional based on your API response
   updated_at?: string; // Optional based on your API response
-  // Add roles and permissions arrays (make optional if user might not have any)
+  // Add roles array (make optional if user might not have any)
   roles?: string[];
-  permissions?: string[];
 }
 // AuthResponse type (ensure it includes roles/permissions)
 
@@ -26,7 +24,7 @@ interface LoginCredentials {
 
 interface RegisterCredentials {
   name: string;
-  email: string;
+  username: string;
   password: string;
   password_confirmation: string; // Required by Laravel validation
 }
@@ -34,7 +32,7 @@ interface RegisterCredentials {
 // Type for Profile Update Payload
 export interface UpdateProfileData {
   name: string;
-  email: string;
+  username: string;
 }
 
 // Type for Password Update Payload
@@ -50,7 +48,6 @@ export interface AuthResponse {
   token_type: "Bearer";
   message?: string;
   roles?: string[]; // Ensure login response includes these if setting user directly
-  permissions?: string[]; // Ensure login response includes these
 }
 const AUTH_TOKEN_KEY = "authToken"; // Consistent key for localStorage
 
@@ -70,7 +67,7 @@ const authService = {
     localStorage.removeItem(AUTH_TOKEN_KEY);
   },
   /**
-   * Update the authenticated user's profile (name, email).
+   * Update the authenticated user's profile (name, username).
    */
   updateProfile: async (profileData: UpdateProfileData): Promise<User> => {
     try {

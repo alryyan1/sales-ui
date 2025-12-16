@@ -135,19 +135,19 @@ const PurchaseDetailsPage: React.FC = () => {
              {/* Main Details Card */}
              <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 3 }} elevation={2} className="dark:bg-gray-800">
                  <Grid container spacing={3}>
-                     <Grid item xs={12} sm={6} md={4}>
+                     <Grid xs={12} sm={6} md={4}>
                          <Typography variant="overline" color="text.secondary">{t('purchases:supplier')}</Typography>
                          <Typography variant="body1" fontWeight="medium">{purchase.supplier_name || t('common:n/a')}</Typography>
                      </Grid>
-                     <Grid item xs={12} sm={6} md={4}>
+                     <Grid xs={12} sm={6} md={4}>
                          <Typography variant="overline" color="text.secondary">{t('purchases:purchaseDate')}</Typography>
                          <Typography variant="body1" fontWeight="medium">{dayjs(purchase.purchase_date).format('YYYY-MM-DD')}</Typography>
                      </Grid>
-                     <Grid item xs={12} sm={6} md={4}>
+                     <Grid xs={12} sm={6} md={4}>
                          <Typography variant="overline" color="text.secondary">{t('purchases:reference')}</Typography>
                          <Typography variant="body1" fontWeight="medium">{purchase.reference_number || '---'}</Typography>
                      </Grid>
-                     <Grid item xs={12} sm={6} md={4}>
+                     <Grid xs={12} sm={6} md={4}>
                          <Typography variant="overline" color="text.secondary">{t('purchases:status')}</Typography>
                          <Box sx={{ mt: 0.5 }}>
                              <Chip
@@ -157,16 +157,16 @@ const PurchaseDetailsPage: React.FC = () => {
                             />
                          </Box>
                      </Grid>
-                      <Grid item xs={12} sm={6} md={4}>
+                      <Grid xs={12} sm={6} md={4}>
                           <Typography variant="overline" color="text.secondary">{t('common:recordedBy')}</Typography> {/* Add key */}
                           <Typography variant="body1" fontWeight="medium">{purchase.user_name || t('common:n/a')}</Typography>
                       </Grid>
-                      <Grid item xs={12} sm={6} md={4}>
+                      <Grid xs={12} sm={6} md={4}>
                           <Typography variant="overline" color="text.secondary">{t('common:recordedDate')}</Typography> {/* Add key */}
                           <Typography variant="body1" fontWeight="medium">{dayjs(purchase.created_at).format('YYYY-MM-DD')}</Typography>
                       </Grid>
                       {purchase.notes && (
-                          <Grid item xs={12}>
+                          <Grid xs={12}>
                               <Typography variant="overline" color="text.secondary">{t('purchases:notesLabel')}</Typography>
                               <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', mt: 0.5 }}>{purchase.notes}</Typography>
                           </Grid>

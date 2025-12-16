@@ -7,18 +7,15 @@ import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
-  DialogTitle,
   DialogActions,
   TextField,
   Button,
   Box,
   Alert,
   AlertTitle,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Typography,
+  Autocomplete,
+  Paper,
 } from "@mui/material";
 import { Loader2, AlertCircle, RefreshCw, Plus } from "lucide-react";
 
@@ -33,7 +30,19 @@ import { generateRandomSKU } from "@/lib/utils";
 import CategoryFormModal from "@/components/admin/users/categories/CategoryFormModal";
 import UnitFormModal from "@/components/admin/users/units/UnitFormModal";
 
-// --- Component Props ---
+// --- Component Props & Types ---
+type ProductFormValues = {
+  name: string;
+  scientific_name: string;
+  sku: string;
+  stocking_unit_id: string;
+  sellable_unit_id: string;
+  units_per_stocking_unit: number;
+  category_id: string;
+  stock_quantity: number;
+  stock_alert_level: number | null;
+};
+
 interface ProductFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -68,12 +77,13 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [isSellableUnitModalOpen, setIsSellableUnitModalOpen] = useState(false);
 
   // --- React Hook Form Setup ---
-  const form = useForm({
+  const form = useForm<ProductFormValues>({
+    mode: "onBlur",
+    reValidateMode: "onChange",
     defaultValues: {
       name: "",
       scientific_name: "",
       sku: "",
-      description: "",
       stocking_unit_id: "",
       sellable_unit_id: "",
       units_per_stocking_unit: 1,
@@ -171,7 +181,6 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           name: productToEdit.name || "",
           scientific_name: productToEdit.scientific_name || "",
           sku: productToEdit.sku || "",
-          description: productToEdit.description || "",
           stocking_unit_id: productToEdit.stocking_unit_id ? String(productToEdit.stocking_unit_id) : "",
           sellable_unit_id: productToEdit.sellable_unit_id ? String(productToEdit.sellable_unit_id) : "",
           units_per_stocking_unit: productToEdit.units_per_stocking_unit || 1,
@@ -184,7 +193,6 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           name: "",
           scientific_name: "",
           sku: "",
-          description: "",
           category_id: "",
           stocking_unit_id: "",
           sellable_unit_id: "",
@@ -197,18 +205,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   }, [isOpen, isEditMode, productToEdit, reset, fetchCategoriesForSelect, fetchUnitsForSelect]);
 
   // --- Form Submission Handler ---
-  const onSubmit = async (data: {
-    name: string;
-    scientific_name: string;
-    sku: string;
-    description: string;
-    stocking_unit_id: string;
-    sellable_unit_id: string;
-    units_per_stocking_unit: number;
-    category_id: string;
-    stock_quantity: number;
-    stock_alert_level: number | null;
-  }) => {
+  const onSubmit = async (data: ProductFormValues) => {
     setServerError(null);
     console.log("Submitting product data:", data);
 
@@ -216,7 +213,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       name: data.name,
       scientific_name: data.scientific_name || null,
       sku: data.sku || null,
-      description: data.description || null,
+      description: null,
       stocking_unit_id: data.stocking_unit_id ? Number(data.stocking_unit_id) : null,
       sellable_unit_id: data.sellable_unit_id ? Number(data.sellable_unit_id) : null,
       units_per_stocking_unit: Number(data.units_per_stocking_unit) || 1,
@@ -270,59 +267,112 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   // --- Render Modal ---
   if (!isOpen) return null;
 
+  const handleClose = () => {
+    if (isSubmitting) return;
+    onClose();
+  };
+
   return (
     <Dialog
       open={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       fullWidth
       maxWidth="md"
     >
-      <DialogTitle sx={{ pb: 1, direction: "rtl" }}>
-        {isEditMode ? "تعديل منتج" : "إضافة منتج جديد"}
-      </DialogTitle>
+      {/* <DialogTitle
+        sx={{
+          pb: 1.5,
+          pt: 3,
+          px: 3,
+          borderBottom: 1,
+          borderColor: "divider",
+        }}
+      > */}
+       {/* <Typography variant="h6" component="div" fontWeight={600}>
+          {isEditMode ? "تعديل منتج" : "إضافة منتج جديد"}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+          {isEditMode
+            ? "قم بتحديث بيانات المنتج الحالية وحفظ التغييرات"
+            : "أدخل بيانات المنتج بدقة لتسهيل إدارة المخزون والمبيعات"}
+        </Typography> */}
+      {/* </DialogTitle> */}
       <DialogContent
         sx={{
           pt: 1,
-          maxHeight: "70vh",
+          px: 1,
+          pb: 1,
+          maxHeight: "90vh",
           overflowY: "auto",
-          direction: "rtl",
         }}
       >
         <Box
           component="form"
           onSubmit={handleSubmit(onSubmit)}
           noValidate
-          sx={{ mt: 1 }}
         >
           {/* General Server Error Alert */}
           {serverError && !isSubmitting && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 3,
+                borderRadius: 2,
+              }}
+            >
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>خطأ</AlertTitle>
+                <AlertTitle sx={{ fontWeight: 600 }}>خطأ</AlertTitle>
               </Box>
               {serverError}
             </Alert>
           )}
 
-          {/* Grid layout for fields */}
-          <Box
+          {/* --- Basic Product Information Section --- */}
+          <Paper
+            elevation={0}
             sx={{
-              display: "grid",
-              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-              gap: 2,
+              p: 3,
+              mb: 3,
+              bgcolor: "background.paper",
+              border: 1,
+              borderColor: "divider",
+              borderRadius: 2,
             }}
           >
+            <Typography 
+              variant="subtitle1" 
+              fontWeight={600}
+              sx={{ mb: 2.5, color: "text.primary" }}
+            >
+              معلومات المنتج الأساسية
+            </Typography>
+            
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                gap: 2.5,
+              }}
+            >
             {/* Name Field */}
             <Controller
               control={control}
               name="name"
+              rules={{
+                required: "اسم المنتج مطلوب",
+                minLength: {
+                  value: 2,
+                  message: "اسم المنتج يجب أن يكون على الأقل حرفين",
+                },
+              }}
               render={({ field, fieldState }) => (
                 <TextField
                   {...field}
                   label="اسم المنتج"
                   placeholder="اكتب اسم المنتج"
                   fullWidth
+                  size="small"
                   disabled={isSubmitting}
                   error={!!fieldState.error}
                   helperText={fieldState.error?.message}
@@ -340,6 +390,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   label="الاسم العلمي"
                   placeholder="(اختياري) الاسم العلمي للمنتج"
                   fullWidth
+                  size="small"
                   disabled={isSubmitting}
                   error={!!fieldState.error}
                   helperText={fieldState.error?.message}
@@ -359,6 +410,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     label="الرمز (SKU)"
                     placeholder="(اختياري) رمز المنتج في النظام"
                     fullWidth
+                    size="small"
                     disabled={isSubmitting || isEditMode}
                     error={!!fieldState.error}
                     helperText={fieldState.error?.message}
@@ -379,246 +431,346 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
               )}
             />
 
-            {/* Category Select */}
-            <Controller
-              control={control}
-              name="category_id"
-              render={({ field, fieldState }) => (
-                <Box sx={{ display: "flex", gap: 1 }}>
-                  <FormControl fullWidth size="small" disabled={isSubmitting || loadingCategories}>
-                    <InputLabel>الفئة</InputLabel>
-                    <Select
-                      {...field}
-                      label="الفئة"
-                      value={field.value}
+              {/* Category Autocomplete */}
+              <Controller
+                control={control}
+                name="category_id"
+                render={({ field, fieldState }) => (
+                  <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
+                    <Autocomplete
+                      fullWidth
+                      size="small"
+                      options={categories}
+                      loading={loadingCategories}
+                      getOptionLabel={(option) => option.name || ""}
+                      isOptionEqualToValue={(option, value) =>
+                        option.id === value.id
+                      }
+                      value={
+                        categories.find(
+                          (cat) => String(cat.id) === field.value
+                        ) || null
+                      }
+                      onChange={(_, newValue) =>
+                        field.onChange(newValue ? String(newValue.id) : "")
+                      }
+                      disabled={isSubmitting || loadingCategories}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="الفئة"
+                          placeholder={
+                            loadingCategories
+                              ? "جاري تحميل الفئات..."
+                              : "اختر الفئة"
+                          }
+                          error={!!fieldState.error}
+                          helperText={fieldState.error?.message}
+                        />
+                      )}
+                      noOptionsText={
+                        loadingCategories
+                          ? "جاري تحميل الفئات..."
+                          : "لا توجد فئات متاحة"
+                      }
+                    />
+                    <Button
+                      type="button"
+                      variant="outlined"
+                      onClick={() => setIsCategoryModalOpen(true)}
+                      disabled={isSubmitting}
+                      sx={{ minWidth: 40, height: 40 }}
                     >
-                      <MenuItem value="">
-                        <em>بدون فئة</em>
-                      </MenuItem>
-                      {categories.map((cat) => (
-                        <MenuItem key={cat.id} value={String(cat.id)}>
-                          {cat.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                    {fieldState.error && (
-                      <Typography variant="caption" color="error">
-                        {fieldState.error.message}
-                      </Typography>
-                    )}
-                  </FormControl>
-                  <Button
-                    type="button"
-                    variant="outlined"
-                    onClick={() => setIsCategoryModalOpen(true)}
-                    disabled={isSubmitting}
-                    sx={{ minWidth: 0, px: 1.5 }}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </Box>
-              )}
-            />
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </Box>
+                )}
+              />
+            </Box>
+          </Paper>
 
-            {/* Stocking Unit Select */}
-            <Controller
-              control={control}
-              name="stocking_unit_id"
-              render={({ field, fieldState }) => (
-                <Box sx={{ display: "flex", gap: 1 }}>
-                  <FormControl fullWidth size="small" disabled={isSubmitting || loadingUnits}>
-                    <InputLabel>وحدة التخزين</InputLabel>
-                    <Select
-                      {...field}
-                      label="وحدة التخزين"
-                      value={field.value}
-                    >
-                      <MenuItem value="">
-                        <em>بدون وحدة تخزين</em>
-                      </MenuItem>
-                      {stockingUnits.map((unit) => (
-                        <MenuItem key={unit.id} value={String(unit.id)}>
-                          {unit.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                    {fieldState.error && (
-                      <Typography variant="caption" color="error">
-                        {fieldState.error.message}
-                      </Typography>
-                    )}
-                  </FormControl>
-                  <Button
-                    type="button"
-                    variant="outlined"
-                    onClick={() => setIsStockingUnitModalOpen(true)}
-                    disabled={isSubmitting}
-                    sx={{ minWidth: 0, px: 1.5 }}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </Box>
-              )}
-            />
-
-            {/* Sellable Unit Select */}
-            <Controller
-              control={control}
-              name="sellable_unit_id"
-              render={({ field, fieldState }) => (
-                <Box sx={{ display: "flex", gap: 1 }}>
-                  <FormControl fullWidth size="small" disabled={isSubmitting || loadingUnits}>
-                    <InputLabel>وحدة البيع</InputLabel>
-                    <Select
-                      {...field}
-                      label="وحدة البيع"
-                      value={field.value}
-                    >
-                      <MenuItem value="">
-                        <em>بدون وحدة بيع</em>
-                      </MenuItem>
-                      {sellableUnits.map((unit) => (
-                        <MenuItem key={unit.id} value={String(unit.id)}>
-                          {unit.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                    {fieldState.error && (
-                      <Typography variant="caption" color="error">
-                        {fieldState.error.message}
-                      </Typography>
-                    )}
-                  </FormControl>
-                  <Button
-                    type="button"
-                    variant="outlined"
-                    onClick={() => setIsSellableUnitModalOpen(true)}
-                    disabled={isSubmitting}
-                    sx={{ minWidth: 0, px: 1.5 }}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </Box>
-              )}
-            />
-
-            {/* Units Per Stocking Unit */}
-            <Controller
-              control={control}
-              name="units_per_stocking_unit"
-              render={({ field, fieldState }) => (
-                <TextField
-                  {...field}
-                  label="عدد الوحدات في وحدة التخزين"
-                  type="number"
-                  fullWidth
-                  inputProps={{ min: 1, step: 1 }}
-                  disabled={isSubmitting}
-                  onFocus={(e) => e.target.select()}
-                  onChange={(e) => field.onChange(Number(e.target.value))}
-                  helperText={
-                    fieldState.error?.message ||
-                    "عدد الوحدات البيعية داخل وحدة التخزين (مثال: 12 حبة في كرتونة)."
-                  }
-                  error={!!fieldState.error}
-                />
-              )}
-            />
-
-            {/* Initial Stock Quantity */}
-            <Controller
-              control={control}
-              name="stock_quantity"
-              render={({ field, fieldState }) => (
-                <TextField
-                  {...field}
-                  label="الكمية الابتدائية في المخزون"
-                  type="number"
-                  fullWidth
-                  inputProps={{ min: 0, step: 1 }}
-                  disabled={isSubmitting}
-                  onFocus={(e) => e.target.select()}
-                  onChange={(e) => field.onChange(Number(e.target.value))}
-                  helperText={
-                    fieldState.error?.message ||
-                    "الكمية الحالية من المنتج في المخزون (بوحدة البيع)."
-                  }
-                  error={!!fieldState.error}
-                />
-              )}
-            />
-
-            {/* Stock Alert Level Field */}
-            <Controller
-              control={control}
-              name="stock_alert_level"
-              render={({ field, fieldState }) => (
-                <TextField
-                  {...field}
-                  label="حد تنبيه انخفاض المخزون"
-                  type="number"
-                  fullWidth
-                  inputProps={{ min: 0, step: 1 }}
-                  disabled={isSubmitting}
-                  onFocus={(e) => e.target.select()}
-                  value={field.value ?? ""}
-                  onChange={(e) =>
-                    field.onChange(
-                      e.target.value ? Number(e.target.value) : null
-                    )
-                  }
-                  helperText={
-                    fieldState.error?.message ||
-                    "عند الوصول لهذه الكمية سيتم إظهار تنبيه بانخفاض المخزون (اختياري)."
-                  }
-                  error={!!fieldState.error}
-                />
-              )}
-            />
-
-            {/* Description Field */}
-            <Controller
-              control={control}
-              name="description"
-              render={({ field, fieldState }) => (
-                <TextField
-                  {...field}
-                  label="الوصف"
-                  placeholder="(اختياري) تفاصيل إضافية عن المنتج"
-                  fullWidth
-                  multiline
-                  minRows={3}
-                  disabled={isSubmitting}
-                  value={field.value ?? ""}
-                  error={!!fieldState.error}
-                  helperText={fieldState.error?.message}
-                  sx={{ gridColumn: { xs: "1 / -1", sm: "1 / -1" } }}
-                />
-              )}
-            />
-          </Box>
-
-          <DialogActions sx={{ mt: 2 }}>
-            <Button
-              type="button"
-              onClick={onClose}
-              color="inherit"
-              disabled={isSubmitting}
+          {/* --- Units & Inventory Section --- */}
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              mb: 3,
+              bgcolor: "background.paper",
+              border: 1,
+              borderColor: "divider",
+              borderRadius: 2,
+            }}
+          >
+            <Typography 
+              variant="subtitle1" 
+              fontWeight={600}
+              sx={{ mb: 2.5, color: "text.primary" }}
             >
-              إلغاء
-            </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={isSubmitting}
-              startIcon={
-                isSubmitting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : undefined
-              }
+              الوحدات والمخزون
+            </Typography>
+            
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                gap: 2.5,
+                mb: 2,
+              }}
             >
-              {isEditMode ? "تحديث" : "حفظ"}
-            </Button>
+              {/* Stocking Unit Autocomplete */}
+              <Controller
+                control={control}
+                name="stocking_unit_id"
+                render={({ field, fieldState }) => (
+                  <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
+                    <Autocomplete
+                      fullWidth
+                      size="small"
+                      options={stockingUnits}
+                      loading={loadingUnits}
+                      getOptionLabel={(option) => option.name || ""}
+                      isOptionEqualToValue={(option, value) =>
+                        option.id === value.id
+                      }
+                      value={
+                        stockingUnits.find(
+                          (unit) => String(unit.id) === field.value
+                        ) || null
+                      }
+                      onChange={(_, newValue) =>
+                        field.onChange(newValue ? String(newValue.id) : "")
+                      }
+                      disabled={isSubmitting || loadingUnits}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="وحدة التخزين"
+                          placeholder={
+                            loadingUnits
+                              ? "جاري تحميل الوحدات..."
+                              : "اختر وحدة التخزين"
+                          }
+                          error={!!fieldState.error}
+                          helperText={fieldState.error?.message}
+                        />
+                      )}
+                      noOptionsText={
+                        loadingUnits
+                          ? "جاري تحميل الوحدات..."
+                          : "لا توجد وحدات تخزين متاحة"
+                      }
+                    />
+                    <Button
+                      type="button"
+                      variant="outlined"
+                      onClick={() => setIsStockingUnitModalOpen(true)}
+                      disabled={isSubmitting}
+                      sx={{ minWidth: 40, height: 40 }}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </Box>
+                )}
+              />
+
+
+              {/* Sellable Unit Autocomplete */}
+              <Controller
+                control={control}
+                name="sellable_unit_id"
+                render={({ field, fieldState }) => (
+                  <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
+                    <Autocomplete
+                      fullWidth
+                      size="small"
+                      options={sellableUnits}
+                      loading={loadingUnits}
+                      getOptionLabel={(option) => option.name || ""}
+                      isOptionEqualToValue={(option, value) =>
+                        option.id === value.id
+                      }
+                      value={
+                        sellableUnits.find(
+                          (unit) => String(unit.id) === field.value
+                        ) || null
+                      }
+                      onChange={(_, newValue) =>
+                        field.onChange(newValue ? String(newValue.id) : "")
+                      }
+                      disabled={isSubmitting || loadingUnits}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="وحدة البيع"
+                          placeholder={
+                            loadingUnits
+                              ? "جاري تحميل الوحدات..."
+                              : "اختر وحدة البيع"
+                          }
+                          error={!!fieldState.error}
+                          helperText={fieldState.error?.message}
+                        />
+                      )}
+                      noOptionsText={
+                        loadingUnits
+                          ? "جاري تحميل الوحدات..."
+                          : "لا توجد وحدات بيع متاحة"
+                      }
+                    />
+                    <Button
+                      type="button"
+                      variant="outlined"
+                      onClick={() => setIsSellableUnitModalOpen(true)}
+                      disabled={isSubmitting}
+                      sx={{ minWidth: 40, height: 40 }}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </Box>
+                )}
+              />
+  </Box>
+  <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr 1fr", mt:2 }, gap: 2.5 }}>
+              {/* Units Per Stocking Unit */}
+              <Controller
+                control={control}
+                name="units_per_stocking_unit"
+                rules={{
+                  required: "عدد الوحدات لكل وحدة تخزين مطلوب",
+                  min: {
+                    value: 1,
+                    message: "يجب أن يكون العدد 1 على الأقل",
+                  },
+                }}
+                render={({ field, fieldState }) => (
+                  <TextField
+                    {...field}
+                    label="عدد الوحدات في وحدة التخزين"
+                    type="number"
+                    fullWidth
+                    size="small"
+                    inputProps={{ min: 1, step: 1 }}
+                    disabled={isSubmitting}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => field.onChange(Number(e.target.value))}
+                    helperText={
+                      fieldState.error?.message ||
+                      "عدد الوحدات البيعية داخل وحدة التخزين (مثال: 12 حبة في كرتونة)"
+                    }
+                    error={!!fieldState.error}
+                  />
+                )}
+              />
+
+              {/* Initial Stock Quantity */}
+              <Controller
+                control={control}
+                name="stock_quantity"
+                rules={{
+                  required: "الكمية الابتدائية مطلوبة",
+                  min: {
+                    value: 0,
+                    message: "لا يمكن أن تكون الكمية أقل من 0",
+                  },
+                }}
+                render={({ field, fieldState }) => (
+                  <TextField
+                    {...field}
+                    label="الكمية الابتدائية في المخزون"
+                    type="number"
+                    fullWidth
+                    size="small"
+                    inputProps={{ min: 0, step: 1 }}
+                    disabled={isSubmitting}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => field.onChange(Number(e.target.value))}
+                    helperText={
+                      fieldState.error?.message ||
+                      "الكمية الحالية من المنتج في المخزون (بوحدة البيع)"
+                    }
+                    error={!!fieldState.error}
+                  />
+                )}
+              />
+
+              {/* Stock Alert Level Field */}
+              <Controller
+                control={control}
+                name="stock_alert_level"
+                rules={{
+                  min: {
+                    value: 0,
+                    message: "لا يمكن أن يكون حد التنبيه أقل من 0",
+                  },
+                }}
+                render={({ field, fieldState }) => (
+                  <TextField
+                    {...field}
+                    label="حد تنبيه انخفاض المخزون"
+                    type="number"
+                    fullWidth
+                    size="small"
+                    inputProps={{ min: 0, step: 1 }}
+                    disabled={isSubmitting}
+                    onFocus={(e) => e.target.select()}
+                    value={field.value ?? ""}
+                    onChange={(e) =>
+                      field.onChange(
+                        e.target.value ? Number(e.target.value) : null
+                      )
+                    }
+                    helperText={
+                      fieldState.error?.message ||
+                      "عند الوصول لهذه الكمية سيتم إظهار تنبيه بانخفاض المخزون (اختياري)"
+                    }
+                    error={!!fieldState.error}
+                  />
+                )}
+              />
+            </Box>
+          </Paper>
+
+          <DialogActions
+            sx={{
+              mt: 1,
+              px: 1,
+              pb: 1,
+              pt: 1,
+              borderTop: 1,
+              borderColor: "divider",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Typography variant="caption" color="text.secondary">
+              الحقول المميزة بـ <span style={{ color: "red" }}>*</span> إلزامية
+            </Typography>
+            <Box sx={{ display: "flex", gap: 1.5 }}>
+              <Button
+                type="button"
+                onClick={handleClose}
+                color="inherit"
+                variant="outlined"
+                disabled={isSubmitting}
+                sx={{ minWidth: 100 }}
+              >
+                إلغاء
+              </Button>
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={isSubmitting}
+                sx={{ minWidth: 100 }}
+                startIcon={
+                  isSubmitting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : undefined
+                }
+              >
+                {isEditMode ? "تحديث" : "حفظ"}
+              </Button>
+            </Box>
           </DialogActions>
         </Box>
       </DialogContent>

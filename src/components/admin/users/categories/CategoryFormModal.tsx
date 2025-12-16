@@ -1,55 +1,46 @@
 // src/components/admin/categories/CategoryFormModal.tsx
 import React, { useEffect, useState } from "react";
-import { useForm, SubmitHandler, Controller } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 
-// shadcn/ui & Lucide
-import { Button } from "@/components/ui/button";
+// MUI components
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
-  DialogClose,
-} from "@/components/ui/dialog";
-import {
-  Form,
+  DialogActions,
+  TextField,
+  Button,
+  Box,
+  Alert,
+  AlertTitle,
   FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
+  InputLabel,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  MenuItem,
+  Typography,
+} from "@mui/material";
 import { Loader2, AlertCircle } from "lucide-react";
 import categoryService, { Category } from "@/services/CategoryService";
-// ... Alert component if needed for serverError
-
-// Services and Types
 
 // --- Zod Schema ---
 const categoryFormSchema = z.object({
   name: z.string().min(1, { message: "validation:required" }),
   description: z.string().nullable().optional(),
-  parent_id: z.preprocess(
-    // Convert empty string to null for optional number
-    (val) => (val === "" || val === "0" || val === 0 ? null : val),
-    z.number().positive().nullable().optional()
-  ),
+  parent_id: z.union([
+    z.number().positive(),
+    z.null(),
+    z.undefined(),
+  ]).optional(),
 });
-type CategoryFormValues = z.infer<typeof categoryFormSchema>;
+type CategoryFormValues = {
+  name: string;
+  description?: string | null;
+  parent_id?: number | null;
+};
 
 // --- Component Props ---
 interface CategoryFormModalProps {
@@ -81,7 +72,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
     handleSubmit,
     control,
     reset,
-    formState: { isSubmitting, errors },
+    formState: { isSubmitting },
     setError,
   } = form;
 
@@ -100,7 +91,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
     }
   }, [isOpen, isEditMode, categoryToEdit, reset]);
 
-  const onSubmit: SubmitHandler<CategoryFormValues> = async (data) => {
+  const onSubmit = async (data: CategoryFormValues) => {
     setServerError(null);
     const apiData = { ...data, parent_id: data.parent_id || null }; // Ensure null if empty
     try {
@@ -120,7 +111,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
       });
       onSaveSuccess(savedCategory);
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       if (err.response?.data?.errors) {
         const apiErrors = err.response.data.errors;
         Object.keys(apiErrors).forEach((field) => {
@@ -142,132 +133,187 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
 
   if (!isOpen) return null;
 
+  const handleClose = () => {
+    if (isSubmitting) return;
+    onClose();
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-lg p-0">
-        <Form {...form}>
-            <form onSubmit={handleSubmit(onSubmit)} noValidate>
-            <DialogHeader className="p-6 pb-4 border-b dark:border-zinc-700">
-              <DialogTitle className="dark:text-white">
-              {isEditMode
-                ? t("categories:editCategory")
-                : t("categories:addCategory")}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-              {serverError && (
-              <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 dark:border-red-400 dark:bg-red-950 dark:text-red-200">
-                <AlertCircle className="me-2 h-5 w-5" />
-                <span>{serverError}</span>
-              </div>
-              )}
-              <FormField
+    <Dialog
+      open={isOpen}
+      onClose={handleClose}
+      fullWidth
+      maxWidth="sm"
+    >
+      <DialogTitle
+        sx={{
+          pb: 1.5,
+          pt: 3,
+          px: 3,
+          borderBottom: 1,
+          borderColor: "divider",
+        }}
+      >
+        <Typography variant="h6" component="div" fontWeight={600}>
+          {isEditMode
+            ? t("categories:editCategory")
+            : t("categories:addCategory")}
+        </Typography>
+      </DialogTitle>
+      <Box
+        component="form"
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
+      >
+        <DialogContent
+          sx={{
+            pt: 3,
+            px: 3,
+            pb: 2,
+            maxHeight: "70vh",
+            overflowY: "auto",
+          }}
+        >
+          {serverError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>{t("common:error")}</AlertTitle>
+              </Box>
+              {serverError}
+            </Alert>
+          )}
+
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
+            {/* Name Field */}
+            <Controller
               control={control}
               name="name"
-              render={({ field }) => (
-                <FormItem>
-                <FormLabel className="dark:text-white">
-                  {t("categories:nameLabel")}
-                  <span className="text-red-500">*</span>
-                </FormLabel>
-                <FormControl>
-                  <Input
+              rules={{
+                required: t("validation:required"),
+              }}
+              render={({ field, fieldState }) => (
+                <TextField
                   {...field}
+                  label={
+                    <>
+                      {t("categories:nameLabel")}
+                      <span style={{ color: "red" }}> *</span>
+                    </>
+                  }
+                  fullWidth
+                  size="small"
                   disabled={isSubmitting}
-                  className="dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-700"
-                  />
-                </FormControl>
-                <FormMessage className="dark:text-red-300" />
-                </FormItem>
+                  error={!!fieldState.error}
+                  helperText={fieldState.error?.message ? t(fieldState.error.message) : ""}
+                />
               )}
-              />
-              <FormField
+            />
+
+            {/* Parent Category Field */}
+            <Controller
               control={control}
               name="parent_id"
-              render={({ field }) => (
-                <FormItem>
-                <FormLabel className="dark:text-white">
-                  {t("categories:parentCategoryLabel")}
-                </FormLabel>
-                <Select
-                  onValueChange={(value) =>
-                  field.onChange(value ? Number(value) : null)
-                  }
-                  value={field.value ? String(field.value) : ""}
+              render={({ field, fieldState }) => (
+                <FormControl
+                  fullWidth
+                  size="small"
                   disabled={isSubmitting || loadingCategories}
+                  error={!!fieldState.error}
                 >
-                  <FormControl>
-                  <SelectTrigger className="dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-700">
-                    <SelectValue
-                    placeholder={t(
-                      "categories:selectParentPlaceholder"
-                    )}
-                    className="dark:text-zinc-400"
-                    />
-                  </SelectTrigger>
-                  </FormControl>
-                  <SelectContent className="dark:bg-zinc-900 dark:text-zinc-100">
-                  <SelectItem value=" " className="dark:text-zinc-100">
-                    {t("categories:noParent")}
-                  </SelectItem>
-                  {allCategories
-                    .filter(
-                    (cat) =>
-                      !categoryToEdit || cat.id !== categoryToEdit.id
-                    )
-                    .map((cat) => (
-                    <SelectItem
-                      key={cat.id}
-                      value={String(cat.id)}
-                      className="dark:bg-zinc-900 dark:text-zinc-100"
-                    >
-                      {cat.name}
-                    </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage className="dark:text-red-300" />
-                </FormItem>
+                  <InputLabel>{t("categories:parentCategoryLabel")}</InputLabel>
+                  <Select
+                    {...field}
+                    label={t("categories:parentCategoryLabel")}
+                    value={field.value ? String(field.value) : ""}
+                    onChange={(e) =>
+                      field.onChange(
+                        e.target.value && e.target.value !== " "
+                          ? Number(e.target.value)
+                          : null
+                      )
+                    }
+                  >
+                    <MenuItem value=" ">
+                      <em>{t("categories:noParent")}</em>
+                    </MenuItem>
+                    {allCategories
+                      .filter(
+                        (cat) =>
+                          !categoryToEdit || cat.id !== categoryToEdit.id
+                      )
+                      .map((cat) => (
+                        <MenuItem key={cat.id} value={String(cat.id)}>
+                          {cat.name}
+                        </MenuItem>
+                      ))}
+                  </Select>
+                  {fieldState.error && (
+                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                      {fieldState.error.message}
+                    </Typography>
+                  )}
+                </FormControl>
               )}
-              />
-              <FormField
+            />
+
+            {/* Description Field */}
+            <Controller
               control={control}
               name="description"
-              render={({ field }) => (
-                <FormItem>
-                <FormLabel className="dark:text-white">
-                  {t("categories:descriptionLabel")}
-                </FormLabel>
-                <FormControl>
-                  <Textarea
-                  className="resize-y min-h-[80px] dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-700"
+              render={({ field, fieldState }) => (
+                <TextField
                   {...field}
-                  value={field.value ?? ""}
+                  label={t("categories:descriptionLabel")}
+                  fullWidth
+                  size="small"
+                  multiline
+                  minRows={3}
                   disabled={isSubmitting}
-                  />
-                </FormControl>
-                <FormMessage className="dark:text-red-300" />
-                </FormItem>
+                  value={field.value ?? ""}
+                  error={!!fieldState.error}
+                  helperText={fieldState.error?.message}
+                />
               )}
-              />
-            </div>
-            <DialogFooter className="p-6 pt-4 border-t dark:border-zinc-700">
-              <DialogClose asChild>
-              <Button type="button" variant="ghost" disabled={isSubmitting} className="dark:text-zinc-200">
-                {t("common:cancel")}
-              </Button>
-              </DialogClose>
-              <Button type="submit" disabled={isSubmitting} className="dark:text-white">
-              {isSubmitting && (
-                <Loader2 className="me-2 h-4 w-4 animate-spin" />
-              )}
-              {isEditMode ? t("common:update") : t("common:create")}
-              </Button>
-            </DialogFooter>
-            </form>
-        </Form>
-      </DialogContent>
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions
+          sx={{
+            px: 3,
+            pb: 3,
+            pt: 2,
+            borderTop: 1,
+            borderColor: "divider",
+          }}
+        >
+          <Button
+            type="button"
+            onClick={handleClose}
+            color="inherit"
+            variant="outlined"
+            disabled={isSubmitting}
+            sx={{ minWidth: 100 }}
+          >
+            {t("common:cancel")}
+          </Button>
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={isSubmitting}
+            sx={{ minWidth: 100 }}
+            startIcon={
+              isSubmitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : undefined
+            }
+          >
+            {isEditMode ? t("common:update") : t("common:create")}
+          </Button>
+        </DialogActions>
+      </Box>
     </Dialog>
   );
 };
+
 export default CategoryFormModal;

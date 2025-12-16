@@ -23,7 +23,7 @@ import { Loader2, Save, KeyRound, UserCircle, AlertCircle } from 'lucide-react';
 // Schema for updating profile details
 export const profileSchema = z.object({
     name: z.string().min(1, { message: "validation:required" }),
-    email: z.string().min(1, { message: "validation:required" }).email({ message: "validation:email" }),
+    username: z.string().min(1, { message: "validation:required" }),
 });
 export type ProfileFormValues = z.infer<typeof profileSchema>;
 
@@ -52,7 +52,7 @@ const ProfileDetailsForm: React.FC<ProfileDetailsFormProps> = ({ currentUser, on
         resolver: zodResolver(profileSchema),
         defaultValues: {
             name: currentUser.name || '',
-            email: currentUser.email || '',
+            username: currentUser.username || '',
         },
     });
     const { handleSubmit, control, formState: { isSubmitting, errors }, setError } = form;
@@ -83,7 +83,7 @@ const ProfileDetailsForm: React.FC<ProfileDetailsFormProps> = ({ currentUser, on
                     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                          {serverError && !isSubmitting && ( <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>{t('common:error')}</AlertTitle><AlertDescription>{serverError}</AlertDescription></Alert> )}
                         <FormField control={control} name="name" render={({ field }) => ( <FormItem> <FormLabel>{t('profile:nameLabel')}</FormLabel> <FormControl><Input {...field} disabled={isSubmitting} /></FormControl> <FormMessage>{errors.name?.message ? t(errors.name.message) : null}</FormMessage> </FormItem> )} />
-                        <FormField control={control} name="email" render={({ field }) => ( <FormItem> <FormLabel>{t('profile:emailLabel')}</FormLabel> <FormControl><Input type="email" {...field} disabled={isSubmitting} /></FormControl> <FormMessage>{errors.email?.message ? t(errors.email.message) : null}</FormMessage> </FormItem> )} />
+                        <FormField control={control} name="username" render={({ field }) => ( <FormItem> <FormLabel>{t('profile:usernameLabel')}</FormLabel> <FormControl><Input {...field} disabled={isSubmitting} /></FormControl> <FormMessage>{errors.username?.message ? t(errors.username.message) : null}</FormMessage> </FormItem> )} />
                         <div className="flex justify-end">
                              <Button type="submit" disabled={isSubmitting}>
                                 {isSubmitting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}

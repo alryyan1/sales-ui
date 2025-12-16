@@ -147,42 +147,78 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
     }, []);
 
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {isPurchaseReceived && (
-                <Alert severity="warning" sx={{ mb: 2 }}>
-                    {t('purchases:itemsLockedReceived')}
-                </Alert>
-            )}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="h6" component="h3" sx={{ 
-                    color: 'text.primary',
-                    fontWeight: 500 
-                }}>
-                    {t('purchases:itemsSectionTitle')} ({fields.length})
-                </Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {/* Section Header */}
+            <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: 2
+            }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{ 
+                        width: 4,
+                        height: 24,
+                        bgcolor: 'primary.main',
+                        borderRadius: 1
+                    }} />
+                    <Typography variant="h6" component="h3" sx={{ 
+                        color: 'text.primary',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1
+                    }}>
+                        {t('purchases:itemsSectionTitle')}
+                        <Box sx={{ 
+                            px: 1.5,
+                            py: 0.5,
+                            borderRadius: 2,
+                            bgcolor: 'primary.light',
+                            color: 'primary.main',
+                            fontSize: '0.875rem',
+                            fontWeight: 600
+                        }}>
+                            {fields.length}
+                        </Box>
+                    </Typography>
+                </Box>
 
                 <Button
                     type="button"
-                    variant="outlined"
+                    variant="contained"
                     onClick={addItem}
                     disabled={isSubmitting || isPurchaseReceived}
                     startIcon={<AddIcon />}
                     size="medium"
                     sx={{ 
                         textTransform: 'none',
-                        fontSize: '0.875rem',
-                        borderColor: 'primary.main',
-                        color: 'primary.main',
+                        fontWeight: 600,
+                        px: 2.5,
+                        boxShadow: 2,
                         '&:hover': {
-                            backgroundColor: 'primary.main',
-                            color: 'white',
-                            borderColor: 'primary.main'
+                            boxShadow: 4
                         }
                     }}
                 >
                     {t('purchases:addProduct')}
                 </Button>
             </Box>
+
+            {isPurchaseReceived && (
+                <Alert 
+                    severity="warning" 
+                    sx={{ 
+                        borderRadius: 2,
+                        border: 1,
+                        borderColor: 'warning.main',
+                        bgcolor: 'warning.light'
+                    }}
+                >
+                    {t('purchases:itemsLockedReceived')}
+                </Alert>
+            )}
 
             {/* Search functionality for large datasets */}
             {fields.length > 10 && (
@@ -199,15 +235,30 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                             </InputAdornment>
                         ),
                     }}
-                    sx={{ mb: 2 }}
+                    sx={{ 
+                        mb: 1,
+                        '& .MuiOutlinedInput-root': {
+                            bgcolor: 'background.paper',
+                            '&:hover': {
+                                bgcolor: 'action.hover'
+                            }
+                        }
+                    }}
                 />
             )}
 
             {/* Display root error for items array */}
             {errors.items && !Array.isArray(errors.items) && errors.items.root && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                    <ErrorIcon />
-                    <AlertTitle>{t('common:error')}</AlertTitle>
+                <Alert 
+                    severity="error" 
+                    sx={{ 
+                        mb: 2,
+                        borderRadius: 2,
+                        border: 1,
+                        borderColor: 'error.main'
+                    }}
+                >
+                    <AlertTitle sx={{ fontWeight: 600 }}>{t('common:error')}</AlertTitle>
                     <Typography variant="body2" sx={{ mt: 0.5 }}>
                       {typeof errors.items.root?.message === 'string' 
                         ? errors.items.root.message 
@@ -217,9 +268,33 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
              )}
 
             {/* Performance optimized rendering */}
-            {fields.length > 50 ? (
+            {fields.length === 0 ? (
+                <Box sx={{ 
+                    p: 6,
+                    textAlign: 'center',
+                    bgcolor: 'grey.50',
+                    borderRadius: 2,
+                    border: 1,
+                    borderColor: 'divider',
+                    borderStyle: 'dashed'
+                }}>
+                    <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
+                        {t('purchases:noItemsAdded') || 'No items added yet'}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        {t('purchases:clickAddProduct') || 'Click "Add Product" to start adding items'}
+                    </Typography>
+                </Box>
+            ) : fields.length > 50 ? (
                 // Use virtualization for large datasets
-                <Box sx={{ height: 600, width: '100%' }}>
+                <Box sx={{ 
+                    height: 600, 
+                    width: '100%',
+                    borderRadius: 2,
+                    border: 1,
+                    borderColor: 'divider',
+                    overflow: 'hidden'
+                }}>
                     <AutoSizer>
                         {({ height, width }) => (
                             <List
@@ -235,30 +310,38 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                     </AutoSizer>
                 </Box>
             ) : (
-                                 // Regular rendering for smaller datasets
-                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                     {fields.map((item, index) => (
-                         <PurchaseItemRow
-                             key={item.id}
-                             index={index}
-                             remove={handleRemove}
-                             isSubmitting={isSubmitting}
-                             itemCount={fields.length}
-                             isNew={index === 0}
-                             isPurchaseReceived={isPurchaseReceived}
-                         />
-                     ))}
-                 </Box>
+                // Regular rendering for smaller datasets
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {fields.map((item, index) => (
+                        <PurchaseItemRow
+                            key={item.id}
+                            index={index}
+                            remove={handleRemove}
+                            isSubmitting={isSubmitting}
+                            itemCount={fields.length}
+                            isNew={index === 0}
+                            isPurchaseReceived={isPurchaseReceived}
+                        />
+                    ))}
+                </Box>
             )}
 
             {/* Show filtered count if searching */}
             {searchTerm && (
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    {t('purchases:showingFilteredResults', { 
-                        shown: filteredFields.length, 
-                        total: fields.length 
-                    }) || `Showing ${filteredFields.length} of ${fields.length} items`}
-                </Typography>
+                <Box sx={{ 
+                    p: 1.5,
+                    bgcolor: 'info.light',
+                    borderRadius: 1,
+                    border: 1,
+                    borderColor: 'info.main'
+                }}>
+                    <Typography variant="body2" color="info.dark" sx={{ fontWeight: 500 }}>
+                        {t('purchases:showingFilteredResults', { 
+                            shown: filteredFields.length, 
+                            total: fields.length 
+                        }) || `Showing ${filteredFields.length} of ${fields.length} items`}
+                    </Typography>
+                </Box>
             )}
         </Box>
     );

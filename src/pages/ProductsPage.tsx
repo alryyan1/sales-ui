@@ -9,19 +9,16 @@ import Tooltip from "@mui/material/Tooltip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
 import Pagination from "@mui/material/Pagination";
-import AddIcon from "@mui/icons-material/Add";
 import Snackbar from "@mui/material/Snackbar";
 import TextField from "@mui/material/TextField";
 import InputAdornment from "@mui/material/InputAdornment";
-import SearchIcon from "@mui/icons-material/Search";
-import FilterListIcon from "@mui/icons-material/FilterList";
-import PrintIcon from "@mui/icons-material/Print";
-import TableChartIcon from "@mui/icons-material/TableChart";
-import FileUploadIcon from "@mui/icons-material/FileUpload";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import Select, { SelectChangeEvent } from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
+
+// Lucide Icons (shadcn)
+import { Plus, Filter, Printer, FileSpreadsheet, Upload, Search } from "lucide-react";
 
 // Services and Types
 import productService, { Product } from "../services/productService"; // Use product service
@@ -339,7 +336,6 @@ const ProductsPage: React.FC = () => {
         }}
       >
         <Typography
-          variant="h4"
           component="h1"
           className="text-gray-800 dark:text-gray-100 font-semibold"
         >
@@ -357,7 +353,7 @@ const ProductsPage: React.FC = () => {
                   "&:hover": { bgcolor: "primary.light" },
                 }}
               >
-                <FilterListIcon />
+                <Filter className="h-5 w-5" />
               </IconButton>
             </Tooltip>
             <Typography variant="caption">
@@ -376,7 +372,7 @@ const ProductsPage: React.FC = () => {
                   "&:hover": { bgcolor: "primary.light" },
                 }}
               >
-                <FilterListIcon />
+                <Filter className="h-5 w-5" />
               </IconButton>
             </Tooltip>
             <Typography variant="caption">
@@ -395,7 +391,7 @@ const ProductsPage: React.FC = () => {
                   "&:hover": { bgcolor: "primary.light" },
                 }}
               >
-                <FilterListIcon />
+                <Filter className="h-5 w-5" />
               </IconButton>
             </Tooltip>
             <Typography variant="caption">
@@ -407,7 +403,7 @@ const ProductsPage: React.FC = () => {
           <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
             <Tooltip title="طباعة تقرير المنتجات">
               <IconButton onClick={() => handlePrintProducts()} color="default">
-                <PrintIcon />
+                <Printer className="h-5 w-5" />
               </IconButton>
             </Tooltip>
             <Typography variant="caption">طباعة</Typography>
@@ -417,7 +413,7 @@ const ProductsPage: React.FC = () => {
           <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
             <Tooltip title="تصدير إلى Excel">
               <IconButton onClick={() => handleExportExcel()} color="default">
-                <TableChartIcon />
+                <FileSpreadsheet className="h-5 w-5" />
               </IconButton>
             </Tooltip>
             <Typography variant="caption">Excel</Typography>
@@ -427,7 +423,7 @@ const ProductsPage: React.FC = () => {
           <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
             <Tooltip title="استيراد من ملف">
               <IconButton onClick={() => setIsImportDialogOpen(true)} color="default">
-                <FileUploadIcon />
+                <Upload className="h-5 w-5" />
               </IconButton>
             </Tooltip>
             <Typography variant="caption">استيراد</Typography>
@@ -445,7 +441,7 @@ const ProductsPage: React.FC = () => {
                   "&:hover": { bgcolor: "primary.dark" },
                 }}
               >
-                <AddIcon />
+                <Plus className="h-5 w-5" />
               </IconButton>
             </Tooltip>
             <Typography variant="caption">إضافة</Typography>
@@ -467,7 +463,7 @@ const ProductsPage: React.FC = () => {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon color="action" />
+                    <Search className="h-5 w-5" style={{ color: 'var(--mui-palette-action-active)' }} />
                   </InputAdornment>
                 ),
                 sx: {

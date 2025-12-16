@@ -12,8 +12,6 @@ import { Input } from "@/components/ui/input";
 import { AlertTriangle, Loader2, ArrowLeft, Plus, Edit, Trash2, Search } from 'lucide-react'; // AlertTriangle for delete conflict
 
 // Services and Types
-import { useAuthorization } from '@/hooks/useAuthorization';
-
 // Custom Components
 import ConfirmationDialog from '../../components/common/ConfirmationDialog'; // Adjust path
 import { Alert } from '@mui/material';
@@ -26,7 +24,6 @@ const CategoriesListPage: React.FC = () => {
     const { t } = useTranslation(['categories', 'common']);
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-    const { can } = useAuthorization();
 
     // --- State ---
     const [categoriesResponse, setCategoriesResponse] = useState<PaginatedResponse<Category> | null>(null);
@@ -101,7 +98,7 @@ const CategoriesListPage: React.FC = () => {
         <div className="p-4 md:p-6 lg:p-8 dark:bg-gray-950 min-h-screen pb-10">
              <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
                 <h1 className="text-2xl md:text-3xl font-semibold">{t('categories:manageTitle')}</h1> {/* Add key */}
-                 {can('manage-categories') && ( <Button onClick={() => openModal()} disabled={loadingFlatCategories}><Plus className="me-2 h-4 w-4" /> {t('categories:addCategory')}</Button> )}
+                 <Button onClick={() => openModal()} disabled={loadingFlatCategories}><Plus className="me-2 h-4 w-4" /> {t('categories:addCategory')}</Button>
             </div>
             <div className="mb-4 max-w-sm flex items-center border rounded px-2">
                 <Search className="h-4 w-4 text-muted-foreground mr-2" />
@@ -143,8 +140,8 @@ const CategoriesListPage: React.FC = () => {
                                         <TableCell className="text-center">{category.products_count ?? 0}</TableCell>
                                         <TableCell className="text-center">
                                              <div className="flex justify-center items-center gap-1">
-                                                 {can('manage-categories') && <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openModal(category)}><Edit className="h-4 w-4" /></Button>}
-                                                 {can('manage-categories') && <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600 hover:text-red-700" onClick={() => openConfirmDialog(category.id)} disabled={isDeleting}><Trash2 className="h-4 w-4" /></Button>}
+                                                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openModal(category)}><Edit className="h-4 w-4" /></Button>
+                                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600 hover:text-red-700" onClick={() => openConfirmDialog(category.id)} disabled={isDeleting}><Trash2 className="h-4 w-4" /></Button>
                                              </div>
                                         </TableCell>
                                     </TableRow>

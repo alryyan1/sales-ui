@@ -13,7 +13,7 @@ export interface Role {
 // Type for creating/updating users (password only on create)
 export interface UserFormData {
     name: string;
-    email: string;
+    username: string;
     password?: string; // Optional for update
     password_confirmation?: string; // Optional for update
     roles: string[]; // Array of role names

@@ -12,7 +12,8 @@ import {
   Typography, 
   Chip,
   Box,
-  Tooltip
+  Tooltip,
+  Grid
 } from "@mui/material";
 import { 
   Delete as DeleteIcon
@@ -136,10 +137,10 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
 
   // Memoized render content
   const renderContent = useMemo(() => (
-    <CardContent sx={{ p: 2 }}>
-      <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-2 items-start">
+    <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+      <Grid container spacing={2.5} alignItems="flex-start">
         {/* Product Selection */}
-        <div>
+        <Grid xs={12} sm={6} md={4}>
           <ProductSelect
             id={`product-select-${uniqueId}`}
             value={selectedProduct || null}
@@ -152,86 +153,146 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
             placeholder={t('products:selectProduct')}
             required
           />
-        </div>
+        </Grid>
 
         {/* Batch Number */}
-        <TextField
-          label={t('purchases:fields.batchNumber')}
-          size="small"
-          error={!!getFieldError('batch_number')}
-          helperText={getFieldError('batch_number')}
-          disabled={isSubmitting || isPurchaseReceived}
-          {...register(`items.${index}.batch_number`)}
-        />
+        <Grid xs={12} sm={6} md={1.5}>
+          <TextField
+            label={t('purchases:fields.batchNumber')}
+            size="small"
+            fullWidth
+            error={!!getFieldError('batch_number')}
+            helperText={getFieldError('batch_number')}
+            disabled={isSubmitting || isPurchaseReceived}
+            {...register(`items.${index}.batch_number`)}
+          />
+        </Grid>
 
         {/* Quantity */}
-        <TextField
-          label={t('purchases:fields.quantity')}
-          type="number"
-          size="small"
-          error={!!getFieldError('quantity')}
-          helperText={getFieldError('quantity')}
-          disabled={isSubmitting || isPurchaseReceived}
-          {...register(`items.${index}.quantity`)}
-        />
+        <Grid xs={12} sm={6} md={1.5}>
+          <TextField
+            label={t('purchases:fields.quantity')}
+            type="number"
+            size="small"
+            fullWidth
+            error={!!getFieldError('quantity')}
+            helperText={getFieldError('quantity')}
+            disabled={isSubmitting || isPurchaseReceived}
+            {...register(`items.${index}.quantity`)}
+          />
+        </Grid>
 
         {/* Unit Cost */}
-        <TextField
-          label={t('purchases:fields.unitCost')}
-          type="number"
-          size="small"
-          error={!!getFieldError('unit_cost')}
-          helperText={getFieldError('unit_cost')}
-          disabled={isSubmitting || isPurchaseReceived}
-          {...register(`items.${index}.unit_cost`)}
-        />
+        <Grid xs={12} sm={6} md={1.5}>
+          <TextField
+            label={t('purchases:fields.unitCost')}
+            type="number"
+            size="small"
+            fullWidth
+            error={!!getFieldError('unit_cost')}
+            helperText={getFieldError('unit_cost')}
+            disabled={isSubmitting || isPurchaseReceived}
+            {...register(`items.${index}.unit_cost`)}
+          />
+        </Grid>
 
         {/* Sale Price */}
-        <TextField
-          label={t('purchases:fields.salePrice')}
-          type="number"
-          size="small"
-          error={!!getFieldError('sale_price')}
-          helperText={getFieldError('sale_price')}
-          disabled={isSubmitting || isPurchaseReceived}
-          {...register(`items.${index}.sale_price`)}
-        />
+        <Grid xs={12} sm={6} md={1.5}>
+          <TextField
+            label={t('purchases:fields.salePrice')}
+            type="number"
+            size="small"
+            fullWidth
+            error={!!getFieldError('sale_price')}
+            helperText={getFieldError('sale_price')}
+            disabled={isSubmitting || isPurchaseReceived}
+            {...register(`items.${index}.sale_price`)}
+          />
+        </Grid>
 
         {/* Actions */}
-        <div className="flex flex-col gap-1">
-          <Tooltip title={isPurchaseReceived ? t('purchases:cannotDeleteReceived') : t('common:delete')}>
-            <IconButton
-              onClick={handleRemove}
-              disabled={isSubmitting || itemCount <= 1 || isPurchaseReceived}
-              color="error"
-              size="small"
-            >
-              <DeleteIcon />
-            </IconButton>
-          </Tooltip>
-        </div>
-      </div>
+        <Grid xs={12} sm={6} md={2}>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            justifyContent: { xs: 'flex-start', md: 'flex-end' },
+            height: '100%',
+            pt: { xs: 0, md: 0.5 }
+          }}>
+            <Tooltip title={isPurchaseReceived ? t('purchases:cannotDeleteReceived') : t('common:delete')}>
+              <IconButton
+                onClick={handleRemove}
+                disabled={isSubmitting || itemCount <= 1 || isPurchaseReceived}
+                color="error"
+                size="medium"
+                sx={{
+                  bgcolor: 'error.light',
+                  '&:hover': {
+                    bgcolor: 'error.main',
+                    color: 'error.contrastText'
+                  },
+                  '&.Mui-disabled': {
+                    bgcolor: 'action.disabledBackground',
+                    color: 'action.disabled'
+                  }
+                }}
+              >
+                <DeleteIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </Grid>
+      </Grid>
 
       {/* Additional Info Row */}
       {selectedProduct && (
-        <Box sx={{ display: 'flex', gap: 2, mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
+        <Box sx={{ 
+          display: 'flex', 
+          flexWrap: 'wrap',
+          gap: 1.5, 
+          mt: 3, 
+          pt: 3, 
+          borderTop: 1, 
+          borderColor: 'divider',
+          bgcolor: 'grey.50',
+          borderRadius: 2,
+          p: 2
+        }}>
           <Chip
             label={`${t('purchases:fields.totalSellableUnits')}: ${formatNumber(calculatedValues.totalSellableUnitsDisplay)}`}
             size="small"
             variant="outlined"
+            sx={{
+              fontWeight: 500,
+              borderColor: 'primary.main',
+              color: 'primary.main',
+              bgcolor: 'primary.light'
+            }}
           />
           <Chip
             label={`${t('purchases:fields.itemTotal')}: ${formatNumber(calculatedValues.itemTotalCost)}`}
             size="small"
             variant="outlined"
+            sx={{
+              fontWeight: 600,
+              borderColor: 'success.main',
+              color: 'success.dark',
+              bgcolor: 'success.light'
+            }}
           />
-                     {(selectedProduct.units_per_stocking_unit || 0) > 1 && (
-             <Chip
-               label={`${t('purchases:fields.unitsPerStocking')}: ${selectedProduct.units_per_stocking_unit || 0}`}
-               size="small"
-               variant="outlined"
-             />
-           )}
+          {(selectedProduct.units_per_stocking_unit || 0) > 1 && (
+            <Chip
+              label={`${t('purchases:fields.unitsPerStocking')}: ${selectedProduct.units_per_stocking_unit || 0}`}
+              size="small"
+              variant="outlined"
+              sx={{
+                fontWeight: 500,
+                borderColor: 'info.main',
+                color: 'info.dark',
+                bgcolor: 'info.light'
+              }}
+            />
+          )}
         </Box>
       )}
     </CardContent>
@@ -251,16 +312,40 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
   ]);
 
   return (
-    <Card variant="outlined" sx={{ mb: 2 }}>
+    <Card 
+      variant="outlined" 
+      sx={{ 
+        mb: 2,
+        borderRadius: 2,
+        border: 1,
+        borderColor: 'divider',
+        boxShadow: 1,
+        overflow: 'hidden',
+        transition: 'all 0.2s ease-in-out',
+        '&:hover': {
+          boxShadow: 3,
+          borderColor: 'primary.light'
+        }
+      }}
+    >
       {isPurchaseReceived && (
         <Box sx={{ 
-          p: 1, 
+          p: 1.5, 
           bgcolor: 'warning.light', 
-          color: 'warning.contrastText',
+          color: 'warning.dark',
           borderBottom: 1,
-          borderColor: 'warning.main'
+          borderColor: 'warning.main',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1
         }}>
-          <Typography variant="caption" sx={{ fontWeight: 'medium' }}>
+          <Box sx={{ 
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            bgcolor: 'warning.main'
+          }} />
+          <Typography variant="caption" sx={{ fontWeight: 600 }}>
             {t('purchases:itemLockedReceived')}
           </Typography>
         </Box>

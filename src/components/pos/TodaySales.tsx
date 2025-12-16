@@ -57,7 +57,7 @@ export const TodaySales: React.FC<TodaySalesProps> = ({ sales, onViewSale }) => 
           ) : (
             <Grid container spacing={2}>
               {sales.map((sale) => (
-                <Grid item xs={6} key={sale.id}>
+                <Grid xs={6} key={sale.id}>
                   <Card
                     sx={{
                       width: 100,

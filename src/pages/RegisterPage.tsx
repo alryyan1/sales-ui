@@ -24,7 +24,7 @@ import { useAuth } from '../context/AuthContext'; // Adjust import path as neede
 // Type for validation errors specific to this form
 interface RegistrationErrors {
     name?: string[];
-    email?: string[];
+    username?: string[];
     password?: string[];
     // Add other fields if your backend validation returns them
     [key: string]: string[] | undefined; // Index signature
@@ -50,7 +50,7 @@ const RegisterPage: React.FC = () => {
         watch   // Get watch to compare passwords client-side
     } = useForm<RegisterFormInputs>({
         defaultValues: {
-            name: '', email: '', password: '', password_confirmation: ''
+            name: '', username: '', password: '', password_confirmation: ''
         },
     });
 
@@ -167,24 +167,23 @@ const RegisterPage: React.FC = () => {
                             />
                         {/* </Grid> */}
 
-                        {/* Email Field - Full width on all screens */}
+                        {/* Username Field - Full width on all screens */}
                         {/* <Grid item xs={12}> */}
                              <Controller
-                                name="email"
+                                name="username"
                                 control={control}
                                 rules={{
                                     required: t('validation:required') || true,
-                                    pattern: { value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i, message: t('validation:email') }
                                 }}
                                 render={({ field, fieldState }) => (
                                     <TextField
                                         {...field}
                                         required
                                         fullWidth
-                                        id="email"
-                                        label={t('register:emailLabel')}
-                                        name="email" // RHF uses the 'name' from Controller
-                                        autoComplete="email"
+                                        id="username"
+                                        label={t('register:usernameLabel')}
+                                        name="username" // RHF uses the 'name' from Controller
+                                        autoComplete="username"
                                         variant="outlined"
                                         error={!!fieldState.error}
                                         helperText={fieldState.error?.message || ' '}
@@ -266,7 +265,7 @@ const RegisterPage: React.FC = () => {
 
                     {/* Link to Login Page */}
                     <Grid container justifyContent="flex-end">
-                        <Grid item>
+                        <Grid>
                             <Link component={RouterLink} to="/login" variant="body2">
                                 {t('register:loginPrompt')} {t('register:loginLink')}
                             </Link>

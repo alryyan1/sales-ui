@@ -5,7 +5,6 @@ import { Box, Drawer, useTheme, alpha } from '@mui/material';
 import { Loader2 } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
-import { useAuthorization } from '@/hooks/useAuthorization';
 import SidebarDrawer from './SidebarDrawer';
 import UserMenu from './UserMenu';
 import { DRAWER_WIDTH } from './types';
@@ -15,7 +14,6 @@ const COLLAPSED_DRAWER_WIDTH = 72;
 
 const RootLayout: React.FC = () => {
     const { isLoading } = useAuth();
-    const { can } = useAuthorization();
     const theme = useTheme();
     const [mobileOpen, setMobileOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -40,9 +38,7 @@ const RootLayout: React.FC = () => {
         );
     }
 
-    const visibleNavItems = navItems.filter(
-        (item) => item.permission === null || (item.permission !== null && can(item.permission))
-    );
+    const visibleNavItems = navItems;
 
     const handleDrawerToggle = () => {
         setMobileOpen(!mobileOpen);

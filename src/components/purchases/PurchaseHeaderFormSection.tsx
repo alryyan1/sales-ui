@@ -1,24 +1,29 @@
 // src/components/purchases/PurchaseHeaderFormSection.tsx
 import React from 'react';
-import { useFormContext } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-
-// shadcn/ui & Lucide Icons
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { Calendar as CalendarIcon, Building2, FileText, MessageSquare } from 'lucide-react';
+import { useFormContext, Controller } from 'react-hook-form';
 
 // MUI Components
-import Autocomplete from "@mui/material/Autocomplete";
-import TextField from "@mui/material/TextField";
-import CircularProgress from "@mui/material/CircularProgress";
+import {
+  Card,
+  CardContent,
+  TextField,
+  Autocomplete,
+  CircularProgress,
+  Box,
+  Typography,
+  Chip,
+  alpha,
+  InputAdornment,
+  Stack,
+} from "@mui/material";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+
+// Icons
+import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
+import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
+import InventoryOutlinedIcon from '@mui/icons-material/InventoryOutlined';
+import TagOutlinedIcon from '@mui/icons-material/TagOutlined';
+import NotesOutlinedIcon from '@mui/icons-material/NotesOutlined';
 
 // Types
 import { Supplier } from '../../services/supplierService';
@@ -34,12 +39,52 @@ interface PurchaseHeaderFormSectionProps {
     isPurchaseReceived?: boolean;
 }
 
-// Status options for the autocomplete
+// Status options configuration
 const statusOptions = [
-    { value: "pending", label: "purchases:status_pending", color: "warning" },
-    { value: "ordered", label: "purchases:status_ordered", color: "info" },
-    { value: "received", label: "purchases:status_received", color: "success" },
-];
+    { value: "pending", label: "قيد الانتظار", color: "warning" },
+    { value: "ordered", label: "تم الطلب", color: "info" },
+    { value: "received", label: "تم الاستلام", color: "success" },
+] as const;
+
+type StatusOption = typeof statusOptions[number];
+
+// Field Label Component with Icon
+const FieldLabel: React.FC<{ 
+    children: React.ReactNode; 
+    required?: boolean;
+    icon?: React.ReactNode;
+}> = ({ children, required, icon }) => (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
+        {icon && (
+            <Box sx={{ 
+                color: 'primary.main', 
+                display: 'flex', 
+                alignItems: 'center',
+                '& svg': { fontSize: 18 }
+            }}>
+                {icon}
+            </Box>
+        )}
+        <Typography 
+            variant="body2" 
+            sx={{ 
+                fontWeight: 600, 
+                color: 'text.primary',
+                letterSpacing: '-0.01em'
+            }}
+        >
+            {children}
+            {required && (
+                <Typography 
+                    component="span" 
+                    sx={{ color: 'error.main', ml: 0.5 }}
+                >
+                    *
+                </Typography>
+            )}
+        </Typography>
+    </Box>
+);
 
 export const PurchaseHeaderFormSection: React.FC<PurchaseHeaderFormSectionProps> = ({
     suppliers,
@@ -51,212 +96,310 @@ export const PurchaseHeaderFormSection: React.FC<PurchaseHeaderFormSectionProps>
     onSupplierSelect,
     isPurchaseReceived = false
 }) => {
-    const { t } = useTranslation(['purchases', 'common', 'suppliers', 'validation']);
     const { control } = useFormContext();
 
+    // Common input styles
+    const inputStyles = {
+        '& .MuiOutlinedInput-root': {
+            backgroundColor: 'background.paper',
+            transition: 'all 0.2s ease-in-out',
+            '&:hover': {
+                backgroundColor: (theme: any) => alpha(theme.palette.primary.main, 0.02),
+            },
+            '&.Mui-focused': {
+                backgroundColor: 'background.paper',
+                boxShadow: (theme: any) => `0 0 0 3px ${alpha(theme.palette.primary.main, 0.1)}`,
+            },
+            '& input, & textarea': { 
+                textAlign: 'right', 
+                direction: 'ltr' 
+            }
+        }
+    };
+
+    const isDisabled = isSubmitting || isPurchaseReceived;
+
     return (
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50">
-            <CardContent className="p-1">
-                {/* All fields in one row */}
-                <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
-                    {/* Supplier Selection */}
-                    <FormField
+        <Card 
+            elevation={0} 
+            sx={{ 
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 3,
+                overflow: 'hidden',
+                mb: 3,
+            }}
+        >
+            {/* Header */}
+            <Box 
+                sx={{ 
+                    px: 3, 
+                    py: 2,
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
+                    bgcolor: (theme) => alpha(theme.palette.primary.main, 0.03),
+                }}
+            >
+                <Typography 
+                    variant="subtitle1" 
+                    sx={{ 
+                        fontWeight: 700,
+                        color: 'text.primary',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                    }}
+                >
+                    <InventoryOutlinedIcon sx={{ fontSize: 22, color: 'primary.main' }} />
+                    معلومات الطلب
+                </Typography>
+            </Box>
+
+            <CardContent sx={{ p: 3 }}>
+                <Stack spacing={3} sx={{ direction: 'ltr' }}>
+                    
+                    {/* Supplier Selection - Full Width */}
+                    <Controller
                         control={control}
                         name="supplier_id"
                         render={({ field, fieldState }) => (
-                            <FormItem className="space-y-1">
-                                <FormLabel className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                                    <Building2 className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-                                    {t('purchases:selectSupplier')} <span className="text-red-500">*</span>
-                                </FormLabel>
-                                <FormControl>
-                                    <Autocomplete
-                                        options={suppliers}
-                                        getOptionLabel={(option) => option.name}
-                                        value={selectedSupplier}
-                                        onChange={(event, newValue) => {
-                                            field.onChange(newValue?.id || "");
-                                            onSupplierSelect(newValue);
-                                        }}
-                                        onInputChange={(event, newInputValue) => {
-                                            onSupplierSearchInputChange(newInputValue);
-                                        }}
-                                        inputValue={supplierSearchInput}
-                                        loading={loadingSuppliers}
-                                        disabled={isSubmitting}
-                                        size="small"
-                                        renderInput={(params) => (
-                                            <TextField
-                                                {...params}
-                                                placeholder={t('purchases:selectSupplierPlaceholder')}
-                                                error={!!fieldState.error}
-                                                helperText={fieldState.error?.message ? t(fieldState.error.message) : ""}
-                                                InputProps={{
-                                                    ...params.InputProps,
-                                                    endAdornment: (
-                                                        <>
-                                                            {loadingSuppliers ? (
-                                                                <CircularProgress color="inherit" size={16} />
-                                                            ) : null}
-                                                            {params.InputProps.endAdornment}
-                                                        </>
-                                                    ),
-                                                }}
-                                            />
-                                        )}
-                                        renderOption={(props, option) => {
-                                            const { key, ...otherProps } = props;
-                                            return (
-                                                <li key={key} {...otherProps}>
-                                                    <div className="flex flex-col">
-                                                        <span className="font-medium text-sm">{option.name}</span>
-                                                        <span className="text-xs text-muted-foreground">
-                                                            {option.email || t('common:n/a')}
-                                                        </span>
-                                                    </div>
-                                                </li>
-                                            );
-                                        }}
-                                    />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-
-                    {/* Purchase Date */}
-                    <FormField
-                        control={control}
-                        name="purchase_date"
-                        render={({ field }) => (
-                            <FormItem className="space-y-1">
-                                <FormLabel className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                                    <CalendarIcon className="h-3 w-3 text-green-600 dark:text-green-400" />
-                                    {t('purchases:purchaseDate')} <span className="text-red-500">*</span>
-                                </FormLabel>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <FormControl>
-                                            <Button
-                                                variant="outline"
-                                                disabled={isSubmitting}
-                                                className={cn(
-                                                    "w-full justify-start text-left font-normal h-9 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs",
-                                                    !field.value && "text-muted-foreground"
-                                                )}
-                                            >
-                                                <CalendarIcon className="me-1 h-3 w-3 text-green-600 dark:text-green-400" />
-                                                {field.value ? format(field.value, "MM/dd/yy") : <span>{t('common:pickDate')}</span>}
-                                            </Button>
-                                        </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                        <Calendar
-                                            mode="single"
-                                            selected={field.value ?? undefined}
-                                            onSelect={field.onChange}
-                                            disabled={(date) => date > new Date() || date < new Date("1900-01-01") || isSubmitting}
-                                            initialFocus
+                            <Box>
+                                <FieldLabel required icon={<LocalShippingOutlinedIcon />}>
+                                    المورد
+                                </FieldLabel>
+                                <Autocomplete
+                                    options={suppliers}
+                                    getOptionLabel={(option) => option.name}
+                                    value={selectedSupplier}
+                                    onChange={(_, newValue) => {
+                                        field.onChange(newValue?.id || "");
+                                        onSupplierSelect(newValue);
+                                    }}
+                                    onInputChange={(_, newInputValue) => onSupplierSearchInputChange(newInputValue)}
+                                    inputValue={supplierSearchInput}
+                                    loading={loadingSuppliers}
+                                    disabled={isDisabled}
+                                    size="small"
+                                    noOptionsText="لا توجد نتائج"
+                                    loadingText="جاري البحث..."
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            placeholder="ابحث عن مورد..."
+                                            error={!!fieldState.error}
+                                            helperText={fieldState.error?.message}
+                                            sx={inputStyles}
+                                            InputProps={{
+                                                ...params.InputProps,
+                                                endAdornment: (
+                                                    <>
+                                                        {loadingSuppliers && (
+                                                            <CircularProgress color="primary" size={18} />
+                                                        )}
+                                                        {params.InputProps.endAdornment}
+                                                    </>
+                                                ),
+                                            }}
                                         />
-                                    </PopoverContent>
-                                </Popover>
-                                <FormMessage />
-                            </FormItem>
+                                    )}
+                                    renderOption={(props, option) => (
+                                        <Box 
+                                            component="li" 
+                                            {...props} 
+                                            sx={{ 
+                                                direction: 'ltr', 
+                                                textAlign: 'right',
+                                                py: 1.5,
+                                                borderBottom: '1px solid',
+                                                borderColor: 'divider',
+                                                '&:last-child': { borderBottom: 'none' }
+                                            }}
+                                        >
+                                            <Typography variant="body2" fontWeight={500}>
+                                                {option.name}
+                                            </Typography>
+                                        </Box>
+                                    )}
+                                />
+                            </Box>
                         )}
                     />
 
-                    {/* Status */}
-                    <FormField
-                        control={control}
-                        name="status"
-                        render={({ field, fieldState }) => (
-                            <FormItem className="space-y-1">
-                                <FormLabel className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                                    {t('purchases:statusLabel')} <span className="text-red-500">*</span>
-                                </FormLabel>
-                                <FormControl>
-                                    <Autocomplete
-                                        options={statusOptions}
-                                        getOptionLabel={(option) => t(option.label)}
-                                        value={statusOptions.find(option => option.value === field.value) || null}
-                                        onChange={(event, newValue) => {
-                                            field.onChange(newValue?.value || "");
+                    {/* Row: Date, Status, Reference */}
+                    <Box 
+                        sx={{ 
+                            display: 'flex', 
+                            flexWrap: 'wrap', 
+                            gap: 3,
+                            '& > *': { 
+                                flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)', md: '1 1 calc(33.333% - 16px)' },
+                                minWidth: { xs: '100%', sm: 200, md: 180 }
+                            }
+                        }}
+                    >
+                        {/* Purchase Date */}
+                        <Controller
+                            control={control}
+                            name="purchase_date"
+                            render={({ field, fieldState }) => (
+                                <Box>
+                                    <FieldLabel required icon={<CalendarTodayOutlinedIcon />}>
+                                        تاريخ الطلب
+                                    </FieldLabel>
+                                    <DatePicker
+                                        value={field.value ?? null}
+                                        onChange={field.onChange}
+                                        disabled={isDisabled}
+                                        slotProps={{
+                                            textField: {
+                                                size: 'small',
+                                                fullWidth: true,
+                                                error: !!fieldState.error,
+                                                helperText: fieldState.error?.message,
+                                                placeholder: "YYYY/MM/DD",
+                                                sx: inputStyles
+                                            },
                                         }}
-                                        disabled={isSubmitting || isPurchaseReceived}
+                                        shouldDisableDate={(date) => 
+                                            date > new Date() || date < new Date("1900-01-01")
+                                        }
+                                    />
+                                </Box>
+                            )}
+                        />
+
+                        {/* Status */}
+                        <Controller
+                            control={control}
+                            name="status"
+                            render={({ field, fieldState }) => {
+                                const selectedValue = statusOptions.find(opt => opt.value === field.value) as StatusOption | undefined;
+                                return (
+                                    <Box>
+                                        <FieldLabel required icon={<InventoryOutlinedIcon />}>
+                                            الحالة
+                                        </FieldLabel>
+                                        <Autocomplete<StatusOption, false, true, false>
+                                            options={statusOptions as unknown as StatusOption[]}
+                                            getOptionLabel={(option) => option.label}
+                                            value={selectedValue}
+                                            onChange={(_, newValue) => field.onChange(newValue?.value || "")}
+                                            disabled={isDisabled}
+                                            size="small"
+                                            disableClearable
+                                            renderInput={(params) => (
+                                                <TextField
+                                                    {...params}
+                                                    placeholder="اختر الحالة..."
+                                                    error={!!fieldState.error}
+                                                    helperText={fieldState.error?.message}
+                                                    sx={inputStyles}
+                                                />
+                                            )}
+                                            renderOption={(props, option) => (
+                                                <Box 
+                                                    component="li" 
+                                                    {...props} 
+                                                    sx={{ 
+                                                        direction: 'ltr', 
+                                                        justifyContent: 'flex-start',
+                                                        py: 1.25,
+                                                    }}
+                                                >
+                                                    <Chip 
+                                                        label={option.label} 
+                                                        size="small" 
+                                                        color={option.color}
+                                                        variant="filled"
+                                                        sx={{ 
+                                                            minWidth: 90, 
+                                                            fontWeight: 600,
+                                                            borderRadius: 1.5,
+                                                        }}
+                                                    />
+                                                </Box>
+                                            )}
+                                        />
+                                    </Box>
+                                );
+                            }}
+                        />
+
+                        {/* Reference Number */}
+                        <Controller
+                            control={control}
+                            name="reference_number"
+                            render={({ field, fieldState }) => (
+                                <Box>
+                                    <FieldLabel icon={<TagOutlinedIcon />}>
+                                        رقم المرجع
+                                    </FieldLabel>
+                                    <TextField
+                                        {...field}
+                                        value={field.value ?? ''}
+                                        placeholder="مثال: PO-2024-001"
+                                        disabled={isDisabled}
                                         size="small"
-                                        renderInput={(params) => (
-                                            <TextField
-                                                {...params}
-                                                placeholder={t("purchases:selectStatusPlaceholder")}
-                                                error={!!fieldState.error}
-                                                helperText={fieldState.error?.message ? t(fieldState.error.message) : ""}
-                                            />
-                                        )}
-                                        renderOption={(props, option) => {
-                                            const { key, ...otherProps } = props;
-                                            return (
-                                                <li key={key} {...otherProps}>
-                                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-${option.color}-100 text-${option.color}-800 dark:bg-${option.color}-900 dark:text-${option.color}-200`}>
-                                                        {t(option.label)}
-                                                    </span>
-                                                </li>
-                                            );
+                                        fullWidth
+                                        error={!!fieldState.error}
+                                        helperText={fieldState.error?.message}
+                                        sx={inputStyles}
+                                        InputProps={{
+                                            startAdornment: (
+                                                <InputAdornment position="start">
+                                                    <Typography 
+                                                        variant="body2" 
+                                                        sx={{ 
+                                                            color: 'text.disabled',
+                                                            fontWeight: 500,
+                                                            fontSize: '0.8rem'
+                                                        }}
+                                                    >
+                                                        #
+                                                    </Typography>
+                                                </InputAdornment>
+                                            ),
                                         }}
                                     />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                                </Box>
+                            )}
+                        />
+                    </Box>
 
-                    {/* Reference Number */}
-                    <FormField
-                        control={control}
-                        name="reference_number"
-                        render={({ field }) => (
-                            <FormItem className="space-y-1">
-                                <FormLabel className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                                    <FileText className="h-3 w-3 text-purple-600 dark:text-purple-400" />
-                                    {t('purchases:referenceLabel')}
-                                </FormLabel>
-                                <FormControl>
-                                    <Input 
-                                        placeholder={t('purchases:referencePlaceholder')} 
-                                        {...field} 
-                                        value={field.value ?? ''} 
-                                        disabled={isSubmitting}
-                                        className="h-9 text-xs border-gray-200 dark:border-gray-600 focus:border-purple-500 dark:focus:border-purple-400"
-                                    />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-
-                    {/* Notes */}
-                    <FormField
+                    {/* Notes - Full Width */}
+                    <Controller
                         control={control}
                         name="notes"
-                        render={({ field }) => (
-                            <FormItem className="space-y-1">
-                                <FormLabel className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                                    <MessageSquare className="h-3 w-3 text-orange-600 dark:text-orange-400" />
-                                    {t('purchases:notesLabel')}
-                                </FormLabel>
-                                <FormControl>
-                                    <Textarea 
-                                        placeholder={t('purchases:notesPlaceholder')} 
-                                        className="resize-none h-9 text-xs border-gray-200 dark:border-gray-600 focus:border-orange-500 dark:focus:border-orange-400" 
-                                        {...field} 
-                                        value={field.value ?? ''} 
-                                        disabled={isSubmitting} 
-                                    />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                        render={({ field, fieldState }) => (
+                            <Box>
+                                <FieldLabel icon={<NotesOutlinedIcon />}>
+                                    الملاحظات
+                                </FieldLabel>
+                                <TextField
+                                    {...field}
+                                    value={field.value ?? ''}
+                                    placeholder="أدخل أي ملاحظات إضافية هنا..."
+                                    disabled={isDisabled}
+                                    size="small"
+                                    fullWidth
+                                    multiline
+                                    minRows={3}
+                                    maxRows={6}
+                                    error={!!fieldState.error}
+                                    helperText={fieldState.error?.message}
+                                    sx={{
+                                        ...inputStyles,
+                                        '& .MuiOutlinedInput-root': {
+                                            ...inputStyles['& .MuiOutlinedInput-root'],
+                                            alignItems: 'flex-start',
+                                        }
+                                    }}
+                                />
+                            </Box>
                         )}
                     />
-                </div>
+
+                </Stack>
             </CardContent>
         </Card>
     );

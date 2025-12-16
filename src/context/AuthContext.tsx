@@ -14,7 +14,6 @@ type AuthContextType = {
   user: User | null;
   isLoading: boolean; // Still represents initial auth check loading
   roles: string[]; // Array of role names
-  permissions: string[]; // Array of permission names
   checkAuthStatus: () => Promise<void>; // Function to re-check auth if needed
   handleLoginSuccess: (authResponse: AuthResponse) => void; // Accept full AuthResponse
   handleRegisterSuccess: (authResponse: AuthResponse) => void; // Accept full AuthResponse
@@ -38,14 +37,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [roles, setRoles] = useState<string[]>([]);
-  const [permissions, setPermissions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   const clearAuthState = () => {
     setUser(null);
     setRoles([]);
-    setPermissions([]);
     authService.removeToken(); // Ensure token is removed on clear
   };
 
@@ -59,7 +56,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (currentUser) {
         setUser(currentUser);
         setRoles(currentUser.roles || []); // Set roles from user object
-        setPermissions(currentUser.permissions || []); // Set permissions
         console.log("AuthProvider: User authenticated", currentUser);
       } else {
         console.log("AuthProvider: No valid user session/token found.");
@@ -82,11 +78,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const handleLoginSuccess = (authResponse: AuthResponse) => {
     console.log("AuthProvider: Login successful", authResponse);
     setUser(authResponse.user);
-    // Extract roles/permissions from response. If they are nested in user object, adjust accordingly
+    // Extract roles from response. If they are nested in user object, adjust accordingly
     setRoles(authResponse.roles || authResponse.user.roles || []);
-    setPermissions(
-      authResponse.permissions || authResponse.user.permissions || []
-    );
     // Token is already stored by authService.login
     // The actual redirect will be handled by the LoginPage component
     // which has access to the location state with the intended destination
@@ -96,9 +89,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     console.log("AuthProvider: Register successful", authResponse);
     setUser(authResponse.user);
     setRoles(authResponse.roles || authResponse.user.roles || []);
-    setPermissions(
-      authResponse.permissions || authResponse.user.permissions || []
-    );
     // Token stored by authService.register
     navigate("/dashboard", { replace: true });
   };
@@ -125,7 +115,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     user,
     isLoading,
     roles,
-    permissions,
     checkAuthStatus,
     handleLoginSuccess,
     handleRegisterSuccess,

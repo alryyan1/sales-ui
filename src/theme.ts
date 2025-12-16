@@ -1,42 +1,27 @@
 // src/theme.ts
 import { createTheme } from '@mui/material/styles';
-import { prefixer } from 'stylis';
-import rtlPlugin from 'stylis-plugin-rtl';
+import { arEG } from '@mui/material/locale';
 import createCache from '@emotion/cache';
+import { prefixer } from 'stylis';
 
-// Create RTL cache for Emotion
+// Create cache for Emotion (WITHOUT rtlPlugin - MUI handles RTL internally)
 export const cacheRtl = createCache({
-  key: 'muirtl',
-  stylisPlugins: [prefixer, rtlPlugin],
+  key: 'mui',
+  stylisPlugins: [prefixer],
 });
 
-// MUI Theme with Tajawal font and RTL
+// Create MUI theme with Arabic RTL support
 const theme = createTheme({
   direction: 'rtl',
   typography: {
     fontFamily: '"Tajawal", "Arial", sans-serif',
-    // Customize typography variants if needed
-    h1: {
-      fontWeight: 700,
-    },
-    h2: {
-      fontWeight: 700,
-    },
-    h3: {
-      fontWeight: 700,
-    },
-    h4: {
-      fontWeight: 600,
-    },
-    h5: {
-      fontWeight: 600,
-    },
-    h6: {
-      fontWeight: 600,
-    },
-    button: {
-      fontWeight: 600,
-    },
+    h1: { fontWeight: 700 },
+    h2: { fontWeight: 700 },
+    h3: { fontWeight: 700 },
+    h4: { fontWeight: 600 },
+    h5: { fontWeight: 600 },
+    h6: { fontWeight: 600 },
+    button: { fontWeight: 600 },
   },
   palette: {
     primary: {
@@ -53,15 +38,19 @@ const theme = createTheme({
     },
     error: {
       main: '#d32f2f',
+      light: '#ffebee',
     },
     warning: {
       main: '#ed6c02',
+      light: '#fff3e0',
     },
     info: {
       main: '#0288d1',
+      light: '#e3f2fd',
     },
     success: {
       main: '#2e7d32',
+      light: '#e8f5e9',
     },
     background: {
       default: '#fafafa',
@@ -74,6 +63,9 @@ const theme = createTheme({
   components: {
     MuiCssBaseline: {
       styleOverrides: {
+        html: {
+          direction: 'rtl',
+        },
         body: {
           direction: 'rtl',
           fontFamily: '"Tajawal", "Arial", sans-serif',
@@ -83,7 +75,7 @@ const theme = createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          textTransform: 'none', // Disable uppercase transformation
+          textTransform: 'none',
           fontWeight: 600,
         },
       },
@@ -91,13 +83,20 @@ const theme = createTheme({
     MuiTextField: {
       defaultProps: {
         variant: 'outlined',
-        size: 'medium',
+        size: 'small',
       },
     },
     MuiCard: {
       styleOverrides: {
         root: {
           borderRadius: 12,
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
         },
       },
     },
@@ -108,8 +107,21 @@ const theme = createTheme({
         },
       },
     },
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          fontWeight: 500,
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          borderRadius: 12,
+        },
+      },
+    },
   },
-});
+}, arEG);
 
 export default theme;
-

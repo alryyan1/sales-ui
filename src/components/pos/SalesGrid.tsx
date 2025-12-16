@@ -66,7 +66,7 @@ export const SalesGrid: React.FC<SalesGridProps> = ({
   return (
     <Grid container spacing={2}>
       {sales.map((sale) => (
-        <Grid item xs={12} sm={6} md={4} key={sale.id}>
+        <Grid xs={12} sm={6} md={4} key={sale.id}>
           <Card
             sx={{
               cursor: 'pointer',

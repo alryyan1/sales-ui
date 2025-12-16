@@ -23,8 +23,6 @@ import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 
 // Types & hooks
 import { Supplier } from "../../services/supplierService";
-import { useAuthorization } from "@/hooks/useAuthorization";
-
 // Component Props
 interface SuppliersTableProps {
   suppliers: Supplier[];
@@ -41,7 +39,6 @@ const SuppliersTable: React.FC<SuppliersTableProps> = ({
   onViewLedger,
   isLoading = false,
 }) => {
-  const { can } = useAuthorization();
   if (suppliers.length === 0) {
     return (
       <Paper sx={{ p: 3, textAlign: "center", mt: 2 }}>
@@ -90,21 +87,19 @@ const SuppliersTable: React.FC<SuppliersTableProps> = ({
                       </IconButton>
                     </Tooltip>
 
-                    {can("edit-suppliers") && (
-                      <Tooltip title="تعديل">
-                        <span>
-                          <IconButton
-                            aria-label="تعديل"
-                            color="primary"
-                            size="small"
-                            onClick={() => onEdit(supplier)}
-                            disabled={isLoading} // Disable if parent is processing delete
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </span>
-                      </Tooltip>
-                    )}
+                    <Tooltip title="تعديل">
+                      <span>
+                        <IconButton
+                          aria-label="تعديل"
+                          color="primary"
+                          size="small"
+                          onClick={() => onEdit(supplier)}
+                          disabled={isLoading} // Disable if parent is processing delete
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
                   </Box>
                 </TableCell>
               </TableRow>

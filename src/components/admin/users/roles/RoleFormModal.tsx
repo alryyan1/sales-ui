@@ -1,49 +1,42 @@
 // src/components/admin/roles/RoleFormModal.tsx
 import React, { useEffect, useState } from "react";
-import { useForm, SubmitHandler, Controller } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
-// shadcn/ui & Lucide Icons
-import { Button } from "@/components/ui/button";
+// MUI components
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
-  DialogClose,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
+  DialogActions,
+  TextField,
+  Button,
+  Box,
+  Alert,
+  AlertTitle,
+  Typography,
+  FormControlLabel,
+  Checkbox,
+  FormGroup,
+  Paper,
+} from "@mui/material";
 import { Loader2, AlertCircle } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // Services and Types
 import roleService, {
   RoleFormData,
   RoleWithPermissions,
   Permission,
-} from "../../../../services/roleService"; // Adjust path
+} from "../../../../services/roleService";
 import { useAuth } from "@/context/AuthContext";
 
 // --- Zod Schema ---
 const roleFormSchema = z.object({
-  name: z.string().min(1, { message: "validation:required" }), // Role name is usually required
-  permissions: z.array(z.string()), // Array of permission names assigned
+  name: z.string().min(1, { message: "validation:required" }),
+  permissions: z.array(z.string()),
 });
 
 type RoleFormValues = z.infer<typeof roleFormSchema>;
@@ -52,13 +45,12 @@ type RoleFormValues = z.infer<typeof roleFormSchema>;
 interface RoleFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  roleToEdit: RoleWithPermissions | null; // Role object for editing (includes current permissions)
-  onSaveSuccess: (role: RoleWithPermissions) => void; // Callback with saved/created role
-  availablePermissions: Permission[]; // List of all permissions from backend
-  loadingPermissions: boolean; // Loading state for permissions list
+  roleToEdit: RoleWithPermissions | null;
+  onSaveSuccess: (role: RoleWithPermissions) => void;
+  availablePermissions: Permission[];
+  loadingPermissions: boolean;
 }
 
-// --- Component ---
 const RoleFormModal: React.FC<RoleFormModalProps> = ({
   isOpen,
   onClose,
@@ -72,16 +64,14 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
     "common",
     "validation",
     "permissions",
-  ]); // Add permissions namespace if needed
+  ]);
   const isEditMode = Boolean(roleToEdit);
-
   const [serverError, setServerError] = useState<string | null>(null);
+  const { user } = useAuth();
 
-  const {user} =  useAuth()
-  // --- RHF Setup ---
   const form = useForm<RoleFormValues>({
     resolver: zodResolver(roleFormSchema),
-    defaultValues: { name: "", permissions: [] }, // Default values for form fields
+    defaultValues: { name: "", permissions: [] },
   });
   const {
     handleSubmit,
@@ -91,31 +81,28 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
     setError,
   } = form;
 
-  // --- Effect to Populate/Reset Form ---
   useEffect(() => {
     if (isOpen) {
       setServerError(null);
       if (isEditMode && roleToEdit) {
-        console.log(roleToEdit, 'roleToEdit')
+        console.log(roleToEdit, 'roleToEdit');
         reset({
           name: roleToEdit.name || "",
-          permissions: roleToEdit.permissions || [], // Use permissions from the role object
+          permissions: roleToEdit.permissions || [],
         });
       } else {
-        reset({ name: "", permissions: [] }); // Reset for adding
+        reset({ name: "", permissions: [] });
       }
     }
   }, [isOpen, isEditMode, roleToEdit, reset]);
 
-  // --- Form Submission ---
-  const onSubmit: SubmitHandler<RoleFormValues> = async (data) => {
+  const onSubmit = async (data: RoleFormValues) => {
     setServerError(null);
     console.log(`Submitting ${isEditMode ? "update" : "create"} role:`, data);
 
-    // Name is usually not updatable after creation, depends on backend controller logic
     const apiData: RoleFormData | Pick<RoleFormData, "permissions"> = isEditMode
-      ? { permissions: data.permissions } // Only send permissions for update
-      : data; // Send all data for create
+      ? { permissions: data.permissions }
+      : data;
 
     try {
       let savedRole: RoleWithPermissions;
@@ -141,166 +128,214 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
       toast.error(t("common:error"), { description: generalError });
       setServerError(generalError);
       if (apiErrors) {
-        if (apiErrors) {
-          Object.entries(apiErrors).forEach(([field, message]) => {
-            setError(field as keyof RoleFormValues, {
-              type: "manual",
-              message: t(`validation:${message}`, { defaultValue: message }),
-            });
+        Object.entries(apiErrors).forEach(([field, message]) => {
+          setError(field as keyof RoleFormValues, {
+            type: "manual",
+            message: t(`validation:${message}`, { defaultValue: message }),
           });
-        }
+        });
       }
     }
   };
 
-  // --- Render Modal ---
   if (!isOpen) return null;
 
+  const handleClose = () => {
+    if (isSubmitting) return;
+    onClose();
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-lg p-0">
-        {/* Width suitable for role form */}
-        <Form {...form}>
-          <form onSubmit={handleSubmit(onSubmit)} noValidate>
-            <DialogHeader className="p-6 pb-4 border-b dark:border-gray-700">
-              <DialogTitle className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                {isEditMode ? t("roles:editRole") : t("roles:addRole")}
-              </DialogTitle>
-            </DialogHeader>
+    <Dialog
+      open={isOpen}
+      onClose={handleClose}
+      fullWidth
+      maxWidth="sm"
+    >
+      <DialogTitle
+        sx={{
+          pb: 1.5,
+          pt: 3,
+          px: 3,
+          borderBottom: 1,
+          borderColor: "divider",
+        }}
+      >
+        <Typography variant="h6" component="div" fontWeight={600}>
+          {isEditMode ? t("roles:editRole") : t("roles:addRole")}
+        </Typography>
+      </DialogTitle>
+      <Box
+        component="form"
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
+      >
+        <DialogContent
+          sx={{
+            pt: 3,
+            px: 3,
+            pb: 2,
+            maxHeight: "70vh",
+            overflowY: "auto",
+          }}
+        >
+          {serverError && !isSubmitting && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>{t("common:error")}</AlertTitle>
+              </Box>
+              {serverError}
+            </Alert>
+          )}
 
-            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-              {serverError && !isSubmitting && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>{t("common:error")}</AlertTitle>
-                  <AlertDescription>{serverError}</AlertDescription>
-                </Alert>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
+            {/* Role Name Field */}
+            <Controller
+              control={control}
+              name="name"
+              rules={{
+                required: t("validation:required"),
+              }}
+              render={({ field, fieldState }) => (
+                <TextField
+                  {...field}
+                  label={
+                    <>
+                      {t("roles:roleName")}
+                      <span style={{ color: "red" }}> *</span>
+                    </>
+                  }
+                  placeholder={t("roles:roleNamePlaceholder")}
+                  fullWidth
+                  size="small"
+                  disabled={isSubmitting || isEditMode}
+                  InputProps={{
+                    readOnly: isEditMode,
+                  }}
+                  error={!!fieldState.error}
+                  helperText={fieldState.error?.message}
+                />
               )}
+            />
 
-              {/* Role Name Field (Readonly in edit mode usually) */}
-              <FormField
-                control={control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      {t("roles:roleName")}{" "}
-                      <span className="text-red-500">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={t("roles:roleNamePlaceholder")}
-                        {...field}
-                        disabled={isSubmitting || isEditMode} // Disable name change in edit mode
-                        readOnly={isEditMode} // Make explicitly readonly
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Permissions Assignment */}
-              <FormField
-                control={control}
-                name="permissions"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="mb-2">
-                      <FormLabel className="text-base">
-                        {t("roles:assignPermissions")}
-                      </FormLabel>
-                      <FormDescription>
-                        {t("roles:assignPermissionsDesc")}
-                      </FormDescription>
-                    </div>
-                    <ScrollArea className="h-64 w-full rounded-md border p-2 dark:border-gray-700">
-                      {" "}
-                      {/* Increased height */}
-                      {loadingPermissions ? (
-                        <div className="flex justify-center items-center h-full text-muted-foreground">
-                          <Loader2 className="h-5 w-5 animate-spin me-2" />{" "}
+            {/* Permissions Assignment */}
+            <Controller
+              control={control}
+              name="permissions"
+              render={({ field, fieldState }) => (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    {t("roles:assignPermissions")}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, display: "block" }}>
+                    {t("roles:assignPermissionsDesc")}
+                  </Typography>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 2,
+                      maxHeight: 300,
+                      overflowY: "auto",
+                    }}
+                  >
+                    {loadingPermissions ? (
+                      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: 4 }}>
+                        <Loader2 className="h-5 w-5 animate-spin" style={{ marginRight: 8 }} />
+                        <Typography variant="body2" color="text.secondary">
                           {t("common:loading")}...
-                        </div>
-                      ) : availablePermissions.length === 0 ? (
-                        <p className="text-sm text-muted-foreground p-4 text-center">
-                          {t("permissions:noneAvailable")}
-                        </p> // Add key
-                      ) : (
-                        availablePermissions.map((permission) => (
-                          <FormField
+                        </Typography>
+                      </Box>
+                    ) : availablePermissions.length === 0 ? (
+                      <Typography variant="body2" color="text.secondary" sx={{ p: 2, textAlign: "center" }}>
+                        {t("permissions:noneAvailable")}
+                      </Typography>
+                    ) : (
+                      <FormGroup>
+                        {availablePermissions.map((permission) => (
+                          <FormControlLabel
                             key={permission.id}
-                            control={control}
-                            name="permissions"
-                            render={({ field: permissionField }) => {
-                              console.log(permissionField,'permissionField')
-                              return (
-                                <FormItem
-                                  key={permission.id}
-                                  className="flex flex-row items-center space-x-3 space-y-0 rtl:space-x-reverse mb-2 px-2 py-1 rounded hover:bg-accent"
-                                >
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={permissionField.value?.includes(
-                                        permission.name
-                                      )}
-                                      disabled={isSubmitting}
-                                      onCheckedChange={(checked) => {
-                                        return checked
-                                          ? permissionField.onChange([
-                                              ...(permissionField.value || []),
-                                              permission.name,
-                                            ])
-                                          : permissionField.onChange(
-                                              (
-                                                permissionField.value || []
-                                              ).filter(
-                                                (value) =>
-                                                  value !== permission.name
-                                              )
-                                            );
-                                      }}
-                                    />
-                                  </FormControl>
-                                  <FormLabel className="font-normal text-sm cursor-pointer flex-grow">
-                                    {/* Try translating permission name, fallback to original */}
-                                    {t(`permissions:${permission.name}`, {
-                                      defaultValue: permission.name,
-                                    })}
-                                  </FormLabel>
-                                </FormItem>
-                              );
+                            control={
+                              <Checkbox
+                                checked={field.value?.includes(permission.name)}
+                                disabled={isSubmitting}
+                                onChange={(e) => {
+                                  const currentPermissions = field.value || [];
+                                  if (e.target.checked) {
+                                    field.onChange([...currentPermissions, permission.name]);
+                                  } else {
+                                    field.onChange(
+                                      currentPermissions.filter((p) => p !== permission.name)
+                                    );
+                                  }
+                                }}
+                              />
+                            }
+                            label={
+                              <Typography variant="body2">
+                                {t(`permissions:${permission.name}`, {
+                                  defaultValue: permission.name,
+                                })}
+                              </Typography>
+                            }
+                            sx={{
+                              mb: 0.5,
+                              "&:hover": {
+                                bgcolor: "action.hover",
+                                borderRadius: 1,
+                              },
                             }}
                           />
-                        ))
-                      )}
-                    </ScrollArea>
-                    <FormMessage>
+                        ))}
+                      </FormGroup>
+                    )}
+                  </Paper>
+                  {fieldState.error && (
+                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
                       {errors.permissions?.message
                         ? t(errors.permissions.message)
-                        : null}
-                    </FormMessage>
-                  </FormItem>
-                )}
-              />
-            </div>
-            <DialogFooter className="p-6 pt-4 border-t dark:border-gray-700">
-              <DialogClose asChild>
-                <Button type="button" variant="ghost" disabled={isSubmitting}>
-                  {t("common:cancel")}
-                </Button>
-              </DialogClose>
-              <Button type="submit" disabled={isSubmitting}>
-                {" "}
-                {isSubmitting && (
-                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                )}{" "}
-                {isEditMode ? t("common:update") : t("common:create")}{" "}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
+                        : ""}
+                    </Typography>
+                  )}
+                </Box>
+              )}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions
+          sx={{
+            px: 3,
+            pb: 3,
+            pt: 2,
+            borderTop: 1,
+            borderColor: "divider",
+          }}
+        >
+          <Button
+            type="button"
+            onClick={handleClose}
+            color="inherit"
+            variant="outlined"
+            disabled={isSubmitting}
+            sx={{ minWidth: 100 }}
+          >
+            {t("common:cancel")}
+          </Button>
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={isSubmitting}
+            sx={{ minWidth: 100 }}
+            startIcon={
+              isSubmitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : undefined
+            }
+          >
+            {isEditMode ? t("common:update") : t("common:create")}
+          </Button>
+        </DialogActions>
+      </Box>
     </Dialog>
   );
 };

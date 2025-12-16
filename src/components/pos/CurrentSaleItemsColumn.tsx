@@ -1,24 +1,34 @@
 // src/components/pos/CurrentSaleItemsColumn.tsx
 import React, { useState } from "react";
 
-// shadcn/ui Components
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+// MUI Components
+import {
+  Box,
+  Card,
+  CardContent,
+  Button,
+  TextField,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Chip,
+  IconButton,
+  Typography,
+  CircularProgress,
+  Skeleton,
+} from "@mui/material";
 
-// Icons
-import { 
-  ShoppingCart, 
-  Plus, 
-  Minus, 
-  Trash2, 
-  Package, 
-  Check,
-  X,
-  Layers
-} from "lucide-react";
+// MUI Icons
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import AddIcon from '@mui/icons-material/Add';
+import RemoveIcon from '@mui/icons-material/Remove';
+import DeleteIcon from '@mui/icons-material/Delete';
+import InventoryIcon from '@mui/icons-material/Inventory';
+import CheckIcon from '@mui/icons-material/Check';
+import CloseIcon from '@mui/icons-material/Close';
+import LayersIcon from '@mui/icons-material/Layers';
 
 // Types
 import { CartItem } from "./types";
@@ -32,9 +42,9 @@ interface CurrentSaleItemsColumnProps {
   onRemoveItem: (productId: number) => Promise<void>;
   onUpdateBatch?: (productId: number, batchId: number | null, batchNumber: string | null, expiryDate: string | null, unitPrice: number) => Promise<void>;
   isSalePaid?: boolean;
-  deletingItems?: Set<number>; // Track which items are being deleted
-  updatingItems?: Set<number>; // Track which items are being updated
-  isLoading?: boolean; // Add loading state
+  deletingItems?: Set<number>;
+  updatingItems?: Set<number>;
+  isLoading?: boolean;
 }
 
 export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
@@ -48,26 +58,17 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
   updatingItems = new Set(),
   isLoading = false,
 }) => {
-  // State for editing quantity
   const [editingQuantity, setEditingQuantity] = useState<number | null>(null);
   const [editValue, setEditValue] = useState<string>("");
-  // State for editing unit price
   const [editingUnitPrice, setEditingUnitPrice] = useState<number | null>(null);
   const [editUnitPriceValue, setEditUnitPriceValue] = useState<string>("");
-  
-  // State for batch selection
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
   const [selectedProductForBatch, setSelectedProductForBatch] = useState<CartItem | null>(null);
 
   const formatExpiryDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    });
+    return date.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', year: 'numeric' });
   };
-  console.log(currentSaleItems, 'currentSaleItems');
 
   const isExpired = (item: CartItem) => {
     const expiryDate = item.selectedBatchExpiryDate || item.product.earliest_expiry_date;
@@ -97,12 +98,10 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
   const handleQuantitySave = async (productId: number) => {
     const newQuantity = parseInt(editValue);
     if (isNaN(newQuantity) || newQuantity < 1) {
-      // Reset to original value if invalid
       setEditingQuantity(null);
       setEditValue("");
       return;
     }
-
     await onUpdateQuantity(productId, newQuantity);
     setEditingQuantity(null);
     setEditValue("");
@@ -123,12 +122,10 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
     if (!onUpdateUnitPrice) return;
     const newUnitPrice = parseFloat(editUnitPriceValue);
     if (isNaN(newUnitPrice) || newUnitPrice < 0) {
-      // Reset to original value if invalid
       setEditingUnitPrice(null);
       setEditUnitPriceValue("");
       return;
     }
-
     await onUpdateUnitPrice(productId, newUnitPrice);
     setEditingUnitPrice(null);
     setEditUnitPriceValue("");
@@ -142,30 +139,13 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
   const handleKeyDown = (event: React.KeyboardEvent, productId: number) => {
     if (event.key === 'Enter') {
       event.preventDefault();
-      if (editingQuantity === productId) {
-        handleQuantitySave(productId);
-      } else if (editingUnitPrice === productId) {
-        handleUnitPriceSave(productId);
-      }
+      if (editingQuantity === productId) handleQuantitySave(productId);
+      else if (editingUnitPrice === productId) handleUnitPriceSave(productId);
     } else if (event.key === 'Escape') {
       event.preventDefault();
-      if (editingQuantity === productId) {
-        handleQuantityCancel();
-      } else if (editingUnitPrice === productId) {
-        handleUnitPriceCancel();
-      }
+      if (editingQuantity === productId) handleQuantityCancel();
+      else if (editingUnitPrice === productId) handleUnitPriceCancel();
     }
-  };
-
-  const handleInputBlur = (productId: number, type: 'quantity' | 'unitPrice') => {
-    // Small delay to allow button clicks to register
-    setTimeout(() => {
-      if (type === 'quantity' && editingQuantity === productId) {
-        handleQuantityCancel();
-      } else if (type === 'unitPrice' && editingUnitPrice === productId) {
-        handleUnitPriceCancel();
-      }
-    }, 100);
   };
 
   const handleBatchSelection = (item: CartItem) => {
@@ -192,324 +172,218 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
   };
 
   const hasMultipleBatches = (item: CartItem) => {
-    console.log(item.product.available_batches, 'available_batches',item.product,'item.product');
-
-    // Check if product has multiple batches available
     return item.product.available_batches && item.product.available_batches.length > 1;
   };
  
   return (
-    <div dir="ltr" className="w-full h-full flex flex-col">
-      <Card className="flex-1 flex flex-col">
-        <CardContent className="flex-1 p-0">
+    <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Card sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <CardContent sx={{ flex: 1, p: 0 }}>
           {isLoading ? (
-            // Skeleton loading state
-            <div className="flex-1 overflow-y-auto max-h-[calc(100vh-200px)]">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-center">الرقم</TableHead>
-                      <TableHead className="text-center">المنتج</TableHead>
-                      <TableHead className="text-center">الكمية</TableHead>
-                      <TableHead className="text-center">سعر الوحدة</TableHead>
-                      <TableHead className="text-center">الإجمالي</TableHead>
-                      <TableHead className="text-center">المخزون</TableHead>
-                      <TableHead className="text-center">الإجراءات</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {[...Array(5)].map((_, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="text-center">
-                          <div className="h-10 w-10 rounded-full bg-gray-200 animate-pulse mx-auto"></div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="space-y-2">
-                            <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
-                            <div className="h-3 bg-gray-200 rounded animate-pulse w-3/4 mx-auto"></div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="h-8 bg-gray-200 rounded animate-pulse w-16 mx-auto"></div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="h-4 bg-gray-200 rounded animate-pulse w-20 mx-auto"></div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="h-4 bg-gray-200 rounded animate-pulse w-16 mx-auto"></div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="h-4 bg-gray-200 rounded animate-pulse w-12 mx-auto"></div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex justify-center space-x-1">
-                            <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-                            <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-                            <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
+            <Box sx={{ p: 2 }}>
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} variant="rectangular" height={60} sx={{ mb: 1, borderRadius: 1 }} />
+              ))}
+            </Box>
           ) : currentSaleItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-              <ShoppingCart className="h-16 w-16 mb-4 opacity-50" />
-              <h3 className="text-xl font-medium mb-2">لا توجد عناصر في البيع</h3>
-              <p className="text-base">أضف المنتجات للبدء</p>
-            </div>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 300, color: 'text.secondary' }}>
+              <ShoppingCartIcon sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
+              <Typography variant="h6" gutterBottom>لا توجد عناصر في البيع</Typography>
+              <Typography variant="body2">أضف المنتجات للبدء</Typography>
+            </Box>
           ) : (
-            <div className="flex-1 overflow-y-auto max-h-[calc(100vh-200px)]">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-center">الرقم</TableHead>
-                      <TableHead className="text-center">المنتج</TableHead>
-                      <TableHead className="text-center">الكمية</TableHead>
-                      <TableHead className="text-center">سعر الوحدة</TableHead>
-                      <TableHead className="text-center">الإجمالي</TableHead>
-                      <TableHead className="text-center">المخزون</TableHead>
-                      <TableHead className="text-center">الإجراءات</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {currentSaleItems.map((item) => (
-                      <TableRow key={item.product.id}>
-                        <TableCell className="text-center">
-                          <div className={`h-10 w-10 rounded-full flex items-center justify-center mx-auto ${
-                            isExpired(item) ? 'bg-red-100' : 'bg-blue-100'
-                          }`}>
-                            <span 
-                              className={`text-sm font-bold ${
-                                isExpired(item) ? 'text-red-600' : 'text-blue-600'
-                              }`}
-                              title={getExpiryDate(item) ? `انتهاء الصلاحية: ${formatExpiryDate(getExpiryDate(item)!)}` : undefined}
-                            >
-                              {currentSaleItems.indexOf(item) + 1}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="text-center">
-                            <div className="font-medium text-xl flex items-center justify-center gap-2">
-                                                             {item.product.name.charAt(0).toUpperCase() + item.product.name.slice(1)}
-                              {hasMultipleBatches(item) && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleBatchSelection(item)}
-                                  className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
-                                  title="اختر الدفعة"
-                                >
-                                  <Layers className="h-4 w-4 animate-bounce" />
-                                </Button>
-                              )}
-                            </div>
-                            <div className="text-sm text-gray-500">رمز المنتج: {item.product.sku || 'غير متوفر'}</div>
-                            {item.selectedBatchNumber && (
-                              <div className="text-xs text-blue-600 mt-1">
-                                <Badge variant="outline" className="text-xs">
-                                  الدفعة: {item.selectedBatchNumber}
-                                </Badge>
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={async () => {
-                                await onUpdateQuantity(item.product.id, Math.max(1, item.quantity - 1));
-                              }}
-                              disabled={item.quantity <= 1 || isSalePaid || updatingItems.has(item.product.id)}
-                              className={`h-8 w-8 p-0 ${
-                                (item.quantity <= 1 || isSalePaid || updatingItems.has(item.product.id)) ? 'opacity-50 cursor-not-allowed' : ''
-                              }`}
-                            >
-                              {updatingItems.has(item.product.id) ? (
-                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500"></div>
-                              ) : (
-                                <Minus className="h-4 w-4" />
-                              )}
-                            </Button>
-                            
-                            {editingQuantity === item.product.id ? (
-                              <div className="flex items-center space-x-1">
-                                <Input
-                                  type="number"
-                                  value={editValue}
-                                  onChange={(e) => setEditValue(e.target.value)}
-                                  onKeyDown={(e) => handleKeyDown(e, item.product.id)}
-                                  onBlur={() => handleInputBlur(item.product.id, 'quantity')}
-                                  className="w-16 h-8 text-center text-sm"
-                                  min="1"
-                                  autoFocus
-                                />
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleQuantitySave(item.product.id)}
-                                  disabled={updatingItems.has(item.product.id)}
-                                  className="h-6 w-6 p-0 text-green-600 hover:text-green-700"
-                                >
-                                  <Check className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={handleQuantityCancel}
-                                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-                                >
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <span
-                                className="w-14 text-center font-medium text-base cursor-pointer hover:bg-gray-100 rounded px-1 py-1 transition-colors"
-                                onClick={() => handleQuantityClick(item)}
-                                title={isSalePaid ? 'تم الدفع، لا يمكن التعديل' : 'انقر لتعديل الكمية'}
-                              >
-                                {item.quantity}
-                              </span>
-                            )}
-                            
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={async () => {
-                                await onUpdateQuantity(item.product.id, item.quantity + 1);
-                              }}
-                              disabled={isSalePaid || updatingItems.has(item.product.id)}
-                              className={`h-8 w-8 p-0 ${
-                                (isSalePaid || updatingItems.has(item.product.id)) ? 'opacity-50 cursor-not-allowed' : ''
-                              }`}
-                            >
-                              {updatingItems.has(item.product.id) ? (
-                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500"></div>
-                              ) : (
-                                <Plus className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="text-center">
-                            {editingUnitPrice === item.product.id ? (
-                              <div className="flex items-center justify-center space-x-1">
-                                <Input
-                                  type="number"
-                                  value={editUnitPriceValue}
-                                  onChange={(e) => setEditUnitPriceValue(e.target.value)}
-                                  onKeyDown={(e) => handleKeyDown(e, item.product.id)}
-                                  onBlur={() => handleInputBlur(item.product.id, 'unitPrice')}
-                                  className="w-20 h-8 text-center text-sm"
-                                  min="0"
-                                  step="0.01"
-                                  autoFocus
-                                />
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleUnitPriceSave(item.product.id)}
-                                  disabled={updatingItems.has(item.product.id)}
-                                  className="h-6 w-6 p-0 text-green-600 hover:text-green-700"
-                                >
-                                  <Check className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={handleUnitPriceCancel}
-                                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-                                >
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <span
-                                className="font-medium text-base cursor-pointer hover:bg-gray-100 rounded px-2 py-1 transition-colors"
-                                onClick={() => handleUnitPriceClick(item)}
-                                title={isSalePaid || !onUpdateUnitPrice ? 'تم الدفع، لا يمكن التعديل' : 'انقر لتعديل السعر'}
-                              >
-                                {formatNumber(item.unitPrice)}
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="font-bold text-green-600 text-base">{formatNumber(item.total)}</div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex flex-col items-center space-y-1">
-                            <div className="flex items-center space-x-1">
-                              <Package className="h-3 w-3 text-gray-500" />
-                              <span className={`text-base font-medium ${
-                                item.selectedBatchId 
-                                  ? (item.selectedBatchNumber ? 'text-blue-600' : 'text-blue-600')
-                                  : isLowStock(item.product.stock_quantity, item.product.stock_alert_level) 
-                                    ? 'text-red-600' 
-                                    : 'text-green-600'
-                              }`}>
-                                {item.selectedBatchId 
-                                  ? (() => {
-                                      // Find the selected batch to get its remaining quantity
-                                      const selectedBatch = item.product.available_batches?.find(
-                                        batch => batch.id === item.selectedBatchId
-                                      );
-                                      return formatNumber(selectedBatch?.remaining_quantity || 0);
-                                    })()
-                                  : formatNumber(item.product.stock_quantity)
-                                }
-                              </span>
-                            </div>
-                            {item.selectedBatchId && (
-                              <span className="text-xs text-blue-600">
-                                {item.selectedBatchNumber ? `الدفعة: ${item.selectedBatchNumber}` : 'الدفعة المحددة'}
-                              </span>
-                            )}
-                            {!item.selectedBatchId && isLowStock(item.product.stock_quantity, item.product.stock_alert_level) && (
-                              <span className="text-sm text-red-500">مخزون منخفض</span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={async () => {
-                              // Since we now create sales on backend before adding items, 
-                              // all sale items have backend records and should use backend deletion
-                              await onRemoveItem(item.product.id);
-                            }}
-                            disabled={isSalePaid || deletingItems.has(item.product.id)}
-                            className={`h-10 w-10 p-0 ${
-                              isSalePaid 
-                                ? 'text-gray-400 cursor-not-allowed' 
-                                : deletingItems.has(item.product.id)
-                                ? 'text-gray-400 cursor-not-allowed'
-                                : 'text-red-500 hover:text-red-700'
-                            }`}
-                            title={isSalePaid ? 'تم الدفع، لا يمكن التعديل' : 'إزالة العنصر'}
+            <Box sx={{ flex: 1, overflowY: 'auto', maxHeight: 'calc(100vh - 200px)' }}>
+              <Table size="small" stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>#</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>المنتج</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>الكمية</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>سعر الوحدة</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>الإجمالي</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>المخزون</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>حذف</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {currentSaleItems.map((item, index) => (
+                    <TableRow key={item.product.id} hover>
+                      {/* Row Number */}
+                      <TableCell align="center">
+                        <Box
+                          sx={{
+                            width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto',
+                            bgcolor: isExpired(item) ? 'error.light' : 'primary.light',
+                            color: isExpired(item) ? 'error.contrastText' : 'primary.contrastText',
+                          }}
+                          title={getExpiryDate(item) ? `انتهاء الصلاحية: ${formatExpiryDate(getExpiryDate(item)!)}` : undefined}
+                        >
+                          <Typography variant="body2" fontWeight="bold">{index + 1}</Typography>
+                        </Box>
+                      </TableCell>
+
+                      {/* Product Name */}
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                          <Typography variant="body1" fontWeight="medium">
+                            {item.product.name}
+                          </Typography>
+                          {hasMultipleBatches(item) && (
+                            <IconButton size="small" color="primary" onClick={() => handleBatchSelection(item)} title="اختر الدفعة">
+                              <LayersIcon fontSize="small" />
+                            </IconButton>
+                          )}
+                        </Box>
+                        <Typography variant="caption" color="text.secondary">
+                          باركود: {item.product.sku || 'غير متوفر'}
+                        </Typography>
+                        {item.selectedBatchNumber && (
+                          <Box sx={{ mt: 0.5 }}>
+                            <Chip label={`الدفعة: ${item.selectedBatchNumber}`} size="small" variant="outlined" color="primary" />
+                          </Box>
+                        )}
+                      </TableCell>
+
+                      {/* Quantity */}
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                          <IconButton
+                            size="small"
+                            onClick={() => onUpdateQuantity(item.product.id, Math.max(1, item.quantity - 1))}
+                            disabled={item.quantity <= 1 || isSalePaid || updatingItems.has(item.product.id)}
                           >
-                            {deletingItems.has(item.product.id) ? (
-                              <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-red-600"></div>
-                            ) : (
-                              <Trash2 className="h-5 w-5" />
-                            )}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
+                            {updatingItems.has(item.product.id) ? <CircularProgress size={16} /> : <RemoveIcon fontSize="small" />}
+                          </IconButton>
+                          
+                          {editingQuantity === item.product.id ? (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <TextField
+                                type="number"
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onKeyDown={(e) => handleKeyDown(e, item.product.id)}
+                                size="small"
+                                sx={{ width: 60 }}
+                                inputProps={{ min: 1, style: { textAlign: 'center' } }}
+                                autoFocus
+                              />
+                              <IconButton size="small" color="success" onClick={() => handleQuantitySave(item.product.id)}>
+                                <CheckIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton size="small" color="error" onClick={handleQuantityCancel}>
+                                <CloseIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          ) : (
+                            <Typography
+                              variant="body1"
+                              fontWeight="medium"
+                              sx={{ cursor: isSalePaid ? 'default' : 'pointer', px: 1, '&:hover': { bgcolor: isSalePaid ? 'inherit' : 'action.hover' }, borderRadius: 1 }}
+                              onClick={() => handleQuantityClick(item)}
+                              title={isSalePaid ? 'تم الدفع' : 'انقر لتعديل الكمية'}
+                            >
+                              {item.quantity}
+                            </Typography>
+                          )}
+                          
+                          <IconButton
+                            size="small"
+                            onClick={() => onUpdateQuantity(item.product.id, item.quantity + 1)}
+                            disabled={isSalePaid || updatingItems.has(item.product.id)}
+                          >
+                            {updatingItems.has(item.product.id) ? <CircularProgress size={16} /> : <AddIcon fontSize="small" />}
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+
+                      {/* Unit Price */}
+                      <TableCell align="center">
+                        {editingUnitPrice === item.product.id ? (
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                            <TextField
+                              type="number"
+                              value={editUnitPriceValue}
+                              onChange={(e) => setEditUnitPriceValue(e.target.value)}
+                              onKeyDown={(e) => handleKeyDown(e, item.product.id)}
+                              size="small"
+                              sx={{ width: 80 }}
+                              inputProps={{ min: 0, step: 0.01, style: { textAlign: 'center' } }}
+                              autoFocus
+                            />
+                            <IconButton size="small" color="success" onClick={() => handleUnitPriceSave(item.product.id)}>
+                              <CheckIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton size="small" color="error" onClick={handleUnitPriceCancel}>
+                              <CloseIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        ) : (
+                          <Typography
+                            variant="body1"
+                            fontWeight="medium"
+                            sx={{ cursor: (isSalePaid || !onUpdateUnitPrice) ? 'default' : 'pointer', '&:hover': { bgcolor: (isSalePaid || !onUpdateUnitPrice) ? 'inherit' : 'action.hover' }, borderRadius: 1, px: 1 }}
+                            onClick={() => handleUnitPriceClick(item)}
+                            title={isSalePaid ? 'تم الدفع' : 'انقر لتعديل السعر'}
+                          >
+                            {formatNumber(item.unitPrice)}
+                          </Typography>
+                        )}
+                      </TableCell>
+
+                      {/* Total */}
+                      <TableCell align="center">
+                        <Typography variant="body1" fontWeight="bold" color="success.main">
+                          {formatNumber(item.total)}
+                        </Typography>
+                      </TableCell>
+
+                      {/* Stock */}
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <InventoryIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                            <Typography
+                              variant="body2"
+                              fontWeight="medium"
+                              color={
+                                item.selectedBatchId ? 'primary.main' :
+                                isLowStock(item.product.stock_quantity, item.product.stock_alert_level) ? 'error.main' : 'success.main'
+                              }
+                            >
+                              {item.selectedBatchId
+                                ? formatNumber(item.product.available_batches?.find(b => b.id === item.selectedBatchId)?.remaining_quantity || 0)
+                                : formatNumber(item.product.stock_quantity)
+                              }
+                            </Typography>
+                          </Box>
+                          {item.selectedBatchId && item.selectedBatchNumber && (
+                            <Typography variant="caption" color="primary.main">
+                              الدفعة: {item.selectedBatchNumber}
+                            </Typography>
+                          )}
+                          {!item.selectedBatchId && isLowStock(item.product.stock_quantity, item.product.stock_alert_level) && (
+                            <Typography variant="caption" color="error.main">مخزون منخفض</Typography>
+                          )}
+                        </Box>
+                      </TableCell>
+
+                      {/* Delete */}
+                      <TableCell align="center">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => onRemoveItem(item.product.id)}
+                          disabled={isSalePaid || deletingItems.has(item.product.id)}
+                          title={isSalePaid ? 'تم الدفع' : 'حذف'}
+                        >
+                          {deletingItems.has(item.product.id) ? <CircularProgress size={20} color="error" /> : <DeleteIcon />}
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Box>
           )}
         </CardContent>
       </Card>
@@ -522,6 +396,6 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
         onBatchSelect={handleBatchSelect}
         selectedBatchId={selectedProductForBatch?.selectedBatchId || null}
       />
-    </div>
+    </Box>
   );
-}; 
+};

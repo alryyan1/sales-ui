@@ -23,10 +23,7 @@ import { PaginatedResponse } from '../services/clientService';
 import SuppliersTable from '../components/suppliers/SuppliersTable';
 import SupplierFormModal from '../components/suppliers/SupplierFormModal';
 import ConfirmationDialog from '../components/common/ConfirmationDialog';
-import { useAuthorization } from '@/hooks/useAuthorization';
-
 const SuppliersPage: React.FC = () => {
-    const { can } = useAuthorization(); // Assuming you have a hook for permissions
     const navigate = useNavigate();
     // --- State Management ---
     const [suppliersResponse, setSuppliersResponse] = useState<PaginatedResponse<Supplier> | null>(null);
@@ -175,7 +172,7 @@ const SuppliersPage: React.FC = () => {
                 <Typography variant="h4" component="h1" className="text-gray-800 dark:text-gray-100 font-semibold">
                     الموردون
                 </Typography>
-                {can('create-suppliers') && <Button
+                <Button
                     onClick={() => openModal()}
                     variant="contained"
                     color="primary"
@@ -183,7 +180,7 @@ const SuppliersPage: React.FC = () => {
                     sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
                 >
                     إضافة مورد
-                </Button>}
+                </Button>
             </Box>
 
              <Box sx={{ mb: 3 }}>

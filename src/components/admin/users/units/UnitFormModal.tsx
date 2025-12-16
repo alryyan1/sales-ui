@@ -1,40 +1,29 @@
 // src/components/admin/units/UnitFormModal.tsx
 import React, { useEffect, useState } from "react";
-import { useForm, SubmitHandler } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 
-// shadcn/ui & Lucide
-import { Button } from "@/components/ui/button";
+// MUI components
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
-  DialogClose,
-} from "@/components/ui/dialog";
-import {
-  Form,
+  DialogActions,
+  TextField,
+  Button,
+  Box,
+  Alert,
+  AlertTitle,
   FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
+  InputLabel,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  MenuItem,
+  Typography,
+} from "@mui/material";
 import { Loader2, AlertCircle } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import unitService, { Unit, UnitFormData } from "@/services/UnitService";
 
 // --- Zod Schema ---
@@ -104,7 +93,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
     }
   }, [isOpen, isEditMode, unitToEdit, reset, defaultType]);
 
-  const onSubmit: SubmitHandler<UnitFormValues> = async (data) => {
+  const onSubmit = async (data: UnitFormValues) => {
     setServerError(null);
     console.log("Submitting unit data:", data);
 
@@ -158,177 +147,216 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
 
   if (!isOpen) return null;
 
+  const handleClose = () => {
+    if (isSubmitting) return;
+    onClose();
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md p-0">
-        <Form {...form}>
-          <form onSubmit={handleSubmit(onSubmit)} noValidate>
-            <DialogHeader className="p-6 pb-4 border-b dark:border-gray-700">
-              <DialogTitle className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                {isEditMode
-                  ? t("units:editUnit")
-                  : t("units:addUnit")}
-              </DialogTitle>
-            </DialogHeader>
+    <Dialog
+      open={isOpen}
+      onClose={handleClose}
+      fullWidth
+      maxWidth="sm"
+    >
+      <DialogTitle
+        sx={{
+          pb: 1.5,
+          pt: 3,
+          px: 3,
+          borderBottom: 1,
+          borderColor: "divider",
+        }}
+      >
+        <Typography variant="h6" component="div" fontWeight={600}>
+          {isEditMode
+            ? t("units:editUnit")
+            : t("units:addUnit")}
+        </Typography>
+      </DialogTitle>
+      <Box
+        component="form"
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
+      >
+        <DialogContent
+          sx={{
+            pt: 3,
+            px: 3,
+            pb: 2,
+            maxHeight: "70vh",
+            overflowY: "auto",
+          }}
+        >
+          {/* General Server Error Alert */}
+          {serverError && !isSubmitting && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>{t("common:error")}</AlertTitle>
+              </Box>
+              {serverError}
+            </Alert>
+          )}
 
-            <div className="p-6 space-y-4">
-              {/* General Server Error Alert */}
-              {serverError && !isSubmitting && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>{t("common:error")}</AlertTitle>
-                  <AlertDescription>{serverError}</AlertDescription>
-                </Alert>
-              )}
-
-              {/* Name Field */}
-              <FormField
-                control={control}
-                name="name"
-                render={({ field, fieldState }) => (
-                  <FormItem>
-                    <FormLabel className="text-gray-900 dark:text-gray-100">
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
+            {/* Name Field */}
+            <Controller
+              control={control}
+              name="name"
+              rules={{
+                required: t("validation:required"),
+              }}
+              render={({ field, fieldState }) => (
+                <TextField
+                  {...field}
+                  label={
+                    <>
                       {t("units:name")}
-                      <span className="text-red-500">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        className="bg-white dark:bg-gray-900 dark:text-gray-100"
-                        placeholder={t("units:namePlaceholder")}
-                        {...field}
-                        disabled={isSubmitting}
-                      />
-                    </FormControl>
-                    <FormMessage>
-                      {fieldState.error?.message
-                        ? t(fieldState.error.message)
-                        : null}
-                    </FormMessage>
-                  </FormItem>
-                )}
-              />
+                      <span style={{ color: "red" }}> *</span>
+                    </>
+                  }
+                  placeholder={t("units:namePlaceholder")}
+                  fullWidth
+                  size="small"
+                  disabled={isSubmitting}
+                  error={!!fieldState.error}
+                  helperText={fieldState.error?.message ? t(fieldState.error.message) : ""}
+                />
+              )}
+            />
 
-              {/* Type Field */}
-              <FormField
-                control={control}
-                name="type"
-                render={({ field, fieldState }) => (
-                  <FormItem>
-                    <FormLabel className="text-gray-900 dark:text-gray-100">
-                      {t("units:type")}
-                      <span className="text-red-500">*</span>
-                    </FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      disabled={isSubmitting}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="bg-white dark:bg-gray-900 dark:text-gray-100">
-                          <SelectValue placeholder={t("units:selectType")} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="stocking">
-                          {t("units:stockingUnit")}
-                        </SelectItem>
-                        <SelectItem value="sellable">
-                          {t("units:sellableUnit")}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage>
-                      {fieldState.error?.message
-                        ? t(fieldState.error.message)
-                        : null}
-                    </FormMessage>
-                  </FormItem>
-                )}
-              />
+            {/* Type Field */}
+            <Controller
+              control={control}
+              name="type"
+              rules={{
+                required: t("validation:required"),
+              }}
+              render={({ field, fieldState }) => (
+                <FormControl
+                  fullWidth
+                  size="small"
+                  disabled={isSubmitting}
+                  error={!!fieldState.error}
+                >
+                  <InputLabel>
+                    {t("units:type")}
+                    <span style={{ color: "red" }}> *</span>
+                  </InputLabel>
+                  <Select
+                    {...field}
+                    label={`${t("units:type")} *`}
+                    value={field.value}
+                  >
+                    <MenuItem value="stocking">
+                      {t("units:stockingUnit")}
+                    </MenuItem>
+                    <MenuItem value="sellable">
+                      {t("units:sellableUnit")}
+                    </MenuItem>
+                  </Select>
+                  {fieldState.error && (
+                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                      {fieldState.error.message ? t(fieldState.error.message) : ""}
+                    </Typography>
+                  )}
+                </FormControl>
+              )}
+            />
 
-              {/* Description Field */}
-              <FormField
-                control={control}
-                name="description"
-                render={({ field, fieldState }) => (
-                  <FormItem>
-                    <FormLabel className="text-gray-900 dark:text-gray-100">
-                      {t("units:description")}
-                    </FormLabel>
-                    <FormControl>
-                      <Textarea
-                        className="resize-y min-h-[80px] bg-white dark:bg-gray-900 dark:text-gray-100"
-                        placeholder={t("units:descriptionPlaceholder")}
-                        {...field}
-                        value={field.value ?? ""}
-                        disabled={isSubmitting}
-                      />
-                    </FormControl>
-                    <FormMessage>
-                      {fieldState.error?.message
-                        ? t(fieldState.error.message)
-                        : null}
-                    </FormMessage>
-                  </FormItem>
-                )}
-              />
+            {/* Description Field */}
+            <Controller
+              control={control}
+              name="description"
+              render={({ field, fieldState }) => (
+                <TextField
+                  {...field}
+                  label={t("units:description")}
+                  placeholder={t("units:descriptionPlaceholder")}
+                  fullWidth
+                  size="small"
+                  multiline
+                  minRows={3}
+                  disabled={isSubmitting}
+                  value={field.value ?? ""}
+                  error={!!fieldState.error}
+                  helperText={fieldState.error?.message}
+                />
+              )}
+            />
 
-              {/* Active Status Field */}
-              <FormField
-                control={control}
-                name="is_active"
-                render={({ field, fieldState }) => (
-                  <FormItem>
-                    <FormLabel className="text-gray-900 dark:text-gray-100">
-                      {t("units:status")}
-                    </FormLabel>
-                    <Select
-                      onValueChange={(value) => field.onChange(value === 'true')}
-                      value={field.value ? 'true' : 'false'}
-                      disabled={isSubmitting}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="bg-white dark:bg-gray-900 dark:text-gray-100">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="true">
-                          {t("units:active")}
-                        </SelectItem>
-                        <SelectItem value="false">
-                          {t("units:inactive")}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage>
-                      {fieldState.error?.message
-                        ? t(fieldState.error.message)
-                        : null}
-                    </FormMessage>
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <DialogFooter className="p-6 pt-4 border-t dark:border-gray-700">
-              <DialogClose asChild>
-                <Button type="button" variant="ghost" disabled={isSubmitting}>
-                  {t("common:cancel")}
-                </Button>
-              </DialogClose>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && (
-                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                )}
-                {isEditMode ? t("common:update") : t("common:create")}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
+            {/* Active Status Field */}
+            <Controller
+              control={control}
+              name="is_active"
+              render={({ field, fieldState }) => (
+                <FormControl
+                  fullWidth
+                  size="small"
+                  disabled={isSubmitting}
+                  error={!!fieldState.error}
+                >
+                  <InputLabel>{t("units:status")}</InputLabel>
+                  <Select
+                    {...field}
+                    label={t("units:status")}
+                    value={field.value ? 'true' : 'false'}
+                    onChange={(e) => field.onChange(e.target.value === 'true')}
+                  >
+                    <MenuItem value="true">
+                      {t("units:active")}
+                    </MenuItem>
+                    <MenuItem value="false">
+                      {t("units:inactive")}
+                    </MenuItem>
+                  </Select>
+                  {fieldState.error && (
+                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                      {fieldState.error.message}
+                    </Typography>
+                  )}
+                </FormControl>
+              )}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions
+          sx={{
+            px: 3,
+            pb: 3,
+            pt: 2,
+            borderTop: 1,
+            borderColor: "divider",
+          }}
+        >
+          <Button
+            type="button"
+            onClick={handleClose}
+            color="inherit"
+            variant="outlined"
+            disabled={isSubmitting}
+            sx={{ minWidth: 100 }}
+          >
+            {t("common:cancel")}
+          </Button>
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={isSubmitting}
+            sx={{ minWidth: 100 }}
+            startIcon={
+              isSubmitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : undefined
+            }
+          >
+            {isEditMode ? t("common:update") : t("common:create")}
+          </Button>
+        </DialogActions>
+      </Box>
     </Dialog>
   );
 };
 
-export default UnitFormModal; 
+export default UnitFormModal;

@@ -13,6 +13,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 // استيراد الإعدادات المخصصة
 import theme, { cacheRtl } from "./theme"; // استيراد Theme الـ MUI المخصص (مع RTL)
 import { CacheProvider } from "@emotion/react";
+import "./fonts/tajawal.css"; // استيراد خط Tajawal المحلي
 import "./index.css"; // استيراد CSS العام (اختياري)
 import router from "./router";
 import { SettingsProvider } from "./context/SettingsContext";

@@ -119,6 +119,20 @@
     font-family: "Tajawal", "Arial", sans-serif;
     direction: rtl;
   }
+  /* Ensure all input fields are right-aligned in RTL mode */
+  [dir="rtl"] input,
+  [dir="rtl"] textarea,
+  [dir="rtl"] .MuiInputBase-input,
+  [dir="rtl"] .MuiAutocomplete-input {
+    text-align: right !important;
+    direction: rtl !important;
+  }
+  [dir="rtl"] input::placeholder,
+  [dir="rtl"] textarea::placeholder,
+  [dir="rtl"] .MuiInputBase-input::placeholder {
+    text-align: right !important;
+    direction: rtl !important;
+  }
 }
 
 

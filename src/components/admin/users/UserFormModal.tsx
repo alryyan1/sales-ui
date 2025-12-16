@@ -51,7 +51,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
     // because it now uses the `t` function for messages.
     const createUserSchema = z.object({
         name: z.string().min(1, { message: t("validation:required") }), // Direct use of t()
-        email: z.string().min(1, { message: t("validation:required") }).email({ message: t("validation:email") }),
+        username: z.string().min(1, { message: t("validation:required") }),
         password: z.string().min(8, { message: t("validation:minLength", { count: 8 }) }), // Interpolation works here if t is configured
         password_confirmation: z.string(),
         roles: z.array(z.string()).min(1, { message: t("validation:roleRequired") }),
@@ -62,7 +62,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
 
     const updateUserSchema = z.object({
         name: z.string().min(1, { message: t("validation:required") }),
-        email: z.string().min(1, { message: t("validation:required") }).email({ message: t("validation:email") }),
+        username: z.string().min(1, { message: t("validation:required") }),
         roles: z.array(z.string()).min(1, { message: t("validation:roleRequired") }),
     });
 
@@ -75,7 +75,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
     const form = useForm<CombinedUserFormValues>({
         resolver: zodResolver(isEditMode ? updateUserSchema : createUserSchema),
         defaultValues: {
-            name: '', email: '', roles: [],
+            name: '', username: '', roles: [],
             password: '', password_confirmation: '', // Initialize even if conditionally rendered
         },
     });
@@ -91,12 +91,12 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
             if (isEditMode && userToEdit) {
                 reset({
                     name: userToEdit.name || '',
-                    email: userToEdit.email || '',
+                    username: userToEdit.username || '',
                     roles: userToEdit.roles || [],
                     password: '', password_confirmation: '', // Ensure passwords cleared for edit
                 });
             } else {
-                reset({ name: '', email: '', roles: [], password: '', password_confirmation: '' });
+                reset({ name: '', username: '', roles: [], password: '', password_confirmation: '' });
             }
         }
     }, [isOpen, isEditMode, userToEdit, reset]);
@@ -110,7 +110,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
          try {
              let savedUser: User;
              if (isEditMode && userToEdit) {
-                 const updateData: Partial<UserFormData> = { name: apiData.name, email: apiData.email, roles: apiData.roles };
+                const updateData: Partial<UserFormData> = { name: apiData.name, username: (apiData as any).username, roles: apiData.roles };
                  savedUser = await userService.updateUser(userToEdit.id, updateData);
              } else {
                  savedUser = await userService.createUser(data as CreateUserFormValues);
@@ -154,8 +154,8 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
 
                        {/* Name Field */}
                        <FormField control={control} name="name" render={({ field }) => ( <FormItem> <FormLabel>{t('users:nameLabel')} <span className="text-red-500">*</span></FormLabel> <FormControl><Input {...field} disabled={isSubmitting} /></FormControl> <FormMessage /> </FormItem> )} />
-                            {/* Email Field */}
-                            <FormField control={control} name="email" render={({ field }) => ( <FormItem> <FormLabel>{t('users:emailLabel')} <span className="text-red-500">*</span></FormLabel> <FormControl><Input type="email" {...field} disabled={isSubmitting} /></FormControl> <FormMessage /> </FormItem> )} />
+                            {/* Username Field */}
+                            <FormField control={control} name="username" render={({ field }) => ( <FormItem> <FormLabel>{t('users:usernameLabel')} <span className="text-red-500">*</span></FormLabel> <FormControl><Input {...field} disabled={isSubmitting} /></FormControl> <FormMessage /> </FormItem> )} />
 
                             {/* Password Fields (ONLY FOR CREATE MODE with Visibility Toggle) */}
                             {!isEditMode && (
@@ -249,8 +249,8 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
                                                                                      >
                                                                                          <FormControl>
                                                                                              <Checkbox
-                                                                                                 checked={roleField.value?.includes(role.name)}
-                                                                                                 disabled={isSubmitting || (role.name === 'admin' && userToEdit?.email === 'admin@example.com')} // Example: prevent removing admin from default admin
+                                                                                                checked={roleField.value?.includes(role.name)}
+                                                                                                disabled={isSubmitting || (role.name === 'admin' && userToEdit?.username === 'superadmin')} // Example: prevent removing admin from default admin
                                                                                                  onCheckedChange={(checked) => {
                                                                                                      return checked
                                                                                                          ? roleField.onChange([...(roleField.value || []), role.name]) // Add role

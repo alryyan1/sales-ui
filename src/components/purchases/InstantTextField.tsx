@@ -15,6 +15,8 @@ interface InstantTextFieldProps {
   max?: number | string;
   step?: number;
   size?: 'small' | 'medium';
+  error?: boolean;
+  helperText?: string;
 }
 
 const InstantTextField: React.FC<InstantTextFieldProps> = ({
@@ -28,6 +30,8 @@ const InstantTextField: React.FC<InstantTextFieldProps> = ({
   max,
   step,
   size = 'small',
+  error,
+  helperText,
 }) => {
   const [inputValue, setInputValue] = useState<string>(value?.toString?.() ?? '');
 
@@ -46,33 +50,30 @@ const InstantTextField: React.FC<InstantTextFieldProps> = ({
     }
   };
 
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.select();
+  };
+
   return (
     <TextField
-      onFocus={(e) => {
-        e.target.select();
-      }}
       value={inputValue}
-      
       onChange={handleChange}
+      onFocus={handleFocus}
       type={type}
       placeholder={placeholder}
       label={label}
       size={size}
       fullWidth
       disabled={disabled}
+      error={error}
+      helperText={helperText}
       InputProps={{
-        style: { fontSize: '0.875rem' },
-        inputProps: {
-          min,
-          max,
-          step,
-        },
+        inputProps: { min, max, step },
       }}
       sx={{
-        minWidth: 120,
-        width: '100%',
         '& .MuiInputBase-input': {
-          padding: '4px 8px',
+          padding: '8px 12px',
+          fontSize: '0.875rem',
         },
       }}
     />
@@ -80,5 +81,3 @@ const InstantTextField: React.FC<InstantTextFieldProps> = ({
 };
 
 export default InstantTextField;
-
-

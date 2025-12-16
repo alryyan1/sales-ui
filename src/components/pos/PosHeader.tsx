@@ -9,19 +9,19 @@ import {
   Typography,
   Tooltip,
   Chip,
+  Button,
+  IconButton,
+  Paper,
+  CircularProgress,
 } from "@mui/material";
 
-// shadcn UI
-import { Button } from "@/components/ui/button";
-
-// Icons
-import {
-  Plus,
-  Calculator,
-  FileText,
-  Printer,
-  FilePenLine,
-} from "lucide-react";
+// MUI Icons
+import AddIcon from '@mui/icons-material/Add';
+import CalculateIcon from '@mui/icons-material/Calculate';
+import DescriptionIcon from '@mui/icons-material/Description';
+import PrintIcon from '@mui/icons-material/Print';
+import ReceiptIcon from '@mui/icons-material/Receipt';
+import CloseIcon from '@mui/icons-material/Close';
 
 // Types
 import { Product } from "../../services/productService";
@@ -102,22 +102,18 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
     if (event.key === 'Enter') {
       event.preventDefault();
       
-      // If there are selected products, trigger the add products button
       if (selectedProducts.length > 0) {
         await handleAddProducts();
         return;
       }
       
-      // If no selected products but there's search input, try to find and add a product
       if (!searchInput.trim()) return;
       
-      // First try to find in search results
       const productBySku = searchResults.find(
         product => product.sku?.toLowerCase() === searchInput.toLowerCase()
       );
       
       if (productBySku) {
-        // Add to selected products if not already selected
         if (!selectedProducts.find(p => p.id === productBySku.id)) {
           setSelectedProducts(prev => [...prev, productBySku]);
         }
@@ -126,7 +122,6 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
         return;
       }
       
-      // If not found in results, search backend specifically
       try {
         setSearchLoading(true);
         const response = await apiClient.get<{ data: Product[] }>(
@@ -139,7 +134,6 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
         );
         
         if (exactSkuMatch) {
-          // Add to selected products if not already selected
           if (!selectedProducts.find(p => p.id === exactSkuMatch.id)) {
             setSelectedProducts(prev => [...prev, exactSkuMatch]);
           }
@@ -158,7 +152,6 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
     try {
       setLoadingClients(true);
       const response = await clientService.getClients();
-      // Ensure selected client (if any) is included in options so Autocomplete can display it
       const fetched = response.data || [];
       if (selectedClient && !fetched.find(c => c.id === selectedClient.id)) {
         setClients([selectedClient, ...fetched]);
@@ -173,20 +166,16 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
     }
   };
 
-  // Load clients on mount
   useEffect(() => {
     loadClients();
-    // We intentionally don't include loadClients in deps to avoid re-fetch loop
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Load current shift on mount
   useEffect(() => {
     const fetchShift = async () => {
       try {
         setShiftLoading(true);
         const response = await apiClient.get("/shifts/current");
-        // 204 means no content / no active shift
         if (response.status === 200) {
           setShift(response.data.data || response.data);
         } else {
@@ -230,12 +219,10 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
     }
   };
 
-  // When selectedClient changes from parent, ensure it's present in options
   useEffect(() => {
     if (selectedClient && !clients.find(c => c.id === selectedClient.id)) {
       setClients(prev => [selectedClient, ...prev]);
     }
-    // We intentionally don't include clients in deps to avoid infinite loop when mutating list
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedClient]);
 
@@ -243,13 +230,10 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
     if (selectedProducts.length === 0) return;
 
     if (selectedProducts.length === 1 && onAddProduct) {
-      // Single product - use existing method
       await onAddProduct(selectedProducts[0]);
     } else if (onAddMultipleProducts) {
-      // Multiple products - use new method
       await onAddMultipleProducts(selectedProducts);
     } else {
-      // Fallback - add one by one
       for (const product of selectedProducts) {
         if (onAddProduct) {
           await onAddProduct(product);
@@ -262,304 +246,219 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
     setSearchResults([]);
   };
 
-
-
   return (
-      <div className="w-full bg-white rounded-lg shadow-md border border-gray-200 px-4 py-3 min-h-[80px] flex items-center justify-between">
-        {/* Left side - Create Empty Sale Button and Date Selection */}
-        <div className="flex items-center space-x-1">
-          <Tooltip title="إنشاء بيع فارغ">
-            <div>
-              <Button
-                type="button"
-                size="icon"
-                disabled={loading}
-                className="h-8 w-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
-                onClick={onCreateEmptySale}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-          </Tooltip>
+    <Paper sx={{ mx: 1, mt: 1, px: 2, py: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
+      {/* Left - Create Sale + Date */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Tooltip title="إنشاء بيع جديد">
+          <IconButton
+            color="primary"
+            onClick={onCreateEmptySale}
+            disabled={loading}
+            sx={{ bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' } }}
+            size="small"
+          >
+            <AddIcon />
+          </IconButton>
+        </Tooltip>
 
-          {/* Date Selection */}
-          <Box sx={{ minWidth: 150 }}>
-            <TextField
-              type="date"
-              value={selectedDate || new Date().toISOString().split('T')[0]}
-              onChange={(e) => onDateChange?.(e.target.value)}
+        <TextField
+          type="date"
+          value={selectedDate || new Date().toISOString().split('T')[0]}
+          onChange={(e) => onDateChange?.(e.target.value)}
+          size="small"
+          sx={{ width: 150 }}
+        />
+      </Box>
+
+      {/* Center - Client + Product Search */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, justifyContent: 'center' }}>
+        {hasSelectedSale && (
+          <>
+            {/* Client Selection */}
+            <Autocomplete
+              options={clients}
+              getOptionLabel={(option) => `${option.name} ${option.phone ? `(${option.phone})` : ''}`}
+              value={selectedClient || null}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              onChange={(_, newValue) => onClientChange?.(newValue)}
+              loading={loadingClients}
               size="small"
-              sx={{
-                backgroundColor: 'white',
-                borderRadius: 1,
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: 'transparent',
-                },
-                '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: 'transparent',
-                },
-                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  borderColor: 'transparent',
-                },
-              }}
+              sx={{ minWidth: 200 }}
+              renderInput={(params) => (
+                <TextField {...params} label="العميل" placeholder="ابحث عن عميل..." size="small" />
+              )}
+              renderOption={(props, option) => (
+                <Box component="li" {...props}>
+                  <Box>
+                    <Typography variant="body2">{option.name}</Typography>
+                    {option.phone && (
+                      <Typography variant="caption" color="text.secondary">{option.phone}</Typography>
+                    )}
+                  </Box>
+                </Box>
+              )}
             />
-          </Box>
-        </div>
 
-        {/* Center - Client Selection and Product Search */}
-        <div className="flex items-center space-x-4">
-          {/* Client Selection - Only show when sale is selected */}
-          {hasSelectedSale && (
-            <Box sx={{ minWidth: 200 }}>
+            {/* Product Search */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 350 }}>
               <Autocomplete
-                options={clients}
-                getOptionLabel={(option) => `${option.name} ${option.phone ? `(${option.phone})` : ''}`}
-                value={selectedClient}
-                isOptionEqualToValue={(option, value) => option.id === value.id}
-                onChange={(_, newValue) => onClientChange?.(newValue)}
-                loading={loadingClients}
+                multiple
+                freeSolo
+                blurOnSelect={false}
+                clearOnBlur={false}
+                fullWidth
+                options={searchResults}
+                value={selectedProducts}
+                onChange={(_, newValue) => {
+                  const products = newValue.filter(item => typeof item !== 'string') as Product[];
+                  setSelectedProducts(products);
+                }}
+                getOptionLabel={(option) => {
+                  if (typeof option === 'string') return option;
+                  return `${option.name} (${option.sku || 'N/A'})`;
+                }}
+                inputValue={searchInput}
+                onInputChange={(_, newInputValue, reason) => {
+                  if (reason === 'input' || reason === 'clear') {
+                    setSearchInput(newInputValue);
+                    handleSearch(newInputValue);
+                  }
+                }}
+                loading={searchLoading}
+                disabled={loading}
+                size="small"
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="اختر العميل"
-                    placeholder="ابحث عن عميل..."
+                    placeholder="ابحث عن منتج..."
                     size="small"
-                    sx={{
-                      backgroundColor: 'white',
-                      borderRadius: 1,
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: 'transparent',
-                      },
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: 'transparent',
-                      },
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: 'transparent',
-                      },
-                    }}
+                    onKeyDown={handleKeyDown}
                   />
                 )}
                 renderOption={(props, option) => (
                   <Box component="li" {...props}>
                     <Box>
-                      <Typography variant="body1">{option.name}</Typography>
-                      {option.phone && (
-                        <Typography variant="body2" color="text.secondary">
-                          {option.phone}
-                        </Typography>
-                      )}
+                      <Typography variant="body2" fontWeight="medium">{option.name}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        باركود: {option.sku || "N/A"} | السعر: {formatNumber(option.last_sale_price_per_sellable_unit || 0)}
+                      </Typography>
                     </Box>
                   </Box>
                 )}
+                noOptionsText={searchInput ? "لا توجد نتائج" : "اكتب للبحث..."}
               />
-            </Box>
-          )}
-
-          {/* Product Search - Only show when sale is selected */}
-          {hasSelectedSale && (
-            <>
-              <Box sx={{ minWidth: 400, display: 'flex', gap: 2, alignItems: 'center' }}>
-                                 <Autocomplete
-                   multiple
-                   freeSolo
-                   blurOnSelect={false}
-                   clearOnBlur={false}
-                   sx={{
-                     width: '100%'
-                   }}
-                   fullWidth
-                   options={searchResults}
-                   
-                   value={selectedProducts}
-                   onChange={(_, newValue) => {
-                     // Filter out string values (freeSolo input)
-                     const products = newValue.filter(item => typeof item !== 'string') as Product[];
-                     setSelectedProducts(products);
-                     
-                     // Keep the search input focused and don't clear it immediately
-                     // This allows users to continue selecting multiple products
-                   }}
-                   getOptionLabel={(option) => {
-                     if (typeof option === 'string') return option;
-                     return `${option.name} (${option.sku || 'N/A'})`;
-                   }}
-                   inputValue={searchInput}
-                   onInputChange={(_, newInputValue, reason) => {
-                     // Only update search input if it's a user typing or clearing
-                     // Don't clear when selecting an option
-                     if (reason === 'input' || reason === 'clear') {
-                       setSearchInput(newInputValue);
-                       handleSearch(newInputValue);
-                     }
-                     // When selecting an option (reason === 'selectOption'), keep the current input
-                   }}
-                   loading={searchLoading}
-                   disabled={loading}
-                   renderInput={(params) => (
-                     <TextField
-                       {...params}
-                       placeholder="ابحث عن منتج..."
-                       variant="outlined"
-                       size="medium"
-                       onKeyDown={handleKeyDown}
-                     />
-                   )}
-                  renderOption={(props, option) => (
-                    <Box component="li" {...props}>
-                      <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                        <div className="font-medium">
-                          {option.name}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          SKU: {option.sku || "N/A"} | Price: {formatNumber(option.last_sale_price_per_sellable_unit || 0)}
-                        </div>
-                      </Box>
-                    </Box>
-                  )}
-                  noOptionsText={searchInput ? "لا توجد نتائج" : "اكتب للبحث..."}
-                />
-                
-                <Tooltip title={selectedProducts.length > 1 ? "إضافة المنتجات" : "إضافة منتج"}>
-                  <div>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="outline"
-                      disabled={selectedProducts.length === 0 || loading}
-                      className="h-8 w-8 rounded-full"
-                      onClick={handleAddProducts}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </Tooltip>
-              </Box>
-
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                اضغط Enter للإضافة
-              </Typography>
-            </>
-          )}
-        </div>
-
-        {/* Right side - Shift + Action Buttons */}
-        <div className="flex items-center space-x-2">
-          {/* Shift status / actions */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 1 }}>
-            {shift && shift.is_open ? (
-              <>
-                <Chip
-                  label="وردية مفتوحة"
-                  color="success"
-                  size="small"
-                  variant="outlined"
-                />
-                <Tooltip title="إغلاق الوردية">
-                  <div>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="destructive"
-                      disabled={shiftLoading}
-                      className="h-7 w-7 rounded-full"
-                      onClick={handleCloseShift}
-                    >
-                      <span className="text-xs font-bold">×</span>
-                    </Button>
-                  </div>
-                </Tooltip>
-              </>
-            ) : (
-              <Tooltip title="فتح وردية جديدة">
-                <div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={shiftLoading}
-                    className="h-7 rounded-full bg-emerald-600 hover:bg-emerald-700 px-3 text-xs font-semibold text-white"
-                    onClick={handleOpenShift}
+              
+              <Tooltip title={selectedProducts.length > 1 ? "إضافة المنتجات" : "إضافة منتج"}>
+                <span>
+                  <IconButton
+                    color="primary"
+                    onClick={handleAddProducts}
+                    disabled={selectedProducts.length === 0 || loading}
+                    size="small"
                   >
-                    وردية
-                  </Button>
-                </div>
+                    <AddIcon />
+                  </IconButton>
+                </span>
               </Tooltip>
-            )}
-          </Box>
+            </Box>
 
-          {/* Calculator Button */}
-          <Tooltip title="الآلة الحاسبة">
-            <div>
-              <Button
-                type="button"
-                size="icon"
-                className="h-8 w-8 rounded-full bg-orange-500 text-white hover:bg-orange-600"
-                onClick={onOpenCalculator}
+            <Typography variant="caption" color="text.secondary">
+              اضغط Enter للإضافة
+            </Typography>
+          </>
+        )}
+      </Box>
+
+      {/* Right - Shift + Actions */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        {/* Shift */}
+        {shift && shift.is_open ? (
+          <>
+            <Chip label="وردية مفتوحة" color="success" size="small" variant="outlined" />
+            <Tooltip title="إغلاق الوردية">
+              <IconButton
+                color="error"
+                onClick={handleCloseShift}
+                disabled={shiftLoading}
+                size="small"
               >
-                <Calculator className="h-4 w-4" />
-              </Button>
-            </div>
-          </Tooltip>
-
-          {/* Preview PDF Button */}
-          <Tooltip title="معاينة PDF">
-            <div>
-              <Button
-                type="button"
-                size="icon"
-                className="h-8 w-8 rounded-full bg-purple-600 text-white hover:bg-purple-700"
-                onClick={onPreviewPdf}
-              >
-                <FileText className="h-4 w-4" />
-              </Button>
-            </div>
-          </Tooltip>
-
-          {/* Invoice PDF Button - Only show when sale is selected */}
-          {hasSelectedSale && (
-            <Tooltip title="إنشاء فاتورة">
-              <div>
-                <Button
-                  type="button"
-                  size="icon"
-                  className="h-8 w-8 rounded-full bg-emerald-600 text-white hover:bg-emerald-700"
-                  onClick={onGenerateInvoice}
-                >
-                  <FilePenLine className="h-4 w-4" />
-                </Button>
-              </div>
+                {shiftLoading ? <CircularProgress size={16} /> : <CloseIcon />}
+              </IconButton>
             </Tooltip>
-          )}
+          </>
+        ) : (
+          <Button
+            variant="contained"
+            color="success"
+            size="small"
+            onClick={handleOpenShift}
+            disabled={shiftLoading}
+            sx={{ minWidth: 'auto', px: 2 }}
+          >
+            {shiftLoading ? <CircularProgress size={16} color="inherit" /> : 'وردية'}
+          </Button>
+        )}
 
-          {/* Thermal Invoice Button - Only show when sale is selected */}
-          {hasSelectedSale && (
-            <Tooltip title="طباعة فاتورة حرارية">
-              <div>
-                <Button
-                  type="button"
-                  size="icon"
-                  className="h-8 w-8 rounded-full bg-orange-500 text-white hover:bg-orange-600"
-                  onClick={onPrintThermalInvoice}
-                >
-                  <Printer className="h-4 w-4" />
-                </Button>
-              </div>
-            </Tooltip>
-          )}
+        {/* Calculator */}
+        <Tooltip title="الآلة الحاسبة">
+          <IconButton
+            onClick={onOpenCalculator}
+            sx={{ bgcolor: 'warning.main', color: 'white', '&:hover': { bgcolor: 'warning.dark' } }}
+            size="small"
+          >
+            <CalculateIcon />
+          </IconButton>
+        </Tooltip>
 
-          {/* PDF Report Button */}
-          <Tooltip title="إنشاء PDF">
-            <div>
-              <Button
-                type="button"
-                size="icon"
-                className="h-8 w-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
-                onClick={onGeneratePdf}
-              >
-                <FileText className="h-4 w-4" />
-              </Button>
-            </div>
+        {/* Preview PDF */}
+        <Tooltip title="معاينة PDF">
+          <IconButton
+            onClick={onPreviewPdf}
+            sx={{ bgcolor: 'secondary.main', color: 'white', '&:hover': { bgcolor: 'secondary.dark' } }}
+            size="small"
+          >
+            <DescriptionIcon />
+          </IconButton>
+        </Tooltip>
+
+        {/* Invoice - Only when sale selected */}
+        {hasSelectedSale && (
+          <Tooltip title="إنشاء فاتورة">
+            <IconButton
+              onClick={onGenerateInvoice}
+              sx={{ bgcolor: 'success.main', color: 'white', '&:hover': { bgcolor: 'success.dark' } }}
+              size="small"
+            >
+              <ReceiptIcon />
+            </IconButton>
           </Tooltip>
-        </div>
-        </div>
+        )}
+
+        {/* Thermal Print - Only when sale selected */}
+        {hasSelectedSale && (
+          <Tooltip title="طباعة فاتورة حرارية">
+            <IconButton
+              onClick={onPrintThermalInvoice}
+              sx={{ bgcolor: 'warning.main', color: 'white', '&:hover': { bgcolor: 'warning.dark' } }}
+              size="small"
+            >
+              <PrintIcon />
+            </IconButton>
+          </Tooltip>
+        )}
+
+        {/* Generate PDF */}
+        <Tooltip title="إنشاء تقرير PDF">
+          <IconButton
+            onClick={onGeneratePdf}
+            sx={{ bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' } }}
+            size="small"
+          >
+            <DescriptionIcon />
+          </IconButton>
+        </Tooltip>
+      </Box>
+    </Paper>
   );
-}; 
+};
