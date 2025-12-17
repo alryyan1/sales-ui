@@ -84,6 +84,9 @@ const DashboardPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Control charts visibility to avoid heavy initial requests
+    const [showCharts, setShowCharts] = useState<boolean>(false);
+
     // --- Yearly Sales Chart State ---
     const currentYear = new Date().getFullYear();
     const [chartYear, setChartYear] = useState<number>(currentYear);
@@ -156,8 +159,9 @@ const DashboardPage: React.FC = () => {
     }, [t]);
 
     useEffect(() => {
+        if (!showCharts) return;
         fetchYearlyMonthlyTotals(chartYear, chartMetric);
-    }, [chartYear, chartMetric, fetchYearlyMonthlyTotals]);
+    }, [chartYear, chartMetric, fetchYearlyMonthlyTotals, showCharts]);
 
     // Fetch purchases monthly totals (placeholder endpoint, adjust when backend available)
     const fetchYearlyMonthlyPurchases = useCallback(async (year: number) => {
@@ -188,8 +192,9 @@ const DashboardPage: React.FC = () => {
     }, []);
 
     useEffect(() => {
+        if (!showCharts) return;
         fetchYearlyMonthlyPurchases(purchChartYear);
-    }, [purchChartYear, fetchYearlyMonthlyPurchases]);
+    }, [purchChartYear, fetchYearlyMonthlyPurchases, showCharts]);
 
     // Fetch top-selling products for pie chart
     const fetchTopProducts = useCallback(async (range: 'month' | 'year') => {
@@ -218,8 +223,9 @@ const DashboardPage: React.FC = () => {
     }, []);
 
     useEffect(() => {
+        if (!showCharts) return;
         fetchTopProducts(topRange);
-    }, [topRange, fetchTopProducts]);
+    }, [topRange, fetchTopProducts, showCharts]);
 
     // --- Loading State UI ---
     const renderSkeletons = (count = 6) => ( // Default to 6 skeletons for a 2x3 or similar layout
@@ -410,174 +416,198 @@ const DashboardPage: React.FC = () => {
                         </Card>
                     )}
 
-                    {/* --- Sales by Month Chart --- */}
-                    <Card className="mt-6 dark:bg-gray-900 dark:border-gray-700">
-                        <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                            <div>
-                                <CardTitle className="text-md font-semibold text-gray-800 dark:text-gray-100">
-                                    {t('dashboard:salesByMonth', 'المبيعات خلال أشهر السنة')}
+                    {/* --- Charts section (lazy loaded) --- */}
+                    {!showCharts && (
+                        <Card className="mt-6 dark:bg-gray-900 dark:border-gray-700">
+                            <CardHeader>
+                                <CardTitle className="text-md font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                                    <TrendingUp className="h-5 w-5 text-muted-foreground dark:text-gray-400" />
+                                    {t('dashboard:chartsTitle', 'الرسوم البيانية')}
                                 </CardTitle>
                                 <CardDescription className="dark:text-gray-400">
-                                    {chartMetric === 'revenue' ? t('dashboard:byRevenue', 'حسب إجمالي المبيعات') : t('dashboard:byPaid', 'حسب إجمالي المبلغ المدفوع')}
+                                    {t('dashboard:chartsHint', 'لتحسين سرعة تحميل الصفحة، اضغط على الزر بالأسفل لعرض الرسوم البيانية.')}
                                 </CardDescription>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <select
-                                    className="border rounded-md px-2 py-1 bg-white dark:bg-gray-800 dark:border-gray-700"
-                                    value={chartYear}
-                                    onChange={(e) => setChartYear(Number(e.target.value))}
-                                >
-                                    {Array.from({ length: 5 }, (_, i) => currentYear - i).map((y) => (
-                                        <option key={y} value={y}>{y}</option>
-                                    ))}
-                                </select>
-                                <div className="flex rounded-md overflow-hidden border dark:border-gray-700">
-                                    <button
-                                        className={`px-3 py-1 text-sm ${chartMetric === 'revenue' ? 'bg-primary text-white' : 'bg-white dark:bg-gray-800 dark:text-gray-200'}`}
-                                        onClick={() => setChartMetric('revenue')}
-                                    >
-                                        {t('dashboard:metricRevenue', 'الإجمالي')}
-                                    </button>
-                                    <button
-                                        className={`px-3 py-1 text-sm ${chartMetric === 'paid' ? 'bg-primary text-white' : 'bg-white dark:bg-gray-800 dark:text-gray-200'}`}
-                                        onClick={() => setChartMetric('paid')}
-                                    >
-                                        {t('dashboard:metricPaid', 'المدفوع')}
-                                    </button>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            {isChartLoading ? (
-                                <Skeleton className="h-40 w-full dark:bg-gray-700" />
-                            ) : (
-                                <div className="w-full h-56">
-                                    {chartNoData ? (
-                                        <div className="h-full w-full flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
-                                            {t('dashboard:noChartData', 'لا توجد بيانات للسنة المحددة')}
+                            </CardHeader>
+                            <CardContent className="flex justify-center">
+                                <Button onClick={() => setShowCharts(true)}>
+                                    {t('dashboard:showCharts', 'إظهار الرسوم البيانية')}
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {showCharts && (
+                        <>
+                            {/* --- Sales by Month Chart --- */}
+                            <Card className="mt-6 dark:bg-gray-900 dark:border-gray-700">
+                                <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                                    <div>
+                                        <CardTitle className="text-md font-semibold text-gray-800 dark:text-gray-100">
+                                            {t('dashboard:salesByMonth', 'المبيعات خلال أشهر السنة')}
+                                        </CardTitle>
+                                        <CardDescription className="dark:text-gray-400">
+                                            {chartMetric === 'revenue' ? t('dashboard:byRevenue', 'حسب إجمالي المبيعات') : t('dashboard:byPaid', 'حسب إجمالي المبلغ المدفوع')}
+                                        </CardDescription>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <select
+                                            className="border rounded-md px-2 py-1 bg-white dark:bg-gray-800 dark:border-gray-700"
+                                            value={chartYear}
+                                            onChange={(e) => setChartYear(Number(e.target.value))}
+                                        >
+                                            {Array.from({ length: 5 }, (_, i) => currentYear - i).map((y) => (
+                                                <option key={y} value={y}>{y}</option>
+                                            ))}
+                                        </select>
+                                        <div className="flex rounded-md overflow-hidden border dark:border-gray-700">
+                                            <button
+                                                className={`px-3 py-1 text-sm ${chartMetric === 'revenue' ? 'bg-primary text-white' : 'bg-white dark:bg-gray-800 dark:text-gray-200'}`}
+                                                onClick={() => setChartMetric('revenue')}
+                                            >
+                                                {t('dashboard:metricRevenue', 'الإجمالي')}
+                                            </button>
+                                            <button
+                                                className={`px-3 py-1 text-sm ${chartMetric === 'paid' ? 'bg-primary text-white' : 'bg-white dark:bg-gray-800 dark:text-gray-200'}`}
+                                                onClick={() => setChartMetric('paid')}
+                                            >
+                                                {t('dashboard:metricPaid', 'المدفوع')}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    {isChartLoading ? (
+                                        <Skeleton className="h-40 w-full dark:bg-gray-700" />
+                                    ) : (
+                                        <div className="w-full h-56">
+                                            {chartNoData ? (
+                                                <div className="h-full w-full flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+                                                    {t('dashboard:noChartData', 'لا توجد بيانات للسنة المحددة')}
+                                                </div>
+                                            ) : (
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <BarChart data={monthlySeries.map((v, i) => ({
+                                                        name: new Date(2000, i, 1).toLocaleString(undefined, { month: 'short' }),
+                                                        value: v,
+                                                    }))}>
+                                                        <CartesianGrid strokeDasharray="3 3" />
+                                                        <XAxis dataKey="name" />
+                                                        <YAxis tickFormatter={(v) => formatNumber(v)} />
+                                                        <RechartsTooltip formatter={(v: any) => formatCurrency(Number(v))} />
+                                                        <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                                                    </BarChart>
+                                                </ResponsiveContainer>
+                                            )}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            {/* --- Top Products Pie Chart --- */}
+                            <Card className="mt-6 dark:bg-gray-900 dark:border-gray-700">
+                                <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                                    <div>
+                                        <CardTitle className="text-md font-semibold text-gray-800 dark:text-gray-100">
+                                            {t('dashboard:topProducts', 'المنتجات الأكثر مبيعاً')}
+                                        </CardTitle>
+                                        <CardDescription className="dark:text-gray-400">
+                                            {t('dashboard:topByQty', 'حسب إجمالي الكمية المباعة')}
+                                        </CardDescription>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex rounded-md overflow-hidden border dark:border-gray-700">
+                                            <button
+                                                className={`px-3 py-1 text-sm ${topRange === 'month' ? 'bg-primary text-white' : 'bg-white dark:bg-gray-800 dark:text-gray-200'}`}
+                                                onClick={() => setTopRange('month')}
+                                            >
+                                                {t('dashboard:thisMonth', 'هذا الشهر')}
+                                            </button>
+                                            <button
+                                                className={`px-3 py-1 text-sm ${topRange === 'year' ? 'bg-primary text-white' : 'bg-white dark:bg-gray-800 dark:text-gray-200'}`}
+                                                onClick={() => setTopRange('year')}
+                                            >
+                                                {t('dashboard:thisYear', 'هذه السنة')}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    {isTopLoading ? (
+                                        <Skeleton className="h-60 w-full dark:bg-gray-700" />
+                                    ) : topProducts.length === 0 ? (
+                                        <div className="h-60 w-full flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+                                            {t('dashboard:noChartData', 'لا توجد بيانات للفترة المحددة')}
                                         </div>
                                     ) : (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={monthlySeries.map((v, i) => ({
-                                                name: new Date(2000, i, 1).toLocaleString(undefined, { month: 'short' }),
-                                                value: v,
-                                            }))}>
-                                                <CartesianGrid strokeDasharray="3 3" />
-                                                <XAxis dataKey="name" />
-                                                <YAxis tickFormatter={(v) => formatNumber(v)} />
-                                                <RechartsTooltip formatter={(v: any) => formatCurrency(Number(v))} />
-                                                <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    )}
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* --- Top Products Pie Chart --- */}
-                    <Card className="mt-6 dark:bg-gray-900 dark:border-gray-700">
-                        <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                            <div>
-                                <CardTitle className="text-md font-semibold text-gray-800 dark:text-gray-100">
-                                    {t('dashboard:topProducts', 'المنتجات الأكثر مبيعاً')}
-                                </CardTitle>
-                                <CardDescription className="dark:text-gray-400">
-                                    {t('dashboard:topByQty', 'حسب إجمالي الكمية المباعة')}
-                                </CardDescription>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="flex rounded-md overflow-hidden border dark:border-gray-700">
-                                    <button
-                                        className={`px-3 py-1 text-sm ${topRange === 'month' ? 'bg-primary text-white' : 'bg-white dark:bg-gray-800 dark:text-gray-200'}`}
-                                        onClick={() => setTopRange('month')}
-                                    >
-                                        {t('dashboard:thisMonth', 'هذا الشهر')}
-                                    </button>
-                                    <button
-                                        className={`px-3 py-1 text-sm ${topRange === 'year' ? 'bg-primary text-white' : 'bg-white dark:bg-gray-800 dark:text-gray-200'}`}
-                                        onClick={() => setTopRange('year')}
-                                    >
-                                        {t('dashboard:thisYear', 'هذه السنة')}
-                                    </button>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            {isTopLoading ? (
-                                <Skeleton className="h-60 w-full dark:bg-gray-700" />
-                            ) : topProducts.length === 0 ? (
-                                <div className="h-60 w-full flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
-                                    {t('dashboard:noChartData', 'لا توجد بيانات للفترة المحددة')}
-                                </div>
-                            ) : (
-                                <div className="w-full h-60">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie data={topProducts} dataKey="value" nameKey="name" innerRadius={50} outerRadius={90}>
-                                                {topProducts.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={["#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#84cc16","#e11d48","#0ea5e9","#a3e635"][index % 10]} />
-                                                ))}
-                                            </Pie>
-                                            <Legend />
-                                            <RechartsTooltip />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* --- Purchases by Month Chart --- */}
-                    <Card className="mt-6 dark:bg-gray-900 dark:border-gray-700">
-                        <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                            <div>
-                                <CardTitle className="text-md font-semibold text-gray-800 dark:text-gray-100">
-                                    {t('dashboard:purchasesByMonth', 'المشتريات خلال أشهر السنة')}
-                                </CardTitle>
-                                <CardDescription className="dark:text-gray-400">
-                                    {t('dashboard:byTotalCost', 'حسب إجمالي تكلفة الشراء')}
-                                </CardDescription>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <select
-                                    className="border rounded-md px-2 py-1 bg-white dark:bg-gray-800 dark:border-gray-700"
-                                    value={purchChartYear}
-                                    onChange={(e) => setPurchChartYear(Number(e.target.value))}
-                                >
-                                    {Array.from({ length: 5 }, (_, i) => currentYear - i).map((y) => (
-                                        <option key={y} value={y}>{y}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            {isPurchChartLoading ? (
-                                <Skeleton className="h-40 w-full dark:bg-gray-700" />
-                            ) : (
-                                <div className="w-full h-56">
-                                    {purchChartNoData ? (
-                                        <div className="h-full w-full flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
-                                            {t('dashboard:noChartData', 'لا توجد بيانات للسنة المحددة')}
+                                        <div className="w-full h-60">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <PieChart>
+                                                    <Pie data={topProducts} dataKey="value" nameKey="name" innerRadius={50} outerRadius={90}>
+                                                        {topProducts.map((entry, index) => (
+                                                            <Cell key={`cell-${index}`} fill={["#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#84cc16","#e11d48","#0ea5e9","#a3e635"][index % 10]} />
+                                                        ))}
+                                                    </Pie>
+                                                    <Legend />
+                                                    <RechartsTooltip />
+                                                </PieChart>
+                                            </ResponsiveContainer>
                                         </div>
-                                    ) : (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={purchMonthlySeries.map((v, i) => ({
-                                                name: new Date(2000, i, 1).toLocaleString(undefined, { month: 'short' }),
-                                                value: v,
-                                            }))}>
-                                                <CartesianGrid strokeDasharray="3 3" />
-                                                <XAxis dataKey="name" />
-                                                <YAxis tickFormatter={(v) => formatNumber(v)} />
-                                                <RechartsTooltip formatter={(v: any) => formatCurrency(Number(v))} />
-                                                <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} />
-                                            </BarChart>
-                                        </ResponsiveContainer>
                                     )}
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
+                                </CardContent>
+                            </Card>
+
+                            {/* --- Purchases by Month Chart --- */}
+                            <Card className="mt-6 dark:bg-gray-900 dark:border-gray-700">
+                                <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                                    <div>
+                                        <CardTitle className="text-md font-semibold text-gray-800 dark:text-gray-100">
+                                            {t('dashboard:purchasesByMonth', 'المشتريات خلال أشهر السنة')}
+                                        </CardTitle>
+                                        <CardDescription className="dark:text-gray-400">
+                                            {t('dashboard:byTotalCost', 'حسب إجمالي تكلفة الشراء')}
+                                        </CardDescription>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <select
+                                            className="border rounded-md px-2 py-1 bg-white dark:bg-gray-800 dark:border-gray-700"
+                                            value={purchChartYear}
+                                            onChange={(e) => setPurchChartYear(Number(e.target.value))}
+                                        >
+                                            {Array.from({ length: 5 }, (_, i) => currentYear - i).map((y) => (
+                                                <option key={y} value={y}>{y}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    {isPurchChartLoading ? (
+                                        <Skeleton className="h-40 w-full dark:bg-gray-700" />
+                                    ) : (
+                                        <div className="w-full h-56">
+                                            {purchChartNoData ? (
+                                                <div className="h-full w-full flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+                                                    {t('dashboard:noChartData', 'لا توجد بيانات للسنة المحددة')}
+                                                </div>
+                                            ) : (
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <BarChart data={purchMonthlySeries.map((v, i) => ({
+                                                        name: new Date(2000, i, 1).toLocaleString(undefined, { month: 'short' }),
+                                                        value: v,
+                                                    }))}>
+                                                        <CartesianGrid strokeDasharray="3 3" />
+                                                        <XAxis dataKey="name" />
+                                                        <YAxis tickFormatter={(v) => formatNumber(v)} />
+                                                        <RechartsTooltip formatter={(v: any) => formatCurrency(Number(v))} />
+                                                        <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} />
+                                                    </BarChart>
+                                                </ResponsiveContainer>
+                                            )}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </>
+                    )}
 
                 </>
              )}

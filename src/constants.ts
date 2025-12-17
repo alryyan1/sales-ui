@@ -149,7 +149,7 @@ export const formatDate = (
 export const formatCurrency = (
     value: string | number | null | undefined,
     locale?: string,       // Example: 'ar-SA' for Arabic (Saudi Arabia)
-    currencyCode: string = 'USD', // Default currency, can be overridden or taken from settings
+    currencyCode: string = 'SDG', // Default currency set globally to Sudanese Pound
     options?: Intl.NumberFormatOptions
 ): string => {
     if (value === null || value === undefined) return '---';

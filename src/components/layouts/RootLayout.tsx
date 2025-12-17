@@ -132,11 +132,12 @@ const RootLayout: React.FC = () => {
                 component="main"
                 sx={{
                     flexGrow: 1,
-                    overflow: 'hidden',
+                    // overflowX: 'hidden',
+                    overflowY: 'auto',
                     p: 1,
                     width: { sm: `calc(100% - ${DRAWER_WIDTH}px)` },
                     bgcolor: 'background.default',
-                    minHeight: '100vh',
+                    minHeight: '10vh',
                     order: { sm: 1 },
                 }}
             >

@@ -5,7 +5,6 @@ import RootLayout from "./components/layouts/RootLayout";
 import ProtectedRoute from "./components/layouts/ProtectedRoute"; // Assuming this checks auth state
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
-import HomePage from "./pages/HomePage";
 import DashboardPage from "./pages/DashboardPage";
 import ClientsPage from "./pages/ClientsPage";
 import ClientLedgerPage from "./pages/clients/ClientLedgerPage";
@@ -116,8 +115,8 @@ const router = createHashRouter([
       {
         element: <ProtectedRoute />, // Ensures user is logged in
         children: [
-          { index: true, element: <HomePage /> }, // Move HomePage inside protected routes
-          { path: "dashboard", element: <DashboardPage /> },
+          { index: true, element: <DashboardPage /> }, // Dashboard is the default home
+          { path: "dashboard", element: <DashboardPage /> }, // explicit /dashboard path
           { path: "profile", element: <ProfilePage /> },
           { 
             path: "clients",
