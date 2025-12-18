@@ -1,7 +1,6 @@
 // src/components/purchases/PurchaseItemsList.tsx
 import React, { useMemo, useCallback, useState } from 'react';
 import { useFieldArray, useFormContext } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
 
 // MUI Components
 import { Button, Typography, Box, Alert, AlertTitle, TextField, InputAdornment } from '@mui/material';
@@ -13,9 +12,6 @@ import AutoSizer from 'react-virtualized-auto-sizer';
 
 // Child Row Component
 import { PurchaseItemRow } from './PurchaseItemRow';
-
-// Types
-import { Product } from '../../services/productService';
 
 interface PurchaseItemsListProps {
     isSubmitting: boolean;
@@ -79,7 +75,6 @@ VirtualizedRow.displayName = 'VirtualizedRow';
 export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
     isSubmitting, isPurchaseReceived = false
 }) => {
-    const { t } = useTranslation(['purchases', 'common']);
     const { control, formState: { errors } } = useFormContext();
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -170,7 +165,7 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                         alignItems: 'center',
                         gap: 1
                     }}>
-                        {t('purchases:itemsSectionTitle')}
+                        أصناف المشتريات
                         <Box sx={{ 
                             px: 1.5,
                             py: 0.5,
@@ -202,7 +197,7 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                         }
                     }}
                 >
-                    {t('purchases:addProduct')}
+                    إضافة منتج
                 </Button>
             </Box>
 
@@ -216,7 +211,7 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                         bgcolor: 'warning.light'
                     }}
                 >
-                    {t('purchases:itemsLockedReceived')}
+                    لا يمكن تعديل الأصناف بعد استلام المشتريات
                 </Alert>
             )}
 
@@ -225,7 +220,7 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                 <TextField
                     fullWidth
                     size="small"
-                    placeholder={t('purchases:searchItems') || 'Search items...'}
+                    placeholder="ابحث في الأصناف..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     InputProps={{
@@ -258,11 +253,11 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                         borderColor: 'error.main'
                     }}
                 >
-                    <AlertTitle sx={{ fontWeight: 600 }}>{t('common:error')}</AlertTitle>
+                    <AlertTitle sx={{ fontWeight: 600 }}>خطأ</AlertTitle>
                     <Typography variant="body2" sx={{ mt: 0.5 }}>
                       {typeof errors.items.root?.message === 'string' 
                         ? errors.items.root.message 
-                        : t('common:error')}
+                        : 'حدث خطأ'}
                     </Typography>
                 </Alert>
              )}
@@ -279,10 +274,10 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                     borderStyle: 'dashed'
                 }}>
                     <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
-                        {t('purchases:noItemsAdded') || 'No items added yet'}
+                        لا توجد أصناف مضافة بعد
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                        {t('purchases:clickAddProduct') || 'Click "Add Product" to start adding items'}
+                        اضغط على زر "إضافة منتج" لبدء إضافة الأصناف
                     </Typography>
                 </Box>
             ) : fields.length > 50 ? (
@@ -336,10 +331,7 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                     borderColor: 'info.main'
                 }}>
                     <Typography variant="body2" color="info.dark" sx={{ fontWeight: 500 }}>
-                        {t('purchases:showingFilteredResults', { 
-                            shown: filteredFields.length, 
-                            total: fields.length 
-                        }) || `Showing ${filteredFields.length} of ${fields.length} items`}
+                        {`يتم عرض ${filteredFields.length} من ${fields.length} صنفًا`}
                     </Typography>
                 </Box>
             )}
