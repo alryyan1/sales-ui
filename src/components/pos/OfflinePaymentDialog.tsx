@@ -223,15 +223,38 @@ export const OfflinePaymentDialog: React.FC<OfflinePaymentDialogProps> = ({
       )
   };
 
+  // Handle Enter key for completion
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!open || completing) return;
+
+      // Ignore if typing in an input field or pressing a button
+      const target = event.target as HTMLElement;
+      if (['INPUT', 'TEXTAREA', 'BUTTON'].includes(target.tagName)) {
+        return;
+      }
+
+      if (event.key === 'Enter') {
+        event.preventDefault(); // Prevent default browser behavior
+        handleCompleteClick();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, completing, handleCompleteClick]);
+
   return (
     <Dialog 
       open={open} 
       onClose={!completing ? onClose : undefined}
-      maxWidth="md"
-      fullWidth
+      // maxWidth="md"
+      // fullWidth
+      
       dir="rtl"
       PaperProps={{
           sx: {
+            minWidth:'333px',
               borderRadius: 3,
               overflow: 'hidden',
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
@@ -250,7 +273,7 @@ export const OfflinePaymentDialog: React.FC<OfflinePaymentDialogProps> = ({
 
         <DialogContent sx={{ p: { xs: 2, md: 4 } }}>
             {/* Layout Container: Flex instead of Grid */}
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4, alignItems: 'center' ,justifyContent: 'center' }}>
                 
                 {/* Left Side: Payment Entry (Only if pending) */}
                 {!isFullyPaid && (
@@ -363,7 +386,8 @@ export const OfflinePaymentDialog: React.FC<OfflinePaymentDialogProps> = ({
                     pt: { xs: 2, md: 0 },
                     // Ensure this panel fills the height if displayed side-by-side, but adapts if full width
                     height: '100%',
-                    minHeight: 300
+                    minHeight: 300,
+                    maxWidth:333,
                 }}>
                     <Typography variant="subtitle2" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                         <ReceiptIcon color="action" fontSize="small" />
@@ -460,7 +484,7 @@ export const OfflinePaymentDialog: React.FC<OfflinePaymentDialogProps> = ({
                             <Typography variant="body2" fontWeight="bold" color="success.main">{formatNumber(totalPaid)}</Typography>
                         </Stack>
                         
-                        {isFullyPaid && (
+                        {/* {isFullyPaid && (
                             <Alert 
                                 icon={<CheckCircleIcon fontSize="inherit" />} 
                                 severity="success" 
@@ -469,7 +493,7 @@ export const OfflinePaymentDialog: React.FC<OfflinePaymentDialogProps> = ({
                             >
                                 تم سداد كامل المبلغ
                             </Alert>
-                        )}
+                        )} */}
 
                         <Button 
                             fullWidth 
@@ -480,12 +504,12 @@ export const OfflinePaymentDialog: React.FC<OfflinePaymentDialogProps> = ({
                             disabled={completing}
                             sx={{ 
                                 borderRadius: 2, 
-                                py: 1.5, 
+                                // py: 1.5, 
                                 fontWeight: 'bold',
                                 boxShadow: 'none'
                             }}
                         >
-                            {completing ? <CircularProgress size={24} color="inherit" /> : (isFullyPaid ? 'إتمام وحفظ البيع' : 'حفظ (دفع جزئي)')}
+                            {completing ? <CircularProgress size={24} color="inherit" /> : (isFullyPaid ? 'إتمام وحفظ العمليه' : 'حفظ (دفع جزئي)')}
                         </Button>
                     </Box>
                 </Box>

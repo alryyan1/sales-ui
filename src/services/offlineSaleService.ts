@@ -60,6 +60,7 @@ export const offlineSaleService = {
             sale_date: offlineSale.sale_date,
             status: "completed", // POS sales are usually completed
             notes: offlineSale.notes,
+            shift_id: offlineSale.shift_id,
             items: offlineSale.items.map((item) => ({
               product_id: item.product_id,
               quantity: item.quantity,
@@ -78,10 +79,15 @@ export const offlineSaleService = {
               })),
           };
 
-          await saleService.createSale(saleData);
+          const createdSale = await saleService.createSale(saleData);
 
           // If successful, update local pending sale to synced
-          const syncedSale = { ...offlineSale, is_synced: true };
+          const syncedSale: OfflineSale = {
+            ...offlineSale,
+            is_synced: true,
+            id: createdSale.id,
+            invoice_number: createdSale.invoice_number,
+          };
           await dbService.savePendingSale(syncedSale);
 
           await dbService.removeSyncAction(action.id);
@@ -109,11 +115,12 @@ export const offlineSaleService = {
   /**
    * Create a new temporary sale object
    */
-  createDraftSale: (): OfflineSale => {
+  createDraftSale: (shiftId: number | null = null): OfflineSale => {
     return {
       tempId: generateId(),
       offline_created_at: Date.now(),
       is_synced: false,
+      shift_id: shiftId,
       sale_date: new Date().toISOString().split("T")[0],
       total_amount: 0,
       paid_amount: 0,
@@ -125,6 +132,7 @@ export const offlineSaleService = {
       created_at: new Date().toISOString(),
       items: [],
       payments: [],
+      user_id: null,
     };
   },
 

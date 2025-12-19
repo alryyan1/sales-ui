@@ -36,16 +36,20 @@ interface OfflineSaleSummaryColumnProps {
   currentSaleItems: CartItem[]; // To calculate subtotal etc
   onUpdateSale: (sale: OfflineSale) => void;
   onCompleteSale: () => void; // Trigger for parent to sync/finalize
+  isPaymentDialogOpen: boolean;
+  onPaymentDialogOpenChange: (isOpen: boolean) => void;
 }
 
 export const OfflineSaleSummaryColumn: React.FC<OfflineSaleSummaryColumnProps> = ({
   currentSale,
   currentSaleItems,
   onUpdateSale,
-  onCompleteSale
+  onCompleteSale,
+  isPaymentDialogOpen,
+  onPaymentDialogOpenChange
 }) => {
   // Dialog states
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  // const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false); // Lifted up
   const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState(false);
   
   // Date editing state
@@ -119,6 +123,28 @@ export const OfflineSaleSummaryColumn: React.FC<OfflineSaleSummaryColumnProps> =
       onCompleteSale();
   };
 
+  // Shortcut for payment (+)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+        // Check if user is typing in an input field
+        if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+            return;
+        }
+
+        if (event.key === '+') {
+            event.preventDefault(); 
+            
+            // Check button validation
+            if (grandTotal > 0 && currentSale.status !== 'completed') {
+                onPaymentDialogOpenChange(true);
+            }
+        }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [grandTotal, currentSale.status]);
+
   return (
     <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto' }}>
       <Card sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -136,8 +162,8 @@ export const OfflineSaleSummaryColumn: React.FC<OfflineSaleSummaryColumnProps> =
                   py: 1,
                 }}
               >
-                {/* Use TempID */}
-                {currentSale.tempId || 'مسودة'}
+                {/* Use TempID or Real ID */}
+                {currentSale.is_synced && currentSale.id ? `#${currentSale.id}` : (currentSale.tempId || 'مسودة')}
               </Box>
           
               {/* Row 1: Date/Time */}
@@ -292,7 +318,7 @@ export const OfflineSaleSummaryColumn: React.FC<OfflineSaleSummaryColumnProps> =
 
               {/* Add Payment Button */}
               <Button
-                onClick={() => setIsPaymentDialogOpen(true)}
+                onClick={() => onPaymentDialogOpenChange(true)}
                 variant="contained"
                 fullWidth
                 size="large"
@@ -316,7 +342,7 @@ export const OfflineSaleSummaryColumn: React.FC<OfflineSaleSummaryColumnProps> =
       {/* Payment Dialog */}
       <OfflinePaymentDialog
         open={isPaymentDialogOpen}
-        onClose={() => setIsPaymentDialogOpen(false)}
+        onClose={() => onPaymentDialogOpenChange(false)}
         currentSale={currentSale}
         onUpdateSale={onUpdateSale}
         onComplete={handlePaymentComplete}

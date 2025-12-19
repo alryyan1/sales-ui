@@ -22,9 +22,11 @@ export interface SyncAction {
 }
 
 export interface OfflineSale extends Omit<Sale, "id"> {
+  id?: number; // ID from backend when synced
   tempId: string; // Temporary ID for offline reference
   offline_created_at: number;
   is_synced: boolean;
+  shift_id?: number | null;
   items: OfflineSaleItem[];
 }
 
@@ -198,7 +200,7 @@ class IndexedDBService {
 
   async getPendingSyncActions(): Promise<SyncAction[]> {
     const store = await this.getStore(STORES.SYNC_QUEUE, "readonly");
-    
+
     // We want to process them in order
     return new Promise((resolve, reject) => {
       // Filter manually or use index
