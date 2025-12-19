@@ -1,6 +1,6 @@
 // src/router.tsx
 import React from "react"; // Import React if using Suspense/lazy later
-import { createBrowserRouter, createHashRouter, Navigate, Outlet } from "react-router-dom";
+import { createHashRouter, Navigate, Outlet } from "react-router-dom";
 import RootLayout from "./components/layouts/RootLayout";
 import ProtectedRoute from "./components/layouts/ProtectedRoute"; // Assuming this checks auth state
 import LoginPage from "./pages/LoginPage";
@@ -28,7 +28,6 @@ import { AuthProvider } from "./context/AuthContext";
 import ProfitLossReportPage from "./pages/reports/ProfitLossReportPage";
 import RolesListPage from "./pages/admin/RolesListPage";
 import StockAdjustmentsListPage from "./components/inventory/StockAdjustmentsListPage";
-import StockAdjustmentFormModal from "./components/inventory/StockAdjustmentFormModal";
 import CategoriesListPage from "./pages/admin/CategoriesListPage";
 import SettingsPage from "./pages/admin/SettingsPage";
 import SystemPage from "./pages/admin/SystemPage";
@@ -41,10 +40,10 @@ import ManageStockRequisitionsListPage from "./pages/inventory/ManageStockRequis
 import ProcessRequisitionPage from "./components/admin/inventory/ProcessRequisitionPage";
 import InventoryLogPage from "./pages/reports/InventoryLogPage";
 import PurchaseDetailsPage from "./pages/purchases/PurchaseDetailsPage";
-import PurchaseItemsPage from "./pages/purchases/PurchaseItemsPage";
 import ManagePurchaseItemsPage from "./pages/purchases/ManagePurchaseItemsPage";
 import SalesTerminalPage from "./pages/sales/SalesTerminalPage";
 import PosPage from "./pages/PosPage";
+import PosPageOffline from "./pages/PosPageOffline";
 import NearExpiryReportPage from "./components/reports/NearExpiryReportPage";
 import MonthlyRevenueReportPage from "./components/reports/MonthlyRevenueReportPage";
 import SalesWithDiscountsPage from "./pages/reports/SalesWithDiscountsPage";
@@ -53,6 +52,7 @@ import BackupPage from "./pages/admin/BackupPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import WhatsAppSchedulersPage from "./pages/admin/WhatsAppSchedulersPage";
 import ExpensesPage from "./pages/admin/ExpensesPage";
+import IndexedDBManagerPage from "./pages/admin/IndexedDBManagerPage";
 // ... other page imports
 
 // --- Admin Route Guard Component ---
@@ -73,7 +73,7 @@ const AdminRouteGuard: React.FC<{ children: React.ReactNode }> = ({
 
   if (!isLoggedIn || !hasRole("admin")) {
     // Redirect non-admins away
-            toast.error("Access Denied", {
+    toast.error("Access Denied", {
       description: "You do not have permission to access this area.",
     });
     return <Navigate to="/dashboard" replace />; // Redirect to dashboard or login
@@ -118,15 +118,15 @@ const router = createHashRouter([
           { index: true, element: <DashboardPage /> }, // Dashboard is the default home
           { path: "dashboard", element: <DashboardPage /> }, // explicit /dashboard path
           { path: "profile", element: <ProfilePage /> },
-          { 
+          {
             path: "clients",
             children: [
               { index: true, element: <ClientsPage /> },
               { path: ":id/ledger", element: <ClientLedgerPage /> },
             ]
           },
-          { 
-            path: "suppliers", 
+          {
+            path: "suppliers",
             children: [
               { index: true, element: <SuppliersPage /> },
               { path: ":id/ledger", element: <SupplierLedgerPage /> },
@@ -150,6 +150,7 @@ const router = createHashRouter([
               { path: "add", element: <SaleFormPage /> },
               { path: "pos", element: <SalesTerminalPage /> },
               { path: "pos-new", element: <PosPage /> },
+              { path: "pos-offline", element: <PosPageOffline /> },
               // --- Routes for Sale Returns ---
               { path: "returns", element: <SaleReturnsListPage /> },
               { path: "returns/:returnId", element: <SaleReturnDetailsPage /> },
@@ -174,17 +175,17 @@ const router = createHashRouter([
               { path: "inventory", element: <InventoryReportPage /> },
               { path: "profit-loss", element: <ProfitLossReportPage /> },
               {
-                path:"near-expiry", element:<NearExpiryReportPage/>
+                path: "near-expiry", element: <NearExpiryReportPage />
               },
               {
-                path:"monthly-revenue",element:<MonthlyRevenueReportPage/>
+                path: "monthly-revenue", element: <MonthlyRevenueReportPage />
               },
               {
-                path:'inventory-log', element: <InventoryLogPage />
+                path: 'inventory-log', element: <InventoryLogPage />
               }
             ],
           },
-          
+
           // Analytics
           { path: "analytics", element: <AnalyticsPage /> },
 
@@ -206,6 +207,8 @@ const router = createHashRouter([
               { path: "system", element: <SystemPage /> }, // System version and updates
               { path: "backups", element: <BackupPage /> }, // Database backup management
               { path: "whatsapp-schedulers", element: <WhatsAppSchedulersPage /> }, // WhatsApp schedulers management
+                  // ... other admin routes
+              { path: "idb-manager", element: <IndexedDBManagerPage /> },
               {
                 path: "inventory",
                 children: [

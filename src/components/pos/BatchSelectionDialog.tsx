@@ -61,7 +61,7 @@ export const BatchSelectionDialog: React.FC<BatchSelectionDialogProps> = ({
     if (open && product) {
       loadBatches();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, product]);
 
   useEffect(() => {
@@ -73,7 +73,26 @@ export const BatchSelectionDialog: React.FC<BatchSelectionDialogProps> = ({
 
   const loadBatches = async () => {
     if (!product) return;
-    
+
+    // OFFLINE SUPPORT: Use product.available_batches if available locally
+    if (product.available_batches && product.available_batches.length > 0) {
+      // Map to Batch interface if necessary, though structure seems similar
+      // Product interface has specific structure for available_batches, likely matches or compatible
+      // casting or mapping might be needed if types usually don't match perfectly, 
+      // but based on typical usage they often do. 
+      // Let's assume they map for now or map safely.
+      const localBatches = product.available_batches.map(b => ({
+        id: b.id,
+        batch_number: b.batch_number,
+        remaining_quantity: b.remaining_quantity,
+        expiry_date: b.expiry_date,
+        sale_price: b.sale_price,
+        unit_cost: b.unit_cost
+      }));
+      setBatches(localBatches);
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await apiClient.get(`/products/${product.id}/available-batches`);
@@ -161,7 +180,7 @@ export const BatchSelectionDialog: React.FC<BatchSelectionDialogProps> = ({
                 {batches.map((batch) => {
                   const expiryStatus = getExpiryStatus(batch.expiry_date);
                   const isSelected = selectedBatch?.id === batch.id;
-                  
+
                   return (
                     <TableRow
                       key={batch.id}
@@ -197,7 +216,7 @@ export const BatchSelectionDialog: React.FC<BatchSelectionDialogProps> = ({
                               variant="body2"
                               color={
                                 expiryStatus === 'expired' ? 'error.main' :
-                                expiryStatus === 'expiring-soon' ? 'warning.main' : 'success.main'
+                                  expiryStatus === 'expiring-soon' ? 'warning.main' : 'success.main'
                               }
                             >
                               {formatExpiryDate(batch.expiry_date)}

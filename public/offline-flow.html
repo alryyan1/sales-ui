@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Offline POS Flowchart</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f4f6f8;
+        color: #333;
+      }
+      h1 {
+        text-align: center;
+        color: #1a1a1a;
+        margin-bottom: 30px;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      .description {
+        margin-top: 30px;
+        line-height: 1.6;
+      }
+    </style>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({ startOnLoad: true });
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Offline POS System Architecture</h1>
+        <div class="mermaid">
+graph TD
+    %% Styling
+    classDef ui fill:#e1f5fe,stroke:#01579b,stroke-width:2px;
+    classDef service fill:#fff3e0,stroke:#e65100,stroke-width:2px;
+    classDef db fill:#f3e5f5,stroke:#4a148c,stroke-width:2px;
+    classDef server fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px;
+
+    subgraph "Presentation Layer (PosPageOffline.tsx)"
+        Start((Start))
+        UI_State["State: existing products + currentSale"]
+        User_Search["User Searches Product"]
+        User_Cart["User Updates Cart"]
+        User_Pay["User Clicks Pay"]
+        
+        Start --> UI_State
+        UI_State --> User_Search
+        UI_State --> User_Cart
+        UI_State --> User_Pay
+    end
+
+    subgraph "Logic and Service Layer"
+        OSS_Init["offlineSaleService.initializeProducts"]
+        OSS_Calc["offlineSaleService.calculateTotals"]
+        OSS_Complete["offlineSaleService.completeSale"]
+        
+        Hook_Sync["useOfflineSync.triggerSync"]
+        OSS_Process["offlineSaleService.processSyncQueue"]
+    end
+
+    subgraph "Local Storage Layer (IndexedDB / db.ts)"
+        DB_Products[("Product Store")]
+        DB_Sales[("Pending Sales")]
+        DB_Queue[("Sync Queue")]
+    end
+
+    subgraph "Cloud / Backend"
+        API_Prod["GET /products"]
+        API_Sale["POST /sales"]
+    end
+
+    %% Initialization Flow
+    Start -.-> |"1. Mount"| OSS_Init
+    OSS_Init --> |"Fetch Data"| API_Prod
+    API_Prod --> |"Save"| DB_Products
+    DB_Products --> |"Load"| UI_State
+
+    %% Cart Operation
+    User_Search --> |"Search Query"| DB_Products
+    User_Cart --> |"Update State"| OSS_Calc
+    OSS_Calc --> |"Return Details"| UI_State
+
+    %% Payment Flow
+    User_Pay --> |"Checkout"| OSS_Complete
+    OSS_Complete --> |"1. Store Record"| DB_Sales
+    OSS_Complete --> |"2. Queue Action"| DB_Queue
+    
+    %% Sync Flow (Background)
+    Hook_Sync --> |"Online/Interval"| OSS_Process
+    OSS_Process --> |"Read Pending"| DB_Queue
+    DB_Queue --> |"Sync Data"| API_Sale
+    API_Sale --> |"Confirm"| DB_Queue
+    DB_Queue --> |"Remove Item"| DB_Queue
+
+    %% Classes
+    class Start,UI_State,User_Search,User_Cart,User_Pay ui;
+    class OSS_Init,OSS_Calc,OSS_Complete,Hook_Sync,OSS_Process service;
+    class DB_Products,DB_Sales,DB_Queue db;
+    class API_Prod,API_Sale server;
+        </div>
+
+      <div class="description">
+        <h3>Legend</h3>
+        <ul>
+          <li>
+            <span
+              style="
+                background: #e1f5fe;
+                padding: 2px 6px;
+                border: 1px solid #01579b;
+              "
+              >Blue (UI)</span
+            >: User Interface components and actions in React.
+          </li>
+          <li>
+            <span
+              style="
+                background: #fff3e0;
+                padding: 2px 6px;
+                border: 1px solid #e65100;
+              "
+              >Orange (Service)</span
+            >: Logic handling in `offlineSaleService` and hooks.
+          </li>
+          <li>
+            <span
+              style="
+                background: #f3e5f5;
+                padding: 2px 6px;
+                border: 1px solid #4a148c;
+              "
+              >Purple (DB)</span
+            >: Local data persistence using IndexedDB (Dexie).
+          </li>
+          <li>
+            <span
+              style="
+                background: #e8f5e9;
+                padding: 2px 6px;
+                border: 1px solid #1b5e20;
+              "
+              >Green (Server)</span
+            >: External Backend API Endpoints.
+          </li>
+        </ul>
+      </div>
+    </div>
+  </body>
+</html>
