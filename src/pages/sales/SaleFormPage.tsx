@@ -38,7 +38,7 @@ import { formatNumber, preciseSum, preciseCalculation } from "@/constants"; // Y
 import apiClient from "@/lib/axios";
 import { SalePaymentsSection } from "@/components/sales/SalePaymentsSection";
 import { SaleTotalsDisplay } from "@/components/sales/SaleTotalsDisplay";
-
+import { warehouseService, Warehouse } from "../../services/warehouseService";
 
 // --- Component ---
 const SaleFormPage: React.FC = () => {
@@ -50,100 +50,100 @@ const SaleFormPage: React.FC = () => {
     "products",
   ]);
   const saleItemSchema = z.object({
-  id: z.number().nullable().optional(),
+    id: z.number().nullable().optional(),
 
-  product_id: z
-    .number({ required_error: t("validation:required") })
-    .positive({ message: t("validation:selectProduct") }),
-  purchase_item_id: z.number().nullable().optional(),
-  product: z.custom<Product>().optional(),
-  quantity: z.coerce
-    .number({ invalid_type_error: t("validation:invalidInteger") })
-    .int({ message: t("validation:invalidInteger") })
-    .min(1, { message: t("validation:minQuantity") }),
-  unit_price: z
-    .preprocess(
+    product_id: z
+      .number({ required_error: t("validation:required") })
+      .positive({ message: t("validation:selectProduct") }),
+    purchase_item_id: z.number().nullable().optional(),
+    product: z.custom<Product>().optional(),
+    quantity: z.coerce
+      .number({ invalid_type_error: t("validation:invalidInteger") })
+      .int({ message: t("validation:invalidInteger") })
+      .min(1, { message: t("validation:minQuantity") }),
+    unit_price: z.coerce
+      .number({ invalid_type_error: t("validation:invalidPrice") })
+      .min(0, { message: t("validation:minZero") })
+      .default(0),
+    available_stock: z.number().optional(),
+  });
+
+  const paymentItemSchema = z.object({
+    id: z.number().nullable().optional(), // Added ID
+    method: z.enum([
+      "cash",
+      "visa",
+      "mastercard",
+      "bank_transfer",
+      "mada",
+      "other",
+      "store_credit",
+    ]),
+    amount: z.preprocess(
       (val) => (val === "" ? undefined : val),
       z.coerce
-        .number({ invalid_type_error: t("validation:invalidPrice") })
-        .min(0, { message: t("validation:minZero") })
-    )
-    .default(0),
-  available_stock: z.number().optional(),
-});
-
-const paymentItemSchema = z.object({
-  method: z.enum([
-    "cash",
-    "visa",
-    "mastercard",
-    "bank_transfer",
-    "mada",
-    "other",
-    "store_credit",
-  ]),
-  amount: z.preprocess(
-    (val) => (val === "" ? undefined : val),
-    z.coerce
-      .number({
-        required_error: t("validation:required"),
-        invalid_type_error: t("validation:invalidNumber"),
-      })
-      .min(0.01, {
-        message: t("validation:minPaymentAmount"),
-      })
-  ),
-  payment_date: z.date({
-    required_error: t("validation:required"),
-    invalid_type_error: t("validation:invalidDate"),
-  }),
-  referance_number: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
-});
-
-const saleFormSchema = z
-  .object({
-    client_id: z
-      .number({ required_error: t("validation:required") })
-      .positive({ message: t("validation:selectClient") }),
-    sale_date: z.date({
+        .number({
+          required_error: t("validation:required"),
+          invalid_type_error: t("validation:invalidNumber"),
+        })
+        .min(0.01, {
+          message: t("validation:minPaymentAmount"),
+        })
+    ),
+    payment_date: z.date({
       required_error: t("validation:required"),
       invalid_type_error: t("validation:invalidDate"),
     }),
-    status: z.enum(["completed", "pending", "draft", "cancelled"], {
-      required_error: t("validation:required"),
-    }),
-    invoice_number: z.string().nullable().optional(),
+    reference_number: z.string().nullable().optional(), // Fixed Typo
     notes: z.string().nullable().optional(),
-    items: z
-      .array(saleItemSchema)
-      .min(1, { message: t("sales:errorItemsRequired") }),
-    payments: z.array(paymentItemSchema).optional(),
-  })
-  .refine(
-    (data) => {
-      const totalSaleAmount = data.items.reduce(
-        (sum, item) =>
-          sum + (Number(item.quantity) || 0) * (Number(item.unit_price) || 0),
-        0
-      );
-      const totalPaidAmount =
-        data.payments?.reduce(
-          (sum, payment) => sum + (Number(payment.amount) || 0),
+  });
+
+  const saleFormSchema = z
+    .object({
+      warehouse_id: z
+        .number({ required_error: t("validation:required") })
+        .positive({ message: "يرجى اختيار المخزن" }), // Add proper translation key later
+      client_id: z
+        .number({ required_error: t("validation:required") })
+        .positive({ message: t("validation:selectClient") }),
+      sale_date: z.date({
+        required_error: t("validation:required"),
+        invalid_type_error: t("validation:invalidDate"),
+      }),
+      status: z.enum(["completed", "pending", "draft", "cancelled"], {
+        required_error: t("validation:required"),
+      }),
+      invoice_number: z.string().nullable().optional(),
+      notes: z.string().nullable().optional(),
+      items: z
+        .array(saleItemSchema)
+        .min(1, { message: t("sales:errorItemsRequired") }),
+      payments: z.array(paymentItemSchema).optional(),
+    })
+    .refine(
+      (data) => {
+        const totalSaleAmount = data.items.reduce(
+          (sum, item) =>
+            sum + (Number(item.quantity) || 0) * (Number(item.unit_price) || 0),
           0
-        ) ?? 0;
-      return totalPaidAmount <= totalSaleAmount;
-    },
-    {
-      message: t("sales:errorPaidExceedsTotal"),
-      path: ["payments"],
-    }
-  );
+        );
+        const totalPaidAmount =
+          data.payments?.reduce(
+            (sum, payment) => sum + (Number(payment.amount) || 0),
+            0
+          ) ?? 0;
+        return totalPaidAmount <= totalSaleAmount;
+      },
+      {
+        message: t("sales:errorPaidExceedsTotal"),
+        path: ["payments"],
+      }
+    );
 
   type SaleItemFormValues = z.infer<typeof saleItemSchema>; // <-- THIS IS THE CORRECT TYPE
 
-type SaleFormValues = z.infer<typeof saleFormSchema>;
-type PaymentItemFormValues = z.infer<typeof paymentItemSchema>;
+  type SaleFormValues = z.infer<typeof saleFormSchema>;
+  type PaymentItemFormValues = z.infer<typeof paymentItemSchema>;
   const navigate = useNavigate();
   const { id: saleIdParam } = useParams<{ id?: string }>();
 
@@ -158,6 +158,11 @@ type PaymentItemFormValues = z.infer<typeof paymentItemSchema>;
   const [loadingClients, setLoadingClients] = useState(false); // Separate loading for async search
   const [loadingProducts, setLoadingProducts] = useState(false); // Separate loading for async search
   const [serverError, setServerError] = useState<string | null>(null); // General API errors
+
+  // Warehouse State
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [loadingWarehouses, setLoadingWarehouses] = useState(false);
+
   // Search States
   const [clientSearchInput, setClientSearchInput] = useState("");
   const [debouncedClientSearch, setDebouncedClientSearch] = useState("");
@@ -174,6 +179,7 @@ type PaymentItemFormValues = z.infer<typeof paymentItemSchema>;
     resolver: zodResolver(saleFormSchema),
 
     defaultValues: {
+      warehouse_id: 1, // Default Main Warehouse
       client_id: selectedClient?.id,
       sale_date: new Date(),
       status: "completed",
@@ -193,23 +199,32 @@ type PaymentItemFormValues = z.infer<typeof paymentItemSchema>;
     control,
   } = formMethods;
 
-
-
   const watchedItems = useWatch({ control, name: "items" });
   const watchedPayments = useWatch({ control, name: "payments" });
 
   const grandTotal =
     watchedItems?.reduce(
       (sum, item) =>
-        preciseCalculation(sum, preciseCalculation(Number(item?.quantity) || 0, Number(item?.unit_price) || 0, 'multiply', 2), 'add', 2),
+        preciseCalculation(
+          sum,
+          preciseCalculation(
+            Number(item?.quantity) || 0,
+            Number(item?.unit_price) || 0,
+            "multiply",
+            2
+          ),
+          "add",
+          2
+        ),
       0
     ) ?? 0;
   const totalPaid =
     watchedPayments?.reduce(
-      (sum, payment) => preciseCalculation(sum, Number(payment?.amount) || 0, 'add', 2),
+      (sum, payment) =>
+        preciseCalculation(sum, Number(payment?.amount) || 0, "add", 2),
       0
     ) ?? 0;
-  const amountDue = preciseCalculation(grandTotal, totalPaid, 'subtract', 2);
+  const amountDue = preciseCalculation(grandTotal, totalPaid, "subtract", 2);
   // Predefined payment methods (can also be fetched from API if configurable)
   const paymentMethodOptions = [
     { value: "cash", labelKey: "paymentMethods:cash" },
@@ -271,8 +286,11 @@ type PaymentItemFormValues = z.infer<typeof paymentItemSchema>;
       } // Adjust min length
       setLoadingProducts(true);
       try {
+        const warehouseId = watch("warehouse_id");
         const response = await apiClient.get<{ data: Product[] }>(
-          `/products/autocomplete?search=${encodeURIComponent(search)}&limit=15`
+          `/products/autocomplete?search=${encodeURIComponent(
+            search
+          )}&limit=15&warehouse_id=${warehouseId || ""}`
         );
         setProducts(response.data.data ?? response.data);
       } catch (error) {
@@ -287,7 +305,7 @@ type PaymentItemFormValues = z.infer<typeof paymentItemSchema>;
         setLoadingProducts(false);
       }
     },
-    [t]
+    [t, watch] // Add watch dependency
   );
 
   // --- Debounce Effects ---
@@ -315,6 +333,29 @@ type PaymentItemFormValues = z.infer<typeof paymentItemSchema>;
   useEffect(() => {
     fetchProducts(debouncedProductSearch);
   }, [debouncedProductSearch, fetchProducts]);
+
+  useEffect(() => {
+    fetchProducts(debouncedProductSearch);
+  }, [debouncedProductSearch, fetchProducts]);
+
+  // --- Fetch Warehouses ---
+  useEffect(() => {
+    const fetchWarehouses = async () => {
+      setLoadingWarehouses(true);
+      try {
+        const data = await warehouseService.getAll();
+        setWarehouses(data);
+      } catch (error) {
+        console.error("Failed to fetch warehouses:", error);
+        toast.error(t("common:error"), {
+          description: "Failed to load warehouses",
+        });
+      } finally {
+        setLoadingWarehouses(false);
+      }
+    };
+    fetchWarehouses();
+  }, [t]);
 
   // --- Fetch Existing Sale Data ---
   useEffect(() => {
@@ -381,32 +422,33 @@ type PaymentItemFormValues = z.infer<typeof paymentItemSchema>;
     else setLoadingData(false);
   }, [isEditMode, saleId, reset, navigate, t]); // Dependencies
 
-// --- Form Submission (COMPLETE IMPLEMENTATION) ---
-const onSubmit: SubmitHandler<SaleFormValues> = async (data) => {
-  setServerError(null); // Clear previous server errors
-  console.log(data, "form data");
-  // Data is already validated by Zod at this point, including the refine check.
-  // The `data` object here matches `SaleFormValues`.
+  // --- Form Submission (COMPLETE IMPLEMENTATION) ---
+  const onSubmit: SubmitHandler<SaleFormValues> = async (data) => {
+    setServerError(null); // Clear previous server errors
+    console.log(data, "form data");
+    // Data is already validated by Zod at this point, including the refine check.
+    // The `data` object here matches `SaleFormValues`.
 
-  // Prepare data for the API (CreateSaleData or UpdateSaleData)
-  const apiItems = data.items.map(item => ({
+    // Prepare data for the API (CreateSaleData or UpdateSaleData)
+    const apiItems = data.items.map((item) => ({
       id: isEditMode && item.id ? item.id : undefined, // Include item ID only if editing and item exists
       product_id: item.product_id,
       purchase_item_id: item.purchase_item_id ?? null, // Send selected batch ID
       quantity: Number(item.quantity),
       unit_price: Number(item.unit_price),
-  }));
+    }));
 
-  const apiPayments = data.payments?.map(p => ({
-      id: isEditMode && p.id ? p.id : undefined, // Include payment ID only if editing and payment exists
-      method: p.method,
-      amount: Number(p.amount),
-      payment_date: format(p.payment_date as Date, "yyyy-MM-dd"), // Format date
-      reference_number: p.reference_number || null,
-      notes: p.notes || null,
-  })) || []; // Ensure it's an empty array if no payments
+    const apiPayments =
+      data.payments?.map((p) => ({
+        id: isEditMode && p.id ? p.id : undefined, // Include payment ID only if editing and payment exists
+        method: p.method,
+        amount: Number(p.amount),
+        payment_date: format(p.payment_date as Date, "yyyy-MM-dd"), // Format date
+        reference_number: p.reference_number || null,
+        notes: p.notes || null,
+      })) || []; // Ensure it's an empty array if no payments
 
-  const apiDataPayload = {
+    const apiDataPayload = {
       client_id: data.client_id,
       sale_date: format(data.sale_date as Date, "yyyy-MM-dd"),
       status: data.status,
@@ -415,26 +457,35 @@ const onSubmit: SubmitHandler<SaleFormValues> = async (data) => {
       items: apiItems,
       payments: apiPayments,
       // The backend SaleController will calculate total_amount and paid_amount based on items and payments
-  };
+    };
 
-  console.log(`Submitting ${isEditMode ? 'Update' : 'Create'} Sale to API:`, apiDataPayload);
+    console.log(
+      `Submitting ${isEditMode ? "Update" : "Create"} Sale to API:`,
+      apiDataPayload
+    );
 
-  try {
+    try {
       let savedSale: Sale;
       if (isEditMode && saleId) {
-          // Ensure your UpdateSaleData type and backend update method can handle
-          // adding/updating/removing items and payments.
-          // This usually involves more complex logic than a simple PUT.
-          savedSale = await saleService.updateSale(saleId, apiDataPayload as UpdateSaleData);
+        // Ensure your UpdateSaleData type and backend update method can handle
+        // adding/updating/removing items and payments.
+        // This usually involves more complex logic than a simple PUT.
+        savedSale = await saleService.updateSale(
+          saleId,
+          apiDataPayload as UpdateSaleData
+        );
       } else {
-          savedSale = await saleService.createSale(apiDataPayload as CreateSaleData);
+        savedSale = await saleService.createSale(
+          apiDataPayload as CreateSaleData
+        );
       }
 
-      toast.success(t("common:success"), { description: t("sales:saveSuccess") });
+      toast.success(t("common:success"), {
+        description: t("sales:saveSuccess"),
+      });
       navigate("/sales", { state: { updatedSaleId: savedSale.id } }); // Pass ID for potential highlight
-
-  } catch (err) {
-      console.error(`Failed to ${isEditMode ? 'update' : 'create'} sale:`, err);
+    } catch (err) {
+      console.error(`Failed to ${isEditMode ? "update" : "create"} sale:`, err);
       const generalError = saleService.getErrorMessage(err);
       const apiErrors = saleService.getValidationErrors(err);
 
@@ -443,36 +494,46 @@ const onSubmit: SubmitHandler<SaleFormValues> = async (data) => {
 
       // Map API validation errors back to RHF fields for specific error messages
       if (apiErrors) {
-          Object.entries(apiErrors).forEach(([key, messages]) => {
-              // Handle top-level errors
-              if (key in ({} as SaleFormValues)) {
-                  setError(key as keyof SaleFormValues, { type: 'server', message: messages[0] });
-              }
-
-              // Handle nested item errors (e.g., "items.0.quantity": ["Insufficient stock..."])
-              const itemMatch = key.match(/^items\.(\d+)\.(.+)$/);
-              if (itemMatch) {
-                  const [, index, fieldName] = itemMatch;
-                  const fieldToSetErrorOnItem = (fieldName === 'quantity' || key.includes('stock'))
-                      ? `items.${index}.quantity` // Point stock errors to quantity field
-                      : `items.${index}.${fieldName as keyof SaleItemFormValues}`;
-                  setError(fieldToSetErrorOnItem as any, { type: 'server', message: messages[0] });
-              }
-
-              // Handle nested payment errors (e.g., "payments.0.amount": ["Invalid amount..."])
-              const paymentMatch = key.match(/^payments\.(\d+)\.(.+)$/);
-              if (paymentMatch) {
-                  const [, index, fieldName] = paymentMatch;
-                  setError(`payments.${index}.${fieldName as keyof PaymentItemFormValue}`, { type: 'server', message: messages[0] });
-              }
-          });
-           // If there were field-specific errors, also set a general hint
-          if (Object.keys(apiErrors).length > 0) {
-               setServerError(t('validation:checkFields'));
+        Object.entries(apiErrors).forEach(([key, messages]) => {
+          // Handle top-level errors
+          if (key in ({} as SaleFormValues)) {
+            setError(key as keyof SaleFormValues, {
+              type: "server",
+              message: messages[0],
+            });
           }
+
+          // Handle nested item errors (e.g., "items.0.quantity": ["Insufficient stock..."])
+          const itemMatch = key.match(/^items\.(\d+)\.(.+)$/);
+          if (itemMatch) {
+            const [, index, fieldName] = itemMatch;
+            const fieldToSetErrorOnItem =
+              fieldName === "quantity" || key.includes("stock")
+                ? `items.${index}.quantity` // Point stock errors to quantity field
+                : `items.${index}.${fieldName as keyof SaleItemFormValues}`;
+            setError(fieldToSetErrorOnItem as any, {
+              type: "server",
+              message: messages[0],
+            });
+          }
+
+          // Handle nested payment errors (e.g., "payments.0.amount": ["Invalid amount..."])
+          const paymentMatch = key.match(/^payments\.(\d+)\.(.+)$/);
+          if (paymentMatch) {
+            const [, index, fieldName] = paymentMatch;
+            setError(
+              `payments.${index}.${fieldName as keyof PaymentItemFormValue}`,
+              { type: "server", message: messages[0] }
+            );
+          }
+        });
+        // If there were field-specific errors, also set a general hint
+        if (Object.keys(apiErrors).length > 0) {
+          setServerError(t("validation:checkFields"));
+        }
       }
-  }
-};
+    }
+  };
 
   // --- Render Logic ---
   // 1. Display Full Page Loader ONLY when fetching existing Sale data in Edit Mode
@@ -563,7 +624,6 @@ const onSubmit: SubmitHandler<SaleFormValues> = async (data) => {
                 products={products}
                 loadingProducts={loadingProducts}
                 productSearchInput={productSearchInput}
-                
                 onProductSearchInputChange={setProductSearchInput}
                 isSubmitting={isSubmitting}
                 // No need to pass control, errors etc. thanks to FormProvider

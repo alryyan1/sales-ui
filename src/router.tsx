@@ -53,6 +53,7 @@ import AnalyticsPage from "./pages/AnalyticsPage";
 import WhatsAppSchedulersPage from "./pages/admin/WhatsAppSchedulersPage";
 import ExpensesPage from "./pages/admin/ExpensesPage";
 import IndexedDBManagerPage from "./pages/admin/IndexedDBManagerPage";
+import WarehousesListPage from "./pages/warehouses/WarehousesListPage"; // Import Added
 // ... other page imports
 
 // --- Admin Route Guard Component ---
@@ -123,14 +124,14 @@ const router = createHashRouter([
             children: [
               { index: true, element: <ClientsPage /> },
               { path: ":id/ledger", element: <ClientLedgerPage /> },
-            ]
+            ],
           },
           {
             path: "suppliers",
             children: [
               { index: true, element: <SuppliersPage /> },
               { path: ":id/ledger", element: <SupplierLedgerPage /> },
-            ]
+            ],
           },
           { path: "products", element: <ProductsPage /> },
           {
@@ -139,8 +140,11 @@ const router = createHashRouter([
               { index: true, element: <PurchasesListPage /> },
               { path: "add", element: <PurchaseFormPage /> },
               { path: ":id/edit", element: <PurchaseFormPage /> }, // Edit Purchase
-              { path: ':id', element: <PurchaseDetailsPage /> }, // Details
-              { path: ':id/manage-items', element: <ManagePurchaseItemsPage /> }, // Manage Purchase Items
+              { path: ":id", element: <PurchaseDetailsPage /> }, // Details
+              {
+                path: ":id/manage-items",
+                element: <ManagePurchaseItemsPage />,
+              }, // Manage Purchase Items
             ],
           },
           {
@@ -175,14 +179,17 @@ const router = createHashRouter([
               { path: "inventory", element: <InventoryReportPage /> },
               { path: "profit-loss", element: <ProfitLossReportPage /> },
               {
-                path: "near-expiry", element: <NearExpiryReportPage />
+                path: "near-expiry",
+                element: <NearExpiryReportPage />,
               },
               {
-                path: "monthly-revenue", element: <MonthlyRevenueReportPage />
+                path: "monthly-revenue",
+                element: <MonthlyRevenueReportPage />,
               },
               {
-                path: 'inventory-log', element: <InventoryLogPage />
-              }
+                path: "inventory-log",
+                element: <InventoryLogPage />,
+              },
             ],
           },
 
@@ -206,8 +213,11 @@ const router = createHashRouter([
               { path: "settings", element: <SettingsPage /> },
               { path: "system", element: <SystemPage /> }, // System version and updates
               { path: "backups", element: <BackupPage /> }, // Database backup management
-              { path: "whatsapp-schedulers", element: <WhatsAppSchedulersPage /> }, // WhatsApp schedulers management
-                  // ... other admin routes
+              {
+                path: "whatsapp-schedulers",
+                element: <WhatsAppSchedulersPage />,
+              }, // WhatsApp schedulers management
+              // ... other admin routes
               { path: "idb-manager", element: <IndexedDBManagerPage /> },
               {
                 path: "inventory",
@@ -227,6 +237,7 @@ const router = createHashRouter([
                   },
                 ],
               },
+              { path: "warehouses", element: <WarehousesListPage /> }, // Added Warehouses Route
             ],
           },
         ],

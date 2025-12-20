@@ -1,294 +1,379 @@
 // src/pages/SuppliersPage.tsx
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 
 // MUI Components
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import CircularProgress from '@mui/material/CircularProgress';
-import Alert from '@mui/material/Alert';
-import Pagination from '@mui/material/Pagination';
-import AddIcon from '@mui/icons-material/Add';
-import Snackbar from '@mui/material/Snackbar';
-import TextField from '@mui/material/TextField';
-import InputAdornment from '@mui/material/InputAdornment';
-import SearchIcon from '@mui/icons-material/Search';
-import Button from '@mui/material/Button';
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import CircularProgress from "@mui/material/CircularProgress";
+import Alert from "@mui/material/Alert";
+import Pagination from "@mui/material/Pagination";
+import AddIcon from "@mui/icons-material/Add";
+import Snackbar from "@mui/material/Snackbar";
+import TextField from "@mui/material/TextField";
+import InputAdornment from "@mui/material/InputAdornment";
+import SearchIcon from "@mui/icons-material/Search";
+import Button from "@mui/material/Button";
+import Paper from "@mui/material/Paper";
+import Fade from "@mui/material/Fade";
 
 // Services and Types
-import supplierService, { Supplier } from '../services/supplierService';
-import { PaginatedResponse } from '../services/clientService';
+import supplierService, { Supplier } from "../services/supplierService";
 
 // Custom Components
-import SuppliersTable from '../components/suppliers/SuppliersTable';
-import SupplierFormModal from '../components/suppliers/SupplierFormModal';
-import ConfirmationDialog from '../components/common/ConfirmationDialog';
+import SuppliersTable from "../components/suppliers/SuppliersTable";
+import SupplierFormModal from "../components/suppliers/SupplierFormModal";
+import ConfirmationDialog from "../components/common/ConfirmationDialog";
+
 const SuppliersPage: React.FC = () => {
-    const navigate = useNavigate();
-    // --- State Management ---
-    const [suppliersResponse, setSuppliersResponse] = useState<PaginatedResponse<Supplier> | null>(null);
-    const [isLoading, setIsLoading] = useState(true); // Loading supplier list
-    const [error, setError] = useState<string | null>(null); // Error fetching list
-    const [currentPage, setCurrentPage] = useState(1); // Pagination state
-    const [searchTerm, setSearchTerm] = useState(''); // Controlled search input state
-    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(''); // Debounced search term for API call
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-    // Modal State
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null); // Supplier being edited
+  // --- State Management ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
-    // Deletion State
-    const [isConfirmOpen, setIsConfirmOpen] = useState(false); // Confirm dialog visibility
-    const [supplierToDeleteId, setSupplierToDeleteId] = useState<number | null>(null); // ID of supplier to delete
-    const [isDeleting, setIsDeleting] = useState(false); // Loading state for delete operation
+  // Modal & Dialog State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    id: number | null;
+  }>({
+    isOpen: false,
+    id: null,
+  });
 
-    // Notification State
-    const [snackbarOpen, setSnackbarOpen] = useState(false);
-    const [snackbarMessage, setSnackbarMessage] = useState('');
-    const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
+  // Notification State
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error";
+  }>({
+    open: false,
+    message: "",
+    severity: "success",
+  });
 
-    // --- Debounce Search Term ---
-    useEffect(() => {
-        // Set up a timer to update debouncedSearchTerm after user stops typing
-        const timerId = setTimeout(() => {
-            setDebouncedSearchTerm(searchTerm);
-            setCurrentPage(1); // Reset to page 1 whenever the search term is finalized
-        }, 500); // 500ms delay
+  // --- Debounce Search Term ---
+  useEffect(() => {
+    const timerId = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setCurrentPage(1);
+    }, 500);
+    return () => clearTimeout(timerId);
+  }, [searchTerm]);
 
-        // Clear the timer if searchTerm changes before the delay is over, or on unmount
-        return () => clearTimeout(timerId);
-    }, [searchTerm]); // Effect runs when searchTerm changes
+  // --- Queries ---
+  const {
+    data: suppliersResponse,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ["suppliers", currentPage, debouncedSearchTerm],
+    queryFn: () =>
+      supplierService.getSuppliers(currentPage, debouncedSearchTerm),
+    placeholderData: keepPreviousData,
+  });
 
-    // --- Data Fetching (using useCallback) ---
-    const fetchSuppliers = useCallback(async (page: number, search: string) => {
-        console.log(`Fetching suppliers - Page: ${page}, Search: "${search}"`);
-        setIsLoading(true);
-        setError(null);
-        try {
-            const data = await supplierService.getSuppliers(page, search); // Pass search term
-            setSuppliersResponse(data);
-        } catch (err) {
-            console.error("Failed to fetch suppliers:", err);
-            setError(supplierService.getErrorMessage(err));
-        } finally {
-            setIsLoading(false);
-        }
-    }, []); // useCallback: dependency array is empty, function is stable
+  // --- Mutations ---
+  const deleteMutation = useMutation({
+    mutationFn: supplierService.deleteSupplier,
+    onSuccess: () => {
+      showSnackbar("تم حذف المورد بنجاح", "success");
+      setDeleteConfirmation({ isOpen: false, id: null });
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      // Adjust page if needed automatically by refetch
+      if (
+        suppliersResponse &&
+        suppliersResponse.data.length === 1 &&
+        currentPage > 1
+      ) {
+        setCurrentPage((prev) => prev - 1);
+      }
+    },
+    onError: (err: any) => {
+      showSnackbar(supplierService.getErrorMessage(err), "error");
+      setDeleteConfirmation((prev) => ({ ...prev, isOpen: false }));
+    },
+  });
 
-    // Effect to fetch data on mount and when page or debounced search term changes
-    useEffect(() => {
-        fetchSuppliers(currentPage, debouncedSearchTerm);
-    }, [fetchSuppliers, currentPage, debouncedSearchTerm]);
+  // --- Handlers ---
+  const showSnackbar = (message: string, severity: "success" | "error") => {
+    setSnackbar({ open: true, message, severity });
+  };
 
-    // --- Notification Handlers ---
-    const showSnackbar = (message: string, type: 'success' | 'error') => {
-        setSnackbarMessage(message);
-        setSnackbarSeverity(type);
-        setSnackbarOpen(true);
-    };
+  const handleSnackbarClose = () => {
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
 
-    const handleSnackbarClose = (_event?: React.SyntheticEvent | Event, reason?: string) => {
-        if (reason === 'clickaway') return;
-        setSnackbarOpen(false);
-    };
+  // Modal Handlers
+  const handleOpenModal = (supplier: Supplier | null = null) => {
+    setEditingSupplier(supplier);
+    setIsModalOpen(true);
+  };
 
-    // --- Modal Handlers ---
-    const openModal = (supplier: Supplier | null = null) => {
-        setEditingSupplier(supplier);
-        setIsModalOpen(true);
-    };
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setTimeout(() => setEditingSupplier(null), 150);
+  };
 
-    const closeModal = () => {
-        setIsModalOpen(false);
-        // No need to reset editingSupplier here, modal's useEffect handles it
-    };
-
-    const handleSaveSuccess = () => {
-        closeModal();
-        showSnackbar(
-            editingSupplier ? 'تم تحديث بيانات المورد بنجاح' : 'تم إضافة المورد بنجاح',
-            'success'
-        );
-        const pageToFetch = editingSupplier ? currentPage : 1;
-        fetchSuppliers(pageToFetch, debouncedSearchTerm);
-        if (!editingSupplier) setCurrentPage(1);
-    };
-
-    // --- Deletion Handlers ---
-    const openConfirmDialog = (id: number) => {
-        setSupplierToDeleteId(id);
-        setIsConfirmOpen(true);
-    };
-
-    const closeConfirmDialog = () => {
-        if (isDeleting) return; // Prevent closing while processing
-        setIsConfirmOpen(false);
-        setTimeout(() => setSupplierToDeleteId(null), 300); // Clear ID after potential fade out
-    };
-
-    const handleDeleteConfirm = async () => {
-        if (!supplierToDeleteId) return;
-        setIsDeleting(true);
-
-        try {
-            await supplierService.deleteSupplier(supplierToDeleteId);
-            showSnackbar('تم حذف المورد بنجاح', 'success');
-            closeConfirmDialog(); // Close confirmation dialog
-
-            // Smart refetch/pagination adjustment
-            if (suppliersResponse && suppliersResponse.data.length === 1 && currentPage > 1) {
-                setCurrentPage(prev => prev - 1); // Go to previous page if last item deleted
-            } else {
-                // Refetch current page with current search term
-                fetchSuppliers(currentPage, debouncedSearchTerm);
-            }
-        } catch (err) {
-            showSnackbar(supplierService.getErrorMessage(err), 'error');
-            closeConfirmDialog(); // Also close dialog on error
-        } finally {
-            setIsDeleting(false);
-        }
-    };
-
-    // --- Pagination Handler ---
-    const handlePageChange = (_: React.ChangeEvent<unknown>, value: number) => {
-        setCurrentPage(value);
-    };
-
-     // --- Search Handler ---
-    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setSearchTerm(e.target.value);
-    };
-
-    // --- Ledger Handler ---
-    const handleViewLedger = (supplier: Supplier) => {
-        navigate(`/suppliers/${supplier.id}/ledger`);
-    };
-
-    // --- Render Component ---
-    return (
-        <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }} className="dark:bg-gray-900 min-h-screen" style={{direction: 'rtl'}}>
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: 'center', mb: 3, gap: 2 }}>
-                <Typography variant="h4" component="h1" className="text-gray-800 dark:text-gray-100 font-semibold">
-                    الموردون
-                </Typography>
-                <Button
-                    onClick={() => openModal()}
-                    variant="contained"
-                    color="primary"
-                    startIcon={<AddIcon />}
-                    sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
-                >
-                    إضافة مورد
-                </Button>
-            </Box>
-
-             <Box sx={{ mb: 3 }}>
-                 <TextField
-                    fullWidth
-                    variant="outlined"
-                    size="small"
-                    placeholder="ابحث عن مورد..."
-                    value={searchTerm}
-                    onChange={handleSearchChange}
-                    InputProps={{
-                        startAdornment: (
-                        <InputAdornment position="start">
-                            <SearchIcon color="action" />
-                        </InputAdornment>
-                        ),
-                    }}
-                    className="dark:bg-gray-800 [&>div>input]:text-gray-900 dark:[&>div>input]:text-gray-100 [&>div>fieldset]:border-gray-300 dark:[&>div>fieldset]:border-gray-600"
-                />
-             </Box>
-
-            {/* Loading State */}
-            {isLoading && (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
-                    <CircularProgress />
-                    <Typography sx={{ ml: 2 }} className="text-gray-600 dark:text-gray-400">
-                        جاري التحميل...
-                    </Typography>
-                </Box>
-            )}
-
-            {/* Error State */}
-            {!isLoading && error && (
-                <Alert severity="error" sx={{ my: 2 }}>{error}</Alert>
-            )}
-
-            {/* Content Area: Table and Pagination */}
-            {!isLoading && !error && suppliersResponse && (
-                <Box sx={{mt: 2}}>
-                    {/* Suppliers Table */}
-                    <SuppliersTable
-                        suppliers={suppliersResponse.data}
-                        onEdit={openModal}
-                        onDelete={openConfirmDialog}
-                        onViewLedger={handleViewLedger}
-                        isLoading={isDeleting} // Pass deleting state
-                    />
-
-                    {/* MUI Pagination */}
-                    {suppliersResponse.last_page > 1 && (
-                        <Box sx={{ display: 'flex', justifyContent: 'center', p: 2, mt: 3 }}>
-                            <Pagination
-                                count={suppliersResponse.last_page}
-                                page={currentPage}
-                                onChange={handlePageChange}
-                                color="primary"
-                                shape="rounded"
-                                showFirstButton
-                                showLastButton
-                                disabled={isLoading || isDeleting} // Disable pagination during loading/deleting
-                            />
-                        </Box>
-                    )}
-
-                    {/* No Suppliers Message */}
-                    {suppliersResponse.data.length === 0 && (
-                        <Typography sx={{ textAlign: 'center', py: 5 }} className="text-gray-500 dark:text-gray-400">
-                            لا يوجد موردون حاليًا
-                        </Typography>
-                    )}
-                </Box>
-            )}
-
-            {/* Supplier Add/Edit Modal */}
-            <SupplierFormModal
-                isOpen={isModalOpen}
-                onClose={closeModal}
-                supplierToEdit={editingSupplier}
-                onSaveSuccess={handleSaveSuccess}
-            />
-
-            {/* Confirmation Dialog for Deletion */}
-            <ConfirmationDialog
-                open={isConfirmOpen}
-                onClose={closeConfirmDialog}
-                onConfirm={handleDeleteConfirm}
-                title="تأكيد الحذف"
-                message="هل أنت متأكد من حذف هذا المورد؟ لا يمكن التراجع عن هذه العملية."
-                confirmText="حذف"
-                cancelText="إلغاء"
-                isLoading={isDeleting}
-            />
-
-            {/* MUI Snackbar for Notifications */}
-            <Snackbar
-                open={snackbarOpen}
-                autoHideDuration={5000}
-                onClose={handleSnackbarClose}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-            >
-                {/* Added key to Alert */}
-                <Alert key={snackbarMessage} onClose={handleSnackbarClose} severity={snackbarSeverity} variant="filled" sx={{ width: '100%' }}>
-                    {snackbarMessage}
-                </Alert>
-            </Snackbar>
-
-        </Box>
+  const handleSaveSuccess = () => {
+    handleCloseModal();
+    showSnackbar(
+      editingSupplier
+        ? "تم تحديث بيانات المورد بنجاح"
+        : "تم إضافة المورد بنجاح",
+      "success"
     );
+    queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+  };
+
+  // Delete Handlers
+  const handleOpenDelete = (id: number) => {
+    setDeleteConfirmation({ isOpen: true, id });
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteConfirmation.id) {
+      deleteMutation.mutate(deleteConfirmation.id);
+    }
+  };
+
+  const handleViewLedger = (supplier: Supplier) => {
+    navigate(`/suppliers/${supplier.id}/ledger`);
+  };
+
+  return (
+    <Box
+      sx={{ p: { xs: 2, sm: 3, md: 4 } }}
+      className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300"
+      dir="rtl"
+    >
+      {/* Header Section */}
+      <Paper elevation={0} className="bg-transparent" sx={{ mb: 4 }}>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            justifyContent: "space-between",
+            alignItems: { xs: "stretch", sm: "center" },
+            gap: 2,
+          }}
+        >
+          <Box>
+            <Typography
+              variant="h4"
+              component="h1"
+              className="text-gray-800 dark:text-gray-100 font-bold tracking-tight"
+            >
+              الموردون
+            </Typography>
+            <Typography
+              variant="body2"
+              className="text-gray-500 dark:text-gray-400 mt-1"
+            >
+              إدارة بيانات الموردين والمشتريات
+            </Typography>
+          </Box>
+
+          <Button
+            onClick={() => handleOpenModal()}
+            variant="contained"
+            size="large"
+            startIcon={<AddIcon />}
+            sx={{
+              borderRadius: "12px",
+              textTransform: "none",
+              fontWeight: 600,
+              paddingX: 3,
+              boxShadow:
+                "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+              "&:hover": {
+                boxShadow:
+                  "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+              },
+            }}
+          >
+            إضافة مورد جديد
+          </Button>
+        </Box>
+
+        {/* Search Bar */}
+        <Box sx={{ mt: 3 }}>
+          <TextField
+            fullWidth
+            variant="outlined"
+            placeholder="ابحث عن مورد بالاسم، البريد الإلكتروني أو الهاتف..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon className="text-gray-400" />
+                </InputAdornment>
+              ),
+              sx: {
+                borderRadius: "12px",
+                backgroundColor: "background.paper",
+                "& fieldset": { border: "none" },
+                boxShadow:
+                  "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+                transition: "all 0.2s",
+                "&:hover": {
+                  boxShadow:
+                    "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+                },
+                "&.Mui-focused": {
+                  boxShadow: "0 0 0 2px var(--mui-palette-primary-main)",
+                },
+              },
+            }}
+            className="dark:bg-gray-800"
+          />
+        </Box>
+      </Paper>
+
+      {/* Error State */}
+      {isError && (
+        <Fade in>
+          <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+            {supplierService.getErrorMessage(error)}
+          </Alert>
+        </Fade>
+      )}
+
+      {/* Content Area */}
+      <Box sx={{ position: "relative", minHeight: 400 }}>
+        {isLoading && !suppliersResponse ? (
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              height: 300,
+              gap: 2,
+            }}
+          >
+            <CircularProgress size={40} thickness={4} />
+            <Typography className="text-gray-500 animate-pulse">
+              جاري تحميل البيانات...
+            </Typography>
+          </Box>
+        ) : (
+          <Fade in={!isLoading}>
+            <Box>
+              {/* Suppliers Table */}
+              {suppliersResponse && (
+                <SuppliersTable
+                  suppliers={suppliersResponse.data}
+                  onEdit={handleOpenModal}
+                  onDelete={handleOpenDelete}
+                  onViewLedger={handleViewLedger}
+                  isLoading={deleteMutation.isPending}
+                />
+              )}
+
+              {/* Empty State */}
+              {suppliersResponse?.data.length === 0 && (
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 6,
+                    textAlign: "center",
+                    borderRadius: 3,
+                    bgcolor: "background.paper",
+                    mt: 2,
+                    border: "1px dashed",
+                    borderColor: "divider",
+                  }}
+                >
+                  <Typography variant="h6" className="text-gray-500 mb-2">
+                    لا توجد نتائج
+                  </Typography>
+                  <Typography variant="body2" className="text-gray-400">
+                    جرّب تعديل مصطلحات البحث أو أضف موردًا جديدًا.
+                  </Typography>
+                </Paper>
+              )}
+
+              {/* Pagination */}
+              {suppliersResponse && suppliersResponse.last_page > 1 && (
+                <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
+                  <Pagination
+                    count={suppliersResponse.last_page}
+                    page={currentPage}
+                    onChange={(_, page) => setCurrentPage(page)}
+                    color="primary"
+                    size="large"
+                    shape="rounded"
+                    showFirstButton
+                    showLastButton
+                    disabled={isLoading || deleteMutation.isPending}
+                    sx={{
+                      "& .MuiPaginationItem-root": {
+                        fontSize: "1rem",
+                        borderRadius: "8px",
+                      },
+                    }}
+                  />
+                </Box>
+              )}
+            </Box>
+          </Fade>
+        )}
+      </Box>
+
+      {/* Supplier Add/Edit Modal */}
+      <SupplierFormModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        supplierToEdit={editingSupplier}
+        onSaveSuccess={handleSaveSuccess}
+      />
+
+      {/* Confirmation Dialog for Deletion */}
+      <ConfirmationDialog
+        open={deleteConfirmation.isOpen}
+        onClose={() =>
+          setDeleteConfirmation({ ...deleteConfirmation, isOpen: false })
+        }
+        onConfirm={handleConfirmDelete}
+        title="حذف المورد"
+        message="هل أنت متأكد تمامًا من رغبتك في حذف هذا المورد؟ سيؤدي ذلك إلى فقدان بياناته نهائيًا."
+        confirmText={deleteMutation.isPending ? "جاري الحذف..." : "نعم، احذف"}
+        cancelText="تراجع"
+        isLoading={deleteMutation.isPending}
+      />
+
+      {/* Notification Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: "100%", borderRadius: 2, boxShadow: 3 }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Box>
+  );
 };
 
 export default SuppliersPage;

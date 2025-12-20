@@ -1,15 +1,15 @@
+```typescript
 // src/components/sales/SaleItemRow.tsx
-import React, { useState, useEffect, useCallback, act } from "react";
-import { useFormContext, Controller, useWatch } from "react-hook-form";
+import React, { useState, useEffect } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns"; // For formatting dates
+// For formatting dates
 import { toast } from "sonner";
 
 // shadcn/ui & Lucide Icons
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 import {
   FormControl,
   FormField,
@@ -35,15 +35,18 @@ import {
   Check,
   ChevronsUpDown,
   Trash2,
-  PackageSearch,
 } from "lucide-react";
 
 // Types
 import { Product } from "../../services/productService";
 import { PurchaseItem as BatchType } from "../../services/purchaseService"; // Batch is essentially a PurchaseItem record
-import { formatNumber, formatCurrency, formatDate, preciseCalculation } from "@/constants"; // Your formatter
+import {
+  formatNumber,
+  formatCurrency,
+  formatDate,
+  preciseCalculation,
+} from "@/constants"; // Your formatter
 import apiClient from "@/lib/axios"; // For direct API call for batches
-import { all } from "axios";
 import { ActiveSaleDataType } from "@/pages/sales/SalesTerminalPage";
 
 interface SaleItemRowProps {
@@ -56,6 +59,7 @@ interface SaleItemRowProps {
   onProductSearchInputChangeForRow: (value: string) => void; // Handler to update parent's search term
   isSubmitting: boolean; // Form submission state from parent
   itemCount: number; // Total number of items, to disable remove on last item
+  activeSaleData?: ActiveSaleDataType;
 }
 
 // This type should match the 'item' structure within SaleFormPage's Zod schema for 'items' array
@@ -68,7 +72,7 @@ type SaleItemFormValues = {
   quantity: number | string; // RHF might handle as string initially
   unit_price: number | string; // RHF might handle as string initially
   available_stock?: number; // Remaining quantity of the SELECTED BATCH (in sellable units)
-  activeSaleData:ActiveSaleDataType
+  activeSaleData: ActiveSaleDataType;
 };
 
 export const SaleItemRow: React.FC<SaleItemRowProps> = ({
@@ -78,7 +82,7 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
   loadingAllProducts,
   productSearchInputForRow, // Use this if each row has independent search
   onProductSearchInputChangeForRow,
-  activeSaleData,
+  activeSaleData, // Unused but passed
   isSubmitting,
   itemCount,
 }) => {
@@ -97,13 +101,13 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
     formState: { errors },
     clearErrors,
   } = useFormContext<any>(); // Use 'any' or the full form type
-// console.log(productSearchInputForRow,'productSearchInputForRow')
+  // console.log(productSearchInputForRow,'productSearchInputForRow')
   // Local state for this row's popovers and fetched batches
   const [productPopoverOpen, setProductPopoverOpen] = useState(false);
   const [batchPopoverOpen, setBatchPopoverOpen] = useState(false);
   const [availableBatches, setAvailableBatches] = useState<BatchType[]>([]);
   const [loadingBatches, setLoadingBatches] = useState(false);
-  console.log(activeSaleData,'activeSaleData')
+  console.log(activeSaleData, "activeSaleData");
   // Watch fields specific to this item row
   const currentProductId = watch(`items.${index}.product_id`);
   const selectedProductForDisplay = watch(`items.${index}.product`) as
@@ -111,19 +115,25 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
     | undefined;
   const quantity = watch(`items.${index}.quantity`);
   const productId = watch(`items.${index}.product_id`);
-  
+
   const unitPrice = watch(`items.${index}.unit_price`);
-  const itemTotal = preciseCalculation(Number(quantity) || 0, Number(unitPrice) || 0, 'multiply', 2);
+  const itemTotal = preciseCalculation(
+    Number(quantity) || 0,
+    Number(unitPrice) || 0,
+    "multiply",
+    2
+  );
   const stockForSelectedBatch = watch(`items.${index}.available_stock`);
+  const warehouseId = watch("warehouse_id"); // Watch warehouse_id from parent form
 
   // Fetch available batches when currentProductId changes
   useEffect(() => {
-    const fetchBatches = async (productId: number) => {
+    const fetchBatches = async (productId: number, warehouseId: number) => {
       setLoadingBatches(true);
       setAvailableBatches([]); // Clear previous batches
       try {
         const response = await apiClient.get<{ data: BatchType[] }>(
-          `/products/${productId}/available-batches`
+          `/products/${productId}/available-batches?warehouse_id=${warehouseId}`
         );
         setAvailableBatches(response.data.data ?? response.data);
       } catch (error) {
@@ -136,8 +146,8 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
       }
     };
 
-    if (currentProductId && currentProductId !== 0) {
-      fetchBatches(currentProductId);
+    if (currentProductId && currentProductId !== 0 && warehouseId) {
+      fetchBatches(currentProductId, warehouseId);
     } else {
       setAvailableBatches([]); // Clear if no product or product ID is 0/null
     }
@@ -150,6 +160,7 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
     ); // Default to total product stock initially
   }, [
     currentProductId,
+    warehouseId, // Add warehouseId dependency
     index,
     setValue,
     t,
@@ -172,7 +183,7 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
       : 0; // Example fallback
     setValue(
       `items.${index}.unit_price`,
-              Number(suggestedPrice.toFixed(0)) || 0
+      Number(suggestedPrice.toFixed(0)) || 0
     );
     clearErrors(`items.${index}.product_id`);
     setProductPopoverOpen(false);
@@ -267,15 +278,16 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
                     >
                       {selectedProductForDisplay?.name ??
                         (() => {
-                          const selectedProduct = allProducts.find(p => p.id === field.value);
-                          console.log(allProducts,field.value,'allProducts')
+                          const selectedProduct = allProducts.find(
+                            (p) => p.id === field.value
+                          );
+                          console.log(allProducts, field.value, "allProducts");
                           return selectedProduct
                             ? selectedProduct.name
-                            : (field.value && field.value !== 0
-                                ? `ID: ${field.value}`
-                                : t("sales:selectProductPlaceholder"));
-                        })()
-                      }
+                            : field.value && field.value !== 0
+                            ? `ID: ${field.value}`
+                            : t("sales:selectProductPlaceholder");
+                        })()}
                       <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </FormControl>
@@ -283,7 +295,7 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
                 <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height] p-0">
                   <Command shouldFilter={false}>
                     <CommandInput
-                    className="w-full"
+                      className="w-full"
                       placeholder={t("products:searchPlaceholder")}
                       value={productSearchInputForRow}
                       onValueChange={onProductSearchInputChangeForRow}
@@ -493,7 +505,7 @@ export const SaleItemRow: React.FC<SaleItemRowProps> = ({
                   step="1"
                   placeholder="1"
                   {...qtyField}
-                  disabled={isSubmitting }
+                  disabled={isSubmitting}
                   className={cn(
                     (Number(qtyField.value) >
                       (stockForSelectedBatch ?? Infinity) ||

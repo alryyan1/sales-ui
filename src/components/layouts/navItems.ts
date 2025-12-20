@@ -90,6 +90,7 @@ export const adminItems: NavItem[] = [
   { to: "/admin/settings", label: "الإعدادات", permission: null },
   { to: "/admin/system", label: "النظام", permission: null },
   { to: "/admin/backups", label: "النسخ الاحتياطي", permission: null },
+  { to: "/admin/warehouses", label: "المخازن", permission: null },
   { to: "/admin/whatsapp-schedulers", label: "جدولة واتساب", permission: null },
   {
     to: "/admin/inventory/requisitions/request",

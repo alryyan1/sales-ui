@@ -1,14 +1,12 @@
 // src/components/sales/SaleHeaderFormSection.tsx
-import React, { useState, useEffect } from "react";
-import { useFormContext, Controller } from "react-hook-form";
+import React, { useState } from "react";
+import { useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
 // shadcn/ui & Lucide Icons
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   FormControl,
   FormField,
@@ -46,6 +44,7 @@ import {
 
 // Types
 import { Client } from "../../services/clientService"; // Use Client type
+import { Warehouse } from "../../services/warehouseService";
 
 interface SaleHeaderFormSectionProps {
   clients: Client[];
@@ -55,6 +54,8 @@ interface SaleHeaderFormSectionProps {
   isSubmitting: boolean;
   selectedClient: Client | null; // For display in combobox trigger
   onClientSelect: (client: Client | null) => void; // To update parent's selectedClient
+  warehouses?: Warehouse[];
+  loadingWarehouses?: boolean;
 }
 
 export const SaleHeaderFormSection: React.FC<SaleHeaderFormSectionProps> = ({
@@ -65,17 +66,53 @@ export const SaleHeaderFormSection: React.FC<SaleHeaderFormSectionProps> = ({
   isSubmitting,
   selectedClient,
   onClientSelect,
+  warehouses,
+  loadingWarehouses,
 }) => {
   const { t } = useTranslation(["sales", "common", "clients", "validation"]);
   const {
     control,
-    formState: { errors },
+    // formState: { errors },
   } = useFormContext(); // Get RHF control and errors
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
 
   return (
     <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-4 mb-6">
-      
+      {/* Warehouse Selection */}
+      <FormField
+        control={control}
+        name="warehouse_id"
+        render={({ field, fieldState }) => (
+          <FormItem>
+            <FormLabel>
+              المخزن <span className="text-red-500">*</span>
+            </FormLabel>
+            <Select
+              onValueChange={(val) => field.onChange(Number(val))}
+              defaultValue={field.value?.toString()}
+              disabled={isSubmitting || loadingWarehouses}
+            >
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر المخزن" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {warehouses?.map((warehouse) => (
+                  <SelectItem
+                    key={warehouse.id}
+                    value={warehouse.id.toString()}
+                  >
+                    {warehouse.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
       {/* mb-6 instead of mb-8 */}
       {/* Client Combobox */}
       <FormField
@@ -158,7 +195,6 @@ export const SaleHeaderFormSection: React.FC<SaleHeaderFormSectionProps> = ({
                               onClientSearchInputChange("");
                             }}
                           >
-                            
                             <Check
                               className={cn(
                                 "me-2 h-4 w-4",
@@ -188,12 +224,10 @@ export const SaleHeaderFormSection: React.FC<SaleHeaderFormSectionProps> = ({
         name="sale_date"
         render={({ field, fieldState }) => (
           <FormItem className="flex flex-col">
-            
             <FormLabel>
               {t("sales:saleDate")} <span className="text-red-500">*</span>
             </FormLabel>
             <Popover>
-              
               <PopoverTrigger asChild>
                 <FormControl>
                   <Button
@@ -204,7 +238,6 @@ export const SaleHeaderFormSection: React.FC<SaleHeaderFormSectionProps> = ({
                       !field.value && "text-muted-foreground"
                     )}
                   >
-                    
                     <CalendarIcon className="me-2 h-4 w-4" />
                     {field.value ? (
                       format(field.value, "PPP")
@@ -240,7 +273,6 @@ export const SaleHeaderFormSection: React.FC<SaleHeaderFormSectionProps> = ({
         name="status"
         render={({ field, fieldState }) => (
           <FormItem>
-            
             <FormLabel>
               {t("sales:statusLabel")} <span className="text-red-500">*</span>
             </FormLabel>
@@ -251,7 +283,6 @@ export const SaleHeaderFormSection: React.FC<SaleHeaderFormSectionProps> = ({
             >
               <FormControl>
                 <SelectTrigger>
-                  
                   <SelectValue
                     placeholder={t("sales:selectStatusPlaceholder")}
                   />

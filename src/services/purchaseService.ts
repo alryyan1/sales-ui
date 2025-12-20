@@ -1,8 +1,5 @@
 // src/services/purchaseService.ts
-import apiClient, {
-  getValidationErrors,
-  getErrorMessage,
-} from "../lib/axios";
+import apiClient, { getValidationErrors, getErrorMessage } from "../lib/axios";
 // Assuming PaginatedResponse is defined/exported from clientService or a shared types file
 import { PaginatedResponse } from "./clientService";
 import { Product } from "./productService"; // For purchase item details
@@ -12,22 +9,21 @@ import { Supplier } from "./supplierService"; // For purchase header details
 
 // Matches PurchaseItemResource structure
 
-
 export interface PurchaseItem {
-    id: number;
-    product_id: number;
-    product_name?: string;
-    product_sku?: string;
-    batch_number: string | null;
-    quantity: number; // Original quantity in STOCKING units
-    remaining_quantity: number; // Quantity remaining in SELLABLE units
-    unit_cost: string | number; // Cost per STOCKING unit
-    cost_per_sellable_unit: string | number; // New: Cost per SELLABLE unit (calculated by backend)
-    total_cost: string | number; // Original total cost (quantity_stocking * unit_cost_stocking)
-    sale_price: string | number | null; // Intended sale price per SELLABLE unit for this batch
-    sale_price_stocking_unit?: string | number | null; // Optional: sale price per STOCKING unit
-    expiry_date: string | null; // Format YYYY-MM-DD
-    product?: Product; // Optional full product details
+  id: number;
+  product_id: number;
+  product_name?: string;
+  product_sku?: string;
+  batch_number: string | null;
+  quantity: number; // Original quantity in STOCKING units
+  remaining_quantity: number; // Quantity remaining in SELLABLE units
+  unit_cost: string | number; // Cost per STOCKING unit
+  cost_per_sellable_unit: string | number; // New: Cost per SELLABLE unit (calculated by backend)
+  total_cost: string | number; // Original total cost (quantity_stocking * unit_cost_stocking)
+  sale_price: string | number | null; // Intended sale price per SELLABLE unit for this batch
+  sale_price_stocking_unit?: string | number | null; // Optional: sale price per STOCKING unit
+  expiry_date: string | null; // Format YYYY-MM-DD
+  product?: Product; // Optional full product details
 }
 
 // Data structure for updating an existing purchase
@@ -98,7 +94,7 @@ const purchaseService = {
   ): Promise<PaginatedResponse<Purchase>> => {
     try {
       const params = new URLSearchParams();
-      
+
       // If queryParams is provided, use them directly
       if (queryParams) {
         const existingParams = new URLSearchParams(queryParams);
@@ -218,7 +214,10 @@ const purchaseService = {
       );
       return response.data.data || [];
     } catch (error) {
-      console.error(`Error fetching purchases for product ${productId}:`, error);
+      console.error(
+        `Error fetching purchases for product ${productId}:`,
+        error
+      );
       throw error;
     }
   },
@@ -228,20 +227,26 @@ const purchaseService = {
    * @param file Excel file to upload
    * @returns Promise resolving to headers from Excel file
    */
-  importPurchaseItemsStep1: async (file: File): Promise<{ headers: string[]; message: string }> => {
+  importPurchaseItemsStep1: async (
+    file: File
+  ): Promise<{ headers: string[]; message: string }> => {
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append("file", file);
 
-      const response = await apiClient.post('/purchases/import-items', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const response = await apiClient.post(
+        "/purchases/import-items",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
       return response.data;
     } catch (error) {
-      console.error('Error uploading Excel file:', error);
+      console.error("Error uploading Excel file:", error);
       throw new Error(getErrorMessage(error));
     }
   },
@@ -249,20 +254,26 @@ const purchaseService = {
   /**
    * Add a new item to a purchase.
    */
-  addPurchaseItem: async (purchaseId: number, itemData: {
-    product_id: number;
-    batch_number?: string | null;
-    quantity: number;
-    unit_cost: number;
-    sale_price: number;
-    sale_price_stocking_unit?: number | null;
-    expiry_date?: string | null;
-  }): Promise<{ purchase: Purchase }> => {
+  addPurchaseItem: async (
+    purchaseId: number,
+    itemData: {
+      product_id: number;
+      batch_number?: string | null;
+      quantity: number;
+      unit_cost: number;
+      sale_price: number;
+      sale_price_stocking_unit?: number | null;
+      expiry_date?: string | null;
+    }
+  ): Promise<{ purchase: Purchase }> => {
     try {
-      const response = await apiClient.post(`/purchases/${purchaseId}/items`, itemData);
+      const response = await apiClient.post(
+        `/purchases/${purchaseId}/items`,
+        itemData
+      );
       return response.data;
     } catch (error) {
-      console.error('Error adding purchase item:', error);
+      console.error("Error adding purchase item:", error);
       throw new Error(getErrorMessage(error));
     }
   },
@@ -270,20 +281,27 @@ const purchaseService = {
   /**
    * Update a specific purchase item.
    */
-  updatePurchaseItem: async (purchaseId: number, itemId: number, itemData: {
-    product_id: number;
-    batch_number?: string | null;
-    quantity: number;
-    unit_cost: number;
-    sale_price: number;
-    sale_price_stocking_unit?: number | null;
-    expiry_date?: string | null;
-  }): Promise<{ purchase: Purchase }> => {
+  updatePurchaseItem: async (
+    purchaseId: number,
+    itemId: number,
+    itemData: {
+      product_id: number;
+      batch_number?: string | null;
+      quantity: number;
+      unit_cost: number;
+      sale_price: number;
+      sale_price_stocking_unit?: number | null;
+      expiry_date?: string | null;
+    }
+  ): Promise<{ purchase: Purchase }> => {
     try {
-      const response = await apiClient.put(`/purchases/${purchaseId}/items/${itemId}`, itemData);
+      const response = await apiClient.put(
+        `/purchases/${purchaseId}/items/${itemId}`,
+        itemData
+      );
       return response.data;
     } catch (error) {
-      console.error('Error updating purchase item:', error);
+      console.error("Error updating purchase item:", error);
       throw new Error(getErrorMessage(error));
     }
   },
@@ -291,12 +309,17 @@ const purchaseService = {
   /**
    * Delete a specific purchase item.
    */
-  deletePurchaseItem: async (purchaseId: number, itemId: number): Promise<{ purchase: Purchase }> => {
+  deletePurchaseItem: async (
+    purchaseId: number,
+    itemId: number
+  ): Promise<{ purchase: Purchase }> => {
     try {
-      const response = await apiClient.delete(`/purchases/${purchaseId}/items/${itemId}`);
+      const response = await apiClient.delete(
+        `/purchases/${purchaseId}/items/${itemId}`
+      );
       return response.data;
     } catch (error) {
-      console.error('Error deleting purchase item:', error);
+      console.error("Error deleting purchase item:", error);
       throw new Error(getErrorMessage(error));
     }
   },
@@ -309,30 +332,34 @@ const purchaseService = {
    * @returns Promise resolving to preview data
    */
   importPurchaseItemsPreview: async (
-    file: File, 
-    columnMapping: Record<string, string>, 
+    file: File,
+    columnMapping: Record<string, string>,
     skipHeader: boolean = true
   ): Promise<{ preview: any[] }> => {
     try {
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('skipHeader', skipHeader ? '1' : '0');
-      
+      formData.append("file", file);
+      formData.append("skipHeader", skipHeader ? "1" : "0");
+
       // Add column mapping as JSON
       Object.entries(columnMapping).forEach(([field, column]) => {
         formData.append(`columnMapping[${field}]`, column);
       });
 
-      const response = await apiClient.post('/purchases/preview-import-items', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        timeout: 60000, // 1 minute timeout for preview
-      });
+      const response = await apiClient.post(
+        "/purchases/preview-import-items",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+          timeout: 60000, // 1 minute timeout for preview
+        }
+      );
 
       return response.data;
     } catch (error) {
-      console.error('Error previewing import:', error);
+      console.error("Error previewing import:", error);
       throw new Error(getErrorMessage(error));
     }
   },
@@ -346,32 +373,41 @@ const purchaseService = {
    * @returns Promise resolving to import results
    */
   importPurchaseItemsStep2: async (
-    file: File, 
-    columnMapping: Record<string, string>, 
+    file: File,
+    columnMapping: Record<string, string>,
     skipHeader: boolean = true,
     purchaseId: number
-  ): Promise<{ imported: number; errors: number; message: string; errorDetails: any[] }> => {
+  ): Promise<{
+    imported: number;
+    errors: number;
+    message: string;
+    errorDetails: any[];
+  }> => {
     try {
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('skipHeader', skipHeader ? '1' : '0');
-      formData.append('purchase_id', purchaseId.toString());
-      
+      formData.append("file", file);
+      formData.append("skipHeader", skipHeader ? "1" : "0");
+      formData.append("purchase_id", purchaseId.toString());
+
       // Add column mapping as JSON
       Object.entries(columnMapping).forEach(([field, column]) => {
         formData.append(`columnMapping[${field}]`, column);
       });
 
-      const response = await apiClient.post('/purchases/process-import-items', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        timeout: 300000, // 5 minutes timeout for large imports
-      });
+      const response = await apiClient.post(
+        "/purchases/process-import-items",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+          timeout: 300000, // 5 minutes timeout for large imports
+        }
+      );
 
       return response.data;
     } catch (error) {
-      console.error('Error processing import:', error);
+      console.error("Error processing import:", error);
       throw new Error(getErrorMessage(error));
     }
   },
@@ -381,10 +417,12 @@ const purchaseService = {
    */
   getProductBySku: async (sku: string): Promise<Product> => {
     try {
-      const response = await apiClient.get(`/products/by-sku/${encodeURIComponent(sku)}`);
+      const response = await apiClient.get(
+        `/products/by-sku/${encodeURIComponent(sku)}`
+      );
       return response.data.product || response.data;
     } catch (error) {
-      console.error('Error getting product by SKU:', error);
+      console.error("Error getting product by SKU:", error);
       throw error;
     }
   },
