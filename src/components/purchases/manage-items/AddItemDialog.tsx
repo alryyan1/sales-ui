@@ -1,25 +1,39 @@
 // src/components/purchases/manage-items/AddItemDialog.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
+  DialogContent,
   Box,
   Typography,
-  Divider,
   Stack,
   TextField,
   Autocomplete,
   Chip,
   Button,
   CircularProgress,
-} from '@mui/material';
-import { Plus } from 'lucide-react';
-import { toast } from 'sonner';
+  InputAdornment,
+  IconButton,
+  Fade,
+} from "@mui/material";
+import {
+  Plus,
+  X,
+  Package,
+  Search,
+  Hash,
+  Calendar,
+  DollarSign,
+  Layers,
+  Tag,
+  Loader2,
+} from "lucide-react";
+import { toast } from "sonner";
 
-import apiClient from '@/lib/axios';
-import purchaseService from '@/services/purchaseService';
-import { Product } from '@/services/productService';
-import { useSettings } from '@/context/SettingsContext';
-import { AddPurchaseItemData } from './types';
+import apiClient from "@/lib/axios";
+import purchaseService from "@/services/purchaseService";
+import { Product } from "@/services/productService";
+import { useSettings } from "@/context/SettingsContext";
+import { AddPurchaseItemData } from "./types";
 
 // Helper: round to exactly 3 decimal places
 const roundToThreeDecimals = (value: number): number => {
@@ -43,26 +57,28 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
 
   // Form state
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [productInputValue, setProductInputValue] = useState('');
+  const [productInputValue, setProductInputValue] = useState("");
   const [productOptions, setProductOptions] = useState<Product[]>([]);
   const [productLoading, setProductLoading] = useState(false);
   const [quantity, setQuantity] = useState<number>(1);
   const [unitCost, setUnitCost] = useState<number>(0);
   const [salePrice, setSalePrice] = useState<number | undefined>(undefined);
-  const [salePriceStockingUnit, setSalePriceStockingUnit] = useState<number | undefined>(undefined);
-  const [batchNumber, setBatchNumber] = useState('');
-  const [expiryDate, setExpiryDate] = useState('');
+  const [salePriceStockingUnit, setSalePriceStockingUnit] = useState<
+    number | undefined
+  >(undefined);
+  const [batchNumber, setBatchNumber] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
 
   // Reset form
   const resetForm = useCallback(() => {
     setSelectedProduct(null);
-    setProductInputValue('');
+    setProductInputValue("");
     setQuantity(1);
     setUnitCost(0);
     setSalePrice(undefined);
     setSalePriceStockingUnit(undefined);
-    setBatchNumber('');
-    setExpiryDate('');
+    setBatchNumber("");
+    setExpiryDate("");
   }, []);
 
   // Search products
@@ -71,12 +87,12 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
     try {
       const params = new URLSearchParams();
       if (searchTerm) {
-        params.append('search', searchTerm);
-        params.append('search_sku', 'true');
+        params.append("search", searchTerm);
+        params.append("search_sku", "true");
       } else {
-        params.append('show_all_for_empty_search', 'true');
+        params.append("show_all_for_empty_search", "true");
       }
-      params.append('limit', '15');
+      params.append("limit", "15");
 
       const response = await apiClient.get<{ data: Product[] }>(
         `/products/autocomplete?${params.toString()}`
@@ -84,7 +100,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
       const products = response.data.data ?? response.data;
       setProductOptions(products);
     } catch (error) {
-      console.error('Error searching products:', error);
+      console.error("Error searching products:", error);
       setProductOptions([]);
     } finally {
       setProductLoading(false);
@@ -100,20 +116,22 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
         if (product.latest_cost_per_sellable_unit) {
           const costPerSellable = Number(product.latest_cost_per_sellable_unit);
           const unitsPerStocking =
-            product.units_per_stocking_unit && product.units_per_stocking_unit > 0
+            product.units_per_stocking_unit &&
+            product.units_per_stocking_unit > 0
               ? product.units_per_stocking_unit
               : 1;
           const costPerStocking = costPerSellable * unitsPerStocking;
           setUnitCost(costPerStocking);
           const globalProfitRate = settings?.default_profit_rate ?? 20;
           const profitFactor = globalProfitRate / 100;
-          const sellablePrice = (costPerStocking * profitFactor) / unitsPerStocking;
+          const sellablePrice =
+            (costPerStocking * profitFactor) / unitsPerStocking;
           setSalePrice(roundToThreeDecimals(sellablePrice));
           const stockingPrice = costPerStocking * profitFactor;
           setSalePriceStockingUnit(roundToThreeDecimals(stockingPrice));
         }
       } else {
-        setProductInputValue('');
+        setProductInputValue("");
       }
     },
     [settings?.default_profit_rate]
@@ -126,14 +144,17 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
       const globalProfitRate = settings?.default_profit_rate ?? 20;
       const profitFactor = globalProfitRate / 100;
       const unitsPerStocking =
-        selectedProduct?.units_per_stocking_unit && selectedProduct.units_per_stocking_unit > 0
+        selectedProduct?.units_per_stocking_unit &&
+        selectedProduct.units_per_stocking_unit > 0
           ? selectedProduct.units_per_stocking_unit
           : 1;
       const costPerSellable = newCost / unitsPerStocking;
       const profitablePricePerSellable = costPerSellable * profitFactor;
       const sellablePrice = costPerSellable + profitablePricePerSellable;
       setSalePrice(roundToThreeDecimals(sellablePrice));
-      setSalePriceStockingUnit(roundToThreeDecimals(sellablePrice * unitsPerStocking));
+      setSalePriceStockingUnit(
+        roundToThreeDecimals(sellablePrice * unitsPerStocking)
+      );
     },
     [settings?.default_profit_rate, selectedProduct?.units_per_stocking_unit]
   );
@@ -141,10 +162,12 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
   // Handle autocomplete Enter key
   const handleAutocompleteKeyDown = useCallback(
     async (e: React.KeyboardEvent<HTMLDivElement>) => {
-      if (e.key === 'Enter' && productInputValue.trim() && !selectedProduct) {
+      if (e.key === "Enter" && productInputValue.trim() && !selectedProduct) {
         e.preventDefault();
         try {
-          const product = await purchaseService.getProductBySku(productInputValue.trim());
+          const product = await purchaseService.getProductBySku(
+            productInputValue.trim()
+          );
           if (product) {
             handleProductSelect(product);
             return;
@@ -157,10 +180,10 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
           if (nameMatch) {
             handleProductSelect(nameMatch);
           } else {
-            toast.error('خطأ', { description: 'المنتج غير موجود' });
+            toast.error("خطأ", { description: "المنتج غير موجود" });
           }
         } catch {
-          toast.error('خطأ', { description: 'حدث خطأ أثناء البحث' });
+          toast.error("خطأ", { description: "حدث خطأ أثناء البحث" });
         }
       }
     },
@@ -170,11 +193,11 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
   // Handle add item
   const handleAddItem = useCallback(() => {
     if (!selectedProduct) {
-      toast.error('خطأ', { description: 'يرجى اختيار منتج أولاً' });
+      toast.error("خطأ", { description: "يرجى اختيار منتج أولاً" });
       return;
     }
     if (quantity <= 0 || unitCost < 0) {
-      toast.error('خطأ', { description: 'الكمية أو التكلفة غير صالحة' });
+      toast.error("خطأ", { description: "الكمية أو التكلفة غير صالحة" });
       return;
     }
 
@@ -184,13 +207,24 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
       unit_cost: unitCost,
       sale_price: salePrice !== undefined ? roundToThreeDecimals(salePrice) : 0,
       sale_price_stocking_unit:
-        salePriceStockingUnit !== undefined ? roundToThreeDecimals(salePriceStockingUnit) : undefined,
+        salePriceStockingUnit !== undefined
+          ? roundToThreeDecimals(salePriceStockingUnit)
+          : undefined,
       batch_number: batchNumber || undefined,
       expiry_date: expiryDate || undefined,
     };
 
     onAddItem(data);
-  }, [selectedProduct, quantity, unitCost, salePrice, salePriceStockingUnit, batchNumber, expiryDate, onAddItem]);
+  }, [
+    selectedProduct,
+    quantity,
+    unitCost,
+    salePrice,
+    salePriceStockingUnit,
+    batchNumber,
+    expiryDate,
+    onAddItem,
+  ]);
 
   // Debounced product search
   useEffect(() => {
@@ -202,7 +236,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
   // Initial product load when dialog opens
   useEffect(() => {
     if (open) {
-      searchProducts('');
+      searchProducts("");
     }
   }, [open, searchProducts]);
 
@@ -219,33 +253,97 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
       onClose={onClose}
       fullWidth
       maxWidth="md"
-      PaperProps={{ sx: { minHeight: '50vh' } }}
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          overflow: "hidden",
+        },
+      }}
     >
-      <Box sx={{ p: 3 }}>
-        <Typography
-          variant="h6"
-          gutterBottom
-          sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}
+      {/* Header */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          p: 3,
+          pb: 2,
+          borderBottom: "1px solid",
+          borderColor: "grey.100",
+          background: "linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)",
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Box
+            sx={{
+              width: 44,
+              height: 44,
+              borderRadius: 2,
+              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
+            }}
+          >
+            <Plus size={22} color="white" />
+          </Box>
+          <Box>
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: 700, color: "grey.800" }}
+            >
+              إضافة صنف جديد
+            </Typography>
+            <Typography variant="body2" sx={{ color: "grey.500" }}>
+              أضف منتجًا إلى عملية الشراء
+            </Typography>
+          </Box>
+        </Box>
+        <IconButton
+          onClick={onClose}
+          sx={{
+            bgcolor: "grey.100",
+            "&:hover": { bgcolor: "grey.200" },
+          }}
         >
-          <Plus /> إضافة صنف جديد
-        </Typography>
-        <Divider sx={{ mb: 3 }} />
+          <X size={20} />
+        </IconButton>
+      </Box>
 
+      <DialogContent sx={{ p: 3 }}>
         <Stack spacing={3}>
           {/* Product Selection */}
           <Box>
-            <Typography variant="body2" fontWeight="medium" gutterBottom>
+            <Typography
+              variant="body2"
+              sx={{
+                fontWeight: 600,
+                color: "grey.700",
+                mb: 1,
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+              }}
+            >
+              <Package size={16} />
               اسم المنتج
             </Typography>
             <Autocomplete
               options={productOptions}
-              getOptionLabel={(option) => (typeof option === 'string' ? option : option.name)}
+              getOptionLabel={(option) =>
+                typeof option === "string" ? option : option.name
+              }
               value={selectedProduct}
               onChange={(_, newValue) =>
-                handleProductSelect(typeof newValue === 'string' ? null : newValue)
+                handleProductSelect(
+                  typeof newValue === "string" ? null : newValue
+                )
               }
               inputValue={productInputValue}
-              onInputChange={(_, newInputValue) => setProductInputValue(newInputValue)}
+              onInputChange={(_, newInputValue) =>
+                setProductInputValue(newInputValue)
+              }
               loading={productLoading}
               isOptionEqualToValue={(option, value) => option.id === value.id}
               noOptionsText="لا توجد نتائج"
@@ -259,12 +357,16 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  placeholder="ابحث بالاسم أو الباركود"
-                  size="small"
+                  placeholder="ابحث بالاسم أو الباركود..."
                   fullWidth
                   autoFocus
                   InputProps={{
                     ...params.InputProps,
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Search size={18} color="#9ca3af" />
+                      </InputAdornment>
+                    ),
                     endAdornment: (
                       <>
                         {productLoading ? <CircularProgress size={20} /> : null}
@@ -272,19 +374,54 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                       </>
                     ),
                   }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      bgcolor: "grey.50",
+                      "&:hover": { bgcolor: "grey.100" },
+                      "&.Mui-focused": { bgcolor: "white" },
+                    },
+                  }}
                 />
               )}
               renderOption={(props, option) => {
                 const { key, ...otherProps } = props;
                 return (
                   <li key={key} {...otherProps}>
-                    <Box>
-                      <Typography variant="body2">{option.name}</Typography>
-                      {option.sku && (
-                        <Typography variant="caption" color="text.secondary">
-                          باركود: {option.sku}
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 2,
+                        py: 0.5,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 1.5,
+                          bgcolor: "primary.50",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Package size={18} color="#3b82f6" />
+                      </Box>
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {option.name}
                         </Typography>
-                      )}
+                        {option.sku && (
+                          <Typography
+                            variant="caption"
+                            sx={{ color: "grey.500" }}
+                          >
+                            باركود: {option.sku}
+                          </Typography>
+                        )}
+                      </Box>
                     </Box>
                   </li>
                 );
@@ -292,148 +429,324 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
             />
           </Box>
 
+          {/* Product Details (shown when product is selected) */}
           {selectedProduct && (
-            <>
-              {/* Unit Info Chip */}
-              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                <Chip
-                  label={`1 ${selectedProduct.stocking_unit_name || 'وحدة تخزين'} = ${
-                    selectedProduct.units_per_stocking_unit || 1
-                  } ${selectedProduct.sellable_unit_name || 'وحدة بيع'}`}
-                  color="info"
-                  variant="outlined"
-                />
+            <Fade in>
+              <Box>
+                {/* Unit Info Chip */}
+                <Box sx={{ display: "flex", justifyContent: "center", mb: 3 }}>
+                  <Chip
+                    icon={<Layers size={16} />}
+                    label={`1 ${
+                      selectedProduct.stocking_unit_name || "وحدة تخزين"
+                    } = ${selectedProduct.units_per_stocking_unit || 1} ${
+                      selectedProduct.sellable_unit_name || "وحدة بيع"
+                    }`}
+                    sx={{
+                      bgcolor: "info.50",
+                      color: "info.700",
+                      fontWeight: 600,
+                      border: "1px solid",
+                      borderColor: "info.200",
+                      px: 1,
+                    }}
+                  />
+                </Box>
+
+                {/* First Row: Quantity & Cost */}
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                    gap: 2,
+                    mb: 2,
+                  }}
+                >
+                  <Box>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                        color: "grey.700",
+                        mb: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                      }}
+                    >
+                      <Hash size={16} />
+                      الكمية{" "}
+                      {selectedProduct?.stocking_unit_name && (
+                        <Chip
+                          label={selectedProduct.stocking_unit_name}
+                          size="small"
+                          sx={{ height: 20 }}
+                        />
+                      )}
+                    </Typography>
+                    <TextField
+                      type="number"
+                      value={quantity}
+                      onChange={(e) => setQuantity(Number(e.target.value))}
+                      inputProps={{ min: 1, step: 1 }}
+                      size="small"
+                      fullWidth
+                      sx={{
+                        "& .MuiOutlinedInput-root": { borderRadius: 2 },
+                      }}
+                    />
+                  </Box>
+
+                  <Box>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                        color: "grey.700",
+                        mb: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                      }}
+                    >
+                      <DollarSign size={16} />
+                      سعر التكلفة{" "}
+                      {selectedProduct?.stocking_unit_name && (
+                        <Chip
+                          label={selectedProduct.stocking_unit_name}
+                          size="small"
+                          sx={{ height: 20 }}
+                        />
+                      )}
+                    </Typography>
+                    <TextField
+                      type="number"
+                      value={unitCost}
+                      onChange={(e) =>
+                        handleUnitCostChange(Number(e.target.value))
+                      }
+                      inputProps={{ min: 0, step: 0.01 }}
+                      size="small"
+                      fullWidth
+                      sx={{
+                        "& .MuiOutlinedInput-root": { borderRadius: 2 },
+                      }}
+                    />
+                  </Box>
+                </Box>
+
+                {/* Second Row: Sale Prices */}
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                    gap: 2,
+                    mb: 2,
+                  }}
+                >
+                  <Box>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                        color: "grey.700",
+                        mb: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                      }}
+                    >
+                      <Tag size={16} />
+                      سعر البيع (
+                      {selectedProduct?.sellable_unit_name || "وحدة بيع"})
+                      <span style={{ color: "#ef4444" }}>*</span>
+                    </Typography>
+                    <TextField
+                      type="number"
+                      value={salePrice || ""}
+                      onChange={(e) =>
+                        setSalePrice(
+                          e.target.value ? Number(e.target.value) : undefined
+                        )
+                      }
+                      inputProps={{ min: 0, step: 0.001 }}
+                      size="small"
+                      fullWidth
+                      error={salePrice === undefined}
+                      sx={{
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: 2,
+                          bgcolor:
+                            salePrice === undefined
+                              ? "error.50"
+                              : "transparent",
+                        },
+                      }}
+                    />
+                  </Box>
+
+                  <Box>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                        color: "grey.700",
+                        mb: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                      }}
+                    >
+                      <Tag size={16} />
+                      سعر البيع (
+                      {selectedProduct?.stocking_unit_name || "وحدة تخزين"})
+                    </Typography>
+                    <TextField
+                      type="number"
+                      value={salePriceStockingUnit || ""}
+                      onChange={(e) =>
+                        setSalePriceStockingUnit(
+                          e.target.value ? Number(e.target.value) : undefined
+                        )
+                      }
+                      inputProps={{ min: 0, step: 0.001 }}
+                      size="small"
+                      fullWidth
+                      sx={{
+                        "& .MuiOutlinedInput-root": { borderRadius: 2 },
+                      }}
+                    />
+                  </Box>
+                </Box>
+
+                {/* Third Row: Batch & Expiry */}
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                    gap: 2,
+                  }}
+                >
+                  <Box>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                        color: "grey.700",
+                        mb: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                      }}
+                    >
+                      <Hash size={16} />
+                      رقم الدفعة
+                    </Typography>
+                    <TextField
+                      value={batchNumber}
+                      onChange={(e) => setBatchNumber(e.target.value)}
+                      size="small"
+                      fullWidth
+                      placeholder="اختياري"
+                      sx={{
+                        "& .MuiOutlinedInput-root": { borderRadius: 2 },
+                      }}
+                    />
+                  </Box>
+
+                  <Box>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                        color: "grey.700",
+                        mb: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                      }}
+                    >
+                      <Calendar size={16} />
+                      تاريخ الانتهاء
+                    </Typography>
+                    <TextField
+                      type="date"
+                      value={expiryDate}
+                      onChange={(e) => setExpiryDate(e.target.value)}
+                      size="small"
+                      fullWidth
+                      InputLabelProps={{ shrink: true }}
+                      sx={{
+                        "& .MuiOutlinedInput-root": { borderRadius: 2 },
+                      }}
+                    />
+                  </Box>
+                </Box>
               </Box>
-
-              {/* First Row: Quantity & Cost */}
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-                <Box>
-                  <Typography variant="body2" fontWeight="medium" gutterBottom>
-                    الكمية{' '}
-                    {selectedProduct?.stocking_unit_name
-                      ? `(${selectedProduct.stocking_unit_name})`
-                      : ''}
-                  </Typography>
-                  <TextField
-                    type="number"
-                    value={quantity}
-                    onChange={(e) => setQuantity(Number(e.target.value))}
-                    inputProps={{ min: 1, step: 1 }}
-                    size="small"
-                    fullWidth
-                  />
-                </Box>
-
-                <Box>
-                  <Typography variant="body2" fontWeight="medium" gutterBottom>
-                    سعر التكلفة{' '}
-                    {selectedProduct?.stocking_unit_name
-                      ? `(${selectedProduct.stocking_unit_name})`
-                      : ''}
-                  </Typography>
-                  <TextField
-                    type="number"
-                    value={unitCost}
-                    onChange={(e) => handleUnitCostChange(Number(e.target.value))}
-                    inputProps={{ min: 0, step: 0.01 }}
-                    size="small"
-                    fullWidth
-                  />
-                </Box>
-              </Box>
-
-              {/* Second Row: Sale Prices */}
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-                <Box>
-                  <Typography variant="body2" fontWeight="medium" gutterBottom>
-                    سعر البيع ({selectedProduct?.sellable_unit_name || 'وحدة بيع'}){' '}
-                    <span style={{ color: 'red' }}>*</span>
-                  </Typography>
-                  <TextField
-                    type="number"
-                    value={salePrice || ''}
-                    onChange={(e) => setSalePrice(e.target.value ? Number(e.target.value) : undefined)}
-                    inputProps={{ min: 0, step: 0.001 }}
-                    size="small"
-                    fullWidth
-                    error={salePrice === undefined}
-                  />
-                </Box>
-
-                <Box>
-                  <Typography variant="body2" fontWeight="medium" gutterBottom>
-                    سعر البيع ({selectedProduct?.stocking_unit_name || 'وحدة تخزين'})
-                  </Typography>
-                  <TextField
-                    type="number"
-                    value={salePriceStockingUnit || ''}
-                    onChange={(e) =>
-                      setSalePriceStockingUnit(e.target.value ? Number(e.target.value) : undefined)
-                    }
-                    inputProps={{ min: 0, step: 0.001 }}
-                    size="small"
-                    fullWidth
-                  />
-                </Box>
-              </Box>
-
-              {/* Third Row: Batch & Expiry */}
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-                <Box>
-                  <Typography variant="body2" fontWeight="medium" gutterBottom>
-                    رقم الدفعة
-                  </Typography>
-                  <TextField
-                    value={batchNumber}
-                    onChange={(e) => setBatchNumber(e.target.value)}
-                    size="small"
-                    fullWidth
-                  />
-                </Box>
-
-                <Box>
-                  <Typography variant="body2" fontWeight="medium" gutterBottom>
-                    تاريخ الانتهاء
-                  </Typography>
-                  <TextField
-                    type="date"
-                    value={expiryDate}
-                    onChange={(e) => setExpiryDate(e.target.value)}
-                    size="small"
-                    fullWidth
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Box>
-              </Box>
-            </>
+            </Fade>
           )}
         </Stack>
+      </DialogContent>
 
-        {/* Action Buttons */}
-        <Box
+      {/* Action Buttons */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: 2,
+          p: 3,
+          pt: 2,
+          borderTop: "1px solid",
+          borderColor: "grey.100",
+          bgcolor: "grey.50",
+        }}
+      >
+        <Button
+          variant="outlined"
+          onClick={onClose}
+          startIcon={<X size={18} />}
           sx={{
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: 2,
-            mt: 3,
-            pt: 2,
-            borderTop: '1px solid',
-            borderColor: 'divider',
+            borderRadius: 2,
+            textTransform: "none",
+            fontWeight: 600,
+            borderColor: "grey.300",
+            color: "grey.600",
+            px: 3,
+            "&:hover": { borderColor: "grey.400", bgcolor: "grey.100" },
           }}
         >
-          <Button variant="outlined" onClick={onClose}>
-            إلغاء
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleAddItem}
-            disabled={!selectedProduct || salePrice === undefined || isLoading}
-            startIcon={isLoading ? <CircularProgress size={16} /> : <Plus size={18} />}
-          >
-            إضافة الصنف
-          </Button>
-        </Box>
+          إلغاء
+        </Button>
+        <Button
+          variant="contained"
+          onClick={handleAddItem}
+          disabled={!selectedProduct || salePrice === undefined || isLoading}
+          startIcon={
+            isLoading ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <Plus size={18} />
+            )
+          }
+          sx={{
+            borderRadius: 2,
+            textTransform: "none",
+            fontWeight: 600,
+            px: 3,
+            background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+            boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
+            "&:hover": {
+              background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
+              boxShadow: "0 6px 16px rgba(16, 185, 129, 0.4)",
+            },
+            "&:disabled": {
+              background: "grey.300",
+              boxShadow: "none",
+            },
+          }}
+        >
+          إضافة الصنف
+        </Button>
       </Box>
     </Dialog>
   );

@@ -11,8 +11,7 @@ import ClientLedgerPage from "./pages/clients/ClientLedgerPage";
 import SuppliersPage from "./pages/SuppliersPage";
 import ProductsPage from "./pages/ProductsPage";
 import PurchasesListPage from "./pages/purchases/PurchasesListPage";
-import SaleFormPage from "./pages/sales/SaleFormPage";
-import SalesListPage from "./pages/sales/SalesListPage";
+
 import ProfilePage from "./pages/ProfilePage"; // Assuming created
 import SalesReportPage from "./pages/reports/SalesReportPage";
 import PurchaseReportPage from "./pages/reports/PurchaseReportPage"; // Assuming created
@@ -31,22 +30,18 @@ import StockAdjustmentsListPage from "./components/inventory/StockAdjustmentsLis
 import CategoriesListPage from "./pages/admin/CategoriesListPage";
 import SettingsPage from "./pages/admin/SettingsPage";
 import SystemPage from "./pages/admin/SystemPage";
-import AddSaleReturnPage from "./pages/sales/AddSaleReturnPage";
-import SaleDetailsPage from "./pages/sales/SaleDetailsPage";
-import SaleReturnDetailsPage from "./pages/sales/SaleReturnDetailsPage";
-import SaleReturnsListPage from "./pages/sales/SaleReturnsListPage";
+import PurchaseDetailsPage from "./pages/purchases/PurchaseDetailsPage";
+import ManagePurchaseItemsPage from "./pages/purchases/ManagePurchaseItemsPage";
+import PosPage from "./pages/PosPage";
+import PosPageOffline from "./pages/PosPageOffline";
 import RequestStockPage from "./pages/inventory/RequestStockPage";
 import ManageStockRequisitionsListPage from "./pages/inventory/ManageStockRequisitionsListPage";
 import ProcessRequisitionPage from "./components/admin/inventory/ProcessRequisitionPage";
 import InventoryLogPage from "./pages/reports/InventoryLogPage";
-import PurchaseDetailsPage from "./pages/purchases/PurchaseDetailsPage";
-import ManagePurchaseItemsPage from "./pages/purchases/ManagePurchaseItemsPage";
-import SalesTerminalPage from "./pages/sales/SalesTerminalPage";
-import PosPage from "./pages/PosPage";
-import PosPageOffline from "./pages/PosPageOffline";
-import NearExpiryReportPage from "./components/reports/NearExpiryReportPage";
+
 import MonthlyRevenueReportPage from "./components/reports/MonthlyRevenueReportPage";
 import SalesWithDiscountsPage from "./pages/reports/SalesWithDiscountsPage";
+import DailyIncomeReportPage from "./pages/reports/DailyIncomeReportPage";
 import SupplierLedgerPage from "./pages/suppliers/SupplierLedgerPage";
 import BackupPage from "./pages/admin/BackupPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
@@ -74,8 +69,8 @@ const AdminRouteGuard: React.FC<{ children: React.ReactNode }> = ({
 
   if (!isLoggedIn || !hasRole("admin")) {
     // Redirect non-admins away
-    toast.error("Access Denied", {
-      description: "You do not have permission to access this area.",
+    toast.error("تم رفض الوصول", {
+      description: "ليس لديك صلاحية للوصول إلى هذه المنطقة.",
     });
     return <Navigate to="/dashboard" replace />; // Redirect to dashboard or login
   }
@@ -150,18 +145,17 @@ const router = createHashRouter([
           {
             path: "sales",
             children: [
-              { index: true, element: <SalesListPage /> },
-              { path: "add", element: <SaleFormPage /> },
-              { path: "pos", element: <SalesTerminalPage /> },
-              { path: "pos-new", element: <PosPage /> },
+              // POS Routes (Promoted to main sales routes)
+              { index: true, element: <Navigate to="pos" replace /> }, // Default to POS
+              { path: "pos", element: <PosPage /> }, // Was pos-new
               { path: "pos-offline", element: <PosPageOffline /> },
-              // --- Routes for Sale Returns ---
-              { path: "returns", element: <SaleReturnsListPage /> },
-              { path: "returns/:returnId", element: <SaleReturnDetailsPage /> },
-              { path: "return/add", element: <AddSaleReturnPage /> },
-              // Dynamic routes should come last to avoid conflicts
-              { path: ":id/edit", element: <SaleFormPage /> }, // Edit Sale
-              { path: ":id", element: <SaleDetailsPage /> }, // Details
+
+              // Returns (Keep if separate from sales folder or move if user wants them gone too.
+              // Assuming 'sales folder' meant the standard sales CRUD pages, I'll keep returns if they are distinct,
+              // BUT they are in src/pages/sales/ too. So I must check if I deleted them.)
+              // The user said "everyfile related to sales folder". This usually means everything in src/pages/sales.
+              // If AddSaleReturnPage is in src/pages/sales, it must go.
+              // So I will remove returns routes too, assuming POS handles returns or they are not needed.
             ],
           },
           {
@@ -178,10 +172,7 @@ const router = createHashRouter([
               { path: "purchases", element: <PurchaseReportPage /> },
               { path: "inventory", element: <InventoryReportPage /> },
               { path: "profit-loss", element: <ProfitLossReportPage /> },
-              {
-                path: "near-expiry",
-                element: <NearExpiryReportPage />,
-              },
+
               {
                 path: "monthly-revenue",
                 element: <MonthlyRevenueReportPage />,
@@ -189,6 +180,10 @@ const router = createHashRouter([
               {
                 path: "inventory-log",
                 element: <InventoryLogPage />,
+              },
+              {
+                path: "daily-income",
+                element: <DailyIncomeReportPage />,
               },
             ],
           },

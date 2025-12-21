@@ -3,24 +3,14 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import {
-  format,
-  getYear,
-  getMonth,
-} from "date-fns"; // Date functions
-import { arSA, enUS } from "date-fns/locale"; // Import locales for date-fns
+import { format, getYear, getMonth } from "date-fns"; // Date functions
+import { arSA } from "date-fns/locale"; // Import locales for date-fns
 
 // shadcn/ui & Lucide Icons
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -100,13 +90,6 @@ type MonthReportFilterValues = z.infer<typeof monthReportFilterSchema>;
 
 // --- Component ---
 const MonthlyRevenueReportPage: React.FC = () => {
-  const { t, i18n } = useTranslation([
-    "reports",
-    "common",
-    "months",
-    "days",
-    "paymentMethods",
-  ]); // Add namespaces
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -138,31 +121,28 @@ const MonthlyRevenueReportPage: React.FC = () => {
   const watchedYear = watch("year");
 
   // --- Data Fetching ---
-  const fetchReport = useCallback(
-    async (filters: MonthReportFilterValues) => {
-      setIsLoading(true);
-      setError(null);
-      setReportData(null);
-      try {
-        const params = new URLSearchParams();
-        params.append("month", String(filters.month));
-        params.append("year", String(filters.year));
-        // Add other filters from 'filters' object if implemented
+  const fetchReport = useCallback(async (filters: MonthReportFilterValues) => {
+    setIsLoading(true);
+    setError(null);
+    setReportData(null);
+    try {
+      const params = new URLSearchParams();
+      params.append("month", String(filters.month));
+      params.append("year", String(filters.year));
+      // Add other filters from 'filters' object if implemented
 
-        const response = await apiClient.get<{
-          data: MonthlyRevenueReportData;
-        }>(`/reports/monthly-revenue?${params.toString()}`);
-        setReportData(response.data.data);
-      } catch (err) {
-        const errorMsg = getErrorMessage(err);
-        setError(errorMsg);
-        toast.error(t("common:error"), { description: errorMsg });
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [t]
-  );
+      const response = await apiClient.get<{
+        data: MonthlyRevenueReportData;
+      }>(`/reports/monthly-revenue?${params.toString()}`);
+      setReportData(response.data.data);
+    } catch (err) {
+      const errorMsg = getErrorMessage(err);
+      setError(errorMsg);
+      toast.error("خطأ", { description: errorMsg });
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   // --- Effect to Fetch Report When Filters/Page Change from URL or Form ---
   useEffect(() => {
@@ -193,7 +173,7 @@ const MonthlyRevenueReportPage: React.FC = () => {
   // --- Helper for month/year select options ---
   const years = Array.from({ length: 10 }, (_, i) => currentYear - 5 + i); // Last 5 years + next 4
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
-  const dateFnsLocale = i18n.language.startsWith("ar") ? arSA : enUS; // For localized month names
+  const dateFnsLocale = arSA;
 
   const getPaymentMethodIcon = (method: string) => {
     // Example: Return a Lucide icon component based on payment method
@@ -217,13 +197,13 @@ const MonthlyRevenueReportPage: React.FC = () => {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 dark:text-gray-100">
-          {t("reports:monthlyRevenueReportTitle")} {/* Add key */}
+          تقرير الإيرادات الشهرية
         </h1>
       </div>
       {/* Filter Form Card */}
       <Card className="dark:bg-gray-900 mb-6">
         <CardHeader>
-          <CardTitle className="text-lg">{t("common:filters")}</CardTitle>
+          <CardTitle className="text-lg">الفلاتر</CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -234,23 +214,18 @@ const MonthlyRevenueReportPage: React.FC = () => {
                   name="month"
                   render={({ field }) => (
                     <FormItem>
-                      
-                      <FormLabel>{t("common:month")}*</FormLabel>
+                      <FormLabel>الشهر*</FormLabel>
                       <Select
                         onValueChange={(val) => field.onChange(Number(val))}
                         value={String(field.value)}
                         disabled={isLoading}
                       >
-                        
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue
-                              placeholder={t("common:selectMonth")}
-                            />
+                            <SelectValue placeholder="اختر الشهر" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          
                           {months.map((m) => (
                             <SelectItem key={m} value={String(m)}>
                               {format(new Date(2000, m - 1, 1), "MMMM", {
@@ -261,7 +236,9 @@ const MonthlyRevenueReportPage: React.FC = () => {
                         </SelectContent>
                       </Select>
                       <FormMessage>
-                        {formState.errors.month?.message ? t(formState.errors.month.message) : null}
+                        {formState.errors.month?.message
+                          ? formState.errors.month.message
+                          : null}
                       </FormMessage>
                     </FormItem>
                   )}
@@ -271,21 +248,18 @@ const MonthlyRevenueReportPage: React.FC = () => {
                   name="year"
                   render={({ field }) => (
                     <FormItem>
-                      
-                      <FormLabel>{t("common:year")}*</FormLabel>
+                      <FormLabel>السنة*</FormLabel>
                       <Select
                         onValueChange={(val) => field.onChange(Number(val))}
                         value={String(field.value)}
                         disabled={isLoading}
                       >
-                        
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder={t("common:selectYear")} />
+                            <SelectValue placeholder="اختر السنة" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          
                           {years.map((y) => (
                             <SelectItem key={y} value={String(y)}>
                               {y}
@@ -294,27 +268,27 @@ const MonthlyRevenueReportPage: React.FC = () => {
                         </SelectContent>
                       </Select>
                       <FormMessage>
-                        {formState.errors.year?.message ? t(formState.errors.year.message) : null}
+                        {formState.errors.year?.message
+                          ? formState.errors.year.message
+                          : null}
                       </FormMessage>
                     </FormItem>
                   )}
                 />
                 {/* Add other filters (Client, User) here if needed */}
                 <div className="flex items-end gap-2">
-                  
                   {/* Buttons aligned */}
                   <Button
                     type="submit"
                     disabled={isLoading}
                     className="w-full sm:w-auto"
                   >
-                    
                     {isLoading ? (
                       <Loader2 className="me-2 h-4 w-4 animate-spin" />
                     ) : (
                       <Filter className="me-2 h-4 w-4" />
                     )}
-                    {t("reports:generateReport")}
+                    توليد التقرير
                   </Button>
                 </div>
               </div>
@@ -331,7 +305,7 @@ const MonthlyRevenueReportPage: React.FC = () => {
       {!isLoading && error && (
         <Alert variant="destructive" className="mt-6">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>{t("common:error")}</AlertTitle>
+          <AlertTitle>خطأ</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
@@ -341,15 +315,13 @@ const MonthlyRevenueReportPage: React.FC = () => {
           {/* Month Summary Card */}
           <Card className="dark:bg-gray-900 mb-6">
             <CardHeader>
-              <CardTitle>
-                {t("reports:monthSummaryFor", { month: reportData.month_name })}
-              </CardTitle>
+              <CardTitle>ملخص شهر {reportData.month_name}</CardTitle>
               {/* Add key */}
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex justify-between items-center text-lg">
                 <span className="font-medium text-muted-foreground">
-                  {t("reports:totalRevenueMonth")}:
+                  إجمالي الإيرادات (المبيعات):
                 </span>
                 {/* Add key */}
                 <span className="font-bold text-green-600 dark:text-green-400">
@@ -362,7 +334,7 @@ const MonthlyRevenueReportPage: React.FC = () => {
                              </div> */}
               <Separator className="my-2 dark:bg-gray-700" />
               <p className="text-sm font-semibold text-muted-foreground">
-                {t("reports:totalPaymentsByMethodMonth")}:
+                إجمالي المدفوعات حسب الطريقة:
               </p>
               {/* Add key */}
               {Object.keys(reportData.month_summary.total_payments_by_method)
@@ -372,8 +344,8 @@ const MonthlyRevenueReportPage: React.FC = () => {
                     reportData.month_summary.total_payments_by_method
                   ).map(([method, total]) => (
                     <div key={method} className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        {t(`paymentMethods:${method}`)}:
+                      <span className="text-muted-foreground capitalize">
+                        {method}:
                       </span>
                       <span className="font-medium">
                         {formatCurrency(total)}
@@ -383,7 +355,7 @@ const MonthlyRevenueReportPage: React.FC = () => {
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground pl-4">
-                  {t("reports:noPaymentsForPeriod")}
+                  لا توجد مدفوعات لهذه الفترة.
                 </p>
               )}
               {/* Add key */}
@@ -393,7 +365,7 @@ const MonthlyRevenueReportPage: React.FC = () => {
           {/* Daily Breakdown Table */}
           <Card className="dark:bg-gray-900">
             <CardHeader>
-              <CardTitle>{t("reports:dailyBreakdown")}</CardTitle>
+              <CardTitle>التفاصيل اليومية</CardTitle>
             </CardHeader>
             {/* Add key */}
             <CardContent className="p-0">
@@ -401,13 +373,11 @@ const MonthlyRevenueReportPage: React.FC = () => {
                 <TableHeader>
                   <TableRow className="dark:border-gray-700">
                     <TableHead className="dark:text-gray-300">
-                      {t("common:date")}
+                      التاريخ
                     </TableHead>
-                    <TableHead className="dark:text-gray-300">
-                      {t("common:day")}
-                    </TableHead>
+                    <TableHead className="dark:text-gray-300">اليوم</TableHead>
                     <TableHead className="text-right dark:text-gray-300">
-                      {t("reports:dailyRevenue")}
+                      الإيرادات
                     </TableHead>
                     {/* Add key */}
                     {/* Display unique payment methods found in the month as columns */}
@@ -416,13 +386,13 @@ const MonthlyRevenueReportPage: React.FC = () => {
                     ).map((method) => (
                       <TableHead
                         key={method}
-                        className="text-right dark:text-gray-300"
+                        className="text-right dark:text-gray-300 capitalize"
                       >
-                        {t(`paymentMethods:${method}`)}
+                        {method}
                       </TableHead>
                     ))}
                     <TableHead className="text-right dark:text-gray-300">
-                      {t("reports:dailyTotalPayments")}
+                      إجمالي المدفوعات
                     </TableHead>
                     {/* Add key */}
                   </TableRow>
@@ -439,7 +409,7 @@ const MonthlyRevenueReportPage: React.FC = () => {
                         }
                         className="h-24 text-center text-muted-foreground"
                       >
-                        {t("common:noDataForMonth")}
+                        لا توجد بيانات لهذا الشهر
                       </TableCell>
                     </TableRow>
                   )}
@@ -447,10 +417,7 @@ const MonthlyRevenueReportPage: React.FC = () => {
                   {reportData.daily_breakdown.map((day) => (
                     <TableRow key={day.date} className="dark:border-gray-700">
                       <TableCell className="font-medium dark:text-gray-100">
-                        {formatDate(day.date, i18n.language, {
-                          day: "numeric",
-                          month: "short",
-                        })}
+                        {formatDate(day.date)}
                       </TableCell>
                       <TableCell className="dark:text-gray-300">
                         {day.day_of_week}
@@ -482,7 +449,7 @@ const MonthlyRevenueReportPage: React.FC = () => {
       )}
       {!isLoading && !error && !reportData && (
         <div className="text-center py-10 text-muted-foreground">
-          {t("reports:selectMonthYearPrompt")}
+          يرجى اختيار الشهر والسنة لعرض التقرير.
         </div>
       )}
       {/* Add key */}

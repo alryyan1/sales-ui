@@ -33,9 +33,8 @@ export const navItems: NavItem[] = [
     icon: BoxIcon,
     permission: null,
   },
-  { to: "/sales", label: "المبيعات", icon: CircleDollarSign, permission: null },
   {
-    to: "/sales/pos-new",
+    to: "/sales/pos",
     label: "نقطة البيع",
     icon: CircleDollarSign,
     permission: null,
@@ -43,12 +42,6 @@ export const navItems: NavItem[] = [
   {
     to: "/sales/pos-offline",
     label: "نقطة البيع (Offline)",
-    icon: CircleDollarSign,
-    permission: null,
-  },
-  {
-    to: "/sales/returns",
-    label: "مرتجعات المبيعات",
     icon: CircleDollarSign,
     permission: null,
   },
@@ -65,11 +58,7 @@ export const reportItems: NavItem[] = [
     permission: null,
   },
   { to: "/reports/inventory-log", label: "سجل المخزون", permission: null },
-  {
-    to: "/reports/near-expiry",
-    label: "قرب انتهاء الصلاحية",
-    permission: null,
-  },
+
   {
     to: "/reports/monthly-revenue",
     label: "الإيرادات الشهرية",
@@ -78,6 +67,11 @@ export const reportItems: NavItem[] = [
   {
     to: "/reports/sales-discounts",
     label: "المبيعات المخفضة",
+    permission: null,
+  },
+  {
+    to: "/reports/daily-income",
+    label: "تقرير الدخل اليومي",
     permission: null,
   },
 ];

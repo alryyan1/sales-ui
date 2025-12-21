@@ -1,7 +1,6 @@
 // src/components/reports/inventory/InventoryReportTable.tsx
 import React, { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { Link as RouterLink } from "react-router-dom";
+
 import { cn } from "@/lib/utils";
 
 // shadcn/ui & Lucide Icons
@@ -14,27 +13,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { ChevronDown, ChevronRight, Edit, AlertTriangle } from "lucide-react";
+import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
+import { ChevronDown, ChevronRight, AlertTriangle } from "lucide-react";
 // Removed Badge as not used in this specific version, but can be added back if needed
 
 // Child Component for batch details
 import { InventoryBatchDetailsTable } from "./InventoryBatchDetailsTable"; // Ensure this path is correct
 
 // Types
-import {
-  Product as ProductType,
-  PurchaseItem as PurchaseItemType,
-} from "@/services/productService"; // Ensure ProductType includes available_batches
+import { Product as ProductType } from "@/services/productService";
+import { PurchaseItem as PurchaseItemType } from "@/services/purchaseService";
 import { formatNumber, formatCurrency } from "@/constants";
 
 // Interface for Product with potentially loaded batches
 // This should match the structure of data coming from the API for this report
-interface ProductWithBatches extends ProductType {
+interface ProductWithBatches extends Omit<ProductType, "available_batches"> {
   available_batches?: PurchaseItemType[]; // Backend should provide this when 'include_batches' is true
   // Ensure ProductType itself has:
   // sku, name, stock_quantity, stock_alert_level,
@@ -53,7 +46,6 @@ export const InventoryReportTable: React.FC<InventoryReportTableProps> = ({
   isLoading = false, // Default to false
   // fetchBatchesForProduct
 }) => {
-  const { t } = useTranslation(["reports", "products", "common", "purchases"]);
   const [openRows, setOpenRows] = useState<Record<number, boolean>>({}); // Tracks expanded rows by productId
 
   const toggleRow = (productId: number) => {
@@ -68,8 +60,7 @@ export const InventoryReportTable: React.FC<InventoryReportTableProps> = ({
   if (products.length === 0) {
     return (
       <div className="py-10 text-center text-muted-foreground dark:text-gray-400">
-        {t("common:noResultsFound", { term: t("products:products") })}{" "}
-        {/* Add key */}
+        لم يتم العثور على أي منتجات
       </div>
     );
   }
@@ -82,28 +73,26 @@ export const InventoryReportTable: React.FC<InventoryReportTableProps> = ({
         <TableRow className="dark:border-gray-700">
           <TableHead className="w-[40px] px-2"></TableHead>{" "}
           {/* For expand icon */}
-          <TableHead className="px-2 py-3">{t("products:sku")}</TableHead>
+          <TableHead className="px-2 py-3">رمز المنتج (SKU)</TableHead>
           <TableHead className="px-2 py-3 min-w-[200px]">
-            {t("products:name")}
+            اسم المنتج
           </TableHead>{" "}
           {/* Give name more space */}
           <TableHead className="text-center px-2 py-3">
-            {t("products:totalStock")} ({t("products:sellableUnits")})
+            إجمالي المخزون (وحدة)
           </TableHead>
-          <TableHead className="text-center px-2 py-3">
-            {t("products:stockAlertLevel")}
+          <TableHead className="text-center px-2 py-3">حد التنبيه</TableHead>
+          <TableHead className="text-right px-2 py-3">
+            أحدث تكلفة للوحدة
           </TableHead>
           <TableHead className="text-right px-2 py-3">
-            {t("products:latestCostPerSellableUnit")}
-          </TableHead>
-          <TableHead className="text-right px-2 py-3">
-            {t("products:lastSalePricePerSellableUnit")}
+            آخر سعر بيع للوحدة
           </TableHead>
           <TableHead className="text-center px-2 py-3">
-            {t("reports:totalItemsPurchased")}
+            إجمالي المشتريات
           </TableHead>
           <TableHead className="text-center px-2 py-3">
-            {t("reports:totalItemsSold")}
+            إجمالي المبيعات
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -116,8 +105,7 @@ export const InventoryReportTable: React.FC<InventoryReportTableProps> = ({
           const hasBatches =
             product.available_batches && product.available_batches.length > 0;
           const isOpen = !!openRows[product.id];
-          const sellableUnitName =
-            product.sellable_unit_name || t("products:defaultSellableUnit");
+          const sellableUnitName = product.sellable_unit_name || "وحدة";
 
           return (
             <React.Fragment key={product.id}>
@@ -145,9 +133,7 @@ export const InventoryReportTable: React.FC<InventoryReportTableProps> = ({
                       ) : (
                         <ChevronRight className="h-4 w-4" />
                       )}
-                      <span className="sr-only">
-                        {isOpen ? t("common:collapse") : t("common:expand")}
-                      </span>{" "}
+                      <span className="sr-only">{isOpen ? "طي" : "توسيع"}</span>{" "}
                       {/* Add keys */}
                     </Button>
                   ) : (
@@ -155,7 +141,7 @@ export const InventoryReportTable: React.FC<InventoryReportTableProps> = ({
                   )}
                 </TableCell>
                 <TableCell className="px-2 py-3 dark:text-gray-300">
-                  {product.sku || t("common:n/a")}
+                  {product.sku || "-"}
                 </TableCell>
                 <TableCell className="px-2 py-3 font-medium dark:text-gray-100">
                   {product.name}
@@ -171,29 +157,29 @@ export const InventoryReportTable: React.FC<InventoryReportTableProps> = ({
                     ? `${formatNumber(
                         product.stock_alert_level
                       )} ${sellableUnitName}`
-                    : t("common:n/a")}
+                    : "-"}
                 </TableCell>
                 <TableCell className="text-right px-2 py-3 dark:text-gray-100">
                   {product.latest_cost_per_sellable_unit
                     ? formatCurrency(product.latest_cost_per_sellable_unit)
-                    : t("common:n/a")}
+                    : "-"}
                 </TableCell>
                 <TableCell className="text-right px-2 py-3 dark:text-gray-100">
                   {product.last_sale_price_per_sellable_unit
-                    ? formatCurrency(
-                        product.last_sale_price_per_sellable_unit
-                      )
-                    : t("common:n/a")}
+                    ? formatCurrency(product.last_sale_price_per_sellable_unit)
+                    : "-"}
                 </TableCell>
                 <TableCell className="text-center px-2 py-3 dark:text-gray-100">
-                  {product.total_items_purchased !== null && product.total_items_purchased !== undefined
+                  {product.total_items_purchased !== null &&
+                  product.total_items_purchased !== undefined
                     ? formatNumber(product.total_items_purchased)
-                    : t("common:n/a")}
+                    : "-"}
                 </TableCell>
                 <TableCell className="text-center px-2 py-3 dark:text-gray-100">
-                  {product.total_items_sold !== null && product.total_items_sold !== undefined
+                  {product.total_items_sold !== null &&
+                  product.total_items_sold !== undefined
                     ? formatNumber(product.total_items_sold)
-                    : t("common:n/a")}
+                    : "-"}
                 </TableCell>
               </TableRow>
               {/* Collapsible Content for Batches */}
@@ -218,7 +204,7 @@ export const InventoryReportTable: React.FC<InventoryReportTableProps> = ({
                         {" "}
                         {/* Added border-t for separation */}
                         <h4 className="text-sm font-semibold mb-2 text-gray-700 dark:text-gray-200">
-                          {t("reports:batchDetailsFor", { name: product.name })}
+                          {`تفاصيل الدفعات للمنتج: ${product.name}`}
                         </h4>
                         <InventoryBatchDetailsTable
                           batches={product.available_batches!} // Assert as batches exist

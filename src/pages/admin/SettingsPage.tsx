@@ -1,9 +1,9 @@
 // src/pages/admin/SettingsPage.tsx
 import React, { useEffect, useState } from "react";
-import { useForm, SubmitHandler, Controller } from "react-hook-form";
+import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useTranslation } from "react-i18next";
+
 import { useSettings } from "@/context/SettingsContext"; // Import settings context
 import { AppSettings } from "@/services/settingService"; // Import settings type
 import { toast } from "sonner";
@@ -28,17 +28,18 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea"; // If you have multiline settings
-import {
-  Loader2,
-  Settings as SettingsIcon,
-  AlertCircle,
-  Save,
-} from "lucide-react";
+import { Loader2, Settings as SettingsIcon, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import WhatsAppConfig from "@/components/admin/WhatsAppConfig";
 import settingService from "@/services/settingService";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // --- Zod Schema for Settings Form (Matches AppSettings keys) ---
 // Make all fields optional for partial updates, but RHF will use defaultValues
@@ -69,7 +70,7 @@ const settingsFormSchema = z.object({
   invoice_prefix: z.string().optional(),
   purchase_order_prefix: z.string().optional(),
   default_profit_rate: z.coerce.number().min(0).max(1000).optional(),
-  
+
   // WhatsApp Settings
   whatsapp_enabled: z.boolean().optional(),
   whatsapp_api_url: z.string().url({ message: "validation:url" }).optional(),
@@ -82,12 +83,10 @@ type SettingsFormValues = z.infer<typeof settingsFormSchema>;
 
 // --- Component ---
 const SettingsPage: React.FC = () => {
-  const { t } = useTranslation(["settings", "common", "validation"]);
-  const { settings, isLoadingSettings, updateSettings, fetchSettings } =
-    useSettings(); // Get from context
+  // Removed useTranslation
+  const { settings, isLoadingSettings, updateSettings } = useSettings(); // Get from context
 
   const [serverError, setServerError] = useState<string | null>(null);
-  const [isOpen, setIsOpen] = useState(false); // If using a modal, else remove this
 
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsFormSchema),
@@ -105,7 +104,7 @@ const SettingsPage: React.FC = () => {
       invoice_prefix: "INV-",
       purchase_order_prefix: "PO-",
       default_profit_rate: 20.0,
-      
+
       // WhatsApp defaults
       whatsapp_enabled: false,
       whatsapp_api_url: "https://waapi.app/api/v1",
@@ -120,8 +119,7 @@ const SettingsPage: React.FC = () => {
     reset,
     getValues,
     watch,
-    formState: { isSubmitting, errors },
-    setError: setFormError,
+    formState: { isSubmitting },
   } = form;
 
   // --- Effect to Populate Form with Loaded Settings ---
@@ -142,16 +140,17 @@ const SettingsPage: React.FC = () => {
         invoice_prefix: settings.invoice_prefix || "INV-",
         purchase_order_prefix: settings.purchase_order_prefix || "PO-",
         default_profit_rate: settings.default_profit_rate ?? 20.0,
-        
+
         // WhatsApp settings
         whatsapp_enabled: settings.whatsapp_enabled || false,
-        whatsapp_api_url: settings.whatsapp_api_url || "https://waapi.app/api/v1",
+        whatsapp_api_url:
+          settings.whatsapp_api_url || "https://waapi.app/api/v1",
         whatsapp_api_token: settings.whatsapp_api_token || "",
         whatsapp_instance_id: settings.whatsapp_instance_id || "",
         whatsapp_default_phone: settings.whatsapp_default_phone || "",
       });
     }
-  }, [settings, reset, isOpen]); // Depend on isOpen if this were a modal, or just settings
+  }, [settings, reset]); // Depend on isOpen if this were a modal, or just settings
 
   // --- Form Submission ---
   const onSubmit: SubmitHandler<SettingsFormValues> = async (data) => {
@@ -173,7 +172,7 @@ const SettingsPage: React.FC = () => {
       console.error("Failed to update settings:", err);
       // Error toast is handled by context, but set local serverError for form display
       // const generalError = getErrorMessage(err); // Use generic getErrorMessage
-      setServerError('server error ');
+      setServerError("server error ");
       // Optionally map specific API validation errors back to fields if backend provides them
       // const apiErrors = getValidationErrors(err);
       // if (apiErrors) { /* ... map with setFormError ... */ }
@@ -183,7 +182,7 @@ const SettingsPage: React.FC = () => {
   // --- Render Logic ---
   if (isLoadingSettings && !settings) {
     // Show skeletons only on initial settings load
-    
+
     return (
       <div className="p-4 md:p-6 lg:p-8 space-y-6">
         <h1 className="text-2xl md:text-3xl font-semibold">
@@ -220,15 +219,15 @@ const SettingsPage: React.FC = () => {
         {/* <Button variant="outline" size="icon" onClick={() => navigate('/admin')}><ArrowLeft className="h-4 w-4" /></Button> */}
         <SettingsIcon className="h-7 w-7 text-primary me-2" />
         <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 dark:text-gray-100">
-          {t("settings:pageTitle")}
+          الإعدادات العامة
         </h1>
       </div>
 
       {/* General Settings */}
       <Card className="dark:bg-gray-900 mb-8">
         <CardHeader>
-          <CardTitle>{t("settings:appSettingsTitle")}</CardTitle>
-          <CardDescription>{t("settings:appSettingsDesc")}</CardDescription>
+          <CardTitle>إعدادات التطبيق</CardTitle>
+          <CardDescription>تكوين الإعدادات العامة للتطبيق</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -236,7 +235,7 @@ const SettingsPage: React.FC = () => {
               {serverError && !isSubmitting && (
                 <Alert variant="destructive" className="mb-4">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>{t("common:error")}</AlertTitle>
+                  <AlertTitle>خطأ</AlertTitle>
                   <AlertDescription>{serverError}</AlertDescription>
                 </Alert>
               )}
@@ -247,8 +246,7 @@ const SettingsPage: React.FC = () => {
                   name="company_name"
                   render={({ field }) => (
                     <FormItem>
-                      
-                      <FormLabel>{t("settings:companyName")}</FormLabel>
+                      <FormLabel>اسم الشركة</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -261,10 +259,13 @@ const SettingsPage: React.FC = () => {
                   name="company_email"
                   render={({ field }) => (
                     <FormItem>
-                      
-                      <FormLabel>{t("settings:companyEmail")}</FormLabel>
+                      <FormLabel>البريد الإلكتروني للشركة</FormLabel>
                       <FormControl>
-                        <Input type="email" {...field} value={field.value || ''} />
+                        <Input
+                          type="email"
+                          {...field}
+                          value={field.value || ""}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -275,8 +276,7 @@ const SettingsPage: React.FC = () => {
                   name="company_phone"
                   render={({ field }) => (
                     <FormItem>
-                      
-                      <FormLabel>{t("settings:companyPhone")}</FormLabel>
+                      <FormLabel>هاتف الشركة</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -289,8 +289,7 @@ const SettingsPage: React.FC = () => {
                   name="company_address"
                   render={({ field }) => (
                     <FormItem className="md:col-span-2">
-                      
-                      <FormLabel>{t("settings:companyAddress")}</FormLabel>
+                      <FormLabel>عنوان الشركة</FormLabel>
                       <FormControl>
                         <Textarea {...field} className="min-h-[80px]" />
                       </FormControl>
@@ -299,21 +298,39 @@ const SettingsPage: React.FC = () => {
                   )}
                 />
                 <div className="md:col-span-2">
-                  <FormLabel>{t("settings:companyLogoUrl", "Company Logo")}</FormLabel>
+                  <FormLabel>شعار الشركة</FormLabel>
                   <div className="flex items-center gap-3">
-                    <Input type="file" accept="image/*" onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      try {
-                        const updated = await settingService.uploadLogo(file);
-                        reset({ ...getValues(), company_logo_url: updated.company_logo_url || "" });
-                        toast.success(t('success'), { description: t('settings:updateSuccess')});
-                      } catch (err) {
-                        toast.error(t('common:error'));
-                      }
-                    }} />
-                    {(watch('company_logo_url') || settings?.company_logo_url) && (
-                      <img src={watch('company_logo_url') || settings?.company_logo_url || ''} alt="Logo" className="h-20 w-auto rounded border" />
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        try {
+                          const updated = await settingService.uploadLogo(file);
+                          reset({
+                            ...getValues(),
+                            company_logo_url: updated.company_logo_url || "",
+                          });
+                          toast.success("تم بنجاح", {
+                            description: "تم تحديث الشعار بنجاح",
+                          });
+                        } catch (err) {
+                          toast.error("حدث خطأ");
+                        }
+                      }}
+                    />
+                    {(watch("company_logo_url") ||
+                      settings?.company_logo_url) && (
+                      <img
+                        src={
+                          watch("company_logo_url") ||
+                          settings?.company_logo_url ||
+                          ""
+                        }
+                        alt="Logo"
+                        className="h-20 w-auto rounded border"
+                      />
                     )}
                   </div>
                 </div>
@@ -323,10 +340,7 @@ const SettingsPage: React.FC = () => {
                   name="currency_symbol"
                   render={({ field }) => (
                     <FormItem>
-                      
-                      <FormLabel>
-                        {t("settings:currencySymbol")}
-                      </FormLabel>
+                      <FormLabel>رمز العملة</FormLabel>
                       <FormControl>
                         <Input {...field} maxLength={5} />
                       </FormControl>
@@ -339,13 +353,12 @@ const SettingsPage: React.FC = () => {
                   name="date_format"
                   render={({ field }) => (
                     <FormItem>
-                      
-                      <FormLabel>{t("settings:dateFormat")}</FormLabel>
+                      <FormLabel>صيغة التاريخ</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder="YYYY-MM-DD" />
                       </FormControl>
                       <FormDescription>
-                        {t("settings:dateFormatDesc")}
+                        استخدم YYYY للسنة، MM للشهر، DD لليوم
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -356,16 +369,22 @@ const SettingsPage: React.FC = () => {
                   name="timezone"
                   render={({ field }) => (
                     <FormItem>
-                      
-                      <FormLabel>{t("settings:timezone", "Timezone")}</FormLabel>
+                      <FormLabel>المنطقة الزمنية</FormLabel>
                       <FormControl>
-                        <Select value={field.value} onValueChange={field.onChange}>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        >
                           <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select timezone" />
+                            <SelectValue placeholder="اختر المنطقة الزمنية" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Africa/Khartoum">Africa/Khartoum</SelectItem>
-                            <SelectItem value="Asia/Muscat">Asia/Muscat</SelectItem>
+                            <SelectItem value="Africa/Khartoum">
+                              Africa/Khartoum
+                            </SelectItem>
+                            <SelectItem value="Asia/Muscat">
+                              Asia/Muscat
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </FormControl>
@@ -378,10 +397,7 @@ const SettingsPage: React.FC = () => {
                   name="global_low_stock_threshold"
                   render={({ field }) => (
                     <FormItem>
-                      
-                      <FormLabel>
-                        {t("settings:lowStockThreshold")}
-                      </FormLabel>
+                      <FormLabel>حد تنبيه انخفاض المخزون</FormLabel>
                       <FormControl>
                         <Input type="number" min="0" {...field} />
                       </FormControl>
@@ -394,8 +410,7 @@ const SettingsPage: React.FC = () => {
                   name="invoice_prefix"
                   render={({ field }) => (
                     <FormItem>
-                      
-                      <FormLabel>{t("settings:invoicePrefix")}</FormLabel>
+                      <FormLabel>بادئة الفاتورة</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -408,8 +423,7 @@ const SettingsPage: React.FC = () => {
                   name="purchase_order_prefix"
                   render={({ field }) => (
                     <FormItem>
-                      
-                      <FormLabel>{t("settings:poPrefix")}</FormLabel>
+                      <FormLabel>بادئة طلب الشراء</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -422,13 +436,18 @@ const SettingsPage: React.FC = () => {
                   name="default_profit_rate"
                   render={({ field }) => (
                     <FormItem>
-                      
-                      <FormLabel>{t("settings:defaultProfitRate")}</FormLabel>
+                      <FormLabel>هامش الربح الافتراضي (%)</FormLabel>
                       <FormControl>
-                        <Input type="number" min="0" max="1000" step="0.1" {...field} />
+                        <Input
+                          type="number"
+                          min="0"
+                          max="1000"
+                          step="0.1"
+                          {...field}
+                        />
                       </FormControl>
                       <FormDescription>
-                        {t("settings:defaultProfitRateDesc")}
+                        النسبة المئوية الافتراضية للربح عند إضافة منتجات جديدة
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -444,7 +463,7 @@ const SettingsPage: React.FC = () => {
                   {isSubmitting && (
                     <Loader2 className="me-2 h-4 w-4 animate-spin" />
                   )}
-                  {t("common:saveChanges")}
+                  حفظ التغييرات
                 </Button>
               </div>
             </form>
@@ -455,15 +474,16 @@ const SettingsPage: React.FC = () => {
       {/* WhatsApp Configuration */}
       {settings && (
         <div className="mb-8">
-          <WhatsAppConfig 
-            settings={settings} 
-            onSettingsUpdate={updateSettings} 
+          <WhatsAppConfig
+            settings={settings}
+            onSettingsUpdate={async (data) => {
+              await updateSettings(data);
+            }}
           />
         </div>
       )}
 
       {/* WhatsApp Scheduler Section removed as requested */}
-      
     </div>
   );
 };

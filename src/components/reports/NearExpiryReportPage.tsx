@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useTranslation } from "react-i18next";
+
 import {
   useNavigate,
   useSearchParams,
@@ -64,7 +64,12 @@ import { PaginatedResponse } from "@/services/clientService";
 
 // --- Zod Schema for Filter Form ---
 const nearExpiryFilterSchema = z.object({
-  daysThreshold: z.coerce.number().int().min(1).max(365).default(30),
+  daysThreshold: z.coerce
+    .number()
+    .int()
+    .min(1, "يجب أن يكون 1 على الأقل")
+    .max(365, "يجب أن لا يزيد عن 365")
+    .default(30),
   productId: z.string().nullable().optional(), // For filtering by a specific product
   // categoryId: z.string().nullable().optional(),
 });
@@ -72,20 +77,14 @@ type NearExpiryFilterValues = z.infer<typeof nearExpiryFilterSchema>;
 
 // Define the structure of the items returned by the API
 // This will be PurchaseItemType with product eager loaded
-interface NearExpiryItem extends PurchaseItemType {
+interface NearExpiryItem extends Omit<PurchaseItemType, "product"> {
   product?: Pick<ProductType, "id" | "name" | "sku">; // Ensure product details are included
 }
 interface PaginatedNearExpiryItems extends PaginatedResponse<NearExpiryItem> {}
 
 // --- Component ---
 const NearExpiryReportPage: React.FC = () => {
-  const { t } = useTranslation([
-    "reports",
-    "products",
-    "common",
-    "purchases",
-    "validation",
-  ]);
+  // Removed useTranslation
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -98,7 +97,7 @@ const NearExpiryReportPage: React.FC = () => {
   // Add state for product filter dropdown if needed
 
   // --- Form for Filters ---
-  const form = useForm<NearExpiryFilterValues>({
+  const form = useForm({
     resolver: zodResolver(nearExpiryFilterSchema),
     defaultValues: {
       daysThreshold: Number(searchParams.get("daysThreshold")) || 30,
@@ -187,14 +186,14 @@ const NearExpiryReportPage: React.FC = () => {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 dark:text-gray-100">
-          {t("reports:nearExpiryReportTitle")} {/* Add key */}
+          تقرير قرب انتهاء الصلاحية
         </h1>
       </div>
 
       {/* Filter Form Card */}
       <Card className="dark:bg-gray-900 mb-6">
         <CardHeader>
-          <CardTitle className="text-lg">{t("common:filters")}</CardTitle>
+          <CardTitle className="text-lg">الفلاتر</CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -205,8 +204,7 @@ const NearExpiryReportPage: React.FC = () => {
                   name="daysThreshold"
                   render={({ field, fieldState }) => (
                     <FormItem>
-                      
-                      <FormLabel>{t("reports:daysThreshold")}</FormLabel>
+                      <FormLabel>حد الأيام</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -218,7 +216,7 @@ const NearExpiryReportPage: React.FC = () => {
                       </FormControl>
                       <FormMessage>
                         {fieldState.error?.message
-                          ? t(fieldState.error.message)
+                          ? fieldState.error.message
                           : null}
                       </FormMessage>
                     </FormItem>
@@ -235,7 +233,7 @@ const NearExpiryReportPage: React.FC = () => {
                   disabled={isLoading}
                 >
                   <X className="me-2 h-4 w-4" />
-                  {t("common:clearFilters")}
+                  مسح الفلاتر
                 </Button>
                 <Button type="submit" disabled={isLoading}>
                   {isLoading ? (
@@ -243,7 +241,7 @@ const NearExpiryReportPage: React.FC = () => {
                   ) : (
                     <Filter className="me-2 h-4 w-4" />
                   )}
-                  {t("common:applyFilters")}
+                  تطبيق الفلاتر
                 </Button>
               </div>
             </form>
@@ -260,7 +258,7 @@ const NearExpiryReportPage: React.FC = () => {
       {!isLoading && error && (
         <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-5 w-5" />
-          <AlertTitle>{t("common:error")}</AlertTitle>
+          <AlertTitle>خطأ</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
@@ -268,33 +266,28 @@ const NearExpiryReportPage: React.FC = () => {
         <>
           <Card className="dark:bg-gray-900">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>{t("reports:results")}</CardTitle>
+              <CardTitle>النتائج</CardTitle>
               <CardDescription>
-                {t("common:paginationSummary", {
-                  from: reportData.from,
-                  to: reportData.to,
-                  total: reportData.total,
-                })}
+                {`عرض ${reportData.from}-${reportData.to} من ${reportData.total}`}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t("products:product")}</TableHead>
-                    <TableHead>{t("products:sku")}</TableHead>
-                    <TableHead>{t("purchases:batchNumber")}</TableHead>
+                    <TableHead>المنتج</TableHead>
+                    <TableHead>SKU</TableHead>
+                    <TableHead>رقم الدفعة</TableHead>
                     <TableHead className="text-center">
-                      {t("reports:remainingQty")}
+                      الكمية المتبقية
                     </TableHead>
-                    <TableHead>{t("purchases:expiryDate")}</TableHead>
+                    <TableHead>تاريخ الانتهاء</TableHead>
                     <TableHead className="text-center">
-                      {t("reports:daysToExpiry")}
+                      الأيام المتبقية
                     </TableHead>
                     {/* Add key */}
                     <TableHead className="text-right">
-                      {t("purchases:costPerUnit")} (
-                      {t("products:sellableUnits")})
+                      التكلفة للوحدة ( وحدات البيع)
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -305,7 +298,7 @@ const NearExpiryReportPage: React.FC = () => {
                         colSpan={7}
                         className="h-24 text-center text-muted-foreground"
                       >
-                        {t("reports:noNearExpiryItems")}
+                        لا توجد منتجات قريبة الانتهاء
                       </TableCell>
                     </TableRow>
                   )}
@@ -328,7 +321,6 @@ const NearExpiryReportPage: React.FC = () => {
                             "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300"
                         )}
                       >
-                        
                         {/* Highlight expired */}
                         <TableCell className="font-medium">
                           {item.product?.name || `ID: ${item.product_id}`}
@@ -341,7 +333,7 @@ const NearExpiryReportPage: React.FC = () => {
                         <TableCell>
                           {item.expiry_date
                             ? formatDate(item.expiry_date)
-                            : t("common:n/a")}
+                            : "---"}
                         </TableCell>
                         <TableCell
                           className={`text-center font-medium ${
@@ -356,9 +348,9 @@ const NearExpiryReportPage: React.FC = () => {
                         >
                           {daysLeft !== null
                             ? daysLeft < 0
-                              ? t("reports:expired")
+                              ? "منتهية"
                               : daysLeft
-                            : t("common:n/a")}
+                            : "---"}
                           {/* Add key */}
                         </TableCell>
                         <TableCell className="text-right">
@@ -387,7 +379,7 @@ const NearExpiryReportPage: React.FC = () => {
       {!isLoading && !error && (!reportData || !reportData.data?.length) && (
         <div className="text-center text-muted-foreground my-8">
           <PackageSearch className="mx-auto mb-2 h-8 w-8" />
-          <div>{t("reports:noNearExpiryItems")}</div>
+          <div>لا توجد منتجات قريبة الانتهاء</div>
         </div>
       )}
     </div>

@@ -1,10 +1,7 @@
 // src/pages/reports/InventoryReportPage.tsx
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useTranslation } from "react-i18next";
-import {
-  useNavigate,
-  useSearchParams,
-} from "react-router-dom";
+
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils"; // Assuming you have this from shadcn/ui setup
 
@@ -38,9 +35,7 @@ import {
 
 // API Client & Types
 import apiClient, { getErrorMessage } from "@/lib/axios";
-import {
-  Product as ProductType
-} from "@/services/productService"; // Ensure ProductType includes available_batches and new accessors
+import { Product as ProductType } from "@/services/productService"; // Ensure ProductType includes available_batches and new accessors
 import { PaginatedResponse } from "@/services/clientService"; // Assuming shared type
 
 // Child Components
@@ -54,7 +49,7 @@ import { PurchaseItem } from "@/services/purchaseService";
 import { PdfViewerDialog } from "@/components/common/PdfViewerDialog";
 
 // Interface for Product with potentially loaded batches for this page
-interface ProductWithBatches extends Omit<ProductType, 'available_batches'> {
+interface ProductWithBatches extends Omit<ProductType, "available_batches"> {
   available_batches?: PurchaseItem[];
 }
 type PaginatedProductsWithBatches = PaginatedResponse<ProductWithBatches>;
@@ -113,13 +108,6 @@ const generatePagination = (
 };
 
 const InventoryReportPage: React.FC = () => {
-  const { t } = useTranslation([
-    "reports",
-    "products",
-    "common",
-    "purchases",
-    "validation",
-  ]);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -173,13 +161,13 @@ const InventoryReportPage: React.FC = () => {
       } catch (err) {
         const errorMsg = getErrorMessage(err);
         setError(errorMsg);
-        toast.error(t("common:error"), { description: errorMsg });
+        toast.error("خطأ", { description: errorMsg });
         setReportData(null);
       } finally {
         setIsLoading(false);
       }
     },
-    [t]
+    []
   ); // Added t as dependency for toast
 
   // --- Effect to Fetch Report When Filters/Page Change from URL ---
@@ -207,17 +195,18 @@ const InventoryReportPage: React.FC = () => {
       const params = new URLSearchParams();
       if (currentFilters.search) params.append("search", currentFilters.search);
       if (currentFilters.lowStockOnly) params.append("low_stock_only", "true");
-      if (currentFilters.outOfStockOnly) params.append("out_of_stock_only", "true");
+      if (currentFilters.outOfStockOnly)
+        params.append("out_of_stock_only", "true");
 
       const url = `/api/reports/inventory-pdf?${params.toString()}`;
       setPdfUrl(url);
       setPdfDialogOpen(true);
     } catch (err) {
-      toast.error(t("common:error"), {
-        description: t("reports:errorGeneratingPdf"),
+      toast.error("خطأ", {
+        description: "حدث خطأ أثناء إنشاء ملف PDF",
       });
     }
-  }, [currentFilters, t]);
+  }, [currentFilters]);
   const handleClearFilters = () => {
     // Does not reset form directly, relies on useEffect syncing form with URL params
     setSearchParams({ page: "1" }); // This will trigger useEffect which resets the form
@@ -244,15 +233,15 @@ const InventoryReportPage: React.FC = () => {
             variant="outline"
             size="icon"
             onClick={() => navigate("/dashboard")}
-            aria-label={t("common:back")}
+            aria-label="رجوع"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 dark:text-gray-100">
-            {t("reports:inventoryReportTitle")}
+            تقرير المخزون
           </h1>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {!isLoading && !error && reportData && (
             <Button
@@ -261,7 +250,7 @@ const InventoryReportPage: React.FC = () => {
               className="flex items-center gap-2"
             >
               <FileText className="h-4 w-4" />
-              {t("reports:exportPdf")}
+              تصدير PDF
             </Button>
           )}
         </div>
@@ -287,14 +276,14 @@ const InventoryReportPage: React.FC = () => {
       {!isLoading && error && (
         <Alert variant="destructive" className="mt-6">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>{t("common:errorFetchingData")}</AlertTitle>
+          <AlertTitle>خطأ في جلب البيانات</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
           <div className="mt-4">
             <Button
               variant="outline"
               onClick={() => fetchReport(currentFilters, currentPage)}
             >
-              {t("common:retry")}
+              إعادة المحاولة
             </Button>
           </div>
         </Alert>
@@ -305,15 +294,11 @@ const InventoryReportPage: React.FC = () => {
         <>
           <Card className="dark:bg-gray-900 mt-6">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4 sm:px-6">
-              <CardTitle className="text-lg font-medium">
-                {t("reports:results")}
-              </CardTitle>
+              <CardTitle className="text-lg font-medium">النتائج</CardTitle>
               <CardDescription className="text-sm text-muted-foreground">
-                {t("common:paginationSummary", {
-                  from: formatNumber(reportData.from),
-                  to: formatNumber(reportData.to),
-                  total: formatNumber(reportData.total),
-                })}
+                {`عرض ${formatNumber(reportData.from)}-${formatNumber(
+                  reportData.to
+                )} من ${formatNumber(reportData.total)}`}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -411,7 +396,7 @@ const InventoryReportPage: React.FC = () => {
       {!isLoading && !error && reportData && reportData.data.length === 0 && (
         <div className="text-center py-10 text-muted-foreground mt-6">
           <PackageCheck className="mx-auto h-12 w-12 text-gray-400 mb-3" />
-          {t("common:noResults")}
+          لا توجد نتائج
         </div>
       )}
       {/* Initial prompt if no filters applied and no data (before first fetch attempt with filters) */}
@@ -420,7 +405,7 @@ const InventoryReportPage: React.FC = () => {
         !reportData &&
         !Object.values(currentFilters).some(Boolean) && (
           <div className="text-center py-10 text-muted-foreground mt-6">
-            {t("reports:applyFiltersToView")} {/* Add key */}
+            قم بتطبيق الفلاتر لعرض التقرير {/* Add key */}
           </div>
         )}
 
@@ -429,7 +414,7 @@ const InventoryReportPage: React.FC = () => {
         isOpen={pdfDialogOpen}
         onClose={() => setPdfDialogOpen(false)}
         pdfUrl={pdfUrl}
-        title={t("reports:inventoryReportTitle")}
+        title="تقرير المخزون"
       />
     </div>
   );

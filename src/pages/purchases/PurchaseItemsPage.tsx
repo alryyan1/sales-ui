@@ -1,7 +1,7 @@
 // src/pages/purchases/PurchaseItemsPage.tsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+
 import { toast } from 'sonner';
 
 // MUI Components
@@ -59,7 +59,7 @@ interface PurchaseItemFormData {
 
 
 const PurchaseItemsPage: React.FC = () => {
-  const { t } = useTranslation(['purchases', 'common', 'products']);
+    // Removed useTranslation
   const navigate = useNavigate();
   const { purchaseId } = useParams<{ purchaseId: string }>();
 
@@ -106,11 +106,11 @@ const PurchaseItemsPage: React.FC = () => {
       console.error('Failed to fetch purchase details:', err);
       const errorMsg = purchaseService.getErrorMessage(err);
       setError(errorMsg);
-      toast.error(t('common:error'), { description: errorMsg });
+      toast.error("خطأ", { description: errorMsg });
     } finally {
       setIsLoading(false);
     }
-  }, [purchaseId, t]);
+  }, [purchaseId]);
 
   // Fetch products for autocomplete
   const fetchProducts = useCallback(async () => {
@@ -120,11 +120,11 @@ const PurchaseItemsPage: React.FC = () => {
       setProducts(response.data || []);
     } catch (error) {
       console.error('Failed to fetch products:', error);
-      toast.error(t('common:error'), { description: 'Failed to load products' });
+      toast.error("خطأ", { description: 'فشل تحميل المنتجات' });
     } finally {
       setIsLoadingProducts(false);
     }
-  }, [t]);
+  }, []);
 
   // Load data on mount
   useEffect(() => {
@@ -139,15 +139,15 @@ const PurchaseItemsPage: React.FC = () => {
     const errors: { [key: string]: string } = {};
     
     if (!data.product_id) {
-      errors.product_id = t('purchases:productRequired');
+      errors.product_id = "المنتج مطلوب";
     }
     
     if (data.quantity <= 0) {
-      errors.quantity = t('purchases:quantityRequired');
+      errors.quantity = "الكمية مطلوبة";
     }
     
     if (data.unit_cost <= 0) {
-      errors.unit_cost = t('purchases:unitCostRequired');
+      errors.unit_cost = "تكلفة الوحدة مطلوبة";
     }
     
     return errors;
@@ -231,7 +231,7 @@ const PurchaseItemsPage: React.FC = () => {
         const result = await purchaseService.updatePurchaseItem(Number(purchaseId), editingItemId, itemData);
         setPurchase(result.purchase);
         setPurchaseItems(result.purchase.items || []);
-        toast.success(t('purchases:itemUpdated'));
+        toast.success("تم تحديث العنصر");
       } else {
         // Add new item
         const itemData = {
@@ -246,30 +246,31 @@ const PurchaseItemsPage: React.FC = () => {
         const result = await purchaseService.addPurchaseItem(Number(purchaseId), itemData);
         setPurchase(result.purchase);
         setPurchaseItems(result.purchase.items || []);
-        toast.success(t('purchases:itemAdded'));
+        toast.success("تم إضافة العنصر");
       }
 
       handleCancelForm();
     } catch (error) {
       console.error('Failed to save item:', error);
       const errorMsg = purchaseService.getErrorMessage(error);
-      toast.error(t('common:error'), { description: errorMsg });
+      toast.error("خطأ", { description: errorMsg });
     }
   };
 
   // Delete item
   const handleDeleteItem = async (itemId: number) => {
-    if (!confirm(t('purchases:confirmDeleteItem'))) return;
+    if (!confirm("هل أنت متأكد من حذف هذا العنصر؟")) return;
 
     try {
       const result = await purchaseService.deletePurchaseItem(Number(purchaseId), itemId);
       setPurchase(result.purchase);
       setPurchaseItems(result.purchase.items || []);
-      toast.success(t('purchases:itemDeleted'));
+      setPurchaseItems(result.purchase.items || []);
+      toast.success("تم حذف العنصر");
     } catch (error) {
       console.error('Failed to delete item:', error);
       const errorMsg = purchaseService.getErrorMessage(error);
-      toast.error(t('common:error'), { description: errorMsg });
+      toast.error("خطأ", { description: errorMsg });
     }
   };
 
@@ -288,7 +289,7 @@ const PurchaseItemsPage: React.FC = () => {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 200px)', p: 3 }}>
         <CircularProgress />
-        <Typography sx={{ ml: 2 }}>{t('common:loading')}</Typography>
+        <Typography sx={{ ml: 2 }}>جاري التحميل...</Typography>
       </Box>
     );
   }
@@ -304,7 +305,7 @@ const PurchaseItemsPage: React.FC = () => {
   if (!purchase) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="error">{t('purchases:purchaseNotFound')}</Alert>
+        <Alert severity="error">الشراء غير موجود</Alert>
       </Box>
     );
   }
@@ -318,10 +319,10 @@ const PurchaseItemsPage: React.FC = () => {
         </IconButton>
         <Box>
           <Typography variant="h4" component="h1">
-            {t('purchases:managePurchaseItems')}
+            إدارة عناصر الشراء
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {t('purchases:purchase')} #{purchase.id} - {purchase.supplier_name}
+            شراء #{purchase.id} - {purchase.supplier_name}
           </Typography>
         </Box>
       </Box>
@@ -329,13 +330,14 @@ const PurchaseItemsPage: React.FC = () => {
       {/* Purchase Summary */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle>{t('purchases:purchaseSummary')}</CardTitle>
+        <CardHeader>
+          <CardTitle>ملخص الشراء</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Typography variant="body2" color="text.secondary">
-                {t('purchases:purchaseDate')}
+                تاريخ الشراء
               </Typography>
               <Typography variant="body1">
                 {dayjs(purchase.purchase_date).format('DD/MM/YYYY')}
@@ -343,15 +345,19 @@ const PurchaseItemsPage: React.FC = () => {
             </div>
             <div>
               <Typography variant="body2" color="text.secondary">
-                {t('purchases:status')}
+                الحالة
               </Typography>
               <Badge variant={purchase.status === 'received' ? 'default' : 'secondary'}>
-                {t(`purchases:status_${purchase.status}`)}
+                {{
+                  received: "تم الاستلام",
+                  pending: "معلق",
+                  ordered: "تم الطلب",
+                }[purchase.status] || purchase.status}
               </Badge>
             </div>
             <div>
               <Typography variant="body2" color="text.secondary">
-                {t('purchases:totalAmount')}
+                المبلغ الإجمالي
               </Typography>
               <Typography variant="body1" fontWeight="bold">
                 {formatCurrency(purchase.total_amount)}
@@ -365,14 +371,14 @@ const PurchaseItemsPage: React.FC = () => {
       <Card className="mb-6">
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>{t('purchases:purchaseItems')}</CardTitle>
+            <CardTitle>عناصر الشراء</CardTitle>
             <Button
               variant="contained"
               startIcon={<AddIcon />}
               onClick={handleAddItem}
               disabled={isAddingItem || editingItemId !== null}
             >
-              {t('purchases:addItem')}
+              إضافة عنصر
             </Button>
           </div>
         </CardHeader>
@@ -380,19 +386,19 @@ const PurchaseItemsPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
               <Typography variant="body2" color="text.secondary">
-                {t('purchases:totalItems')}
+                إجمالي العناصر
               </Typography>
               <Typography variant="h6">{totalItems}</Typography>
             </div>
             <div>
               <Typography variant="body2" color="text.secondary">
-                {t('purchases:totalValue')}
+                القيمة الإجمالية
               </Typography>
               <Typography variant="h6">{formatCurrency(totalValue)}</Typography>
             </div>
             <div>
               <Typography variant="body2" color="text.secondary">
-                {t('purchases:averageValue')}
+                متوسط القيمة
               </Typography>
               <Typography variant="h6">
                 {totalItems > 0 ? formatCurrency(totalValue / totalItems) : formatCurrency(0)}
@@ -404,14 +410,14 @@ const PurchaseItemsPage: React.FC = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t('purchases:product')}</TableHead>
-                <TableHead>{t('purchases:batchNumber')}</TableHead>
-                <TableHead>{t('purchases:quantity')}</TableHead>
-                <TableHead>{t('purchases:unitCost')}</TableHead>
-                <TableHead>{t('purchases:totalCost')}</TableHead>
-                <TableHead>{t('purchases:salePrice')}</TableHead>
-                <TableHead>{t('purchases:expiryDate')}</TableHead>
-                <TableHead>{t('common:actions')}</TableHead>
+                <TableHead>المنتج</TableHead>
+                <TableHead>رقم الدفعة</TableHead>
+                <TableHead>الكمية</TableHead>
+                <TableHead>تكلفة الوحدة</TableHead>
+                <TableHead>التكلفة الإجمالية</TableHead>
+                <TableHead>سعر البيع</TableHead>
+                <TableHead>تاريخ الانتهاء</TableHead>
+                <TableHead>إجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -419,7 +425,7 @@ const PurchaseItemsPage: React.FC = () => {
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8">
                     <Typography variant="body2" color="text.secondary">
-                      {t('purchases:noItems')}
+                      لا توجد عناصر
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -445,7 +451,7 @@ const PurchaseItemsPage: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
-                        <Tooltip title={t('common:edit')}>
+                        <Tooltip title="تعديل">
                           <IconButton
                             size="small"
                             onClick={() => handleEditItem(item)}
@@ -454,7 +460,7 @@ const PurchaseItemsPage: React.FC = () => {
                             <EditIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title={t('common:delete')}>
+                        <Tooltip title="حذف">
                           <IconButton
                             size="small"
                             onClick={() => handleDeleteItem(item.id)}
@@ -482,7 +488,7 @@ const PurchaseItemsPage: React.FC = () => {
         fullWidth
       >
         <DialogTitle>
-          {editingItemId ? t('purchases:editItem') : t('purchases:addItem')}
+          {editingItemId ? "تعديل عنصر" : "إضافة عنصر"}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
@@ -497,7 +503,7 @@ const PurchaseItemsPage: React.FC = () => {
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label={t('purchases:product')}
+                    label="المنتج"
                     required
                     error={!!formErrors.product_id}
                     helperText={formErrors.product_id}
@@ -507,7 +513,7 @@ const PurchaseItemsPage: React.FC = () => {
 
               {/* Batch Number */}
               <TextField
-                label={t('purchases:batchNumber')}
+                label="رقم الدفعة"
                 value={formData.batch_number}
                 onChange={(e) => handleFormChange('batch_number', e.target.value)}
                 fullWidth
@@ -515,7 +521,7 @@ const PurchaseItemsPage: React.FC = () => {
 
               {/* Quantity */}
               <TextField
-                label={t('purchases:quantity')}
+                label="الكمية"
                 type="number"
                 value={formData.quantity}
                 onChange={(e) => handleFormChange('quantity', Number(e.target.value))}
@@ -527,7 +533,7 @@ const PurchaseItemsPage: React.FC = () => {
 
               {/* Unit Cost */}
               <TextField
-                label={t('purchases:unitCost')}
+                label="تكلفة الوحدة"
                 type="number"
                 value={formData.unit_cost}
                 onChange={(e) => handleFormChange('unit_cost', Number(e.target.value))}
@@ -542,7 +548,7 @@ const PurchaseItemsPage: React.FC = () => {
 
               {/* Sale Price */}
               <TextField
-                label={t('purchases:salePrice')}
+                label="سعر البيع"
                 type="number"
                 value={formData.sale_price || ''}
                 onChange={(e) => handleFormChange('sale_price', e.target.value ? Number(e.target.value) : null)}
@@ -554,7 +560,7 @@ const PurchaseItemsPage: React.FC = () => {
 
               {/* Expiry Date */}
               <TextField
-                label={t('purchases:expiryDate')}
+                label="تاريخ الانتهاء"
                 type="date"
                 value={formData.expiry_date}
                 onChange={(e) => handleFormChange('expiry_date', e.target.value)}
@@ -566,14 +572,14 @@ const PurchaseItemsPage: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCancelForm} startIcon={<CancelIcon />}>
-            {t('common:cancel')}
+            إلغاء
           </Button>
           <Button
             onClick={handleSaveItem}
             variant="contained"
             startIcon={<SaveIcon />}
           >
-            {t('common:save')}
+            حفظ
           </Button>
         </DialogActions>
       </Dialog>

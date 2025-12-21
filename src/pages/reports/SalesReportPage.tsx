@@ -3,10 +3,16 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useTranslation } from "react-i18next";
+
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { format, parseISO, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import {
+  format,
+  parseISO,
+  startOfMonth,
+  endOfMonth,
+  subMonths,
+} from "date-fns";
 import { cn } from "@/lib/utils";
 
 // shadcn/ui Components
@@ -95,7 +101,7 @@ const reportFilterSchema = z
     (data) =>
       !data.endDate || !data.startDate || data.endDate >= data.startDate,
     {
-      message: "validation:endDateAfterStart",
+      message: "تاريخ الانتهاء يجب أن يكون بعد تاريخ البدء",
       path: ["endDate"],
     }
   );
@@ -104,19 +110,14 @@ type ReportFilterValues = z.infer<typeof reportFilterSchema>;
 
 // --- Component ---
 const SalesReportPage: React.FC = () => {
-  const { t } = useTranslation([
-    "reports",
-    "sales",
-    "common",
-    "clients",
-    "users",
-    "validation",
-  ]);
+  // Removed useTranslation
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
- 
+
   // --- State ---
-  const [reportData, setReportData] = useState<PaginatedResponse<Sale> | null>(null);
+  const [reportData, setReportData] = useState<PaginatedResponse<Sale> | null>(
+    null
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
@@ -128,8 +129,12 @@ const SalesReportPage: React.FC = () => {
   const form = useForm<ReportFilterValues>({
     resolver: zodResolver(reportFilterSchema),
     defaultValues: {
-      startDate: searchParams.get("startDate") || format(startOfMonth(new Date()), "yyyy-MM-dd"),
-      endDate: searchParams.get("endDate") || format(endOfMonth(new Date()), "yyyy-MM-dd"),
+      startDate:
+        searchParams.get("startDate") ||
+        format(startOfMonth(new Date()), "yyyy-MM-dd"),
+      endDate:
+        searchParams.get("endDate") ||
+        format(endOfMonth(new Date()), "yyyy-MM-dd"),
       clientId: searchParams.get("clientId") || null,
       userId: searchParams.get("userId") || null,
       status: searchParams.get("status") || null,
@@ -150,13 +155,13 @@ const SalesReportPage: React.FC = () => {
       setProducts(productsResponse.data);
     } catch (error) {
       console.error("Error loading filters:", error);
-      toast.error(t("common:error"), {
-        description: t("reports:errorLoadingFilters"),
+      toast.error("خطأ", {
+        description: "حدث خطأ أثناء تحميل الفلاتر",
       });
     } finally {
       setLoadingFilters(false);
     }
-  }, [t]);
+  }, []);
 
   useEffect(() => {
     fetchFilterData();
@@ -167,11 +172,13 @@ const SalesReportPage: React.FC = () => {
     async (filters: ReportFilterValues, page: number) => {
       setIsLoading(true);
       setError(null);
-      
+
       try {
         const data = await saleService.getSalesReport(
           page,
-          filters.startDate ? format(filters.startDate, "yyyy-MM-dd") : undefined,
+          filters.startDate
+            ? format(filters.startDate, "yyyy-MM-dd")
+            : undefined,
           filters.endDate ? format(filters.endDate, "yyyy-MM-dd") : undefined,
           filters.clientId ? Number(filters.clientId) : undefined,
           filters.userId ? Number(filters.userId) : undefined,
@@ -182,20 +189,24 @@ const SalesReportPage: React.FC = () => {
       } catch (err) {
         const errorMsg = saleService.getErrorMessage(err);
         setError(errorMsg);
-        toast.error(t("common:error"), { description: errorMsg });
+        toast.error("خطأ", { description: errorMsg });
         setReportData(null);
       } finally {
         setIsLoading(false);
       }
     },
-    [t]
+    []
   );
 
   // --- Current Filters and Page ---
   const currentFilters = useMemo(
     () => ({
-      startDate: searchParams.get("startDate") || format(startOfMonth(new Date()), "yyyy-MM-dd"),
-      endDate: searchParams.get("endDate") || format(endOfMonth(new Date()), "yyyy-MM-dd"),
+      startDate:
+        searchParams.get("startDate") ||
+        format(startOfMonth(new Date()), "yyyy-MM-dd"),
+      endDate:
+        searchParams.get("endDate") ||
+        format(endOfMonth(new Date()), "yyyy-MM-dd"),
       clientId: searchParams.get("clientId") || null,
       userId: searchParams.get("userId") || null,
       status: searchParams.get("status") || null,
@@ -308,12 +319,18 @@ const SalesReportPage: React.FC = () => {
   const handleDownloadPdf = () => {
     const currentFilterValues = watch();
     const params = new URLSearchParams();
-    
+
     if (currentFilterValues.startDate) {
-      params.append("start_date", format(currentFilterValues.startDate, "yyyy-MM-dd"));
+      params.append(
+        "start_date",
+        format(currentFilterValues.startDate, "yyyy-MM-dd")
+      );
     }
     if (currentFilterValues.endDate) {
-      params.append("end_date", format(currentFilterValues.endDate, "yyyy-MM-dd"));
+      params.append(
+        "end_date",
+        format(currentFilterValues.endDate, "yyyy-MM-dd")
+      );
     }
     if (currentFilterValues.clientId) {
       params.append("client_id", String(currentFilterValues.clientId));
@@ -325,9 +342,11 @@ const SalesReportPage: React.FC = () => {
       params.append("status", currentFilterValues.status);
     }
 
-    const pdfUrl = `${import.meta.env.VITE_API_BASE_URL}/reports/sales/pdf?${params.toString()}`;
+    const pdfUrl = `${
+      import.meta.env.VITE_API_BASE_URL
+    }/reports/sales/pdf?${params.toString()}`;
     window.open(pdfUrl, "_blank");
-    toast.info(t("reports:pdfDownloadStarting"));
+    toast.info("جاري بدء تحميل PDF...");
   };
 
   // --- Calculate Summary Stats ---
@@ -335,10 +354,21 @@ const SalesReportPage: React.FC = () => {
     if (!reportData?.data) return null;
 
     const totalSales = reportData.data.length;
-    const totalAmount = reportData.data.reduce((sum, sale) => sum + Number(sale.total_amount), 0);
-    const totalPaid = reportData.data.reduce((sum, sale) => sum + Number(sale.paid_amount), 0);
-    const totalDue = reportData.data.reduce((sum, sale) => sum + Number(sale.due_amount || 0), 0);
-    const completedSales = reportData.data.filter(sale => sale.status === 'completed').length;
+    const totalAmount = reportData.data.reduce(
+      (sum, sale) => sum + Number(sale.total_amount),
+      0
+    );
+    const totalPaid = reportData.data.reduce(
+      (sum, sale) => sum + Number(sale.paid_amount),
+      0
+    );
+    const totalDue = reportData.data.reduce(
+      (sum, sale) => sum + Number(sale.due_amount || 0),
+      0
+    );
+    const completedSales = reportData.data.filter(
+      (sale) => sale.status === "completed"
+    ).length;
 
     return {
       totalSales,
@@ -351,19 +381,41 @@ const SalesReportPage: React.FC = () => {
   }, [reportData]);
 
   // --- Get Status Badge ---
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status?: string) => {
     const statusConfig = {
-      completed: { variant: "default" as const, className: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" },
-      pending: { variant: "secondary" as const, className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300" },
-      draft: { variant: "outline" as const, className: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300" },
-      cancelled: { variant: "destructive" as const, className: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" },
+      completed: {
+        variant: "default" as const,
+        className:
+          "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
+      },
+      pending: {
+        variant: "secondary" as const,
+        className:
+          "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
+      },
+      draft: {
+        variant: "outline" as const,
+        className:
+          "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300",
+      },
+      cancelled: {
+        variant: "destructive" as const,
+        className: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
+      },
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
-    
+    const config =
+      statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
+
+    const statusLabels: Record<string, string> = {
+      completed: "مكتمل",
+      pending: "معلق",
+      draft: "مسودة",
+      cancelled: "ملغي",
+    };
     return (
       <Badge variant={config.variant} className={config.className}>
-        {t(`sales:status_${status}`)}
+        {statusLabels[status as string] || status}
       </Badge>
     );
   };
@@ -375,29 +427,29 @@ const SalesReportPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-        <Button
+              <Button
                 variant="ghost"
-          size="icon"
-          onClick={() => navigate("/dashboard")}
+                size="icon"
+                onClick={() => navigate("/dashboard")}
                 className="h-8 w-8"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {t("reports:salesReportTitle")}
-        </h1>
+                  تقرير المبيعات
+                </h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  {t("reports:salesReportDescription")}
+                  عرض وتصدير تقارير المبيعات
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-3">
               {!isLoading && reportData && reportData.data.length > 0 && (
                 <Button onClick={handleDownloadPdf} variant="outline">
                   <Download className="h-4 w-4 mr-2" />
-                  {t("reports:downloadPDF")}
+                  تصدير PDF
                 </Button>
               )}
             </div>
@@ -410,11 +462,11 @@ const SalesReportPage: React.FC = () => {
         <div className="mb-6">
           <div className="flex flex-wrap gap-2">
             {[
-              { key: "today", label: t("reports:today") },
-              { key: "yesterday", label: t("reports:yesterday") },
-              { key: "thisWeek", label: t("reports:thisWeek") },
-              { key: "thisMonth", label: t("reports:thisMonth") },
-              { key: "lastMonth", label: t("reports:lastMonth") },
+              { key: "today", label: "اليوم" },
+              { key: "yesterday", label: "أمس" },
+              { key: "thisWeek", label: "هذا الأسبوع" },
+              { key: "thisMonth", label: "هذا الشهر" },
+              { key: "lastMonth", label: "الشهر الماضي" },
             ].map((preset) => (
               <Button
                 key={preset.key}
@@ -444,7 +496,7 @@ const SalesReportPage: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                          {t("reports:totalSales")}
+                          إجمالي العمليات
                         </p>
                         <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                           {summaryStats.totalSales}
@@ -462,7 +514,7 @@ const SalesReportPage: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                          {t("reports:totalAmount")}
+                          إجمالي المبيعات
                         </p>
                         <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                           {formatNumber(summaryStats.totalAmount)}
@@ -480,7 +532,7 @@ const SalesReportPage: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                          {t("reports:totalDue")}
+                          إجمالي المستحق
                         </p>
                         <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                           {formatNumber(summaryStats.totalDue)}
@@ -496,7 +548,10 @@ const SalesReportPage: React.FC = () => {
             {isLoading && (
               <div className="space-y-4">
                 {[...Array(5)].map((_, i) => (
-                  <div key={i} className="flex items-center space-x-4 p-4 bg-white dark:bg-gray-900 rounded-lg">
+                  <div
+                    key={i}
+                    className="flex items-center space-x-4 p-4 bg-white dark:bg-gray-900 rounded-lg"
+                  >
                     <Skeleton className="h-12 w-12 rounded-full" />
                     <div className="space-y-2 flex-1">
                       <Skeleton className="h-4 w-[250px]" />
@@ -512,7 +567,7 @@ const SalesReportPage: React.FC = () => {
             {!isLoading && error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>{t("common:error")}</AlertTitle>
+                <AlertTitle>خطأ</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
@@ -522,13 +577,12 @@ const SalesReportPage: React.FC = () => {
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle>{t("reports:results")}</CardTitle>
+                    <CardTitle>النتائج</CardTitle>
                     <div className="text-sm text-gray-500 dark:text-gray-400">
-                      {t("reports:showingResults", {
-                        from: (currentPage - 1) * 25 + 1,
-                        to: Math.min(currentPage * 25, reportData.total),
-                        total: reportData.total,
-                      })}
+                      {`عرض ${(currentPage - 1) * 25 + 1}-${Math.min(
+                        currentPage * 25,
+                        reportData.total
+                      )} من ${reportData.total}`}
                     </div>
                   </div>
                 </CardHeader>
@@ -537,10 +591,10 @@ const SalesReportPage: React.FC = () => {
                     <div className="text-center py-12">
                       <FileText className="mx-auto h-12 w-12 text-gray-400" />
                       <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {t("reports:noSalesFound")}
+                        لا توجد مبيعات
                       </h3>
                       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        {t("reports:tryAdjustingFilters")}
+                        جرب تعديل الفلاتر
                       </p>
                     </div>
                   ) : (
@@ -549,22 +603,36 @@ const SalesReportPage: React.FC = () => {
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead>{t("sales:date")}</TableHead>
-                              <TableHead>{t("sales:invoice")}</TableHead>
-                              <TableHead>{t("clients:client")}</TableHead>
-                              <TableHead>{t("users:user")}</TableHead>
-                              <TableHead>{t("sales:status")}</TableHead>
-                              <TableHead className="text-right">{t("sales:totalAmount")}</TableHead>
-                              <TableHead className="text-right">{t("sales:paidAmount")}</TableHead>
-                              <TableHead className="text-right">{t("sales:dueAmount")}</TableHead>
-                              <TableHead className="text-right">{t("common:actions")}</TableHead>
+                              <TableHead>التاريخ</TableHead>
+                              <TableHead>الفاتورة</TableHead>
+                              <TableHead>العميل</TableHead>
+                              <TableHead>المستخدم</TableHead>
+                              <TableHead>الحالة</TableHead>
+                              <TableHead className="text-right">
+                                المبلغ الإجمالي
+                              </TableHead>
+                              <TableHead className="text-right">
+                                المدفوع
+                              </TableHead>
+                              <TableHead className="text-right">
+                                المستحق
+                              </TableHead>
+                              <TableHead className="text-right">
+                                الإجراءات
+                              </TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {reportData.data.map((sale) => (
-                              <TableRow key={sale.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                              <TableRow
+                                key={sale.id}
+                                className="hover:bg-gray-50 dark:hover:bg-gray-800"
+                              >
                                 <TableCell className="font-medium">
-                                  {format(parseISO(sale.sale_date), "MMM dd, yyyy")}
+                                  {format(
+                                    parseISO(sale.sale_date),
+                                    "MMM dd, yyyy"
+                                  )}
                                 </TableCell>
                                 <TableCell>
                                   {sale.invoice_number || (
@@ -591,7 +659,13 @@ const SalesReportPage: React.FC = () => {
                                   {formatNumber(sale.paid_amount)}
                                 </TableCell>
                                 <TableCell className="text-right">
-                                  <span className={Number(sale.due_amount) > 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}>
+                                  <span
+                                    className={
+                                      Number(sale.due_amount) > 0
+                                        ? "text-red-600 dark:text-red-400"
+                                        : "text-green-600 dark:text-green-400"
+                                    }
+                                  >
                                     {formatNumber(sale.due_amount || 0)}
                                   </span>
                                 </TableCell>
@@ -599,9 +673,10 @@ const SalesReportPage: React.FC = () => {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => navigate(`/sales/${sale.id}`)}
+                                    disabled
+                                    title="غير متاح"
                                   >
-                                    <Eye className="h-4 w-4" />
+                                    <Eye className="h-4 w-4 opacity-50" />
                                   </Button>
                                 </TableCell>
                               </TableRow>
@@ -614,13 +689,12 @@ const SalesReportPage: React.FC = () => {
                       {reportData.last_page > 1 && (
                         <div className="flex items-center justify-between mt-6">
                           <div className="text-sm text-gray-700 dark:text-gray-300">
-                            {t("reports:showingResults", {
-                              from: (currentPage - 1) * 25 + 1,
-                              to: Math.min(currentPage * 25, reportData.total),
-                              total: reportData.total,
-                            })}
+                            {`عرض ${(currentPage - 1) * 25 + 1}-${Math.min(
+                              currentPage * 25,
+                              reportData.total
+                            )} من ${reportData.total}`}
                           </div>
-                          
+
                           <div className="flex items-center space-x-2">
                             <Button
                               variant="outline"
@@ -629,33 +703,40 @@ const SalesReportPage: React.FC = () => {
                               disabled={currentPage === 1}
                             >
                               <ChevronLeft className="h-4 w-4" />
-                              {t("common:previous")}
+                              السابق
                             </Button>
-                            
+
                             <div className="flex items-center space-x-1">
-                              {Array.from({ length: Math.min(5, reportData.last_page) }, (_, i) => {
-                                const page = i + 1;
-                                return (
-                                  <Button
-                                    key={page}
-                                    variant={currentPage === page ? "default" : "outline"}
-                                    size="sm"
-                                    onClick={() => handlePageChange(page)}
-                                    className="w-8 h-8"
-                                  >
-                                    {page}
-                                  </Button>
-                                );
-                              })}
+                              {Array.from(
+                                { length: Math.min(5, reportData.last_page) },
+                                (_, i) => {
+                                  const page = i + 1;
+                                  return (
+                                    <Button
+                                      key={page}
+                                      variant={
+                                        currentPage === page
+                                          ? "default"
+                                          : "outline"
+                                      }
+                                      size="sm"
+                                      onClick={() => handlePageChange(page)}
+                                      className="w-8 h-8"
+                                    >
+                                      {page}
+                                    </Button>
+                                  );
+                                }
+                              )}
                             </div>
-                            
+
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => handlePageChange(currentPage + 1)}
                               disabled={currentPage === reportData.last_page}
                             >
-                              {t("common:next")}
+                              التالي
                               <ChevronRight className="h-4 w-4" />
                             </Button>
                           </div>
@@ -671,22 +752,25 @@ const SalesReportPage: React.FC = () => {
           {/* Filters Sidebar */}
           <div className="lg:col-span-1">
             <Card className="sticky top-6">
-        <CardHeader>
+              <CardHeader>
                 <CardTitle className="text-lg flex items-center space-x-2">
                   <Filter className="h-5 w-5" />
-                  <span>{t("common:filters")}</span>
+                  <span>الفلاتر</span>
                 </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-                  <form onSubmit={handleSubmit(onFilterSubmit)} className="space-y-4">
-                {/* Start Date */}
-                <FormField
-                  control={control}
-                  name="startDate"
-                  render={({ field }) => (
+              </CardHeader>
+              <CardContent>
+                <Form {...form}>
+                  <form
+                    onSubmit={handleSubmit(onFilterSubmit)}
+                    className="space-y-4"
+                  >
+                    {/* Start Date */}
+                    <FormField
+                      control={control}
+                      name="startDate"
+                      render={({ field }) => (
                         <FormItem>
-                      <FormLabel>{t("common:startDate")}</FormLabel>
+                          <FormLabel>تاريخ البدء</FormLabel>
                           <FormControl>
                             <Input
                               type="date"
@@ -694,18 +778,18 @@ const SalesReportPage: React.FC = () => {
                               value={field.value || ""}
                             />
                           </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                {/* End Date */}
-                <FormField
-                  control={control}
-                  name="endDate"
-                  render={({ field }) => (
+                    {/* End Date */}
+                    <FormField
+                      control={control}
+                      name="endDate"
+                      render={({ field }) => (
                         <FormItem>
-                      <FormLabel>{t("common:endDate")}</FormLabel>
+                          <FormLabel>تاريخ الانتهاء</FormLabel>
                           <FormControl>
                             <Input
                               type="date"
@@ -713,41 +797,48 @@ const SalesReportPage: React.FC = () => {
                               value={field.value || ""}
                             />
                           </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                {/* Client Select */}
-                <FormField
-                  control={control}
-                  name="clientId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("clients:client")}</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value ?? ""}
+                    {/* Client Select */}
+                    <FormField
+                      control={control}
+                      name="clientId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("clients:client")}</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value ?? ""}
                             disabled={loadingFilters}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                                <SelectValue placeholder={t("reports:allClients")} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                              <SelectItem value=" ">{t("reports:allClients")}</SelectItem>
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue
+                                  placeholder={t("reports:allClients")}
+                                />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value=" ">
+                                {t("reports:allClients")}
+                              </SelectItem>
                               {clients.map((client) => (
-                                <SelectItem key={client.id} value={String(client.id)}>
+                                <SelectItem
+                                  key={client.id}
+                                  value={String(client.id)}
+                                >
                                   {client.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
                     {/* User Select */}
                     <FormField
@@ -763,11 +854,15 @@ const SalesReportPage: React.FC = () => {
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder={t("reports:allUsers")} />
+                                <SelectValue
+                                  placeholder={t("reports:allUsers")}
+                                />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value=" ">{t("reports:allUsers")}</SelectItem>
+                              <SelectItem value=" ">
+                                {t("reports:allUsers")}
+                              </SelectItem>
                               {/* User selection temporarily disabled */}
                             </SelectContent>
                           </Select>
@@ -783,7 +878,10 @@ const SalesReportPage: React.FC = () => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>{t("products:product")}</FormLabel>
-                          <Popover open={productSearchOpen} onOpenChange={setProductSearchOpen}>
+                          <Popover
+                            open={productSearchOpen}
+                            onOpenChange={setProductSearchOpen}
+                          >
                             <PopoverTrigger asChild>
                               <FormControl>
                                 <Button
@@ -794,7 +892,10 @@ const SalesReportPage: React.FC = () => {
                                   disabled={loadingFilters}
                                 >
                                   {field.value
-                                    ? products.find((product) => String(product.id) === field.value)?.name
+                                    ? products.find(
+                                        (product) =>
+                                          String(product.id) === field.value
+                                      )?.name
                                     : t("reports:allProducts")}
                                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
@@ -802,9 +903,13 @@ const SalesReportPage: React.FC = () => {
                             </PopoverTrigger>
                             <PopoverContent className="w-full p-0">
                               <Command>
-                                <CommandInput placeholder={t("products:searchProducts")} />
+                                <CommandInput
+                                  placeholder={t("products:searchProducts")}
+                                />
                                 <CommandList>
-                                  <CommandEmpty>{t("products:noProductsFound")}</CommandEmpty>
+                                  <CommandEmpty>
+                                    {t("products:noProductsFound")}
+                                  </CommandEmpty>
                                   <CommandGroup>
                                     <CommandItem
                                       value=""
@@ -816,7 +921,9 @@ const SalesReportPage: React.FC = () => {
                                       <Check
                                         className={cn(
                                           "mr-2 h-4 w-4",
-                                          !field.value ? "opacity-100" : "opacity-0"
+                                          !field.value
+                                            ? "opacity-100"
+                                            : "opacity-0"
                                         )}
                                       />
                                       {t("reports:allProducts")}
@@ -833,7 +940,9 @@ const SalesReportPage: React.FC = () => {
                                         <Check
                                           className={cn(
                                             "mr-2 h-4 w-4",
-                                            field.value === String(product.id) ? "opacity-100" : "opacity-0"
+                                            field.value === String(product.id)
+                                              ? "opacity-100"
+                                              : "opacity-0"
                                           )}
                                         />
                                         {product.name}
@@ -849,34 +958,46 @@ const SalesReportPage: React.FC = () => {
                       )}
                     />
 
-                {/* Status Select */}
-                <FormField
-                  control={control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("sales:status")}</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value ?? ""}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                                <SelectValue placeholder={t("reports:allStatuses")} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                              <SelectItem value=" ">{t("reports:allStatuses")}</SelectItem>
-                              <SelectItem value="completed">{t("sales:status_completed")}</SelectItem>
-                              <SelectItem value="pending">{t("sales:status_pending")}</SelectItem>
-                              <SelectItem value="draft">{t("sales:status_draft")}</SelectItem>
-                              <SelectItem value="cancelled">{t("sales:status_cancelled")}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    {/* Status Select */}
+                    <FormField
+                      control={control}
+                      name="status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("sales:status")}</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value ?? ""}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue
+                                  placeholder={t("reports:allStatuses")}
+                                />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value=" ">
+                                {t("reports:allStatuses")}
+                              </SelectItem>
+                              <SelectItem value="completed">
+                                {t("sales:status_completed")}
+                              </SelectItem>
+                              <SelectItem value="pending">
+                                {t("sales:status_pending")}
+                              </SelectItem>
+                              <SelectItem value="draft">
+                                {t("sales:status_draft")}
+                              </SelectItem>
+                              <SelectItem value="cancelled">
+                                {t("sales:status_cancelled")}
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
                     <div className="flex flex-col gap-2 pt-4">
                       <Button
@@ -891,24 +1012,24 @@ const SalesReportPage: React.FC = () => {
                         )}
                         {t("common:applyFilters")}
                       </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={clearFilters}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={clearFilters}
                         disabled={isLoading}
                         className="w-full"
-                >
+                      >
                         <X className="mr-2 h-4 w-4" />
-                  {t("common:clearFilters")}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+                        {t("common:clearFilters")}
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
           </div>
         </div>
-            </div>
+      </div>
     </div>
   );
 };

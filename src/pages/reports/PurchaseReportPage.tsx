@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useTranslation } from "react-i18next";
+
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { format, parseISO, startOfMonth } from "date-fns";
@@ -88,7 +88,7 @@ const reportFilterSchema = z
     (data) =>
       !data.endDate || !data.startDate || data.endDate >= data.startDate,
     {
-      message: "validation:endDateAfterStart",
+      message: "تاريخ الانتهاء يجب أن يكون بعد تاريخ البدء",
       path: ["endDate"],
     }
   );
@@ -97,13 +97,7 @@ type ReportFilterValues = z.infer<typeof reportFilterSchema>;
 
 // --- Component ---
 const PurchaseReportPage: React.FC = () => {
-  const { t } = useTranslation([
-    "reports",
-    "purchases",
-    "common",
-    "suppliers",
-    "validation",
-  ]); // Add purchases, suppliers
+  // Removed useTranslation
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -139,13 +133,13 @@ const PurchaseReportPage: React.FC = () => {
       const response = await supplierService.getSuppliers(1, "", 9999);
       setSuppliers(response.data);
     } catch (err) {
-      toast.error(t("common:error"), {
+      toast.error("خطأ", {
         description: supplierService.getErrorMessage(err),
       });
     } finally {
       setLoadingSuppliers(false);
     }
-  }, [t]);
+  }, []);
 
   useEffect(() => {
     fetchSuppliersForFilter();
@@ -179,7 +173,7 @@ const PurchaseReportPage: React.FC = () => {
         setReportData(data);
       } catch (err) {
         /* ... error handling ... */
-        setError(t("common:error"));
+        setError("خطأ");
       } finally {
         setIsLoading(false);
       }
@@ -260,14 +254,14 @@ const PurchaseReportPage: React.FC = () => {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 dark:text-gray-100">
-          {t("reports:purchaseReportTitle")} {/* Use correct title key */}
+          تقرير المشتريات
         </h1>
       </div>
 
       {/* Filter Form Card */}
       <Card className="dark:bg-gray-900 mb-6">
         <CardHeader>
-          <CardTitle className="text-lg">{t("common:filters")}</CardTitle>
+          <CardTitle className="text-lg">الفلاتر</CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -280,7 +274,7 @@ const PurchaseReportPage: React.FC = () => {
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       {" "}
-                      <FormLabel>{t("common:startDate")}</FormLabel>{" "}
+                      <FormLabel>تاريخ البدء</FormLabel>{" "}
                       <Popover>
                         {" "}
                         <PopoverTrigger asChild>
@@ -297,7 +291,7 @@ const PurchaseReportPage: React.FC = () => {
                               {field.value ? (
                                 format(field.value, "PPP")
                               ) : (
-                                <span>{t("common:pickDate")}</span>
+                                <span>اختر التاريخ</span>
                               )}{" "}
                             </Button>
                           </FormControl>
@@ -322,7 +316,7 @@ const PurchaseReportPage: React.FC = () => {
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       {" "}
-                      <FormLabel>{t("common:endDate")}</FormLabel>{" "}
+                      <FormLabel>تاريخ الانتهاء</FormLabel>{" "}
                       <Popover>
                         {" "}
                         <PopoverTrigger asChild>
@@ -339,7 +333,7 @@ const PurchaseReportPage: React.FC = () => {
                               {field.value ? (
                                 format(field.value, "PPP")
                               ) : (
-                                <span>{t("common:pickDate")}</span>
+                                <span>اختر التاريخ</span>
                               )}{" "}
                             </Button>
                           </FormControl>
@@ -364,7 +358,7 @@ const PurchaseReportPage: React.FC = () => {
                   render={({ field }) => (
                     <FormItem>
                       {" "}
-                      <FormLabel>{t("suppliers:supplier")}</FormLabel>{" "}
+                      <FormLabel>المورد</FormLabel>{" "}
                       <Select
                         onValueChange={field.onChange}
                         value={field.value ?? ""}
@@ -374,17 +368,13 @@ const PurchaseReportPage: React.FC = () => {
                         <FormControl>
                           <SelectTrigger>
                             {" "}
-                            <SelectValue
-                              placeholder={
-                                t("reports:allSuppliers") || "All Suppliers"
-                              }
-                            />{" "}
+                            <SelectValue placeholder={"جميع الموردين"} />{" "}
                           </SelectTrigger>
                         </FormControl>{" "}
                         <SelectContent>
                           {" "}
                           <SelectItem value="all">
-                            {t("reports:allSuppliers") || "All Suppliers"}
+                            "جميع الموردين"
                           </SelectItem>{" "}
                           {suppliers.map((s) => (
                             <SelectItem key={s.id} value={String(s.id)}>
@@ -404,7 +394,7 @@ const PurchaseReportPage: React.FC = () => {
                   render={({ field }) => (
                     <FormItem>
                       {" "}
-                      <FormLabel>{t("purchases:status")}</FormLabel>{" "}
+                      <FormLabel>الحالة</FormLabel>{" "}
                       <Select
                         onValueChange={field.onChange}
                         value={field.value ?? ""}
@@ -414,26 +404,20 @@ const PurchaseReportPage: React.FC = () => {
                         <FormControl>
                           <SelectTrigger>
                             {" "}
-                            <SelectValue
-                              placeholder={
-                                t("reports:allStatuses") || "All Statuses"
-                              }
-                            />{" "}
+                            <SelectValue placeholder={"جميع الحالات"} />{" "}
                           </SelectTrigger>
                         </FormControl>{" "}
                         <SelectContent>
                           {" "}
                           <SelectItem value="all">
-                            {t("reports:allStatuses") || "All Statuses"}
+                            "جميع الحالات"
                           </SelectItem>{" "}
                           <SelectItem value="received">
-                            {t("purchases:status_received")}
+                            "تم الاستلام"
                           </SelectItem>
-                          <SelectItem value="pending">
-                            {t("purchases:status_pending")}
-                          </SelectItem>
+                          <SelectItem value="pending">"معلق"</SelectItem>
                           <SelectItem value="ordered">
-                            {t("purchases:status_ordered")}
+                            "تم الطلب"
                           </SelectItem>{" "}
                         </SelectContent>{" "}
                       </Select>{" "}
@@ -450,7 +434,7 @@ const PurchaseReportPage: React.FC = () => {
                   disabled={isLoading}
                 >
                   <X className="me-2 h-4 w-4" />
-                  {t("common:clearFilters")}
+                  مسح الفلاتر
                 </Button>
                 <Button type="submit" disabled={isLoading}>
                   {" "}
@@ -475,7 +459,7 @@ const PurchaseReportPage: React.FC = () => {
       {!isLoading && error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>{t("common:error")}</AlertTitle>
+          <AlertTitle>خطأ</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
@@ -483,27 +467,20 @@ const PurchaseReportPage: React.FC = () => {
       <>
         <Card className="dark:bg-gray-900">
           <CardHeader>
-            <CardTitle>{t("reports:results")}</CardTitle>
+            <CardTitle>النتائج</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
                   {/* Purchase Table Headers */}
-                  <TableHead>{t("purchases:date")}</TableHead>
-                  <TableHead>{t("purchases:reference")}</TableHead>
-                  <TableHead>{t("suppliers:supplier")}</TableHead>{" "}
-                  {/* Use supplier key */}
-                  <TableHead>{t("common:recordedBy")}</TableHead>
-                  <TableHead className="text-center">
-                    {t("purchases:status")}
-                  </TableHead>
-                  <TableHead className="text-right">
-                    {t("purchases:totalAmount")}
-                  </TableHead>
-                  <TableHead className="text-center">
-                    {t("common:actions")}
-                  </TableHead>
+                  <TableHead>التاريخ</TableHead>
+                  <TableHead>المرجع</TableHead>
+                  <TableHead>المورد</TableHead> {/* Use supplier key */}
+                  <TableHead>سجل بواسطة</TableHead>
+                  <TableHead className="text-center">الحالة</TableHead>
+                  <TableHead className="text-right">المبلغ الإجمالي</TableHead>
+                  <TableHead className="text-center">الإجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -513,7 +490,7 @@ const PurchaseReportPage: React.FC = () => {
                       colSpan={9}
                       className="h-24 text-center text-muted-foreground"
                     >
-                      {t("common:noResults")}
+                      لا توجد نتائج
                     </TableCell>
                   </TableRow>
                 )}
@@ -524,15 +501,17 @@ const PurchaseReportPage: React.FC = () => {
                       {dayjs(purchase.purchase_date).format("YYYY-MM-DD")}
                     </TableCell>
                     <TableCell>{purchase.reference_number || "---"}</TableCell>
-                    <TableCell>
-                      {purchase.supplier_name || t("common:n/a")}
-                    </TableCell>
-                    <TableCell>
-                      {purchase.user_name || t("common:n/a")}
-                    </TableCell>
+                    <TableCell>{purchase.supplier_name || "-"}</TableCell>
+                    <TableCell>{purchase.user_name || "-"}</TableCell>
                     <TableCell className="text-center">
                       <Chip
-                        label={t(`purchases:status_${purchase.status}`)}
+                        label={
+                          {
+                            received: "تم الاستلام",
+                            pending: "معلق",
+                            ordered: "تم الطلب",
+                          }[purchase.status] || purchase.status
+                        }
                         size="small"
                         color={
                           purchase.status === "received"
@@ -550,9 +529,11 @@ const PurchaseReportPage: React.FC = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => navigate(`/purchases/${purchase.id}/edit`)}
+                        onClick={() =>
+                          navigate(`/purchases/${purchase.id}/edit`)
+                        }
                       >
-                        {t("common:view")}
+                        عرض
                       </Button>{" "}
                       {/* Link to Purchase Details */}
                     </TableCell>
@@ -572,10 +553,10 @@ const PurchaseReportPage: React.FC = () => {
               disabled={currentPage === 1 || isLoading}
               className="mx-1"
             >
-              {t("common:previous")}
+              السابق
             </Button>
             <span className="px-3 py-1 text-sm text-gray-800 dark:text-gray-100">
-              {t("common:page")} {currentPage} / {reportData?.last_page}
+              صفحة {currentPage} / {reportData?.last_page}
             </span>
             <Button
               variant="outline"
@@ -583,7 +564,7 @@ const PurchaseReportPage: React.FC = () => {
               disabled={currentPage === reportData?.last_page || isLoading}
               className="mx-1"
             >
-              {t("common:next")}
+              التالي
             </Button>
           </div>
         )}

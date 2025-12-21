@@ -19,8 +19,6 @@ import { Loader2 } from "lucide-react";
 // Services and Types
 import clientService, { Client } from "../../services/clientService";
 
-
-
 // --- Zod Schema for Validation ---
 const clientFormSchema = z.object({
   name: z.string().min(1, { message: "الاسم مطلوب" }),
@@ -41,7 +39,7 @@ interface ClientFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   clientToEdit: Client | null;
-  onSaveSuccess: () => void;
+  onSaveSuccess: (client?: Client) => void;
 }
 
 // --- Component Definition ---
@@ -126,7 +124,7 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
         duration: 3000,
       });
 
-      onSaveSuccess();
+      onSaveSuccess(savedClient); // Pass client back
       onClose();
     } catch (err) {
       console.error("Failed to save client:", err);
@@ -159,9 +157,7 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
 
   return (
     <Dialog open={isOpen} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>
-        {isEditMode ? "تعديل عميل" : "إضافة عميل"}
-      </DialogTitle>
+      <DialogTitle>{isEditMode ? "تعديل عميل" : "إضافة عميل"}</DialogTitle>
       <DialogContent dividers>
         <Box
           component="form"
@@ -241,11 +237,7 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
             >
               إلغاء
             </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={isSubmitting}
-            >
+            <Button type="submit" variant="contained" disabled={isSubmitting}>
               {isSubmitting && (
                 <Loader2 className="me-2 h-4 w-4 animate-spin" />
               )}

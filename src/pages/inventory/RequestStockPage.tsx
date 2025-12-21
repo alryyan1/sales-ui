@@ -1,14 +1,9 @@
 // src/pages/inventory/RequestStockPage.tsx
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import {
-  useForm,
-  Controller,
-  useFieldArray,
-  SubmitHandler,
-} from "react-hook-form";
+import { useForm, useFieldArray, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useTranslation } from "react-i18next";
+
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -28,7 +23,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -42,7 +36,6 @@ import {
 import {
   Command,
   CommandEmpty,
-  CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
@@ -57,10 +50,8 @@ import {
   Calendar as CalendarIcon,
   Trash2,
   PlusCircle,
-  Save,
   ArrowLeft,
   AlertCircle,
-  PackageSearch,
 } from "lucide-react";
 
 // Services and Types
@@ -68,34 +59,33 @@ import stockRequisitionService, {
   CreateStockRequisitionData,
 } from "../../services/stockRequisitionService"; // Adjust path
 import productService, { Product } from "../../services/productService";
-import { formatNumber, formatDate } from "@/constants"; // Helpers
 
 // --- Zod Schema Definition ---
 const requisitionItemSchema = z.object({
   product_id: z
-    .number({ required_error: "validation:required" })
-    .positive({ message: "validation:selectProduct" }),
+    .number({ required_error: "مطلوب" })
+    .positive({ message: "الرجاء اختيار منتج" }),
   product_name_display: z.string().optional(), // For displaying selected product name
   requested_quantity: z.coerce
-    .number({ invalid_type_error: "validation:invalidInteger" })
-    .int({ message: "validation:invalidInteger" })
-    .min(1, { message: "validation:minQuantity" }),
+    .number({ invalid_type_error: "يجب أن يكون رقماً صحيحاً" })
+    .int({ message: "يجب أن يكون رقماً صحيحاً" })
+    .min(1, { message: "الكمية يجب أن تكون 1 على الأقل" }),
   item_notes: z.string().nullable().optional(),
 });
 
 const createRequisitionSchema = z.object({
   department_or_reason: z
     .string()
-    .min(1, { message: "validation:required" })
-    .max(255, { message: "validation:maxLengthShort" }), // Example: make reason required
+    .min(1, { message: "مطلوب" })
+    .max(255, { message: "النص طويل جداً" }), // Example: make reason required
   request_date: z.date({
-    required_error: "validation:required",
-    invalid_type_error: "validation:invalidDate",
+    required_error: "مطلوب",
+    invalid_type_error: "تاريخ غير صالح",
   }),
   notes: z.string().nullable().optional(),
   items: z
     .array(requisitionItemSchema)
-    .min(1, { message: "inventory:errorItemsRequiredRequisition" }), // Add key
+    .min(1, { message: "يجب إضافة عنصر واحد على الأقل" }), // Add key
 });
 
 type CreateRequisitionFormValues = z.infer<typeof createRequisitionSchema>;
@@ -103,12 +93,7 @@ type RequisitionItemFormValues = z.infer<typeof requisitionItemSchema>;
 
 // --- Component ---
 const RequestStockPage: React.FC = () => {
-  const { t } = useTranslation([
-    "inventory",
-    "common",
-    "products",
-    "validation",
-  ]); // Add inventory namespace
+  // Removed useTranslation
   const navigate = useNavigate();
 
   // --- State ---
@@ -164,7 +149,7 @@ const RequestStockPage: React.FC = () => {
         );
         setProducts(response);
       } catch (error) {
-        toast.error(t("common:error"), {
+        toast.error("خطأ", {
           description: productService.getErrorMessage(error),
         });
         setProducts([]);
@@ -172,7 +157,7 @@ const RequestStockPage: React.FC = () => {
         setLoadingProducts(false);
       }
     },
-    [ productSearchInput]
+    [productSearchInput]
   ); // Dependencies
 
   useEffect(() => {
@@ -209,15 +194,15 @@ const RequestStockPage: React.FC = () => {
     console.log("Submitting Stock Requisition:", apiData);
     try {
       await stockRequisitionService.createRequisition(apiData);
-      toast.success(t("common:success"), {
-        description: t("inventory:requisitionCreateSuccess"),
+      toast.success("تم بنجاح", {
+        description: "تم إنشاء طلب المخزون بنجاح",
       }); // Add key
       navigate("/admin/inventory/requisitions"); // Navigate to a list page (to be created)
     } catch (err) {
       console.error("Failed to create stock requisition:", err);
       const generalError = stockRequisitionService.getErrorMessage(err);
       const apiErrors = stockRequisitionService.getValidationErrors(err);
-      toast.error(t("common:error"), { description: generalError });
+      toast.error("خطأ", { description: generalError });
       setServerError(generalError);
       if (apiErrors && Array.isArray(apiErrors)) {
         apiErrors.forEach((error) => {
@@ -251,17 +236,15 @@ const RequestStockPage: React.FC = () => {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 dark:text-gray-100">
-          {t("inventory:requestStockTitle")} {/* Add key */}
+          طلب مخزون جديد
         </h1>
       </div>
 
       <Card className="dark:bg-gray-900">
         <CardHeader>
-          <CardTitle>{t("inventory:requisitionDetails")}</CardTitle>
+          <CardTitle>تفاصيل الطلب</CardTitle>
           {/* Add key */}
-          <CardDescription>
-            {t("inventory:requisitionDetailsDesc")}
-          </CardDescription>
+          <CardDescription>أدخل تفاصيل طلب المخزون أدناه</CardDescription>
           {/* Add key */}
         </CardHeader>
         <Form {...form}>
@@ -270,7 +253,7 @@ const RequestStockPage: React.FC = () => {
               {serverError && !isSubmitting && (
                 <Alert variant="destructive" className="mb-4">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>{t("common:error")}</AlertTitle>
+                  <AlertTitle>خطأ</AlertTitle>
                   <AlertDescription>{serverError}</AlertDescription>
                 </Alert>
               )}
@@ -282,12 +265,12 @@ const RequestStockPage: React.FC = () => {
                   render={({ field, fieldState }) => (
                     <FormItem>
                       <FormLabel>
-                        {t("inventory:departmentOrReason")}
+                        القسم / السبب
                         <span className="text-red-500">*</span>
                       </FormLabel>
                       <FormControl>
                         <Input
-                          placeholder={t("inventory:reasonPlaceholder")}
+                          placeholder="أدخل القسم أو سبب الطلب"
                           {...field}
                           disabled={isSubmitting}
                         />
@@ -303,7 +286,7 @@ const RequestStockPage: React.FC = () => {
                   render={({ field, fieldState }) => (
                     <FormItem className="flex flex-col">
                       <FormLabel>
-                        {t("inventory:requestDate")}
+                        تاريخ الطلب
                         <span className="text-red-500">*</span>
                       </FormLabel>
                       <Popover>
@@ -321,7 +304,7 @@ const RequestStockPage: React.FC = () => {
                               {field.value ? (
                                 format(field.value, "PPP")
                               ) : (
-                                <span>{t("common:pickDate")}</span>
+                                <span>اختر تاريخاً</span>
                               )}
                             </Button>
                           </FormControl>
@@ -348,14 +331,10 @@ const RequestStockPage: React.FC = () => {
                   name="notes"
                   render={({ field, fieldState }) => (
                     <FormItem className="md:col-span-2">
-                      <FormLabel>
-                        {t("inventory:notesLabelRequisition")}
-                      </FormLabel>
+                      <FormLabel>ملاحظات</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder={t(
-                            "inventory:notesPlaceholderRequisition"
-                          )}
+                          placeholder="أي ملاحظات إضافية..."
                           className="min-h-[60px]"
                           {...field}
                           value={field.value ?? ""}
@@ -371,9 +350,7 @@ const RequestStockPage: React.FC = () => {
               <Separator className="my-6" />
               {/* Items Section */}
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium">
-                  {t("inventory:requestedItems")}
-                </h3>
+                <h3 className="text-lg font-medium">العناصر المطلوبة</h3>
                 {/* Add key */}
                 <Button
                   type="button"
@@ -383,7 +360,7 @@ const RequestStockPage: React.FC = () => {
                   disabled={isSubmitting}
                 >
                   <PlusCircle className="me-2 h-4 w-4" />
-                  {t("inventory:addItem")}
+                  إضافة عنصر
                 </Button>
                 {/* Add key */}
               </div>
@@ -420,7 +397,7 @@ const RequestStockPage: React.FC = () => {
                         render={({ field: productFieldCtrl, fieldState }) => (
                           <FormItem className="md:col-span-7 flex flex-col">
                             <FormLabel>
-                              {t("products:product")}
+                              المنتج
                               <span className="text-red-500">*</span>
                             </FormLabel>
                             <Popover
@@ -449,9 +426,7 @@ const RequestStockPage: React.FC = () => {
                                     ) ||
                                       (productFieldCtrl.value
                                         ? `ID: ${productFieldCtrl.value}`
-                                        : t(
-                                            "products:selectProductPlaceholder"
-                                          ))}
+                                        : "اختر منتجاً...")}
                                     <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                                   </Button>
                                 </FormControl>
@@ -459,9 +434,7 @@ const RequestStockPage: React.FC = () => {
                               <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height] p-0">
                                 <Command shouldFilter={false}>
                                   <CommandInput
-                                    placeholder={t(
-                                      "products:searchPlaceholder"
-                                    )}
+                                    placeholder="بحث عن منتج..."
                                     value={productSearchInput}
                                     onValueChange={
                                       handleProductSearchInputChange
@@ -473,22 +446,20 @@ const RequestStockPage: React.FC = () => {
                                     {loadingProducts && (
                                       <div className="p-2 text-center text-sm">
                                         <Loader2 className="inline me-2 h-4 w-4 animate-spin" />
-                                        {t("common:loading")}...
+                                        جاري التحميل...
                                       </div>
                                     )}
                                     {!loadingProducts &&
                                       products.length === 0 &&
                                       productSearchInput && (
                                         <CommandEmpty>
-                                          {t("common:noResults")}
+                                          لا توجد نتائج
                                         </CommandEmpty>
                                       )}
                                     {!loadingProducts &&
                                       products.length === 0 &&
                                       !productSearchInput && (
-                                        <CommandEmpty>
-                                          {t("products:typeToSearch")}
-                                        </CommandEmpty>
+                                        <CommandEmpty>اكتب للبحث</CommandEmpty>
                                       )}
                                     {!loadingProducts &&
                                       products.map((product) => (
@@ -519,7 +490,7 @@ const RequestStockPage: React.FC = () => {
                                             )}
                                           />
                                           {product.name} ({product.sku || "N/A"}
-                                          ) - {t("inventory:currentStock")}:
+                                          ) - المخزون الحالي:
                                           {product.stock_quantity}
                                         </CommandItem>
                                       ))}
@@ -537,9 +508,7 @@ const RequestStockPage: React.FC = () => {
                         name={`items.${index}.requested_quantity`}
                         render={({ field, fieldState }) => (
                           <FormItem className="md:col-span-3">
-                            <FormLabel>
-                              {t("inventory:requestedQuantity")}*
-                            </FormLabel>
+                            <FormLabel>الكمية المطلوبة*</FormLabel>
                             <FormControl>
                               <Input
                                 type="number"
@@ -561,12 +530,10 @@ const RequestStockPage: React.FC = () => {
                         name={`items.${index}.item_notes`}
                         render={({ field, fieldState }) => (
                           <FormItem className="md:col-span-2">
-                            <FormLabel>{t("inventory:itemNotes")}</FormLabel>
+                            <FormLabel>ملاحظات العنصر</FormLabel>
                             <FormControl>
                               <Input
-                                placeholder={t(
-                                  "inventory:itemNotesPlaceholder"
-                                )}
+                                placeholder="ملاحظات (اختياري)"
                                 {...field}
                                 value={field.value ?? ""}
                                 disabled={isSubmitting}
@@ -583,7 +550,7 @@ const RequestStockPage: React.FC = () => {
               </div>
               {fields.length === 0 && (
                 <p className="text-muted-foreground text-center py-4">
-                  {t("inventory:noItemsInRequisition")}
+                  لا توجد عناصر في الطلب
                 </p>
               )}
               {/* Add key */}
@@ -597,7 +564,7 @@ const RequestStockPage: React.FC = () => {
                   {isSubmitting && (
                     <Loader2 className="me-2 h-4 w-4 animate-spin" />
                   )}
-                  {t("inventory:submitRequisition")} {/* Add key */}
+                  إرسال الطلب {/* Add key */}
                 </Button>
               </div>
             </CardContent>

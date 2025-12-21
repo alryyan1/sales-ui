@@ -1,28 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import {
-  Box,
-  Typography,
-  Button,
-  Paper,
-  TextField,
-  Chip,
-  CircularProgress,
-  Stack,
-  Autocomplete,
-  Tooltip,
-  IconButton,
-} from "@mui/material";
-import {} from "@mui/icons-material";
-import {
-  Wifi,
-  WifiOff,
-  RefreshCw,
-  ChevronLeft,
-  ChevronRight,
-  Plus,
-  Search,
-  X,
-} from "lucide-react";
+import { Box, Paper } from "@mui/material";
 import apiClient from "@/lib/axios";
 
 // Use standard Tailwind classes via classNames if needed,
@@ -38,6 +15,7 @@ import { CartItem } from "../components/pos/types";
 import { PendingSalesColumn } from "../components/pos/PendingSalesColumn";
 import { toast } from "sonner";
 import { OfflineSaleSummaryColumn } from "../components/pos/OfflineSaleSummaryColumn";
+import { PosOfflineHeader } from "../components/pos/PosOfflineHeader";
 
 export const PosPageOffline = () => {
   const { isOnline, isSyncing, triggerSync } = useOfflineSync();
@@ -131,32 +109,37 @@ export const PosPageOffline = () => {
 
   // UI State
   const [products, setProducts] = useState<Product[]>([]);
+  const [clients, setClients] = useState<any[]>([]); // Using any for client type for now as we didn't import strict type
   const [currentSale, setCurrentSale] = useState<OfflineSale>(
     offlineSaleService.createDraftSale()
   );
-  const [inputValue, setInputValue] = useState("");
-  const [autocompleteOpen, setAutocompleteOpen] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  // MOVED TO HEADER: inputValue, autocompleteOpen, inputRef
 
   // Dialog State
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
 
-  // Load Products on Mount
+  // Load Products and Clients on Mount
   useEffect(() => {
     const load = async () => {
       const res = await offlineSaleService.searchProducts("");
       // console.log(res,'res');
       setProducts(res);
+
+      const clientsRes = await offlineSaleService.searchClients("");
+      setClients(clientsRes);
     };
     load();
   }, []);
 
-  // Initial check if we have products, if not try to sync
+  // Initial check if we have products/clients, if not try to sync
   useEffect(() => {
     const checkInit = async () => {
       const res = await offlineSaleService.searchProducts("");
-      if (res.length === 0 && isOnline) {
+      const clientsRes = await offlineSaleService.searchClients("");
+
+      if ((res.length === 0 || clientsRes.length === 0) && isOnline) {
         await offlineSaleService.initializeProducts();
+        await offlineSaleService.initializeClients(); // Load clients too
         window.location.reload(); // Simple refresh to show products, or just reload data
       }
     };
@@ -173,6 +156,20 @@ export const PosPageOffline = () => {
   // --- Actions ---
 
   const addToCart = (product: Product) => {
+    if (!shift || !shift.is_open) {
+      toast.error("يجب فتح الوردية قبل إضافة منتجات");
+      return;
+    }
+
+    const currentStock = Number(
+      product.current_stock_quantity ?? product.stock_quantity ?? 0
+    );
+
+    if (currentStock <= 0) {
+      toast.error("عذراً، هذا المنتج غير متوفر في المخزون (الكمية 0)");
+      return;
+    }
+
     updateCurrentSale((prev) => {
       const existing = prev.items.find((i) => i.product_id === product.id);
       // Determine price: try last sale price per sellable unit, then first batch, then default 0
@@ -328,10 +325,15 @@ export const PosPageOffline = () => {
     await loadPendingSales();
 
     // Reset
-    const newDraft = offlineSaleService.createDraftSale(shift?.id || null);
-    // Save new draft immediately so it exists
-    await offlineSaleService.saveDraft(newDraft);
-    setCurrentSale(newDraft);
+    if (shift && shift.is_open) {
+      const newDraft = offlineSaleService.createDraftSale(shift.id);
+      await offlineSaleService.saveDraft(newDraft);
+      setCurrentSale(newDraft);
+    } else {
+      // If shift closed/not available, just clear UI
+      const newDraft = offlineSaleService.createDraftSale(null);
+      setCurrentSale(newDraft);
+    }
   };
 
   // Select sale from history
@@ -341,7 +343,11 @@ export const PosPageOffline = () => {
 
   // Create new sale
   const handleNewSale = async () => {
-    const newSale = offlineSaleService.createDraftSale(shift?.id || null);
+    if (!shift || !shift.is_open) {
+      toast.error("يجب فتح الوردية أولاً لإنشاء عملية بيع جديدة");
+      return;
+    }
+    const newSale = offlineSaleService.createDraftSale(shift.id);
     await offlineSaleService.saveDraft(newSale);
     setCurrentSale(newSale);
     // List refresh handled by useEffect or we can force it here
@@ -377,351 +383,78 @@ export const PosPageOffline = () => {
 
     // If the deleted sale is the current one, switch to a new draft
     if (currentSale.tempId === sale.tempId) {
-      handleNewSale();
+      if (shift && shift.is_open) {
+        handleNewSale();
+      } else {
+        // Fallback: clear to empty draft in memory without saving
+        const newDraft = offlineSaleService.createDraftSale(null);
+        setCurrentSale(newDraft);
+        await loadPendingSales();
+      }
     } else {
       await loadPendingSales();
     }
   };
 
+  const isPendingSaleSelected = useMemo(() => {
+    return pendingSales.some((s) => s.tempId === currentSale.tempId);
+  }, [pendingSales, currentSale.tempId]);
+
   return (
     <Box
       sx={{
-        height: "100vh",
         display: "flex",
         flexDirection: "column",
-        bgcolor: "#f4f6f8",
+        height: "calc(100vh - 80px)",
       }}
     >
-      {/* TOP BAR */}
-      <Paper
-        elevation={0}
+      {/* TOP HEADER */}
+      <PosOfflineHeader
+        isOnline={isOnline}
+        isSyncing={isSyncing}
+        onTriggerSync={triggerSync}
+        shift={shift}
+        shiftLoading={shiftLoading}
+        onOpenShift={handleOpenShift}
+        onCloseShift={handleCloseShift}
+        selectedShiftId={selectedShiftId}
+        availableShiftIds={availableShiftIds}
+        onShiftSelect={setSelectedShiftId}
+        products={products}
+        onAddToCart={addToCart}
+        onNewSale={handleNewSale}
+        onPaymentShortcut={() => {
+          if (
+            Number(currentSale.total_amount) > 0 &&
+            currentSale.status !== "completed"
+          ) {
+            setIsPaymentDialogOpen(true);
+          }
+        }}
+      />
+
+      <Box
         sx={{
-          px: 3,
-          py: 2,
           display: "flex",
-          alignItems: "center",
-          borderBottom: "1px solid",
-          borderColor: "divider",
-          bgcolor: "white",
-          gap: 3,
+          flex: 1,
+          overflow: "hidden",
+          p: 2,
+          gap: 2,
         }}
       >
-        <Typography
-          variant="h5"
-          fontWeight="900"
-          sx={{
-            background: "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)",
-            backgroundClip: "text",
-            color: "transparent",
-            letterSpacing: "-0.5px",
-          }}
-        >
-          NEXT POS
-        </Typography>
-
-        <Box
-          sx={{
-            flex: 1,
-            display: "flex",
-            justifyContent: "center",
-            maxWidth: 600,
-          }}
-        >
-          <Autocomplete
-            open={autocompleteOpen}
-            onOpen={() => setAutocompleteOpen(true)}
-            onClose={() => setAutocompleteOpen(false)}
-            options={products}
-            getOptionLabel={(option) =>
-              `${option.name} (${option.sku || "No SKU"})`
-            }
-            value={null}
-            inputValue={inputValue}
-            onInputChange={(_, newInputValue) => {
-              setInputValue(newInputValue);
-            }}
-            autoHighlight
-            fullWidth
-            onChange={(_, newValue) => {
-              if (newValue) {
-                addToCart(newValue);
-                setInputValue("");
-              }
-            }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                inputRef={inputRef}
-                autoFocus
-                placeholder="Scan or Search Product..."
-                size="small"
-                sx={{
-                  bgcolor: "grey.50",
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 3,
-                    "& fieldset": { borderColor: "grey.200" },
-                    "&:hover fieldset": { borderColor: "primary.main" },
-                    "&.Mui-focused fieldset": { borderColor: "primary.main" },
-                  },
-                }}
-                InputProps={{
-                  ...params.InputProps,
-                  startAdornment: (
-                    <Search
-                      size={18}
-                      color="#9ca3af"
-                      style={{ marginRight: 8 }}
-                    />
-                  ),
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "+") {
-                    e.preventDefault();
-                    if (Number(currentSale.total_amount) > 0) {
-                      setIsPaymentDialogOpen(true);
-                    }
-                    return;
-                  }
-                  if (e.key === "Enter" && inputValue) {
-                    const exactMatch = products.find(
-                      (p) => p.sku === inputValue || p.sku === inputValue.trim()
-                    );
-                    if (exactMatch) {
-                      addToCart(exactMatch);
-                      setInputValue("");
-                      setAutocompleteOpen(false); // Close dropdown
-                      e.preventDefault();
-                      e.stopPropagation();
-                      return;
-                    }
-                  }
-                  if (params.inputProps.onKeyDown) {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    (params.inputProps.onKeyDown as any)(e);
-                  }
-                }}
-              />
-            )}
-            renderOption={(props, option) => (
-              <li {...props} key={option.id}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    width: "100%",
-                  }}
-                >
-                  <Box>
-                    <Typography variant="body1" fontWeight="bold">
-                      {option.name}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {option.sku}
-                    </Typography>
-                  </Box>
-                  <Typography color="primary.main" fontWeight="bold">
-                    {(() => {
-                      let price = Number(
-                        option.last_sale_price_per_sellable_unit || 0
-                      );
-                      if (
-                        price === 0 &&
-                        option.available_batches &&
-                        option.available_batches.length > 0
-                      ) {
-                        price = Number(
-                          option.available_batches[0].sale_price || 0
-                        );
-                      }
-                      return price.toFixed(2);
-                    })()}
-                  </Typography>
-                </Box>
-              </li>
-            )}
-            filterOptions={(options, state) => {
-              const inputValue = state.inputValue.toLowerCase();
-              const filtered = options.filter(
-                (option) =>
-                  option.name.toLowerCase().includes(inputValue) ||
-                  (option.sku && option.sku.toLowerCase().includes(inputValue))
-              );
-              return filtered.sort((a, b) => {
-                const aSku = a.sku?.toLowerCase() || "";
-                const bSku = b.sku?.toLowerCase() || "";
-                const exactA = aSku === inputValue;
-                const exactB = bSku === inputValue;
-                if (exactA && !exactB) return -1;
-                if (!exactA && exactB) return 1;
-                return 0;
-              });
-            }}
-            clearOnBlur
-            handleHomeEndKeys
-          />
-        </Box>
-
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<Plus size={18} />}
-          onClick={handleNewSale}
-          sx={{
-            borderRadius: 2,
-            textTransform: "none",
-            boxShadow: "0 4px 6px -1px rgba(37, 99, 235, 0.2)",
-          }}
-        >
-          New Sale
-        </Button>
-
-        <Box sx={{ flexGrow: 0 }} />
-
-        <Stack direction="row" spacing={2} alignItems="center">
-      
-
-          {/* Shift Status */}
-          {shift && shift.is_open ? (
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Chip
-                label="Open"
-                color="success"
-                size="small"
-                variant="filled"
-                sx={{ borderRadius: 1.5, fontWeight: 600, px: 0.5 }}
-              />
-              <Tooltip title="Close Shift">
-                <IconButton
-                  onClick={handleCloseShift}
-                  disabled={shiftLoading || !isOnline}
-                  size="small"
-                  sx={{
-                    color: "error.main",
-                    bgcolor: "error.lighter",
-                    "&:hover": { bgcolor: "error.light", color: "white" },
-                  }}
-                >
-                  {shiftLoading ? (
-                    <CircularProgress size={16} />
-                  ) : (
-                    <X size={18} />
-                  )}
-                </IconButton>
-              </Tooltip>
-            </Stack>
-          ) : (
-            <Button
-              variant="outlined"
-              color="success"
-              size="small"
-              onClick={handleOpenShift}
-              disabled={shiftLoading || !isOnline}
-              sx={{ borderRadius: 2 }}
-            >
-              {shiftLoading ? (
-                <CircularProgress size={16} color="inherit" />
-              ) : (
-                "Open Shift"
-              )}
-            </Button>
-          )}
-
-          {/* Sync Status */}
-          <Stack direction="row" spacing={1} alignItems="center">
-            {/* <Chip
-              icon={
-                isSyncing ? (
-                  <CircularProgress size={14} />
-                ) : isOnline ? (
-                  <Wifi size={14} />
-                ) : (
-                  <WifiOff size={14} />
-                )
-              }
-              label={isSyncing ? "Syncing..." : isOnline ? "Online" : "Offline"}
-              color={isOnline ? "success" : "default"}
-              variant="outlined"
-              size="small"
-              sx={{ borderRadius: 1.5 }}
-            /> */}
-            <Tooltip title="Sync Data">
-              <IconButton
-                onClick={() => triggerSync()}
-                disabled={isSyncing}
-                size="small"
-                sx={{ border: "1px solid", borderColor: "divider" }}
-              >
-                <RefreshCw
-                  size={18}
-                  className={isSyncing ? "animate-spin" : ""}
-                />
-              </IconButton>
-            </Tooltip>
-                {/* Shift Navigation */}
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              bgcolor: "grey.50",
-              border: "1px solid",
-              borderColor: "grey.200",
-              borderRadius: 2,
-              p: 0.5,
-            }}
-          >
-         <IconButton
-              size="small"
-              onClick={() =>
-                setSelectedShiftId((prev) => (prev ? prev + 1 : null))
-              }
-              disabled={
-                !selectedShiftId ||
-                (availableShiftIds.length > 0 &&
-                  selectedShiftId >= Math.max(...availableShiftIds))
-              }
-            >
-              <ChevronRight size={18} />
-            </IconButton>  
-            <Typography
-              variant="body2"
-              fontWeight="600"
-              sx={{
-                mx: 2,
-                minWidth: 60,
-                textAlign: "center",
-                color: "text.primary",
-              }}
-            >
-              Shift #{selectedShiftId || "-"}
-            </Typography>
-            
-             <IconButton
-              size="small"
-              onClick={() =>
-                setSelectedShiftId((prev) => (prev ? prev - 1 : null))
-              }
-              disabled={
-                !selectedShiftId ||
-                (availableShiftIds.length > 0 &&
-                  selectedShiftId <= Math.min(...availableShiftIds))
-              }
-            >
-              <ChevronLeft size={18} />
-            </IconButton>
-          </Box>
-          </Stack>
-        </Stack>
-      </Paper>
-
-      <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
         {/* LEFT: PENDING SALES COLUMN */}
-        <Box
+        <Paper
+          elevation={0}
           sx={{
             width: 90,
             flexShrink: 0,
             bgcolor: "white",
-            borderRight: "1px solid",
+            border: "1px solid",
             borderColor: "divider",
+            borderRadius: 3,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
           }}
         >
           <PendingSalesColumn
@@ -730,10 +463,23 @@ export const PosPageOffline = () => {
             onSaleSelect={handleSelectPendingSale}
             onDelete={handleDeletePendingSale}
           />
-        </Box>
+        </Paper>
 
         {/* MIDDLE: MAIN TABLE AREA */}
-        <Box sx={{ flex: 1, p: 3, display: "flex", flexDirection: "column" }}>
+        <Paper
+          elevation={0}
+          sx={{
+            flex: 1,
+            bgcolor: "white",
+            border: "1px solid",
+            borderColor: "divider",
+            borderRadius: 3,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            p: 2,
+          }}
+        >
           <CurrentSaleItemsColumn
             currentSaleItems={cartItems}
             onUpdateQuantity={async (id, qty) => updateQuantity(id, qty)}
@@ -743,28 +489,45 @@ export const PosPageOffline = () => {
               updateBatch(id, batchId, num, expiry, price)
             }
           />
-        </Box>
+        </Paper>
 
         {/* RIGHT: SUMMARY PANEL */}
-        {/* RIGHT: SUMMARY PANEL */}
-        <Box
-          sx={{
-            width: 400,
-            borderLeft: "1px solid",
-            borderColor: "divider",
-            zIndex: 10,
-            bgcolor: "white",
-          }}
-        >
-          <OfflineSaleSummaryColumn
-            currentSale={currentSale}
-            currentSaleItems={cartItems}
-            onUpdateSale={(updated) => updateCurrentSale(updated)}
-            onCompleteSale={handleCompleteSale}
-            isPaymentDialogOpen={isPaymentDialogOpen}
-            onPaymentDialogOpenChange={setIsPaymentDialogOpen}
-          />
-        </Box>
+        {isPendingSaleSelected && (
+          <Paper
+            elevation={0}
+            sx={{
+              width: 400,
+              flexShrink: 0,
+              bgcolor: "white",
+              border: "1px solid",
+              borderColor: "divider",
+              borderRadius: 3,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
+            <OfflineSaleSummaryColumn
+              currentSale={currentSale}
+              currentSaleItems={cartItems}
+              onUpdateSale={(updated) => updateCurrentSale(updated)}
+              onCompleteSale={handleCompleteSale}
+              isPaymentDialogOpen={isPaymentDialogOpen}
+              onPaymentDialogOpenChange={setIsPaymentDialogOpen}
+              clients={clients}
+              onClientAdded={async (client) => {
+                // Optimistic/Local update for speed
+                await dbService.saveClients([client]);
+                setClients((prev) => {
+                  const exists = prev.find((c) => c.id === client.id);
+                  if (exists)
+                    return prev.map((c) => (c.id === client.id ? client : c));
+                  return [...prev, client];
+                });
+              }}
+            />
+          </Paper>
+        )}
       </Box>
 
       {/* PAYMENT DIALOG TEST */}

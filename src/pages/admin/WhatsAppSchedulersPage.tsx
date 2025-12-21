@@ -1,14 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
+
 import { toast } from "sonner";
 
 // shadcn/ui Components
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -53,12 +48,13 @@ import {
 } from "lucide-react";
 
 const WhatsAppSchedulersPage: React.FC = () => {
-  const { t } = useTranslation(["settings", "common"]);
+  // Removed useTranslation
   const [schedulers, setSchedulers] = useState<WhatsAppScheduler[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedScheduler, setSelectedScheduler] = useState<WhatsAppScheduler | null>(null);
+  const [selectedScheduler, setSelectedScheduler] =
+    useState<WhatsAppScheduler | null>(null);
   const [isToggling, setIsToggling] = useState<number | null>(null);
 
   useEffect(() => {
@@ -72,7 +68,7 @@ const WhatsAppSchedulersPage: React.FC = () => {
       setSchedulers(data);
     } catch (error) {
       console.error("Error loading schedulers:", error);
-      toast.error(t("common:errorLoadingData"));
+      toast.error("خطأ في تحميل البيانات");
     } finally {
       setIsLoading(false);
     }
@@ -98,13 +94,11 @@ const WhatsAppSchedulersPage: React.FC = () => {
 
     try {
       await whatsappSchedulerService.deleteScheduler(selectedScheduler.id);
-      toast.success(t("settings:whatsappSchedulerDeleted"));
+      toast.success("تم حذف المجدول");
       loadSchedulers();
     } catch (error: any) {
       console.error("Error deleting scheduler:", error);
-      toast.error(
-        error.response?.data?.message || t("common:errorDeletingData")
-      );
+      toast.error(error.response?.data?.message || "خطأ في حذف البيانات");
     } finally {
       setIsDeleteDialogOpen(false);
       setSelectedScheduler(null);
@@ -115,13 +109,11 @@ const WhatsAppSchedulersPage: React.FC = () => {
     setIsToggling(scheduler.id);
     try {
       await whatsappSchedulerService.toggleScheduler(scheduler.id);
-      toast.success(t("settings:whatsappSchedulerStatusUpdated"));
+      toast.success("تم تحديث حالة المجدول");
       loadSchedulers();
     } catch (error: any) {
       console.error("Error toggling scheduler:", error);
-      toast.error(
-        error.response?.data?.message || t("common:errorUpdatingData")
-      );
+      toast.error(error.response?.data?.message || "خطأ في تحديث البيانات");
     } finally {
       setIsToggling(null);
     }
@@ -129,27 +121,27 @@ const WhatsAppSchedulersPage: React.FC = () => {
 
   const getReportTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
-      daily_sales: t("settings:dailySalesReport"),
-      inventory: t("settings:inventoryReport"),
-      profit_loss: t("settings:profitLossReport"),
+      daily_sales: "تقرير المبيعات اليومي",
+      inventory: "تقرير المخزون",
+      profit_loss: "تقرير الأرباح والخسائر",
     };
     return labels[type] || type;
   };
 
   const getDaysOfWeekLabel = (days: number[]) => {
-    if (!days || days.length === 0) return t("settings:notSet");
-    
+    if (!days || days.length === 0) return "لم يتم تعيينه";
+
     const dayLabels: Record<number, string> = {
-      0: t("common:sunday"),
-      1: t("common:monday"),
-      2: t("common:tuesday"),
-      3: t("common:wednesday"),
-      4: t("common:thursday"),
-      5: t("common:friday"),
-      6: t("common:saturday"),
+      0: "الأحد",
+      1: "الاثنين",
+      2: "الثلاثاء",
+      3: "الأربعاء",
+      4: "الخميس",
+      5: "الجمعة",
+      6: "السبت",
     };
-    
-    return days.map(day => dayLabels[day]).join(", ");
+
+    return days.map((day) => dayLabels[day]).join(", ");
   };
 
   const formatTime = (time: string) => {
@@ -157,7 +149,10 @@ const WhatsAppSchedulersPage: React.FC = () => {
       const [hours, minutes] = time.split(":");
       const date = new Date();
       date.setHours(parseInt(hours), parseInt(minutes));
-      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      return date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
     } catch {
       return time;
     }
@@ -178,7 +173,7 @@ const WhatsAppSchedulersPage: React.FC = () => {
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-10 w-32" />
         </div>
-        
+
         <Card>
           <CardHeader>
             <Skeleton className="h-6 w-32" />
@@ -209,15 +204,18 @@ const WhatsAppSchedulersPage: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <MessageCircle className="h-8 w-8 text-blue-600" />
-            {t("settings:whatsappSchedulers")}
+            مجدول التقارير (WhatsApp)
           </h1>
           <p className="text-muted-foreground mt-2">
-            {t("settings:whatsappSchedulersDescription")}
+            إدارة جدولة التقارير التلقائية عبر واتساب
           </p>
         </div>
-        <Button onClick={handleCreateScheduler} className="flex items-center gap-2">
+        <Button
+          onClick={handleCreateScheduler}
+          className="flex items-center gap-2"
+        >
           <Plus className="h-4 w-4" />
-          {t("settings:createScheduler")}
+          إنشاء مجدول
         </Button>
       </div>
 
@@ -226,29 +224,27 @@ const WhatsAppSchedulersPage: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
-            {t("settings:scheduledReports")}
+            التقارير المجدولة
           </CardTitle>
         </CardHeader>
         <CardContent>
           {schedulers.length === 0 ? (
             <Alert>
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                {t("settings:noSchedulersFound")}
-              </AlertDescription>
+              <AlertDescription>لم يتم العثور على مجدولات</AlertDescription>
             </Alert>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t("settings:name")}</TableHead>
-                  <TableHead>{t("settings:phoneNumber")}</TableHead>
-                  <TableHead>{t("settings:reportType")}</TableHead>
-                  <TableHead>{t("settings:scheduleTime")}</TableHead>
-                  <TableHead>{t("settings:daysOfWeek")}</TableHead>
-                  <TableHead>{t("settings:status")}</TableHead>
-                  <TableHead>{t("settings:lastSent")}</TableHead>
-                  <TableHead className="text-right">{t("common:actions")}</TableHead>
+                  <TableHead>الاسم</TableHead>
+                  <TableHead>رقم الهاتف</TableHead>
+                  <TableHead>نوع التقرير</TableHead>
+                  <TableHead>وقت الإرسال</TableHead>
+                  <TableHead>أيام الأسبوع</TableHead>
+                  <TableHead>الحالة</TableHead>
+                  <TableHead>آخر إرسال</TableHead>
+                  <TableHead className="text-right">إجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -289,22 +285,24 @@ const WhatsAppSchedulersPage: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <Switch
                           checked={scheduler.is_active}
-                          onCheckedChange={() => handleToggleScheduler(scheduler)}
+                          onCheckedChange={() =>
+                            handleToggleScheduler(scheduler)
+                          }
                           disabled={isToggling === scheduler.id}
                         />
                         <Badge
-                          variant={scheduler.is_active ? "default" : "secondary"}
+                          variant={
+                            scheduler.is_active ? "default" : "secondary"
+                          }
                         >
-                          {scheduler.is_active
-                            ? t("settings:active")
-                            : t("settings:inactive")}
+                          {scheduler.is_active ? "نشط" : "غير نشط"}
                         </Badge>
                       </div>
                     </TableCell>
                     <TableCell>
                       {scheduler.last_sent_at
                         ? formatDate(scheduler.last_sent_at)
-                        : t("settings:neverSent")}
+                        : "لم يتم الإرسال بعد"}
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -318,14 +316,14 @@ const WhatsAppSchedulersPage: React.FC = () => {
                             onClick={() => handleEditScheduler(scheduler)}
                           >
                             <Edit className="mr-2 h-4 w-4" />
-                            {t("common:edit")}
+                            تعديل
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleDeleteScheduler(scheduler)}
                             className="text-red-600"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
-                            {t("common:delete")}
+                            حذف
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -351,16 +349,14 @@ const WhatsAppSchedulersPage: React.FC = () => {
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
         onConfirm={confirmDelete}
-        title={t("settings:deleteScheduler")}
-        message={t("settings:deleteSchedulerConfirmation", {
-          name: selectedScheduler?.name,
-        })}
-        confirmText={t("common:delete")}
-        cancelText={t("common:cancel")}
+        title="حذف المجدول"
+        message={`هل أنت متأكد من حذف هذا المجدول: ${selectedScheduler?.name}؟`}
+        confirmText="حذف"
+        cancelText="إلغاء"
         variant="destructive"
       />
     </div>
   );
 };
 
-export default WhatsAppSchedulersPage; 
+export default WhatsAppSchedulersPage;

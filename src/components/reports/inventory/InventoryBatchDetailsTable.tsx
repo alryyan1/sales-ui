@@ -1,6 +1,6 @@
 // src/components/reports/inventory/InventoryBatchDetailsTable.tsx
 import React from "react";
-import { useTranslation } from "react-i18next";
+
 import {
   Table,
   TableBody,
@@ -20,36 +20,31 @@ interface InventoryBatchDetailsTableProps {
 export const InventoryBatchDetailsTable: React.FC<
   InventoryBatchDetailsTableProps
 > = ({ batches, sellableUnitName }) => {
-  const { t } = useTranslation(["reports", "purchases", "common", "products"]);
-
   if (!batches || batches.length === 0) {
     return (
       <p className="px-4 py-2 text-xs text-muted-foreground">
-        {t("reports:noBatchesAvailableForProduct")}
+        لا توجد دفعات متاحة لهذا المنتج
       </p>
     );
   }
 
-  const displaySellableUnit =
-    sellableUnitName || t("products:defaultSellableUnit");
+  const displaySellableUnit = sellableUnitName || "وحدة";
 
   return (
-    <Table size="sm" className="my-2">
+    <Table className="my-2">
       <TableHeader>
         <TableRow className="text-xs bg-slate-100 dark:bg-slate-700">
-          <TableHead>{t("purchases:batchNumber")}</TableHead>
+          <TableHead>رقم الدفعة</TableHead>
           <TableHead className="text-center">
-            {t("reports:remainingQty")} ({displaySellableUnit})
+            الكمية المتبقية ({displaySellableUnit})
           </TableHead>
-          <TableHead>{t("purchases:expiryDate")}</TableHead>
+          <TableHead>تاريخ الانتهاء</TableHead>
           <TableHead className="text-right">
-            {t("purchases:costPerUnit")} ({displaySellableUnit})
+            التكلفة للوحدة ({displaySellableUnit})
           </TableHead>{" "}
           {/* Cost per Sellable Unit */}
           <TableHead className="text-right">
-            {t("purchases:intendedSalePricePerUnit", {
-              unit: displaySellableUnit,
-            })}
+            {`سعر البيع المقترح (${displaySellableUnit})`}
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -59,21 +54,19 @@ export const InventoryBatchDetailsTable: React.FC<
             key={batch.id}
             className="text-xs hover:bg-slate-50 dark:hover:bg-slate-700/50"
           >
-            <TableCell>{batch.batch_number || t("common:n/a")}</TableCell>
+            <TableCell>{batch.batch_number || "-"}</TableCell>
             <TableCell className="text-center">
               {formatNumber(batch.remaining_quantity)}
             </TableCell>
             <TableCell>
-              {batch.expiry_date
-                ? formatDate(batch.expiry_date)
-                : t("common:n/a")}
+              {batch.expiry_date ? formatDate(batch.expiry_date) : "-"}
             </TableCell>
             <TableCell className="text-right">
               {formatCurrency(batch.cost_per_sellable_unit)}
             </TableCell>{" "}
             {/* Display cost_per_sellable_unit */}
             <TableCell className="text-right">
-              {batch.sale_price ? formatCurrency(batch.sale_price) : t("common:n/a")}
+              {batch.sale_price ? formatCurrency(batch.sale_price) : "-"}
             </TableCell>
           </TableRow>
         ))}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
+
 import { toast } from "sonner";
 
 // shadcn/ui Components
@@ -65,18 +65,24 @@ import systemService, {
 } from "@/services/systemService";
 
 const SystemPage: React.FC = () => {
-  const { t } = useTranslation(["system", "common"]);
+  // Removed useTranslation
   const [version, setVersion] = useState<SystemVersion | null>(null);
   const [updateCheck, setUpdateCheck] = useState<UpdateCheck | null>(null);
   const [isLoadingVersion, setIsLoadingVersion] = useState(true);
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [updateType, setUpdateType] = useState<'backend' | 'frontend' | 'both'>('backend');
-  const [updateResult, setUpdateResult] = useState<BackendUpdateResult | FrontendUpdateResult | CombinedUpdateResult | null>(null);
-  const [frontendInstructions, setFrontendInstructions] = useState<FrontendInstructions | null>(null);
+  const [updateType, setUpdateType] = useState<"backend" | "frontend" | "both">(
+    "backend"
+  );
+  const [updateResult, setUpdateResult] = useState<
+    BackendUpdateResult | FrontendUpdateResult | CombinedUpdateResult | null
+  >(null);
+  const [frontendInstructions, setFrontendInstructions] =
+    useState<FrontendInstructions | null>(null);
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [showFrontendDialog, setShowFrontendDialog] = useState(false);
-  const [showUpdateProgressDialog, setShowUpdateProgressDialog] = useState(false);
+  const [showUpdateProgressDialog, setShowUpdateProgressDialog] =
+    useState(false);
   const [updateProgress, setUpdateProgress] = useState<UpdateProgress[]>([]);
   const [currentProgress, setCurrentProgress] = useState(0);
 
@@ -92,7 +98,7 @@ const SystemPage: React.FC = () => {
       setVersion(data);
     } catch (error) {
       console.error("Failed to load system version:", error);
-      toast.error("Failed to load system version information");
+      toast.error("فشل تحميل معلومات إصدار النظام");
     } finally {
       setIsLoadingVersion(false);
     }
@@ -103,16 +109,17 @@ const SystemPage: React.FC = () => {
       setIsCheckingUpdates(true);
       const data = await systemService.checkForUpdates();
       setUpdateCheck(data);
-      
-      const totalUpdates = (data.backend_commit_count || 0) + (data.frontend_commit_count || 0);
+
+      const totalUpdates =
+        (data.backend_commit_count || 0) + (data.frontend_commit_count || 0);
       if (data.has_updates) {
-        toast.success(`Found ${totalUpdates} new commit(s) available!`);
+        toast.success(`تم العثور على ${totalUpdates} تحديث(ات) جديدة متاحة!`);
       } else {
-        toast.info("System is up to date");
+        toast.info("النظام محدث");
       }
     } catch (error) {
       console.error("Failed to check for updates:", error);
-      toast.error("Failed to check for updates");
+      toast.error("فشل التحقق من التحديثات");
     } finally {
       setIsCheckingUpdates(false);
     }
@@ -125,41 +132,45 @@ const SystemPage: React.FC = () => {
       setUpdateProgress([]);
       setCurrentProgress(0);
 
-      let result: BackendUpdateResult | FrontendUpdateResult | CombinedUpdateResult;
+      let result:
+        | BackendUpdateResult
+        | FrontendUpdateResult
+        | CombinedUpdateResult;
 
       switch (updateType) {
-        case 'backend':
+        case "backend":
           result = await systemService.updateBackend();
           break;
-        case 'frontend':
+        case "frontend":
           result = await systemService.updateFrontend();
           break;
-        case 'both':
+        case "both":
           result = await systemService.updateBoth();
           break;
         default:
-          throw new Error('Invalid update type');
+          throw new Error("نوع تحديث غير صالح");
       }
 
       setUpdateResult(result);
       setShowUpdateProgressDialog(false);
       setShowUpdateDialog(true);
-      
+
       // Check if update was successful
-      const isSuccess = 'data' in result && 
-        (result.data.success || 
-         ('overall_success' in result.data && result.data.overall_success));
-      
+      const isSuccess =
+        "data" in result &&
+        (result.data.success ||
+          ("overall_success" in result.data && result.data.overall_success));
+
       if (isSuccess) {
-        toast.success(`${updateType.charAt(0).toUpperCase() + updateType.slice(1)} updated successfully!`);
+        toast.success(`تم التحديث بنجاح!`);
         // Reload version info after update
         await loadVersion();
       } else {
-        toast.error(`${updateType.charAt(0).toUpperCase() + updateType.slice(1)} update completed with errors`);
+        toast.error(`اكتمل التحديث مع وجود أخطاء`);
       }
     } catch (error) {
       console.error(`Failed to update ${updateType}:`, error);
-      toast.error(`Failed to update ${updateType}`);
+      toast.error(`فشل التحديث`);
       setShowUpdateProgressDialog(false);
     } finally {
       setIsUpdating(false);
@@ -173,13 +184,13 @@ const SystemPage: React.FC = () => {
       setShowFrontendDialog(true);
     } catch (error) {
       console.error("Failed to get frontend instructions:", error);
-      toast.error("Failed to get frontend update instructions");
+      toast.error("فشل الحصول على تعليمات تحديث الواجهة الأمامية");
     }
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard");
+    toast.success("تم النسخ إلى الحافظة");
   };
 
   const formatDate = (dateString: string) => {
@@ -192,20 +203,21 @@ const SystemPage: React.FC = () => {
 
   const getUpdateStatusText = () => {
     if (!updateCheck) return "Unknown";
-    
+
     const backendUpdates = updateCheck.backend_has_updates;
     const frontendUpdates = updateCheck.frontend_has_updates;
-    
-    if (backendUpdates && frontendUpdates) return "Both Available";
-    if (backendUpdates) return "Backend Available";
-    if (frontendUpdates) return "Frontend Available";
-    return "Up to Date";
+
+    if (backendUpdates && frontendUpdates) return "كلاهما متاح";
+    if (backendUpdates) return "الخلفية متاحة";
+    if (frontendUpdates) return "الواجهة الأمامية متاحة";
+    return "محدث";
   };
 
   const getUpdateStatusVariant = () => {
     if (!updateCheck) return "default";
-    
-    const hasUpdates = updateCheck.backend_has_updates || updateCheck.frontend_has_updates;
+
+    const hasUpdates =
+      updateCheck.backend_has_updates || updateCheck.frontend_has_updates;
     return hasUpdates ? "destructive" : "default";
   };
 
@@ -241,7 +253,7 @@ const SystemPage: React.FC = () => {
       <div className="flex items-center mb-6 gap-2">
         <Server className="h-7 w-7 text-primary" />
         <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 dark:text-gray-100">
-          System Management
+          إدارة النظام
         </h1>
       </div>
 
@@ -251,45 +263,59 @@ const SystemPage: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Code className="h-5 w-5" />
-              Current System Version
+              إصدار النظام الحالي
             </CardTitle>
-            <CardDescription>
-              Information about the current system installation
-            </CardDescription>
+            <CardDescription>معلومات حول تثبيت النظام الحالي</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-500">Commit Hash</label>
+                <label className="text-sm font-medium text-gray-500">
+                  معرف الإصدار (Hash)
+                </label>
                 <div className="flex items-center gap-2 mt-1">
                   <GitCommit className="h-4 w-4 text-gray-400" />
                   <code className="text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                    {version?.current_commit ? truncateHash(version.current_commit) : 'Unknown'}
+                    {version?.current_commit
+                      ? truncateHash(version.current_commit)
+                      : "غير معروف"}
                   </code>
                 </div>
               </div>
-              
+
               <div>
-                <label className="text-sm font-medium text-gray-500">Branch</label>
+                <label className="text-sm font-medium text-gray-500">
+                  الفرع
+                </label>
                 <div className="flex items-center gap-2 mt-1">
                   <GitBranch className="h-4 w-4 text-gray-400" />
-                  <Badge variant="outline">{version?.current_branch || 'Unknown'}</Badge>
+                  <Badge variant="outline">
+                    {version?.current_branch || "غير معروف"}
+                  </Badge>
                 </div>
               </div>
-              
+
               <div>
-                <label className="text-sm font-medium text-gray-500">Laravel Version</label>
+                <label className="text-sm font-medium text-gray-500">
+                  إصدار Laravel
+                </label>
                 <div className="flex items-center gap-2 mt-1">
                   <Server className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm">{version?.laravel_version || 'Unknown'}</span>
+                  <span className="text-sm">
+                    {version?.laravel_version || "غير معروف"}
+                  </span>
                 </div>
               </div>
-              
+
               <div>
-                <label className="text-sm font-medium text-gray-500">PHP Version</label>
+                <label className="text-sm font-medium text-gray-500">
+                  إصدار PHP
+                </label>
                 <div className="flex items-center gap-2 mt-1">
                   <Code className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm">{version?.php_version || 'Unknown'}</span>
+                  <span className="text-sm">
+                    {version?.php_version || "غير معروف"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -297,11 +323,15 @@ const SystemPage: React.FC = () => {
             <Separator />
 
             <div>
-              <label className="text-sm font-medium text-gray-500">Last Commit Date</label>
+              <label className="text-sm font-medium text-gray-500">
+                تاريخ آخر تعديل
+              </label>
               <div className="flex items-center gap-2 mt-1">
                 <Calendar className="h-4 w-4 text-gray-400" />
                 <span className="text-sm">
-                  {version?.last_commit_date ? formatDate(version.last_commit_date) : 'Unknown'}
+                  {version?.last_commit_date
+                    ? formatDate(version.last_commit_date)
+                    : "غير معروف"}
                 </span>
               </div>
             </div>
@@ -309,9 +339,10 @@ const SystemPage: React.FC = () => {
             {version?.has_uncommitted_changes && (
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Uncommitted Changes</AlertTitle>
+                <AlertTitle>تغييرات غير محفوظة</AlertTitle>
                 <AlertDescription>
-                  There are uncommitted changes in the repository. Consider committing or stashing them before updating.
+                  هناك تغييرات غير محفوظة في المستودع. يرجى حفظها أو تجاهلها قبل
+                  التحديث.
                 </AlertDescription>
               </Alert>
             )}
@@ -324,7 +355,7 @@ const SystemPage: React.FC = () => {
                 className="flex-1"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
+                تحديث
               </Button>
               <Button
                 onClick={checkForUpdates}
@@ -337,7 +368,7 @@ const SystemPage: React.FC = () => {
                 ) : (
                   <Download className="h-4 w-4 mr-2" />
                 )}
-                Check for Updates
+                التحقق من التحديثات
               </Button>
             </div>
           </CardContent>
@@ -348,17 +379,15 @@ const SystemPage: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Download className="h-5 w-5" />
-              Update Status
+              حالة التحديث
             </CardTitle>
-            <CardDescription>
-              Check for and install system updates
-            </CardDescription>
+            <CardDescription>التحقق من التحديثات وتثبيتها</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {updateCheck ? (
               <>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Update Status</span>
+                  <span className="text-sm font-medium">حالة التحديث</span>
                   <Badge variant={getUpdateStatusVariant()}>
                     {getUpdateStatusText()}
                   </Badge>
@@ -369,16 +398,29 @@ const SystemPage: React.FC = () => {
                   <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
                     <div className="flex items-center gap-2 mb-2">
                       <Server className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Backend Updates</span>
+                      <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                        تحديثات الخلفية
+                      </span>
                       <Badge variant="secondary" className="text-xs">
-                        {updateCheck.backend_commit_count} commits
+                        {updateCheck.backend_commit_count} تعديلات
                       </Badge>
                     </div>
                     {updateCheck.backend_latest_commit_info && (
                       <div className="text-xs text-blue-700 dark:text-blue-300">
-                        <div><strong>Latest:</strong> {updateCheck.backend_latest_commit_info.message}</div>
-                        <div><strong>Author:</strong> {updateCheck.backend_latest_commit_info.author}</div>
-                        <div><strong>Date:</strong> {formatDate(updateCheck.backend_latest_commit_info.date)}</div>
+                        <div>
+                          <strong>الأحدث:</strong>{" "}
+                          {updateCheck.backend_latest_commit_info.message}
+                        </div>
+                        <div>
+                          <strong>المؤلف:</strong>{" "}
+                          {updateCheck.backend_latest_commit_info.author}
+                        </div>
+                        <div>
+                          <strong>التاريخ:</strong>{" "}
+                          {formatDate(
+                            updateCheck.backend_latest_commit_info.date
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -389,29 +431,50 @@ const SystemPage: React.FC = () => {
                   <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
                     <div className="flex items-center gap-2 mb-2">
                       <Monitor className="h-4 w-4 text-green-600" />
-                      <span className="text-sm font-medium text-green-800 dark:text-green-200">Frontend Updates</span>
+                      <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                        تحديثات الواجهة الأمامية
+                      </span>
                       <Badge variant="secondary" className="text-xs">
-                        {updateCheck.frontend_commit_count} commits
+                        {updateCheck.frontend_commit_count} تعديلات
                       </Badge>
                     </div>
                     {updateCheck.frontend_latest_commit_info && (
                       <div className="text-xs text-green-700 dark:text-green-300">
-                        <div><strong>Latest:</strong> {updateCheck.frontend_latest_commit_info.message}</div>
-                        <div><strong>Author:</strong> {updateCheck.frontend_latest_commit_info.author}</div>
-                        <div><strong>Date:</strong> {formatDate(updateCheck.frontend_latest_commit_info.date)}</div>
+                        <div>
+                          <strong>الأحدث:</strong>{" "}
+                          {updateCheck.frontend_latest_commit_info.message}
+                        </div>
+                        <div>
+                          <strong>المؤلف:</strong>{" "}
+                          {updateCheck.frontend_latest_commit_info.author}
+                        </div>
+                        <div>
+                          <strong>التاريخ:</strong>{" "}
+                          {formatDate(
+                            updateCheck.frontend_latest_commit_info.date
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
                 )}
 
-                {(updateCheck.backend_has_updates || updateCheck.frontend_has_updates) && (
+                {(updateCheck.backend_has_updates ||
+                  updateCheck.frontend_has_updates) && (
                   <>
                     <Separator />
 
                     <div className="space-y-3">
                       <div>
-                        <label className="text-sm font-medium mb-2 block">Select Update Type:</label>
-                        <Select value={updateType} onValueChange={(value: 'backend' | 'frontend' | 'both') => setUpdateType(value)}>
+                        <label className="text-sm font-medium mb-2 block">
+                          اختر نوع التحديث:
+                        </label>
+                        <Select
+                          value={updateType}
+                          onValueChange={(
+                            value: "backend" | "frontend" | "both"
+                          ) => setUpdateType(value)}
+                        >
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
@@ -420,7 +483,7 @@ const SystemPage: React.FC = () => {
                               <SelectItem value="backend">
                                 <div className="flex items-center gap-2">
                                   <Server className="h-4 w-4" />
-                                  Backend Only
+                                  الخلفية فقط
                                 </div>
                               </SelectItem>
                             )}
@@ -428,18 +491,19 @@ const SystemPage: React.FC = () => {
                               <SelectItem value="frontend">
                                 <div className="flex items-center gap-2">
                                   <Monitor className="h-4 w-4" />
-                                  Frontend Only
+                                  الواجهة الأمامية فقط
                                 </div>
                               </SelectItem>
                             )}
-                            {(updateCheck.backend_has_updates && updateCheck.frontend_has_updates) && (
-                              <SelectItem value="both">
-                                <div className="flex items-center gap-2">
-                                  <Layers className="h-4 w-4" />
-                                  Both Backend & Frontend
-                                </div>
-                              </SelectItem>
-                            )}
+                            {updateCheck.backend_has_updates &&
+                              updateCheck.frontend_has_updates && (
+                                <SelectItem value="both">
+                                  <div className="flex items-center gap-2">
+                                    <Layers className="h-4 w-4" />
+                                    كلاهما (الخلفية والواجهة)
+                                  </div>
+                                </SelectItem>
+                              )}
                           </SelectContent>
                         </Select>
                       </div>
@@ -454,29 +518,37 @@ const SystemPage: React.FC = () => {
                         ) : (
                           <Download className="h-4 w-4 mr-2" />
                         )}
-                        Update {updateType.charAt(0).toUpperCase() + updateType.slice(1)}
+                        تحديث{" "}
+                        {updateType === "backend"
+                          ? "الخلفية"
+                          : updateType === "frontend"
+                          ? "الواجهة"
+                          : "الكل"}
                       </Button>
-                      
+
                       <Button
                         onClick={getFrontendInstructions}
                         variant="outline"
                         className="w-full"
                       >
                         <Terminal className="h-4 w-4 mr-2" />
-                        Manual Frontend Instructions
+                        تعليمات يدوية للواجهة
                       </Button>
                     </div>
                   </>
                 )}
 
                 <div className="text-xs text-gray-500">
-                  Last checked: {formatDate(updateCheck.checked_at)}
+                  آخر فحص: {formatDate(updateCheck.checked_at)}
                 </div>
               </>
             ) : (
               <div className="text-center py-8 text-gray-500">
                 <Download className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Click "Check for Updates" to see if updates are available</p>
+                <p>
+                  انقر فوق "التحقق من التحديثات" لمعرفة ما إذا كانت التحديثات
+                  متاحة
+                </p>
               </div>
             )}
           </CardContent>
@@ -484,32 +556,50 @@ const SystemPage: React.FC = () => {
       </div>
 
       {/* Update Progress Dialog */}
-      <Dialog open={showUpdateProgressDialog} onOpenChange={setShowUpdateProgressDialog}>
+      <Dialog
+        open={showUpdateProgressDialog}
+        onOpenChange={setShowUpdateProgressDialog}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Loader2 className="h-5 w-5 animate-spin" />
-              Updating {updateType.charAt(0).toUpperCase() + updateType.slice(1)}
+              جاري تحديث{" "}
+              {updateType === "backend"
+                ? "الخلفية"
+                : updateType === "frontend"
+                ? "الواجهة"
+                : "الكل"}
             </DialogTitle>
             <DialogDescription>
-              Please wait while the system is being updated...
+              يرجى الانتظار بينما يتم تحديث النظام...
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <Progress value={currentProgress} className="w-full" />
-            <div className="text-sm text-center">
-              {currentProgress}% Complete
-            </div>
-            
+            <div className="text-sm text-center">{currentProgress}% مكتمل</div>
+
             <div className="space-y-2 max-h-40 overflow-y-auto">
               {updateProgress.map((progress, index) => (
                 <div key={index} className="flex items-center gap-2 text-sm">
-                  {progress.status === 'pending' && <div className="h-2 w-2 rounded-full bg-gray-300" />}
-                  {progress.status === 'running' && <Loader2 className="h-3 w-3 animate-spin" />}
-                  {progress.status === 'completed' && <CheckCircle className="h-3 w-3 text-green-600" />}
-                  {progress.status === 'error' && <XCircle className="h-3 w-3 text-red-600" />}
-                  <span className={progress.status === 'error' ? 'text-red-600' : ''}>
+                  {progress.status === "pending" && (
+                    <div className="h-2 w-2 rounded-full bg-gray-300" />
+                  )}
+                  {progress.status === "running" && (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  )}
+                  {progress.status === "completed" && (
+                    <CheckCircle className="h-3 w-3 text-green-600" />
+                  )}
+                  {progress.status === "error" && (
+                    <XCircle className="h-3 w-3 text-red-600" />
+                  )}
+                  <span
+                    className={
+                      progress.status === "error" ? "text-red-600" : ""
+                    }
+                  >
                     {progress.step}
                   </span>
                 </div>
@@ -524,33 +614,44 @@ const SystemPage: React.FC = () => {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {updateResult && 'data' in updateResult && 
-               (updateResult.data.success || 
-                ('overall_success' in updateResult.data && updateResult.data.overall_success)) ? (
+              {updateResult &&
+              "data" in updateResult &&
+              (updateResult.data.success ||
+                ("overall_success" in updateResult.data &&
+                  updateResult.data.overall_success)) ? (
                 <CheckCircle className="h-5 w-5 text-green-600" />
               ) : (
                 <XCircle className="h-5 w-5 text-red-600" />
               )}
-              {updateType.charAt(0).toUpperCase() + updateType.slice(1)} Update Result
+              نتيجة تحديث{" "}
+              {updateType === "backend"
+                ? "الخلفية"
+                : updateType === "frontend"
+                ? "الواجهة"
+                : "الكل"}
             </DialogTitle>
-            <DialogDescription>
-              {updateResult?.message}
-            </DialogDescription>
+            <DialogDescription>{updateResult?.message}</DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
-            {updateResult && 'data' in updateResult && (
+            {updateResult && "data" in updateResult && (
               <>
                 {/* Backend Results */}
-                {updateType === 'backend' || updateType === 'both' ? (
+                {updateType === "backend" || updateType === "both" ? (
                   <div>
                     <h4 className="font-medium mb-2 flex items-center gap-2">
                       <Server className="h-4 w-4" />
-                      Backend Steps:
+                      خطوات الخلفية:
                     </h4>
                     <div className="space-y-1">
-                      {('backend' in updateResult.data ? updateResult.data.backend.steps : updateResult.data.steps).map((step, index) => (
-                        <div key={index} className="text-sm text-gray-600 dark:text-gray-400">
+                      {("backend" in updateResult.data
+                        ? updateResult.data.backend.steps
+                        : updateResult.data.steps
+                      ).map((step, index) => (
+                        <div
+                          key={index}
+                          className="text-sm text-gray-600 dark:text-gray-400"
+                        >
                           • {step}
                         </div>
                       ))}
@@ -559,15 +660,21 @@ const SystemPage: React.FC = () => {
                 ) : null}
 
                 {/* Frontend Results */}
-                {updateType === 'frontend' || updateType === 'both' ? (
+                {updateType === "frontend" || updateType === "both" ? (
                   <div>
                     <h4 className="font-medium mb-2 flex items-center gap-2">
                       <Monitor className="h-4 w-4" />
-                      Frontend Steps:
+                      خطوات الواجهة:
                     </h4>
                     <div className="space-y-1">
-                      {('frontend' in updateResult.data ? updateResult.data.frontend.steps : updateResult.data.steps).map((step, index) => (
-                        <div key={index} className="text-sm text-gray-600 dark:text-gray-400">
+                      {("frontend" in updateResult.data
+                        ? updateResult.data.frontend.steps
+                        : updateResult.data.steps
+                      ).map((step, index) => (
+                        <div
+                          key={index}
+                          className="text-sm text-gray-600 dark:text-gray-400"
+                        >
                           • {step}
                         </div>
                       ))}
@@ -576,14 +683,22 @@ const SystemPage: React.FC = () => {
                 ) : null}
 
                 {/* Errors */}
-                {('backend' in updateResult.data ? updateResult.data.backend.errors : updateResult.data.errors).length > 0 && (
+                {("backend" in updateResult.data
+                  ? updateResult.data.backend.errors
+                  : updateResult.data.errors
+                ).length > 0 && (
                   <Alert variant="destructive">
                     <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>Errors Encountered</AlertTitle>
+                    <AlertTitle>الأخطاء التي واجهتها</AlertTitle>
                     <AlertDescription>
                       <div className="space-y-1">
-                        {('backend' in updateResult.data ? updateResult.data.backend.errors : updateResult.data.errors).map((error, index) => (
-                          <div key={index} className="text-sm">• {error}</div>
+                        {("backend" in updateResult.data
+                          ? updateResult.data.backend.errors
+                          : updateResult.data.errors
+                        ).map((error, index) => (
+                          <div key={index} className="text-sm">
+                            • {error}
+                          </div>
                         ))}
                       </div>
                     </AlertDescription>
@@ -591,8 +706,18 @@ const SystemPage: React.FC = () => {
                 )}
 
                 <div className="text-xs text-gray-500">
-                  Updated at: {('backend' in updateResult.data ? updateResult.data.backend.updated_at : updateResult.data.updated_at) ? 
-                    formatDate('backend' in updateResult.data ? updateResult.data.backend.updated_at : updateResult.data.updated_at) : ''}
+                  تم التحديث في:{" "}
+                  {(
+                    "backend" in updateResult.data
+                      ? updateResult.data.backend.updated_at
+                      : updateResult.data.updated_at
+                  )
+                    ? formatDate(
+                        "backend" in updateResult.data
+                          ? updateResult.data.backend.updated_at
+                          : updateResult.data.updated_at
+                      )
+                    : ""}
                 </div>
               </>
             )}
@@ -606,22 +731,26 @@ const SystemPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Terminal className="h-5 w-5" />
-              Frontend Update Instructions
+              تعليمات تحديث الواجهة الأمامية
             </DialogTitle>
             <DialogDescription>
               {frontendInstructions?.description}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Frontend Directory:</label>
+              <label className="text-sm font-medium">
+                دليل الواجهة الأمامية:
+              </label>
               <div className="flex items-center gap-2 mt-1">
                 <code className="text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded flex-1">
                   {frontendInstructions?.frontend_path}
                 </code>
                 <Button
-                  onClick={() => copyToClipboard(frontendInstructions?.frontend_path || '')}
+                  onClick={() =>
+                    copyToClipboard(frontendInstructions?.frontend_path || "")
+                  }
                   variant="outline"
                   size="sm"
                 >
@@ -631,7 +760,9 @@ const SystemPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-2 block">Commands to run:</label>
+              <label className="text-sm font-medium mb-2 block">
+                أوامر التشغيل:
+              </label>
               <div className="space-y-2">
                 {frontendInstructions?.commands.map((command, index) => (
                   <div key={index} className="flex items-center gap-2">
@@ -652,9 +783,10 @@ const SystemPage: React.FC = () => {
 
             <Alert>
               <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Important</AlertTitle>
+              <AlertTitle>هام</AlertTitle>
               <AlertDescription>
-                Make sure to run these commands in the frontend directory. The build process may take several minutes.
+                تأكد من تشغيل هذه الأوامر في دليل الواجهة الأمامية. قد تستغرق
+                عملية البناء بضع دقائق.
               </AlertDescription>
             </Alert>
           </div>
@@ -664,4 +796,4 @@ const SystemPage: React.FC = () => {
   );
 };
 
-export default SystemPage; 
+export default SystemPage;

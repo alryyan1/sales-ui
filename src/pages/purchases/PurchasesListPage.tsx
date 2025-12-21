@@ -1,35 +1,89 @@
 // src/pages/PurchasesListPage.tsx
+// Premium UI using shadcn/ui + MUI + Tailwind + Lucide
 import React, { useState, useEffect, useCallback } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 
-// MUI Components
-import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
-import CircularProgress from "@mui/material/CircularProgress";
-import Alert from "@mui/material/Alert";
-import Pagination from "@mui/material/Pagination";
-import Paper from "@mui/material/Paper";
-import TextField from "@mui/material/TextField";
-import Autocomplete from "@mui/material/Autocomplete";
-import IconButton from "@mui/material/IconButton";
-import Tooltip from "@mui/material/Tooltip";
-import Chip from "@mui/material/Chip";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
-import Button from "@mui/material/Button";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
+// shadcn/ui Components
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
-// Icons
-import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
-import FilterListIcon from "@mui/icons-material/FilterList";
-import ClearIcon from "@mui/icons-material/Clear";
-import HistoryIcon from "@mui/icons-material/History";
-import TableChartIcon from "@mui/icons-material/TableChart";
-import InventoryIcon from "@mui/icons-material/Inventory";
+// MUI Components (for complex interactions)
+import {
+  Pagination,
+  Autocomplete,
+  TextField,
+  CircularProgress,
+} from "@mui/material";
+
+// Lucide Icons
+import {
+  Plus,
+  Filter,
+  X,
+  FileSpreadsheet,
+  FileText,
+  Package,
+  History,
+  Calendar,
+  User,
+  Hash,
+  Search,
+  ShoppingCart,
+  CheckCircle,
+  Clock,
+  Truck,
+  RefreshCw,
+  MoreHorizontal,
+  ChevronDown,
+  ChevronUp,
+  TrendingUp,
+  Boxes,
+  DollarSign,
+  ArrowUpRight,
+} from "lucide-react";
 
 // Services and Types
 import purchaseService from "../../services/purchaseService";
@@ -39,6 +93,7 @@ import exportService from "../../services/exportService";
 import dayjs from "dayjs";
 import { formatCurrency } from "@/constants";
 import { PurchaseItemDetailsDialog } from "@/components/purchases/PurchaseItemDetailsDialog";
+import { cn } from "@/lib/utils";
 
 // Filter interface
 interface PurchaseFilters {
@@ -51,7 +106,7 @@ interface PurchaseFilters {
 }
 
 const PurchasesListPage: React.FC = () => {
-  const navigate = useNavigate(); // Hook for navigation
+  const navigate = useNavigate();
 
   // --- State ---
   const [purchasesResponse, setPurchasesResponse] = useState<any>(null);
@@ -74,18 +129,33 @@ const PurchasesListPage: React.FC = () => {
   const [productHistoryDialogOpen, setProductHistoryDialogOpen] =
     useState(false);
 
-  // Status options
-  const statusOptions = [
-    { value: "pending", label: "قيد الانتظار" },
-    { value: "ordered", label: "تم الطلب" },
-    { value: "received", label: "تم الاستلام" },
-  ];
+  // Status configuration
+  const statusConfig = {
+    pending: {
+      label: "قيد الانتظار",
+      icon: Clock,
+      variant: "warning" as const,
+      color: "text-amber-600 bg-amber-50 border-amber-200",
+    },
+    ordered: {
+      label: "تم الطلب",
+      icon: Truck,
+      variant: "secondary" as const,
+      color: "text-blue-600 bg-blue-50 border-blue-200",
+    },
+    received: {
+      label: "تم الاستلام",
+      icon: CheckCircle,
+      variant: "success" as const,
+      color: "text-emerald-600 bg-emerald-50 border-emerald-200",
+    },
+  };
 
   // --- Data Fetching ---
   const fetchSuppliers = useCallback(async () => {
     setLoadingSuppliers(true);
     try {
-      const response = await supplierService.getSuppliers(1, ""); // Get all suppliers for filter
+      const response = await supplierService.getSuppliers(1, "");
       setSuppliers(response.data || []);
     } catch (error) {
       console.error("Failed to fetch suppliers:", error);
@@ -103,7 +173,7 @@ const PurchasesListPage: React.FC = () => {
         "name",
         "asc",
         1000
-      ); // Get all products for filter
+      );
       setProducts(response.data || []);
     } catch (error) {
       console.error("Failed to fetch products:", error);
@@ -117,30 +187,19 @@ const PurchasesListPage: React.FC = () => {
       setIsLoading(true);
       setError(null);
       try {
-        // Build query parameters
         const params = new URLSearchParams();
         params.append("page", page.toString());
 
-        if (filters.supplier_id) {
+        if (filters.supplier_id)
           params.append("supplier_id", filters.supplier_id.toString());
-        }
-        if (filters.reference_number) {
+        if (filters.reference_number)
           params.append("reference_number", filters.reference_number);
-        }
-        if (filters.purchase_date) {
+        if (filters.purchase_date)
           params.append("purchase_date", filters.purchase_date);
-        }
-        if (filters.created_at) {
-          params.append("created_at", filters.created_at);
-        }
-        if (filters.status) {
-          params.append("status", filters.status);
-        }
-        if (filters.product_id) {
+        if (filters.created_at) params.append("created_at", filters.created_at);
+        if (filters.status) params.append("status", filters.status);
+        if (filters.product_id)
           params.append("product_id", filters.product_id.toString());
-        }
-
-        console.log("Filter params:", params.toString());
 
         const data = await purchaseService.getPurchases(
           page,
@@ -156,27 +215,22 @@ const PurchasesListPage: React.FC = () => {
     []
   );
 
-  // Effect to fetch data
   useEffect(() => {
     fetchPurchases(currentPage, filters);
   }, [fetchPurchases, currentPage, filters]);
 
-  // Effect to fetch suppliers and products on component mount
   useEffect(() => {
     fetchSuppliers();
     fetchProducts();
   }, [fetchSuppliers, fetchProducts]);
 
-  // --- Filter Handlers ---
+  // --- Handlers ---
   const handleFilterChange = (
     key: keyof PurchaseFilters,
     value: string | number | undefined
   ) => {
-    setFilters((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
-    setCurrentPage(1); // Reset to first page when filters change
+    setFilters((prev) => ({ ...prev, [key]: value }));
+    setCurrentPage(1);
   };
 
   const clearFilters = () => {
@@ -188,7 +242,8 @@ const PurchasesListPage: React.FC = () => {
     (value) => value !== undefined && value !== null && value !== ""
   );
 
-  // --- Pagination Handler ---
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+
   const handlePageChange = (
     _event: React.ChangeEvent<unknown>,
     value: number
@@ -196,24 +251,18 @@ const PurchasesListPage: React.FC = () => {
     setCurrentPage(value);
   };
 
-  // --- PDF Report Handler ---
   const handleViewPdfReport = async (id: number) => {
     try {
-      // Generate and view PDF report for the purchase
       await exportService.exportPurchasePdf(id);
-      console.log("PDF report generated successfully");
     } catch (error) {
       console.error("Failed to generate PDF report:", error);
-      // Show error message (you can add a toast notification here if needed)
     }
   };
 
-  // --- Product History Handler ---
   const handleViewProductHistory = async (product: Product) => {
     setSelectedProduct(product);
     setProductHistoryDialogOpen(true);
     setLoadingProductPurchases(true);
-
     try {
       const purchases = await purchaseService.getPurchasesForProduct(
         product.id
@@ -233,424 +282,538 @@ const PurchasesListPage: React.FC = () => {
     setProductPurchases([]);
   };
 
-  // --- Excel Export Handler ---
   const handleExportExcel = async () => {
     try {
-      // Pass current filters to the Excel export
       await exportService.exportPurchasesExcel(filters);
-      // Show success message (you can add a toast notification here if needed)
-      console.log("Excel export initiated successfully");
     } catch (error) {
       console.error("Failed to export Excel:", error);
-      // Show error message (you can add a toast notification here if needed)
     }
   };
 
-  // --- Render ---
+  // Stats calculation
+  const stats = {
+    total: purchasesResponse?.meta?.total || 0,
+    received:
+      purchasesResponse?.data?.filter((p: any) => p.status === "received")
+        .length || 0,
+    pending:
+      purchasesResponse?.data?.filter((p: any) => p.status === "pending")
+        .length || 0,
+    totalAmount:
+      purchasesResponse?.data?.reduce(
+        (sum: number, p: any) => sum + Number(p.total_amount || 0),
+        0
+      ) || 0,
+  };
+
   return (
-    <Box
-      sx={{ p: { xs: 1, sm: 2, md: 3 }, direction: "rtl" }}
-      className="dark:bg-gray-900 min-h-screen"
-    >
-      {/* Header & Add Button */}
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: { xs: "column", sm: "row" },
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 3,
-          gap: 2,
-        }}
+    <TooltipProvider>
+      <div
+        className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 p-4 md:p-6"
+        dir="rtl"
       >
-        <Typography
-          variant="h4"
-          component="h1"
-          className="text-gray-800 dark:text-gray-100 font-semibold"
-        >
-          قائمة المشتريات
-        </Typography>
-        <Box sx={{ display: "flex", gap: 1 }}>
-          {/* Filter Toggle Button */}
-          <Button
-            variant="outlined"
-            onClick={() => setShowFilters(!showFilters)}
-            startIcon={<FilterListIcon />}
-          >
-            الفلاتر
-          </Button>
-          {/* Excel Export Button */}
-          <Button
-            variant="outlined"
-            onClick={handleExportExcel}
-            startIcon={<TableChartIcon />}
-          >
-            تصدير إلى Excel
-          </Button>
-          {/* Link to the Add Purchase Page */}
-          <Button
-            variant="contained"
-            component={RouterLink}
-            to="/purchases/add"
-          >
-            إضافة عملية شراء
-          </Button>
-        </Box>
-      </Box>
+        {/* Header */}
+        <div className="mb-6">
+          <Card className="border-0 shadow-md bg-gradient-to-r from-sky-400 via-sky-500 to-blue-500">
+            <CardContent className="p-4">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                {/* Title Section */}
+                <div className="flex items-center gap-4">
+                  <div className="p-2 bg-white/30 backdrop-blur-sm rounded-lg">
+                    <ShoppingCart className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-xl md:text-2xl font-bold text-white">
+                      المشتريات
+                    </h1>
+                    <p className="text-sky-100 text-xs">
+                      إدارة عمليات الشراء والمخزون
+                    </p>
+                  </div>
+                </div>
 
-      {/* Filters Section */}
-      {showFilters && (
-        <Paper sx={{ p: 3, mb: 3 }} className="dark:bg-gray-800">
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: 2,
-            }}
-          >
-            <Typography
-              variant="h6"
-              className="text-gray-800 dark:text-gray-100"
-            >
-              الفلاتر
-            </Typography>
-            {hasActiveFilters && (
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={clearFilters}
-                startIcon={<ClearIcon />}
-              >
-                مسح الفلاتر
-              </Button>
-            )}
-          </Box>
-
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: { xs: "1fr", md: "repeat(6, 1fr)" },
-              gap: 2,
-            }}
-          >
-            {/* Supplier Filter */}
-            <Autocomplete
-              options={suppliers}
-              getOptionLabel={(option) => option.name}
-              value={
-                suppliers.find((s) => s.id === filters.supplier_id) || null
-              }
-              onChange={(event, newValue) => {
-                handleFilterChange("supplier_id", newValue?.id);
-              }}
-              loading={loadingSuppliers}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="المورد"
-                  placeholder="اختر المورد"
-                  size="small"
-                />
-              )}
-            />
-
-            {/* Product Filter */}
-            <Autocomplete
-              options={products}
-              getOptionLabel={(option) =>
-                `${option.name}${option.sku ? ` (${option.sku})` : ""}`
-              }
-              value={products.find((p) => p.id === filters.product_id) || null}
-              onChange={(event, newValue) => {
-                handleFilterChange("product_id", newValue?.id);
-              }}
-              loading={loadingProducts}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="المنتج"
-                  placeholder="اختر المنتج"
-                  size="small"
-                />
-              )}
-            />
-
-            {/* Reference Number Filter */}
-            <TextField
-              label="رقم المرجع"
-              placeholder="أدخل رقم المرجع"
-              value={filters.reference_number || ""}
-              onChange={(e) =>
-                handleFilterChange("reference_number", e.target.value)
-              }
-              size="small"
-            />
-
-            {/* Status Filter */}
-            <Autocomplete
-              options={statusOptions}
-              getOptionLabel={(option) => option.label}
-              value={
-                statusOptions.find((s) => s.value === filters.status) || null
-              }
-              onChange={(event, newValue) => {
-                handleFilterChange("status", newValue?.value);
-              }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="الحالة"
-                  placeholder="اختر الحالة"
-                  size="small"
-                />
-              )}
-            />
-
-            {/* Purchase Date Filter */}
-            <TextField
-              type="date"
-              label="تاريخ الشراء"
-              value={filters.purchase_date || ""}
-              onChange={(e) =>
-                handleFilterChange("purchase_date", e.target.value)
-              }
-              size="small"
-              InputLabelProps={{
-                shrink: true,
-              }}
-              inputProps={{
-                max: dayjs().format("YYYY-MM-DD"), // Max date is today
-              }}
-            />
-
-            {/* Created At Filter */}
-            <TextField
-              type="date"
-              label="تاريخ الإنشاء"
-              value={filters.created_at || ""}
-              onChange={(e) => handleFilterChange("created_at", e.target.value)}
-              size="small"
-              InputLabelProps={{
-                shrink: true,
-              }}
-              inputProps={{
-                max: dayjs().format("YYYY-MM-DD"), // Max date is today
-              }}
-            />
-          </Box>
-        </Paper>
-      )}
-
-      {/* Loading / Error States */}
-      {isLoading && (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
-          <CircularProgress />
-          <Typography
-            sx={{ ml: 2 }}
-            className="text-gray-600 dark:text-gray-400"
-          >
-            جاري التحميل...
-          </Typography>
-        </Box>
-      )}
-      {!isLoading && error && (
-        <Alert severity="error" sx={{ my: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      {/* Content Area: Table and Pagination */}
-      {!isLoading && !error && purchasesResponse && (
-        <Card style={{ direction: "rtl" }}>
-          <CardContent>
-            <Table aria-label="قائمة المشتريات" className="text-base">
-              <TableHead>
-                <TableRow>
-                  <TableCell align="center" className="font-semibold text-base">
-                    #
-                  </TableCell>
-                  <TableCell align="center" className="font-semibold text-base">
-                    تاريخ الشراء
-                  </TableCell>
-                  <TableCell align="center" className="font-semibold text-base">
-                    تاريخ الإنشاء
-                  </TableCell>
-                  <TableCell align="center" className="font-semibold text-base">
-                    رقم المرجع
-                  </TableCell>
-                  <TableCell align="center" className="font-semibold text-base">
-                    المورد
-                  </TableCell>
-                  <TableCell align="center" className="font-semibold text-base">
-                    الحالة
-                  </TableCell>
-                  <TableCell align="center" className="font-semibold text-base">
-                    إجمالي المبلغ
-                  </TableCell>
-                  <TableCell align="center" className="font-semibold text-base">
-                    إجراءات
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {purchasesResponse.data.map((purchase) => (
-                  <TableRow
-                    key={purchase.id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-800"
-                    onClick={() =>
-                      navigate(`/purchases/${purchase.id}/manage-items`)
-                    }
-                    sx={{ cursor: "pointer" }}
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="bg-white/10 border-white/20 text-white hover:bg-white/20"
                   >
-                    <TableCell align="center" className="text-base">
-                      {purchase.id}
-                    </TableCell>
-                    <TableCell align="center" className="text-base">
-                      {dayjs(purchase.purchase_date).format("YYYY-MM-DD")}
-                    </TableCell>
-                    <TableCell align="center" className="text-base">
-                      {dayjs(purchase.created_at).format("YYYY-MM-DD HH:mm")}
-                    </TableCell>
-                    <TableCell align="center" className="text-base">
-                      {purchase.reference_number || "---"}
-                    </TableCell>
-                    <TableCell align="center" className="text-base">
-                      <span className="font-bold text-gray-900 dark:text-gray-100">
-                        {purchase.supplier_name || "-"}
-                      </span>
-                    </TableCell>
-                    {/* Handle possible null supplier */}
-                    <TableCell align="center" className="text-base">
-                      <Chip
-                        label={
-                          purchase.status === "received"
-                            ? "تم الاستلام"
-                            : purchase.status === "pending"
-                            ? "قيد الانتظار"
-                            : "تم الطلب"
-                        }
-                        size="small"
-                        color={
-                          purchase.status === "received"
-                            ? "success"
-                            : purchase.status === "pending"
-                            ? "warning"
-                            : "default"
-                        }
-                      />
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      className="text-base font-semibold"
+                    {showFilters ? (
+                      <ChevronUp className="h-4 w-4 ml-2" />
+                    ) : (
+                      <Filter className="h-4 w-4 ml-2" />
+                    )}
+                    الفلاتر
+                    {activeFilterCount > 0 && (
+                      <Badge className="mr-2 bg-white text-blue-600 hover:bg-white">
+                        {activeFilterCount}
+                      </Badge>
+                    )}
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportExcel}
+                    className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                  >
+                    <FileSpreadsheet className="h-4 w-4 ml-2" />
+                    تصدير
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    className="bg-white text-sky-600 hover:bg-sky-50 shadow-md"
+                    asChild
+                  >
+                    <RouterLink to="/purchases/add">
+                      <Plus className="h-4 w-4 ml-2" />
+                      إضافة شراء
+                    </RouterLink>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Stats Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
+                <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <Boxes className="h-4 w-4 text-white/80" />
+                    <ArrowUpRight className="h-3 w-3 text-emerald-200" />
+                  </div>
+                  <p className="text-xl font-bold text-white mt-1">
+                    {stats.total}
+                  </p>
+                  <p className="text-sky-100 text-xs">إجمالي العمليات</p>
+                </div>
+                <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <CheckCircle className="h-4 w-4 text-emerald-200" />
+                    <span className="text-xs text-emerald-200">✓</span>
+                  </div>
+                  <p className="text-xl font-bold text-white mt-1">
+                    {stats.received}
+                  </p>
+                  <p className="text-sky-100 text-xs">تم الاستلام</p>
+                </div>
+                <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <Clock className="h-4 w-4 text-amber-200" />
+                    <span className="text-xs text-amber-200">⏳</span>
+                  </div>
+                  <p className="text-xl font-bold text-white mt-1">
+                    {stats.pending}
+                  </p>
+                  <p className="text-sky-100 text-xs">قيد الانتظار</p>
+                </div>
+                <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <DollarSign className="h-4 w-4 text-white/80" />
+                    <TrendingUp className="h-3 w-3 text-emerald-200" />
+                  </div>
+                  <p className="text-lg font-bold text-white mt-1">
+                    {formatCurrency(stats.totalAmount)}
+                  </p>
+                  <p className="text-sky-100 text-xs">إجمالي المبلغ</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filters */}
+        <Collapsible open={showFilters} onOpenChange={setShowFilters}>
+          <CollapsibleContent>
+            <Card className="mb-6 border shadow-sm">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Search className="h-5 w-5 text-muted-foreground" />
+                    <CardTitle className="text-lg">بحث وفلترة</CardTitle>
+                  </div>
+                  {hasActiveFilters && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearFilters}
+                      className="text-destructive"
                     >
-                      {formatCurrency(purchase.total_amount)}
-                    </TableCell>
-                    <TableCell align="center" className="text-base">
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "center",
-                          gap: 0.5,
-                        }}
-                      >
-                        <Tooltip title="عرض تقرير PDF">
-                          <IconButton
-                            aria-label="عرض تقرير PDF"
-                            color="default"
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleViewPdfReport(purchase.id);
-                            }}
-                          >
-                            <PictureAsPdfIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
+                      <X className="h-4 w-4 ml-1" />
+                      مسح الكل
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                  {/* Supplier Filter */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium flex items-center gap-1">
+                      <User className="h-4 w-4" />
+                      المورد
+                    </label>
+                    <Autocomplete
+                      options={suppliers}
+                      getOptionLabel={(option) => option.name}
+                      value={
+                        suppliers.find((s) => s.id === filters.supplier_id) ||
+                        null
+                      }
+                      onChange={(_, newValue) =>
+                        handleFilterChange("supplier_id", newValue?.id)
+                      }
+                      loading={loadingSuppliers}
+                      size="small"
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          placeholder="اختر المورد"
+                          size="small"
+                        />
+                      )}
+                    />
+                  </div>
 
-                        <Tooltip title="إدارة بنود الشراء">
-                          <IconButton
-                            aria-label="إدارة بنود الشراء"
-                            color="primary"
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(
-                                `/purchases/${purchase.id}/manage-items`
-                              );
-                            }}
-                          >
-                            <InventoryIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
+                  {/* Product Filter */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium flex items-center gap-1">
+                      <Package className="h-4 w-4" />
+                      المنتج
+                    </label>
+                    <Autocomplete
+                      options={products}
+                      getOptionLabel={(option) =>
+                        `${option.name}${option.sku ? ` (${option.sku})` : ""}`
+                      }
+                      value={
+                        products.find((p) => p.id === filters.product_id) ||
+                        null
+                      }
+                      onChange={(_, newValue) =>
+                        handleFilterChange("product_id", newValue?.id)
+                      }
+                      loading={loadingProducts}
+                      size="small"
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          placeholder="اختر المنتج"
+                          size="small"
+                        />
+                      )}
+                    />
+                  </div>
 
-                        {/* Product History Button - only show if there's a product filter */}
-                        {filters.product_id && (
-                          <Tooltip title="سجل مشتريات المنتج">
-                            <IconButton
-                              aria-label="سجل مشتريات المنتج"
-                              color="primary"
-                              size="small"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const product = products.find(
-                                  (p) => p.id === filters.product_id
-                                );
-                                if (product) {
-                                  handleViewProductHistory(product);
-                                }
-                              }}
-                            >
-                              <HistoryIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                      </Box>
-                    </TableCell>
-                  </TableRow>
+                  {/* Reference Number */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium flex items-center gap-1">
+                      <Hash className="h-4 w-4" />
+                      رقم المرجع
+                    </label>
+                    <Input
+                      placeholder="أدخل الرقم"
+                      value={filters.reference_number || ""}
+                      onChange={(e) =>
+                        handleFilterChange("reference_number", e.target.value)
+                      }
+                    />
+                  </div>
+
+                  {/* Status */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">الحالة</label>
+                    <Select
+                      value={filters.status || ""}
+                      onValueChange={(value) =>
+                        handleFilterChange("status", value || undefined)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر الحالة" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">قيد الانتظار</SelectItem>
+                        <SelectItem value="ordered">تم الطلب</SelectItem>
+                        <SelectItem value="received">تم الاستلام</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Purchase Date */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      تاريخ الشراء
+                    </label>
+                    <Input
+                      type="date"
+                      value={filters.purchase_date || ""}
+                      onChange={(e) =>
+                        handleFilterChange("purchase_date", e.target.value)
+                      }
+                      max={dayjs().format("YYYY-MM-DD")}
+                    />
+                  </div>
+
+                  {/* Created At */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">تاريخ الإنشاء</label>
+                    <Input
+                      type="date"
+                      value={filters.created_at || ""}
+                      onChange={(e) =>
+                        handleFilterChange("created_at", e.target.value)
+                      }
+                      max={dayjs().format("YYYY-MM-DD")}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
+
+        {/* Main Content */}
+        <Card className="border shadow-sm">
+          {/* Loading State */}
+          {isLoading && (
+            <CardContent className="p-8">
+              <div className="space-y-4">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="flex items-center gap-4">
+                    <Skeleton className="h-12 w-12 rounded-lg" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-1/3" />
+                      <Skeleton className="h-3 w-1/4" />
+                    </div>
+                    <Skeleton className="h-8 w-24" />
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-
-          {/* Pagination */}
-          {purchasesResponse?.meta?.last_page > 1 && (
-            <Box
-              sx={{ display: "flex", justifyContent: "center", p: 2, mt: 3 }}
-            >
-              <Pagination
-                count={purchasesResponse.meta.last_page}
-                page={currentPage}
-                onChange={handlePageChange}
-                color="primary"
-                shape="rounded"
-                showFirstButton
-                showLastButton
-                disabled={isLoading}
-              />
-            </Box>
+              </div>
+            </CardContent>
           )}
-          {/* No Purchases Message */}
-          {purchasesResponse.data.length === 0 && (
-            <Typography
-              sx={{ textAlign: "center", py: 5 }}
-              className="text-gray-500 dark:text-gray-400"
-            >
-              لا توجد عمليات شراء مسجلة.
-            </Typography>
+
+          {/* Error State */}
+          {!isLoading && error && (
+            <CardContent className="p-8">
+              <div className="flex flex-col items-center justify-center text-center">
+                <div className="p-4 bg-destructive/10 rounded-full mb-4">
+                  <X className="h-8 w-8 text-destructive" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">حدث خطأ</h3>
+                <p className="text-muted-foreground mb-4">{error}</p>
+                <Button
+                  onClick={() => fetchPurchases(currentPage, filters)}
+                  variant="outline"
+                >
+                  <RefreshCw className="h-4 w-4 ml-2" />
+                  إعادة المحاولة
+                </Button>
+              </div>
+            </CardContent>
+          )}
+
+          {/* Table */}
+          {!isLoading && !error && purchasesResponse && (
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="text-center font-bold">#</TableHead>
+                      <TableHead className="text-center font-bold">
+                        التاريخ
+                      </TableHead>
+                      <TableHead className="text-center font-bold">
+                        المورد
+                      </TableHead>
+                      <TableHead className="text-center font-bold">
+                        رقم المرجع
+                      </TableHead>
+                      <TableHead className="text-center font-bold">
+                        الحالة
+                      </TableHead>
+                      <TableHead className="text-center font-bold">
+                        الإجمالي
+                      </TableHead>
+                      <TableHead className="text-center font-bold">
+                        إجراءات
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {purchasesResponse.data.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="h-48 text-center">
+                          <div className="flex flex-col items-center justify-center">
+                            <div className="p-4 bg-muted rounded-full mb-4">
+                              <ShoppingCart className="h-12 w-12 text-muted-foreground" />
+                            </div>
+                            <h3 className="text-lg font-semibold mb-2">
+                              لا توجد عمليات شراء
+                            </h3>
+                            <p className="text-muted-foreground mb-4">
+                              ابدأ بإضافة أول عملية شراء
+                            </p>
+                            <Button asChild>
+                              <RouterLink to="/purchases/add">
+                                <Plus className="h-4 w-4 ml-2" />
+                                إضافة شراء
+                              </RouterLink>
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      purchasesResponse.data.map((purchase: any) => {
+                        const status =
+                          statusConfig[
+                            purchase.status as keyof typeof statusConfig
+                          ] || statusConfig.pending;
+                        const StatusIcon = status.icon;
+
+                        return (
+                          <TableRow
+                            key={purchase.id}
+                            className="cursor-pointer hover:bg-muted/50 transition-colors"
+                            onClick={() =>
+                              navigate(`/purchases/${purchase.id}/manage-items`)
+                            }
+                          >
+                            <TableCell className="text-center">
+                              <Badge variant="outline" className="font-mono">
+                                {purchase.id}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                <Calendar className="h-4 w-4 text-muted-foreground" />
+                                <span className="font-medium">
+                                  {dayjs(purchase.purchase_date).format(
+                                    "YYYY-MM-DD"
+                                  )}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <span className="font-semibold">
+                                {purchase.supplier_name || "—"}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <code className="text-sm text-muted-foreground">
+                                {purchase.reference_number || "—"}
+                              </code>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge
+                                className={cn("gap-1 border", status.color)}
+                              >
+                                <StatusIcon className="h-3 w-3" />
+                                {status.label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <span className="font-bold text-primary">
+                                {formatCurrency(purchase.total_amount)}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger
+                                  asChild
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuLabel>
+                                    الإجراءات
+                                  </DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(
+                                        `/purchases/${purchase.id}/manage-items`
+                                      );
+                                    }}
+                                  >
+                                    <Package className="h-4 w-4 ml-2" />
+                                    إدارة البنود
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleViewPdfReport(purchase.id);
+                                    }}
+                                  >
+                                    <FileText className="h-4 w-4 ml-2" />
+                                    عرض PDF
+                                  </DropdownMenuItem>
+                                  {filters.product_id && (
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const product = products.find(
+                                          (p) => p.id === filters.product_id
+                                        );
+                                        if (product)
+                                          handleViewProductHistory(product);
+                                      }}
+                                    >
+                                      <History className="h-4 w-4 ml-2" />
+                                      سجل المنتج
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination */}
+              {purchasesResponse?.meta?.last_page > 1 && (
+                <div className="flex justify-center p-4 border-t">
+                  <Pagination
+                    count={purchasesResponse.meta.last_page}
+                    page={currentPage}
+                    onChange={handlePageChange}
+                    color="primary"
+                    shape="rounded"
+                    showFirstButton
+                    showLastButton
+                    disabled={isLoading}
+                  />
+                </div>
+              )}
+            </>
           )}
         </Card>
-      )}
 
-      {/* Product History Dialog */}
-      <PurchaseItemDetailsDialog
-        open={productHistoryDialogOpen}
-        onClose={handleCloseProductHistory}
-        product={selectedProduct}
-        purchases={productPurchases}
-        isLoading={loadingProductPurchases}
-      />
-    </Box>
+        {/* Product History Dialog */}
+        <PurchaseItemDetailsDialog
+          open={productHistoryDialogOpen}
+          onClose={handleCloseProductHistory}
+          product={selectedProduct}
+          purchases={productPurchases}
+          isLoading={loadingProductPurchases}
+        />
+      </div>
+    </TooltipProvider>
   );
 };
 

@@ -1,6 +1,7 @@
 import { dbService, OfflineSale, OfflineSaleItem } from "./db";
 import saleService, { CreateSaleData } from "./saleService";
 import productService, { Product } from "./productService";
+import clientService from "./clientService";
 // import { v4 as uuidv4 } from 'uuid'; // Removed: using fallback
 
 // Simple UUID fallback if package not available
@@ -33,6 +34,33 @@ export const offlineSaleService = {
       return true;
     } catch (error) {
       console.error("Failed to initialize products offline cache:", error);
+      return false;
+    }
+  },
+
+  /**
+   * Initialize local DB with clients from backend
+   */
+  initializeClients: async () => {
+    try {
+      let page = 1;
+      let hasMore = true;
+      while (hasMore) {
+        const response = await clientService.getClients(page);
+        if (response && response.data) {
+          await dbService.saveClients(response.data);
+          if (response.current_page < response.last_page) {
+            page++;
+          } else {
+            hasMore = false;
+          }
+        } else {
+          hasMore = false;
+        }
+      }
+      return true;
+    } catch (error) {
+      console.error("Failed to initialize clients offline cache:", error);
       return false;
     }
   },
@@ -110,6 +138,10 @@ export const offlineSaleService = {
    */
   searchProducts: async (query: string): Promise<Product[]> => {
     return dbService.searchProducts(query);
+  },
+
+  searchClients: async (query: string) => {
+    return dbService.searchClients(query);
   },
 
   /**

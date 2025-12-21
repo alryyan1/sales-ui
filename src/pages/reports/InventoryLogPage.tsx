@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useTranslation } from "react-i18next";
+
 import {
   useNavigate,
   useSearchParams,
@@ -95,22 +95,30 @@ const logFilterSchema = z
     (data) =>
       !data.endDate || !data.startDate || data.endDate >= data.startDate,
     {
-      message: "validation:endDateAfterStart",
+      message: "تاريخ الانتهاء يجب أن يكون بعد تاريخ البدء",
       path: ["endDate"],
     }
   );
 type LogFilterValues = z.infer<typeof logFilterSchema>;
 
 const movementTypes = [
-  { value: "purchase", labelKey: "inventory:type_purchase" },
-  { value: "sale", labelKey: "inventory:type_sale" },
-  { value: "adjustment", labelKey: "inventory:type_adjustment" },
-  { value: "requisition_issue", labelKey: "inventory:type_requisition_issue" },
+  { value: "purchase", label: "شراء" },
+  { value: "sale", label: "بيع" },
+  { value: "adjustment", label: "تعديل مخزني" },
+  { value: "requisition_issue", label: "صرف مخزني" },
 ];
+
+const movementTypeLabels: Record<string, string> = {
+  purchase: "شراء",
+  sale: "بيع",
+  adjustment: "تعديل مخزني",
+  requisition_issue: "صرف مخزني",
+  return: "مرتجع",
+};
 
 // --- Component ---
 const InventoryLogPage: React.FC = () => {
-  const { t } = useTranslation(["inventory", "common", "reports", "products"]);
+  // Removed useTranslation
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -137,25 +145,19 @@ const InventoryLogPage: React.FC = () => {
   const { control, handleSubmit, reset, watch } = form;
 
   // --- Fetch Products for Filter ---
-  const fetchProductsForFilter = useCallback(
-    async (search = "") => {
-      setLoadingProductsFilter(true);
-      try {
-        const data = await productService.getProductsForAutocomplete(
-          search,
-          100
-        );
-        setProductsForFilter(data);
-      } catch (err) {
-        toast.error(t("common:error"), {
-          description: productService.getErrorMessage(err),
-        });
-      } finally {
-        setLoadingProductsFilter(false);
-      }
-    },
-    [t]
-  );
+  const fetchProductsForFilter = useCallback(async (search = "") => {
+    setLoadingProductsFilter(true);
+    try {
+      const data = await productService.getProductsForAutocomplete(search, 100);
+      setProductsForFilter(data);
+    } catch (err) {
+      toast.error("خطأ", {
+        description: productService.getErrorMessage(err),
+      });
+    } finally {
+      setLoadingProductsFilter(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchProductsForFilter("");
@@ -183,12 +185,12 @@ const InventoryLogPage: React.FC = () => {
         setLogData(data);
       } catch (err) {
         console.error("Failed to fetch inventory log:", err);
-        setError(t("common:error"));
+        setError("خطأ");
       } finally {
         setIsLoading(false);
       }
     },
-    [t]
+    []
   );
 
   // --- Effect to Fetch Log When Filters/Page Change ---
@@ -258,24 +260,24 @@ const InventoryLogPage: React.FC = () => {
         type: filters.type || undefined,
         search: filters.search || undefined,
       };
-      
+
       const response = await inventoryLogService.generatePdf(apiFilters);
-      
+
       // Create blob and download
-      const blob = new Blob([response], { type: 'application/pdf' });
+      const blob = new Blob([response], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.download = `inventory-log-${dayjs().format('YYYY-MM-DD')}.pdf`;
+      link.download = `inventory-log-${dayjs().format("YYYY-MM-DD")}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      
-      toast.success(t("reports:pdfGenerated"));
+
+      toast.success("تم إنشاء ملف PDF بنجاح");
     } catch (error) {
       console.error("Failed to generate PDF:", error);
-      toast.error(t("common:error"), { description: t("reports:pdfGenerationFailed") });
+      toast.error("خطأ", { description: "فشل إنشاء ملف PDF" });
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -294,31 +296,38 @@ const InventoryLogPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
-          <IconButton
-            onClick={() => navigate("/reports")}
-            size="large"
-          >
+          <IconButton onClick={() => navigate("/reports")} size="large">
             <ArrowLeft />
           </IconButton>
-          <Typography variant="h4" component="h1" className="text-2xl md:text-3xl font-semibold">
-            {t("inventory:logPageTitle")}
+          <Typography
+            variant="h4"
+            component="h1"
+            className="text-2xl md:text-3xl font-semibold"
+          >
+            سجل حركات المخزون
           </Typography>
         </div>
         <Button
           variant="contained"
-          startIcon={isGeneratingPdf ? <CircularProgress size={20} /> : <PictureAsPdfIcon />}
+          startIcon={
+            isGeneratingPdf ? (
+              <CircularProgress size={20} />
+            ) : (
+              <PictureAsPdfIcon />
+            )
+          }
           onClick={generatePdf}
           disabled={isGeneratingPdf}
           size="large"
         >
-          {isGeneratingPdf ? t("reports:generatingPdf") : t("reports:exportPdf")}
+          {isGeneratingPdf ? "جاري إنشاء PDF" : "تصدير PDF"}
         </Button>
       </div>
 
       {/* Filter Form - No Card Wrapper */}
       <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
         <Typography variant="h6" className="mb-4 text-lg font-semibold">
-          {t("common:filters")}
+          الفلاتر
         </Typography>
         <Form {...form}>
           <form onSubmit={handleSubmit(onFilterSubmit)}>
@@ -329,7 +338,7 @@ const InventoryLogPage: React.FC = () => {
                 name="startDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base">{t("common:startDate")}</FormLabel>
+                    <FormLabel className="text-base">تاريخ البدء</FormLabel>
                     <FormControl>
                       <TextField
                         type="date"
@@ -337,7 +346,7 @@ const InventoryLogPage: React.FC = () => {
                         size="medium"
                         fullWidth
                         InputProps={{
-                          style: { fontSize: '16px' }
+                          style: { fontSize: "16px" },
                         }}
                       />
                     </FormControl>
@@ -352,7 +361,7 @@ const InventoryLogPage: React.FC = () => {
                 name="endDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base">{t("common:endDate")}</FormLabel>
+                    <FormLabel className="text-base">تاريخ الانتهاء</FormLabel>
                     <FormControl>
                       <TextField
                         type="date"
@@ -360,7 +369,7 @@ const InventoryLogPage: React.FC = () => {
                         size="medium"
                         fullWidth
                         InputProps={{
-                          style: { fontSize: '16px' }
+                          style: { fontSize: "16px" },
                         }}
                       />
                     </FormControl>
@@ -375,22 +384,28 @@ const InventoryLogPage: React.FC = () => {
                 name="productId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base">{t("products:product")}</FormLabel>
+                    <FormLabel className="text-base">المنتج</FormLabel>
                     <FormControl>
                       <Autocomplete
                         options={productsForFilter}
                         getOptionLabel={(option) => option.name}
-                        value={productsForFilter.find(p => String(p.id) === field.value) || null}
-                        onChange={(_, newValue) => field.onChange(newValue ? String(newValue.id) : null)}
+                        value={
+                          productsForFilter.find(
+                            (p) => String(p.id) === field.value
+                          ) || null
+                        }
+                        onChange={(_, newValue) =>
+                          field.onChange(newValue ? String(newValue.id) : null)
+                        }
                         loading={loadingProductsFilter}
                         renderInput={(params) => (
                           <TextField
                             {...params}
-                            placeholder={t("reports:allProducts")}
+                            placeholder="جميع المنتجات"
                             size="medium"
                             InputProps={{
                               ...params.InputProps,
-                              style: { fontSize: '16px' }
+                              style: { fontSize: "16px" },
                             }}
                           />
                         )}
@@ -414,23 +429,21 @@ const InventoryLogPage: React.FC = () => {
                 name="type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base">{t("inventory:movementType")}</FormLabel>
+                    <FormLabel className="text-base">نوع الحركة</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value ?? ""}
                     >
                       <FormControl>
                         <SelectTrigger className="text-base">
-                          <SelectValue placeholder={t("reports:allTypes")} />
+                          <SelectValue placeholder="جميع الأنواع" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value=" ">
-                          {t("reports:allTypes")}
-                        </SelectItem>
+                        <SelectItem value=" ">جميع الأنواع</SelectItem>
                         {movementTypes.map((mt) => (
                           <SelectItem key={mt.value} value={mt.value}>
-                            {t(mt.labelKey)}
+                            {mt.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -446,15 +459,15 @@ const InventoryLogPage: React.FC = () => {
                 name="search"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base">{t("common:search")}</FormLabel>
+                    <FormLabel className="text-base">بحث</FormLabel>
                     <FormControl>
                       <TextField
-                        placeholder={t("inventory:searchLogPlaceholder")}
+                        placeholder="بحث في السجل..."
                         {...field}
                         size="medium"
                         fullWidth
                         InputProps={{
-                          style: { fontSize: '16px' }
+                          style: { fontSize: "16px" },
                         }}
                       />
                     </FormControl>
@@ -464,11 +477,22 @@ const InventoryLogPage: React.FC = () => {
               />
             </div>
             <div className="flex justify-end gap-2 mt-4">
-              <Button type="submit" variant="contained" size="large" startIcon={<FilterListIcon />}>
-                {t("common:filter")}
+              <Button
+                type="submit"
+                variant="contained"
+                size="large"
+                startIcon={<FilterListIcon />}
+              >
+                تصفية
               </Button>
-              <Button type="button" variant="outlined" size="large" onClick={clearFilters} startIcon={<ClearIcon />}>
-                {t("common:clear")}
+              <Button
+                type="button"
+                variant="outlined"
+                size="large"
+                onClick={clearFilters}
+                startIcon={<ClearIcon />}
+              >
+                مسح
               </Button>
             </div>
           </form>
@@ -484,7 +508,7 @@ const InventoryLogPage: React.FC = () => {
 
       {!isLoading && error && (
         <Alert severity="error" className="mb-6">
-          <Typography variant="h6">{t("common:error")}</Typography>
+          <Typography variant="h6">خطأ</Typography>
           <Typography>{error}</Typography>
         </Alert>
       )}
@@ -493,29 +517,39 @@ const InventoryLogPage: React.FC = () => {
         <>
           <Card className="dark:bg-gray-900">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-xl">{t("reports:results")}</CardTitle>
+              <CardTitle className="text-xl">النتائج</CardTitle>
               <CardDescription className="text-base">
-                {t("common:paginationSummary", {
-                  from: logData.from,
-                  to: logData.to,
-                  total: logData.total,
-                })}
+                {`عرض ${logData.from}-${logData.to} من ${logData.total}`}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-center text-base font-semibold">{t("common:date")}</TableHead>
-                    <TableHead className="text-center text-base font-semibold">{t("inventory:movementType")}</TableHead>
-                    <TableHead className="text-center text-base font-semibold">{t("products:product")}</TableHead>
-                    <TableHead className="text-center text-base font-semibold">{t("purchases:batchNumber")}</TableHead>
                     <TableHead className="text-center text-base font-semibold">
-                      {t("inventory:quantityChange")}
+                      التاريخ
                     </TableHead>
-                    <TableHead className="text-center text-base font-semibold">{t("inventory:documentRef")}</TableHead>
-                    <TableHead className="text-center text-base font-semibold">{t("common:user")}</TableHead>
-                    <TableHead className="text-center text-base font-semibold">{t("common:notesOrReason")}</TableHead>
+                    <TableHead className="text-center text-base font-semibold">
+                      نوع الحركة
+                    </TableHead>
+                    <TableHead className="text-center text-base font-semibold">
+                      المنتج
+                    </TableHead>
+                    <TableHead className="text-center text-base font-semibold">
+                      رقم الدفعة
+                    </TableHead>
+                    <TableHead className="text-center text-base font-semibold">
+                      تغيير الكمية
+                    </TableHead>
+                    <TableHead className="text-center text-base font-semibold">
+                      مرجع المستند
+                    </TableHead>
+                    <TableHead className="text-center text-base font-semibold">
+                      المستخدم
+                    </TableHead>
+                    <TableHead className="text-center text-base font-semibold">
+                      ملاحظات/سبب
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -525,66 +559,68 @@ const InventoryLogPage: React.FC = () => {
                         colSpan={8}
                         className="h-24 text-center text-muted-foreground text-base"
                       >
-                        {t("common:noResults")}
+                        لا توجد نتائج
                       </TableCell>
                     </TableRow>
                   )}
-                  {logData.data.map(
-                    (entry, index) => (
-                      <TableRow
-                        key={`${entry.type}-${entry.document_id}-${entry.product_id}-${index}`}
-                      >
-                        <TableCell className="text-center text-base">
-                          {dayjs(entry.transaction_date).format("YYYY-MM-DD")}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge className="border border-gray-300 text-sm">
-                            {t(`inventory:type_${entry.type}`)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Typography variant="body1" className="font-medium">
-                            {entry.product_name}
-                          </Typography>
-                          <Typography variant="body2" className="text-muted-foreground">
-                            {entry.product_sku}
-                          </Typography>
-                        </TableCell>
-                        <TableCell className="text-center text-base">{entry.batch_number || '---'}</TableCell>
-                        <TableCell
-                          className={`text-center font-bold text-lg ${getMovementTypeColor(
-                            entry.type
-                          )}`}
+                  {logData.data.map((entry, index) => (
+                    <TableRow
+                      key={`${entry.type}-${entry.document_id}-${entry.product_id}-${index}`}
+                    >
+                      <TableCell className="text-center text-base">
+                        {dayjs(entry.transaction_date).format("YYYY-MM-DD")}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge className="border border-gray-300 text-sm">
+                          {movementTypeLabels[entry.type] || entry.type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Typography variant="body1" className="font-medium">
+                          {entry.product_name}
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          className="text-muted-foreground"
                         >
-                          {entry.quantity_change > 0 ? "+" : ""}
-                          {formatNumber(entry.quantity_change)}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <RouterLink
-                            to={
-                              entry.type === "purchase"
-                                ? `/purchases/${entry.document_id}`
-                                : entry.type === "sale"
-                                ? `/sales/${entry.document_id}`
-                                : entry.type === "requisition_issue"
-                                ? `/admin/inventory/requisitions/${entry.document_id}/process`
-                                : "#"
-                            }
-                            className="hover:underline text-primary text-base font-medium"
-                          >
-                            {entry.document_reference ||
-                              `#${entry.document_id}`}
-                          </RouterLink>
-                        </TableCell>
-                        <TableCell className="text-center text-base">
-                          {entry.user_name || t("common:n/a")}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
-                          {entry.reason_notes}
-                        </TableCell>
-                      </TableRow>
-                    )
-                  )}
+                          {entry.product_sku}
+                        </Typography>
+                      </TableCell>
+                      <TableCell className="text-center text-base">
+                        {entry.batch_number || "---"}
+                      </TableCell>
+                      <TableCell
+                        className={`text-center font-bold text-lg ${getMovementTypeColor(
+                          entry.type
+                        )}`}
+                      >
+                        {entry.quantity_change > 0 ? "+" : ""}
+                        {formatNumber(entry.quantity_change)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <RouterLink
+                          to={
+                            entry.type === "purchase"
+                              ? `/purchases/${entry.document_id}`
+                              : entry.type === "sale"
+                              ? `/sales/${entry.document_id}`
+                              : entry.type === "requisition_issue"
+                              ? `/admin/inventory/requisitions/${entry.document_id}/process`
+                              : "#"
+                          }
+                          className="hover:underline text-primary text-base font-medium"
+                        >
+                          {entry.document_reference || `#${entry.document_id}`}
+                        </RouterLink>
+                      </TableCell>
+                      <TableCell className="text-center text-base">
+                        {entry.user_name || "-"}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
+                        {entry.reason_notes}
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </CardContent>
@@ -599,9 +635,12 @@ const InventoryLogPage: React.FC = () => {
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
                   >
-                    {t("common:previous")}
+                    السابق
                   </PaginationPrevious>
-                  {Array.from({ length: logData.last_page }, (_, i) => i + 1).map((page) => (
+                  {Array.from(
+                    { length: logData.last_page },
+                    (_, i) => i + 1
+                  ).map((page) => (
                     <PaginationItem key={page} active={page === currentPage}>
                       <PaginationLink onClick={() => handlePageChange(page)}>
                         {page}
@@ -612,7 +651,7 @@ const InventoryLogPage: React.FC = () => {
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === logData.last_page}
                   >
-                    {t("common:next")}
+                    التالي
                   </PaginationNext>
                 </PaginationContent>
               </Pagination>

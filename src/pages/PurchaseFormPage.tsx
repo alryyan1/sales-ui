@@ -39,12 +39,18 @@ import {
   Fade,
   Skeleton,
 } from "@mui/material";
+
+// Lucide Icons
 import {
-  ArrowLeft,
+  ArrowRight,
   AlertCircle,
   FileText,
   Upload,
-  CheckCircle2,
+  Save,
+  CheckCircle,
+  ShoppingCart,
+  Package,
+  Loader2,
 } from "lucide-react";
 
 // Services and Types
@@ -57,7 +63,7 @@ import productService, { Product } from "../services/productService";
 import exportService from "../services/exportService";
 import { formatNumber, preciseCalculation } from "@/constants";
 import apiClient from "@/lib/axios";
-import { warehouseService, Warehouse } from "../services/warehouseService"; // Import Warehouse Service
+import { warehouseService, Warehouse } from "../services/warehouseService";
 
 // --- Type Definitions ---
 export type PurchaseFormValues = {
@@ -116,7 +122,7 @@ const PurchaseFormPage: React.FC = () => {
   // --- React Hook Form Setup ---
   const formMethods = useForm<PurchaseFormValues>({
     defaultValues: {
-      warehouse_id: 1, // Default to Main Warehouse
+      warehouse_id: 1,
       supplier_id: undefined as any,
       purchase_date: new Date(),
       status: "pending" as const,
@@ -148,12 +154,10 @@ const PurchaseFormPage: React.FC = () => {
     control,
   } = formMethods;
 
-  // Memoized watched items to prevent unnecessary re-renders
   const watchedItems = useWatch({ control, name: "items" });
-
-  // Watch purchase status to determine if items can be modified
   const watchedStatus = useWatch({ control, name: "status" });
-  const isPurchaseReceived = watchedStatus === "received";
+  // const isPurchaseReceived = watchedStatus === "received";
+  const isPurchaseReceived = false; // Logic disabled as per request: allow editing even if received
 
   // Memoized grand total calculation
   const grandTotal = useMemo(
@@ -176,7 +180,7 @@ const PurchaseFormPage: React.FC = () => {
     [watchedItems]
   );
 
-  // --- Initial suppliers load (for dropdown opening with data) ---
+  // --- Initial suppliers load ---
   useEffect(() => {
     const loadInitialSuppliers = async () => {
       setLoadingSuppliers(true);
@@ -192,7 +196,6 @@ const PurchaseFormPage: React.FC = () => {
         setLoadingSuppliers(false);
       }
     };
-
     loadInitialSuppliers();
   }, []);
 
@@ -208,14 +211,12 @@ const PurchaseFormPage: React.FC = () => {
     };
   }, [supplierSearchInput]);
 
-  // Memoized supplier search effect
   useEffect(() => {
     if (
       debouncedSupplierSearch !== "" &&
       debouncedSupplierSearch !== lastSupplierSearchRef.current
     ) {
       lastSupplierSearchRef.current = debouncedSupplierSearch;
-
       const searchSuppliers = async () => {
         setLoadingSuppliers(true);
         try {
@@ -265,7 +266,6 @@ const PurchaseFormPage: React.FC = () => {
         if (!existingPurchase.items)
           throw new Error("Purchase items missing in API response.");
 
-        // Pre-fetch related data for display
         const initialSupplier = existingPurchase.supplier_id
           ? await supplierService
               .getSupplier(existingPurchase.supplier_id)
@@ -432,6 +432,7 @@ const PurchaseFormPage: React.FC = () => {
           return;
         }
       }
+
       const apiData: CreatePurchaseData | UpdatePurchaseData = {
         ...data,
         purchase_date: format(data.purchase_date as Date, "yyyy-MM-dd"),
@@ -451,11 +452,6 @@ const PurchaseFormPage: React.FC = () => {
         })),
       };
 
-      console.log(
-        `Submitting ${isEditMode ? "Update" : "Create"} Purchase:`,
-        apiData
-      );
-
       try {
         let createdPurchase: any;
         if (isEditMode && purchaseId) {
@@ -469,11 +465,8 @@ const PurchaseFormPage: React.FC = () => {
           );
         }
 
-        toast.success("نجح", {
-          description: "تم حفظ المشتريات بنجاح",
-        });
+        toast.success("نجح", { description: "تم حفظ المشتريات بنجاح" });
 
-        // For new purchases, redirect to manage items page to add products
         if (!isEditMode && createdPurchase?.purchase?.id) {
           navigate(`/purchases/${createdPurchase.purchase.id}/manage-items`);
         } else {
@@ -497,7 +490,10 @@ const PurchaseFormPage: React.FC = () => {
               const [, index, fieldName] = match;
               setError(
                 `items.${index}.${fieldName}` as keyof PurchaseFormValues,
-                { type: "server", message: messages[0] }
+                {
+                  type: "server",
+                  message: messages[0],
+                }
               );
             } else if (key in ({} as PurchaseFormValues)) {
               setError(key as keyof PurchaseFormValues, {
@@ -516,7 +512,6 @@ const PurchaseFormPage: React.FC = () => {
   // --- PDF Export Handler ---
   const handleViewPdf = useCallback(async () => {
     if (!purchaseId) return;
-
     try {
       await exportService.exportPurchasePdf(purchaseId);
     } catch (err) {
@@ -529,7 +524,6 @@ const PurchaseFormPage: React.FC = () => {
   // --- Import Success Handler ---
   const handleImportSuccess = useCallback(async () => {
     if (!purchaseId) return;
-
     try {
       const existingPurchase = await purchaseService.getPurchase(purchaseId);
       if (!existingPurchase.items)
@@ -597,22 +591,25 @@ const PurchaseFormPage: React.FC = () => {
     }
   }, [purchaseId, reset, setError]);
 
+  // Loading skeleton
   if (loadingData && isEditMode) {
     return (
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-          <Skeleton
-            variant="rectangular"
-            height={80}
-            sx={{ borderRadius: 2 }}
-          />
-          <Skeleton
-            variant="rectangular"
-            height={400}
-            sx={{ borderRadius: 2 }}
-          />
-        </Box>
-      </Container>
+      <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc", p: { xs: 2, md: 4 } }}>
+        <Container maxWidth="lg">
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <Skeleton
+              variant="rectangular"
+              height={100}
+              sx={{ borderRadius: 3 }}
+            />
+            <Skeleton
+              variant="rectangular"
+              height={400}
+              sx={{ borderRadius: 3 }}
+            />
+          </Box>
+        </Container>
+      </Box>
     );
   }
 
@@ -620,147 +617,125 @@ const PurchaseFormPage: React.FC = () => {
     <Box
       sx={{
         minHeight: "100vh",
-        bgcolor: "grey.50",
+        bgcolor: "#f8fafc",
         pb: 6,
         pt: { xs: 2, sm: 3 },
       }}
+      dir="rtl"
     >
-      <Container maxWidth="md">
+      <Container maxWidth="lg">
         {/* Header Section */}
         <Fade in timeout={300}>
           <Paper
             elevation={0}
             sx={{
-              bgcolor: "background.paper",
-              borderRadius: 3,
               p: { xs: 2.5, sm: 3, md: 4 },
               mb: 3,
+              borderRadius: 3,
               border: "1px solid",
-              borderColor: "divider",
-              background:
-                "linear-gradient(to bottom, rgba(255,255,255,1) 0%, rgba(250,250,250,1) 100%)",
+              borderColor: "grey.200",
+              background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
             }}
           >
             <Box
               sx={{
                 display: "flex",
-                flexDirection: { xs: "column", sm: "row" },
-                alignItems: { xs: "flex-start", sm: "center" },
+                flexDirection: { xs: "column", md: "row" },
+                alignItems: { xs: "stretch", md: "center" },
                 justifyContent: "space-between",
                 gap: 3,
               }}
             >
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 2.5,
-                  flex: 1,
-                }}
-              >
+              {/* Left Side: Back button and Title */}
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2.5 }}>
                 <IconButton
                   onClick={() => navigate("/purchases")}
                   sx={{
                     bgcolor: "grey.100",
                     border: "1px solid",
-                    borderColor: "divider",
+                    borderColor: "grey.200",
+                    width: 44,
+                    height: 44,
                     "&:hover": {
-                      bgcolor: "primary.light",
-                      borderColor: "primary.main",
+                      bgcolor: "primary.50",
+                      borderColor: "primary.300",
                       color: "primary.main",
-                      transform: "translateX(-2px)",
                     },
-                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                    transition: "all 0.2s ease",
                   }}
                 >
-                  <ArrowLeft size={20} />
+                  <ArrowRight size={20} />
                 </IconButton>
-                <Box
-                  sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 1.5,
-                    flex: 1,
-                  }}
-                >
+
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                   <Box
                     sx={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 2,
+                      background: isEditMode
+                        ? "linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)"
+                        : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                       display: "flex",
                       alignItems: "center",
-                      gap: 2,
-                      flexWrap: "wrap",
+                      justifyContent: "center",
+                      boxShadow: isEditMode
+                        ? "0 4px 12px rgba(139, 92, 246, 0.3)"
+                        : "0 4px 12px rgba(16, 185, 129, 0.3)",
                     }}
                   >
-                    <Typography
-                      variant="h4"
-                      component="h1"
-                      sx={{
-                        fontWeight: 800,
-                        fontSize: {
-                          xs: "1.5rem",
-                          sm: "1.875rem",
-                          md: "2.25rem",
-                        },
-                        color: "text.primary",
-                        lineHeight: 1.2,
-                        letterSpacing: "-0.02em",
-                      }}
-                    >
-                      {isEditMode ? "تعديل مشتريات" : "إضافة مشتريات جديدة"}
-                    </Typography>
-                    {isEditMode && purchaseId && (
-                      <Chip
-                        label={`#${purchaseId}`}
-                        size="small"
-                        sx={{
-                          bgcolor: "primary.50",
-                          color: "primary.main",
-                          fontWeight: 600,
-                          fontSize: "0.75rem",
-                          height: 24,
-                        }}
-                      />
+                    {isEditMode ? (
+                      <Package size={24} color="white" />
+                    ) : (
+                      <ShoppingCart size={24} color="white" />
                     )}
                   </Box>
-                  {isPurchaseReceived && (
+                  <Box>
                     <Box
-                      sx={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 1,
-                        px: 1.5,
-                        py: 0.75,
-                        bgcolor: "warning.50",
-                        borderRadius: 2,
-                        border: "1px solid",
-                        borderColor: "warning.200",
-                        width: "fit-content",
-                      }}
+                      sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
                     >
-                      <AlertCircle size={16} style={{ color: "#ed6c02" }} />
                       <Typography
-                        variant="body2"
+                        variant="h5"
                         sx={{
-                          color: "warning.dark",
-                          fontWeight: 600,
-                          fontSize: "0.8125rem",
+                          fontWeight: 700,
+                          color: "grey.800",
+                          letterSpacing: "-0.02em",
                         }}
                       >
-                        تم استلام هذه المشتريات - للقراءة فقط
+                        {isEditMode ? "تعديل المشتريات" : "إضافة مشتريات جديدة"}
                       </Typography>
+                      {isEditMode && purchaseId && (
+                        <Chip
+                          label={`#${purchaseId}`}
+                          size="small"
+                          sx={{
+                            bgcolor: "primary.50",
+                            color: "primary.main",
+                            fontWeight: 600,
+                            fontSize: "0.75rem",
+                          }}
+                        />
+                      )}
                     </Box>
-                  )}
+                    <Typography
+                      variant="body2"
+                      sx={{ color: "grey.500", mt: 0.5 }}
+                    >
+                      {isEditMode
+                        ? "تعديل بيانات عملية الشراء"
+                        : "إنشاء عملية شراء جديدة للمخزون"}
+                    </Typography>
+                  </Box>
                 </Box>
               </Box>
 
+              {/* Right Side: Action Buttons */}
               <Box
                 sx={{
                   display: "flex",
                   alignItems: "center",
                   gap: 1.5,
                   flexWrap: "wrap",
-                  width: { xs: "100%", sm: "auto" },
-                  justifyContent: { xs: "flex-start", sm: "flex-end" },
                 }}
               >
                 {isEditMode && purchaseId && !isPurchaseReceived && (
@@ -769,21 +744,19 @@ const PurchaseFormPage: React.FC = () => {
                     onClick={() => setIsImportDialogOpen(true)}
                     startIcon={<Upload size={18} />}
                     sx={{
+                      borderRadius: 2,
                       textTransform: "none",
                       fontWeight: 600,
-                      borderColor: "primary.main",
-                      color: "primary.main",
-                      px: 2.5,
+                      borderColor: "grey.300",
+                      color: "grey.600",
                       "&:hover": {
-                        borderColor: "primary.dark",
+                        borderColor: "primary.main",
                         bgcolor: "primary.50",
-                        transform: "translateY(-1px)",
-                        boxShadow: 2,
+                        color: "primary.main",
                       },
-                      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                     }}
                   >
-                    استيراد العناصر
+                    استيراد
                   </Button>
                 )}
 
@@ -793,21 +766,19 @@ const PurchaseFormPage: React.FC = () => {
                     onClick={handleViewPdf}
                     startIcon={<FileText size={18} />}
                     sx={{
+                      borderRadius: 2,
                       textTransform: "none",
                       fontWeight: 600,
                       borderColor: "grey.300",
-                      color: "text.secondary",
-                      px: 2.5,
+                      color: "grey.600",
                       "&:hover": {
-                        borderColor: "grey.400",
-                        bgcolor: "grey.50",
-                        transform: "translateY(-1px)",
-                        boxShadow: 1,
+                        borderColor: "error.main",
+                        bgcolor: "error.50",
+                        color: "error.main",
                       },
-                      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                     }}
                   >
-                    عرض PDF
+                    PDF
                   </Button>
                 )}
 
@@ -815,36 +786,39 @@ const PurchaseFormPage: React.FC = () => {
                   type="submit"
                   variant="contained"
                   disabled={isSubmitting || (loadingData && isEditMode)}
-                  size="large"
                   onClick={handleSubmit(onSubmit)}
                   startIcon={
                     isSubmitting ? (
-                      <CircularProgress size={18} color="inherit" />
+                      <Loader2 size={18} className="animate-spin" />
                     ) : (
-                      <CheckCircle2 size={18} />
+                      <Save size={18} />
                     )
                   }
                   sx={{
+                    borderRadius: 2,
                     textTransform: "none",
-                    fontWeight: 700,
-                    px: 4,
+                    fontWeight: 600,
+                    px: 3,
                     py: 1.25,
-                    boxShadow: "0 4px 12px rgba(25, 118, 210, 0.3)",
+                    background:
+                      "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+                    boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
                     "&:hover": {
-                      boxShadow: "0 6px 16px rgba(25, 118, 210, 0.4)",
-                      transform: "translateY(-2px)",
+                      background:
+                        "linear-gradient(135deg, #2563eb 0%, #1e40af 100%)",
+                      boxShadow: "0 6px 16px rgba(59, 130, 246, 0.4)",
                     },
                     "&:disabled": {
+                      background: "grey.300",
                       boxShadow: "none",
                     },
-                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                   }}
                 >
                   {isSubmitting
                     ? "جاري الحفظ..."
                     : isEditMode
-                    ? "تحديث المشتريات"
-                    : "إنشاء المشتريات"}
+                    ? "تحديث"
+                    : "إنشاء"}
                 </Button>
               </Box>
             </Box>
@@ -856,46 +830,34 @@ const PurchaseFormPage: React.FC = () => {
           <Card
             sx={{
               bgcolor: "background.paper",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
               borderRadius: 3,
-              overflow: "hidden",
               border: "1px solid",
-              borderColor: "divider",
+              borderColor: "grey.200",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+              overflow: "hidden",
             }}
           >
             <FormProvider {...formMethods}>
               <form onSubmit={handleSubmit(onSubmit)} noValidate>
-                <CardContent sx={{ p: { xs: 3, sm: 4, md: 5 } }}>
+                <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
+                  {/* Server Error Alert */}
                   {serverError && !isSubmitting && (
                     <Fade in>
                       <Alert
                         severity="error"
-                        icon={<AlertCircle size={22} />}
+                        icon={<AlertCircle size={20} />}
                         sx={{
-                          mb: 4,
+                          mb: 3,
                           borderRadius: 2,
                           bgcolor: "error.50",
                           border: "1px solid",
                           borderColor: "error.200",
-                          "& .MuiAlert-icon": {
-                            color: "error.main",
-                          },
-                          "& .MuiAlert-message": {
-                            width: "100%",
-                          },
                         }}
                       >
-                        <AlertTitle
-                          sx={{ fontWeight: 700, mb: 0.5, fontSize: "1rem" }}
-                        >
+                        <AlertTitle sx={{ fontWeight: 700 }}>
                           خطأ في التحقق
                         </AlertTitle>
-                        <Typography
-                          variant="body2"
-                          sx={{ color: "error.dark" }}
-                        >
-                          {serverError}
-                        </Typography>
+                        <Typography variant="body2">{serverError}</Typography>
                       </Alert>
                     </Fade>
                   )}
@@ -910,157 +872,73 @@ const PurchaseFormPage: React.FC = () => {
                     selectedSupplier={selectedSupplier}
                     onSupplierSelect={setSelectedSupplier}
                     isPurchaseReceived={isPurchaseReceived}
+                    warehouses={warehouses}
+                    loadingWarehouses={loadingWarehouses}
                   />
 
                   {/* Items Section for Edit Mode */}
                   {isEditMode && (
                     <>
-                      <Divider sx={{ my: 5, borderColor: "divider" }} />
+                      <Divider sx={{ my: 4, borderColor: "grey.200" }} />
                       <PurchaseItemsList
                         isSubmitting={isSubmitting}
                         isPurchaseReceived={isPurchaseReceived}
                       />
-                      <Divider sx={{ my: 5, borderColor: "divider" }} />
+                      <Divider sx={{ my: 4, borderColor: "grey.200" }} />
 
                       {/* Totals Display */}
-                      <Fade in timeout={300}>
-                        <Paper
-                          elevation={0}
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          gap: 3,
+                          p: 3,
+                          bgcolor: "primary.50",
+                          borderRadius: 2,
+                          border: "1px solid",
+                          borderColor: "primary.100",
+                        }}
+                      >
+                        <Typography
+                          variant="subtitle1"
+                          sx={{ color: "primary.700", fontWeight: 600 }}
+                        >
+                          الإجمالي الكلي:
+                        </Typography>
+                        <Box
                           sx={{
                             display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            gap: 3,
-                            p: { xs: 2.5, sm: 3 },
-                            bgcolor: "grey.50",
-                            borderRadius: 2,
-                            border: "2px solid",
-                            borderColor: "primary.200",
-                            background:
-                              "linear-gradient(to left, rgba(25, 118, 210, 0.04) 0%, transparent 100%)",
+                            alignItems: "baseline",
+                            gap: 1,
                           }}
                         >
                           <Typography
-                            variant="h6"
+                            variant="h4"
                             sx={{
-                              color: "text.secondary",
-        {/* Server Error Alert */}
-        {serverError && (
-          <Fade in timeout={500}>
-            <Alert
-              severity="error"
-              sx={{
-                mb: 3,
-                borderRadius: 2,
-                boxShadow: 1,
-              }}
-              onClose={() => setServerError(null)}
-            >
-              <AlertTitle sx={{ fontWeight: 700 }}>خطأ في الخادم</AlertTitle>
-              {serverError}
-            </Alert>
-          </Fade>
-        )}
-
-        {/* Form Provider */}
-        <FormProvider {...formMethods}>
-          <form onSubmit={handleSubmit(onSubmit)}>
-            {/* Form Sections */}
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 3, // Increased spacing between sections
-              }}
-            >
-              {/* Header Details */}
-              <PurchaseHeaderFormSection
-                isEditMode={isEditMode}
-                isPurchaseReceived={isPurchaseReceived}
-                loadingSuppliers={loadingSuppliers}
-                supplierSearchInput={supplierSearchInput}
-                setSupplierSearchInput={setSupplierSearchInput}
-                suppliers={suppliers}
-                selectedSupplier={selectedSupplier}
-                setSelectedSupplier={setSelectedSupplier}
-                isSubmitting={isSubmitting} // Pass isSubmitting
-                warehouses={warehouses}
-                loadingWarehouses={loadingWarehouses}
-              />
-
-              <Divider sx={{ my: 2 }} />
-
-              {/* Items List */}
-              <PurchaseItemsList
-                isPurchaseReceived={isPurchaseReceived}
-                isSubmitting={isSubmitting} // Pass isSubmitting
-              />
-            </Box>
-          </form>
-        </FormProvider>
-
-        {/* Totals Display */}
-        {isEditMode && (
-          <Fade in timeout={300}>
-            <Paper
-              elevation={0}
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: 3,
-                p: { xs: 2.5, sm: 3 },
-                bgcolor: "grey.50",
-                borderRadius: 2,
-                border: "2px solid",
-                borderColor: "primary.200",
-                background:
-                  "linear-gradient(to left, rgba(25, 118, 210, 0.04) 0%, transparent 100%)",
-                mt: 3, // Added margin top for spacing
-              }}
-            >
-              <Typography
-                variant="h6"
-                sx={{
-                  color: "text.secondary",
-                  fontWeight: 600,
-                  fontSize: "1rem",
-                }}
-              >
-                الإجمالي الكلي:
-              </Typography>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "baseline",
-                  gap: 1,
-                }}
-              >
-                <Typography
-                  variant="h4"
-                  sx={{
-                    fontWeight: 800,
-                    color: "primary.main",
-                    fontSize: { xs: "1.5rem", sm: "2rem" },
-                    letterSpacing: "-0.02em",
-                  }}
-                >
-                  {formatNumber(grandTotal)}
-                </Typography>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: "text.secondary",
-                    fontWeight: 500,
-                    fontSize: "0.875rem",
-                  }}
-                >
-                  ر.س
-                </Typography>
-              </Box>
-            </Paper>
-          </Fade>
-        )}
+                              fontWeight: 800,
+                              color: "primary.main",
+                              letterSpacing: "-0.02em",
+                            }}
+                          >
+                            {formatNumber(grandTotal)}
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            sx={{ color: "primary.400", fontWeight: 500 }}
+                          >
+                            ر.س
+                          </Typography>
+                        </Box>
+                      </Paper>
+                    </>
+                  )}
+                </CardContent>
+              </form>
+            </FormProvider>
+          </Card>
+        </Fade>
       </Container>
 
       {/* Purchase Items Import Dialog */}
@@ -1072,9 +950,7 @@ const PurchaseFormPage: React.FC = () => {
           onImportSuccess={() => {
             handleImportSuccess();
             setIsImportDialogOpen(false);
-            toast.success("نجح", {
-              description: "تم استيراد العناصر بنجاح",
-            });
+            toast.success("نجح", { description: "تم استيراد العناصر بنجاح" });
           }}
         />
       )}

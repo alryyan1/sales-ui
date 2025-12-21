@@ -1,18 +1,24 @@
 // src/pages/purchases/ManagePurchaseItemsPage.tsx
 // Refactored into subcomponents for better maintainability
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 // MUI Components
-import { Box, Paper, Typography, CircularProgress } from '@mui/material';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import { Box, Paper, Typography, CircularProgress } from "@mui/material";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 
 // Services
-import purchaseService from '@/services/purchaseService';
-import productService from '@/services/productService';
-import apiClient from '@/lib/axios';
+import purchaseService from "@/services/purchaseService";
+import productService from "@/services/productService";
+import apiClient from "@/lib/axios";
 
 // Subcomponents
 import {
@@ -22,7 +28,7 @@ import {
   AddPurchaseItemData,
   ProductUnitsMap,
   Product,
-} from '@/components/purchases/manage-items';
+} from "@/components/purchases/manage-items";
 
 const ManagePurchaseItemsPage: React.FC = () => {
   const { id: purchaseIdParam } = useParams<{ id: string }>();
@@ -47,7 +53,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
     error: purchaseError,
     refetch: refetchPurchase,
   } = useQuery({
-    queryKey: ['purchase', purchaseId],
+    queryKey: ["purchase", purchaseId],
     queryFn: () => purchaseService.getPurchase(purchaseId!),
     enabled: !!purchaseId,
     staleTime: 0,
@@ -60,45 +66,75 @@ const ManagePurchaseItemsPage: React.FC = () => {
       return await purchaseService.addPurchaseItem(purchaseId!, data);
     },
     onSuccess: () => {
-      toast.success('تم بنجاح', { description: 'تمت إضافة الصنف بنجاح' });
+      toast.success("تم بنجاح", { description: "تمت إضافة الصنف بنجاح" });
       refetchPurchase();
       setAddItemDialogOpen(false);
     },
     onError: (error: unknown) => {
-      toast.error('خطأ', { description: purchaseService.getErrorMessage(error) });
+      toast.error("خطأ", {
+        description: purchaseService.getErrorMessage(error),
+      });
     },
   });
 
   const updateItemMutation = useMutation({
-    mutationFn: async ({ itemId, field, value }: { itemId: number; field: string; value: unknown }) => {
+    mutationFn: async ({
+      itemId,
+      field,
+      value,
+    }: {
+      itemId: number;
+      field: string;
+      value: unknown;
+    }) => {
       const currentItem = purchase?.items?.find((item) => item.id === itemId);
-      if (!currentItem) throw new Error('الصنف غير موجود');
+      if (!currentItem) throw new Error("الصنف غير موجود");
 
       const updatedItemData = {
         product_id: currentItem.product_id,
-        batch_number: field === 'batch_number' ? (value as string || null) : (currentItem.batch_number || null),
-        quantity: field === 'quantity' ? Number(value) : currentItem.quantity,
-        unit_cost: field === 'unit_cost' ? Number(value) : Number(currentItem.unit_cost),
-        sale_price: field === 'sale_price' ? (value ? Number(value) : 0) : (currentItem.sale_price ? Number(currentItem.sale_price) : 0),
+        batch_number:
+          field === "batch_number"
+            ? (value as string) || null
+            : currentItem.batch_number || null,
+        quantity: field === "quantity" ? Number(value) : currentItem.quantity,
+        unit_cost:
+          field === "unit_cost" ? Number(value) : Number(currentItem.unit_cost),
+        sale_price:
+          field === "sale_price"
+            ? value
+              ? Number(value)
+              : 0
+            : currentItem.sale_price
+            ? Number(currentItem.sale_price)
+            : 0,
         sale_price_stocking_unit:
-          field === 'sale_price_stocking_unit'
+          field === "sale_price_stocking_unit"
             ? value !== null && value !== undefined
               ? Number(value)
               : null
             : currentItem.sale_price_stocking_unit !== undefined
             ? (currentItem.sale_price_stocking_unit as number | null)
             : null,
-        expiry_date: field === 'expiry_date' ? (value as string || null) : (currentItem.expiry_date || null),
+        expiry_date:
+          field === "expiry_date"
+            ? (value as string) || null
+            : currentItem.expiry_date || null,
       };
 
-      return await purchaseService.updatePurchaseItem(purchaseId!, itemId, updatedItemData);
+      return await purchaseService.updatePurchaseItem(
+        purchaseId!,
+        itemId,
+        updatedItemData
+      );
     },
     onSuccess: () => {
-      toast.success('تم بنجاح', { description: 'تم تحديث الصنف بنجاح' });
+      toast.success("تم بنجاح", { description: "تم تحديث الصنف بنجاح" });
       refetchPurchase();
     },
     onError: (error: unknown) => {
-      toast.error('خطأ', { description: purchaseService.getErrorMessage(error) });
+      toast.error("خطأ", {
+        description: purchaseService.getErrorMessage(error),
+      });
     },
   });
 
@@ -107,27 +143,35 @@ const ManagePurchaseItemsPage: React.FC = () => {
       return await purchaseService.deletePurchaseItem(purchaseId!, itemId);
     },
     onSuccess: () => {
-      toast.success('تم بنجاح', { description: 'تم حذف الصنف بنجاح' });
+      toast.success("تم بنجاح", { description: "تم حذف الصنف بنجاح" });
       refetchPurchase();
     },
     onError: (error: unknown) => {
-      toast.error('خطأ', { description: purchaseService.getErrorMessage(error) });
+      toast.error("خطأ", {
+        description: purchaseService.getErrorMessage(error),
+      });
     },
   });
 
   const addAllProductsMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiClient.get<{ data: Product[] }>('/products?limit=1000');
+      const response = await apiClient.get<{ data: Product[] }>(
+        "/products?limit=1000"
+      );
       const allProducts = response.data.data || response.data;
-      const existingProductIds = purchase?.items?.map((item) => item.product_id) || [];
-      const newProducts = allProducts.filter((product) => !existingProductIds.includes(product.id));
+      const existingProductIds =
+        purchase?.items?.map((item) => item.product_id) || [];
+      const newProducts = allProducts.filter(
+        (product) => !existingProductIds.includes(product.id)
+      );
 
       const promises = newProducts.map((product) => {
         const data: AddPurchaseItemData = {
           product_id: product.id,
           quantity: 0,
           unit_cost: Number(product.latest_cost_per_sellable_unit) || 0,
-          sale_price: Number(product.suggested_sale_price_per_sellable_unit) || 0,
+          sale_price:
+            Number(product.suggested_sale_price_per_sellable_unit) || 0,
         };
         return purchaseService.addPurchaseItem(purchaseId!, data);
       });
@@ -136,17 +180,20 @@ const ManagePurchaseItemsPage: React.FC = () => {
       return newProducts.length;
     },
     onSuccess: (count) => {
-      toast.success('تم بنجاح', { description: `تمت إضافة ${count} منتج` });
+      toast.success("تم بنجاح", { description: `تمت إضافة ${count} منتج` });
       refetchPurchase();
     },
     onError: (error: unknown) => {
-      toast.error('خطأ', { description: purchaseService.getErrorMessage(error) });
+      toast.error("خطأ", {
+        description: purchaseService.getErrorMessage(error),
+      });
     },
   });
 
   const deleteZeroQuantityItemsMutation = useMutation({
     mutationFn: async () => {
-      const zeroQuantityItems = purchase?.items?.filter((item) => item.quantity === 0) || [];
+      const zeroQuantityItems =
+        purchase?.items?.filter((item) => item.quantity === 0) || [];
       const promises = zeroQuantityItems.map((item) =>
         purchaseService.deletePurchaseItem(purchaseId!, item.id)
       );
@@ -154,16 +201,20 @@ const ManagePurchaseItemsPage: React.FC = () => {
       return zeroQuantityItems.length;
     },
     onSuccess: (count) => {
-      toast.success('تم بنجاح', { description: `تم حذف ${count} صنف بكمية صفر` });
+      toast.success("تم بنجاح", {
+        description: `تم حذف ${count} صنف بكمية صفر`,
+      });
       refetchPurchase();
     },
     onError: (error: unknown) => {
-      toast.error('خطأ', { description: purchaseService.getErrorMessage(error) });
+      toast.error("خطأ", {
+        description: purchaseService.getErrorMessage(error),
+      });
     },
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: async (status: 'received' | 'pending' | 'ordered') => {
+    mutationFn: async (status: "received" | "pending" | "ordered") => {
       const currentItems =
         purchase?.items?.map((item) => ({
           id: item.id,
@@ -175,14 +226,19 @@ const ManagePurchaseItemsPage: React.FC = () => {
           expiry_date: item.expiry_date,
         })) || [];
 
-      return await purchaseService.updatePurchase(purchaseId!, { status, items: currentItems });
+      return await purchaseService.updatePurchase(purchaseId!, {
+        status,
+        items: currentItems,
+      });
     },
     onSuccess: () => {
-      toast.success('تم بنجاح', { description: 'تم تحديث حالة المشتريات' });
+      toast.success("تم بنجاح", { description: "تم تحديث حالة المشتريات" });
       refetchPurchase();
     },
     onError: (error: unknown) => {
-      toast.error('خطأ', { description: purchaseService.getErrorMessage(error) });
+      toast.error("خطأ", {
+        description: purchaseService.getErrorMessage(error),
+      });
     },
   });
 
@@ -203,7 +259,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
     );
   }, [purchase?.items]);
 
-  const isReadOnly = useMemo(() => purchase?.status === 'received', [purchase?.status]);
+  const isReadOnly = useMemo(() => false, []); // Logic disabled as per request: allow editing even if received
 
   // ==================== HANDLERS ====================
 
@@ -225,7 +281,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
 
   const handleItemDelete = useCallback(
     (itemId: number) => {
-      if (window.confirm('هل أنت متأكد من حذف هذا الصنف؟')) {
+      if (window.confirm("هل أنت متأكد من حذف هذا الصنف؟")) {
         deleteItemMutation.mutate(itemId);
       }
     },
@@ -279,8 +335,13 @@ const ManagePurchaseItemsPage: React.FC = () => {
 
   if (!purchaseId) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <Paper sx={{ p: 4, textAlign: 'center', maxWidth: 400 }}>
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="60vh"
+      >
+        <Paper sx={{ p: 4, textAlign: "center", maxWidth: 400 }}>
           <ErrorOutlineIcon color="error" sx={{ fontSize: 48, mb: 2 }} />
           <Typography variant="h6" color="error" gutterBottom>
             خطأ
@@ -293,7 +354,13 @@ const ManagePurchaseItemsPage: React.FC = () => {
 
   if (loadingPurchase) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh" gap={2}>
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="60vh"
+        gap={2}
+      >
         <CircularProgress />
         <Typography>جاري التحميل...</Typography>
       </Box>
@@ -302,26 +369,33 @@ const ManagePurchaseItemsPage: React.FC = () => {
 
   if (purchaseError || !purchase) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <Paper sx={{ p: 4, textAlign: 'center', maxWidth: 400 }}>
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="60vh"
+      >
+        <Paper sx={{ p: 4, textAlign: "center", maxWidth: 400 }}>
           <ErrorOutlineIcon color="error" sx={{ fontSize: 48, mb: 2 }} />
           <Typography variant="h6" color="error" gutterBottom>
             خطأ
           </Typography>
-          <Typography color="text.secondary">{purchaseService.getErrorMessage(purchaseError)}</Typography>
+          <Typography color="text.secondary">
+            {purchaseService.getErrorMessage(purchaseError)}
+          </Typography>
         </Paper>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ p: 2, minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ p: 2, minHeight: "100vh", bgcolor: "background.default" }}>
       {/* Header Section */}
       <PurchaseHeader
         purchase={purchase}
         summary={summary}
         isReadOnly={isReadOnly}
-        onBack={() => navigate('/purchases')}
+        onBack={() => navigate("/purchases")}
         onOpenAddDialog={() => setAddItemDialogOpen(true)}
         onAddAllProducts={() => addAllProductsMutation.mutate()}
         onDeleteZeroQuantity={() => deleteZeroQuantityItemsMutation.mutate()}

@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useTranslation } from "react-i18next";
+
 import { toast } from "sonner";
 
 // shadcn/ui Components
@@ -55,8 +55,14 @@ import { AppSettings } from "@/services/settingService";
 const whatsappSettingsSchema = z.object({
   whatsapp_enabled: z.boolean(),
   whatsapp_api_url: z.string().url({ message: "validation:url" }).optional(),
-  whatsapp_api_token: z.string().min(1, { message: "validation:required" }).optional(),
-  whatsapp_instance_id: z.string().min(1, { message: "validation:required" }).optional(),
+  whatsapp_api_token: z
+    .string()
+    .min(1, { message: "validation:required" })
+    .optional(),
+  whatsapp_instance_id: z
+    .string()
+    .min(1, { message: "validation:required" })
+    .optional(),
   whatsapp_default_phone: z.string().optional(),
 });
 
@@ -71,7 +77,7 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
   settings,
   onSettingsUpdate,
 }) => {
-  const { t } = useTranslation(["settings", "common", "validation"]);
+  // Removed useTranslation
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{
     success: boolean;
@@ -101,16 +107,16 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
   const onSubmit = async (data: WhatsAppSettingsFormValues) => {
     try {
       await onSettingsUpdate(data);
-      toast.success(t("settings:whatsappSettingsUpdated"));
+      toast.success("تم تحديث إعدادات واتساب");
     } catch (error) {
       console.error("Failed to update WhatsApp settings:", error);
-      toast.error(t("common:updateFailed"));
+      toast.error("فشل التحديث");
     }
   };
 
   const handleTestConnection = async () => {
     if (!testPhoneNumber) {
-      toast.error(t("settings:pleaseEnterPhoneNumber"));
+      toast.error("يرجى إدخال رقم هاتف");
       return;
     }
 
@@ -124,13 +130,13 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
         message: result.message,
         details: result.details,
       });
-      
+
       if (result.success) {
-        toast.success(t("settings:whatsappTestMessageSent"));
+        toast.success("تم إرسال رسالة الاختبار");
       } else {
         // Display detailed error information in toast
         let errorMessage = result.error || result.message;
-        
+
         // If there are additional details, include them in the toast
         if (result.details) {
           if (result.details.explanation) {
@@ -140,7 +146,7 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
             errorMessage += ` (ChatId: ${result.details.chatId})`;
           }
         }
-        
+
         toast.error(errorMessage, {
           description: result.details?.explanation || result.error,
           duration: 6000, // Show for 6 seconds to allow reading longer error messages
@@ -150,10 +156,10 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
       console.error("WhatsApp test error:", error);
       setTestResult({
         success: false,
-        message: t("settings:failedToSendTestMessage"),
+        message: "فشل إرسال رسالة الاختبار",
       });
-      toast.error(t("settings:whatsappTestFailedCheckConfig"), {
-        description: t("settings:whatsappTestFailed"),
+      toast.error("فشل اختبار واتساب - تحقق من الإعدادات", {
+        description: "يرجى التحقق من مفتاح API ومعرف المثيل ورقم الهاتف.",
         duration: 5000,
       });
     } finally {
@@ -166,10 +172,10 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
       <CardHeader>
         <div className="flex items-center gap-2">
           <MessageCircle className="h-5 w-5 text-green-600" />
-          <CardTitle>{t("settings:whatsappIntegration")}</CardTitle>
+          <CardTitle>إعدادات واتساب</CardTitle>
         </div>
         <CardDescription>
-          {t("settings:whatsappIntegrationDesc")}
+          تكوين الربط مع خدمة واتساب لإرسال التقارير والإشعارات
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -182,11 +188,9 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                   <div className="space-y-0.5">
-                    <FormLabel className="text-base">
-                      {t("settings:enableWhatsApp")}
-                    </FormLabel>
+                    <FormLabel className="text-base">تفعيل واتساب</FormLabel>
                     <FormDescription>
-                      {t("settings:enableWhatsAppDesc")}
+                      تفعيل إرسال التقارير التلقائية عبر واتساب
                     </FormDescription>
                   </div>
                   <FormControl>
@@ -206,12 +210,15 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
                 name="whatsapp_api_url"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("settings:whatsappApiUrl")}</FormLabel>
+                    <FormLabel>رابط API</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="https://waapi.app/api/v1" />
+                      <Input
+                        {...field}
+                        placeholder="https://waapi.app/api/v1"
+                      />
                     </FormControl>
                     <FormDescription>
-                      {t("settings:whatsappApiUrlDesc")}
+                      رابط خدمة WaAPI (اتركه افتراضيًا إذا لم تكن متأكدًا)
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -223,16 +230,16 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
                 name="whatsapp_api_token"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("settings:whatsappApiToken")}</FormLabel>
+                    <FormLabel>مفتاح API Token</FormLabel>
                     <FormControl>
                       <Input
                         type="password"
                         {...field}
-                        placeholder="Your WaAPI token"
+                        placeholder="مفتاح WaAPI الخاص بك"
                       />
                     </FormControl>
                     <FormDescription>
-                      {t("settings:whatsappApiTokenDesc")}
+                      مفتاح المصادقة الخاص بحسابك
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -244,12 +251,12 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
                 name="whatsapp_instance_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("settings:whatsappInstanceId")}</FormLabel>
+                    <FormLabel>معرف المثيل (Instance ID)</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Your instance ID" />
+                      <Input {...field} placeholder="معرف المثيل الخاص بك" />
                     </FormControl>
                     <FormDescription>
-                      {t("settings:whatsappInstanceIdDesc")}
+                      المعرف الخاص بمثيل واتساب في الخدمة
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -261,15 +268,12 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
                 name="whatsapp_default_phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("settings:whatsappDefaultPhone")}</FormLabel>
+                    <FormLabel>رقم الهاتف الافتراضي</FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="+1234567890"
-                      />
+                      <Input {...field} placeholder="+1234567890" />
                     </FormControl>
                     <FormDescription>
-                      {t("settings:whatsappDefaultPhoneDesc")}
+                      رقم الهاتف الذي ستصل الرسائل منه (اختياري)
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -287,20 +291,21 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
                   className="w-full md:w-auto"
                 >
                   <TestTube className="h-4 w-4 mr-2" />
-                  {t("settings:testWhatsAppConnection")}
+                  اختبار الاتصال
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>{t("settings:testWhatsAppConnection")}</DialogTitle>
+                  <DialogTitle>اختبار اتصال واتساب</DialogTitle>
                   <DialogDescription>
-                    {t("settings:testWhatsAppConnectionDesc")}
+                    أدخل رقم هاتف لاختبار إعدادات الاتصال. سيتم إرسال رسالة
+                    تجريبية.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm font-medium">
-                      {t("settings:phoneNumberToTest")}
+                      رقم هاتف للاختبار
                     </label>
                     <Input
                       type="tel"
@@ -321,7 +326,7 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
                         <XCircle className="h-4 w-4" />
                       )}
                       <AlertTitle>
-                        {testResult.success ? t("settings:success") : t("settings:error")}
+                        {testResult.success ? "نجاح" : "خطأ"}
                       </AlertTitle>
                       <AlertDescription>
                         <div className="space-y-1">
@@ -329,13 +334,19 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
                           {testResult.details && !testResult.success && (
                             <div className="text-sm space-y-1">
                               {testResult.details.explanation && (
-                                <p className="font-medium">Explanation: {testResult.details.explanation}</p>
+                                <p className="font-medium">
+                                  Explanation: {testResult.details.explanation}
+                                </p>
                               )}
                               {testResult.details.chatId && (
-                                <p className="text-xs opacity-75">ChatId: {testResult.details.chatId}</p>
+                                <p className="text-xs opacity-75">
+                                  ChatId: {testResult.details.chatId}
+                                </p>
                               )}
                               {testResult.details.instanceId && (
-                                <p className="text-xs opacity-75">InstanceId: {testResult.details.instanceId}</p>
+                                <p className="text-xs opacity-75">
+                                  InstanceId: {testResult.details.instanceId}
+                                </p>
                               )}
                             </div>
                           )}
@@ -349,14 +360,16 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
                       variant="outline"
                       onClick={() => setIsTestDialogOpen(false)}
                     >
-                      {t("settings:cancel")}
+                      إلغاء
                     </Button>
                     <Button
                       onClick={handleTestConnection}
                       disabled={isTesting || !testPhoneNumber}
                     >
-                      {isTesting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                      {isTesting ? t("settings:testing") : t("settings:sendTestMessage")}
+                      {isTesting && (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      )}
+                      {isTesting ? "جاري الاختبار..." : "إرسال رسالة اختبار"}
                     </Button>
                   </div>
                 </div>
@@ -366,8 +379,10 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
             {/* Save Button */}
             <div className="flex justify-end">
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {t("common:saveChanges")}
+                {isSubmitting && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
+                حفظ التغييرات
               </Button>
             </div>
           </form>
@@ -376,14 +391,24 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
         {/* Help Information */}
         <Alert className="mt-6">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>{t("settings:setupInstructions")}</AlertTitle>
+          <AlertTitle>إرشادات الإعداد</AlertTitle>
           <AlertDescription>
             <ol className="list-decimal list-inside space-y-1 mt-2">
-              <li>{t("settings:setupInstructionsStep1")} <a href="https://waapi.app" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">waapi.app</a></li>
-              <li>{t("settings:setupInstructionsStep2")}</li>
-              <li>{t("settings:setupInstructionsStep3")}</li>
-              <li>{t("settings:setupInstructionsStep4")}</li>
-              <li>{t("settings:setupInstructionsStep5")}</li>
+              <li>
+                أنشئ حسابًا في{" "}
+                <a
+                  href="https://waapi.app"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline"
+                >
+                  waapi.app
+                </a>
+              </li>
+              <li>قم بربط جهاز واتساب الخاص بك من خلال لوحة التحكم</li>
+              <li>انسخ مفتاح API ومعرف المثيل من لوحة تحكم WaAPI</li>
+              <li>ألصق البيانات في الحقول أعلاه</li>
+              <li>اضغط على حفظ، ثم جرب إرسال رسالة اختبار</li>
             </ol>
           </AlertDescription>
         </Alert>
@@ -392,4 +417,4 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({
   );
 };
 
-export default WhatsAppConfig; 
+export default WhatsAppConfig;
