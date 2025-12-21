@@ -52,11 +52,7 @@ export const reportItems: NavItem[] = [
   { to: "/reports/sales", label: "تقرير المبيعات", permission: null },
   { to: "/reports/purchases", label: "تقرير المشتريات", permission: null },
   { to: "/reports/inventory", label: "تقرير المخزون", permission: null },
-  {
-    to: "/reports/profit-loss",
-    label: "تقرير الأرباح والخسائر",
-    permission: null,
-  },
+
   { to: "/reports/inventory-log", label: "سجل المخزون", permission: null },
 
   {

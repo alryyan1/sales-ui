@@ -24,7 +24,7 @@ import { toast } from "sonner";
 import PurchaseFormPage from "./pages/PurchaseFormPage";
 import UsersListPage from "./components/admin/users/UsersListPage";
 import { AuthProvider } from "./context/AuthContext";
-import ProfitLossReportPage from "./pages/reports/ProfitLossReportPage";
+
 import RolesListPage from "./pages/admin/RolesListPage";
 import StockAdjustmentsListPage from "./components/inventory/StockAdjustmentsListPage";
 import CategoriesListPage from "./pages/admin/CategoriesListPage";
@@ -171,7 +171,6 @@ const router = createHashRouter([
               { path: "sales-discounts", element: <SalesWithDiscountsPage /> },
               { path: "purchases", element: <PurchaseReportPage /> },
               { path: "inventory", element: <InventoryReportPage /> },
-              { path: "profit-loss", element: <ProfitLossReportPage /> },
 
               {
                 path: "monthly-revenue",
