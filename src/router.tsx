@@ -44,7 +44,7 @@ import SalesWithDiscountsPage from "./pages/reports/SalesWithDiscountsPage";
 import DailyIncomeReportPage from "./pages/reports/DailyIncomeReportPage";
 import SupplierLedgerPage from "./pages/suppliers/SupplierLedgerPage";
 import BackupPage from "./pages/admin/BackupPage";
-import AnalyticsPage from "./pages/AnalyticsPage";
+
 import WhatsAppSchedulersPage from "./pages/admin/WhatsAppSchedulersPage";
 import ExpensesPage from "./pages/admin/ExpensesPage";
 import IndexedDBManagerPage from "./pages/admin/IndexedDBManagerPage";
@@ -188,7 +188,6 @@ const router = createHashRouter([
           },
 
           // Analytics
-          { path: "analytics", element: <AnalyticsPage /> },
 
           // --- Admin Section ---
           {

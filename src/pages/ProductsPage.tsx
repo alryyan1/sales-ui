@@ -745,31 +745,18 @@ const ProductsPage: React.FC = () => {
             <ProductsTable
               products={productsResponse.data as ProductTableItem[]}
               onEdit={(product) => openModal(product as ProductTableItem)}
-              isLoading={false} // Removed isDeleting
+              isLoading={false}
+              // Pagination Props
+              rowCount={productsResponse.meta.total}
+              paginationModel={{
+                page: currentPage - 1, // DataGrid is 0-indexed
+                pageSize: rowsPerPage,
+              }}
+              onPaginationModelChange={(model) => {
+                setRowsPerPage(model.pageSize);
+                setCurrentPage(model.page + 1); // Convert back to 1-indexed
+              }}
             />
-            {/* Pagination */}
-            {productsResponse.meta.last_page > 1 && (
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "center",
-                  p: 2,
-                  mt: 3,
-                  px: 2,
-                }}
-              >
-                <Pagination
-                  count={productsResponse.meta.last_page}
-                  page={currentPage}
-                  onChange={handlePageChange}
-                  color="primary"
-                  shape="rounded"
-                  showFirstButton
-                  showLastButton
-                  disabled={isLoading} // Removed isDeleting
-                />
-              </Box>
-            )}
             {/* No Products Message */}
             {productsResponse.data.length === 0 && (
               <Typography

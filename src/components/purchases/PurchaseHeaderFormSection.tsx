@@ -165,108 +165,125 @@ export const PurchaseHeaderFormSection: React.FC<
 
       <CardContent sx={{ p: 3 }}>
         <Stack spacing={3} sx={{ direction: "ltr" }}>
-          {/* Warehouse Selection */}
-          <Controller
-            control={control}
-            name="warehouse_id"
-            render={({ field, fieldState }) => (
-              <Box>
-                <FieldLabel required icon={<InventoryOutlinedIcon />}>
-                  المخزن
-                </FieldLabel>
-                <Autocomplete
-                  options={warehouses || []}
-                  getOptionLabel={(option) => option.name}
-                  value={warehouses?.find((w) => w.id === field.value) || null}
-                  onChange={(_, newValue) => {
-                    field.onChange(newValue?.id);
-                  }}
-                  loading={loadingWarehouses}
-                  disabled={isSubmitting || isPurchaseReceived}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      placeholder="اختر المخزن"
-                      error={!!fieldState.error}
-                      helperText={fieldState.error?.message}
-                      size="small"
-                    />
-                  )}
-                />
-              </Box>
-            )}
-          />
+          {/* Row: Warehouse and Supplier */}
+          <Box
+            sx={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 3,
+              "& > *": {
+                flex: {
+                  xs: "1 1 100%",
+                  md: "1 1 calc(50% - 12px)",
+                },
+              },
+            }}
+          >
+            {/* Warehouse Selection */}
+            <Controller
+              control={control}
+              name="warehouse_id"
+              render={({ field, fieldState }) => (
+                <Box>
+                  <FieldLabel required icon={<InventoryOutlinedIcon />}>
+                    المخزن
+                  </FieldLabel>
+                  <Autocomplete
+                    options={warehouses || []}
+                    getOptionLabel={(option) => option.name}
+                    value={
+                      warehouses?.find((w) => w.id === field.value) || null
+                    }
+                    onChange={(_, newValue) => {
+                      field.onChange(newValue?.id);
+                    }}
+                    loading={loadingWarehouses}
+                    disabled={isSubmitting || isPurchaseReceived}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder="اختر المخزن"
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                        size="small"
+                      />
+                    )}
+                  />
+                </Box>
+              )}
+            />
 
-          {/* Supplier Selection - Full Width */}
-          <Controller
-            control={control}
-            name="supplier_id"
-            render={({ field, fieldState }) => (
-              <Box>
-                <FieldLabel required icon={<LocalShippingOutlinedIcon />}>
-                  المورد
-                </FieldLabel>
-                <Autocomplete
-                  options={suppliers}
-                  getOptionLabel={(option) => option.name}
-                  value={selectedSupplier}
-                  onChange={(_, newValue) => {
-                    field.onChange(newValue?.id || "");
-                    onSupplierSelect(newValue);
-                  }}
-                  onInputChange={(_, newInputValue) =>
-                    onSupplierSearchInputChange(newInputValue)
-                  }
-                  inputValue={supplierSearchInput}
-                  loading={loadingSuppliers}
-                  disabled={isDisabled}
-                  size="small"
-                  noOptionsText="لا توجد نتائج"
-                  loadingText="جاري البحث..."
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      placeholder="ابحث عن مورد..."
-                      error={!!fieldState.error}
-                      helperText={fieldState.error?.message}
-                      sx={inputStyles}
-                      InputProps={{
-                        ...params.InputProps,
-                        endAdornment: (
-                          <>
-                            {loadingSuppliers && (
-                              <CircularProgress color="primary" size={18} />
-                            )}
-                            {params.InputProps.endAdornment}
-                          </>
-                        ),
-                      }}
-                    />
-                  )}
-                  renderOption={(props, option) => (
-                    <Box
-                      component="li"
-                      {...props}
-                      sx={{
-                        direction: "ltr",
-                        textAlign: "right",
-                        py: 1.5,
-                        borderBottom: "1px solid",
-                        borderColor: "divider",
-                        "&:last-child": { borderBottom: "none" },
-                      }}
-                    >
-                      <Typography variant="body2" fontWeight={500}>
-                        {option.name}
-                      </Typography>
-                    </Box>
-                  )}
-                />
-              </Box>
-            )}
-          />
+            {/* Supplier Selection */}
+            <Controller
+              control={control}
+              name="supplier_id"
+              render={({ field, fieldState }) => (
+                <Box>
+                  <FieldLabel required icon={<LocalShippingOutlinedIcon />}>
+                    المورد
+                  </FieldLabel>
+                  <Autocomplete
+                    options={suppliers}
+                    getOptionLabel={(option) => option.name}
+                    value={selectedSupplier}
+                    onChange={(_, newValue) => {
+                      field.onChange(newValue?.id || "");
+                      onSupplierSelect(newValue);
+                    }}
+                    onInputChange={(_, newInputValue) =>
+                      onSupplierSearchInputChange(newInputValue)
+                    }
+                    inputValue={supplierSearchInput}
+                    loading={loadingSuppliers}
+                    disabled={isDisabled}
+                    size="small"
+                    noOptionsText="لا توجد نتائج"
+                    loadingText="جاري البحث..."
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder="ابحث عن مورد..."
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                        sx={inputStyles}
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <>
+                              {loadingSuppliers && (
+                                <CircularProgress color="primary" size={18} />
+                              )}
+                              {params.InputProps.endAdornment}
+                            </>
+                          ),
+                        }}
+                      />
+                    )}
+                    renderOption={(props, option) => (
+                      <Box
+                        component="li"
+                        {...props}
+                        sx={{
+                          direction: "ltr",
+                          textAlign: "right",
+                          py: 1.5,
+                          borderBottom: "1px solid",
+                          borderColor: "divider",
+                          "&:last-child": { borderBottom: "none" },
+                        }}
+                      >
+                        <Typography variant="body2" fontWeight={500}>
+                          {option.name}
+                        </Typography>
+                      </Box>
+                    )}
+                  />
+                </Box>
+              )}
+            />
+          </Box>
 
-          {/* Row: Date, Status, Reference */}
+          {/* Row: Date, Currency, Reference (Status Removed) */}
           <Box
             sx={{
               display: "flex",
@@ -276,9 +293,9 @@ export const PurchaseHeaderFormSection: React.FC<
                 flex: {
                   xs: "1 1 100%",
                   sm: "1 1 calc(50% - 12px)",
-                  md: "1 1 calc(33.333% - 16px)",
+                  md: "1 1 calc(33.333% - 16px)", // Adjusted for 3 items
                 },
-                minWidth: { xs: "100%", sm: 200, md: 180 },
+                minWidth: { xs: "100%", sm: 200, md: 150 },
               },
             }}
           >
@@ -313,65 +330,33 @@ export const PurchaseHeaderFormSection: React.FC<
               )}
             />
 
-            {/* Status */}
+            {/* Currency */}
             <Controller
               control={control}
-              name="status"
-              render={({ field, fieldState }) => {
-                const selectedValue = statusOptions.find(
-                  (opt) => opt.value === field.value
-                ) as StatusOption | undefined;
-                return (
-                  <Box>
-                    <FieldLabel required icon={<InventoryOutlinedIcon />}>
-                      الحالة
-                    </FieldLabel>
-                    <Autocomplete<StatusOption, false, true, false>
-                      options={statusOptions as unknown as StatusOption[]}
-                      getOptionLabel={(option) => option.label}
-                      value={selectedValue}
-                      onChange={(_, newValue) =>
-                        field.onChange(newValue?.value || "")
-                      }
-                      disabled={isDisabled}
-                      size="small"
-                      disableClearable
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          placeholder="اختر الحالة..."
-                          error={!!fieldState.error}
-                          helperText={fieldState.error?.message}
-                          sx={inputStyles}
-                        />
-                      )}
-                      renderOption={(props, option) => (
-                        <Box
-                          component="li"
-                          {...props}
-                          sx={{
-                            direction: "ltr",
-                            justifyContent: "flex-start",
-                            py: 1.25,
-                          }}
-                        >
-                          <Chip
-                            label={option.label}
-                            size="small"
-                            color={option.color}
-                            variant="filled"
-                            sx={{
-                              minWidth: 90,
-                              fontWeight: 600,
-                              borderRadius: 1.5,
-                            }}
-                          />
-                        </Box>
-                      )}
-                    />
-                  </Box>
-                );
-              }}
+              name="currency"
+              render={({ field, fieldState }) => (
+                <Box>
+                  <FieldLabel required icon={<TagOutlinedIcon />}>
+                    العملة
+                  </FieldLabel>
+                  <Autocomplete
+                    options={["SDG", "USD"]}
+                    value={field.value || "SDG"}
+                    onChange={(_, newValue) => field.onChange(newValue)}
+                    disabled={isDisabled}
+                    size="small"
+                    disableClearable
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                        sx={inputStyles}
+                      />
+                    )}
+                  />
+                </Box>
+              )}
             />
 
             {/* Reference Number */}

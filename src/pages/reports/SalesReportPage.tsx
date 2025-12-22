@@ -110,7 +110,6 @@ type ReportFilterValues = z.infer<typeof reportFilterSchema>;
 
 // --- Component ---
 const SalesReportPage: React.FC = () => {
-  // Removed useTranslation
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -808,7 +807,7 @@ const SalesReportPage: React.FC = () => {
                       name="clientId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("clients:client")}</FormLabel>
+                          <FormLabel>العميل</FormLabel>
                           <Select
                             onValueChange={field.onChange}
                             value={field.value ?? ""}
@@ -816,15 +815,11 @@ const SalesReportPage: React.FC = () => {
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue
-                                  placeholder={t("reports:allClients")}
-                                />
+                                <SelectValue placeholder="الكل" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value=" ">
-                                {t("reports:allClients")}
-                              </SelectItem>
+                              <SelectItem value=" ">الكل</SelectItem>
                               {clients.map((client) => (
                                 <SelectItem
                                   key={client.id}
@@ -846,7 +841,7 @@ const SalesReportPage: React.FC = () => {
                       name="userId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("users:user")}</FormLabel>
+                          <FormLabel>المستخدم</FormLabel>
                           <Select
                             onValueChange={field.onChange}
                             value={field.value ?? ""}
@@ -854,15 +849,11 @@ const SalesReportPage: React.FC = () => {
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue
-                                  placeholder={t("reports:allUsers")}
-                                />
+                                <SelectValue placeholder="الكل" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value=" ">
-                                {t("reports:allUsers")}
-                              </SelectItem>
+                              <SelectItem value=" ">الكل</SelectItem>
                               {/* User selection temporarily disabled */}
                             </SelectContent>
                           </Select>
@@ -877,7 +868,7 @@ const SalesReportPage: React.FC = () => {
                       name="productId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("products:product")}</FormLabel>
+                          <FormLabel>المنتج</FormLabel>
                           <Popover
                             open={productSearchOpen}
                             onOpenChange={setProductSearchOpen}
@@ -896,20 +887,16 @@ const SalesReportPage: React.FC = () => {
                                         (product) =>
                                           String(product.id) === field.value
                                       )?.name
-                                    : t("reports:allProducts")}
+                                    : "كل المنتجات"}
                                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                               </FormControl>
                             </PopoverTrigger>
                             <PopoverContent className="w-full p-0">
                               <Command>
-                                <CommandInput
-                                  placeholder={t("products:searchProducts")}
-                                />
+                                <CommandInput placeholder="بحث عن منتج..." />
                                 <CommandList>
-                                  <CommandEmpty>
-                                    {t("products:noProductsFound")}
-                                  </CommandEmpty>
+                                  <CommandEmpty>لا توجد منتجات</CommandEmpty>
                                   <CommandGroup>
                                     <CommandItem
                                       value=""
@@ -926,7 +913,7 @@ const SalesReportPage: React.FC = () => {
                                             : "opacity-0"
                                         )}
                                       />
-                                      {t("reports:allProducts")}
+                                      كل المنتجات
                                     </CommandItem>
                                     {products.map((product) => (
                                       <CommandItem
@@ -964,34 +951,22 @@ const SalesReportPage: React.FC = () => {
                       name="status"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("sales:status")}</FormLabel>
+                          <FormLabel>الحالة</FormLabel>
                           <Select
                             onValueChange={field.onChange}
                             value={field.value ?? ""}
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue
-                                  placeholder={t("reports:allStatuses")}
-                                />
+                                <SelectValue placeholder="كل الحالات" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value=" ">
-                                {t("reports:allStatuses")}
-                              </SelectItem>
-                              <SelectItem value="completed">
-                                {t("sales:status_completed")}
-                              </SelectItem>
-                              <SelectItem value="pending">
-                                {t("sales:status_pending")}
-                              </SelectItem>
-                              <SelectItem value="draft">
-                                {t("sales:status_draft")}
-                              </SelectItem>
-                              <SelectItem value="cancelled">
-                                {t("sales:status_cancelled")}
-                              </SelectItem>
+                              <SelectItem value=" ">كل الحالات</SelectItem>
+                              <SelectItem value="completed">مكتمل</SelectItem>
+                              <SelectItem value="pending">معلق</SelectItem>
+                              <SelectItem value="draft">مسودة</SelectItem>
+                              <SelectItem value="cancelled">ملغي</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -1010,7 +985,7 @@ const SalesReportPage: React.FC = () => {
                         ) : (
                           <Filter className="mr-2 h-4 w-4" />
                         )}
-                        {t("common:applyFilters")}
+                        تطبيق الفلاتر
                       </Button>
                       <Button
                         type="button"
@@ -1020,7 +995,7 @@ const SalesReportPage: React.FC = () => {
                         className="w-full"
                       >
                         <X className="mr-2 h-4 w-4" />
-                        {t("common:clearFilters")}
+                        مسح الفلاتر
                       </Button>
                     </div>
                   </form>

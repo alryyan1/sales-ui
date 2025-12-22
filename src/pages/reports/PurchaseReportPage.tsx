@@ -443,7 +443,7 @@ const PurchaseReportPage: React.FC = () => {
                   ) : (
                     <Filter className="me-2 h-4 w-4" />
                   )}{" "}
-                  {t("common:applyFilters")}{" "}
+                  تطبيق الفلاتر{" "}
                 </Button>
               </div>
             </form>

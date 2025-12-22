@@ -58,7 +58,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
   // Form state
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productInputValue, setProductInputValue] = useState("");
-  const [productOptions, setProductOptions] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [productLoading, setProductLoading] = useState(false);
   const [quantity, setQuantity] = useState<number>(1);
   const [unitCost, setUnitCost] = useState<number>(0);
@@ -81,27 +81,26 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
     setExpiryDate("");
   }, []);
 
-  // Search products
-  const searchProducts = useCallback(async (searchTerm: string) => {
+  // Fetch ALL products for client-side filtering/scanning
+  const fetchAllProducts = useCallback(async () => {
     setProductLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (searchTerm) {
-        params.append("search", searchTerm);
-        params.append("search_sku", "true");
-      } else {
-        params.append("show_all_for_empty_search", "true");
-      }
-      params.append("limit", "15");
-
+      // Fetch a large number of products to act as a cache
+      // 2000 limit should cover most small-medium inventories; adjust if needed
       const response = await apiClient.get<{ data: Product[] }>(
-        `/products/autocomplete?${params.toString()}`
+        `/products/autocomplete?limit=2000&show_all_for_empty_search=true`
       );
       const products = response.data.data ?? response.data;
-      setProductOptions(products);
+
+      // Deduplicate products by ID to prevent key collisions
+      const uniqueProducts = Array.from(
+        new Map(products.map((p) => [p.id, p])).values()
+      );
+
+      setAllProducts(uniqueProducts);
     } catch (error) {
-      console.error("Error searching products:", error);
-      setProductOptions([]);
+      console.error("Error fetching products:", error);
+      toast.error("خطأ", { description: "فشل تحميل قائمة المنتجات" });
     } finally {
       setProductLoading(false);
     }
@@ -159,35 +158,41 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
     [settings?.default_profit_rate, selectedProduct?.units_per_stocking_unit]
   );
 
-  // Handle autocomplete Enter key
+  // Handle autocomplete Enter key (Scanner support)
   const handleAutocompleteKeyDown = useCallback(
-    async (e: React.KeyboardEvent<HTMLDivElement>) => {
-      if (e.key === "Enter" && productInputValue.trim() && !selectedProduct) {
-        e.preventDefault();
-        try {
-          const product = await purchaseService.getProductBySku(
-            productInputValue.trim()
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      // If Enter is pressed, try to find an exact SKU or Name match locally
+      if (e.key === "Enter") {
+        const val = productInputValue.trim().toLowerCase();
+        if (val) {
+          // Prioritize SKU match
+          const exactSkuMatch = allProducts.find(
+            (p) => p.sku && p.sku.toLowerCase() === val
           );
-          if (product) {
-            handleProductSelect(product);
+
+          if (exactSkuMatch) {
+            e.preventDefault();
+            e.stopPropagation();
+            handleProductSelect(exactSkuMatch);
+            // Optionally clear the input if you want, but Autocomplete usually handles value display
             return;
           }
-          const nameMatch = productOptions.find(
-            (p) =>
-              p.name.toLowerCase().includes(productInputValue.toLowerCase()) ||
-              (p.sku && p.sku.toLowerCase() === productInputValue.toLowerCase())
+
+          // Then Name match
+          const exactNameMatch = allProducts.find(
+            (p) => p.name.toLowerCase() === val
           );
-          if (nameMatch) {
-            handleProductSelect(nameMatch);
-          } else {
-            toast.error("خطأ", { description: "المنتج غير موجود" });
+
+          if (exactNameMatch) {
+            e.preventDefault();
+            e.stopPropagation();
+            handleProductSelect(exactNameMatch);
+            return;
           }
-        } catch {
-          toast.error("خطأ", { description: "حدث خطأ أثناء البحث" });
         }
       }
     },
-    [productInputValue, selectedProduct, productOptions, handleProductSelect]
+    [productInputValue, allProducts, handleProductSelect]
   );
 
   // Handle add item
@@ -226,19 +231,23 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
     onAddItem,
   ]);
 
-  // Debounced product search
-  useEffect(() => {
-    if (!open) return;
-    const timer = setTimeout(() => searchProducts(productInputValue), 300);
-    return () => clearTimeout(timer);
-  }, [productInputValue, searchProducts, open]);
+  // Handle generic form input key down (submit on Enter)
+  const handleFormInputKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleAddItem();
+      }
+    },
+    [handleAddItem]
+  );
 
-  // Initial product load when dialog opens
+  // Fetch products once when dialog opens
   useEffect(() => {
     if (open) {
-      searchProducts("");
+      fetchAllProducts();
     }
-  }, [open, searchProducts]);
+  }, [open, fetchAllProducts]);
 
   // Reset form when dialog closes
   useEffect(() => {
@@ -330,7 +339,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
               اسم المنتج
             </Typography>
             <Autocomplete
-              options={productOptions}
+              options={allProducts}
               getOptionLabel={(option) =>
                 typeof option === "string" ? option : option.name
               }
@@ -347,11 +356,20 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
               loading={productLoading}
               isOptionEqualToValue={(option, value) => option.id === value.id}
               noOptionsText="لا توجد نتائج"
+              autoHighlight // Automatically highlight keys for better Enter selection
+              // Custom filter to match Name OR SKU
+              filterOptions={(options, state) => {
+                const input = state.inputValue.toLowerCase();
+                return options.filter(
+                  (opt) =>
+                    opt.name.toLowerCase().includes(input) ||
+                    (opt.sku && opt.sku.toLowerCase().includes(input))
+                );
+              }}
               freeSolo
               clearOnBlur
               selectOnFocus
               blurOnSelect
-              filterOptions={(x) => x}
               size="small"
               onKeyDown={handleAutocompleteKeyDown}
               renderInput={(params) => (
@@ -387,7 +405,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
               renderOption={(props, option) => {
                 const { key, ...otherProps } = props;
                 return (
-                  <li key={key} {...otherProps}>
+                  <li key={option.id} {...otherProps}>
                     <Box
                       sx={{
                         display: "flex",
@@ -491,6 +509,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                       inputProps={{ min: 1, step: 1 }}
                       size="small"
                       fullWidth
+                      onKeyDown={handleFormInputKeyDown}
                       sx={{
                         "& .MuiOutlinedInput-root": { borderRadius: 2 },
                       }}
@@ -528,6 +547,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                       inputProps={{ min: 0, step: 0.01 }}
                       size="small"
                       fullWidth
+                      onKeyDown={handleFormInputKeyDown}
                       sx={{
                         "& .MuiOutlinedInput-root": { borderRadius: 2 },
                       }}
@@ -573,6 +593,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                       size="small"
                       fullWidth
                       error={salePrice === undefined}
+                      onKeyDown={handleFormInputKeyDown}
                       sx={{
                         "& .MuiOutlinedInput-root": {
                           borderRadius: 2,
@@ -612,6 +633,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                       inputProps={{ min: 0, step: 0.001 }}
                       size="small"
                       fullWidth
+                      onKeyDown={handleFormInputKeyDown}
                       sx={{
                         "& .MuiOutlinedInput-root": { borderRadius: 2 },
                       }}
@@ -648,6 +670,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                       size="small"
                       fullWidth
                       placeholder="اختياري"
+                      onKeyDown={handleFormInputKeyDown}
                       sx={{
                         "& .MuiOutlinedInput-root": { borderRadius: 2 },
                       }}
@@ -676,6 +699,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                       size="small"
                       fullWidth
                       InputLabelProps={{ shrink: true }}
+                      onKeyDown={handleFormInputKeyDown}
                       sx={{
                         "& .MuiOutlinedInput-root": { borderRadius: 2 },
                       }}

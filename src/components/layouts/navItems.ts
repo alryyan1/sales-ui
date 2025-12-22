@@ -6,8 +6,6 @@ import {
   Building,
   ShoppingCart,
   CircleDollarSign,
-  BarChart3,
-  Settings,
 } from "lucide-react";
 import { NavItem } from "./types";
 
@@ -48,7 +46,6 @@ export const navItems: NavItem[] = [
 ];
 
 export const reportItems: NavItem[] = [
-  { to: "/analytics", label: "التحليلات", permission: null },
   { to: "/reports/sales", label: "تقرير المبيعات", permission: null },
   { to: "/reports/purchases", label: "تقرير المشتريات", permission: null },
   { to: "/reports/inventory", label: "تقرير المخزون", permission: null },

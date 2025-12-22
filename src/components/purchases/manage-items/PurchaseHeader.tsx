@@ -1,29 +1,38 @@
 // src/components/purchases/manage-items/PurchaseHeader.tsx
-import React from 'react';
+import React from "react";
 import {
-  Paper,
-  Stack,
-  Box,
-  Typography,
-  IconButton,
-  Button,
-  Tooltip,
-  FormControl,
+  ArrowLeft,
+  Plus,
+  ListChecks,
+  Trash2,
+  FileText,
+  Loader2,
+  Receipt,
+  Building2,
+} from "lucide-react";
+// Shadcn UI Components
+import { Button } from "@/components/ui/button";
+import {
   Select,
-  MenuItem,
-  CircularProgress,
-  Dialog,
-} from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import LibraryAddCheckIcon from '@mui/icons-material/LibraryAddCheck';
-import AutoDeleteIcon from '@mui/icons-material/AutoDelete';
-import SummarizeIcon from '@mui/icons-material/Summarize';
-import { Plus } from 'lucide-react';
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
-import PurchaseSummaryDialog from '@/components/purchases/PurchaseSummaryDialog';
-import { formatCurrency } from '@/constants';
-import { Purchase } from '@/services/purchaseService';
-import { PurchaseSummary } from './types';
+// Custom Components & Utils
+import PurchaseSummaryDialog from "@/components/purchases/PurchaseSummaryDialog";
+import { formatCurrency } from "@/constants";
+import { Purchase } from "@/services/purchaseService";
+import { PurchaseSummary } from "./types";
+import { cn } from "@/lib/utils";
 
 interface PurchaseHeaderProps {
   purchase: Purchase;
@@ -33,7 +42,7 @@ interface PurchaseHeaderProps {
   onOpenAddDialog: () => void;
   onAddAllProducts: () => void;
   onDeleteZeroQuantity: () => void;
-  onStatusChange: (status: 'pending' | 'ordered' | 'received') => void;
+  onStatusChange: (status: "pending" | "ordered" | "received") => void;
   isAddAllPending: boolean;
   isDeleteZeroPending: boolean;
   isStatusPending: boolean;
@@ -59,120 +68,179 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
   onCloseSummaryDialog,
 }) => {
   return (
-    <Paper sx={{ p: 2, mb: 2 }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+    <div className="bg-white border rounded-xl shadow-sm p-4 mb-6">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
         {/* Title & Back */}
-        <Stack direction="row" alignItems="center" gap={2}>
-          <IconButton onClick={onBack} color="primary">
-            <ArrowBackIcon />
-          </IconButton>
-          <Box>
-            <Typography variant="body1" fontWeight="bold">
-              إدارة أصناف المشتريات #{purchase.id}
-            </Typography>
-            <Typography variant="h6" color="text.secondary">
-              المورد: {purchase.supplier_name || '—'}
-            </Typography>
-          </Box>
-        </Stack>
-
-        {/* Summary Cards */}
-        <Stack direction="row" gap={1}>
-          <Paper
-            sx={{
-              p: 1.5,
-              minWidth: 80,
-              textAlign: 'center',
-              bgcolor: 'primary.light',
-              color: 'primary.contrastText',
-            }}
-          >
-            <Typography variant="h5" fontWeight="bold">
-              {summary.totalItems}
-            </Typography>
-            <Typography variant="caption">عدد الأصناف</Typography>
-          </Paper>
-          <Paper
-            sx={{
-              p: 1.5,
-              minWidth: 80,
-              textAlign: 'center',
-              bgcolor: 'skyblue',
-              color: 'success.contrastText',
-            }}
-          >
-            <Typography variant="h6" fontWeight="bold">
-              {formatCurrency(summary.totalCost)}
-            </Typography>
-            <Typography variant="caption">إجمالي التكلفة</Typography>
-          </Paper>
-        </Stack>
-
-        {/* Actions */}
-        <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap">
-          {!isReadOnly && (
-            <>
-              <Button
-                variant="contained"
-                color="primary"
-                size="small"
-                startIcon={<Plus size={18} />}
-                onClick={onOpenAddDialog}
-              >
-                إضافة صنف
-              </Button>
-              <Tooltip title="إضافة كل المنتجات إلى الفاتورة">
-                <IconButton
-                  onClick={onAddAllProducts}
-                  disabled={isAddAllPending}
-                  color="primary"
-                  size="small"
-                >
-                  {isAddAllPending ? <CircularProgress size={20} /> : <LibraryAddCheckIcon />}
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="حذف الأصناف ذات الكمية صفر">
-                <IconButton
-                  onClick={onDeleteZeroQuantity}
-                  disabled={isDeleteZeroPending}
-                  color="error"
-                  size="small"
-                >
-                  {isDeleteZeroPending ? <CircularProgress size={20} /> : <AutoDeleteIcon />}
-                </IconButton>
-              </Tooltip>
-            </>
-          )}
-
+        <div className="flex items-center gap-4">
           <Button
-            variant="outlined"
-            size="small"
-            startIcon={<SummarizeIcon />}
-            onClick={onOpenSummaryDialog}
+            variant="ghost"
+            size="icon"
+            onClick={onBack}
+            className="hover:bg-slate-100 rounded-full"
           >
-            ملخص الفاتورة
+            <ArrowLeft className="h-5 w-5 text-slate-600" />
           </Button>
 
-          <Dialog open={summaryDialogOpen} onClose={onCloseSummaryDialog} fullWidth maxWidth="sm">
-            <PurchaseSummaryDialog summary={summary} supplierName={purchase.supplier_name || '—'} />
-          </Dialog>
+          <div>
+            <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-blue-600" />
+              إدارة أصناف المشتريات
+              <span className="text-slate-400 font-normal">#{purchase.id}</span>
+            </h1>
+            <div className="flex items-center gap-2 text-slate-500 mt-1">
+              <Building2 className="h-3.5 w-3.5" />
+              <span className="text-sm font-medium">
+                {purchase.supplier_name || "—"}
+              </span>
+            </div>
+          </div>
+        </div>
 
-          {/* Status Select */}
-          <FormControl size="small" sx={{ minWidth: 120 }}>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full xl:w-auto">
+          {/* Summary Stats */}
+          <div className="flex items-center gap-2 self-start sm:self-center">
+            <div className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg flex flex-col items-center min-w-[80px]">
+              <span className="text-lg font-bold leading-none">
+                {summary.totalItems}
+              </span>
+              <span className="text-[10px] opacity-80 font-medium">
+                عدد الأصناف
+              </span>
+            </div>
+            <div className="bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg flex flex-col items-center min-w-[100px]">
+              <span className="text-lg font-bold leading-none">
+                {formatCurrency(summary.totalCost)}
+              </span>
+              <span className="text-[10px] opacity-80 font-medium">
+                إجمالي التكلفة
+              </span>
+            </div>
+          </div>
+
+          {/* Actions Toolbar */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Status Select */}
             <Select
               value={purchase.status}
-              onChange={(e) => onStatusChange(e.target.value as 'received' | 'pending' | 'ordered')}
+              onValueChange={(value) =>
+                onStatusChange(value as "received" | "pending" | "ordered")
+              }
               disabled={isStatusPending}
             >
-              <MenuItem value="pending">قيد الانتظار</MenuItem>
-              <MenuItem value="ordered">تم الطلب</MenuItem>
-              <MenuItem value="received">تم الاستلام</MenuItem>
+              <SelectTrigger
+                className={cn(
+                  "w-[130px] h-9 transition-colors",
+                  purchase.status === "received" &&
+                    "bg-green-50 text-green-700 border-green-200",
+                  purchase.status === "pending" &&
+                    "bg-amber-50 text-amber-700 border-amber-200",
+                  purchase.status === "ordered" &&
+                    "bg-blue-50 text-blue-700 border-blue-200"
+                )}
+              >
+                <SelectValue placeholder="الحالة" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">قيد الانتظار</SelectItem>
+                <SelectItem value="ordered">تم الطلب</SelectItem>
+                <SelectItem value="received">تم الاستلام</SelectItem>
+              </SelectContent>
             </Select>
-          </FormControl>
-          {isStatusPending && <CircularProgress size={20} />}
-        </Stack>
-      </Stack>
-    </Paper>
+
+            <div className="h-8 w-px bg-slate-200 mx-1 hidden sm:block" />
+
+            {!isReadOnly && (
+              <>
+                <Button
+                  onClick={onOpenAddDialog}
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                >
+                  <Plus className="h-4 w-4 ml-1.5" />
+                  إضافة صنف
+                </Button>
+
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={onAddAllProducts}
+                        disabled={isAddAllPending}
+                        className="h-9 w-9 text-slate-600 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200"
+                      >
+                        {isAddAllPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <ListChecks className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>إضافة كل المنتجات</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={onDeleteZeroQuantity}
+                        disabled={isDeleteZeroPending}
+                        className="h-9 w-9 text-slate-600 hover:text-red-600 hover:bg-red-50 hover:border-red-200"
+                      >
+                        {isDeleteZeroPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>حذف الأصناف الصفرية</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </>
+            )}
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onOpenSummaryDialog}
+                    className="h-9 w-9 text-slate-600"
+                  >
+                    <FileText className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>ملخص الفاتورة</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <Dialog
+              open={summaryDialogOpen}
+              onOpenChange={(open) => !open && onCloseSummaryDialog()}
+            >
+              <DialogContent className="max-w-2xl">
+                <PurchaseSummaryDialog
+                  summary={summary}
+                  supplierName={purchase.supplier_name || "—"}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

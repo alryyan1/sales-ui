@@ -297,6 +297,31 @@ const ManagePurchaseItemsPage: React.FC = () => {
 
   // ==================== EFFECTS ====================
 
+  // Keyboard shortcut for adding items
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check if the user is typing in an input field
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      if (e.key === "+" || e.key === "Add") {
+        e.preventDefault();
+        setAddItemDialogOpen(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
   // Load unit names for items' products
   useEffect(() => {
     const ids = purchase?.items?.map((i) => i.product_id) || [];

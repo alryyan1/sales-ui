@@ -7,27 +7,58 @@ import {
   useQueryClient,
   keepPreviousData,
 } from "@tanstack/react-query";
+import { toast } from "sonner";
 
-// MUI Components
-import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
-import CircularProgress from "@mui/material/CircularProgress";
-import Alert from "@mui/material/Alert";
-import Pagination from "@mui/material/Pagination";
-import AddIcon from "@mui/icons-material/Add";
-import Snackbar from "@mui/material/Snackbar";
-import TextField from "@mui/material/TextField";
-import InputAdornment from "@mui/material/InputAdornment";
-import SearchIcon from "@mui/icons-material/Search";
-import Button from "@mui/material/Button";
-import Paper from "@mui/material/Paper";
-import Fade from "@mui/material/Fade";
+// shadcn/ui Components
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Lucide Icons
+import {
+  Plus,
+  Search,
+  Building,
+  Phone,
+  Mail,
+  MoreHorizontal,
+  Pen,
+  Trash,
+  FileText,
+  RefreshCw,
+  User,
+  MapPin,
+  AlertCircle,
+  X,
+} from "lucide-react";
 
 // Services and Types
 import supplierService, { Supplier } from "../services/supplierService";
 
-// Custom Components
-import SuppliersTable from "../components/suppliers/SuppliersTable";
+// Custom Components (reusing existing MUI modals for now)
 import SupplierFormModal from "../components/suppliers/SupplierFormModal";
 import ConfirmationDialog from "../components/common/ConfirmationDialog";
 
@@ -51,16 +82,10 @@ const SuppliersPage: React.FC = () => {
     id: null,
   });
 
-  // Notification State
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity: "success" | "error";
-  }>({
-    open: false,
-    message: "",
-    severity: "success",
-  });
+  // Details Dialog State
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [selectedSupplierDetails, setSelectedSupplierDetails] =
+    useState<Supplier | null>(null);
 
   // --- Debounce Search Term ---
   useEffect(() => {
@@ -77,6 +102,7 @@ const SuppliersPage: React.FC = () => {
     isLoading,
     isError,
     error,
+    refetch,
   } = useQuery({
     queryKey: ["suppliers", currentPage, debouncedSearchTerm],
     queryFn: () =>
@@ -88,11 +114,11 @@ const SuppliersPage: React.FC = () => {
   const deleteMutation = useMutation({
     mutationFn: supplierService.deleteSupplier,
     onSuccess: () => {
-      showSnackbar("تم حذف المورد بنجاح", "success");
+      toast.success("تم حذف المورد بنجاح");
       setDeleteConfirmation({ isOpen: false, id: null });
-      // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
-      // Adjust page if needed automatically by refetch
+
+      // Adjust page if needed
       if (
         suppliersResponse &&
         suppliersResponse.data.length === 1 &&
@@ -102,21 +128,12 @@ const SuppliersPage: React.FC = () => {
       }
     },
     onError: (err: any) => {
-      showSnackbar(supplierService.getErrorMessage(err), "error");
+      toast.error(supplierService.getErrorMessage(err));
       setDeleteConfirmation((prev) => ({ ...prev, isOpen: false }));
     },
   });
 
   // --- Handlers ---
-  const showSnackbar = (message: string, severity: "success" | "error") => {
-    setSnackbar({ open: true, message, severity });
-  };
-
-  const handleSnackbarClose = () => {
-    setSnackbar((prev) => ({ ...prev, open: false }));
-  };
-
-  // Modal Handlers
   const handleOpenModal = (supplier: Supplier | null = null) => {
     setEditingSupplier(supplier);
     setIsModalOpen(true);
@@ -129,18 +146,16 @@ const SuppliersPage: React.FC = () => {
 
   const handleSaveSuccess = () => {
     handleCloseModal();
-    showSnackbar(
-      editingSupplier
-        ? "تم تحديث بيانات المورد بنجاح"
-        : "تم إضافة المورد بنجاح",
-      "success"
-    );
     queryClient.invalidateQueries({ queryKey: ["suppliers"] });
   };
 
-  // Delete Handlers
   const handleOpenDelete = (id: number) => {
     setDeleteConfirmation({ isOpen: true, id });
+  };
+
+  const handleRowClick = (supplier: Supplier) => {
+    setSelectedSupplierDetails(supplier);
+    setDetailsOpen(true);
   };
 
   const handleConfirmDelete = () => {
@@ -154,187 +169,381 @@ const SuppliersPage: React.FC = () => {
   };
 
   return (
-    <Box
-      sx={{ p: { xs: 2, sm: 3, md: 4 } }}
-      className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300"
-      dir="rtl"
-    >
-      {/* Header Section */}
-      <Paper elevation={0} className="bg-transparent" sx={{ mb: 4 }}>
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: { xs: "column", sm: "row" },
-            justifyContent: "space-between",
-            alignItems: { xs: "stretch", sm: "center" },
-            gap: 2,
-          }}
+    <div className="min-h-screen bg-slate-50/50 p-4 md:p-6" dir="rtl">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+            الموردون
+          </h1>
+          <p className="text-slate-500 mt-1">
+            إدارة قائمة الموردين والمشتريات والديون
+          </p>
+        </div>
+
+        <Button
+          onClick={() => handleOpenModal()}
+          size="lg"
+          className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200"
         >
-          <Box>
-            <Typography
-              variant="h4"
-              component="h1"
-              className="text-gray-800 dark:text-gray-100 font-bold tracking-tight"
-            >
-              الموردون
-            </Typography>
-            <Typography
-              variant="body2"
-              className="text-gray-500 dark:text-gray-400 mt-1"
-            >
-              إدارة بيانات الموردين والمشتريات
-            </Typography>
-          </Box>
+          <Plus className="h-5 w-5 ml-2" />
+          إضافة مورد جديد
+        </Button>
+      </div>
 
-          <Button
-            onClick={() => handleOpenModal()}
-            variant="contained"
-            size="large"
-            startIcon={<AddIcon />}
-            sx={{
-              borderRadius: "12px",
-              textTransform: "none",
-              fontWeight: 600,
-              paddingX: 3,
-              boxShadow:
-                "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
-              "&:hover": {
-                boxShadow:
-                  "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
-              },
-            }}
-          >
-            إضافة مورد جديد
-          </Button>
-        </Box>
+      {/* Main Content Card */}
+      <Card className="border-0 shadow-sm bg-white">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+            <CardTitle className="text-xl flex items-center gap-2">
+              <Building className="h-5 w-5 text-blue-500" />
+              قائمة الموردين
+            </CardTitle>
 
-        {/* Search Bar */}
-        <Box sx={{ mt: 3 }}>
-          <TextField
-            fullWidth
-            variant="outlined"
-            placeholder="ابحث عن مورد بالاسم، البريد الإلكتروني أو الهاتف..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon className="text-gray-400" />
-                </InputAdornment>
-              ),
-              sx: {
-                borderRadius: "12px",
-                backgroundColor: "background.paper",
-                "& fieldset": { border: "none" },
-                boxShadow:
-                  "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
-                transition: "all 0.2s",
-                "&:hover": {
-                  boxShadow:
-                    "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
-                },
-                "&.Mui-focused": {
-                  boxShadow: "0 0 0 2px var(--mui-palette-primary-main)",
-                },
-              },
-            }}
-            className="dark:bg-gray-800"
-          />
-        </Box>
-      </Paper>
-
-      {/* Error State */}
-      {isError && (
-        <Fade in>
-          <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
-            {supplierService.getErrorMessage(error)}
-          </Alert>
-        </Fade>
-      )}
-
-      {/* Content Area */}
-      <Box sx={{ position: "relative", minHeight: 400 }}>
-        {isLoading && !suppliersResponse ? (
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              height: 300,
-              gap: 2,
-            }}
-          >
-            <CircularProgress size={40} thickness={4} />
-            <Typography className="text-gray-500 animate-pulse">
-              جاري تحميل البيانات...
-            </Typography>
-          </Box>
-        ) : (
-          <Fade in={!isLoading}>
-            <Box>
-              {/* Suppliers Table */}
-              {suppliersResponse && (
-                <SuppliersTable
-                  suppliers={suppliersResponse.data}
-                  onEdit={handleOpenModal}
-                  onDelete={handleOpenDelete}
-                  onViewLedger={handleViewLedger}
-                  isLoading={deleteMutation.isPending}
-                />
-              )}
-
-              {/* Empty State */}
-              {suppliersResponse?.data.length === 0 && (
-                <Paper
-                  elevation={0}
-                  sx={{
-                    p: 6,
-                    textAlign: "center",
-                    borderRadius: 3,
-                    bgcolor: "background.paper",
-                    mt: 2,
-                    border: "1px dashed",
-                    borderColor: "divider",
-                  }}
+            <div className="relative w-full md:w-80">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="بحث بالاسم، البريد أو الهاتف..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pr-10 border-slate-200 focus-visible:ring-blue-500"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                 >
-                  <Typography variant="h6" className="text-gray-500 mb-2">
-                    لا توجد نتائج
-                  </Typography>
-                  <Typography variant="body2" className="text-gray-400">
-                    جرّب تعديل مصطلحات البحث أو أضف موردًا جديدًا.
-                  </Typography>
-                </Paper>
+                  <X className="h-4 w-4" />
+                </button>
               )}
+            </div>
+          </div>
+        </CardHeader>
 
-              {/* Pagination */}
-              {suppliersResponse && suppliersResponse.last_page > 1 && (
-                <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
-                  <Pagination
-                    count={suppliersResponse.last_page}
-                    page={currentPage}
-                    onChange={(_, page) => setCurrentPage(page)}
-                    color="primary"
-                    size="large"
-                    shape="rounded"
-                    showFirstButton
-                    showLastButton
-                    disabled={isLoading || deleteMutation.isPending}
-                    sx={{
-                      "& .MuiPaginationItem-root": {
-                        fontSize: "1rem",
-                        borderRadius: "8px",
-                      },
-                    }}
-                  />
-                </Box>
-              )}
-            </Box>
-          </Fade>
-        )}
-      </Box>
+        <CardContent>
+          {/* Error State */}
+          {isError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3 text-red-700 mb-6">
+              <AlertCircle className="h-5 w-5 flex-shrink-0" />
+              <p>{supplierService.getErrorMessage(error)}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetch()}
+                className="mr-auto border-red-200 hover:bg-red-100 text-red-700"
+              >
+                <RefreshCw className="h-4 w-4 ml-2" />
+                إعادة المحاولة
+              </Button>
+            </div>
+          )}
 
-      {/* Supplier Add/Edit Modal */}
+          {/* Loading State */}
+          {isLoading && (
+            <div className="space-y-4">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-4 py-3 border-b border-slate-100 last:border-0"
+                >
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-4 w-1/4" />
+                    <Skeleton className="h-3 w-1/3" />
+                  </div>
+                  <Skeleton className="h-8 w-24" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Data Table */}
+          {!isLoading && !isError && suppliersResponse && (
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50 hover:bg-slate-50">
+                    <TableHead className="text-right font-semibold">
+                      الاسم
+                    </TableHead>
+                    <TableHead className="text-right font-semibold">
+                      المسؤول
+                    </TableHead>
+                    <TableHead className="text-right font-semibold">
+                      معلومات الاتصال
+                    </TableHead>
+                    <TableHead className="text-right font-semibold hidden md:table-cell">
+                      العنوان
+                    </TableHead>
+                    <TableHead className="text-center font-semibold w-[100px]">
+                      إجراءات
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {suppliersResponse.data.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-64 text-center">
+                        <div className="flex flex-col items-center justify-center text-slate-500">
+                          <div className="bg-slate-100 p-4 rounded-full mb-4">
+                            <Building className="h-8 w-8 text-slate-400" />
+                          </div>
+                          <h3 className="text-lg font-medium text-slate-900 mb-1">
+                            لا يوجد موردين
+                          </h3>
+                          <p>لم يتم العثور على موردين يطابقون بحثك</p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    suppliersResponse.data.map((supplier) => (
+                      <TableRow
+                        key={supplier.id}
+                        className="hover:bg-slate-50/50 cursor-pointer transition-colors"
+                        onClick={() => handleRowClick(supplier)}
+                      >
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium text-slate-900">
+                              {supplier.name}
+                            </span>
+                            <span className="text-xs text-slate-500">
+                              ID: {supplier.id}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {supplier.contact_person ? (
+                            <div className="flex items-center gap-2 text-slate-700">
+                              <User className="h-3.5 w-3.5 text-slate-400" />
+                              <span className="text-sm">
+                                {supplier.contact_person}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-sm italic">
+                              غير محدد
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            {supplier.phone && (
+                              <div className="flex items-center gap-2 text-sm text-slate-600">
+                                <Phone className="h-3.5 w-3.5 text-green-500" />
+                                <span dir="ltr" className="text-right">
+                                  {supplier.phone}
+                                </span>
+                              </div>
+                            )}
+                            {supplier.email && (
+                              <div className="flex items-center gap-2 text-sm text-slate-600">
+                                <Mail className="h-3.5 w-3.5 text-blue-500" />
+                                <span>{supplier.email}</span>
+                              </div>
+                            )}
+                            {!supplier.phone && !supplier.email && (
+                              <span className="text-slate-400 text-sm italic">
+                                لا توجد معلومات
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {supplier.address ? (
+                            <div
+                              className="flex items-center gap-2 text-sm text-slate-600 max-w-[200px] truncate"
+                              title={supplier.address}
+                            >
+                              <MapPin className="h-3.5 w-3.5 text-red-400 flex-shrink-0" />
+                              <span className="truncate">
+                                {supplier.address}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-sm italic">
+                              غير محدد
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex justify-center">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-slate-500 hover:text-blue-600"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent
+                                align="end"
+                                className="w-[160px]"
+                              >
+                                <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => handleViewLedger(supplier)}
+                                >
+                                  <FileText className="h-4 w-4 ml-2 text-blue-500" />
+                                  كشف الحساب
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleOpenModal(supplier)}
+                                >
+                                  <Pen className="h-4 w-4 ml-2 text-amber-500" />
+                                  تعديل
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => handleOpenDelete(supplier.id)}
+                                  className="text-red-600 focus:text-red-700 focus:bg-red-50"
+                                >
+                                  <Trash className="h-4 w-4 ml-2" />
+                                  حذف
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {suppliersResponse && suppliersResponse.last_page > 1 && (
+            <div className="flex justify-center mt-6">
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1 || isLoading}
+                  className="h-8 w-8 p-0"
+                >
+                  &rarr;
+                </Button>
+                <div className="px-3 py-1 text-sm font-medium text-slate-600">
+                  صفحة {currentPage} من {suppliersResponse.last_page}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setCurrentPage((p) =>
+                      Math.min(suppliersResponse.last_page, p + 1)
+                    )
+                  }
+                  disabled={
+                    currentPage === suppliersResponse.last_page || isLoading
+                  }
+                  className="h-8 w-8 p-0"
+                >
+                  &larr;
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Supplier Details & Actions Dialog */}
+      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <Building className="h-5 w-5 text-blue-600" />
+              {selectedSupplierDetails?.name}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="space-y-1">
+                <span className="text-slate-500 block">المسؤول</span>
+                <div className="font-medium flex items-center gap-2">
+                  <User className="h-4 w-4 text-slate-400" />
+                  {selectedSupplierDetails?.contact_person || "—"}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-slate-500 block">رقم الهاتف</span>
+                <div className="font-medium flex items-center gap-2" dir="ltr">
+                  <span className="flex-1 text-right">
+                    {selectedSupplierDetails?.phone || "—"}
+                  </span>
+                  <Phone className="h-4 w-4 text-slate-400" />
+                </div>
+              </div>
+              <div className="space-y-1 col-span-2">
+                <span className="text-slate-500 block">البريد الإلكتروني</span>
+                <div className="font-medium flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-slate-400" />
+                  {selectedSupplierDetails?.email || "—"}
+                </div>
+              </div>
+              <div className="space-y-1 col-span-2">
+                <span className="text-slate-500 block">العنوان</span>
+                <div className="font-medium flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-slate-400" />
+                  {selectedSupplierDetails?.address || "—"}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 mt-6">
+              <Button
+                onClick={() => {
+                  if (selectedSupplierDetails)
+                    handleViewLedger(selectedSupplierDetails);
+                  setDetailsOpen(false);
+                }}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <FileText className="h-4 w-4 ml-2" />
+                عرض كشف الحساب
+              </Button>
+
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (selectedSupplierDetails)
+                      handleOpenModal(selectedSupplierDetails);
+                    setDetailsOpen(false);
+                  }}
+                  className="w-full"
+                >
+                  <Pen className="h-4 w-4 ml-2 text-amber-600" />
+                  تعديل البيانات
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (selectedSupplierDetails)
+                      handleOpenDelete(selectedSupplierDetails.id);
+                    setDetailsOpen(false);
+                  }}
+                  className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Trash className="h-4 w-4 ml-2" />
+                  حذف المورد
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reused Modals from components */}
       <SupplierFormModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
@@ -342,7 +551,6 @@ const SuppliersPage: React.FC = () => {
         onSaveSuccess={handleSaveSuccess}
       />
 
-      {/* Confirmation Dialog for Deletion */}
       <ConfirmationDialog
         open={deleteConfirmation.isOpen}
         onClose={() =>
@@ -351,28 +559,12 @@ const SuppliersPage: React.FC = () => {
         onConfirm={handleConfirmDelete}
         title="حذف المورد"
         message="هل أنت متأكد تمامًا من رغبتك في حذف هذا المورد؟ سيؤدي ذلك إلى فقدان بياناته نهائيًا."
-        confirmText={deleteMutation.isPending ? "جاري الحذف..." : "نعم، احذف"}
-        cancelText="تراجع"
+        confirmText={deleteMutation.isPending ? "جاري الحذف..." : "حذف"}
+        cancelText="إلغاء"
+        confirmVariant="destructive"
         isLoading={deleteMutation.isPending}
       />
-
-      {/* Notification Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-      >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity={snackbar.severity}
-          variant="filled"
-          sx={{ width: "100%", borderRadius: 2, boxShadow: 3 }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Box>
+    </div>
   );
 };
 

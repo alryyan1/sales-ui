@@ -36,6 +36,7 @@ export interface UpdatePurchaseData {
   reference_number?: string | null;
   status?: "received" | "pending" | "ordered";
   notes?: string | null;
+  currency?: string;
   // Items array can contain existing items (with ID) and new items (without ID)
   items: Array<{
     id?: number | null; // ID of existing item to update, null/missing for new item
@@ -61,6 +62,7 @@ export interface Purchase {
   status: "received" | "pending" | "ordered";
   total_amount: string; // Comes as string
   notes: string | null;
+  currency?: string;
   created_at: string;
   items?: PurchaseItem[]; // Array of items, included if eager loaded (e.g., on show)
   supplier?: Supplier; // Optional: Full supplier details if loaded
@@ -73,6 +75,7 @@ export interface CreatePurchaseData {
   reference_number?: string | null;
   status: "received" | "pending" | "ordered";
   notes?: string | null;
+  currency?: string; // Add currency here
   items: Array<{
     product_id: number;
     batch_number?: string | null; // New

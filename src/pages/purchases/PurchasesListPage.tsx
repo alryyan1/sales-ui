@@ -633,6 +633,9 @@ const PurchasesListPage: React.FC = () => {
                         رقم المرجع
                       </TableHead>
                       <TableHead className="text-center font-bold">
+                        العملة
+                      </TableHead>
+                      <TableHead className="text-center font-bold">
                         الحالة
                       </TableHead>
                       <TableHead className="text-center font-bold">
@@ -646,7 +649,7 @@ const PurchasesListPage: React.FC = () => {
                   <TableBody>
                     {purchasesResponse.data.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="h-48 text-center">
+                        <TableCell colSpan={8} className="h-48 text-center">
                           <div className="flex flex-col items-center justify-center">
                             <div className="p-4 bg-muted rounded-full mb-4">
                               <ShoppingCart className="h-12 w-12 text-muted-foreground" />
@@ -706,6 +709,11 @@ const PurchasesListPage: React.FC = () => {
                               <code className="text-sm text-muted-foreground">
                                 {purchase.reference_number || "—"}
                               </code>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="secondary" className="font-mono">
+                                {purchase.currency || "SDG"}
+                              </Badge>
                             </TableCell>
                             <TableCell className="text-center">
                               <Badge
