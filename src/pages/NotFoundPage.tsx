@@ -4,10 +4,8 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import { Link as RouterLink } from 'react-router-dom'; // لاستخدام Link الخاص بالراوتر
-import { useTranslation } from 'react-i18next';
 
 const NotFoundPage: React.FC = () => {
-  const { t } = useTranslation();
 
   return (
     <Box

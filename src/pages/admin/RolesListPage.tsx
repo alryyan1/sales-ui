@@ -1,50 +1,70 @@
 // src/pages/admin/RolesListPage.tsx
 import React, { useState, useEffect, useCallback } from "react";
-
 import { toast } from "sonner";
 
-// shadcn/ui & Lucide Icons
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+// MUI Components
 import {
+  Box,
+  Typography,
+  Button,
+  Card,
+  CardContent,
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
-  TableHeader,
   TableRow,
-} from "@/components/ui/table";
+  Paper,
+  IconButton,
+  CircularProgress,
+  Alert,
+  AlertTitle,
+  Pagination,
+  Stack,
+  Tooltip,
+  Container,
+} from "@mui/material";
+
+// Icons
+import {
+  Edit,
+  Plus,
+  Trash2,
+  AlertCircle,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
 
 // Services and Types
 import roleService, {
   RoleWithPermissions,
   Permission,
-} from "../../services/roleService"; // Adjust path
-// Custom Components
-import ConfirmationDialog from "../../components/common/ConfirmationDialog"; // Adjust path
-import RoleFormModal from "@/components/admin/users/roles/RoleFormModal";
+} from "../../services/roleService";
 import { PaginatedResponse } from "@/services/clientService";
-import { Edit, Loader2, Plus, Trash2 } from "lucide-react";
 
-// --- Component ---
+// Custom Components
+import ConfirmationDialog from "../../components/common/ConfirmationDialog";
+import RoleFormModal from "@/components/admin/users/roles/RoleFormModal";
+
 const RolesListPage: React.FC = () => {
-  // Removed useTranslation
-
   // --- State ---
   const [rolesResponse, setRolesResponse] =
     useState<PaginatedResponse<RoleWithPermissions> | null>(null);
   const [availablePermissions, setAvailablePermissions] = useState<
     Permission[]
   >([]);
-  const [isLoading, setIsLoading] = useState(true); // Combined loading
+  const [isLoading, setIsLoading] = useState(true);
   const [loadingPermissions, setLoadingPermissions] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1); // Simple state pagination for now
+  const [currentPage, setCurrentPage] = useState(1);
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<RoleWithPermissions | null>(
     null
   );
+
   // Deletion State
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [roleToDeleteId, setRoleToDeleteId] = useState<number | null>(null);
@@ -83,6 +103,7 @@ const RolesListPage: React.FC = () => {
   useEffect(() => {
     fetchRoles(currentPage);
   }, [fetchRoles, currentPage]);
+
   useEffect(() => {
     fetchPermissions();
   }, [fetchPermissions]);
@@ -92,24 +113,29 @@ const RolesListPage: React.FC = () => {
     setEditingRole(role);
     setIsModalOpen(true);
   };
+
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingRole(null);
   };
+
   const handleSaveSuccess = () => {
     closeModal();
     fetchRoles(currentPage);
-  }; // Refetch roles list
+  };
+
   const openConfirmDialog = (id: number) => {
     setRoleToDeleteId(id);
     setIsConfirmOpen(true);
   };
+
   const closeConfirmDialog = () => {
     if (!isDeleting) {
       setIsConfirmOpen(false);
       setTimeout(() => setRoleToDeleteId(null), 300);
     }
   };
+
   const handleDeleteConfirm = async () => {
     if (!roleToDeleteId) return;
     setIsDeleting(true);
@@ -117,7 +143,7 @@ const RolesListPage: React.FC = () => {
       await roleService.deleteRole(roleToDeleteId);
       toast.success("تم بنجاح", { description: "تم حذف الدور بنجاح" });
       closeConfirmDialog();
-      // Refetch potentially adjusting page
+      // Refetch, potentially adjusting page
       if (rolesResponse && rolesResponse.data.length === 1 && currentPage > 1) {
         setCurrentPage((prev) => prev - 1);
       } else {
@@ -131,116 +157,285 @@ const RolesListPage: React.FC = () => {
     }
   };
 
+  const handlePageChange = (
+    _event: React.ChangeEvent<unknown>,
+    value: number
+  ) => {
+    setCurrentPage(value);
+  };
+
   // --- Render ---
   return (
-    <div className="p-4 md:p-6 lg:p-8 dark:bg-gray-950 min-h-screen pb-10">
+    <Container maxWidth="xl" dir="rtl" sx={{ py: 4, minHeight: "100vh" }}>
       {/* Header & Add Button */}
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-        <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 dark:text-gray-100">
-          إدارة الأدوار
-        </h1>
-        {/* Check permission to create roles */}
-        <Button onClick={() => openModal()} disabled={loadingPermissions}>
-          <Plus className="me-2 h-4 w-4" /> إضافة دور
-        </Button>
-      </div>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", sm: "row" },
+          justifyContent: "space-between",
+          alignItems: { xs: "start", sm: "center" },
+          mb: 4,
+          gap: 2,
+        }}
+      >
+        <Box>
+          <Typography
+            variant="h4"
+            component="h1"
+            fontWeight="bold"
+            gutterBottom
+            sx={{ display: "flex", alignItems: "center", gap: 1 }}
+          >
+            <ShieldCheck className="h-8 w-8 text-primary" />
+            إدارة الأدوار
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            إدارة أدوار المستخدمين وصلاحياتهم في النظام
+          </Typography>
+        </Box>
 
-      {/* Loading / Error */}
+        <Button
+          variant="contained"
+          onClick={() => openModal()}
+          disabled={loadingPermissions}
+          startIcon={<Plus className="h-5 w-5" />}
+          sx={{
+            px: 3,
+            py: 1,
+            borderRadius: 2,
+            textTransform: "none",
+            fontWeight: 600,
+          }}
+        >
+          إضافة دور جديد
+        </Button>
+      </Box>
+
+      {/* Loading */}
       {(isLoading || loadingPermissions) && (
-        <div className="flex justify-center items-center">
-          <Loader2 className="animate-spin h-6 w-6 text-gray-500 dark:text-gray-400" />
-        </div>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            py: 10,
+          }}
+        >
+          <CircularProgress />
+        </Box>
       )}
+
+      {/* Error */}
       {!isLoading && error && (
-        <div className="alert alert-error">
-          <span>{error}</span>
-        </div>
+        <Alert
+          severity="error"
+          sx={{ mb: 3 }}
+          icon={<AlertCircle className="h-4 w-4" />}
+        >
+          <AlertTitle>خطأ</AlertTitle>
+          {error}
+        </Alert>
       )}
 
       {/* Roles Table */}
       {!isLoading && !error && rolesResponse && (
         <>
-          <Card className="dark:bg-gray-900">
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>اسم الدور</TableHead>
-                    <TableHead>عدد الصلاحيات</TableHead> {/* Add key */}
-                    <TableHead>عدد المستخدمين</TableHead> {/* Add key */}
-                    <TableHead className="text-center">إجراءات</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rolesResponse.data.length === 0 && (
+          <Card
+            elevation={0}
+            sx={{
+              border: "1px solid",
+              borderColor: "divider",
+              borderRadius: 3,
+              overflow: "hidden",
+            }}
+          >
+            <CardContent sx={{ p: 0 }}>
+              <TableContainer
+                component={Paper}
+                elevation={0}
+                sx={{ borderRadius: 0 }}
+              >
+                <Table sx={{ minWidth: 650 }}>
+                  <TableHead sx={{ bgcolor: "action.hover" }}>
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center">
-                        لا توجد أدوار
+                      <TableCell sx={{ fontWeight: "bold" }}>
+                        اسم الدور
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: "bold" }}>
+                        عدد الصلاحيات
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: "bold" }}>
+                        عدد المستخدمين
+                      </TableCell>
+                      <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                        إجراءات
                       </TableCell>
                     </TableRow>
-                  )}
-                  {rolesResponse.data.map((role) => (
-                    <TableRow key={role.id}>
-                      <TableCell className="font-medium">
-                        {role.name === "admin" ? "مدير النظام" : role.name}
-                      </TableCell>
-                      <TableCell>{role.permissions_count ?? "---"}</TableCell>
-                      <TableCell>{role.users_count ?? "---"}</TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex justify-center items-center gap-1">
-                          {/* Edit action needs permission check */}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => openModal(role)}
-                            disabled={loadingPermissions}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          {/* Prevent deleting admin role */}
-                          {role.name !== "admin" && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-red-600 hover:text-red-700"
-                              onClick={() => openConfirmDialog(role.id)}
-                              disabled={isDeleting}
+                  </TableHead>
+                  <TableBody>
+                    {rolesResponse.data.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} align="center" sx={{ py: 8 }}>
+                          <Typography variant="body1" color="text.secondary">
+                            لا توجد أدوار متاحة حالياً
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      rolesResponse.data.map((role) => (
+                        <TableRow
+                          key={role.id}
+                          sx={{
+                            "&:last-child td, &:last-child th": { border: 0 },
+                            "&:hover": { bgcolor: "action.hover" },
+                          }}
+                        >
+                          <TableCell component="th" scope="row">
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1.5,
+                              }}
                             >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                              <Box
+                                sx={{
+                                  p: 1,
+                                  borderRadius: "50%",
+                                  bgcolor:
+                                    role.name === "admin"
+                                      ? "primary.light"
+                                      : "action.selected",
+                                  color:
+                                    role.name === "admin"
+                                      ? "primary.main"
+                                      : "text.primary",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
+                              >
+                                <ShieldCheck className="h-4 w-4" />
+                              </Box>
+                              <Typography variant="body2" fontWeight={500}>
+                                {role.name === "admin"
+                                  ? "مدير النظام"
+                                  : role.name}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                              }}
+                            >
+                              <Box
+                                component="span"
+                                sx={{
+                                  px: 1.5,
+                                  py: 0.5,
+                                  bgcolor: "action.selected",
+                                  borderRadius: 1,
+                                  fontSize: "0.75rem",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {role.permissions_count ?? 0}
+                              </Box>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                صلاحية
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                              }}
+                            >
+                              <Users className="h-4 w-4 text-gray-400" />
+                              <Typography variant="body2">
+                                {role.users_count ?? 0}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Stack
+                              direction="row"
+                              spacing={1}
+                              justifyContent="center"
+                            >
+                              <Tooltip title="تعديل">
+                                <span>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => openModal(role)}
+                                    disabled={loadingPermissions}
+                                    color="primary"
+                                    sx={{
+                                      bgcolor: "primary.lighter",
+                                      "&:hover": {
+                                        bgcolor: "primary.light",
+                                        color: "primary.contrastText",
+                                      },
+                                    }}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+
+                              {role.name !== "admin" && (
+                                <Tooltip title="حذف">
+                                  <IconButton
+                                    size="small"
+                                    color="error"
+                                    onClick={() => openConfirmDialog(role.id)}
+                                    disabled={isDeleting}
+                                    sx={{
+                                      bgcolor: "error.lighter",
+                                      "&:hover": {
+                                        bgcolor: "error.light",
+                                        color: "error.contrastText",
+                                      },
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                            </Stack>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             </CardContent>
           </Card>
+
           {/* Pagination */}
           {rolesResponse.last_page > 1 && (
-            <div className="flex justify-center mt-4">
-              <Button
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-              >
-                السابق
-              </Button>
-              <span className="mx-4">
-                صفحة {currentPage} من {rolesResponse.last_page}
-              </span>
-              <Button
-                onClick={() =>
-                  setCurrentPage((prev) =>
-                    Math.min(prev + 1, rolesResponse.last_page)
-                  )
-                }
-                disabled={currentPage === rolesResponse.last_page}
-              >
-                التالي
-              </Button>
-            </div>
+            <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+              <Pagination
+                count={rolesResponse.last_page}
+                page={currentPage}
+                onChange={handlePageChange}
+                color="primary"
+                shape="rounded"
+                showFirstButton
+                showLastButton
+              />
+            </Box>
           )}
         </>
       )}
@@ -254,17 +449,18 @@ const RolesListPage: React.FC = () => {
         availablePermissions={availablePermissions}
         loadingPermissions={loadingPermissions}
       />
+
       <ConfirmationDialog
         open={isConfirmOpen}
         onClose={closeConfirmDialog}
         onConfirm={handleDeleteConfirm}
         title="تأكيد الحذف"
-        message="هل أنت متأكد من حذف هذا الدور؟"
+        message="هل أنت متأكد من حذف هذا الدور؟ هذا الإجراء لا يمكن التراجع عنه."
         confirmText="حذف"
         cancelText="إلغاء"
         isLoading={isDeleting}
       />
-    </div>
+    </Container>
   );
 };
 

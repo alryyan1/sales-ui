@@ -1,11 +1,6 @@
-// src/pages/ProfilePage.tsx (or a separate validation file)
-import * as z from 'zod';
-
 // src/pages/ProfilePage.tsx
 import React, { useState, useEffect } from 'react';
 import { useForm, SubmitHandler, FormProvider } from 'react-hook-form'; // Import FormProvider
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext'; // Get user data and update context
 import authService, { UpdateProfileData, UpdatePasswordData, User } from '@/services/authService'; // Import service methods
 import { toast } from "sonner";
@@ -20,23 +15,17 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, Save, KeyRound, UserCircle, AlertCircle } from 'lucide-react';
 
-// Schema for updating profile details
-export const profileSchema = z.object({
-    name: z.string().min(1, { message: "validation:required" }),
-    username: z.string().min(1, { message: "validation:required" }),
-});
-export type ProfileFormValues = z.infer<typeof profileSchema>;
+// Types for forms
+export type ProfileFormValues = {
+    name: string;
+    username: string;
+};
 
-// Schema for changing password
-export const passwordSchema = z.object({
-    current_password: z.string().min(1, { message: "validation:required" }),
-    password: z.string().min(8, { message: "validation:minLength", params: { count: 8 } }), // Add params if your t() supports it
-    password_confirmation: z.string().min(1, { message: "validation:required" }),
-}).refine(data => data.password === data.password_confirmation, {
-    message: "validation:passwordMismatch",
-    path: ["password_confirmation"], // Error applies to confirmation field
-});
-export type PasswordFormValues = z.infer<typeof passwordSchema>;
+export type PasswordFormValues = {
+    current_password: string;
+    password: string;
+    password_confirmation: string;
+};
 
 // --- Child Form Components ---
 
@@ -46,10 +35,8 @@ interface ProfileDetailsFormProps {
     onUpdateSuccess: (updatedUser: User) => void; // Callback to update context
 }
 const ProfileDetailsForm: React.FC<ProfileDetailsFormProps> = ({ currentUser, onUpdateSuccess }) => {
-    const { t } = useTranslation(['profile', 'common', 'validation']);
     const [serverError, setServerError] = useState<string | null>(null);
     const form = useForm<ProfileFormValues>({
-        resolver: zodResolver(profileSchema),
         defaultValues: {
             name: currentUser.name || '',
             username: currentUser.username || '',
@@ -59,35 +46,55 @@ const ProfileDetailsForm: React.FC<ProfileDetailsFormProps> = ({ currentUser, on
 
     const onSubmit: SubmitHandler<ProfileFormValues> = async (data) => {
         setServerError(null);
+        
+        // Basic validation
+        if (!data.name || data.name.trim() === "") {
+            setError("name", { type: "manual", message: "هذا الحقل مطلوب" });
+            return;
+        }
+        if (!data.username || data.username.trim() === "") {
+            setError("username", { type: "manual", message: "هذا الحقل مطلوب" });
+            return;
+        }
+        
         try {
             const result = await authService.updateProfile(data);
-            toast.success(t('common:success'), { description: t('profile:updateSuccess') });
+            toast.success("نجح", { description: "تم تحديث الملف الشخصي بنجاح" });
             onUpdateSuccess(result); // Update user in global context
         } catch (err) {
             const generalError = authService.getErrorMessage(err);
             const apiErrors = authService.getValidationErrors(err);
-            toast.error(t('common:error'), { description: generalError });
+            toast.error("خطأ", { description: generalError });
             setServerError(generalError);
-            if (apiErrors) { /* ... map errors using setError ... */ }
+            if (apiErrors) {
+                Object.entries(apiErrors).forEach(([field, messages]) => {
+                    if (["name", "username"].includes(field)) {
+                        setError(field as keyof ProfileFormValues, {
+                            type: "server",
+                            message: messages[0],
+                        });
+                    }
+                });
+            }
         }
     };
 
     return (
         <Card>
             <CardHeader>
-                <CardTitle className="flex items-center gap-2"><UserCircle className="h-5 w-5"/> {t('profile:detailsTitle')}</CardTitle>
-                <CardDescription>{t('profile:detailsDesc')}</CardDescription>
+                <CardTitle className="flex items-center gap-2"><UserCircle className="h-5 w-5"/> تفاصيل الملف الشخصي</CardTitle>
+                <CardDescription>قم بتحديث معلوماتك الشخصية</CardDescription>
             </CardHeader>
             <CardContent>
                 <Form {...form}>
                     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                         {serverError && !isSubmitting && ( <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>{t('common:error')}</AlertTitle><AlertDescription>{serverError}</AlertDescription></Alert> )}
-                        <FormField control={control} name="name" render={({ field }) => ( <FormItem> <FormLabel>{t('profile:nameLabel')}</FormLabel> <FormControl><Input {...field} disabled={isSubmitting} /></FormControl> <FormMessage>{errors.name?.message ? t(errors.name.message) : null}</FormMessage> </FormItem> )} />
-                        <FormField control={control} name="username" render={({ field }) => ( <FormItem> <FormLabel>{t('profile:usernameLabel')}</FormLabel> <FormControl><Input {...field} disabled={isSubmitting} /></FormControl> <FormMessage>{errors.username?.message ? t(errors.username.message) : null}</FormMessage> </FormItem> )} />
+                         {serverError && !isSubmitting && ( <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>خطأ</AlertTitle><AlertDescription>{serverError}</AlertDescription></Alert> )}
+                        <FormField control={control} name="name" render={({ field }) => ( <FormItem> <FormLabel>الاسم</FormLabel> <FormControl><Input {...field} disabled={isSubmitting} /></FormControl> <FormMessage>{errors.name?.message || null}</FormMessage> </FormItem> )} />
+                        <FormField control={control} name="username" render={({ field }) => ( <FormItem> <FormLabel>اسم المستخدم</FormLabel> <FormControl><Input {...field} disabled={isSubmitting} /></FormControl> <FormMessage>{errors.username?.message || null}</FormMessage> </FormItem> )} />
                         <div className="flex justify-end">
                              <Button type="submit" disabled={isSubmitting}>
                                 {isSubmitting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-                                {t('common:saveChanges')}
+                                حفظ التغييرات
                             </Button>
                         </div>
                     </form>
@@ -100,36 +107,47 @@ const ProfileDetailsForm: React.FC<ProfileDetailsFormProps> = ({ currentUser, on
 // Change Password Form Component
 interface ChangePasswordFormProps { } // No extra props needed, uses auth context implicitly if required
 const ChangePasswordForm: React.FC<ChangePasswordFormProps> = () => {
-    const { t } = useTranslation(['profile', 'common', 'validation']);
     const [serverError, setServerError] = useState<string | null>(null);
     const form = useForm<PasswordFormValues>({
-        resolver: zodResolver(passwordSchema),
         defaultValues: { current_password: '', password: '', password_confirmation: '' },
     });
     const { handleSubmit, control, formState: { isSubmitting, errors }, setError, reset: resetPasswordForm } = form;
 
     const onSubmit: SubmitHandler<PasswordFormValues> = async (data) => {
         setServerError(null);
+        
+        // Basic validation
+        if (!data.current_password || data.current_password.trim() === "") {
+            setError("current_password", { type: "manual", message: "هذا الحقل مطلوب" });
+            return;
+        }
+        if (!data.password || data.password.length < 8) {
+            setError("password", { type: "manual", message: "كلمة المرور يجب أن تكون 8 أحرف على الأقل" });
+            return;
+        }
+        if (data.password !== data.password_confirmation) {
+            setError("password_confirmation", { type: "manual", message: "كلمات المرور غير متطابقة" });
+            return;
+        }
+        
         try {
             const result = await authService.updatePassword(data);
-            toast.success(t('common:success'), { description: t('profile:passwordUpdateSuccess') });
+            toast.success("نجح", { description: "تم تحديث كلمة المرور بنجاح" });
             resetPasswordForm(); // Clear form on success
         } catch (err) {
             const generalError = authService.getErrorMessage(err);
             const apiErrors = authService.getValidationErrors(err);
-            toast.error(t('common:error'), { description: generalError });
+            toast.error("خطأ", { description: generalError });
             setServerError(generalError);
             if (apiErrors) {
-                // Map errors like current_password incorrect, or new password validation
                 Object.entries(apiErrors).forEach(([field, messages]) => {
                      if (field in ({} as PasswordFormValues)) {
                         setError(field as keyof PasswordFormValues, { type: 'server', message: messages[0] });
-                    } else if (field === 'password' && messages[0].includes('current password')) { // Handle specific backend message for current_password
+                    } else if (field === 'password' && messages[0].includes('current password')) {
                          setError('current_password', { type: 'server', message: messages[0] });
                     }
                  });
-                 if (Object.keys(apiErrors).length > 0) setServerError(t('validation:checkFields'));
-
+                 if (Object.keys(apiErrors).length > 0) setServerError("يرجى التحقق من الحقول");
             }
         }
     };
@@ -137,20 +155,20 @@ const ChangePasswordForm: React.FC<ChangePasswordFormProps> = () => {
     return (
          <Card>
             <CardHeader>
-                <CardTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5"/> {t('profile:passwordTitle')}</CardTitle>
-                <CardDescription>{t('profile:passwordDesc')}</CardDescription>
+                <CardTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5"/> تغيير كلمة المرور</CardTitle>
+                <CardDescription>قم بتحديث كلمة المرور الخاصة بك</CardDescription>
             </CardHeader>
             <CardContent>
                 <Form {...form}>
                     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                        {serverError && !isSubmitting && ( <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>{t('common:error')}</AlertTitle><AlertDescription>{serverError}</AlertDescription></Alert> )}
-                        <FormField control={control} name="current_password" render={({ field }) => ( <FormItem> <FormLabel>{t('profile:currentPasswordLabel')}</FormLabel> <FormControl><Input type="password" {...field} disabled={isSubmitting} /></FormControl> <FormMessage>{errors.current_password?.message ? t(errors.current_password.message) : null}</FormMessage> </FormItem> )} />
-                        <FormField control={control} name="password" render={({ field }) => ( <FormItem> <FormLabel>{t('profile:newPasswordLabel')}</FormLabel> <FormControl><Input type="password" {...field} disabled={isSubmitting} /></FormControl> <FormMessage>{errors.password?.message ? t(errors.password.message, { count: 8 } as any) : null}</FormMessage> </FormItem> )} />
-                        <FormField control={control} name="password_confirmation" render={({ field }) => ( <FormItem> <FormLabel>{t('profile:confirmPasswordLabel')}</FormLabel> <FormControl><Input type="password" {...field} disabled={isSubmitting} /></FormControl> <FormMessage>{errors.password_confirmation?.message ? t(errors.password_confirmation.message) : null}</FormMessage> </FormItem> )} />
+                        {serverError && !isSubmitting && ( <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>خطأ</AlertTitle><AlertDescription>{serverError}</AlertDescription></Alert> )}
+                        <FormField control={control} name="current_password" render={({ field }) => ( <FormItem> <FormLabel>كلمة المرور الحالية</FormLabel> <FormControl><Input type="password" {...field} disabled={isSubmitting} /></FormControl> <FormMessage>{errors.current_password?.message || null}</FormMessage> </FormItem> )} />
+                        <FormField control={control} name="password" render={({ field }) => ( <FormItem> <FormLabel>كلمة المرور الجديدة</FormLabel> <FormControl><Input type="password" {...field} disabled={isSubmitting} /></FormControl> <FormMessage>{errors.password?.message || null}</FormMessage> </FormItem> )} />
+                        <FormField control={control} name="password_confirmation" render={({ field }) => ( <FormItem> <FormLabel>تأكيد كلمة المرور</FormLabel> <FormControl><Input type="password" {...field} disabled={isSubmitting} /></FormControl> <FormMessage>{errors.password_confirmation?.message || null}</FormMessage> </FormItem> )} />
                         <div className="flex justify-end">
                              <Button type="submit" disabled={isSubmitting}>
                                 {isSubmitting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-                                {t('profile:updatePasswordButton')}
+                                تحديث كلمة المرور
                             </Button>
                         </div>
                     </form>
@@ -163,7 +181,6 @@ const ChangePasswordForm: React.FC<ChangePasswordFormProps> = () => {
 
 // --- Main Profile Page Component ---
 const ProfilePage: React.FC = () => {
-    const { t } = useTranslation(['profile', 'common']);
     const { user, setUser } = useAuth(); // Get user and a way to update it in context
 
      // Callback to update user in global context after successful profile update
@@ -177,13 +194,13 @@ const ProfilePage: React.FC = () => {
 
     if (!user) {
         // Should be handled by ProtectedRoute, but good fallback
-        return <div className="p-6 text-center">{t('common:loading')}...</div>;
+        return <div className="p-6 text-center">جاري التحميل...</div>;
     }
 
     return (
         <div className="p-4 md:p-6 lg:p-8 space-y-8 max-w-4xl mx-auto"> {/* Center content */}
              <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 dark:text-gray-100">
-                {t('profile:pageTitle')}
+                الملف الشخصي
             </h1>
 
              {/* Pass user data and update callback to details form */}

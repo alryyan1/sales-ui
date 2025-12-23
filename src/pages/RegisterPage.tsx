@@ -1,7 +1,6 @@
 // src/pages/RegisterPage.tsx
 import React, { useState, FormEvent, useEffect } from 'react'; // Added useEffect
 import { Navigate, Link as RouterLink } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { useForm, SubmitHandler, Controller } from 'react-hook-form'; // Import Controller
 
 // MUI Components
@@ -34,7 +33,6 @@ interface RegistrationErrors {
 type RegisterFormInputs = RegisterCredentials; // Use the type from authService or define inline
 
 const RegisterPage: React.FC = () => {
-    const { t } = useTranslation(['register', 'common', 'validation']);
     const { user, isLoading: isAuthLoading, handleRegisterSuccess } = useAuth();
 
     // State for general API errors (non-validation)
@@ -101,7 +99,7 @@ const RegisterPage: React.FC = () => {
                          });
                      }
                  });
-                 setServerError(t('validation:checkFields')); // General hint
+                 setServerError('يرجى التحقق من الحقول'); // General hint
             } else {
                 setServerError(generalError); // Show general error
             }
@@ -128,7 +126,7 @@ const RegisterPage: React.FC = () => {
                     <LockOutlinedIcon />
                 </Avatar>
                 <Typography component="h1" variant="h5">
-                    {t('register:title')}
+                    إنشاء حساب جديد
                 </Typography>
 
                 {/* General Server Error Alert */}
@@ -148,7 +146,7 @@ const RegisterPage: React.FC = () => {
                             <Controller
                                 name="name"
                                 control={control}
-                                rules={{ required: t('validation:required') || true }}
+                                rules={{ required: 'هذا الحقل مطلوب' }}
                                 render={({ field, fieldState }) => (
                                     <TextField
                                         {...field}
@@ -156,7 +154,7 @@ const RegisterPage: React.FC = () => {
                                         required
                                         fullWidth
                                         id="name"
-                                        label={t('register:nameLabel')}
+                                        label="الاسم"
                                         autoFocus // Focus this first
                                         variant="outlined"
                                         error={!!fieldState.error}
@@ -173,7 +171,7 @@ const RegisterPage: React.FC = () => {
                                 name="username"
                                 control={control}
                                 rules={{
-                                    required: t('validation:required') || true,
+                                    required: 'هذا الحقل مطلوب',
                                 }}
                                 render={({ field, fieldState }) => (
                                     <TextField
@@ -181,7 +179,7 @@ const RegisterPage: React.FC = () => {
                                         required
                                         fullWidth
                                         id="username"
-                                        label={t('register:usernameLabel')}
+                                        label="اسم المستخدم"
                                         name="username" // RHF uses the 'name' from Controller
                                         autoComplete="username"
                                         variant="outlined"
@@ -199,8 +197,8 @@ const RegisterPage: React.FC = () => {
                                 name="password"
                                 control={control}
                                 rules={{
-                                    required: t('validation:required') || true,
-                                    minLength: { value: 8, message: t('validation:minLength', { count: 8 }) || 'Minimum 8 characters' }
+                                    required: 'هذا الحقل مطلوب',
+                                    minLength: { value: 8, message: 'كلمة المرور يجب أن تكون 8 أحرف على الأقل' }
                                 }}
                                 render={({ field, fieldState }) => (
                                     <TextField
@@ -208,7 +206,7 @@ const RegisterPage: React.FC = () => {
                                         required
                                         fullWidth
                                         name="password"
-                                        label={t('register:passwordLabel')}
+                                        label="كلمة المرور"
                                         type="password"
                                         id="password"
                                         autoComplete="new-password"
@@ -227,8 +225,8 @@ const RegisterPage: React.FC = () => {
                                 name="password_confirmation"
                                 control={control}
                                 rules={{
-                                    required: t('validation:required') || true,
-                                    validate: value => value === passwordValue || (t('validation:passwordMismatch') as string || 'Passwords do not match') // RHF validation for match
+                                    required: 'هذا الحقل مطلوب',
+                                    validate: value => value === passwordValue || 'كلمات المرور غير متطابقة'
                                 }}
                                 render={({ field, fieldState }) => (
                                     <TextField
@@ -236,7 +234,7 @@ const RegisterPage: React.FC = () => {
                                         required
                                         fullWidth
                                         name="password_confirmation"
-                                        label={t('register:confirmPasswordLabel')}
+                                        label="تأكيد كلمة المرور"
                                         type="password"
                                         id="password_confirmation"
                                         autoComplete="new-password"
@@ -260,14 +258,14 @@ const RegisterPage: React.FC = () => {
                         sx={{ mt: 3, mb: 2 }} // MUI spacing
                         startIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : null}
                     >
-                        {isSubmitting ? t('register:submitButtonLoading') : t('register:submitButton')}
+                        {isSubmitting ? 'جاري التسجيل...' : 'إنشاء حساب'}
                     </Button>
 
                     {/* Link to Login Page */}
                     <Grid container justifyContent="flex-end">
                         <Grid>
                             <Link component={RouterLink} to="/login" variant="body2">
-                                {t('register:loginPrompt')} {t('register:loginLink')}
+                                لديك حساب بالفعل؟ تسجيل الدخول
                             </Link>
                         </Grid>
                     </Grid>

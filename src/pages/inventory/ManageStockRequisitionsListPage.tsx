@@ -7,9 +7,6 @@ import React, {
   useRef,
 } from "react";
 import { useForm, Controller, SubmitHandler } from "react-hook-form"; // RHF for filters
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { useTranslation } from "react-i18next";
 import {
   useNavigate,
   useSearchParams,
@@ -99,28 +96,17 @@ const generatePagination = (
   /* ... (same helper) ... */
 };
 
-// --- Zod Schema for Filter Form ---
-const requisitionFilterSchema = z
-  .object({
-    search: z.string().optional(), // Search by reason/requester name
-    status: z.string().nullable().optional(),
-    requesterId: z.string().nullable().optional(), // Store as string from select
-    startDate: z.date().nullable().optional(),
-    endDate: z.date().nullable().optional(),
-  })
-  .refine(
-    (data) =>
-      !data.endDate || !data.startDate || data.endDate >= data.startDate,
-    {
-      message: "validation:endDateAfterStart",
-      path: ["endDate"],
-    }
-  );
-type RequisitionFilterValues = z.infer<typeof requisitionFilterSchema>;
+// --- Filter Form Types ---
+type RequisitionFilterValues = {
+  search?: string;
+  status?: string | null;
+  requesterId?: string | null;
+  startDate?: Date | null;
+  endDate?: Date | null;
+};
 
 // --- Component ---
 const ManageStockRequisitionsListPage: React.FC = () => {
-  const { t } = useTranslation(["inventory", "common", "users", "validation"]);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -134,7 +120,6 @@ const ManageStockRequisitionsListPage: React.FC = () => {
 
   // --- Form for Filters ---
   const form = useForm<RequisitionFilterValues>({
-    resolver: zodResolver(requisitionFilterSchema),
     defaultValues: {
       search: searchParams.get("search") || "",
       status: searchParams.get("status") || null,
@@ -271,7 +256,7 @@ const ManageStockRequisitionsListPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
         <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 dark:text-gray-100">
-          {t("inventory:manageRequisitionsTitle")}
+          إدارة طلبات المخزون
         </h1>{" "}
         {/* Add key */}
         {/* No "Add" button here, requests are made by other users */}
@@ -280,7 +265,7 @@ const ManageStockRequisitionsListPage: React.FC = () => {
       {/* Filter Form Card */}
       <Card className="dark:bg-gray-900 mb-6">
         <CardHeader>
-          <CardTitle className="text-lg">{t("common:filters")}</CardTitle>
+          <CardTitle className="text-lg">الفلاتر</CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -291,12 +276,10 @@ const ManageStockRequisitionsListPage: React.FC = () => {
                   name="search"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("common:search")}</FormLabel>
+                      <FormLabel>بحث</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder={t(
-                            "inventory:searchRequisitionsPlaceholder"
-                          )}
+                          placeholder="ابحث عن طلبات المخزون..."
                           {...field}
                           value={field.value ?? ""}
                         />
@@ -310,7 +293,7 @@ const ManageStockRequisitionsListPage: React.FC = () => {
                   name="status"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("common:status")}</FormLabel>
+                      <FormLabel>الحالة</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value ?? ""}
@@ -318,31 +301,31 @@ const ManageStockRequisitionsListPage: React.FC = () => {
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue
-                              placeholder={t("reports:allStatuses")}
+                              placeholder="جميع الحالات"
                             />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           <SelectItem value=" ">
-                            {t("reports:allStatuses")}
+                            جميع الحالات
                           </SelectItem>
                           <SelectItem value="pending_approval">
-                            {t("inventory:status_pending_approval")}
+                            في انتظار الموافقة
                           </SelectItem>
                           <SelectItem value="approved">
-                            {t("inventory:status_approved")}
+                            معتمد
                           </SelectItem>
                           <SelectItem value="issued">
-                            {t("inventory:status_issued")}
+                            تم الإصدار
                           </SelectItem>
                           <SelectItem value="partially_issued">
-                            {t("inventory:status_partially_issued")}
+                            إصدار جزئي
                           </SelectItem>
                           <SelectItem value="rejected">
-                            {t("inventory:status_rejected")}
+                            مرفوض
                           </SelectItem>
                           <SelectItem value="cancelled">
-                            {t("inventory:status_cancelled")}
+                            ملغي
                           </SelectItem>
                         </SelectContent>
                       </Select>
@@ -355,7 +338,7 @@ const ManageStockRequisitionsListPage: React.FC = () => {
                   name="startDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("common:startDate")}</FormLabel>
+                      <FormLabel>تاريخ البداية</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
@@ -368,7 +351,7 @@ const ManageStockRequisitionsListPage: React.FC = () => {
                             >
                               {field.value
                                 ? format(field.value, "PPP")
-                                : t("common:pickDate")}
+                                : "اختر التاريخ"}
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
@@ -388,7 +371,7 @@ const ManageStockRequisitionsListPage: React.FC = () => {
                   name="endDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("common:endDate")}</FormLabel>
+                      <FormLabel>تاريخ النهاية</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
@@ -401,7 +384,7 @@ const ManageStockRequisitionsListPage: React.FC = () => {
                             >
                               {field.value
                                 ? format(field.value, "PPP")
-                                : t("common:pickDate")}
+                                : "اختر التاريخ"}
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
@@ -426,7 +409,7 @@ const ManageStockRequisitionsListPage: React.FC = () => {
                   disabled={isLoading}
                 >
                   <X className="me-2 h-4 w-4" />
-                  {t("common:clearFilters")}
+                  مسح الفلاتر
                 </Button>
                 <Button type="submit" disabled={isLoading}>
                   {isLoading ? (
@@ -434,7 +417,7 @@ const ManageStockRequisitionsListPage: React.FC = () => {
                   ) : (
                     <Filter className="me-2 h-4 w-4" />
                   )}{" "}
-                  {t("common:applyFilters")}
+                  تطبيق الفلاتر
                 </Button>
               </div>
             </form>
@@ -451,7 +434,7 @@ const ManageStockRequisitionsListPage: React.FC = () => {
       {!isLoading && error && (
         <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>{t("common:error")}</AlertTitle>
+          <AlertTitle>خطأ</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
@@ -459,30 +442,24 @@ const ManageStockRequisitionsListPage: React.FC = () => {
         <>
           <Card className="dark:bg-gray-900">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>{t("reports:results")}</CardTitle>
+              <CardTitle>النتائج</CardTitle>
               <CardDescription>
-                {t("common:paginationSummary", {
-                  from: requisitionsResponse.from,
-                  to: requisitionsResponse.to,
-                  total: requisitionsResponse.total,
-                })}
+                عرض {requisitionsResponse.from} إلى {requisitionsResponse.to} من {requisitionsResponse.total}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t("inventory:requestId")}</TableHead>{" "}
-                    {/* Add key */}
-                    <TableHead>{t("inventory:requestDate")}</TableHead>
-                    <TableHead>{t("inventory:requester")}</TableHead>{" "}
-                    {/* Add key */}
-                    <TableHead>{t("inventory:departmentOrReason")}</TableHead>
+                    <TableHead>رقم الطلب</TableHead>
+                    <TableHead>تاريخ الطلب</TableHead>
+                    <TableHead>الطالب</TableHead>
+                    <TableHead>القسم / السبب</TableHead>
                     <TableHead className="text-center">
-                      {t("common:status")}
+                      الحالة
                     </TableHead>
                     <TableHead className="text-center">
-                      {t("common:actions")}
+                      الإجراءات
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -493,7 +470,7 @@ const ManageStockRequisitionsListPage: React.FC = () => {
                         colSpan={6}
                         className="h-24 text-center text-muted-foreground"
                       >
-                        {t("inventory:noRequisitionsFound")}
+                        لم يتم العثور على طلبات
                       </TableCell>
                     </TableRow>
                   )}{" "}
@@ -505,7 +482,7 @@ const ManageStockRequisitionsListPage: React.FC = () => {
                       </TableCell>
                       <TableCell>{formatDate(req.request_date)}</TableCell>
                       <TableCell>
-                        {req.requester_name || t("common:n/a")}
+                        {req.requester_name || "غير متوفر"}
                       </TableCell>
                       <TableCell>{req.department_or_reason || "---"}</TableCell>
                       <TableCell className="text-center">
@@ -513,7 +490,12 @@ const ManageStockRequisitionsListPage: React.FC = () => {
                           variant={getStatusBadgeVariant(req.status)}
                           className="text-xs"
                         >
-                          {t(`inventory:status_${req.status}`)}
+                          {req.status === "pending_approval" ? "في انتظار الموافقة" :
+                           req.status === "approved" ? "معتمد" :
+                           req.status === "issued" ? "تم الإصدار" :
+                           req.status === "partially_issued" ? "إصدار جزئي" :
+                           req.status === "rejected" ? "مرفوض" :
+                           req.status === "cancelled" ? "ملغي" : req.status}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-center">
@@ -527,7 +509,7 @@ const ManageStockRequisitionsListPage: React.FC = () => {
                             onClick={() => handleProcessRequest(req.id)}
                           >
                             <Settings2 className="me-2 h-3 w-3" />{" "}
-                            {t("inventory:processRequest")} {/* Add key */}
+                            معالجة الطلب
                           </Button>
                         ) : (
                           <Button
@@ -535,10 +517,8 @@ const ManageStockRequisitionsListPage: React.FC = () => {
                             size="sm"
                             onClick={() => handleProcessRequest(req.id)}
                           >
-                            {" "}
-                            {/* Still go to process page for viewing */}
                             <Eye className="me-2 h-3 w-3" />{" "}
-                            {t("common:viewDetails")}
+                            عرض التفاصيل
                           </Button>
                         )}
                       </TableCell>
@@ -561,7 +541,7 @@ const ManageStockRequisitionsListPage: React.FC = () => {
                     currentPage === 1 ? "cursor-not-allowed opacity-50" : ""
                   }
                 >
-                  {t("common:previous")}
+                  السابق
                 </PaginationPrevious>
                 {paginationItems.map((item, index) =>
                   item === "..." ? (
@@ -589,7 +569,7 @@ const ManageStockRequisitionsListPage: React.FC = () => {
                       : ""
                   }
                 >
-                  {t("common:next")}
+                  التالي
                 </PaginationNext>
               </PaginationContent>
             </Pagination>

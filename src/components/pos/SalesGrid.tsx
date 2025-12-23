@@ -1,6 +1,5 @@
 // src/components/pos/SalesGrid.tsx
 import React from "react";
-import { useTranslation } from "react-i18next";
 
 // MUI Components
 import {
@@ -38,8 +37,6 @@ export const SalesGrid: React.FC<SalesGridProps> = ({
   onSaleClick,
   onEditSale,
 }) => {
-  const { t } = useTranslation(['pos', 'common']);
-
   if (sales.length === 0) {
     return (
       <Box
@@ -54,10 +51,10 @@ export const SalesGrid: React.FC<SalesGridProps> = ({
       >
         <CartIcon sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
         <Typography variant="h6" gutterBottom>
-          {t('pos:noSalesToday')}
+          لا توجد مبيعات اليوم
         </Typography>
         <Typography variant="body2">
-          {t('pos:startMakingSales')}
+          ابدأ في إجراء المبيعات
         </Typography>
       </Box>
     );
@@ -92,7 +89,7 @@ export const SalesGrid: React.FC<SalesGridProps> = ({
                   </Typography>
                 </Box>
                 
-                <Tooltip title={t('pos:editSale')}>
+                <Tooltip title="تعديل البيع">
                   <IconButton
                     size="small"
                     onClick={(e) => {
@@ -117,7 +114,7 @@ export const SalesGrid: React.FC<SalesGridProps> = ({
                   <CartIcon fontSize="small" color="action" />
                 </Badge>
                 <Typography variant="body2" color="text.secondary">
-                  {sale.items.length} {t('pos:items')}
+                  {sale.items.length} عنصر
                 </Typography>
               </Box>
 
@@ -139,7 +136,7 @@ export const SalesGrid: React.FC<SalesGridProps> = ({
               {sale.items.length > 0 && (
                 <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: 'grey.200' }}>
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                    {t('pos:itemsPreview')}:
+                    معاينة العناصر:
                   </Typography>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                     {sale.items.slice(0, 3).map((item, index) => (
@@ -153,7 +150,7 @@ export const SalesGrid: React.FC<SalesGridProps> = ({
                     ))}
                     {sale.items.length > 3 && (
                       <Chip
-                        label={`+${sale.items.length - 3} ${t('pos:more')}`}
+                        label={`+${sale.items.length - 3} المزيد`}
                         size="small"
                         variant="outlined"
                         sx={{ fontSize: '0.7rem' }}

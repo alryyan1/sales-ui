@@ -1,85 +1,54 @@
 // src/router.tsx
-import React from "react"; // Import React if using Suspense/lazy later
-import { createHashRouter, Navigate, Outlet } from "react-router-dom";
+import React from "react";
+import { createHashRouter, Navigate } from "react-router-dom";
 import RootLayout from "./components/layouts/RootLayout";
-import ProtectedRoute from "./components/layouts/ProtectedRoute"; // Assuming this checks auth state
+import ProtectedRoute from "./components/layouts/ProtectedRoute";
+import PermissionGuard from "./components/layouts/PermissionGuard"; // New Guard
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
+// Clients & Suppliers
 import ClientsPage from "./pages/ClientsPage";
 import ClientLedgerPage from "./pages/clients/ClientLedgerPage";
 import SuppliersPage from "./pages/SuppliersPage";
+import SupplierLedgerPage from "./pages/suppliers/SupplierLedgerPage";
+// Products & Inventory
 import ProductsPage from "./pages/ProductsPage";
 import PurchasesListPage from "./pages/purchases/PurchasesListPage";
-
-import ProfilePage from "./pages/ProfilePage"; // Assuming created
-import SalesReportPage from "./pages/reports/SalesReportPage";
-import PurchaseReportPage from "./pages/reports/PurchaseReportPage"; // Assuming created
-import InventoryReportPage from "./pages/reports/InventoryReportPage"; // Assuming created
-import NotFoundPage from "./pages/NotFoundPage";
-import { useAuthorization } from "./hooks/useAuthorization";
-import { useAuth } from "./context/AuthContext";
-import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
 import PurchaseFormPage from "./pages/PurchaseFormPage";
-import UsersListPage from "./components/admin/users/UsersListPage";
-import { AuthProvider } from "./context/AuthContext";
-
-import RolesListPage from "./pages/admin/RolesListPage";
-import StockAdjustmentsListPage from "./components/inventory/StockAdjustmentsListPage";
-import CategoriesListPage from "./pages/admin/CategoriesListPage";
-import SettingsPage from "./pages/admin/SettingsPage";
-import SystemPage from "./pages/admin/SystemPage";
 import PurchaseDetailsPage from "./pages/purchases/PurchaseDetailsPage";
 import ManagePurchaseItemsPage from "./pages/purchases/ManagePurchaseItemsPage";
-import PosPage from "./pages/PosPage";
-import PosPageOffline from "./pages/PosPageOffline";
+import StockAdjustmentsListPage from "./components/inventory/StockAdjustmentsListPage";
+import StockTransfersPage from "./pages/inventory/StockTransfersPage";
 import RequestStockPage from "./pages/inventory/RequestStockPage";
 import ManageStockRequisitionsListPage from "./pages/inventory/ManageStockRequisitionsListPage";
 import ProcessRequisitionPage from "./components/admin/inventory/ProcessRequisitionPage";
-import InventoryLogPage from "./pages/reports/InventoryLogPage";
-import StockTransfersPage from "./pages/inventory/StockTransfersPage";
-
+import WarehousesListPage from "./pages/warehouses/WarehousesListPage";
+// Sales & POS
+import PosPage from "./pages/PosPage";
+import PosPageOffline from "./pages/PosPageOffline"; // Ensure this exists
+// Reports
+import SalesReportPage from "./pages/reports/SalesReportPage";
+import PurchaseReportPage from "./pages/reports/PurchaseReportPage";
+import InventoryReportPage from "./pages/reports/InventoryReportPage";
 import MonthlyRevenueReportPage from "./components/reports/MonthlyRevenueReportPage";
 import SalesWithDiscountsPage from "./pages/reports/SalesWithDiscountsPage";
 import DailyIncomeReportPage from "./pages/reports/DailyIncomeReportPage";
-import SupplierLedgerPage from "./pages/suppliers/SupplierLedgerPage";
-import BackupPage from "./pages/admin/BackupPage";
-
-import WhatsAppSchedulersPage from "./pages/admin/WhatsAppSchedulersPage";
+import InventoryLogPage from "./pages/reports/InventoryLogPage";
+// Admin
+import ProfilePage from "./pages/ProfilePage";
+import UsersListPage from "./components/admin/users/UsersListPage";
+import RolesListPage from "./pages/admin/RolesListPage";
+import CategoriesListPage from "./pages/admin/CategoriesListPage";
 import ExpensesPage from "./pages/admin/ExpensesPage";
+import SettingsPage from "./pages/admin/SettingsPage";
+import SystemPage from "./pages/admin/SystemPage";
+import BackupPage from "./pages/admin/BackupPage";
+import WhatsAppSchedulersPage from "./pages/admin/WhatsAppSchedulersPage";
 import IndexedDBManagerPage from "./pages/admin/IndexedDBManagerPage";
-import WarehousesListPage from "./pages/warehouses/WarehousesListPage"; // Import Added
-// ... other page imports
+import NotFoundPage from "./pages/NotFoundPage";
 
-// --- Admin Route Guard Component ---
-// Create this file: src/components/layouts/AdminRouteGuard.tsx
-const AdminRouteGuard: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const { hasRole, isLoggedIn } = useAuthorization(); // Use your auth hook
-  const { isLoading } = useAuth(); // Get loading state from auth context
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    ); // Or a better loading state
-  }
-
-  if (!isLoggedIn || !hasRole("admin")) {
-    // Redirect non-admins away
-    toast.error("تم رفض الوصول", {
-      description: "ليس لديك صلاحية للوصول إلى هذه المنطقة.",
-    });
-    return <Navigate to="/dashboard" replace />; // Redirect to dashboard or login
-  }
-
-  // Render the admin component if authorized
-  return <>{children}</>;
-};
-// --- End Admin Route Guard ---
+import { AuthProvider } from "./context/AuthContext";
 
 const router = createHashRouter([
   // Auth routes (without navbar)
@@ -112,127 +81,289 @@ const router = createHashRouter([
       {
         element: <ProtectedRoute />, // Ensures user is logged in
         children: [
-          { index: true, element: <DashboardPage /> }, // Dashboard is the default home
-          { path: "dashboard", element: <DashboardPage /> }, // explicit /dashboard path
+          // --- General Access ---
+          { index: true, element: <DashboardPage /> },
+          {
+            path: "dashboard",
+            element: (
+              <PermissionGuard requiredPermission="view-dashboard">
+                <DashboardPage />
+              </PermissionGuard>
+            ),
+          },
           { path: "profile", element: <ProfilePage /> },
+
+          // --- Clients ---
           {
             path: "clients",
+            element: <PermissionGuard requiredPermission="view-clients" />,
             children: [
               { index: true, element: <ClientsPage /> },
               { path: ":id/ledger", element: <ClientLedgerPage /> },
             ],
           },
+
+          // --- Suppliers ---
           {
             path: "suppliers",
+            element: <PermissionGuard requiredPermission="view-suppliers" />,
             children: [
               { index: true, element: <SuppliersPage /> },
               { path: ":id/ledger", element: <SupplierLedgerPage /> },
             ],
           },
-          { path: "products", element: <ProductsPage /> },
+
+          // --- Products ---
+          {
+            path: "products",
+            element: (
+              <PermissionGuard requiredPermission="view-products">
+                <ProductsPage />
+              </PermissionGuard>
+            ),
+          },
+
+          // --- Purchases ---
           {
             path: "purchases",
+            element: <PermissionGuard requiredPermission="view-purchases" />,
             children: [
               { index: true, element: <PurchasesListPage /> },
               { path: "add", element: <PurchaseFormPage /> },
-              { path: ":id/edit", element: <PurchaseFormPage /> }, // Edit Purchase
-              { path: ":id", element: <PurchaseDetailsPage /> }, // Details
+              { path: ":id/edit", element: <PurchaseFormPage /> },
+              { path: ":id", element: <PurchaseDetailsPage /> },
               {
                 path: ":id/manage-items",
                 element: <ManagePurchaseItemsPage />,
-              }, // Manage Purchase Items
+              },
             ],
           },
+
+          // --- Sales/POS ---
           {
             path: "sales",
             children: [
-              // POS Routes (Promoted to main sales routes)
-              { index: true, element: <Navigate to="pos" replace /> }, // Default to POS
-              { path: "pos", element: <PosPage /> }, // Was pos-new
-              { path: "pos-offline", element: <PosPageOffline /> },
-
-              // Returns (Keep if separate from sales folder or move if user wants them gone too.
-              // Assuming 'sales folder' meant the standard sales CRUD pages, I'll keep returns if they are distinct,
-              // BUT they are in src/pages/sales/ too. So I must check if I deleted them.)
-              // The user said "everyfile related to sales folder". This usually means everything in src/pages/sales.
-              // If AddSaleReturnPage is in src/pages/sales, it must go.
-              // So I will remove returns routes too, assuming POS handles returns or they are not needed.
+              { index: true, element: <Navigate to="pos" replace /> },
+              {
+                path: "pos",
+                element: (
+                  <PermissionGuard requiredPermission="view-pos">
+                    <PosPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "pos-offline",
+                element: (
+                  <PermissionGuard requiredPermission="view-pos-offline">
+                    <PosPageOffline />
+                  </PermissionGuard>
+                ),
+              },
             ],
           },
+
+          // --- Inventory Operations ---
           {
             path: "inventory",
             children: [
-              { path: "adjustments", element: <StockAdjustmentsListPage /> },
-              { path: "transfers", element: <StockTransfersPage /> },
+              {
+                path: "adjustments",
+                element: (
+                  <PermissionGuard requiredPermission="view-stock-adjustments">
+                    <StockAdjustmentsListPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "transfers",
+                element: (
+                  <PermissionGuard requiredPermission="view-stock-transfers">
+                    <StockTransfersPage />
+                  </PermissionGuard>
+                ),
+              },
             ],
           },
+
+          // --- Reports ---
           {
             path: "reports",
             children: [
-              { path: "sales", element: <SalesReportPage /> },
-              { path: "sales-discounts", element: <SalesWithDiscountsPage /> },
-              { path: "purchases", element: <PurchaseReportPage /> },
-              { path: "inventory", element: <InventoryReportPage /> },
-
+              {
+                path: "sales",
+                element: (
+                  <PermissionGuard requiredPermission="view-reports-sales">
+                    <SalesReportPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "sales-discounts",
+                element: (
+                  <PermissionGuard requiredPermission="view-reports-discounts">
+                    <SalesWithDiscountsPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "purchases",
+                element: (
+                  <PermissionGuard requiredPermission="view-reports-purchases">
+                    <PurchaseReportPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "inventory",
+                element: (
+                  <PermissionGuard requiredPermission="view-reports-inventory">
+                    <InventoryReportPage />
+                  </PermissionGuard>
+                ),
+              },
               {
                 path: "monthly-revenue",
-                element: <MonthlyRevenueReportPage />,
+                element: (
+                  <PermissionGuard requiredPermission="view-reports-monthly-revenue">
+                    <MonthlyRevenueReportPage />
+                  </PermissionGuard>
+                ),
               },
               {
                 path: "inventory-log",
-                element: <InventoryLogPage />,
+                element: (
+                  <PermissionGuard requiredPermission="view-reports-inventory-log">
+                    <InventoryLogPage />
+                  </PermissionGuard>
+                ),
               },
               {
                 path: "daily-income",
-                element: <DailyIncomeReportPage />,
+                element: (
+                  <PermissionGuard requiredPermission="view-reports-daily-income">
+                    <DailyIncomeReportPage />
+                  </PermissionGuard>
+                ),
               },
             ],
           },
 
-          // Analytics
-
-          // --- Admin Section ---
+          // --- Admin Section (Now Permission Guarded) ---
           {
-            path: "admin", // Base path for admin routes
-            element: (
-              <AdminRouteGuard>
-                <Outlet />
-              </AdminRouteGuard>
-            ), // Wrap admin section with guard
+            path: "admin",
             children: [
-              // Requires 'admin' role due to AdminRouteGuard above
-              { path: "users", element: <UsersListPage /> }, // User management
-              { path: "roles", element: <RolesListPage /> }, // Add later for role management
-              { path: "categories", element: <CategoriesListPage /> },
-              { path: "expenses", element: <ExpensesPage /> },
-              { path: "settings", element: <SettingsPage /> },
-              { path: "system", element: <SystemPage /> }, // System version and updates
-              { path: "backups", element: <BackupPage /> }, // Database backup management
+              {
+                path: "users",
+                element: (
+                  <PermissionGuard requiredPermission="manage-users">
+                    <UsersListPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "roles",
+                element: (
+                  <PermissionGuard requiredPermission="manage-roles">
+                    <RolesListPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "categories",
+                element: (
+                  <PermissionGuard requiredPermission="manage-categories">
+                    <CategoriesListPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "expenses",
+                element: (
+                  <PermissionGuard requiredPermission="manage-expenses">
+                    <ExpensesPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "settings",
+                element: (
+                  <PermissionGuard requiredPermission="manage-settings">
+                    <SettingsPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "system",
+                element: (
+                  <PermissionGuard requiredPermission="manage-system">
+                    <SystemPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "backups",
+                element: (
+                  <PermissionGuard requiredPermission="manage-backups">
+                    <BackupPage />
+                  </PermissionGuard>
+                ),
+              },
               {
                 path: "whatsapp-schedulers",
-                element: <WhatsAppSchedulersPage />,
-              }, // WhatsApp schedulers management
-              // ... other admin routes
-              { path: "idb-manager", element: <IndexedDBManagerPage /> },
+                element: (
+                  <PermissionGuard requiredPermission="manage-whatsapp-schedulers">
+                    <WhatsAppSchedulersPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "idb-manager",
+                element: (
+                  <PermissionGuard requiredPermission="manage-idb">
+                    <IndexedDBManagerPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "warehouses",
+                element: (
+                  <PermissionGuard requiredPermission="manage-warehouses">
+                    <WarehousesListPage />
+                  </PermissionGuard>
+                ),
+              },
+
+              // Admin Inventory
               {
                 path: "inventory",
                 children: [
                   {
                     path: "requisitions/request",
-                    element: <RequestStockPage />,
+                    element: (
+                      <PermissionGuard requiredPermission="request-stock">
+                        <RequestStockPage />
+                      </PermissionGuard>
+                    ),
                   },
                   {
                     path: "requisitions",
-                    element: <ManageStockRequisitionsListPage />,
+                    element: (
+                      <PermissionGuard requiredPermission="view-stock-requisitions">
+                        <ManageStockRequisitionsListPage />
+                      </PermissionGuard>
+                    ),
                   },
-                  ///admin/inventory/requisitions/:requisitionId/process)
                   {
                     path: "requisitions/:requisitionId/process",
-                    element: <ProcessRequisitionPage />,
+                    element: (
+                      <PermissionGuard requiredPermission="view-stock-requisitions">
+                        <ProcessRequisitionPage />
+                      </PermissionGuard>
+                    ),
                   },
                 ],
               },
-              { path: "warehouses", element: <WarehousesListPage /> }, // Added Warehouses Route
             ],
           },
         ],

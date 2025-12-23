@@ -1,9 +1,6 @@
 // src/components/admin/categories/CategoryFormModal.tsx
 import React, { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
-import { useTranslation } from "react-i18next";
-import * as z from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 
 // MUI components
@@ -26,16 +23,7 @@ import {
 import { Loader2, AlertCircle } from "lucide-react";
 import categoryService, { Category } from "@/services/CategoryService";
 
-// --- Zod Schema ---
-const categoryFormSchema = z.object({
-  name: z.string().min(1, { message: "validation:required" }),
-  description: z.string().nullable().optional(),
-  parent_id: z.union([
-    z.number().positive(),
-    z.null(),
-    z.undefined(),
-  ]).optional(),
-});
+// --- Form Types ---
 type CategoryFormValues = {
   name: string;
   description?: string | null;
@@ -60,12 +48,10 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
   allCategories,
   loadingCategories,
 }) => {
-  const { t } = useTranslation(["categories", "common", "validation"]);
   const isEditMode = Boolean(categoryToEdit);
   const [serverError, setServerError] = useState<string | null>(null);
 
   const form = useForm<CategoryFormValues>({
-    resolver: zodResolver(categoryFormSchema),
     defaultValues: { name: "", description: "", parent_id: null },
   });
   const {
@@ -93,6 +79,13 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
 
   const onSubmit = async (data: CategoryFormValues) => {
     setServerError(null);
+    
+    // Basic validation
+    if (!data.name || data.name.trim() === "") {
+      setError("name", { type: "manual", message: "هذا الحقل مطلوب" });
+      return;
+    }
+    
     const apiData = { ...data, parent_id: data.parent_id || null }; // Ensure null if empty
     try {
       let savedCategory: Category;
@@ -104,10 +97,8 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
       } else {
         savedCategory = await categoryService.createCategory(apiData);
       }
-      toast.success(t("common:success"), {
-        description: t(
-          isEditMode ? "categories:updateSuccess" : "categories:createSuccess"
-        ),
+      toast.success("نجح", {
+        description: isEditMode ? "تم تحديث الفئة بنجاح" : "تم إنشاء الفئة بنجاح",
       });
       onSaveSuccess(savedCategory);
       onClose();
@@ -117,16 +108,16 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
         Object.keys(apiErrors).forEach((field) => {
           setError(field as keyof CategoryFormValues, {
             type: "server",
-            message: t(apiErrors[field][0]),
+            message: apiErrors[field][0],
           });
         });
       } else if (err.response?.data?.message) {
-        setServerError(t(err.response.data.message));
+        setServerError(err.response.data.message);
       } else {
-        setServerError(t("common:unknownError"));
+        setServerError("حدث خطأ غير معروف");
       }
-      toast.error(t("common:error"), {
-        description: t("categories:saveError"),
+      toast.error("خطأ", {
+        description: "فشل في حفظ الفئة",
       });
     }
   };
@@ -155,9 +146,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
         }}
       >
         <Typography variant="h6" component="div" fontWeight={600}>
-          {isEditMode
-            ? t("categories:editCategory")
-            : t("categories:addCategory")}
+          {isEditMode ? "تعديل فئة" : "إضافة فئة"}
         </Typography>
       </DialogTitle>
       <Box
@@ -178,7 +167,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
             <Alert severity="error" sx={{ mb: 2 }}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>{t("common:error")}</AlertTitle>
+                <AlertTitle>خطأ</AlertTitle>
               </Box>
               {serverError}
             </Alert>
@@ -190,14 +179,14 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
               control={control}
               name="name"
               rules={{
-                required: t("validation:required"),
+                required: "هذا الحقل مطلوب",
               }}
               render={({ field, fieldState }) => (
                 <TextField
                   {...field}
                   label={
                     <>
-                      {t("categories:nameLabel")}
+                      اسم الفئة
                       <span style={{ color: "red" }}> *</span>
                     </>
                   }
@@ -205,7 +194,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
                   size="small"
                   disabled={isSubmitting}
                   error={!!fieldState.error}
-                  helperText={fieldState.error?.message ? t(fieldState.error.message) : ""}
+                  helperText={fieldState.error?.message || ""}
                 />
               )}
             />
@@ -221,10 +210,10 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
                   disabled={isSubmitting || loadingCategories}
                   error={!!fieldState.error}
                 >
-                  <InputLabel>{t("categories:parentCategoryLabel")}</InputLabel>
+                  <InputLabel>الفئة الرئيسية</InputLabel>
                   <Select
                     {...field}
-                    label={t("categories:parentCategoryLabel")}
+                    label="الفئة الرئيسية"
                     value={field.value ? String(field.value) : ""}
                     onChange={(e) =>
                       field.onChange(
@@ -235,7 +224,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
                     }
                   >
                     <MenuItem value=" ">
-                      <em>{t("categories:noParent")}</em>
+                      <em>لا يوجد</em>
                     </MenuItem>
                     {allCategories
                       .filter(
@@ -264,7 +253,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
               render={({ field, fieldState }) => (
                 <TextField
                   {...field}
-                  label={t("categories:descriptionLabel")}
+                  label="الوصف"
                   fullWidth
                   size="small"
                   multiline
@@ -295,7 +284,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
             disabled={isSubmitting}
             sx={{ minWidth: 100 }}
           >
-            {t("common:cancel")}
+            إلغاء
           </Button>
           <Button
             type="submit"
@@ -308,7 +297,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
               ) : undefined
             }
           >
-            {isEditMode ? t("common:update") : t("common:create")}
+            {isEditMode ? "تحديث" : "إنشاء"}
           </Button>
         </DialogActions>
       </Box>

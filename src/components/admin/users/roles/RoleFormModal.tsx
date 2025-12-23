@@ -1,9 +1,6 @@
 // src/components/admin/roles/RoleFormModal.tsx
 import React, { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
-import { useTranslation } from "react-i18next";
-import * as z from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 
 // MUI components
@@ -33,13 +30,11 @@ import roleService, {
 } from "../../../../services/roleService";
 import { useAuth } from "@/context/AuthContext";
 
-// --- Zod Schema ---
-const roleFormSchema = z.object({
-  name: z.string().min(1, { message: "validation:required" }),
-  permissions: z.array(z.string()),
-});
-
-type RoleFormValues = z.infer<typeof roleFormSchema>;
+// --- Form Types ---
+type RoleFormValues = {
+  name: string;
+  permissions: string[];
+};
 
 // --- Component Props ---
 interface RoleFormModalProps {
@@ -59,18 +54,11 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
   availablePermissions,
   loadingPermissions,
 }) => {
-  const { t } = useTranslation([
-    "roles",
-    "common",
-    "validation",
-    "permissions",
-  ]);
   const isEditMode = Boolean(roleToEdit);
   const [serverError, setServerError] = useState<string | null>(null);
   const { user } = useAuth();
 
   const form = useForm<RoleFormValues>({
-    resolver: zodResolver(roleFormSchema),
     defaultValues: { name: "", permissions: [] },
   });
   const {
@@ -100,6 +88,16 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
     setServerError(null);
     console.log(`Submitting ${isEditMode ? "update" : "create"} role:`, data);
 
+    // Basic validation
+    if (!data.name || data.name.trim() === "") {
+      setError("name", { type: "manual", message: "هذا الحقل مطلوب" });
+      return;
+    }
+    if (!data.permissions || data.permissions.length === 0) {
+      setError("permissions", { type: "manual", message: "يجب اختيار صلاحية واحدة على الأقل" });
+      return;
+    }
+
     const apiData: RoleFormData | Pick<RoleFormData, "permissions"> = isEditMode
       ? { permissions: data.permissions }
       : data;
@@ -114,10 +112,8 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
       } else {
         savedRole = await roleService.createRole(apiData as RoleFormData);
       }
-      toast.success(t("common:success"), {
-        description: t(
-          isEditMode ? "roles:updateSuccess" : "roles:createSuccess"
-        ),
+      toast.success("نجح", {
+        description: isEditMode ? "تم تحديث الدور بنجاح" : "تم إنشاء الدور بنجاح",
       });
       onSaveSuccess(savedRole);
       onClose();
@@ -125,13 +121,13 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
       console.error("Failed to save role:", err);
       const generalError = roleService.getErrorMessage(err);
       const apiErrors = roleService.getValidationErrors(err);
-      toast.error(t("common:error"), { description: generalError });
+      toast.error("خطأ", { description: generalError });
       setServerError(generalError);
       if (apiErrors) {
         Object.entries(apiErrors).forEach(([field, message]) => {
           setError(field as keyof RoleFormValues, {
             type: "manual",
-            message: t(`validation:${message}`, { defaultValue: message }),
+            message: message,
           });
         });
       }
@@ -162,7 +158,7 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
         }}
       >
         <Typography variant="h6" component="div" fontWeight={600}>
-          {isEditMode ? t("roles:editRole") : t("roles:addRole")}
+          {isEditMode ? "تعديل دور" : "إضافة دور"}
         </Typography>
       </DialogTitle>
       <Box
@@ -183,7 +179,7 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
             <Alert severity="error" sx={{ mb: 2 }}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>{t("common:error")}</AlertTitle>
+                <AlertTitle>خطأ</AlertTitle>
               </Box>
               {serverError}
             </Alert>
@@ -195,18 +191,18 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
               control={control}
               name="name"
               rules={{
-                required: t("validation:required"),
+                required: "هذا الحقل مطلوب",
               }}
               render={({ field, fieldState }) => (
                 <TextField
                   {...field}
                   label={
                     <>
-                      {t("roles:roleName")}
+                      اسم الدور
                       <span style={{ color: "red" }}> *</span>
                     </>
                   }
-                  placeholder={t("roles:roleNamePlaceholder")}
+                  placeholder="أدخل اسم الدور"
                   fullWidth
                   size="small"
                   disabled={isSubmitting || isEditMode}
@@ -226,10 +222,10 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
               render={({ field, fieldState }) => (
                 <Box>
                   <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    {t("roles:assignPermissions")}
+                    تعيين الصلاحيات
                   </Typography>
                   <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, display: "block" }}>
-                    {t("roles:assignPermissionsDesc")}
+                    اختر الصلاحيات التي سيتم منحها لهذا الدور
                   </Typography>
                   <Paper
                     variant="outlined"
@@ -243,12 +239,12 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
                       <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: 4 }}>
                         <Loader2 className="h-5 w-5 animate-spin" style={{ marginRight: 8 }} />
                         <Typography variant="body2" color="text.secondary">
-                          {t("common:loading")}...
+                          جاري التحميل...
                         </Typography>
                       </Box>
                     ) : availablePermissions.length === 0 ? (
                       <Typography variant="body2" color="text.secondary" sx={{ p: 2, textAlign: "center" }}>
-                        {t("permissions:noneAvailable")}
+                        لا توجد صلاحيات متاحة
                       </Typography>
                     ) : (
                       <FormGroup>
@@ -273,9 +269,7 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
                             }
                             label={
                               <Typography variant="body2">
-                                {t(`permissions:${permission.name}`, {
-                                  defaultValue: permission.name,
-                                })}
+                                {permission.name}
                               </Typography>
                             }
                             sx={{
@@ -292,9 +286,7 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
                   </Paper>
                   {fieldState.error && (
                     <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
-                      {errors.permissions?.message
-                        ? t(errors.permissions.message)
-                        : ""}
+                      {errors.permissions?.message || ""}
                     </Typography>
                   )}
                 </Box>
@@ -319,7 +311,7 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
             disabled={isSubmitting}
             sx={{ minWidth: 100 }}
           >
-            {t("common:cancel")}
+            إلغاء
           </Button>
           <Button
             type="submit"
@@ -332,7 +324,7 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
               ) : undefined
             }
           >
-            {isEditMode ? t("common:update") : t("common:create")}
+            {isEditMode ? "تحديث" : "إنشاء"}
           </Button>
         </DialogActions>
       </Box>

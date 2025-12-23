@@ -10,11 +10,12 @@ import TopAppBar from "./TopAppBar";
 import UserMenu from "./UserMenu";
 import { DRAWER_WIDTH } from "./types";
 import { navItems, reportItems, adminItems } from "./navItems";
+import DebugPanel from "../common/DebugPanel";
 
 const COLLAPSED_DRAWER_WIDTH = 72;
 
 const RootLayout: React.FC = () => {
-  const { isLoading } = useAuth();
+  const { isLoading, user, roles, permissions } = useAuth();
   const theme = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -155,6 +156,20 @@ const RootLayout: React.FC = () => {
       </Box>
 
       <UserMenu anchorEl={anchorEl} onClose={handleMenuClose} />
+
+      {/* Debug Tool for Auth State - Visualizes User Data */}
+      <DebugPanel
+        data={{
+          user,
+          roles,
+          permissions,
+          meta: {
+            timestamp: new Date().toISOString(),
+            environment: import.meta.env.MODE,
+          },
+        }}
+        title="Auth State Debugger"
+      />
     </Box>
   );
 };

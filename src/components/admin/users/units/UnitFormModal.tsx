@@ -1,9 +1,6 @@
 // src/components/admin/units/UnitFormModal.tsx
 import React, { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
-import { useTranslation } from "react-i18next";
-import * as z from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 
 // MUI components
@@ -26,14 +23,13 @@ import {
 import { Loader2, AlertCircle } from "lucide-react";
 import unitService, { Unit, UnitFormData } from "@/services/UnitService";
 
-// --- Zod Schema ---
-const unitFormSchema = z.object({
-  name: z.string().min(1, { message: "validation:required" }),
-  type: z.enum(['stocking', 'sellable'], { message: "validation:required" }),
-  description: z.string().optional(),
-  is_active: z.boolean(),
-});
-type UnitFormValues = z.infer<typeof unitFormSchema>;
+// --- Form Types ---
+type UnitFormValues = {
+  name: string;
+  type: 'stocking' | 'sellable';
+  description?: string;
+  is_active: boolean;
+};
 
 // --- Component Props ---
 interface UnitFormModalProps {
@@ -51,12 +47,10 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
   onSaveSuccess,
   defaultType,
 }) => {
-  const { t } = useTranslation(["units", "common", "validation"]);
   const isEditMode = Boolean(unitToEdit);
   const [serverError, setServerError] = useState<string | null>(null);
 
   const form = useForm<UnitFormValues>({
-    resolver: zodResolver(unitFormSchema),
     defaultValues: { 
       name: "", 
       type: defaultType || 'stocking', 
@@ -97,6 +91,16 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
     setServerError(null);
     console.log("Submitting unit data:", data);
 
+    // Basic validation
+    if (!data.name || data.name.trim() === "") {
+      setError("name", { type: "manual", message: "هذا الحقل مطلوب" });
+      return;
+    }
+    if (!data.type) {
+      setError("type", { type: "manual", message: "هذا الحقل مطلوب" });
+      return;
+    }
+
     const dataToSend: UnitFormData = {
       name: data.name.trim(),
       type: data.type,
@@ -113,10 +117,8 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
       }
       console.log("Save successful:", savedUnit);
 
-      toast.success(t("common:success"), {
-        description: t(
-          isEditMode ? "units:updateSuccess" : "units:createSuccess"
-        ),
+      toast.success("نجح", {
+        description: isEditMode ? "تم تحديث الوحدة بنجاح" : "تم إنشاء الوحدة بنجاح",
         duration: 3000,
       });
 
@@ -127,7 +129,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
       const generalError = unitService.getErrorMessage(err);
       const apiErrors = unitService.getValidationErrors(err);
 
-      toast.error(t("common:error"), {
+      toast.error("خطأ", {
         description: generalError,
         duration: 5000,
       });
@@ -140,7 +142,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
             message: messages[0],
           });
         });
-        setServerError(t("validation:checkFields"));
+        setServerError("يرجى التحقق من الحقول");
       }
     }
   };
@@ -169,9 +171,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
         }}
       >
         <Typography variant="h6" component="div" fontWeight={600}>
-          {isEditMode
-            ? t("units:editUnit")
-            : t("units:addUnit")}
+          {isEditMode ? "تعديل وحدة" : "إضافة وحدة"}
         </Typography>
       </DialogTitle>
       <Box
@@ -193,7 +193,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
             <Alert severity="error" sx={{ mb: 2 }}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>{t("common:error")}</AlertTitle>
+                <AlertTitle>خطأ</AlertTitle>
               </Box>
               {serverError}
             </Alert>
@@ -205,23 +205,23 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
               control={control}
               name="name"
               rules={{
-                required: t("validation:required"),
+                required: "هذا الحقل مطلوب",
               }}
               render={({ field, fieldState }) => (
                 <TextField
                   {...field}
                   label={
                     <>
-                      {t("units:name")}
+                      اسم الوحدة
                       <span style={{ color: "red" }}> *</span>
                     </>
                   }
-                  placeholder={t("units:namePlaceholder")}
+                  placeholder="أدخل اسم الوحدة"
                   fullWidth
                   size="small"
                   disabled={isSubmitting}
                   error={!!fieldState.error}
-                  helperText={fieldState.error?.message ? t(fieldState.error.message) : ""}
+                  helperText={fieldState.error?.message || ""}
                 />
               )}
             />
@@ -231,7 +231,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
               control={control}
               name="type"
               rules={{
-                required: t("validation:required"),
+                required: "هذا الحقل مطلوب",
               }}
               render={({ field, fieldState }) => (
                 <FormControl
@@ -241,24 +241,24 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
                   error={!!fieldState.error}
                 >
                   <InputLabel>
-                    {t("units:type")}
+                    نوع الوحدة
                     <span style={{ color: "red" }}> *</span>
                   </InputLabel>
                   <Select
                     {...field}
-                    label={`${t("units:type")} *`}
+                    label="نوع الوحدة *"
                     value={field.value}
                   >
                     <MenuItem value="stocking">
-                      {t("units:stockingUnit")}
+                      وحدة تخزين
                     </MenuItem>
                     <MenuItem value="sellable">
-                      {t("units:sellableUnit")}
+                      وحدة بيع
                     </MenuItem>
                   </Select>
                   {fieldState.error && (
                     <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
-                      {fieldState.error.message ? t(fieldState.error.message) : ""}
+                      {fieldState.error.message || ""}
                     </Typography>
                   )}
                 </FormControl>
@@ -272,8 +272,8 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
               render={({ field, fieldState }) => (
                 <TextField
                   {...field}
-                  label={t("units:description")}
-                  placeholder={t("units:descriptionPlaceholder")}
+                  label="الوصف"
+                  placeholder="أدخل وصف الوحدة"
                   fullWidth
                   size="small"
                   multiline
@@ -297,18 +297,18 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
                   disabled={isSubmitting}
                   error={!!fieldState.error}
                 >
-                  <InputLabel>{t("units:status")}</InputLabel>
+                  <InputLabel>الحالة</InputLabel>
                   <Select
                     {...field}
-                    label={t("units:status")}
+                    label="الحالة"
                     value={field.value ? 'true' : 'false'}
                     onChange={(e) => field.onChange(e.target.value === 'true')}
                   >
                     <MenuItem value="true">
-                      {t("units:active")}
+                      نشط
                     </MenuItem>
                     <MenuItem value="false">
-                      {t("units:inactive")}
+                      غير نشط
                     </MenuItem>
                   </Select>
                   {fieldState.error && (
@@ -338,7 +338,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
             disabled={isSubmitting}
             sx={{ minWidth: 100 }}
           >
-            {t("common:cancel")}
+            إلغاء
           </Button>
           <Button
             type="submit"
@@ -351,7 +351,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
               ) : undefined
             }
           >
-            {isEditMode ? t("common:update") : t("common:create")}
+            {isEditMode ? "تحديث" : "إنشاء"}
           </Button>
         </DialogActions>
       </Box>

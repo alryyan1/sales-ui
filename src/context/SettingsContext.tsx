@@ -2,7 +2,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import settingService, { AppSettings } from '@/services/settingService'; // Adjust path
 import { toast } from 'sonner';
-import { useTranslation } from 'react-i18next';
 
 interface SettingsContextType {
     settings: AppSettings | null;
@@ -15,7 +14,6 @@ interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const { t } = useTranslation('common');
     const [settings, setSettings] = useState<AppSettings | null>(null);
     const [isLoadingSettings, setIsLoadingSettings] = useState(true);
 
@@ -45,10 +43,10 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         try {
             const updatedSettings = await settingService.updateSettings(data);
             setSettings(updatedSettings); // Update local context state
-            toast.success(t('success'), { description: t('settings:updateSuccess')}); // Add key
+            toast.success('نجح', { description: 'تم تحديث الإعدادات بنجاح'});
             return updatedSettings;
         } catch (error) {
-            toast.error(t('common:error'), { description: settingService.getErrorMessage(error) });
+            toast.error('خطأ', { description: settingService.getErrorMessage(error) });
             throw error; // Rethrow for form to handle its own state
         }
     };

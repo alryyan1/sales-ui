@@ -1,6 +1,6 @@
 // src/services/authService.ts
 import apiClient, { getValidationErrors, getErrorMessage } from "../lib/axios";
-import axios, { AxiosError } from "axios"; // Import AxiosError for type checking
+import axios from "axios"; // Import AxiosError for type checking
 
 // Define a type for the User object (matching Laravel's User model structure)
 // Update or Define the User interface/type
@@ -11,7 +11,11 @@ export interface User {
   created_at?: string; // Optional based on your API response
   updated_at?: string; // Optional based on your API response
   // Add roles array (make optional if user might not have any)
+  // Add roles array (make optional if user might not have any)
   roles?: string[];
+  permissions?: string[];
+  warehouse_id?: number | null;
+  warehouse?: { id: number; name: string } | null;
 }
 // AuthResponse type (ensure it includes roles/permissions)
 
@@ -48,6 +52,7 @@ export interface AuthResponse {
   token_type: "Bearer";
   message?: string;
   roles?: string[]; // Ensure login response includes these if setting user directly
+  permissions?: string[];
 }
 const AUTH_TOKEN_KEY = "authToken"; // Consistent key for localStorage
 

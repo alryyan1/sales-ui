@@ -4,7 +4,6 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
 import CssBaseline from "@mui/material/CssBaseline";
-import "./i18n"; // <--- تأكد من وجود هذا الاستيراد هنا
 import { LocalizationProvider } from "@mui/x-date-pickers"; // Import LocalizationProvider
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns"; // Import AdapterDateFns
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';

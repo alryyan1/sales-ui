@@ -1,6 +1,5 @@
 // src/components/pos/TodaySales.tsx
 import React from "react";
-import { useTranslation } from "react-i18next";
 
 // MUI Components
 import {
@@ -28,14 +27,12 @@ interface TodaySalesProps {
 }
 
 export const TodaySales: React.FC<TodaySalesProps> = ({ sales, onViewSale }) => {
-  const { t } = useTranslation(['pos', 'common']);
-
   return (
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <CardContent sx={{ flex: 1, p: 0 }}>
         <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            {t('pos:todaySales')} ({sales.length})
+            مبيعات اليوم ({sales.length})
           </Typography>
         </Box>
         
@@ -51,7 +48,7 @@ export const TodaySales: React.FC<TodaySalesProps> = ({ sales, onViewSale }) => 
             }}>
               <ReceiptIcon sx={{ fontSize: 48, mb: 2, opacity: 0.5 }} />
               <Typography variant="body2">
-                {t('pos:noSalesToday')}
+                لا توجد مبيعات اليوم
               </Typography>
             </Box>
           ) : (
