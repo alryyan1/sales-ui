@@ -1,6 +1,5 @@
 // src/components/purchases/EditablePurchaseItemField.tsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
 
 // MUI Components
 import { 
@@ -45,7 +44,6 @@ export const EditablePurchaseItemField: React.FC<EditablePurchaseItemFieldProps>
   formatDisplay,
   parseValue
 }) => {
-  const { t } = useTranslation(['common']);
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value.toString());
   const inputRef = useRef<HTMLInputElement>(null);
@@ -212,7 +210,7 @@ export const EditablePurchaseItemField: React.FC<EditablePurchaseItemFieldProps>
         {displayValue || placeholder || '—'}
       </Typography>
       {!disabled && !isLoading && (
-        <Tooltip title={t('common:edit')}>
+        <Tooltip title="تعديل">
           <IconButton
             size="small"
             sx={{ 

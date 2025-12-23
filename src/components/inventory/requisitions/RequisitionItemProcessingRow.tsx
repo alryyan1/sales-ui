@@ -1,7 +1,6 @@
 // src/components/inventory/requisitions/RequisitionItemProcessingRow.tsx
 import React, { useState, useEffect, useCallback } from "react";
 import { useFormContext, Controller, useWatch } from "react-hook-form";
-import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -70,12 +69,6 @@ type ProcessItemFormValues = {
 export const RequisitionItemProcessingRow: React.FC<
   RequisitionItemProcessingRowProps
 > = ({ index, originalItem, isSubmitting }) => {
-  const { t } = useTranslation([
-    "inventory",
-    "common",
-    "products",
-    "validation",
-  ]);
   const {
     control,
     watch,
@@ -130,7 +123,7 @@ export const RequisitionItemProcessingRow: React.FC<
               originalItem.product?.name}
           </p>
           <p className="text-xs text-muted-foreground">
-            {t("inventory:requestedQuantity")}:{" "}
+            الكمية المطلوبة:{" "}
             {originalItem.requested_quantity}
           </p>
         </div>
@@ -151,13 +144,13 @@ export const RequisitionItemProcessingRow: React.FC<
                 </FormControl>
                 <SelectContent>
                   <SelectItem value="pending">
-                    {t("inventory:itemStatus_pending")}
+                    قيد الانتظار
                   </SelectItem>
                   <SelectItem value="issued">
-                    {t("inventory:itemStatus_issued")}
+                    صدر
                   </SelectItem>
                   <SelectItem value="rejected_item">
-                    {t("inventory:itemStatus_rejected")}
+                    مرفوض
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -174,7 +167,7 @@ export const RequisitionItemProcessingRow: React.FC<
             name={`items.${index}.issued_from_purchase_item_id`}
             render={({ field, fieldState }) => (
               <FormItem className="md:col-span-5 flex flex-col">
-                <FormLabel>{t("inventory:issueFromBatch")}*</FormLabel>
+                <FormLabel>الإصدار من الدفعة*</FormLabel>
                 <Popover
                   open={batchPopoverOpen}
                   onOpenChange={setBatchPopoverOpen}
@@ -198,7 +191,7 @@ export const RequisitionItemProcessingRow: React.FC<
                           <Loader2 className="h-4 w-4 animate-spin me-2" />
                         ) : (
                           watch(`items.${index}.selected_batch_info`) ||
-                          t("inventory:selectBatchPlaceholder")
+                          "اختر الدفعة"
                         )}
                         <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
@@ -208,11 +201,11 @@ export const RequisitionItemProcessingRow: React.FC<
                     <Command>
                       <CommandList>
                         {loadingBatches && (
-                          <CommandEmpty>{t("common:loading")}...</CommandEmpty>
+                          <CommandEmpty>جاري التحميل...</CommandEmpty>
                         )}
                         {!loadingBatches && itemBatches.length === 0 && (
                           <CommandEmpty>
-                            {t("inventory:noBatchesAvailable")}
+                            لا توجد دفعات متاحة
                           </CommandEmpty>
                         )}
                         {!loadingBatches && (
@@ -265,11 +258,7 @@ export const RequisitionItemProcessingRow: React.FC<
                   </PopoverContent>
                 </Popover>
                 <FormMessage>
-                  {fieldState.error?.message
-                    ? t(fieldState.error.message)
-                    : itemRHFerrors?.issued_from_purchase_item_id?.message
-                    ? t(itemRHFerrors.issued_from_purchase_item_id.message)
-                    : null}
+                  {fieldState.error?.message || itemRHFerrors?.issued_from_purchase_item_id?.message || null}
                 </FormMessage>
               </FormItem>
             )}
@@ -281,7 +270,7 @@ export const RequisitionItemProcessingRow: React.FC<
             name={`items.${index}.issued_quantity`}
             render={({ field: qtyField, fieldState: qtyFieldState }) => (
               <FormItem className="md:col-span-3">
-                <FormLabel>{t("inventory:issuedQuantity")}*</FormLabel>
+                <FormLabel>الكمية المصدرة*</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -301,15 +290,11 @@ export const RequisitionItemProcessingRow: React.FC<
                   />
                 </FormControl>
                 <FormMessage>
-                  {qtyFieldState.error?.message
-                    ? t(qtyFieldState.error.message)
-                    : null}
+                  {qtyFieldState.error?.message || null}
                 </FormMessage>
                 {itemRHFerrors?.issued_quantity && !qtyFieldState.error && (
                   <p className="text-xs text-red-500 mt-1">
-                    {itemRHFerrors.issued_quantity.message
-                      ? t(itemRHFerrors.issued_quantity.message)
-                      : t("sales:insufficientStock")}
+                    {itemRHFerrors.issued_quantity.message || "المخزون غير كافٍ"}
                   </p>
                 )}
                 {Number(qtyField.value) >
@@ -317,7 +302,7 @@ export const RequisitionItemProcessingRow: React.FC<
                   !qtyFieldState.error &&
                   !itemRHFerrors?.issued_quantity && (
                     <p className="text-xs text-orange-500 mt-1">
-                      {t("inventory:errorIssuedExceedsBatchStockInline")}
+                      الكمية المصدرة تتجاوز المخزون المتاح في الدفعة
                     </p>
                   )}
               </FormItem>
@@ -329,7 +314,7 @@ export const RequisitionItemProcessingRow: React.FC<
             name={`items.${index}.item_notes`}
             render={({ field }) => (
               <FormItem className="md:col-span-4">
-                <FormLabel>{t("inventory:itemProcessingNotes")}</FormLabel>
+                <FormLabel>ملاحظات معالجة العنصر</FormLabel>
                 <FormControl>
                   <Textarea
                     className="min-h-[40px] text-xs"
@@ -349,10 +334,10 @@ export const RequisitionItemProcessingRow: React.FC<
           name={`items.${index}.item_notes`}
           render={({ field }) => (
             <FormItem className="mt-2">
-              <FormLabel>{t("inventory:itemRejectionReason")}</FormLabel>
+              <FormLabel>سبب الرفض</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder={t("inventory:itemRejectionReasonPlaceholder")}
+                  placeholder="أدخل سبب رفض هذا العنصر"
                   className="min-h-[40px] text-xs"
                   {...field}
                   value={field.value ?? ""}

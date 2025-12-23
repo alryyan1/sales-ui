@@ -5,8 +5,7 @@ import * as React from "react"
 import { format } from "date-fns"
 import { Calendar as CalendarIcon } from "lucide-react"
 import type { DateRange } from "react-day-picker"
-import { arSA, enUS } from 'date-fns/locale';
-import { useTranslation } from "react-i18next";
+import { arSA } from 'date-fns/locale';
 
 import { cn } from "@/lib/utils"
 import { Button,  ButtonProps } from "@/components/ui/button"
@@ -35,8 +34,7 @@ export function DatePickerWithRange({
   buttonVariant = "outline",
   disabled = false,
 }: DatePickerWithRangeProps) {
-  const { t, i18n } = useTranslation("common");
-  const dateLocale = i18n.language.startsWith('ar') ? arSA : enUS;
+  const dateLocale = arSA;
 
   return (
     <div className={cn("grid gap-2", className)}>
@@ -63,7 +61,7 @@ export function DatePickerWithRange({
                 format(date.from, "LLL dd, y", { locale: dateLocale })
               )
             ) : (
-              <span>{t('datePicker.pickDateRange', 'Pick a date range')}</span>
+              <span>اختر نطاق التاريخ</span>
             )}
           </Button>
         </PopoverTrigger>
@@ -76,7 +74,7 @@ export function DatePickerWithRange({
             onSelect={onDateChange}
             numberOfMonths={2}
             locale={dateLocale}
-            dir={i18n.dir()}
+            dir="rtl"
           />
         </PopoverContent>
       </Popover>

@@ -41,7 +41,6 @@ interface PosPdfDialogProps {
 type ReportType = 'daily-sales' | 'current-sale' | 'today-summary';
 
 export const PosPdfDialog: React.FC<PosPdfDialogProps> = ({ open, onClose }) => {
-  const { t } = useTranslation(['pos', 'common']);
   const [reportType, setReportType] = useState<ReportType>('daily-sales');
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
@@ -114,11 +113,11 @@ export const PosPdfDialog: React.FC<PosPdfDialogProps> = ({ open, onClose }) => 
   const getReportTypeLabel = (type: ReportType): string => {
     switch (type) {
       case 'daily-sales':
-        return t('pos:dailySalesReport');
+        return 'تقرير المبيعات اليومية';
       case 'current-sale':
-        return t('pos:currentSaleReport');
+        return 'تقرير البيع الحالي';
       case 'today-summary':
-        return t('pos:todaySummaryReport');
+        return 'ملخص اليوم';
       default:
         return '';
     }
@@ -127,11 +126,11 @@ export const PosPdfDialog: React.FC<PosPdfDialogProps> = ({ open, onClose }) => 
   const getReportTypeDescription = (type: ReportType): string => {
     switch (type) {
       case 'daily-sales':
-        return t('pos:dailySalesDescription');
+        return 'تقرير شامل بجميع المبيعات في تاريخ محدد';
       case 'current-sale':
-        return t('pos:currentSaleDescription');
+        return 'تقرير عن البيع الحالي';
       case 'today-summary':
-        return t('pos:todaySummaryDescription');
+        return 'ملخص شامل لمبيعات اليوم';
       default:
         return '';
     }
@@ -153,7 +152,7 @@ export const PosPdfDialog: React.FC<PosPdfDialogProps> = ({ open, onClose }) => 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <PdfIcon color="primary" />
           <Typography variant="h6">
-            {t('pos:generatePdfReport')}
+            إنشاء تقرير PDF
           </Typography>
         </Box>
         <Button
@@ -173,14 +172,14 @@ export const PosPdfDialog: React.FC<PosPdfDialogProps> = ({ open, onClose }) => 
 
         <Box sx={{ mb: 3 }}>
           <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-            {t('pos:reportType')}
+            نوع التقرير
           </Typography>
           <FormControl fullWidth>
-            <InputLabel>{t('pos:selectReportType')}</InputLabel>
+            <InputLabel>اختر نوع التقرير</InputLabel>
             <Select
               value={reportType}
               onChange={(e) => setReportType(e.target.value as ReportType)}
-              label={t('pos:selectReportType')}
+              label="اختر نوع التقرير"
             >
               <MenuItem value="daily-sales">
                 <Box>
@@ -201,7 +200,7 @@ export const PosPdfDialog: React.FC<PosPdfDialogProps> = ({ open, onClose }) => 
                     {getReportTypeDescription('current-sale')}
                   </Typography>
                   <Chip 
-                    label={t('pos:comingSoon')} 
+                    label="قريباً" 
                     size="small" 
                     color="warning" 
                     sx={{ mt: 0.5 }}
@@ -217,7 +216,7 @@ export const PosPdfDialog: React.FC<PosPdfDialogProps> = ({ open, onClose }) => 
                     {getReportTypeDescription('today-summary')}
                   </Typography>
                   <Chip 
-                    label={t('pos:comingSoon')} 
+                    label="قريباً" 
                     size="small" 
                     color="warning" 
                     sx={{ mt: 0.5 }}
@@ -231,7 +230,7 @@ export const PosPdfDialog: React.FC<PosPdfDialogProps> = ({ open, onClose }) => 
         {reportType === 'daily-sales' && (
           <Box sx={{ mb: 3 }}>
             <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-              {t('pos:reportDate')}
+              تاريخ التقرير
             </Typography>
             <TextField
               type="date"
@@ -243,18 +242,18 @@ export const PosPdfDialog: React.FC<PosPdfDialogProps> = ({ open, onClose }) => 
             />
             <Box sx={{ mt: 2 }}>
               <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-                {t('pos:selectUser', 'Select User')}
+                اختر المستخدم
               </Typography>
               <FormControl fullWidth>
-                <InputLabel>{t('pos:selectUser', 'Select User')}</InputLabel>
+                <InputLabel>اختر المستخدم</InputLabel>
                 <Select
-                  label={t('pos:selectUser', 'Select User')}
+                  label="اختر المستخدم"
                   value={selectedUserId === '' ? '' : selectedUserId}
                   onChange={(e) => setSelectedUserId(Number(e.target.value))}
                 >
-                  <MenuItem value="">{t('pos:allUsers', 'All Users')}</MenuItem>
+                  <MenuItem value="">جميع المستخدمين</MenuItem>
                   {users.map(u => (
-                    <MenuItem key={u.id} value={u.id}>{u.name}{currentUser?.id === u.id ? ` (${t('pos:you','You')})` : ''}</MenuItem>
+                    <MenuItem key={u.id} value={u.id}>{u.name}{currentUser?.id === u.id ? ` (أنت)` : ''}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -270,16 +269,16 @@ export const PosPdfDialog: React.FC<PosPdfDialogProps> = ({ open, onClose }) => 
           borderColor: 'grey.200'
         }}>
           <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-            {t('pos:reportPreview')}
+            معاينة التقرير
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {reportType === 'daily-sales' && (
               <>
-                {t('pos:dailySalesPreviewText')} <strong>{selectedDate}</strong>
+                سيتم إنشاء تقرير المبيعات اليومية لليوم <strong>{selectedDate}</strong>
               </>
             )}
-            {reportType === 'current-sale' && t('pos:currentSalePreviewText')}
-            {reportType === 'today-summary' && t('pos:todaySummaryPreviewText')}
+            {reportType === 'current-sale' && 'سيتم إنشاء تقرير عن البيع الحالي'}
+            {reportType === 'today-summary' && 'سيتم إنشاء ملخص شامل لمبيعات اليوم'}
           </Typography>
         </Box>
       </DialogContent>
@@ -290,7 +289,7 @@ export const PosPdfDialog: React.FC<PosPdfDialogProps> = ({ open, onClose }) => 
           variant="outlined"
           disabled={loading}
         >
-          {t('common:cancel')}
+          إلغاء
         </Button>
         
         <Button
@@ -299,7 +298,7 @@ export const PosPdfDialog: React.FC<PosPdfDialogProps> = ({ open, onClose }) => 
           startIcon={<PreviewIcon />}
           disabled={loading || reportType === 'current-sale' || reportType === 'today-summary'}
         >
-          {t('pos:preview')}
+          معاينة
         </Button>
         
         <Button
@@ -308,7 +307,7 @@ export const PosPdfDialog: React.FC<PosPdfDialogProps> = ({ open, onClose }) => 
           startIcon={loading ? <CircularProgress size={16} /> : <PdfIcon />}
           disabled={loading || reportType === 'current-sale' || reportType === 'today-summary'}
         >
-          {loading ? t('pos:generating') : t('pos:generatePdf')}
+          {loading ? 'جاري الإنشاء...' : 'إنشاء PDF'}
         </Button>
       </DialogActions>
     </Dialog>

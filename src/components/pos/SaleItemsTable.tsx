@@ -1,6 +1,5 @@
 // src/components/pos/SaleItemsTable.tsx
 import React from "react";
-import { useTranslation } from "react-i18next";
 
 // MUI Components
 import {
@@ -44,8 +43,6 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
   onRemoveItem, 
   loading 
 }) => {
-  const { t } = useTranslation(['pos', 'common']);
-
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
@@ -59,7 +56,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
       <CardContent sx={{ flex: 1, p: 0 }}>
         <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            {t('pos:currentSaleItems')} ({items.length})
+            عناصر البيع الحالية ({items.length})
           </Typography>
         </Box>
         
@@ -74,10 +71,10 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
           }}>
             <CartIcon sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
             <Typography variant="h6" sx={{ mb: 1 }}>
-              {t('pos:noItemsInSale')}
+              لا توجد عناصر في البيع
             </Typography>
             <Typography variant="body2">
-              {t('pos:addProductsToStart')}
+              أضف المنتجات للبدء
             </Typography>
           </Box>
         ) : (
@@ -85,11 +82,11 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
             <Table stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 600 }}>{t('pos:product')}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }} align="center">{t('pos:quantity')}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }} align="right">{t('pos:unitPrice')}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }} align="right">{t('pos:total')}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }} align="center">{t('pos:actions')}</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>المنتج</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }} align="center">الكمية</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }} align="right">سعر الوحدة</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }} align="right">الإجمالي</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }} align="center">الإجراءات</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>

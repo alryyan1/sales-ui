@@ -9,7 +9,6 @@ import React, {
 import { useForm, FormProvider, SubmitHandler } from "react-hook-form"; // Import FormProvider
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
@@ -41,15 +40,10 @@ import { PurchaseItem } from "../../../services/purchaseService"; // Needed for 
 
 // --- Component ---
 const ProcessRequisitionPage: React.FC = () => {
-  const { t } = useTranslation([
-    "inventory",
-    "common",
-    "products",
-    "validation",
-  ]);
   const navigate = useNavigate();
   const { requisitionId } = useParams<{ requisitionId: string }>(); // Get ID from URL
-const processRequisitionItemSchema = z
+
+  const processRequisitionItemSchema = z
     .object({
         id: z.number(), // StockRequisitionItem ID (original)
         product_id: z.number(),
@@ -58,7 +52,7 @@ const processRequisitionItemSchema = z
         issued_quantity: z.coerce
             .number()
             .int()
-            .min(0, { message: t("validation:minZero") })
+            .min(0, { message: "يجب أن تكون القيمة أكبر من أو تساوي صفر" })
             .optional()
             .default(0),
         issued_from_purchase_item_id: z.number().positive().nullable().optional(),
@@ -71,7 +65,7 @@ const processRequisitionItemSchema = z
         item_notes: z.string().nullable().optional(),
     })
     .refine((data) => data.issued_quantity <= data.requested_quantity, {
-        message: t("inventory:errorIssuedExceedsRequested"),
+        message: "الكمية المصدرة تتجاوز الكمية المطلوبة",
         path: ["issued_quantity"],
     })
     .refine(
@@ -79,7 +73,7 @@ const processRequisitionItemSchema = z
             !data.issued_from_purchase_item_id ||
             data.issued_quantity <= (data.available_batch_stock ?? 0),
         {
-            message: t("inventory:errorIssuedExceedsBatchStock"),
+            message: "الكمية المصدرة تتجاوز المخزون المتاح في الدفعة",
             path: ["issued_quantity"],
         }
     )
@@ -90,16 +84,16 @@ const processRequisitionItemSchema = z
                     data.issued_from_purchase_item_id !== undefined
                 : true,
         {
-            message: t("inventory:errorBatchRequiredWhenIssuing"),
+            message: "يجب اختيار الدفعة عند إصدار الكمية",
             path: ["issued_from_purchase_item_id"],
         }
     );
 
-const processRequisitionSchema = z
+  const processRequisitionSchema = z
     .object({
         status: z.enum(
             ["approved", "rejected", "partially_issued", "issued", "cancelled", "pending_approval"],
-            { required_error: t("validation:required") }
+            { required_error: "هذا الحقل مطلوب" }
         ),
         issue_date: z.date().nullable().optional(),
         notes: z.string().nullable().optional(), // Overall manager notes
@@ -111,7 +105,7 @@ const processRequisitionSchema = z
                 ? !!data.issue_date
                 : true,
         {
-            message: t("validation:issueDateRequired"),
+            message: "تاريخ الإصدار مطلوب",
             path: ["issue_date"],
         }
     );
@@ -189,25 +183,25 @@ type ProcessRequisitionFormValues = z.infer<typeof processRequisitionSchema>;
         const errorMsg = stockRequisitionService.getErrorMessage(err);
         console.log(errorMsg, "Error fetching requisition details");
         setError("root", { type: "manual", message: errorMsg });
-        toast.error(t("common:error"), { description: errorMsg });
+        toast.error("خطأ", { description: errorMsg });
         // navigate('/admin/inventory/requisitions'); // Optionally navigate back on fatal error
       } finally {
         setIsLoading(false);
       }
     },
-    [reset, t, navigate]
+    [reset, navigate]
   );
 
   useEffect(() => {
     if (requisitionId) {
       fetchRequisitionDetails(Number(requisitionId));
     } else {
-      toast.error(t("common:error"), {
-        description: "No requisition ID provided.",
+      toast.error("خطأ", {
+        description: "لم يتم توفير معرف الطلب.",
       });
       navigate("/admin/inventory/requisitions");
     }
-  }, [requisitionId, fetchRequisitionDetails, navigate, t]);
+  }, [requisitionId, fetchRequisitionDetails, navigate]);
 
   // --- Debounced Product Search for items (if needed by RequisitionItemsProcessingList) ---
   // const fetchProductsForBatchSelect = useCallback(async (search: string) => { /* ... */ }, [t]);
@@ -287,15 +281,15 @@ type ProcessRequisitionFormValues = z.infer<typeof processRequisitionSchema>;
         Number(requisitionId),
         apiData
       );
-      toast.success(t("common:success"), {
-        description: t("inventory:requisitionProcessSuccess"),
+      toast.success("تم بنجاح", {
+        description: "تم معالجة الطلب بنجاح",
       });
       navigate("/admin/inventory/requisitions");
     } catch (err) {
       console.error("Failed to process stock requisition:", err);
       const generalError = stockRequisitionService.getErrorMessage(err);
       const apiErrors = stockRequisitionService.getValidationErrors(err);
-      toast.error(t("common:error"), { description: generalError });
+      toast.error("خطأ", { description: generalError });
       setServerError(generalError);
       if (apiErrors) {
         console.log(apiErrors,'apiErrors');
@@ -315,7 +309,7 @@ type ProcessRequisitionFormValues = z.infer<typeof processRequisitionSchema>;
           }
         });
         if (Object.keys(apiErrors).length > 0)
-          setServerError(t("validation:checkFields"));
+          setServerError("يرجى التحقق من الحقول");
       }
     }
   };
@@ -334,12 +328,12 @@ type ProcessRequisitionFormValues = z.infer<typeof processRequisitionSchema>;
       <div className="p-6">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>{t("common:error")}</AlertTitle>
+          <AlertTitle>خطأ</AlertTitle>
           <AlertDescription>{serverError}</AlertDescription>
         </Alert>
         <Button className="mt-4" variant="outline" onClick={() => navigate(-1)}>
           <ArrowLeft className="me-2 h-4 w-4" />
-          {t("common:back")}
+          رجوع
         </Button>
       </div>
     );
@@ -350,12 +344,12 @@ type ProcessRequisitionFormValues = z.infer<typeof processRequisitionSchema>;
       <div className="p-6 text-center">
         <Alert>
           <AlertDescription>
-            {t("inventory:requisitionNotFound")}
+            الطلب غير موجود
           </AlertDescription>
         </Alert>
         <Button className="mt-4" variant="outline" onClick={() => navigate(-1)}>
           <ArrowLeft className="me-2 h-4 w-4" />
-          {t("common:back")}
+          رجوع
         </Button>
       </div>
     ); // Add key
@@ -372,7 +366,7 @@ type ProcessRequisitionFormValues = z.infer<typeof processRequisitionSchema>;
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="text-2xl md:text-3xl font-semibold">
-          {t("inventory:processRequisitionTitle")} #{requisition?.id}
+          معالجة الطلب #{requisition?.id}
         </h1>
       </div>
 
@@ -391,7 +385,7 @@ type ProcessRequisitionFormValues = z.infer<typeof processRequisitionSchema>;
           {serverError && !isSubmitting && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>{t("common:error")}</AlertTitle>
+              <AlertTitle>خطأ</AlertTitle>
               <AlertDescription>{serverError}</AlertDescription>
             </Alert>
           )}
@@ -421,7 +415,7 @@ type ProcessRequisitionFormValues = z.infer<typeof processRequisitionSchema>;
               {isSubmitting && (
                 <Loader2 className="me-2 h-4 w-4 animate-spin" />
               )}
-              {t("inventory:submitProcessing")}
+              إرسال المعالجة
             </Button>
           </div>
         </form>

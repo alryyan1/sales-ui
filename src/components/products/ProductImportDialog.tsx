@@ -344,7 +344,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
       {autoMapped && (
         <Alert severity="info" sx={{ mb: 2 }}>
           <Typography variant="body2">
-            {t('products:import.autoMappedMessage') || 'Columns have been automatically mapped based on similarity. Please review and adjust if needed.'}
+            تم ربط الأعمدة تلقائياً بناءً على التشابه. يرجى المراجعة والتعديل إذا لزم الأمر.
           </Typography>
         </Alert>
       )}

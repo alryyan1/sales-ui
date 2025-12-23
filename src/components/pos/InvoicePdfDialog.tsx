@@ -40,7 +40,6 @@ export const InvoicePdfDialog: React.FC<InvoicePdfDialogProps> = ({
   onClose, 
   sale 
 }) => {
-  const { t } = useTranslation(['pos', 'common']);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,7 +70,7 @@ export const InvoicePdfDialog: React.FC<InvoicePdfDialogProps> = ({
       onClose();
     } catch (err) {
       console.error('Failed to generate invoice PDF:', err);
-      setError(t('pos:invoicePdfGenerationFailed'));
+      setError('فشل في إنشاء ملف PDF للفاتورة');
     } finally {
       setLoading(false);
     }
@@ -103,7 +102,7 @@ export const InvoicePdfDialog: React.FC<InvoicePdfDialogProps> = ({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <ReceiptIcon color="primary" />
           <Typography variant="h6">
-            {t('pos:generateInvoicePdf')}
+            إنشاء ملف PDF للفاتورة
           </Typography>
         </Box>
         <Button
@@ -124,7 +123,7 @@ export const InvoicePdfDialog: React.FC<InvoicePdfDialogProps> = ({
         {/* Sale Information */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-            {t('pos:saleInformation')}
+            معلومات البيع
           </Typography>
           <Box sx={{ 
             p: 2, 
@@ -135,23 +134,23 @@ export const InvoicePdfDialog: React.FC<InvoicePdfDialogProps> = ({
           }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
               <Typography variant="body2" color="text.secondary">
-                {t('pos:invoiceNumber')}:
+                رقم الفاتورة:
               </Typography>
               <Typography variant="body2" fontWeight={500}>
-                {sale.invoice_number || t('pos:notAssigned')}
+                {sale.invoice_number || 'غير معين'}
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
               <Typography variant="body2" color="text.secondary">
-                {t('pos:client')}:
+                العميل:
               </Typography>
               <Typography variant="body2" fontWeight={500}>
-                {sale.client_name || t('pos:noClient')}
+                {sale.client_name || 'لا يوجد عميل'}
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
               <Typography variant="body2" color="text.secondary">
-                {t('pos:totalAmount')}:
+                المبلغ الإجمالي:
               </Typography>
               <Typography variant="body2" fontWeight={500}>
                 {sale.total_amount.toFixed(0)}
@@ -159,10 +158,10 @@ export const InvoicePdfDialog: React.FC<InvoicePdfDialogProps> = ({
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
               <Typography variant="body2" color="text.secondary">
-                {t('pos:itemsCount')}:
+                عدد العناصر:
               </Typography>
               <Typography variant="body2" fontWeight={500}>
-                {sale.items.length} {t('pos:items')}
+                {sale.items.length} عنصر
               </Typography>
             </Box>
           </Box>
@@ -177,14 +176,14 @@ export const InvoicePdfDialog: React.FC<InvoicePdfDialogProps> = ({
           borderColor: 'primary.200'
         }}>
           <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: 'primary.main' }}>
-            {t('pos:invoicePreview')}
+            معاينة الفاتورة
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {t('pos:invoicePreviewText')}
+            سيتم إنشاء فاتورة احترافية بتنسيق PDF
           </Typography>
           <Box sx={{ mt: 1 }}>
             <Chip 
-              label={t('pos:professionalInvoice')} 
+              label="فاتورة احترافية" 
               size="small" 
               color="primary" 
               variant="outlined"
@@ -199,7 +198,7 @@ export const InvoicePdfDialog: React.FC<InvoicePdfDialogProps> = ({
           variant="outlined"
           disabled={loading}
         >
-          {t('common:cancel')}
+          إلغاء
         </Button>
         
         <Button
@@ -208,7 +207,7 @@ export const InvoicePdfDialog: React.FC<InvoicePdfDialogProps> = ({
           startIcon={<PdfIcon />}
           disabled={loading}
         >
-          {t('pos:preview')}
+          معاينة
         </Button>
         
         <Button
@@ -218,7 +217,7 @@ export const InvoicePdfDialog: React.FC<InvoicePdfDialogProps> = ({
           disabled={loading}
           color="primary"
         >
-          {loading ? t('pos:generating') : t('pos:generateInvoice')}
+          {loading ? 'جاري الإنشاء...' : 'إنشاء الفاتورة'}
         </Button>
       </DialogActions>
     </Dialog>

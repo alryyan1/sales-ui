@@ -1,6 +1,5 @@
 // src/components/common/PdfViewerDialog.tsx
 import React, { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
 
 // shadcn/ui components
 import {
@@ -25,7 +24,6 @@ export const PdfViewerDialog: React.FC<PdfViewerDialogProps> = ({
   pdfUrl,
   title,
 }) => {
-  const { t } = useTranslation(["common", "reports"]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,7 +49,7 @@ export const PdfViewerDialog: React.FC<PdfViewerDialogProps> = ({
 
   const handleIframeError = () => {
     setIsLoading(false);
-    setError(t("common:errorLoadingPdf"));
+    setError("خطأ في تحميل ملف PDF");
   };
 
   return (
@@ -59,7 +57,7 @@ export const PdfViewerDialog: React.FC<PdfViewerDialogProps> = ({
       <DialogContent className="max-w-6xl w-[95vw] h-[90vh] p-0">
         <DialogHeader className="flex flex-row items-center justify-between p-4 border-b">
           <DialogTitle className="text-lg font-semibold">
-            {title || t("reports:inventoryReportTitle")}
+            {title || "تقرير المخزون"}
           </DialogTitle>
           <div className="flex items-center gap-2">
             <Button
@@ -69,7 +67,7 @@ export const PdfViewerDialog: React.FC<PdfViewerDialogProps> = ({
               className="flex items-center gap-2"
             >
               <Download className="h-4 w-4" />
-              {t("common:download")}
+              تحميل
             </Button>
             <Button
               variant="ghost"
@@ -88,7 +86,7 @@ export const PdfViewerDialog: React.FC<PdfViewerDialogProps> = ({
               <div className="flex flex-col items-center gap-2">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <p className="text-sm text-muted-foreground">
-                  {t("common:loadingPdf")}
+                  جاري تحميل ملف PDF...
                 </p>
               </div>
             </div>
@@ -99,7 +97,7 @@ export const PdfViewerDialog: React.FC<PdfViewerDialogProps> = ({
               <div className="flex flex-col items-center gap-2 text-center">
                 <p className="text-sm text-destructive">{error}</p>
                 <Button variant="outline" size="sm" onClick={onClose}>
-                  {t("common:close")}
+                  إغلاق
                 </Button>
               </div>
             </div>
@@ -110,7 +108,7 @@ export const PdfViewerDialog: React.FC<PdfViewerDialogProps> = ({
             className="w-full h-full border-0"
             onLoad={handleIframeLoad}
             onError={handleIframeError}
-            title={title || t("reports:inventoryReportTitle")}
+            title={title || "تقرير المخزون"}
           />
         </div>
       </DialogContent>

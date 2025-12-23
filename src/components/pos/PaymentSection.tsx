@@ -1,6 +1,5 @@
 // src/components/pos/PaymentSection.tsx
 import React, { useState, useEffect, useRef } from "react";
-import { useTranslation } from "react-i18next";
 
 // MUI Components
 import {
@@ -34,13 +33,13 @@ import { formatNumber, preciseSum, preciseCalculation } from "@/constants";
 
 // Payment Method Options
 const paymentMethodOptions = [
-  { value: 'cash', labelKey: 'paymentMethods:cash' },
-  { value: 'visa', labelKey: 'paymentMethods:visa' },
-  { value: 'mastercard', labelKey: 'paymentMethods:mastercard' },
-  { value: 'bank_transfer', labelKey: 'paymentMethods:bank_transfer' },
-  { value: 'mada', labelKey: 'paymentMethods:mada' },
-  { value: 'store_credit', labelKey: 'paymentMethods:store_credit' },
-  { value: 'other', labelKey: 'paymentMethods:other' },
+  { value: 'cash', label: 'نقداً' },
+  { value: 'visa', label: 'فيزا' },
+  { value: 'mastercard', label: 'ماستركارد' },
+  { value: 'bank_transfer', label: 'تحويل بنكي' },
+  { value: 'mada', label: 'مدى' },
+  { value: 'store_credit', label: 'رصيد المحل' },
+  { value: 'other', label: 'أخرى' },
 ];
 
 interface PaymentLine {
@@ -73,8 +72,6 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
   isEditMode = false,
   salePayments = [],
 }) => {
-  const { t } = useTranslation(['pos', 'common', 'paymentMethods']);
-
   // Local state for payment functionality
   const [paymentLines, setPaymentLines] = useState<PaymentLine[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
@@ -263,7 +260,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <CreditCard className="h-5 w-5" />
-            <span>{t('pos:paymentMethods')}</span>
+            <span>طرق الدفع</span>
           </div>
           <Button
             variant="outline"
@@ -273,7 +270,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
             className="h-8 px-2"
           >
             <AddIcon className="h-4 w-4 mr-1" />
-            {t('pos:addPaymentMethod')}
+            إضافة طريقة دفع
           </Button>
         </CardTitle>
       </CardHeader>
@@ -290,7 +287,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
 
         {paymentLines.length === 0 ? (
           <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
-            {t('pos:noPaymentsAdded')}
+            لم تتم إضافة دفعات
           </Typography>
         ) : (
           <div className="space-y-1">
@@ -310,16 +307,16 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
                   
                   <div className="flex gap-1 items-end">
                     <FormControl size="small" sx={{ minWidth: 120 }}>
-                      <InputLabel>{t('pos:paymentMethod')}</InputLabel>
+                      <InputLabel>طريقة الدفع</InputLabel>
                       <Select
                         value={paymentLine.method}
                         onChange={(e) => updatePaymentLine(paymentLine.id, 'method', e.target.value)}
-                        label={t('pos:paymentMethod')}
+                        label="طريقة الدفع"
                         disabled={isFromSale}
                       >
                         {paymentMethodOptions.map(option => (
                           <MenuItem key={option.value} value={option.value}>
-                            {getPaymentMethodName(option.value)}
+                            {option.label}
                           </MenuItem>
                         ))}
                       </Select>
@@ -327,7 +324,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
                     
                     <TextField
                       size="small"
-                      label={t('pos:paymentAmount')}
+                      label="مبلغ الدفع"
                       type="number"
                       value={paymentLine.amount}
                       onChange={(e) => {
@@ -342,7 +339,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
                         max: amountDue + paymentLine.amount
                       }}
                       error={paymentLine.amount > amountDue + paymentLine.amount}
-                      helperText={paymentLine.amount > amountDue + paymentLine.amount ? 'Amount exceeds remaining balance' : ''}
+                      helperText={paymentLine.amount > amountDue + paymentLine.amount ? 'المبلغ يتجاوز الرصيد المتبقي' : ''}
                       sx={{ minWidth: 120 }}
                       disabled={isFromSale}
                     />
@@ -350,7 +347,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
                   
                   {isFromSale && (
                     <div className="mt-1 text-xs text-gray-500">
-                      {t('pos:paymentFromSale')}
+                      دفعة من البيع
                     </div>
                   )}
                 </div>
@@ -365,11 +362,11 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
             <Separator />
             <div className="space-y-1">
               <div className="flex justify-between">
-                <span className="text-gray-600">{t('pos:amountPaid')}</span>
+                <span className="text-gray-600">المبلغ المدفوع</span>
                 <span className="font-medium text-blue-600">{formatNumber(effectiveTotalPaid)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">{t('pos:amountDue')}</span>
+                <span className="text-gray-600">المبلغ المستحق</span>
                 <span className={`font-medium ${amountDue > 0 ? 'text-red-600' : 'text-green-600'}`}>
                   {formatNumber(amountDue)}
                 </span>

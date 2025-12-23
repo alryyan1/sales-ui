@@ -1,7 +1,6 @@
 // src/components/ui/DetailRowDisplay.tsx
 import React from 'react';
 import { cn } from "@/lib/utils"; // Your shadcn/ui utility for conditional classes
-import { useTranslation } from 'react-i18next'; // For default "N/A"
 
 interface DetailRowDisplayProps {
   label: string;
@@ -26,10 +25,8 @@ const DetailRowDisplay: React.FC<DetailRowDisplayProps> = ({
   isLoading = false,
   unit, // Added unit prop
 }) => {
-  const { t } = useTranslation("common"); // For "N/A" or loading text
-
   const displayValue = value === null || value === undefined || (typeof value === 'string' && value.trim() === '')
-    ? <span className="text-xs italic text-slate-400 dark:text-slate-500">{t('notAvailable_short', 'N/A')}</span>
+    ? <span className="text-xs italic text-slate-400 dark:text-slate-500">غير متوفر</span>
     : (
       <span>
         {value}

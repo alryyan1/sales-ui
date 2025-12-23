@@ -1,9 +1,6 @@
 // src/components/suppliers/PaymentFormModal.tsx
 import React, { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { format } from 'date-fns';
 
 // UI Components
@@ -47,23 +44,15 @@ import supplierPaymentService, {
   UpdatePaymentData,
 } from '@/services/supplierPaymentService';
 
-// Validation schema
-const paymentSchema = z.object({
-  amount: z.coerce
-    .number({ invalid_type_error: 'validation:invalidAmount' })
-    .min(0.01, { message: 'validation:minAmount' }),
-  type: z.enum(['payment', 'credit', 'adjustment'], {
-    required_error: 'validation:required',
-  }),
-  method: z.enum(['cash', 'bank_transfer', 'check', 'credit_card', 'other'], {
-    required_error: 'validation:required',
-  }),
-  reference_number: z.string().optional(),
-  notes: z.string().optional(),
-  payment_date: z.string().min(1, { message: 'validation:required' }),
-});
-
-type PaymentFormData = z.infer<typeof paymentSchema>;
+// Form types
+type PaymentFormData = {
+  amount: number;
+  type: 'payment' | 'credit' | 'adjustment';
+  method: 'cash' | 'bank_transfer' | 'check' | 'credit_card' | 'other';
+  reference_number?: string;
+  notes?: string;
+  payment_date: string;
+};
 
 interface PaymentFormModalProps {
   isOpen: boolean;
@@ -84,12 +73,10 @@ const PaymentFormModal: React.FC<PaymentFormModalProps> = ({
   paymentMethods,
   paymentTypes,
 }) => {
-  const { t } = useTranslation(['suppliers', 'common', 'validation']);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<PaymentFormData>({
-    resolver: zodResolver(paymentSchema),
     defaultValues: {
       amount: 0,
       type: 'payment',
@@ -130,6 +117,28 @@ const PaymentFormModal: React.FC<PaymentFormModalProps> = ({
     setIsSubmitting(true);
     setError(null);
 
+    // Basic validation
+    if (!data.amount || data.amount <= 0) {
+      form.setError('amount', { type: 'manual', message: 'المبلغ يجب أن يكون أكبر من صفر' });
+      setIsSubmitting(false);
+      return;
+    }
+    if (!data.type) {
+      form.setError('type', { type: 'manual', message: 'هذا الحقل مطلوب' });
+      setIsSubmitting(false);
+      return;
+    }
+    if (!data.method) {
+      form.setError('method', { type: 'manual', message: 'هذا الحقل مطلوب' });
+      setIsSubmitting(false);
+      return;
+    }
+    if (!data.payment_date || data.payment_date.trim() === '') {
+      form.setError('payment_date', { type: 'manual', message: 'هذا الحقل مطلوب' });
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       if (paymentToEdit) {
         await supplierPaymentService.updatePayment(paymentToEdit.id, {
@@ -159,12 +168,12 @@ const PaymentFormModal: React.FC<PaymentFormModalProps> = ({
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>
-            {paymentToEdit ? t('suppliers:editPayment') : t('suppliers:addPayment')}
+            {paymentToEdit ? 'تعديل الدفع' : 'إضافة دفعة'}
           </DialogTitle>
           <DialogDescription>
             {paymentToEdit 
-              ? t('suppliers:editPayment') 
-              : t('suppliers:addPayment')
+              ? 'تعديل معلومات الدفعة' 
+              : 'إضافة دفعة جديدة للمورد'
             }
           </DialogDescription>
         </DialogHeader>
@@ -183,13 +192,15 @@ const PaymentFormModal: React.FC<PaymentFormModalProps> = ({
               name="amount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('suppliers:amount')}</FormLabel>
+                  <FormLabel>المبلغ</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
                       step="0.01"
                       placeholder="0.00"
                       {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                      value={field.value || ''}
                     />
                   </FormControl>
                   <FormMessage />
@@ -203,11 +214,11 @@ const PaymentFormModal: React.FC<PaymentFormModalProps> = ({
               name="type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('suppliers:paymentType')}</FormLabel>
+                  <FormLabel>نوع الدفع</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={t('suppliers:paymentType')} />
+                        <SelectValue placeholder="اختر نوع الدفع" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -229,11 +240,11 @@ const PaymentFormModal: React.FC<PaymentFormModalProps> = ({
               name="method"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('suppliers:paymentMethod')}</FormLabel>
+                  <FormLabel>طريقة الدفع</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={t('suppliers:paymentMethod')} />
+                        <SelectValue placeholder="اختر طريقة الدفع" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -255,7 +266,7 @@ const PaymentFormModal: React.FC<PaymentFormModalProps> = ({
               name="payment_date"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('suppliers:paymentDate')}</FormLabel>
+                  <FormLabel>تاريخ الدفع</FormLabel>
                   <FormControl>
                     <Input
                       type="date"
@@ -273,10 +284,10 @@ const PaymentFormModal: React.FC<PaymentFormModalProps> = ({
               name="reference_number"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('suppliers:referenceNumber')}</FormLabel>
+                  <FormLabel>رقم المرجع</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder={t('suppliers:referenceNumberPlaceholder')}
+                      placeholder="أدخل رقم المرجع"
                       {...field}
                     />
                   </FormControl>
@@ -291,10 +302,10 @@ const PaymentFormModal: React.FC<PaymentFormModalProps> = ({
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('suppliers:notes')}</FormLabel>
+                  <FormLabel>ملاحظات</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder={t('suppliers:notesPlaceholder')}
+                      placeholder="أدخل الملاحظات"
                       className="resize-none"
                       {...field}
                     />
@@ -311,14 +322,14 @@ const PaymentFormModal: React.FC<PaymentFormModalProps> = ({
                 onClick={handleClose}
                 disabled={isSubmitting}
               >
-                {t('common:cancel')}
+                إلغاء
               </Button>
               <Button
                 type="submit"
                 disabled={isSubmitting}
               >
                 {isSubmitting && <LoadingSpinner className="mr-2 h-4 w-4" />}
-                {paymentToEdit ? t('common:update') : t('common:save')}
+                {paymentToEdit ? 'تحديث' : 'حفظ'}
               </Button>
             </DialogFooter>
           </form>

@@ -1,6 +1,5 @@
 // src/components/pos/ThermalInvoiceDialog.tsx
 import React, { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
 
 // MUI Components
 import {
@@ -38,7 +37,6 @@ export const ThermalInvoiceDialog: React.FC<ThermalInvoiceDialogProps> = ({
   onClose,
   sale,
 }) => {
-  const { t } = useTranslation(['pos', 'common']);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +65,7 @@ export const ThermalInvoiceDialog: React.FC<ThermalInvoiceDialogProps> = ({
       setPdfUrl(url);
     } catch (err) {
       console.error('Failed to load thermal invoice:', err);
-      setError(t('pos:thermalInvoicePrintFailed'));
+      setError('فشل في تحميل الفاتورة الحرارية');
     } finally {
       setLoading(false);
     }
@@ -121,7 +119,7 @@ export const ThermalInvoiceDialog: React.FC<ThermalInvoiceDialogProps> = ({
       <DialogTitle>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6">
-            {t('pos:thermalInvoicePreview')} - {sale?.sale_order_number || sale?.id}
+            معاينة الفاتورة الحرارية - {sale?.sale_order_number || sale?.id}
           </Typography>
           <IconButton onClick={handleClose}>
             <CloseIcon />
@@ -140,7 +138,7 @@ export const ThermalInvoiceDialog: React.FC<ThermalInvoiceDialogProps> = ({
             gap: 2
           }}>
             <CircularProgress />
-            <Typography>{t('common:loading')}</Typography>
+            <Typography>جاري التحميل</Typography>
           </Box>
         )}
 
@@ -170,7 +168,7 @@ export const ThermalInvoiceDialog: React.FC<ThermalInvoiceDialogProps> = ({
       
       <DialogActions>
         <Button onClick={handleClose}>
-          {t('common:close')}
+          إغلاق
         </Button>
         {pdfUrl && (
           <>
@@ -179,14 +177,14 @@ export const ThermalInvoiceDialog: React.FC<ThermalInvoiceDialogProps> = ({
               onClick={handleDownload}
               startIcon={<DownloadIcon />}
             >
-              {t('common:download')}
+              تنزيل
             </Button>
             <Button
               variant="contained"
               onClick={handlePrint}
               startIcon={<PrintIcon />}
             >
-              {t('common:print')}
+              طباعة
             </Button>
           </>
         )}

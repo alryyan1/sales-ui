@@ -20,16 +20,12 @@ import {
   IconButton,
   Chip,
   Pagination,
-  CircularProgress,
   Alert,
   AlertTitle,
   Tooltip,
   Stack,
-  useTheme,
-  alpha,
   Avatar,
   Badge,
-  Fade,
   Skeleton,
 } from "@mui/material";
 import {
@@ -37,15 +33,9 @@ import {
   Plus,
   Edit,
   Trash2,
-  AlertCircle,
-  ShieldCheck,
   Users,
   Store,
-  User as UserIcon,
-  Filter,
   X,
-  MoreVertical,
-  Mail,
 } from "lucide-react";
 
 import { useQuery } from "@tanstack/react-query";
@@ -60,7 +50,6 @@ import UserFormModal from "./UserFormModal";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
 
 const UsersListPage: React.FC = () => {
-  const theme = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user: currentUser } = useAuthorization();
 
@@ -71,7 +60,6 @@ const UsersListPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
   const [page, setPage] = useState(initialPage);
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   // Debounce logic
   useEffect(() => {
@@ -185,352 +173,136 @@ const UsersListPage: React.FC = () => {
   };
 
   return (
-    <Container
-      maxWidth="xl"
-      sx={{
-        py: { xs: 3, md: 4 },
-        direction: "rtl",
-        minHeight: "100vh",
-        bgcolor: "background.default",
-      }}
-    >
+    <Container maxWidth="xl">
       {/* Header Section */}
-      <Fade in timeout={600}>
-        <Box
-          sx={{
-            mb: 4,
-            display: "flex",
-            flexDirection: { xs: "column", sm: "row" },
-            justifyContent: "space-between",
-            alignItems: { xs: "stretch", sm: "flex-start" },
-            gap: 3,
-          }}
-        >
-          <Box>
-            <Typography
-              variant="h4"
-              component="h1"
-              fontWeight={800}
-              gutterBottom
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 2,
-                color: "text.primary",
-                mb: 1,
-                fontSize: { xs: "1.75rem", md: "2.125rem" },
-              }}
-            >
-              <Box
-                sx={{
-                  p: 1.5,
-                  borderRadius: 3,
-                  bgcolor: alpha(theme.palette.primary.main, 0.1),
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Users
-                  size={28}
-                  style={{ color: theme.palette.primary.main }}
-                />
-              </Box>
-              إدارة المستخدمين
-            </Typography>
-            <Typography
-              variant="body1"
-              color="text.secondary"
-              sx={{ fontSize: { xs: "0.875rem", md: "1rem" } }}
-            >
-              إدارة حسابات المستخدمين، الصلاحيات، والمستودعات المرتبطة بهم
-            </Typography>
-          </Box>
-
-          <Button
-            variant="contained"
-            size="large"
-            startIcon={<Plus size={20} />}
-            onClick={() => openModal()}
-            sx={{
-              fontWeight: 700,
-              px: 4,
-              py: 1.5,
-              borderRadius: 3,
-              boxShadow: `0 4px 14px 0 ${alpha(theme.palette.primary.main, 0.39)}`,
-              textTransform: "none",
-              fontSize: "0.9375rem",
-              background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-              "&:hover": {
-                boxShadow: `0 6px 20px 0 ${alpha(theme.palette.primary.main, 0.5)}`,
-                background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
-              },
-              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-            }}
-          >
-            مستخدم جديد
-          </Button>
+      <Box sx={{ mb: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Box>
+          <Typography variant="h4" component="h1" gutterBottom>
+            إدارة المستخدمين
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            إدارة حسابات المستخدمين، الصلاحيات، والمستودعات المرتبطة بهم
+          </Typography>
         </Box>
-      </Fade>
+
+        <Button
+          variant="contained"
+          startIcon={<Plus size={20} />}
+          onClick={() => openModal()}
+        >
+          مستخدم جديد
+        </Button>
+      </Box>
 
       {/* Search & Filter Card */}
-      <Fade in timeout={800}>
-        <Card
-          elevation={0}
-          sx={{
-            mb: 4,
-            borderRadius: 4,
-            border: `1px solid ${alpha(theme.palette.divider, 0.8)}`,
-            bgcolor: "background.paper",
-            boxShadow: `0 2px 8px ${alpha(theme.palette.common.black, 0.04)}`,
-            transition: "all 0.3s ease",
-            "&:hover": {
-              boxShadow: `0 4px 16px ${alpha(theme.palette.common.black, 0.08)}`,
-            },
-          }}
-        >
-          <CardContent sx={{ p: 3 }}>
-            <Stack direction="row" spacing={2} alignItems="center">
-              <Box sx={{ position: "relative", flex: 1 }}>
-                <TextField
-                  fullWidth
-                  variant="outlined"
-                  placeholder="ابحث عن مستخدم بالاسم أو اسم المستخدم..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onFocus={() => setIsSearchFocused(true)}
-                  onBlur={() => setIsSearchFocused(false)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Search
-                          size={20}
-                          style={{
-                            color: isSearchFocused
-                              ? theme.palette.primary.main
-                              : theme.palette.text.disabled,
-                            transition: "color 0.2s",
-                          }}
-                        />
-                      </InputAdornment>
-                    ),
-                    endAdornment: searchTerm && (
-                      <InputAdornment position="end">
-                        <IconButton
-                          size="small"
-                          onClick={() => setSearchTerm("")}
-                          sx={{ p: 0.5 }}
-                        >
-                          <X size={16} />
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                    sx: {
-                      borderRadius: 3,
-                      bgcolor: "background.default",
-                      transition: "all 0.2s",
-                      "& fieldset": {
-                        borderColor: isSearchFocused
-                          ? theme.palette.primary.main
-                          : "transparent",
-                        borderWidth: isSearchFocused ? 2 : 1,
-                      },
-                      "&:hover fieldset": {
-                        borderColor: theme.palette.primary.main,
-                      },
-                      "&.Mui-focused fieldset": {
-                        borderColor: `${theme.palette.primary.main} !important`,
-                        borderWidth: 2,
-                      },
-                    },
-                  }}
-                  size="medium"
-                />
-              </Box>
-              {usersResponse && (
-                <Chip
-                  label={`${usersResponse.total} مستخدم`}
-                  sx={{
-                    height: 40,
-                    fontWeight: 600,
-                    bgcolor: alpha(theme.palette.primary.main, 0.1),
-                    color: theme.palette.primary.main,
-                  }}
-                />
-              )}
-            </Stack>
-          </CardContent>
-        </Card>
-      </Fade>
+      <Card sx={{ mb: 4 }}>
+        <CardContent>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder="ابحث عن مستخدم بالاسم أو اسم المستخدم..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search size={20} />
+                  </InputAdornment>
+                ),
+                endAdornment: searchTerm && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      onClick={() => setSearchTerm("")}
+                    >
+                      <X size={16} />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+            {usersResponse && (
+              <Chip label={`${usersResponse.total} مستخدم`} />
+            )}
+          </Stack>
+        </CardContent>
+      </Card>
 
       {/* Loading State */}
       {isLoading && (
-        <Fade in timeout={400}>
-          <Card
-            elevation={0}
-            sx={{
-              borderRadius: 4,
-              border: `1px solid ${alpha(theme.palette.divider, 0.8)}`,
-              overflow: "hidden",
-            }}
-          >
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <TableCell key={i}>
-                        <Skeleton height={24} />
+        <Card>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <TableCell key={i}>
+                      <Skeleton height={24} />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <TableRow key={i}>
+                    {[1, 2, 3, 4, 5].map((j) => (
+                      <TableCell key={j}>
+                        <Skeleton height={40} />
                       </TableCell>
                     ))}
                   </TableRow>
-                </TableHead>
-                <TableBody>
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <TableRow key={i}>
-                      {[1, 2, 3, 4, 5].map((j) => (
-                        <TableCell key={j}>
-                          <Skeleton height={40} />
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Card>
-        </Fade>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Card>
       )}
 
       {/* Error State */}
       {isError && (
-        <Fade in timeout={400}>
-          <Alert
-            severity="error"
-            variant="filled"
-            icon={<AlertCircle size={24} />}
-            sx={{
-              mb: 4,
-              borderRadius: 3,
-              boxShadow: theme.shadows[4],
-            }}
-          >
-            <AlertTitle sx={{ fontWeight: "bold", mb: 0.5 }}>
-              خطأ في تحميل البيانات
-            </AlertTitle>
-            {error instanceof Error
-              ? error.message
-              : "حدث خطأ غير متوقع أثناء الاتصال بالخادم."}
-          </Alert>
-        </Fade>
+        <Alert severity="error" sx={{ mb: 4 }}>
+          <AlertTitle>خطأ في تحميل البيانات</AlertTitle>
+          {error instanceof Error
+            ? error.message
+            : "حدث خطأ غير متوقع أثناء الاتصال بالخادم."}
+        </Alert>
       )}
 
       {/* Data Table */}
       {!isLoading && !isError && usersResponse && (
-        <Fade in timeout={600}>
-          <Card
-            elevation={0}
-            sx={{
-              borderRadius: 4,
-              border: `1px solid ${alpha(theme.palette.divider, 0.8)}`,
-              overflow: "hidden",
-              boxShadow: `0 2px 8px ${alpha(theme.palette.common.black, 0.04)}`,
-            }}
-          >
-            <TableContainer>
-              <Table sx={{ minWidth: 700 }} aria-label="users table">
-                <TableHead>
-                  <TableRow
-                    sx={{
-                      bgcolor: alpha(theme.palette.primary.main, 0.04),
-                      "& th": {
-                        borderBottom: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                        fontWeight: 700,
-                        py: 2.5,
-                        fontSize: "0.875rem",
-                        color: "text.primary",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.5px",
-                        textAlign: "center",
-                      },
-                    }}
-                  >
-                    <TableCell align="center">المستخدم</TableCell>
-                    <TableCell align="center">اسم الدخول</TableCell>
-                    <TableCell align="center">الأدوار</TableCell>
-                    <TableCell align="center">المستودع</TableCell>
-                    <TableCell align="center" sx={{ width: 120 }}>
-                      الإجراءات
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
+        <Card>
+          <TableContainer>
+            <Table aria-label="users table">
+              <TableHead>
+                <TableRow>
+                  <TableCell align="center">المستخدم</TableCell>
+                  <TableCell align="center">اسم الدخول</TableCell>
+                  <TableCell align="center">الأدوار</TableCell>
+                  <TableCell align="center">المستودع</TableCell>
+                  <TableCell align="center">الإجراءات</TableCell>
+                </TableRow>
+              </TableHead>
                 <TableBody>
                   {usersResponse.data.length === 0 ? (
                     <TableRow>
-                      <TableCell
-                        colSpan={5}
-                        align="center"
-                        sx={{ py: 10, textAlign: "center" }}
-                      >
-                        <Stack alignItems="center" spacing={3}>
-                          <Box
-                            sx={{
-                              p: 3,
-                              borderRadius: "50%",
-                              bgcolor: alpha(theme.palette.text.disabled, 0.1),
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                            }}
-                          >
-                            <Users
-                              size={48}
-                              style={{ color: theme.palette.text.disabled }}
-                            />
-                          </Box>
-                          <Box textAlign="center">
-                            <Typography
-                              variant="h6"
-                              color="text.secondary"
-                              fontWeight={600}
-                              gutterBottom
-                            >
-                              لا توجد نتائج مطابقة
-                            </Typography>
-                            <Typography
-                              variant="body2"
-                              color="text.disabled"
-                            >
-                              حاول ضبط مصطلحات البحث الخاصة بك
-                            </Typography>
-                          </Box>
+                      <TableCell colSpan={5} align="center">
+                        <Stack alignItems="center" spacing={2}>
+                          <Users size={48} />
+                          <Typography variant="h6" color="text.secondary">
+                            لا توجد نتائج مطابقة
+                          </Typography>
+                          <Typography variant="body2" color="text.disabled">
+                            حاول ضبط مصطلحات البحث الخاصة بك
+                          </Typography>
                         </Stack>
                       </TableCell>
                     </TableRow>
                   ) : (
-                    usersResponse.data.map((user, index) => (
-                      <TableRow
-                        key={user.id}
-                        hover
-                        sx={{
-                          "&:last-child td, &:last-child th": { border: 0 },
-                          transition: "all 0.2s ease",
-                          "&:hover": {
-                            bgcolor: alpha(theme.palette.primary.main, 0.02),
-                            transform: "translateX(-2px)",
-                          },
-                          "& td": {
-                            textAlign: "center",
-                            verticalAlign: "middle",
-                          },
-                        }}
-                      >
+                    usersResponse.data.map((user) => (
+                      <TableRow key={user.id} hover>
                         <TableCell align="center">
-                          <Stack
-                            direction="row"
-                            alignItems="center"
-                            spacing={2}
-                          >
+                          <Stack direction="row" alignItems="center" spacing={2}>
                             <Badge
                               overlap="circular"
                               anchorOrigin={{
@@ -544,66 +316,27 @@ const UsersListPage: React.FC = () => {
                                       width: 12,
                                       height: 12,
                                       borderRadius: "50%",
-                                      bgcolor: theme.palette.success.main,
-                                      border: `2px solid ${theme.palette.background.paper}`,
+                                      bgcolor: "success.main",
+                                      border: "2px solid white",
                                     }}
                                   />
                                 ) : null
                               }
                             >
-                              <Avatar
-                                sx={{
-                                  width: 44,
-                                  height: 44,
-                                  bgcolor: theme.palette.primary.main,
-                                  fontWeight: 700,
-                                  fontSize: "0.875rem",
-                                  boxShadow: theme.shadows[2],
-                                }}
-                              >
-                                {getInitials(user.name)}
-                              </Avatar>
+                              <Avatar>{getInitials(user.name)}</Avatar>
                             </Badge>
                             <Box>
-                              <Typography
-                                variant="subtitle2"
-                                fontWeight={600}
-                                sx={{ mb: 0.5 }}
-                              >
+                              <Typography variant="subtitle2">
                                 {user.name}
                               </Typography>
                               {user.id === currentUser?.id && (
-                                <Chip
-                                  label="أنت"
-                                  size="small"
-                                  sx={{
-                                    height: 20,
-                                    fontSize: "0.7rem",
-                                    bgcolor: alpha(
-                                      theme.palette.success.main,
-                                      0.1
-                                    ),
-                                    color: theme.palette.success.main,
-                                    fontWeight: 600,
-                                  }}
-                                />
+                                <Chip label="أنت" size="small" />
                               )}
                             </Box>
                           </Stack>
                         </TableCell>
                         <TableCell align="center">
-                          <Typography
-                            variant="body2"
-                            fontFamily="monospace"
-                            color="text.secondary"
-                            sx={{
-                              bgcolor: alpha(theme.palette.text.secondary, 0.05),
-                              px: 1.5,
-                              py: 0.5,
-                              borderRadius: 1.5,
-                              display: "inline-block",
-                            }}
-                          >
+                          <Typography variant="body2" fontFamily="monospace">
                             @{user.username}
                           </Typography>
                         </TableCell>
@@ -611,7 +344,7 @@ const UsersListPage: React.FC = () => {
                           <Stack
                             direction="row"
                             flexWrap="wrap"
-                            gap={0.75}
+                            gap={0.5}
                             justifyContent="center"
                           >
                             {(user.roles ?? []).map((roleName) => {
@@ -622,23 +355,8 @@ const UsersListPage: React.FC = () => {
                                   key={roleName}
                                   label={roleName}
                                   size="small"
-                                  icon={
-                                    isAdmin ? (
-                                      <ShieldCheck size={14} />
-                                    ) : (
-                                      <UserIcon size={14} />
-                                    )
-                                  }
                                   color={isAdmin ? "primary" : "default"}
                                   variant={isAdmin ? "filled" : "outlined"}
-                                  sx={{
-                                    fontWeight: 600,
-                                    fontSize: "0.75rem",
-                                    height: 24,
-                                    "& .MuiChip-icon": {
-                                      ml: 0.5,
-                                    },
-                                  }}
                                 />
                               );
                             })}
@@ -646,95 +364,30 @@ const UsersListPage: React.FC = () => {
                         </TableCell>
                         <TableCell align="center">
                           {user.warehouse ? (
-                            <Stack
-                              direction="row"
-                              alignItems="center"
-                              spacing={1}
-                              sx={{
-                                px: 1.5,
-                                py: 0.75,
-                                borderRadius: 2,
-                                bgcolor: alpha(
-                                  theme.palette.info.main,
-                                  0.08
-                                ),
-                                display: "inline-flex",
-                              }}
-                            >
-                              <Store
-                                size={16}
-                                style={{ color: theme.palette.info.main }}
-                              />
-                              <Typography
-                                variant="body2"
-                                fontWeight={500}
-                                color="text.primary"
-                              >
+                            <Stack direction="row" alignItems="center" spacing={1}>
+                              <Store size={16} />
+                              <Typography variant="body2">
                                 {user.warehouse.name}
                               </Typography>
                             </Stack>
                           ) : (
-                            <Typography
-                              variant="caption"
-                              color="text.disabled"
-                              sx={{
-                                fontStyle: "italic",
-                              }}
-                            >
+                            <Typography variant="caption" color="text.disabled">
                               غير محدد
                             </Typography>
                           )}
                         </TableCell>
                         <TableCell align="center">
-                          <Stack
-                            direction="row"
-                            spacing={0.5}
-                            justifyContent="center"
-                          >
-                            <Tooltip title="تعديل البيانات" arrow>
-                              <IconButton
-                                size="small"
-                                onClick={() => openModal(user)}
-                                sx={{
-                                  color: theme.palette.primary.main,
-                                  bgcolor: alpha(
-                                    theme.palette.primary.main,
-                                    0.08
-                                  ),
-                                  "&:hover": {
-                                    bgcolor: alpha(
-                                      theme.palette.primary.main,
-                                      0.16
-                                    ),
-                                    transform: "scale(1.1)",
-                                  },
-                                  transition: "all 0.2s",
-                                  width: 36,
-                                  height: 36,
-                                }}
-                              >
+                          <Stack direction="row" spacing={1} justifyContent="center">
+                            <Tooltip title="تعديل البيانات">
+                              <IconButton size="small" onClick={() => openModal(user)}>
                                 <Edit size={16} />
                               </IconButton>
                             </Tooltip>
                             {currentUser?.id !== user.id && (
-                              <Tooltip title="حذف المستخدم" arrow>
+                              <Tooltip title="حذف المستخدم">
                                 <IconButton
                                   size="small"
                                   onClick={() => openConfirmDialog(user.id)}
-                                  sx={{
-                                    color: theme.palette.error.main,
-                                    bgcolor: alpha(theme.palette.error.main, 0.08),
-                                    "&:hover": {
-                                      bgcolor: alpha(
-                                        theme.palette.error.main,
-                                        0.16
-                                      ),
-                                      transform: "scale(1.1)",
-                                    },
-                                    transition: "all 0.2s",
-                                    width: 36,
-                                    height: 36,
-                                  }}
                                   disabled={isDeleting}
                                 >
                                   <Trash2 size={16} />
@@ -750,43 +403,18 @@ const UsersListPage: React.FC = () => {
               </Table>
             </TableContainer>
           </Card>
-        </Fade>
       )}
 
       {/* Pagination */}
       {!isLoading && !isError && usersResponse && usersResponse.last_page > 1 && (
-        <Fade in timeout={800}>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              mt: 4,
-              width: "100%",
-            }}
-          >
-            <Pagination
-              count={usersResponse.last_page}
-              page={page}
-              onChange={handlePageChange}
-              color="primary"
-              size="large"
-              shape="rounded"
-              showFirstButton
-              showLastButton
-              sx={{
-                "& .MuiPagination-ul": {
-                  gap: 1,
-                },
-                "& .MuiPaginationItem-root": {
-                  fontWeight: 600,
-                  "&.Mui-selected": {
-                    boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.3)}`,
-                  },
-                },
-              }}
-            />
-          </Box>
-        </Fade>
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+          <Pagination
+            count={usersResponse.last_page}
+            page={page}
+            onChange={handlePageChange}
+            color="primary"
+          />
+        </Box>
       )}
 
       {/* Modals */}

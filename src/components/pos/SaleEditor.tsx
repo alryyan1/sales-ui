@@ -56,7 +56,6 @@ export const SaleEditor: React.FC<SaleEditorProps> = ({
   onClose,
   onSaleUpdated
 }) => {
-  const { t } = useTranslation(['pos', 'common']);
   const [editingItems, setEditingItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -168,7 +167,7 @@ export const SaleEditor: React.FC<SaleEditorProps> = ({
       onClose();
     } catch (error) {
       console.error('Failed to update sale:', error);
-      setError(t('pos:updateSaleError'));
+      setError('فشل في تحديث البيع');
     } finally {
       setIsLoading(false);
     }
@@ -198,7 +197,7 @@ export const SaleEditor: React.FC<SaleEditorProps> = ({
       <DialogTitle>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6">
-            {t('pos:editSale')} #{sale.id}
+            تعديل البيع #{sale.id}
           </Typography>
           <IconButton onClick={onClose}>
             <CloseIcon />
@@ -209,11 +208,11 @@ export const SaleEditor: React.FC<SaleEditorProps> = ({
       <DialogContent>
         <Box sx={{ mb: 2 }}>
           <Typography variant="body2" color="text.secondary">
-            {t('pos:transactionTime')}: {sale.created_at.toLocaleString()}
+            وقت المعاملة: {sale.created_at.toLocaleString()}
           </Typography>
           {hasChanges && (
             <Chip 
-              label={t('pos:unsavedChanges')} 
+              label="تغييرات غير محفوظة" 
               color="warning" 
               size="small" 
               sx={{ mt: 1 }}
@@ -231,11 +230,11 @@ export const SaleEditor: React.FC<SaleEditorProps> = ({
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>{t('pos:product')}</TableCell>
-                <TableCell align="center">{t('pos:quantity')}</TableCell>
-                <TableCell align="right">{t('pos:unitPrice')}</TableCell>
-                <TableCell align="right">{t('pos:total')}</TableCell>
-                <TableCell align="center">{t('common:actions')}</TableCell>
+                <TableCell>المنتج</TableCell>
+                <TableCell align="center">الكمية</TableCell>
+                <TableCell align="right">سعر الوحدة</TableCell>
+                <TableCell align="right">الإجمالي</TableCell>
+                <TableCell align="center">الإجراءات</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -313,7 +312,7 @@ export const SaleEditor: React.FC<SaleEditorProps> = ({
             variant="outlined"
             size="small"
           >
-            {t('pos:addItem')}
+            إضافة عنصر
           </Button>
         </Box>
         
@@ -321,7 +320,7 @@ export const SaleEditor: React.FC<SaleEditorProps> = ({
         
         <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
           <Typography variant="h6" sx={{ fontWeight: 600, textAlign: 'right' }}>
-            {t('pos:total')}: {formatNumber(subtotal)}
+            الإجمالي: {formatNumber(subtotal)}
           </Typography>
         </Box>
       </DialogContent>
@@ -332,7 +331,7 @@ export const SaleEditor: React.FC<SaleEditorProps> = ({
           disabled={isLoading}
           startIcon={<CancelIcon />}
         >
-          {t('common:cancel')}
+          إلغاء
         </Button>
         <Button 
           onClick={handleSave} 
@@ -340,7 +339,7 @@ export const SaleEditor: React.FC<SaleEditorProps> = ({
           variant="contained"
           startIcon={<SaveIcon />}
         >
-          {isLoading ? t('common:saving') : t('common:save')}
+          {isLoading ? 'جاري الحفظ...' : 'حفظ'}
         </Button>
       </DialogActions>
       

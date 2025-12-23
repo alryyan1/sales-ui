@@ -1,7 +1,6 @@
 // src/components/inventory/requisitions/RequisitionOverallStatusForm.tsx
 import React from "react";
 import { useFormContext, Controller } from "react-hook-form";
-import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -38,16 +37,14 @@ interface RequisitionOverallStatusFormProps {
 export const RequisitionOverallStatusForm: React.FC<
   RequisitionOverallStatusFormProps
 > = ({ isSubmitting }) => {
-  const { t } = useTranslation(["inventory", "common", "validation"]);
   const { control, watch } = useFormContext();
   const overallFormStatus = watch("status");
 
   return (
     <Card className="dark:bg-gray-900">
       <CardHeader>
-        <CardTitle>{t("inventory:processingActions")}</CardTitle>
+        <CardTitle>إجراءات المعالجة</CardTitle>
       </CardHeader>
-      {/* Add key */}
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormField
@@ -56,7 +53,7 @@ export const RequisitionOverallStatusForm: React.FC<
             render={({ field, fieldState }) => (
               <FormItem>
                 <FormLabel>
-                  {t("inventory:overallRequisitionStatus")}
+                  حالة الطلب الإجمالية
                   <span className="text-red-500">*</span>
                 </FormLabel>
                 <Select
@@ -66,24 +63,24 @@ export const RequisitionOverallStatusForm: React.FC<
                 >
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select overall status" />
+                      <SelectValue placeholder="اختر الحالة الإجمالية" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
                     <SelectItem value="approved">
-                      {t("inventory:status_approved")}
+                      موافق عليه
                     </SelectItem>
                     <SelectItem value="partially_issued">
-                      {t("inventory:status_partially_issued")}
+                      صدر جزئياً
                     </SelectItem>
                     <SelectItem value="issued">
-                      {t("inventory:status_issued")}
+                      صدر
                     </SelectItem>
                     <SelectItem value="rejected">
-                      {t("inventory:status_rejected")}
+                      مرفوض
                     </SelectItem>
                     <SelectItem value="cancelled">
-                      {t("inventory:status_cancelled")}
+                      ملغي
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -100,7 +97,7 @@ export const RequisitionOverallStatusForm: React.FC<
               render={({ field, fieldState }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>
-                    {t("inventory:issueDate")}
+                    تاريخ الإصدار
                     <span className="text-red-500">*</span>
                   </FormLabel>
                   <Popover>
@@ -120,7 +117,7 @@ export const RequisitionOverallStatusForm: React.FC<
                           {field.value ? (
                             format(field.value, "PPP")
                           ) : (
-                            <span>{t("common:pickDate")}</span>
+                            <span>اختر التاريخ</span>
                           )}
                         </Button>
                       </FormControl>
@@ -146,7 +143,7 @@ export const RequisitionOverallStatusForm: React.FC<
           name="notes"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("inventory:managerNotes")}</FormLabel>
+              <FormLabel>ملاحظات المدير</FormLabel>
               <FormControl>
                 <Textarea
                   className="min-h-[60px]"

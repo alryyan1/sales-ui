@@ -1,6 +1,5 @@
 // src/components/common/ProductSelect.tsx
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useTranslation } from "react-i18next";
 import { Check, ChevronsUpDown, Search, Copy } from "lucide-react";
 
 // Shadcn UI Components
@@ -60,8 +59,6 @@ export const ProductSelect: React.FC<ProductSelectProps> = React.memo(({
   className,
   id,
 }) => {
-  const { t } = useTranslation(["common", "products"]);
-  
   // State
   const [open, setOpen] = useState(false);
   const [productSearchInput, setProductSearchInput] = useState("");
@@ -188,8 +185,8 @@ export const ProductSelect: React.FC<ProductSelectProps> = React.memo(({
     if (value) {
       return value.name;
     }
-    return placeholder || t('products:selectProduct');
-  }, [value, placeholder, t]);
+    return placeholder || 'اختر المنتج';
+  }, [value, placeholder]);
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -231,7 +228,7 @@ export const ProductSelect: React.FC<ProductSelectProps> = React.memo(({
             <div className="flex items-center border-b px-3">
               <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
               <CommandInput
-                placeholder={t('products:searchProducts')}
+                placeholder="ابحث عن المنتجات"
                 value={productSearchInput}
                 onValueChange={handleSearchChange}
                 className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
@@ -243,7 +240,7 @@ export const ProductSelect: React.FC<ProductSelectProps> = React.memo(({
             
             <CommandList>
               <CommandEmpty>
-                {loadingProducts ? t('common:loading') : t('common:noResults')}
+                {loadingProducts ? 'جاري التحميل...' : 'لا توجد نتائج'}
               </CommandEmpty>
               
               {localProducts.length > 0 && (
@@ -285,7 +282,7 @@ export const ProductSelect: React.FC<ProductSelectProps> = React.memo(({
                   onClick={handleClearSelection}
                   className="w-full text-left justify-start"
                 >
-                  {t('common:clear')}
+                  مسح
                 </Button>
               </div>
             )}

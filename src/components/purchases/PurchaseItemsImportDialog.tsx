@@ -27,7 +27,6 @@ import {
   TableRow,
   LinearProgress,
 } from '@mui/material';
-import { useTranslation } from 'react-i18next';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import purchaseService from '../../services/purchaseService';
 
@@ -138,7 +137,6 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
   purchaseId,
   onImportSuccess,
 }) => {
-  const { t } = useTranslation(['purchases', 'common']);
   const [activeStep, setActiveStep] = useState(0);
   const [file, setFile] = useState<File | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
@@ -167,20 +165,20 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const steps = [
-    t('purchases:import.step1'),
-    t('purchases:import.step2'),
-    t('purchases:import.step3'),
-    t('purchases:import.step4'),
+    'رفع الملف',
+    'تعيين الأعمدة',
+    'معاينة البيانات',
+    'تأكيد الاستيراد',
   ];
 
   const purchaseItemFields = [
-    { key: 'product_name', label: t('purchases:fields.productName'), required: true },
-    { key: 'product_sku', label: t('purchases:fields.productSku'), required: false },
-    { key: 'batch_number', label: t('purchases:fields.batchNumber'), required: false },
-    { key: 'quantity', label: t('purchases:fields.quantity'), required: true },
-    { key: 'unit_cost', label: t('purchases:fields.unitCost'), required: true },
-    { key: 'sale_price', label: t('purchases:fields.salePrice'), required: false },
-    { key: 'expiry_date', label: t('purchases:fields.expiryDate'), required: false },
+    { key: 'product_name', label: 'اسم المنتج', required: true },
+    { key: 'product_sku', label: 'رمز المنتج', required: false },
+    { key: 'batch_number', label: 'رقم الدفعة', required: false },
+    { key: 'quantity', label: 'الكمية', required: true },
+    { key: 'unit_cost', label: 'تكلفة الوحدة', required: true },
+    { key: 'sale_price', label: 'سعر البيع', required: false },
+    { key: 'expiry_date', label: 'تاريخ الانتهاء', required: false },
   ];
 
   // Memoized handlers to prevent unnecessary re-renders
@@ -189,7 +187,7 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
     if (!selectedFile) return;
 
     if (!selectedFile.name.match(/\.(xlsx|xls)$/)) {
-      setError(t('purchases:import.invalidFileType'));
+      setError('نوع الملف غير صحيح. يرجى اختيار ملف Excel (.xlsx أو .xls)');
       return;
     }
 
@@ -208,11 +206,11 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
       
       setActiveStep(1);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('purchases:import.uploadError'));
+      setError(err instanceof Error ? err.message : 'فشل في رفع الملف');
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, []);
 
   const handleColumnMappingChange = useCallback((field: keyof ColumnMapping, value: string) => {
     setColumnMapping(prev => ({
@@ -234,7 +232,7 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
       const unmappedRequired = requiredFields.filter(field => !columnMapping[field.key as keyof ColumnMapping]);
       
       if (unmappedRequired.length > 0) {
-        setError(t('purchases:import.requiredFieldsNotMapped'));
+        setError('يجب تعيين جميع الحقول المطلوبة');
         return;
       }
       
@@ -244,7 +242,7 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
     } else if (activeStep === 2) {
       setActiveStep(3);
     }
-  }, [activeStep, columnMapping, purchaseItemFields, t]);
+  }, [activeStep, columnMapping, purchaseItemFields]);
 
   const handleBack = useCallback(() => {
     setActiveStep(prev => prev - 1);
@@ -260,11 +258,11 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
       const result = await purchaseService.importPurchaseItemsPreview(file, columnMapping, skipHeader);
       setPreviewData(result.preview || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('purchases:import.previewError'));
+      setError(err instanceof Error ? err.message : 'فشل في إنشاء المعاينة');
     } finally {
       setPreviewLoading(false);
     }
-  }, [file, columnMapping, skipHeader, t]);
+  }, [file, columnMapping, skipHeader]);
 
   const handleImport = useCallback(async () => {
     if (!file) return;
@@ -290,14 +288,14 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
       setImportResult(result);
       onImportSuccess();
     } catch (err) {
-      let errorMessage = t('purchases:import.processError');
+      let errorMessage = 'فشل في معالجة الاستيراد';
       
       if (err instanceof Error) {
         // Handle specific error types
         if (err.message.includes('timeout') || err.message.includes('Network Error')) {
-          errorMessage = t('purchases:import.timeoutError') || 'Import timed out. Please try with a smaller file or check your connection.';
+          errorMessage = 'انتهت مهلة الاستيراد. يرجى المحاولة بملف أصغر أو التحقق من الاتصال.';
         } else if (err.message.includes('413')) {
-          errorMessage = t('purchases:import.fileTooLarge') || 'File is too large. Please use a smaller Excel file.';
+          errorMessage = 'الملف كبير جداً. يرجى استخدام ملف Excel أصغر.';
         } else {
           errorMessage = err.message;
         }
@@ -335,7 +333,7 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
   const renderStep1 = useMemo(() => (
     <Box>
       <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary', lineHeight: 1.6 }}>
-        {t('purchases:import.step1Description')}
+        قم بتحميل ملف Excel يحتوي على بيانات عناصر الشراء
       </Typography>
       
       <Box
@@ -368,10 +366,10 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
           }} 
         />
         <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
-          {t('purchases:import.uploadFile')}
+          رفع ملف Excel
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          {t('purchases:import.supportedFormats')}
+          الصيغ المدعومة: .xlsx, .xls
         </Typography>
       </Box>
       
@@ -393,22 +391,22 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
             borderColor: 'success.main'
           }}
         >
-          {t('purchases:import.fileSelected', { fileName: file.name })}
+          تم اختيار الملف: {file.name}
         </Alert>
       )}
     </Box>
-  ), [t, handleFileSelect, file]);
+  ), [handleFileSelect, file]);
 
   const renderStep2 = useMemo(() => (
     <Box>
       <Typography variant="body1" sx={{ mb: 2 }}>
-        {t('purchases:import.step2Description')}
+        قم بتعيين أعمدة Excel مع حقول عناصر الشراء
       </Typography>
       
       {autoMapped && (
         <Alert severity="info" sx={{ mb: 2 }}>
           <Typography variant="body2">
-            {t('purchases:import.autoMappedMessage') || 'Columns have been automatically mapped based on similarity. Please review and adjust if needed.'}
+            تم تعيين الأعمدة تلقائياً بناءً على التشابه. يرجى المراجعة والتعديل إذا لزم الأمر.
           </Typography>
         </Alert>
       )}
@@ -421,7 +419,7 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
               onChange={(e) => setSkipHeader(e.target.checked)}
             />
           }
-          label={t('purchases:import.skipHeaderRow')}
+          label="تخطي صف الرأس"
         />
         
         <Button
@@ -430,7 +428,7 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
           onClick={handleAutoMap}
           sx={{ ml: 'auto' }}
         >
-          {t('purchases:import.autoMapColumns') || 'Auto-Map Columns'}
+          تعيين الأعمدة تلقائياً
         </Button>
       </Box>
       
@@ -448,13 +446,13 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
           <TableHead>
             <TableRow>
               <TableCell sx={{ fontWeight: 600, bgcolor: 'grey.100' }}>
-                {t('purchases:import.purchaseItemField')}
+                حقل عنصر الشراء
               </TableCell>
               <TableCell sx={{ fontWeight: 600, bgcolor: 'grey.100' }}>
-                {t('purchases:import.excelColumn')}
+                عمود Excel
               </TableCell>
               <TableCell sx={{ fontWeight: 600, bgcolor: 'grey.100' }}>
-                {t('purchases:import.required')}
+                مطلوب
               </TableCell>
             </TableRow>
           </TableHead>
@@ -470,9 +468,9 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
                       displayEmpty
                     >
                       <MenuItem value="">
-                        <em>{t('purchases:import.selectColumn')}</em>
+                        <em>اختر العمود</em>
                       </MenuItem>
-                      <MenuItem value="skip">{t('purchases:import.skipColumn')}</MenuItem>
+                      <MenuItem value="skip">تخطي</MenuItem>
                       {headers.map((header) => (
                         <MenuItem key={header} value={header}>
                           {header}
@@ -484,11 +482,11 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
                 <TableCell>
                   {field.required ? (
                     <Typography color="error" variant="caption">
-                      {t('common:required')}
+                      مطلوب
                     </Typography>
                   ) : (
                     <Typography color="text.secondary" variant="caption">
-                      {t('common:optional')}
+                      اختياري
                     </Typography>
                   )}
                 </TableCell>
@@ -498,19 +496,19 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
         </Table>
       </TableContainer>
     </Box>
-  ), [t, autoMapped, skipHeader, handleAutoMap, columnMapping, headers, handleColumnMappingChange, purchaseItemFields]);
+  ), [autoMapped, skipHeader, handleAutoMap, columnMapping, headers, handleColumnMappingChange, purchaseItemFields]);
 
   const renderStep3 = useMemo(() => (
     <Box>
       <Typography variant="body1" sx={{ mb: 2 }}>
-        {t('purchases:import.step3Description') || 'Preview the data that will be imported'}
+        معاينة البيانات التي سيتم استيرادها
       </Typography>
       
       {previewLoading && (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 3 }}>
           <CircularProgress size={60} />
           <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-            {t('purchases:import.generatingPreview') || 'Generating Preview...'}
+            جاري إنشاء المعاينة...
           </Typography>
         </Box>
       )}
@@ -518,19 +516,19 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
       {!previewLoading && previewData.length > 0 && (
         <Box>
           <Typography variant="h6" sx={{ mb: 2 }}>
-            {t('purchases:import.previewTitle') || 'Preview Data (First 10 rows)'}
+            معاينة البيانات (أول 10 صفوف)
           </Typography>
           <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>{t('purchases:fields.productName')}</TableCell>
-                  <TableCell>{t('purchases:fields.productSku')}</TableCell>
-                  <TableCell>{t('purchases:fields.batchNumber')}</TableCell>
-                  <TableCell>{t('purchases:fields.quantity')}</TableCell>
-                  <TableCell>{t('purchases:fields.unitCost')}</TableCell>
-                  <TableCell>{t('purchases:fields.salePrice')}</TableCell>
-                  <TableCell>{t('purchases:fields.expiryDate')}</TableCell>
+                  <TableCell>اسم المنتج</TableCell>
+                  <TableCell>رمز المنتج</TableCell>
+                  <TableCell>رقم الدفعة</TableCell>
+                  <TableCell>الكمية</TableCell>
+                  <TableCell>تكلفة الوحدة</TableCell>
+                  <TableCell>سعر البيع</TableCell>
+                  <TableCell>تاريخ الانتهاء</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -549,38 +547,38 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
             </Table>
           </TableContainer>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            {t('purchases:import.previewNote', { count: previewData.length }) || 'Showing first 10 rows. Total rows to import: ' + previewData.length}
+            عرض أول 10 صفوف. إجمالي الصفوف للاستيراد: {previewData.length}
           </Typography>
         </Box>
       )}
       
       {!previewLoading && previewData.length === 0 && (
         <Alert severity="warning" sx={{ mb: 2 }}>
-          {t('purchases:import.noPreviewData') || 'No data found to preview. Please check your column mapping.'}
+          لم يتم العثور على بيانات للمعاينة. يرجى التحقق من تعيين الأعمدة.
         </Alert>
       )}
     </Box>
-  ), [t, previewLoading, previewData]);
+  ), [previewLoading, previewData]);
 
   const renderStep4 = useMemo(() => (
     <Box>
       <Typography variant="body1" sx={{ mb: 2 }}>
-        {t('purchases:import.step4Description') || 'Review and confirm the import'}
+        راجع وأكد الاستيراد
       </Typography>
       
       {loading && (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 3 }}>
           <CircularProgress size={60} />
           <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-            {t('purchases:import.processing') || 'Processing Import...'}
+            جاري معالجة الاستيراد...
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 2 }}>
-            {t('purchases:import.processingDescription') || 'This may take a few minutes for large files. Please do not close this dialog.'}
+            قد يستغرق هذا بضع دقائق للملفات الكبيرة. يرجى عدم إغلاق هذا الحوار.
           </Typography>
           <Box sx={{ width: '100%', maxWidth: 400 }}>
             <LinearProgress variant="determinate" value={importProgress} />
             <Typography variant="caption" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
-              {Math.round(importProgress)}% Complete
+              {Math.round(importProgress)}% مكتمل
             </Typography>
           </Box>
         </Box>
@@ -589,10 +587,7 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
       {importResult && !loading && (
         <Alert severity={importResult.errors === 0 ? 'success' : 'warning'} sx={{ mb: 2 }}>
           <Typography variant="body2">
-            {t('purchases:import.result', {
-              imported: importResult.imported,
-              errors: importResult.errors,
-            })}
+            تم استيراد {importResult.imported} عنصر بنجاح. {importResult.errors > 0 && `حدثت ${importResult.errors} أخطاء.`}
           </Typography>
         </Alert>
       )}
@@ -600,14 +595,14 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
       {importResult?.errorDetails && importResult.errorDetails.length > 0 && (
         <Box sx={{ mt: 2 }}>
           <Typography variant="h6" sx={{ mb: 1 }}>
-            {t('purchases:import.errorDetails')}
+            تفاصيل الأخطاء
           </Typography>
           <TableContainer component={Paper} sx={{ maxHeight: 200 }}>
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>{t('purchases:import.row')}</TableCell>
-                  <TableCell>{t('purchases:import.errors')}</TableCell>
+                  <TableCell>الصف</TableCell>
+                  <TableCell>الأخطاء</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -629,7 +624,7 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
         </Box>
       )}
     </Box>
-  ), [t, loading, importProgress, importResult]);
+  ), [loading, importProgress, importResult]);
 
   const renderStepContent = useMemo(() => {
     switch (activeStep) {
@@ -667,7 +662,7 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
       }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            {t('purchases:import.title')}
+            استيراد عناصر الشراء
           </Typography>
           <Stepper 
             activeStep={activeStep} 
@@ -709,7 +704,7 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
               borderColor: 'error.main'
             }}
           >
-            <AlertTitle sx={{ fontWeight: 600 }}>{t('common:error')}</AlertTitle>
+            <AlertTitle sx={{ fontWeight: 600 }}>خطأ</AlertTitle>
             {error}
           </Alert>
         )}
@@ -718,7 +713,7 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 4 }}>
             <CircularProgress size={48} />
             <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-              {t('common:loading')}
+              جاري التحميل
             </Typography>
           </Box>
         )}
@@ -738,7 +733,7 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
           onClick={handleClose}
           sx={{ textTransform: 'none', fontWeight: 500 }}
         >
-          {activeStep === 3 ? t('common:close') : t('common:cancel')}
+          {activeStep === 3 ? 'إغلاق' : 'إلغاء'}
         </Button>
 
         {activeStep > 0 && (
@@ -747,7 +742,7 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
             variant="outlined"
             sx={{ textTransform: 'none', fontWeight: 500 }}
           >
-            {t('common:back')}
+            رجوع
           </Button>
         )}
         
@@ -762,7 +757,7 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
               boxShadow: 2
             }}
           >
-            {t('common:next')}
+            التالي
           </Button>
         )}
         
@@ -777,7 +772,7 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
               boxShadow: 2
             }}
           >
-            {t('common:next')}
+            التالي
           </Button>
         )}
         
@@ -793,7 +788,7 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
               boxShadow: 2
             }}
           >
-            {loading ? t('common:importing') : t('common:import')}
+            {loading ? 'جاري الاستيراد...' : 'استيراد'}
           </Button>
         )}
       </DialogActions>

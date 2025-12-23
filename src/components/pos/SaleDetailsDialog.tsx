@@ -41,8 +41,6 @@ export const SaleDetailsDialog: React.FC<SaleDetailsDialogProps> = ({
   open, 
   onClose 
 }) => {
-  const { t } = useTranslation(['pos', 'common']);
-
   if (!sale) return null;
 
   return (
@@ -50,7 +48,7 @@ export const SaleDetailsDialog: React.FC<SaleDetailsDialogProps> = ({
       <DialogTitle>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6">
-            {t('pos:saleDetails')} #{sale.transactionNumber}
+            تفاصيل البيع #{sale.transactionNumber}
           </Typography>
           <IconButton onClick={onClose}>
             <CloseIcon />
@@ -61,7 +59,7 @@ export const SaleDetailsDialog: React.FC<SaleDetailsDialogProps> = ({
       <DialogContent>
         <Box sx={{ mb: 2 }}>
           <Typography variant="body2" color="text.secondary">
-            {t('pos:transactionTime')}: {sale.timestamp.toLocaleString()}
+            وقت المعاملة: {sale.timestamp.toLocaleString()}
           </Typography>
         </Box>
         
@@ -69,10 +67,10 @@ export const SaleDetailsDialog: React.FC<SaleDetailsDialogProps> = ({
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>{t('pos:product')}</TableCell>
-                <TableCell align="center">{t('pos:quantity')}</TableCell>
-                <TableCell align="right">{t('pos:unitPrice')}</TableCell>
-                <TableCell align="right">{t('pos:total')}</TableCell>
+                <TableCell>المنتج</TableCell>
+                <TableCell align="center">الكمية</TableCell>
+                <TableCell align="right">سعر الوحدة</TableCell>
+                <TableCell align="right">الإجمالي</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -99,13 +97,13 @@ export const SaleDetailsDialog: React.FC<SaleDetailsDialogProps> = ({
         
         <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
           <Typography variant="h6" sx={{ fontWeight: 600, textAlign: 'right' }}>
-            {t('pos:total')}: {formatNumber(sale.total)}
+            الإجمالي: {formatNumber(sale.total)}
           </Typography>
         </Box>
       </DialogContent>
       
       <DialogActions>
-        <Button onClick={onClose}>{t('common:close')}</Button>
+        <Button onClick={onClose}>إغلاق</Button>
       </DialogActions>
     </Dialog>
   );

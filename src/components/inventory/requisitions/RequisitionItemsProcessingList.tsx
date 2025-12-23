@@ -1,7 +1,6 @@
 // src/components/inventory/requisitions/RequisitionItemsProcessingList.tsx
 import React from 'react';
 import { useFieldArray, useFormContext } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
 
 // Child Row Component
 import { RequisitionItemProcessingRow } from './RequisitionItemProcessingRow';
@@ -22,7 +21,6 @@ interface RequisitionItemsProcessingListProps {
 export const RequisitionItemsProcessingList: React.FC<RequisitionItemsProcessingListProps> = ({
     originalRequisitionItems, isSubmitting
 }) => {
-    const { t } = useTranslation(['inventory', 'common']);
     const { control, formState: { errors } } = useFormContext();
     console.log(originalRequisitionItems,'originalRequisitionItems');
     // 'fields' here refers to the RHF field array for items to be processed
@@ -34,11 +32,11 @@ export const RequisitionItemsProcessingList: React.FC<RequisitionItemsProcessing
    console.log(fields,'fields');
     return (
         <Card className="dark:bg-gray-900 mb-6">
-            <CardHeader><CardTitle>{t('inventory:itemsToProcess')}</CardTitle></CardHeader>
+            <CardHeader><CardTitle>العناصر للمعالجة</CardTitle></CardHeader>
             <CardContent>
                 {errors.items && !Array.isArray(errors.items) && errors.items.root && (
                     <Alert variant="outlined" className="mb-4">
-                        {t('common:formError')} {/* Replace with appropriate error message */}
+                        خطأ في النموذج
                     </Alert>
                 )}
                 <div className="space-y-6">
@@ -65,7 +63,7 @@ export const RequisitionItemsProcessingList: React.FC<RequisitionItemsProcessing
                     })}
                 </div>
                 {fields.length === 0 && (
-                    <p className="text-muted-foreground text-center py-4">{t('inventory:noItemsInRequisition')}</p>
+                    <p className="text-muted-foreground text-center py-4">لا توجد عناصر في الطلب</p>
                 )}
             </CardContent>
         </Card>

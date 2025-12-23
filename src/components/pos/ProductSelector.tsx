@@ -1,6 +1,5 @@
 // src/components/pos/ProductSelector.tsx
 import React, { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
 
 // MUI Components
 import {
@@ -44,7 +43,6 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
   onClose,
   onProductSelected,
 }) => {
-  const { t } = useTranslation(['pos', 'common']);
   const [searchTerm, setSearchTerm] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -66,7 +64,7 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
       setProducts(response.data.data || []);
     } catch (error) {
       console.error('Failed to search products:', error);
-      setError(t('pos:failedToLoadProducts'));
+      setError('فشل في تحميل المنتجات');
       setProducts([]);
     } finally {
       setLoading(false);
@@ -100,10 +98,10 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
       <DialogTitle>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6">
-            {t('pos:selectProduct')}
+            اختر المنتج
           </Typography>
           <Button onClick={handleClose} startIcon={<CloseIcon />}>
-            {t('common:close')}
+            إغلاق
           </Button>
         </Box>
       </DialogTitle>
@@ -111,7 +109,7 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
       <DialogContent>
         <TextField
           fullWidth
-          placeholder={t('pos:searchProducts')}
+          placeholder="ابحث عن المنتجات"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           InputProps={{
@@ -136,7 +134,7 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
           </Box>
         ) : products.length === 0 && searchTerm ? (
           <Typography color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-            {t('common:noResults')}
+            لا توجد نتائج
           </Typography>
         ) : (
           <List>

@@ -56,9 +56,9 @@ interface PurchaseHeaderFormProps {
 
 // Status options for the autocomplete
 const statusOptions = [
-  { value: "pending", label: "purchases:status_pending" },
-  { value: "ordered", label: "purchases:status_ordered" },
-  { value: "received", label: "purchases:status_received" },
+  { value: "pending", label: "قيد الانتظار" },
+  { value: "ordered", label: "تم الطلب" },
+  { value: "received", label: "تم الاستلام" },
 ];
 
 export const PurchaseHeaderForm: React.FC<PurchaseHeaderFormProps> = ({
@@ -70,12 +70,6 @@ export const PurchaseHeaderForm: React.FC<PurchaseHeaderFormProps> = ({
   selectedSupplier,
   onSupplierSelect,
 }) => {
-  const { t } = useTranslation([
-    "purchases",
-    "common",
-    "suppliers",
-    "validation",
-  ]);
   const { control } = useFormContext();
   const [supplierPopoverOpen, setSupplierPopoverOpen] = useState(false);
 
@@ -88,7 +82,7 @@ export const PurchaseHeaderForm: React.FC<PurchaseHeaderFormProps> = ({
         render={({ field }) => (
           <FormItem className="flex flex-col md:col-span-2">
             <FormLabel>
-              {t("purchases:selectSupplier")}
+              اختر المورد
               <span className="text-red-500">*</span>
             </FormLabel>
             <Popover
@@ -110,10 +104,10 @@ export const PurchaseHeaderForm: React.FC<PurchaseHeaderFormProps> = ({
                     )}
                   >
                     {loadingSuppliers
-                      ? t("common:loading") + "..."
+                      ? "جاري التحميل..."
                       : selectedSupplier
                       ? selectedSupplier.name
-                      : t("purchases:selectSupplierPlaceholder")}
+                      : "اختر مورد"}
                     <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </FormControl>
@@ -121,7 +115,7 @@ export const PurchaseHeaderForm: React.FC<PurchaseHeaderFormProps> = ({
               <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height] p-0">
                 <Command shouldFilter={false}>
                   <CommandInput
-                    placeholder={t("suppliers:searchPlaceholder")}
+                    placeholder="ابحث عن المورد"
                     value={supplierSearchInput}
                     onValueChange={onSupplierSearchInputChange}
                   />
@@ -129,19 +123,19 @@ export const PurchaseHeaderForm: React.FC<PurchaseHeaderFormProps> = ({
                     {loadingSuppliers && (
                       <div className="p-2 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        {t("common:loading")}...
+                        جاري التحميل...
                       </div>
                     )}
                     {!loadingSuppliers &&
                       suppliers.length === 0 &&
                       supplierSearchInput && (
-                        <CommandEmpty>{t("common:noResults")}</CommandEmpty>
+                        <CommandEmpty>لا توجد نتائج</CommandEmpty>
                       )}
                     {!loadingSuppliers &&
                       suppliers.length === 0 &&
                       !supplierSearchInput && (
                         <CommandEmpty>
-                          {t("suppliers:typeToSearch")}
+                          اكتب للبحث
                         </CommandEmpty>
                       )}
                     {!loadingSuppliers && (
@@ -187,7 +181,7 @@ export const PurchaseHeaderForm: React.FC<PurchaseHeaderFormProps> = ({
           <FormItem className="flex flex-col">
             
             <FormLabel>
-              {t("purchases:purchaseDate")}
+              تاريخ الشراء
               <span className="text-red-500">*</span>
             </FormLabel>
             <Popover>
@@ -207,7 +201,7 @@ export const PurchaseHeaderForm: React.FC<PurchaseHeaderFormProps> = ({
                     {field.value ? (
                       format(field.value, "PPP")
                     ) : (
-                      <span>{t("common:pickDate")}</span>
+                      <span>اختر التاريخ</span>
                     )}
                   </Button>
                 </FormControl>
@@ -238,13 +232,13 @@ export const PurchaseHeaderForm: React.FC<PurchaseHeaderFormProps> = ({
           <FormItem>
             
             <FormLabel>
-              {t("purchases:statusLabel")}
+              الحالة
               <span className="text-red-500">*</span>
             </FormLabel>
             <FormControl>
               <Autocomplete
                 options={statusOptions}
-                getOptionLabel={(option) => t(option.label)}
+                getOptionLabel={(option) => option.label}
                 value={statusOptions.find(option => option.value === field.value) || null}
                 onChange={(event, newValue) => {
                   field.onChange(newValue?.value || "");
@@ -253,9 +247,9 @@ export const PurchaseHeaderForm: React.FC<PurchaseHeaderFormProps> = ({
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    placeholder={t("purchases:selectStatusPlaceholder")}
+                    placeholder="اختر الحالة"
                     error={!!fieldState.error}
-                    helperText={fieldState.error?.message ? t(fieldState.error.message) : ""}
+                    helperText={fieldState.error?.message || ""}
                   />
                 )}
               />
@@ -270,10 +264,10 @@ export const PurchaseHeaderForm: React.FC<PurchaseHeaderFormProps> = ({
         name="reference_number"
         render={({ field }) => (
           <FormItem className="md:col-span-2">
-            <FormLabel>{t("purchases:referenceLabel")}</FormLabel>
+            <FormLabel>رقم المرجع</FormLabel>
             <FormControl>
               <Input
-                placeholder={t("purchases:referencePlaceholder")}
+                placeholder="أدخل رقم المرجع"
                 {...field}
                 value={field.value ?? ""}
                 disabled={isSubmitting}
@@ -289,10 +283,10 @@ export const PurchaseHeaderForm: React.FC<PurchaseHeaderFormProps> = ({
         name="notes"
         render={({ field }) => (
           <FormItem className="md:col-span-4">
-            <FormLabel>{t("purchases:notesLabel")}</FormLabel>
+            <FormLabel>ملاحظات</FormLabel>
             <FormControl>
               <Textarea
-                placeholder={t("purchases:notesPlaceholder")}
+                placeholder="أدخل الملاحظات"
                 className="resize-y min-h-[60px]"
                 {...field}
                 value={field.value ?? ""}

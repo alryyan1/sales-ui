@@ -1,6 +1,5 @@
 // src/components/inventory/requisitions/RequisitionHeaderDisplay.tsx
 import React from "react";
-import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormLabel } from "@/components/ui/form"; // For consistent label style
 import { StockRequisition } from "../../../services/stockRequisitionService";
@@ -13,48 +12,58 @@ interface RequisitionHeaderDisplayProps {
 export const RequisitionHeaderDisplay: React.FC<
   RequisitionHeaderDisplayProps
 > = ({ requisition }) => {
-  const { t } = useTranslation(["inventory", "common"]);
-
   if (!requisition) return null;
+
+  const getStatusLabel = (status: string) => {
+    const statusMap: Record<string, string> = {
+      'pending': 'قيد الانتظار',
+      'approved': 'موافق عليه',
+      'rejected': 'مرفوض',
+      'processing': 'قيد المعالجة',
+      'completed': 'مكتمل',
+      'cancelled': 'ملغي'
+    };
+    return statusMap[status] || status;
+  };
 
   return (
     <Card className="mb-6 dark:bg-gray-900">
       <CardHeader>
-        <CardTitle>{t("inventory:requisitionSummary")}</CardTitle>
+        <CardTitle>ملخص الطلب</CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
         <div>
-          <FormLabel>{t("inventory:requestId")}</FormLabel>
+          <FormLabel>رقم الطلب</FormLabel>
           <p className="font-medium">
             REQ-{String(requisition.id).padStart(5, "0")}
           </p>
         </div>
         <div>
-          <FormLabel>{t("inventory:requester")}</FormLabel>
+          <FormLabel>الطالب</FormLabel>
           <p className="font-medium">
-            {requisition.requester_name || t("common:n/a")}
+            {requisition.requester_name || "غير متاح"}
           </p>
         </div>
         <div>
-          <FormLabel>{t("inventory:requestDate")}</FormLabel>
+          <FormLabel>تاريخ الطلب</FormLabel>
           <p className="font-medium">{formatDate(requisition.request_date)}</p>
         </div>
         <div className="md:col-span-3">
-          <FormLabel>{t("inventory:departmentOrReason")}</FormLabel>
+          <FormLabel>القسم أو السبب</FormLabel>
           <p className="font-medium">
             {requisition.department_or_reason || "---"}
           </p>
         </div>
         {requisition.notes && (
           <div className="md:col-span-3">
-            <FormLabel>{t("common:notes")}</FormLabel>
+            <FormLabel>ملاحظات</FormLabel>
             <p className="text-sm whitespace-pre-wrap">{requisition.notes}</p>
           </div>
         )}
         <div>
-          <FormLabel>{t("common:status")}</FormLabel>
+          <FormLabel>الحالة</FormLabel>
           <p className="font-medium">
-            {t(`inventory:status_${requisition.status}`)}
+            {getStatusLabel(requisition.status)}
           </p>
         </div>
       </CardContent>

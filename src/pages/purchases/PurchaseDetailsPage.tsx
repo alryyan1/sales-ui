@@ -138,7 +138,7 @@ const PurchaseDetailsPage: React.FC = () => {
         <IconButton
           onClick={() => navigate("/purchases")}
           sx={{ mr: 1 }}
-          aria-label={t("common:back") || "Back"}
+          aria-label="رجوع"
         >
           <ArrowBackIcon />
         </IconButton>
@@ -147,7 +147,7 @@ const PurchaseDetailsPage: React.FC = () => {
           component="h1"
           className="text-gray-800 dark:text-gray-100 font-semibold"
         >
-          {t("purchases:detailsTitle")} {/* Add key */} #{purchase.id}
+          تفاصيل الشراء #{purchase.id}
         </Typography>
       </Box>
 

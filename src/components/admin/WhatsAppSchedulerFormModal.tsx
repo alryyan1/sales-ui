@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 // shadcn/ui Components
@@ -52,12 +51,12 @@ interface WhatsAppSchedulerFormModalProps {
 }
 
 const schedulerSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  phone_number: z.string().min(1, "Phone number is required"),
+  name: z.string().min(1, "الاسم مطلوب"),
+  phone_number: z.string().min(1, "رقم الهاتف مطلوب"),
   report_type: z.enum(["daily_sales", "inventory", "profit_loss"]),
-  schedule_time: z.string().min(1, "Schedule time is required"),
+  schedule_time: z.string().min(1, "وقت الجدولة مطلوب"),
   is_active: z.boolean(),
-  days_of_week: z.array(z.number()).min(1, "At least one day must be selected"),
+  days_of_week: z.array(z.number()).min(1, "يجب اختيار يوم واحد على الأقل"),
   notes: z.string().optional(),
 });
 
@@ -69,7 +68,6 @@ const WhatsAppSchedulerFormModal: React.FC<WhatsAppSchedulerFormModalProps> = ({
   scheduler,
   onSuccess,
 }) => {
-  const { t } = useTranslation(["settings", "common"]);
   const [isLoading, setIsLoading] = useState(false);
   const [options, setOptions] = useState<SchedulerOptions | null>(null);
 
@@ -124,7 +122,7 @@ const WhatsAppSchedulerFormModal: React.FC<WhatsAppSchedulerFormModalProps> = ({
       setOptions(schedulerOptions);
     } catch (error) {
       console.error("Error loading scheduler options:", error);
-      toast.error(t("common:errorLoadingData"));
+      toast.error("خطأ في تحميل البيانات");
     }
   };
 
@@ -133,17 +131,17 @@ const WhatsAppSchedulerFormModal: React.FC<WhatsAppSchedulerFormModalProps> = ({
     try {
       if (scheduler) {
         await whatsappSchedulerService.updateScheduler(scheduler.id, data);
-        toast.success(t("settings:whatsappSchedulerUpdated"));
+        toast.success("تم تحديث الجدولة بنجاح");
       } else {
         await whatsappSchedulerService.createScheduler(data);
-        toast.success(t("settings:whatsappSchedulerCreated"));
+        toast.success("تم إنشاء الجدولة بنجاح");
       }
       onSuccess();
       onClose();
     } catch (error: any) {
       console.error("Error saving scheduler:", error);
       toast.error(
-        error.response?.data?.message || t("common:errorSavingData")
+        error.response?.data?.message || "خطأ في حفظ البيانات"
       );
     } finally {
       setIsLoading(false);
@@ -151,13 +149,13 @@ const WhatsAppSchedulerFormModal: React.FC<WhatsAppSchedulerFormModalProps> = ({
   };
 
   const daysOfWeek = [
-    { value: 0, label: t("common:sunday") },
-    { value: 1, label: t("common:monday") },
-    { value: 2, label: t("common:tuesday") },
-    { value: 3, label: t("common:wednesday") },
-    { value: 4, label: t("common:thursday") },
-    { value: 5, label: t("common:friday") },
-    { value: 6, label: t("common:saturday") },
+    { value: 0, label: "الأحد" },
+    { value: 1, label: "الإثنين" },
+    { value: 2, label: "الثلاثاء" },
+    { value: 3, label: "الأربعاء" },
+    { value: 4, label: "الخميس" },
+    { value: 5, label: "الجمعة" },
+    { value: 6, label: "السبت" },
   ];
 
   return (
@@ -167,8 +165,8 @@ const WhatsAppSchedulerFormModal: React.FC<WhatsAppSchedulerFormModalProps> = ({
           <DialogTitle className="flex items-center gap-2">
             <MessageCircle className="h-5 w-5 text-blue-600" />
             {scheduler
-              ? t("settings:editWhatsAppScheduler")
-              : t("settings:createWhatsAppScheduler")}
+              ? "تعديل جدولة واتساب"
+              : "إنشاء جدولة واتساب"}
           </DialogTitle>
         </DialogHeader>
 
@@ -178,7 +176,7 @@ const WhatsAppSchedulerFormModal: React.FC<WhatsAppSchedulerFormModalProps> = ({
             <div className="space-y-4">
               <h3 className="text-lg font-medium flex items-center gap-2">
                 <FileText className="h-4 w-4" />
-                {t("settings:basicInformation")}
+                المعلومات الأساسية
               </h3>
 
               <FormField
@@ -186,10 +184,10 @@ const WhatsAppSchedulerFormModal: React.FC<WhatsAppSchedulerFormModalProps> = ({
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("settings:schedulerName")} *</FormLabel>
+                    <FormLabel>اسم الجدولة *</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder={t("settings:enterSchedulerName")}
+                        placeholder="أدخل اسم الجدولة"
                         {...field}
                       />
                     </FormControl>
@@ -203,7 +201,7 @@ const WhatsAppSchedulerFormModal: React.FC<WhatsAppSchedulerFormModalProps> = ({
                 name="phone_number"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("settings:phoneNumber")} *</FormLabel>
+                    <FormLabel>رقم الهاتف *</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -224,14 +222,14 @@ const WhatsAppSchedulerFormModal: React.FC<WhatsAppSchedulerFormModalProps> = ({
                 name="report_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("settings:reportType")} *</FormLabel>
+                    <FormLabel>نوع التقرير *</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder={t("settings:selectReportType")} />
+                          <SelectValue placeholder="اختر نوع التقرير" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -253,7 +251,7 @@ const WhatsAppSchedulerFormModal: React.FC<WhatsAppSchedulerFormModalProps> = ({
             <div className="space-y-4">
               <h3 className="text-lg font-medium flex items-center gap-2">
                 <Clock className="h-4 w-4" />
-                {t("settings:scheduleSettings")}
+                إعدادات الجدولة
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -262,7 +260,7 @@ const WhatsAppSchedulerFormModal: React.FC<WhatsAppSchedulerFormModalProps> = ({
                   name="schedule_time"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("settings:scheduleTime")} *</FormLabel>
+                      <FormLabel>وقت الجدولة *</FormLabel>
                       <FormControl>
                         <Input type="time" {...field} />
                       </FormControl>
@@ -278,10 +276,10 @@ const WhatsAppSchedulerFormModal: React.FC<WhatsAppSchedulerFormModalProps> = ({
                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                       <div className="space-y-0.5">
                         <FormLabel className="text-base">
-                          {t("settings:activeStatus")}
+                          الحالة النشطة
                         </FormLabel>
                         <div className="text-sm text-muted-foreground">
-                          {t("settings:activeStatusDescription")}
+                          تفعيل أو إلغاء تفعيل الجدولة
                         </div>
                       </div>
                       <FormControl>
@@ -300,7 +298,7 @@ const WhatsAppSchedulerFormModal: React.FC<WhatsAppSchedulerFormModalProps> = ({
                 name="days_of_week"
                 render={() => (
                   <FormItem>
-                    <FormLabel>{t("settings:daysOfWeek")} *</FormLabel>
+                    <FormLabel>أيام الأسبوع *</FormLabel>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                       {daysOfWeek.map((day) => (
                         <div key={day.value} className="flex items-center space-x-2">
@@ -337,7 +335,7 @@ const WhatsAppSchedulerFormModal: React.FC<WhatsAppSchedulerFormModalProps> = ({
             <div className="space-y-4">
               <h3 className="text-lg font-medium flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                {t("settings:additionalNotes")}
+                ملاحظات إضافية
               </h3>
 
               <FormField
@@ -345,10 +343,10 @@ const WhatsAppSchedulerFormModal: React.FC<WhatsAppSchedulerFormModalProps> = ({
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("settings:notes")}</FormLabel>
+                    <FormLabel>ملاحظات</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder={t("settings:enterNotes")}
+                        placeholder="أدخل ملاحظات"
                         className="min-h-[100px]"
                         {...field}
                       />
@@ -367,14 +365,14 @@ const WhatsAppSchedulerFormModal: React.FC<WhatsAppSchedulerFormModalProps> = ({
                 onClick={onClose}
                 disabled={isLoading}
               >
-                {t("common:cancel")}
+                إلغاء
               </Button>
               <Button type="submit" disabled={isLoading}>
                 {isLoading
-                  ? t("common:saving")
+                  ? "جاري الحفظ"
                   : scheduler
-                  ? t("common:update")
-                  : t("common:create")}
+                  ? "تحديث"
+                  : "إنشاء"}
               </Button>
             </div>
           </form>

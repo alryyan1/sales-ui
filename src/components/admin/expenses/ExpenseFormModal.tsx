@@ -1,7 +1,6 @@
 // src/components/admin/expenses/ExpenseFormModal.tsx
 import React, { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -22,7 +21,6 @@ interface ExpenseFormModalProps {
 }
 
 const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onClose, expenseToEdit, onSaveSuccess }) => {
-  const { t } = useTranslation(['expenses', 'common']);
   const isEditMode = Boolean(expenseToEdit);
 
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
@@ -136,7 +134,7 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onClose, ex
     e.preventDefault();
     setCategoryServerError(null);
     if (!newCategoryName.trim()) {
-      setCategoryServerError(t('expenses:categoryNameRequired') || 'Name is required');
+      setCategoryServerError('الاسم مطلوب');
       return;
     }
     setIsSavingCategory(true);
@@ -164,7 +162,7 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onClose, ex
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
             <DialogHeader className="p-6 pb-4 border-b dark:border-gray-700">
               <DialogTitle className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                {isEditMode ? t('expenses:editTitle') : t('expenses:addTitle')}
+                {isEditMode ? 'تعديل المصروف' : 'إضافة مصروف'}
               </DialogTitle>
             </DialogHeader>
 
@@ -178,9 +176,9 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onClose, ex
                   name="title"
                   render={({ field, fieldState }) => (
                     <FormItem>
-                      <FormLabel>{t('expenses:title')}</FormLabel>
+                      <FormLabel>العنوان</FormLabel>
                       <FormControl>
-                        <Input placeholder={t('expenses:titlePlaceholder') || ''} {...field} disabled={isSubmitting} />
+                        <Input placeholder="أدخل عنوان المصروف" {...field} disabled={isSubmitting} />
                       </FormControl>
                       <FormMessage>{fieldState.error?.message}</FormMessage>
                     </FormItem>
@@ -191,7 +189,7 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onClose, ex
                   name="amount"
                   render={({ field, fieldState }) => (
                     <FormItem>
-                      <FormLabel>{t('expenses:amount')}</FormLabel>
+                      <FormLabel>المبلغ</FormLabel>
                       <FormControl>
                         <Input type="number" min="0" step="0.01" onFocus={(e) => e.currentTarget.select()} {...field} disabled={isSubmitting} />
                       </FormControl>
@@ -204,7 +202,7 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onClose, ex
                   name="expense_date"
                   render={({ field, fieldState }) => (
                     <FormItem>
-                      <FormLabel>{t('expenses:date')}</FormLabel>
+                      <FormLabel>التاريخ</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} disabled={isSubmitting} />
                       </FormControl>
@@ -217,15 +215,15 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onClose, ex
                   name="expense_category_id"
                   render={({ field, fieldState }) => (
                   <FormItem>
-                    <FormLabel>{t('expenses:category')}</FormLabel>
+                    <FormLabel>الفئة</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting || loadingCategories}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder={loadingCategories ? t('common:loading') + '...' : (t('expenses:selectCategory') || 'Select category')} />
+                          <SelectValue placeholder={loadingCategories ? 'جاري التحميل...' : 'اختر الفئة'} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value=" ">{t('expenses:noCategory')}</SelectItem>
+                        <SelectItem value=" ">لا توجد فئة</SelectItem>
                         {categories.map((cat) => (
                           <SelectItem key={cat.id} value={String(cat.id)}>
                             {cat.name}
@@ -236,7 +234,7 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onClose, ex
                     <FormMessage>{fieldState.error?.message}</FormMessage>
                     <div className="mt-2">
                       <Button type="button" size="sm" variant="secondary" className="gap-1" onClick={() => setIsCategoryModalOpen(true)}>
-                        <Plus className="size-4" /> {t('expenses:addCategory') || 'Add category'}
+                        <Plus className="size-4" /> إضافة فئة
                       </Button>
                     </div>
                   </FormItem>
@@ -247,9 +245,9 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onClose, ex
                   name="payment_method"
                   render={({ field, fieldState }) => (
                     <FormItem>
-                      <FormLabel>{t('expenses:paymentMethod')}</FormLabel>
+                      <FormLabel>طريقة الدفع</FormLabel>
                       <FormControl>
-                        <Input placeholder={t('expenses:paymentMethodPlaceholder') || ''} {...field} disabled={isSubmitting} />
+                        <Input placeholder="أدخل طريقة الدفع" {...field} disabled={isSubmitting} />
                       </FormControl>
                       <FormMessage>{fieldState.error?.message}</FormMessage>
                     </FormItem>
@@ -260,9 +258,9 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onClose, ex
                   name="reference"
                   render={({ field, fieldState }) => (
                     <FormItem>
-                      <FormLabel>{t('expenses:reference')}</FormLabel>
+                      <FormLabel>المرجع</FormLabel>
                       <FormControl>
-                        <Input placeholder={t('expenses:referencePlaceholder') || ''} {...field} disabled={isSubmitting} />
+                        <Input placeholder="أدخل رقم المرجع" {...field} disabled={isSubmitting} />
                       </FormControl>
                       <FormMessage>{fieldState.error?.message}</FormMessage>
                     </FormItem>
@@ -273,9 +271,9 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onClose, ex
                   name="description"
                   render={({ field, fieldState }) => (
                     <FormItem className="sm:col-span-2">
-                      <FormLabel>{t('expenses:description')}</FormLabel>
+                      <FormLabel>الوصف</FormLabel>
                       <FormControl>
-                        <Textarea rows={4} placeholder={t('expenses:descriptionPlaceholder') || ''} {...field} disabled={isSubmitting} />
+                        <Textarea rows={4} placeholder="أدخل وصف المصروف" {...field} disabled={isSubmitting} />
                       </FormControl>
                       <FormMessage>{fieldState.error?.message}</FormMessage>
                     </FormItem>
@@ -286,11 +284,11 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onClose, ex
 
             <DialogFooter className="p-6 pt-4 border-t dark:border-gray-700">
               <DialogClose asChild>
-                <Button type="button" variant="ghost" disabled={isSubmitting}>{t('common:cancel')}</Button>
+                <Button type="button" variant="ghost" disabled={isSubmitting}>إلغاء</Button>
               </DialogClose>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && (<Loader2 className="me-2 h-4 w-4 animate-spin" />)}
-                {isEditMode ? t('common:update') : t('common:create')}
+                {isEditMode ? 'تحديث' : 'إنشاء'}
               </Button>
             </DialogFooter>
           </form>
@@ -302,28 +300,28 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onClose, ex
       <DialogContent className="sm:max-w-md">
         <form onSubmit={handleCreateCategory} noValidate>
           <DialogHeader>
-            <DialogTitle>{t('expenses:addCategory') || 'Add Category'}</DialogTitle>
+            <DialogTitle>إضافة فئة</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
             {categoryServerError && (
               <div className="text-red-600 text-sm">{categoryServerError}</div>
             )}
             <div>
-              <div className="mb-1 text-sm font-medium">{t('expenses:categoryName') || 'Name'}</div>
-              <Input value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} placeholder={t('expenses:categoryNamePlaceholder') || 'e.g. Utilities'} />
+              <div className="mb-1 text-sm font-medium">الاسم</div>
+              <Input value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} placeholder="مثال: المرافق" />
             </div>
             <div>
-              <div className="mb-1 text-sm font-medium">{t('expenses:categoryDescription') || 'Description'}</div>
-              <Textarea rows={3} value={newCategoryDescription} onChange={(e) => setNewCategoryDescription(e.target.value)} placeholder={t('expenses:categoryDescriptionPlaceholder') || ''} />
+              <div className="mb-1 text-sm font-medium">الوصف</div>
+              <Textarea rows={3} value={newCategoryDescription} onChange={(e) => setNewCategoryDescription(e.target.value)} placeholder="أدخل وصف الفئة" />
             </div>
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button type="button" variant="ghost" disabled={isSavingCategory}>{t('common:cancel')}</Button>
+              <Button type="button" variant="ghost" disabled={isSavingCategory}>إلغاء</Button>
             </DialogClose>
             <Button type="submit" disabled={isSavingCategory}>
               {isSavingCategory && (<Loader2 className="me-2 h-4 w-4 animate-spin" />)}
-              {t('common:create')}
+              إنشاء
             </Button>
           </DialogFooter>
         </form>

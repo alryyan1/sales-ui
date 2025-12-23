@@ -1,6 +1,5 @@
 // src/components/pos/SaleSummary.tsx
 import React from "react";
-import { useTranslation } from "react-i18next";
 
 // MUI Components
 import {
@@ -34,8 +33,6 @@ export const SaleSummary: React.FC<SaleSummaryProps> = ({
   onProceedToPayment, 
   onClearSale 
 }) => {
-  const { t } = useTranslation(['pos', 'common']);
-
   const subtotal = preciseSum(items.map(item => item.total), 2);
   const total = subtotal; // No tax calculation
 
@@ -44,7 +41,7 @@ export const SaleSummary: React.FC<SaleSummaryProps> = ({
       <CardContent sx={{ flex: 1, p: 0 }}>
         <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            {t('pos:saleSummary')}
+            ملخص البيع
           </Typography>
         </Box>
         
@@ -52,7 +49,7 @@ export const SaleSummary: React.FC<SaleSummaryProps> = ({
           <Stack spacing={2}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
               <Typography variant="body2" color="text.secondary">
-                {t('pos:itemsCount')}
+                عدد العناصر
               </Typography>
               <Typography variant="body2" sx={{ fontWeight: 500 }}>
                 {items.length}
@@ -61,7 +58,7 @@ export const SaleSummary: React.FC<SaleSummaryProps> = ({
             
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
               <Typography variant="body2" color="text.secondary">
-                {t('pos:subtotal')}
+                المجموع الفرعي
               </Typography>
               <Typography variant="body2" sx={{ fontWeight: 500 }}>
                 {formatNumber(subtotal)}
@@ -74,7 +71,7 @@ export const SaleSummary: React.FC<SaleSummaryProps> = ({
             
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                {t('pos:total')}
+                الإجمالي
               </Typography>
               <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
                 {formatNumber(total)}
@@ -93,7 +90,7 @@ export const SaleSummary: React.FC<SaleSummaryProps> = ({
               disabled={items.length === 0}
               startIcon={<PaymentIcon />}
             >
-              {t('pos:proceedToPayment')}
+              المتابعة للدفع
             </Button>
             
             <Button
@@ -104,7 +101,7 @@ export const SaleSummary: React.FC<SaleSummaryProps> = ({
               disabled={items.length === 0}
               startIcon={<DeleteIcon />}
             >
-              {t('pos:clearSale')}
+              مسح البيع
             </Button>
           </Stack>
         </Box>

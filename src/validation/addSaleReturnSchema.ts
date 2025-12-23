@@ -1,7 +1,6 @@
-import { t } from "i18next";
 import { z } from "zod";
 
-// --- Zod Schema Definition with `t()` directly ---
+// --- Zod Schema Definition ---
 export const returnItemSchema = z.object({
   original_sale_item_id: z.number(),
   product_id: z.number(),
@@ -10,46 +9,46 @@ export const returnItemSchema = z.object({
   quantity_returned: z.coerce
     .number()
     .int()
-    .min(1, { message: t("validation:minQuantity") }),
+    .min(1, { message: "الكمية يجب أن تكون على الأقل 1" }),
   condition: z
     .string()
-    .min(1, { message: t("validation:required") })
+    .min(1, { message: "هذا الحقل مطلوب" })
     .optional()
     .default("resellable"),
   unit_price: z.number(),
   max_returnable_quantity: z.coerce
     .number()
-    .min(0, { message: t("validation:invalidNumber") }), // Add coerce to handle string inputs
+    .min(0, { message: "رقم غير صالح" }), // Add coerce to handle string inputs
 });
 export const addSaleReturnSchema = z
   .object({
     original_sale_id: z
-      .number({ required_error: t("validation:required") })
+      .number({ required_error: "هذا الحقل مطلوب" })
       .positive(),
     return_date: z.date({
-      required_error: t("validation:required"),
-      invalid_type_error: t("validation:invalidDate"),
+      required_error: "هذا الحقل مطلوب",
+      invalid_type_error: "تاريخ غير صالح",
     }),
     status: z.enum(["pending", "completed", "cancelled"], {
-      required_error: t("validation:required"),
+      required_error: "هذا الحقل مطلوب",
     }),
     return_reason: z.string(),
     notes: z.string().nullable(),
     credit_action: z.enum(["refund", "store_credit", "none"], {
-      required_error: t("validation:required"),
+      required_error: "هذا الحقل مطلوب",
     }),
     refunded_amount: z
       .preprocess(
         (val) => (val === "" ? undefined : val),
         z.coerce
-          .number({ invalid_type_error: t("validation:invalidNumber") })
+          .number({ invalid_type_error: "رقم غير صالح" })
           .min(0)
           .optional()
       )
       .default(0),
     items: z
       .array(returnItemSchema)
-      .min(1, { message: t("sales:errorReturnItemsRequired") }),
+      .min(1, { message: "يجب إضافة عنصر واحد على الأقل للإرجاع" }),
   })
   .refine(
     (data) => {
@@ -66,7 +65,7 @@ export const addSaleReturnSchema = z
       return true;
     },
     {
-      message: t("sales:errorRefundExceedsReturnedValue"),
+      message: "مبلغ الاسترداد يتجاوز قيمة العناصر المرجعة",
       path: ["refunded_amount"],
     }
   );
