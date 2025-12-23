@@ -1,7 +1,7 @@
 // src/components/purchases/manage-items/PurchaseItemCard.tsx
-import React, { memo, useCallback, useMemo } from 'react';
-import { Box, Paper, Typography, Avatar, Chip, IconButton, Tooltip, Stack } from '@mui/material';
-import { Trash2 } from 'lucide-react';
+import React from 'react';
+import { Box, Paper, Typography, Avatar, Chip, IconButton, Tooltip } from '@mui/material';
+import { DeleteIcon } from 'lucide-react';
 
 import InstantTextField from '@/components/purchases/InstantTextField';
 import { formatCurrency } from '@/constants';
@@ -9,27 +9,9 @@ import { PurchaseItem } from '@/services/purchaseService';
 import { ProductUnitsMap } from './types';
 
 // Helper: round to exactly 3 decimal places
-const roundToThreeDecimals = (value: number): number =>
-  Math.round(value * 1000) / 1000;
-
-// ==================== SUB-COMPONENTS ====================
-
-interface FieldCellProps {
-  label: string;
-  children: React.ReactNode;
-}
-
-const FieldCell = memo<FieldCellProps>(({ label, children }) => (
-  <Box sx={{ textAlign: 'center' }}>
-    {children}
-    <Typography variant="caption" color="text.secondary" display="block">
-      {label}
-    </Typography>
-  </Box>
-));
-FieldCell.displayName = 'FieldCell';
-
-// ==================== MAIN COMPONENT ====================
+const roundToThreeDecimals = (value: number): number => {
+  return Number(Number(value).toFixed(3));
+};
 
 interface PurchaseItemCardProps {
   item: PurchaseItem;
@@ -42,7 +24,7 @@ interface PurchaseItemCardProps {
   onDelete: (itemId: number) => void;
 }
 
-const PurchaseItemCard: React.FC<PurchaseItemCardProps> = memo(({
+const PurchaseItemCard: React.FC<PurchaseItemCardProps> = ({
   item,
   index,
   totalItems,
@@ -53,220 +35,164 @@ const PurchaseItemCard: React.FC<PurchaseItemCardProps> = memo(({
   onDelete,
 }) => {
   const unitInfo = productUnits[item.product_id];
-  const isZeroQuantity = item.quantity === 0;
-
-  // Memoized values
-  const productName = item.product_name || item.product?.name || `منتج #${item.product_id}`;
-  const productSku = item.product_sku || item.product?.sku;
-  const itemNumber = totalItems - index;
-  const totalCost = useMemo(() => item.quantity * Number(item.unit_cost), [item.quantity, item.unit_cost]);
-
-  // Unit labels
-  const stockingUnitLabel = unitInfo?.stocking_unit_name || 'وحدة تخزين';
-  const sellableUnitLabel = unitInfo?.sellable_unit_name || 'وحدة بيع';
-
-  // Callbacks for updates
-  const handleBatchChange = useCallback(
-    (v: string | number) => onUpdate(item.id, 'batch_number', v),
-    [item.id, onUpdate]
-  );
-
-  const handleQuantityChange = useCallback(
-    (v: string | number) => {
-      if (v === '') return;
-      onUpdate(item.id, 'quantity', Number(v));
-    },
-    [item.id, onUpdate]
-  );
-
-  const handleUnitCostChange = useCallback(
-    (v: string | number) => {
-      if (v === '') return;
-      onUpdate(item.id, 'unit_cost', Number(v));
-    },
-    [item.id, onUpdate]
-  );
-
-  const handleSalePriceChange = useCallback(
-    (v: string | number) => {
-      if (v === '') return;
-      onUpdate(item.id, 'sale_price', roundToThreeDecimals(Number(v)));
-    },
-    [item.id, onUpdate]
-  );
-
-  const handleSalePriceStockingChange = useCallback(
-    (v: string | number) => {
-      if (v === '') return;
-      onUpdate(item.id, 'sale_price_stocking_unit', roundToThreeDecimals(Number(v)));
-    },
-    [item.id, onUpdate]
-  );
-
-  const handleExpiryChange = useCallback(
-    (v: string | number) => onUpdate(item.id, 'expiry_date', String(v) || null),
-    [item.id, onUpdate]
-  );
-
-  const handleDelete = useCallback(() => onDelete(item.id), [item.id, onDelete]);
 
   return (
     <Paper
-      elevation={isZeroQuantity ? 0 : 1}
       sx={{
         p: 2,
-        bgcolor: isZeroQuantity ? 'error.50' : 'background.paper',
-        border: '1px solid',
-        borderColor: isZeroQuantity ? 'error.main' : 'divider',
-        borderRadius: 2,
-        transition: 'all 0.2s ease',
-        '&:hover': {
-          boxShadow: isReadOnly ? 1 : 3,
-        },
+        bgcolor: item.quantity === 0 ? 'error.lighter' : 'background.paper',
+        border: item.quantity === 0 ? '1px solid' : 'none',
+        borderColor: 'error.main',
       }}
     >
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: {
-            xs: '1fr',
-            sm: 'repeat(2, 1fr)',
-            md: 'repeat(4, 1fr)',
-            lg: '2fr repeat(7, 1fr) auto',
-          },
+          gridTemplateColumns: { xs: '1fr', md: 'repeat(9, 1fr)' },
           gap: 2,
           alignItems: 'center',
         }}
       >
         {/* Product Info */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Avatar
-            sx={{
-              width: 36,
-              height: 36,
-              bgcolor: isZeroQuantity ? 'error.main' : 'primary.main',
-              fontSize: '0.875rem',
-              fontWeight: 600,
-            }}
-          >
-            {itemNumber}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', fontSize: '0.875rem' }}>
+            {totalItems - index}
           </Avatar>
-          <Stack spacing={0.25}>
-            <Typography variant="subtitle2" fontWeight={600} noWrap sx={{ maxWidth: 180 }}>
-              {productName}
+          <Box>
+            <Typography variant="subtitle2" fontWeight="medium">
+              {item.product_name || item.product?.name || `منتج #${item.product_id}`}
             </Typography>
-            {productSku && (
+            {(item.product_sku || item.product?.sku) && (
               <Typography variant="caption" color="text.secondary">
-                {productSku}
+                باركود: {item.product_sku || item.product?.sku}
               </Typography>
             )}
-            {isZeroQuantity && (
-              <Chip
-                label="كمية صفر"
-                color="error"
-                size="small"
-                sx={{ height: 20, fontSize: '0.7rem' }}
-              />
+            {item.quantity === 0 && (
+              <Chip label="كمية صفر" color="error" size="small" sx={{ mt: 0.5 }} />
             )}
-          </Stack>
+          </Box>
         </Box>
 
-        {/* Batch Number */}
-        <FieldCell label="رقم الدفعة">
+        {/* Batch */}
+        <Box sx={{ textAlign: 'center' }}>
           <InstantTextField
             value={item.batch_number || ''}
-            onChangeValue={handleBatchChange}
+            onChangeValue={(v) => onUpdate(item.id, 'batch_number', v)}
             type="text"
             placeholder="—"
             disabled={isReadOnly}
           />
-        </FieldCell>
+          <Typography variant="caption" color="text.secondary">
+            رقم الدفعة
+          </Typography>
+        </Box>
 
         {/* Quantity */}
-        <FieldCell label={`الكمية (${stockingUnitLabel})`}>
+        <Box sx={{ textAlign: 'center' }}>
           <InstantTextField
             value={item.quantity}
-            onChangeValue={handleQuantityChange}
+            onChangeValue={(v) => {
+              if (v === '') return;
+              onUpdate(item.id, 'quantity', Number(v));
+            }}
             type="number"
             min={0}
             step={1}
             disabled={isReadOnly}
           />
-        </FieldCell>
+          <Typography variant="caption" color="text.secondary">
+            الكمية {unitInfo?.stocking_unit_name ? `(${unitInfo.stocking_unit_name})` : ''}
+          </Typography>
+        </Box>
 
         {/* Unit Cost */}
-        <FieldCell label={`سعر التكلفة (${stockingUnitLabel})`}>
+        <Box sx={{ textAlign: 'center' }}>
           <InstantTextField
             value={item.unit_cost}
-            onChangeValue={handleUnitCostChange}
+            onChangeValue={(v) => {
+              if (v === '') return;
+              onUpdate(item.id, 'unit_cost', Number(v));
+            }}
             type="number"
             min={0}
             step={0.01}
             disabled={isReadOnly}
           />
-        </FieldCell>
+          <Typography variant="caption" color="text.secondary">
+            سعر التكلفة {unitInfo?.stocking_unit_name ? `(${unitInfo.stocking_unit_name})` : ''}
+          </Typography>
+        </Box>
 
         {/* Sale Price (Sellable) */}
-        <FieldCell label={`سعر البيع (${sellableUnitLabel})`}>
+        <Box sx={{ textAlign: 'center' }}>
           <InstantTextField
             value={item.sale_price ?? ''}
-            onChangeValue={handleSalePriceChange}
+            onChangeValue={(v) => {
+              if (v === '') return;
+              onUpdate(item.id, 'sale_price', roundToThreeDecimals(Number(v)));
+            }}
             type="number"
             min={0}
             step={0.001}
             disabled={isReadOnly}
           />
-        </FieldCell>
+          <Typography variant="caption" color="text.secondary">
+            سعر البيع {unitInfo?.sellable_unit_name ? `(${unitInfo.sellable_unit_name})` : '(وحدة بيع)'}
+          </Typography>
+        </Box>
 
         {/* Sale Price (Stocking) */}
-        <FieldCell label={`سعر البيع (${stockingUnitLabel})`}>
+        <Box sx={{ textAlign: 'center' }}>
           <InstantTextField
             value={item.sale_price_stocking_unit ?? ''}
-            onChangeValue={handleSalePriceStockingChange}
+            onChangeValue={(v) => {
+              if (v === '') return;
+              onUpdate(item.id, 'sale_price_stocking_unit', roundToThreeDecimals(Number(v)));
+            }}
             type="number"
             min={0}
             step={0.001}
             disabled={isReadOnly}
           />
-        </FieldCell>
+          <Typography variant="caption" color="text.secondary">
+            سعر البيع ({unitInfo?.stocking_unit_name || 'وحدة تخزين'})
+          </Typography>
+        </Box>
 
         {/* Expiry Date */}
-        <FieldCell label="تاريخ الانتهاء">
+        <Box sx={{ textAlign: 'center' }}>
           <InstantTextField
             value={item.expiry_date || ''}
-            onChangeValue={handleExpiryChange}
+            onChangeValue={(v) => onUpdate(item.id, 'expiry_date', String(v) || null)}
             type="date"
             disabled={isReadOnly}
           />
-        </FieldCell>
+          <Typography variant="caption" color="text.secondary">
+            تاريخ الانتهاء
+          </Typography>
+        </Box>
 
         {/* Total Cost */}
-        <FieldCell label="إجمالي التكلفة">
-          <Typography
-            variant="body2"
-            fontWeight={600}
-            color={isZeroQuantity ? 'error.main' : 'success.main'}
-          >
-            {formatCurrency(totalCost)}
+        <Box sx={{ textAlign: 'center' }}>
+          <Typography variant="body2" fontWeight="medium">
+            {formatCurrency(item.quantity * Number(item.unit_cost))}
           </Typography>
-        </FieldCell>
+          <Typography variant="caption" color="text.secondary">
+            إجمالي التكلفة
+          </Typography>
+        </Box>
 
         {/* Actions */}
         <Box sx={{ display: 'flex', justifyContent: 'center' }}>
           {!isReadOnly && (
-            <Tooltip title="حذف الصنف">
+            <Tooltip title="حذف">
               <IconButton
                 size="small"
                 color="error"
-                onClick={handleDelete}
+                onClick={() => onDelete(item.id)}
                 disabled={isDeleting}
-                sx={{
-                  '&:hover': {
-                    bgcolor: 'error.50',
-                  },
-                }}
               >
-                <Trash2 size={18} />
+                <DeleteIcon fontSize="small" />
               </IconButton>
             </Tooltip>
           )}
@@ -274,8 +200,6 @@ const PurchaseItemCard: React.FC<PurchaseItemCardProps> = memo(({
       </Box>
     </Paper>
   );
-});
-
-PurchaseItemCard.displayName = 'PurchaseItemCard';
+};
 
 export default PurchaseItemCard;

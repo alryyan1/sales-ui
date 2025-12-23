@@ -6,6 +6,7 @@ import {
   Building,
   ShoppingCart,
   CircleDollarSign,
+  ArrowRightLeft,
 } from "lucide-react";
 import { NavItem } from "./types";
 
@@ -29,6 +30,12 @@ export const navItems: NavItem[] = [
     to: "/inventory/adjustments",
     label: "تعديلات المخزون",
     icon: BoxIcon,
+    permission: null,
+  },
+  {
+    to: "/inventory/transfers",
+    label: "تحويل المخزون",
+    icon: ArrowRightLeft,
     permission: null,
   },
   {

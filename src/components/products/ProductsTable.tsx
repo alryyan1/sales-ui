@@ -4,10 +4,24 @@ import {
   Paper,
   IconButton,
   Tooltip,
-  Box,
   Typography,
   Chip,
   Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  List,
+  ListItem,
+  ListItemText,
+  Tabs,
+  Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Pagination,
 } from "@mui/material";
 import {
   DataGrid,
@@ -15,10 +29,12 @@ import {
   GridRenderCellParams,
   GridToolbar,
 } from "@mui/x-data-grid";
-import { Edit, AlertTriangle, Copy, Check } from "lucide-react";
+import { Edit, AlertTriangle, Copy, Check, Info, History } from "lucide-react";
 
 // Types
-import { Product as ProductType } from "@/services/productService";
+import productService, {
+  Product as ProductType,
+} from "@/services/productService";
 import { formatNumber, formatCurrency } from "@/constants";
 
 // Interface for Product with potentially loaded batches
@@ -62,6 +78,86 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
   onPaginationModelChange,
 }) => {
   const [copiedSku, setCopiedSku] = useState<string | null>(null);
+  const [stockDialogProduct, setStockDialogProduct] =
+    useState<ProductWithOptionalBatches | null>(null);
+  const [isStockDialogOpen, setIsStockDialogOpen] = useState(false);
+
+  const handleOpenStockDialog = (product: ProductWithOptionalBatches) => {
+    setStockDialogProduct(product);
+    setIsStockDialogOpen(true);
+  };
+
+  const handleCloseStockDialog = () => {
+    setIsStockDialogOpen(false);
+    setStockDialogProduct(null);
+  };
+
+  // History Dialog State
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [historyDialogProduct, setHistoryDialogProduct] =
+    useState<ProductWithOptionalBatches | null>(null);
+  const [historyTab, setHistoryTab] = useState(0);
+  const [historyData, setHistoryData] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyTotalPages, setHistoryTotalPages] = useState(1);
+
+  const fetchHistory = async (
+    productId: number,
+    type: "purchases" | "sales",
+    page: number
+  ) => {
+    setHistoryLoading(true);
+    try {
+      const res =
+        type === "purchases"
+          ? await productService.getPurchaseHistory(productId, page)
+          : await productService.getSalesHistory(productId, page);
+      setHistoryData(res.data);
+      setHistoryTotalPages(res.last_page);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleOpenHistoryDialog = (product: ProductWithOptionalBatches) => {
+    setHistoryDialogProduct(product);
+    setHistoryDialogOpen(true);
+    setHistoryTab(0);
+    setHistoryPage(1);
+    fetchHistory(product.id, "purchases", 1);
+  };
+
+  const handleHistoryTabChange = (
+    event: React.SyntheticEvent,
+    newValue: number
+  ) => {
+    setHistoryTab(newValue);
+    setHistoryPage(1);
+    if (historyDialogProduct) {
+      fetchHistory(
+        historyDialogProduct.id,
+        newValue === 0 ? "purchases" : "sales",
+        1
+      );
+    }
+  };
+
+  const handleHistoryPageChange = (
+    event: React.ChangeEvent<unknown>,
+    value: number
+  ) => {
+    setHistoryPage(value);
+    if (historyDialogProduct) {
+      fetchHistory(
+        historyDialogProduct.id,
+        historyTab === 0 ? "purchases" : "sales",
+        value
+      );
+    }
+  };
 
   const copyToClipboard = async (sku: string) => {
     try {
@@ -221,12 +317,13 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
       align: "center",
       headerAlign: "center",
       renderCell: (params: GridRenderCellParams) => {
+        const product = params.row as ProductWithOptionalBatches;
         const stockQty = Number(
-          params.row.current_stock_quantity ?? params.row.stock_quantity ?? 0
+          product.current_stock_quantity ?? product.stock_quantity ?? 0
         );
         const isLow =
-          params.row.stock_alert_level !== null &&
-          stockQty <= (params.row.stock_alert_level as number);
+          product.stock_alert_level !== null &&
+          stockQty <= (product.stock_alert_level as number);
         const isOutOfStock = stockQty <= 0;
 
         return (
@@ -255,6 +352,39 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
               </Tooltip>
             )}
           </Stack>
+        );
+      },
+    },
+    {
+      field: "warehouse_info",
+      headerName: "المخازن",
+      width: 60,
+      align: "center",
+      headerAlign: "center",
+      sortable: false,
+      renderCell: (params: GridRenderCellParams) => {
+        const product = params.row as ProductWithOptionalBatches;
+        if (!product.warehouses?.length) return null;
+
+        return (
+          <Tooltip title="تفاصيل المخزون">
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenStockDialog(product);
+              }}
+              sx={{ p: 0.5 }}
+            >
+              <Info
+                style={{
+                  width: 18,
+                  height: 18,
+                  color: "var(--mui-palette-info-main)",
+                }}
+              />
+            </IconButton>
+          </Tooltip>
         );
       },
     },
@@ -304,30 +434,53 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
     {
       field: "actions",
       headerName: "إجراءات",
-      width: 80,
+      width: 120,
       align: "center",
       headerAlign: "center",
       sortable: false,
       renderCell: (params: GridRenderCellParams) => (
-        <Tooltip title="تعديل">
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(params.row as ProductWithOptionalBatches);
-            }}
-            disabled={isLoading}
-            sx={{
-              color: "primary.main",
-              "&:hover": {
-                bgcolor: "primary.light",
-                color: "primary.contrastText",
-              },
-            }}
-          >
-            <Edit style={{ width: 18, height: 18 }} />
-          </IconButton>
-        </Tooltip>
+        <Stack direction="row" spacing={1}>
+          <Tooltip title="السجل">
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenHistoryDialog(
+                  params.row as ProductWithOptionalBatches
+                );
+              }}
+              disabled={isLoading}
+              sx={{
+                color: "text.secondary",
+                "&:hover": {
+                  bgcolor: "action.hover",
+                  color: "text.primary",
+                },
+              }}
+            >
+              <History style={{ width: 18, height: 18 }} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="تعديل">
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(params.row as ProductWithOptionalBatches);
+              }}
+              disabled={isLoading}
+              sx={{
+                color: "primary.main",
+                "&:hover": {
+                  bgcolor: "primary.light",
+                  color: "primary.contrastText",
+                },
+              }}
+            >
+              <Edit style={{ width: 18, height: 18 }} />
+            </IconButton>
+          </Tooltip>
+        </Stack>
       ),
     },
   ];
@@ -356,47 +509,186 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
   }
 
   return (
-    <Paper
-      sx={{ height: 650, width: "100%", borderRadius: 2, overflow: "hidden" }}
-      elevation={0}
-    >
-      <DataGrid
-        rows={products}
-        columns={columns}
-        loading={isLoading}
-        disableRowSelectionOnClick
-        onRowClick={(params) =>
-          onEdit(params.row as ProductWithOptionalBatches)
-        }
-        // Server-side pagination
-        rowCount={rowCount}
-        paginationModel={paginationModel}
-        onPaginationModelChange={onPaginationModelChange}
-        paginationMode="server"
-        slots={{ toolbar: GridToolbar }}
-        slotProps={{
-          toolbar: {
-            showQuickFilter: true,
-            quickFilterProps: { debounceMs: 500 },
-          },
-        }}
-        sx={{
-          border: 0,
-          "& .MuiDataGrid-cell": {
-            borderBottom: "1px solid #f0f0f0",
-          },
-          "& .MuiDataGrid-columnHeaders": {
-            backgroundColor: "action.hover", // Match previous style
-            borderBottom: "1px solid #e0e0e0",
-            fontSize: "0.875rem",
-            fontWeight: 600,
-          },
-          "& .MuiDataGrid-row": {
-            cursor: "pointer",
-          },
-        }}
-        pageSizeOptions={[10, 25, 50, 100, 200, 500, 1000]}
-      />
-    </Paper>
+    <>
+      <Paper
+        sx={{ height: 650, width: "100%", borderRadius: 2, overflow: "hidden" }}
+        elevation={0}
+      >
+        <DataGrid
+          rows={products}
+          columns={columns}
+          loading={isLoading}
+          disableRowSelectionOnClick
+          onRowClick={(params) =>
+            onEdit(params.row as ProductWithOptionalBatches)
+          }
+          // Server-side pagination
+          rowCount={rowCount}
+          paginationModel={paginationModel}
+          onPaginationModelChange={onPaginationModelChange}
+          paginationMode="server"
+          slots={{ toolbar: GridToolbar }}
+          slotProps={{
+            toolbar: {
+              showQuickFilter: true,
+              quickFilterProps: { debounceMs: 500 },
+            },
+          }}
+          sx={{
+            border: 0,
+            "& .MuiDataGrid-cell": {
+              borderBottom: "1px solid #f0f0f0",
+            },
+            "& .MuiDataGrid-columnHeaders": {
+              backgroundColor: "action.hover", // Match previous style
+              borderBottom: "1px solid #e0e0e0",
+              fontSize: "0.875rem",
+              fontWeight: 600,
+            },
+            "& .MuiDataGrid-row": {
+              cursor: "pointer",
+            },
+          }}
+          pageSizeOptions={[10, 25, 50, 100]}
+        />
+      </Paper>
+      {/* Warehouse Stock Breakdown Dialog */}
+      <Dialog
+        open={isStockDialogOpen}
+        onClose={handleCloseStockDialog}
+        maxWidth="xs"
+        fullWidth
+        onClick={(e) => e.stopPropagation()} // Prevent row click from firing underneath
+      >
+        <DialogTitle sx={{ fontWeight: 600, pb: 1 }}>
+          تفاصيل المخزون: {stockDialogProduct?.name}
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 0 }}>
+          <List disablePadding>
+            {stockDialogProduct?.warehouses?.map((w) => (
+              <ListItem key={w.id} divider>
+                <ListItemText
+                  primary={w.name}
+                  primaryTypographyProps={{ variant: "subtitle2" }}
+                />
+                <Typography variant="body1" fontWeight={600}>
+                  {formatNumber(w.pivot.quantity)}
+                </Typography>
+              </ListItem>
+            ))}
+            {!stockDialogProduct?.warehouses?.length && (
+              <ListItem>
+                <ListItemText primary="No warehouse data available." />
+              </ListItem>
+            )}
+          </List>
+        </DialogContent>
+      </Dialog>
+      {/* Product History Dialog */}
+      <Dialog
+        open={historyDialogOpen}
+        onClose={() => setHistoryDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+        onClick={(e) => e.stopPropagation()}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          سجل المنتج: {historyDialogProduct?.name}
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 0 }}>
+          <Tabs
+            value={historyTab}
+            onChange={handleHistoryTabChange}
+            variant="fullWidth"
+            textColor="primary"
+            indicatorColor="primary"
+          >
+            <Tab label="المشتروات" />
+            <Tab label="المبيعات" />
+          </Tabs>
+
+          <Paper elevation={0} sx={{ p: 2 }}>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>
+                      {historyTab === 0 ? "التاريخ" : "التاريخ"}
+                    </TableCell>
+                    <TableCell>
+                      {historyTab === 0 ? "المورد" : "العميل"}
+                    </TableCell>
+                    <TableCell>
+                      {historyTab === 0
+                        ? "الكمية (وحدة تخزين)"
+                        : "الكمية (وحدة بيع)"}
+                    </TableCell>
+                    <TableCell>
+                      {historyTab === 0 ? "التكلفة" : "السعر"}
+                    </TableCell>
+                    <TableCell>الإجمالي</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {historyLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center">
+                        جاري التحميل...
+                      </TableCell>
+                    </TableRow>
+                  ) : historyData.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center">
+                        لا توجد سجلات
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    historyData.map((item: any) => (
+                      <TableRow key={item.id}>
+                        <TableCell>
+                          {item.created_at
+                            ? new Date(item.created_at).toLocaleDateString(
+                                "en-GB"
+                              )
+                            : "---"}
+                        </TableCell>
+                        <TableCell>
+                          {historyTab === 0
+                            ? item.purchase?.supplier?.name || "N/A"
+                            : item.sale?.client?.name || "N/A"}
+                        </TableCell>
+                        <TableCell>{formatNumber(item.quantity)}</TableCell>
+                        <TableCell>
+                          {formatCurrency(
+                            historyTab === 0 ? item.unit_cost : item.unit_price
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {formatCurrency(
+                            historyTab === 0
+                              ? item.total_cost
+                              : item.total_price
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            {historyTotalPages > 1 && (
+              <Stack direction="row" justifyContent="center" sx={{ mt: 2 }}>
+                <Pagination
+                  count={historyTotalPages}
+                  page={historyPage}
+                  onChange={handleHistoryPageChange}
+                  color="primary"
+                />
+              </Stack>
+            )}
+          </Paper>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };

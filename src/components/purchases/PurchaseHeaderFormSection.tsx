@@ -299,6 +299,60 @@ export const PurchaseHeaderFormSection: React.FC<
               },
             }}
           >
+            {/* Status */}
+            <Controller
+              control={control}
+              name="status"
+              render={({ field }) => (
+                <Box>
+                  <FieldLabel required icon={<TagOutlinedIcon />}>
+                    الحالة
+                  </FieldLabel>
+                  <Autocomplete
+                    options={statusOptions}
+                    getOptionLabel={(option) => option.label}
+                    value={
+                      statusOptions.find((opt) => opt.value === field.value) ||
+                      statusOptions[0]
+                    }
+                    onChange={(_, newValue) => {
+                      if (newValue) {
+                        field.onChange(newValue.value);
+                      }
+                    }}
+                    disabled={isDisabled}
+                    size="small"
+                    disableClearable
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder="اختر الحالة"
+                        sx={inputStyles}
+                      />
+                    )}
+                    renderOption={(props, option) => (
+                      <Box
+                        component="li"
+                        {...props}
+                        sx={{
+                          direction: "rtl",
+                          textAlign: "right",
+                          justifyContent: "flex-start !important",
+                        }}
+                      >
+                        <Chip
+                          label={option.label}
+                          size="small"
+                          color={option.color as any}
+                          variant="outlined"
+                        />
+                      </Box>
+                    )}
+                  />
+                </Box>
+              )}
+            />
+
             {/* Purchase Date */}
             <Controller
               control={control}

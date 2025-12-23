@@ -509,6 +509,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                       inputProps={{ min: 1, step: 1 }}
                       size="small"
                       fullWidth
+                      onFocus={(e) => e.target.select()}
                       onKeyDown={handleFormInputKeyDown}
                       sx={{
                         "& .MuiOutlinedInput-root": { borderRadius: 2 },
@@ -540,6 +541,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                     </Typography>
                     <TextField
                       type="number"
+                      onFocus={(e) => e.target.select()}
                       value={unitCost}
                       onChange={(e) =>
                         handleUnitCostChange(Number(e.target.value))

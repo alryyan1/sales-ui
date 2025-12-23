@@ -38,6 +38,7 @@ import RequestStockPage from "./pages/inventory/RequestStockPage";
 import ManageStockRequisitionsListPage from "./pages/inventory/ManageStockRequisitionsListPage";
 import ProcessRequisitionPage from "./components/admin/inventory/ProcessRequisitionPage";
 import InventoryLogPage from "./pages/reports/InventoryLogPage";
+import StockTransfersPage from "./pages/inventory/StockTransfersPage";
 
 import MonthlyRevenueReportPage from "./components/reports/MonthlyRevenueReportPage";
 import SalesWithDiscountsPage from "./pages/reports/SalesWithDiscountsPage";
@@ -162,6 +163,7 @@ const router = createHashRouter([
             path: "inventory",
             children: [
               { path: "adjustments", element: <StockAdjustmentsListPage /> },
+              { path: "transfers", element: <StockTransfersPage /> },
             ],
           },
           {

@@ -34,7 +34,7 @@ export interface Product {
   category_id?: number | null; // Optional if not included in resource
   category_name?: string | null; // Optional if included by resource
   // Optional accessors that might be added by backend ProductResource
-      // --- Stock (always in sellable units) ---
+  // --- Stock (always in sellable units) ---
   latest_purchase_cost?: string | number | null;
   suggested_sale_price?: string | number | null;
   latest_cost_per_sellable_unit?: number | null;
@@ -54,6 +54,15 @@ export interface Product {
     sale_price: number;
     expiry_date: string | null;
   }[]; // Matches PurchaseItemResource structure
+  // Multi-warehouse stock
+  warehouses?: {
+    id: number;
+    name: string;
+    pivot: {
+      quantity: number;
+      min_stock_level: number | null;
+    };
+  }[];
 }
 
 // Data type for creating/updating - matches form fields before potential conversion
@@ -167,15 +176,22 @@ const productService = {
         { ids: ids }
       );
       console.log("getProductsByIds response:", response.data);
-      
+
       // Handle Laravel Resource Collection response
       // ProductResource::collection() returns a collection with 'data' property
-      if (response.data && response.data.data && Array.isArray(response.data.data)) {
+      if (
+        response.data &&
+        response.data.data &&
+        Array.isArray(response.data.data)
+      ) {
         return response.data.data; // Laravel Resource Collection format
       } else if (response.data && Array.isArray(response.data)) {
         return response.data; // Direct array (fallback)
       } else {
-        console.warn("Unexpected response structure from getProductsByIds:", response.data);
+        console.warn(
+          "Unexpected response structure from getProductsByIds:",
+          response.data
+        );
         return [];
       }
     } catch (error) {
@@ -272,20 +288,22 @@ const productService = {
    * @param file Excel file to upload
    * @returns Promise resolving to headers from Excel file
    */
-  importProductsStep1: async (file: File): Promise<{ headers: string[]; message: string }> => {
+  importProductsStep1: async (
+    file: File
+  ): Promise<{ headers: string[]; message: string }> => {
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append("file", file);
 
-      const response = await apiClient.post('/products/import', formData, {
+      const response = await apiClient.post("/products/import", formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
       });
 
       return response.data;
     } catch (error) {
-      console.error('Error uploading Excel file:', error);
+      console.error("Error uploading Excel file:", error);
       throw new Error(getErrorMessage(error));
     }
   },
@@ -298,30 +316,34 @@ const productService = {
    * @returns Promise resolving to preview data
    */
   importProductsPreview: async (
-    file: File, 
-    columnMapping: Record<string, string>, 
+    file: File,
+    columnMapping: Record<string, string>,
     skipHeader: boolean = true
   ): Promise<{ preview: any[] }> => {
     try {
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('skipHeader', skipHeader ? '1' : '0');
-      
+      formData.append("file", file);
+      formData.append("skipHeader", skipHeader ? "1" : "0");
+
       // Add column mapping as JSON
       Object.entries(columnMapping).forEach(([field, column]) => {
         formData.append(`columnMapping[${field}]`, column);
       });
 
-      const response = await apiClient.post('/products/preview-import', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        timeout: 60000, // 1 minute timeout for preview
-      });
+      const response = await apiClient.post(
+        "/products/preview-import",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+          timeout: 60000, // 1 minute timeout for preview
+        }
+      );
 
       return response.data;
     } catch (error) {
-      console.error('Error previewing import:', error);
+      console.error("Error previewing import:", error);
       throw new Error(getErrorMessage(error));
     }
   },
@@ -334,32 +356,63 @@ const productService = {
    * @returns Promise resolving to import results
    */
   importProductsStep2: async (
-    file: File, 
-    columnMapping: Record<string, string>, 
+    file: File,
+    columnMapping: Record<string, string>,
     skipHeader: boolean = true
-  ): Promise<{ imported: number; errors: number; message: string; errorDetails: any[] }> => {
+  ): Promise<{
+    imported: number;
+    errors: number;
+    message: string;
+    errorDetails: any[];
+  }> => {
     try {
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('skipHeader', skipHeader ? '1' : '0');
-      
+      formData.append("file", file);
+      formData.append("skipHeader", skipHeader ? "1" : "0");
+
       // Add column mapping as JSON
       Object.entries(columnMapping).forEach(([field, column]) => {
         formData.append(`columnMapping[${field}]`, column);
       });
 
-      const response = await apiClient.post('/products/process-import', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        timeout: 300000, // 5 minutes timeout for large imports
-      });
+      const response = await apiClient.post(
+        "/products/process-import",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+          timeout: 300000, // 5 minutes timeout for large imports
+        }
+      );
 
       return response.data;
     } catch (error) {
-      console.error('Error processing import:', error);
+      console.error("Error processing import:", error);
       throw new Error(getErrorMessage(error));
     }
+  },
+
+  getPurchaseHistory: async (
+    productId: number,
+    page: number = 1,
+    limit: number = 10
+  ): Promise<PaginatedResponse<any>> => {
+    const response = await apiClient.get<PaginatedResponse<any>>(
+      `/products/${productId}/purchase-history?page=${page}&per_page=${limit}`
+    );
+    return response.data;
+  },
+
+  getSalesHistory: async (
+    productId: number,
+    page: number = 1,
+    limit: number = 10
+  ): Promise<PaginatedResponse<any>> => {
+    const response = await apiClient.get<PaginatedResponse<any>>(
+      `/products/${productId}/sales-history?page=${page}&per_page=${limit}`
+    );
+    return response.data;
   },
 
   // --- Error Helpers (Imported from axios.ts) ---
