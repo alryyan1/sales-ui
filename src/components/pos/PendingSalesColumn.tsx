@@ -8,6 +8,7 @@ interface PendingSalesColumnProps {
   selectedSaleId: string | null;
   onSaleSelect: (sale: OfflineSale) => void;
   onDelete?: (sale: OfflineSale) => void;
+  title?: string;
 }
 
 export const PendingSalesColumn: React.FC<PendingSalesColumnProps> = ({
@@ -15,6 +16,7 @@ export const PendingSalesColumn: React.FC<PendingSalesColumnProps> = ({
   selectedSaleId,
   onSaleSelect,
   onDelete,
+  title,
 }) => {
   return (
     <Box
@@ -22,8 +24,7 @@ export const PendingSalesColumn: React.FC<PendingSalesColumnProps> = ({
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        borderRight: "1px solid", // Right border since it will be on the left
-        borderColor: "divider",
+        // borderRight removed from here, container handles border
         alignItems: "center",
         overflowY: "auto",
         gap: 1,
@@ -31,13 +32,18 @@ export const PendingSalesColumn: React.FC<PendingSalesColumnProps> = ({
         pt: 2,
         pb: 2,
         bgcolor: "white",
-        minWidth: 80
+        minWidth: 80,
       }}
     >
-        <Typography variant="caption" fontWeight="bold" color="text.secondary" sx={{ mb: 1, textAlign: 'center' }}>
-            PENDING
-        </Typography>
-        
+      <Typography
+        variant="caption"
+        fontWeight="bold"
+        color="text.secondary"
+        sx={{ mb: 1, textAlign: "center" }}
+      >
+        {title || "SALES"}
+      </Typography>
+
       {sales.map((sale, index) => (
         <PendingSaleBox
           key={sale.tempId}
@@ -48,11 +54,11 @@ export const PendingSalesColumn: React.FC<PendingSalesColumnProps> = ({
           onDelete={onDelete}
         />
       ))}
-      
+
       {sales.length === 0 && (
-          <Typography variant="caption" color="text.disabled" align="center">
-              No Pending Sales
-          </Typography>
+        <Typography variant="caption" color="text.disabled" align="center">
+          No Pending Sales
+        </Typography>
       )}
     </Box>
   );

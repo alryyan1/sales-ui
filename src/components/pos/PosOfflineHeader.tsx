@@ -21,6 +21,7 @@ import {
   ChevronRight,
   X,
   Menu as MenuIcon,
+  Printer,
 } from "lucide-react";
 import { Product } from "../../services/productService";
 import { formatNumber } from "@/constants";
@@ -46,6 +47,7 @@ interface PosOfflineHeaderProps {
   selectedShiftId: number | null;
   availableShiftIds: number[];
   onShiftSelect: (id: number | null) => void;
+  onPrintShiftReport: () => void;
 
   // Search / Cart
   products: Product[];
@@ -74,6 +76,7 @@ export const PosOfflineHeader: React.FC<PosOfflineHeaderProps> = ({
   onPaymentShortcut,
   isSaleSelected,
   onDrawerToggle,
+  onPrintShiftReport,
 }) => {
   const theme = useTheme();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -240,13 +243,29 @@ export const PosOfflineHeader: React.FC<PosOfflineHeaderProps> = ({
                         })()}
                       </Typography>
                       {/* Stock Warning */}
-                      {(option.current_stock_quantity ??
-                        option.stock_quantity ??
-                        0) <= 0 && (
-                        <Typography variant="caption" color="error.main">
-                          نفذت الكمية
-                        </Typography>
-                      )}
+                      {(() => {
+                        const currentStock = option.current_stock_quantity ?? 0;
+                        const totalStock = option.stock_quantity ?? 0;
+
+                        if (currentStock <= 0) {
+                          if (totalStock > 0) {
+                            return (
+                              <Typography
+                                variant="caption"
+                                color="warning.main"
+                              >
+                                {`المخزون الكلي: ${totalStock}`}
+                              </Typography>
+                            );
+                          }
+                          return (
+                            <Typography variant="caption" color="error.main">
+                              نفذت الكمية
+                            </Typography>
+                          );
+                        }
+                        return null;
+                      })()}
                     </Box>
                   </Box>
                 </li>
@@ -379,6 +398,22 @@ export const PosOfflineHeader: React.FC<PosOfflineHeaderProps> = ({
             </IconButton>
           </Tooltip>
 
+          {/* Shift Report Button */}
+          <Tooltip title="تقرير الوردية">
+            <IconButton
+              onClick={onPrintShiftReport}
+              disabled={!selectedShiftId}
+              sx={{
+                border: "1px solid",
+                borderColor: "divider",
+                color: "text.secondary",
+                mr: 1,
+              }}
+            >
+              <Printer size={20} />
+            </IconButton>
+          </Tooltip>
+
           {/* Shift Status Button */}
           {shift && shift.is_open ? (
             <Tooltip title="إغلاق الوردية">
@@ -395,10 +430,7 @@ export const PosOfflineHeader: React.FC<PosOfflineHeaderProps> = ({
                     }}
                   />
                 }
-                onClick={onCloseShift} // Wait, actually button to close? Usually separate icon.
-                // Let's stick to the previous design: Chip + X Icon, or a Button that toggles?
-                // "Professional" often means clear status.
-                // Let's do a combined component or just the Close Icon is fine if clear.
+                onClick={onCloseShift}
                 sx={{
                   borderColor: "success.light",
                   color: "success.dark",
@@ -407,7 +439,6 @@ export const PosOfflineHeader: React.FC<PosOfflineHeaderProps> = ({
                   "&:hover": {
                     borderColor: "error.main",
                     color: "error.main",
-                    // Change icon/text on hover? simpler to just have X button next to it.
                   },
                 }}
               >
@@ -417,7 +448,7 @@ export const PosOfflineHeader: React.FC<PosOfflineHeaderProps> = ({
           ) : (
             <Button
               variant="contained"
-              color="inherit" // Dark/Black usually looks good for "Open Shift" prompt
+              color="inherit"
               onClick={onOpenShift}
               disabled={shiftLoading || !isOnline}
               sx={{

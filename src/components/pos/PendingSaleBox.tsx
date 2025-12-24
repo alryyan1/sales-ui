@@ -1,10 +1,5 @@
 import React from "react";
-import {
-  Card,
-  Badge,
-  Box,
-  Typography,
-} from "@mui/material";
+import { Card, Badge, Box, Typography } from "@mui/material";
 import { CloudDone } from "@mui/icons-material";
 import { OfflineSale } from "../../services/db";
 
@@ -53,63 +48,74 @@ export const PendingSaleBox: React.FC<PendingSaleBoxProps> = ({
           overflow: "visible",
           // Show delete button on hover
           "&:hover .delete-btn": {
-             opacity: 1,
-             scale: '1'
-          }
+            opacity: 1,
+            scale: "1",
+          },
         }}
         onClick={() => onSaleSelect(sale)}
       >
         {/* Sync Status Icon */}
-        {sale.is_synced && (
-            <Box 
-                sx={{ 
-                    position: 'absolute', 
-                    top: -5, 
-                    left: -5, 
-                    bgcolor: 'success.main', 
-                    borderRadius: '50%', 
-                    width: 16, 
-                    height: 16, 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    zIndex: 20
-                }}
-            >
-                <CloudDone sx={{ fontSize: 10, color: 'white' }} />
-            </Box>
-        )}
+        {/* Sync Status Icon or Pending Indicator */}
+        <Box
+          sx={{
+            position: "absolute",
+            top: sale.is_synced ? -5 : -3,
+            left: sale.is_synced ? -5 : -3,
+            width: sale.is_synced ? 16 : 8,
+            height: sale.is_synced ? 16 : 8,
+            bgcolor: sale.is_synced ? "success.main" : "error.main",
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 20,
+            boxShadow: 1,
+          }}
+        >
+          {sale.is_synced && (
+            <CloudDone sx={{ fontSize: 10, color: "white" }} />
+          )}
+        </Box>
 
         {/* Delete Button (Top Right) */}
         {!sale.is_synced && onDelete && (
-             <Box
-                className="delete-btn"
-                sx={{
-                    position: 'absolute',
-                    top: -8,
-                    right: -8,
-                    bgcolor: 'error.main',
-                    borderRadius: '50%',
-                    width: 18,
-                    height: 18,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    zIndex: 30, // Higher than badge
-                    opacity: 0,
-                    scale: '0.8',
-                    transition: 'all 0.2s',
-                    boxShadow: 2,
-                    "&:hover": { bgcolor: 'error.dark' }
-                }}
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(sale);
-                }}
+          <Box
+            className="delete-btn"
+            sx={{
+              position: "absolute",
+              top: -8,
+              right: -8,
+              bgcolor: "error.main",
+              borderRadius: "50%",
+              width: 18,
+              height: 18,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              zIndex: 30, // Higher than badge
+              opacity: 0,
+              scale: "0.8",
+              transition: "all 0.2s",
+              boxShadow: 2,
+              "&:hover": { bgcolor: "error.dark" },
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(sale);
+            }}
+          >
+            <Typography
+              sx={{
+                color: "white",
+                fontSize: "12px",
+                fontWeight: "bold",
+                lineHeight: 1,
+              }}
             >
-                <Typography sx={{ color: 'white', fontSize: '12px', fontWeight: 'bold', lineHeight: 1 }}>×</Typography>
-            </Box>
+              ×
+            </Typography>
+          </Box>
         )}
 
         <Box
@@ -123,17 +129,29 @@ export const PendingSaleBox: React.FC<PendingSaleBoxProps> = ({
             width: "100%",
           }}
         >
-          {/* Display sequential number */}
+          {/* Display sequential number or order number */}
           <Typography
             variant="caption"
             fontWeight={700}
-            color="text.secondary"
-            sx={{ fontSize: '0.85rem' }}
+            color={
+              sale.is_synced && sale.sale_order_number
+                ? "primary.main"
+                : "text.secondary"
+            }
+            sx={{ fontSize: "0.85rem" }}
           >
-           #{index}
+            {sale.is_synced && sale.sale_order_number
+              ? `#${sale.sale_order_number}`
+              : `#${index}`}
           </Typography>
-          <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.disabled' }}>
-             {new Date(sale.offline_created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+          <Typography
+            variant="caption"
+            sx={{ fontSize: "0.6rem", color: "text.disabled" }}
+          >
+            {new Date(sale.offline_created_at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
           </Typography>
         </Box>
       </Card>

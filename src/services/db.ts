@@ -24,7 +24,8 @@ export interface SyncAction {
   retryCount: number;
 }
 
-export interface OfflineSale extends Omit<Sale, "id"> {
+export interface OfflineSale
+  extends Omit<Sale, "id" | "sale_order_number" | "client_name"> {
   id?: number; // ID from backend when synced
   tempId: string; // Temporary ID for offline reference
   offline_created_at: number;
@@ -33,6 +34,7 @@ export interface OfflineSale extends Omit<Sale, "id"> {
   client_id: number | null;
   client_name?: string | null;
   items: OfflineSaleItem[];
+  sale_order_number?: number | null;
 }
 
 export interface OfflineSaleItem extends SaleItem {

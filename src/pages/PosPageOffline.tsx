@@ -1,11 +1,17 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { Box, Paper } from "@mui/material";
+import {
+  Box,
+  Paper,
+  IconButton,
+  Tooltip,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@mui/material";
+import { Cloud, Clock, X } from "lucide-react";
 import apiClient from "@/lib/axios";
-
-// Use standard Tailwind classes via classNames if needed,
-// using MUI for components as project seems heavy on MUI but request asked for "Elegant" which MUI can do with custom styling.
-// We will use MUI sx props for "clean and elegant".
-
+import { PDFViewer } from "@react-pdf/renderer";
+import { useAuth } from "@/context/AuthContext";
 import { useOfflineSync } from "../hooks/useOfflineSync";
 import { offlineSaleService } from "../services/offlineSaleService";
 import { dbService, OfflineSale, OfflineSaleItem } from "../services/db";
@@ -16,8 +22,10 @@ import { PendingSalesColumn } from "../components/pos/PendingSalesColumn";
 import { toast } from "sonner";
 import { OfflineSaleSummaryColumn } from "../components/pos/OfflineSaleSummaryColumn";
 import { PosOfflineHeader } from "../components/pos/PosOfflineHeader";
+import { PosShiftReportPdf } from "../components/pos/PosShiftReportPdf";
 
 export const PosPageOffline = () => {
+  const { user } = useAuth();
   const { isOnline, isSyncing, triggerSync } = useOfflineSync();
 
   // Shift state
@@ -34,8 +42,17 @@ export const PosPageOffline = () => {
   useEffect(() => {
     const fetchShift = async () => {
       if (!isOnline) {
-        // If offline, we can't fetch shift status from API.
-        // We might want to keep it null or handle this gracefully.
+        // Try load from local storage
+        const stored = localStorage.getItem("current_pos_shift");
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            setShift(parsed);
+            if (!selectedShiftId && parsed?.id) setSelectedShiftId(parsed.id);
+          } catch (e) {
+            console.error("Error parsing stored shift", e);
+          }
+        }
         return;
       }
       try {
@@ -44,16 +61,19 @@ export const PosPageOffline = () => {
         if (response.status === 200) {
           const shiftData = response.data.data || response.data;
           setShift(shiftData);
+          localStorage.setItem("current_pos_shift", JSON.stringify(shiftData));
           // Initialize selected shift ID
           if (!selectedShiftId && shiftData?.id) {
             setSelectedShiftId(shiftData.id);
           }
         } else {
           setShift(null);
+          localStorage.removeItem("current_pos_shift");
         }
       } catch (error: any) {
         if (error?.response?.status === 204) {
           setShift(null);
+          localStorage.removeItem("current_pos_shift");
         } else {
           console.error("Failed to load current shift:", error);
         }
@@ -74,6 +94,7 @@ export const PosPageOffline = () => {
       const response = await apiClient.post("/shifts/open");
       const newShift = response.data.data || response.data;
       setShift(newShift);
+      localStorage.setItem("current_pos_shift", JSON.stringify(newShift));
 
       // Automatically select the newly opened shift
       if (newShift?.id) {
@@ -97,7 +118,9 @@ export const PosPageOffline = () => {
     try {
       setShiftLoading(true);
       const response = await apiClient.post("/shifts/close");
-      setShift(response.data.data || response.data);
+      const updatedShift = response.data.data || response.data;
+      setShift(updatedShift);
+      localStorage.setItem("current_pos_shift", JSON.stringify(updatedShift));
       toast.success("تم إغلاق الوردية");
     } catch (error) {
       console.error("Failed to close shift:", error);
@@ -117,34 +140,41 @@ export const PosPageOffline = () => {
 
   // Dialog State
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isSyncedView, setIsSyncedView] = useState(true);
+  const [isShiftReportOpen, setIsShiftReportOpen] = useState(false);
 
-  // Load Products and Clients on Mount
+  // Load Products and Clients on Mount & Auto-update
   useEffect(() => {
-    const load = async () => {
-      const res = await offlineSaleService.searchProducts("");
-      // console.log(res,'res');
-      setProducts(res);
+    const loadAndSync = async () => {
+      // 1. Load local data first (fast render)
+      const localProducts = await offlineSaleService.searchProducts("");
+      if (localProducts.length > 0) setProducts(localProducts);
 
-      const clientsRes = await offlineSaleService.searchClients("");
-      setClients(clientsRes);
-    };
-    load();
-  }, []);
+      const localClients = await offlineSaleService.searchClients("");
+      if (localClients.length > 0) setClients(localClients);
 
-  // Initial check if we have products/clients, if not try to sync
-  useEffect(() => {
-    const checkInit = async () => {
-      const res = await offlineSaleService.searchProducts("");
-      const clientsRes = await offlineSaleService.searchClients("");
+      // 2. If online, fetch fresh data
+      if (isOnline) {
+        try {
+          await offlineSaleService.initializeProducts(
+            user?.warehouse_id || undefined
+          );
+          await offlineSaleService.initializeClients();
 
-      if ((res.length === 0 || clientsRes.length === 0) && isOnline) {
-        await offlineSaleService.initializeProducts();
-        await offlineSaleService.initializeClients(); // Load clients too
-        window.location.reload(); // Simple refresh to show products, or just reload data
+          // 3. Refresh state from updated DB
+          const freshProducts = await offlineSaleService.searchProducts("");
+          setProducts(freshProducts);
+
+          const freshClients = await offlineSaleService.searchClients("");
+          setClients(freshClients);
+        } catch (e) {
+          console.error("Auto-update failed", e);
+        }
       }
     };
-    checkInit();
-  }, [isOnline]);
+
+    loadAndSync();
+  }, [isOnline, user?.warehouse_id]);
 
   // Reload pending sales list when sync finishes (to show synced status)
   useEffect(() => {
@@ -453,7 +483,54 @@ export const PosPageOffline = () => {
   const [pendingSales, setPendingSales] = useState<OfflineSale[]>([]);
 
   const loadPendingSales = async () => {
-    const sales = await offlineSaleService.getOfflineSales();
+    let sales = await offlineSaleService.getOfflineSales();
+
+    // Fetch server sales for current shift if online
+    if (isOnline && selectedShiftId) {
+      try {
+        const res = await apiClient.get(
+          `/sales?shift_id=${selectedShiftId}&per_page=100`
+        );
+        const serverSalesData = res.data.data || [];
+
+        const localIds = new Set(sales.filter((s) => s.id).map((s) => s.id));
+
+        const mapped: OfflineSale[] = serverSalesData.map((s: any) => ({
+          tempId: `server_${s.id}`,
+          id: s.id,
+          offline_created_at: new Date(s.created_at).getTime(),
+          is_synced: true,
+          shift_id: s.shift_id ? Number(s.shift_id) : null,
+          sale_date: s.sale_date,
+          total_amount: Number(s.total_amount),
+          paid_amount: Number(s.paid_amount),
+          client_id: s.client_id,
+          client_name: s.client_name,
+          invoice_number: s.invoice_number,
+          sale_order_number: s.sale_order_number,
+          status: "completed",
+          items:
+            s.items?.map((i: any) => ({
+              product_id: i.product_id,
+              quantity: i.quantity,
+              unit_price: Number(i.unit_price),
+              product: i.product,
+              product_name: i.product?.name,
+              purchase_item_id: i.purchase_item_id,
+              // minimal mapping for display
+            })) || [],
+          payments: s.payments || [],
+          notes: s.notes,
+          created_at: s.created_at,
+          user_id: s.user_id,
+        }));
+
+        const uniqueServerSales = mapped.filter((s) => !localIds.has(s.id));
+        sales = [...sales, ...uniqueServerSales];
+      } catch (e) {
+        console.warn("Could not fetch shift history", e);
+      }
+    }
 
     // Compute available shift IDs (from pending sales + current shift if online)
     const ids = new Set(
@@ -469,7 +546,9 @@ export const PosPageOffline = () => {
     // User asked: "only shows pendings sales that belong to current select shift"
     let filteredSales = sales;
     if (selectedShiftId) {
-      filteredSales = sales.filter((s) => s.shift_id === selectedShiftId);
+      filteredSales = sales.filter(
+        (s) => s.shift_id && Number(s.shift_id) === Number(selectedShiftId)
+      );
     }
 
     // Sort by date desc
@@ -586,7 +665,7 @@ export const PosPageOffline = () => {
     }
     if (!confirm("Are you sure you want to delete this pending sale?")) return;
 
-    await dbService.deletePendingSale(sale.tempId);
+    await offlineSaleService.deletePendingSale(sale.tempId);
 
     // If the deleted sale is the current one, switch to a new draft
     if (currentSale.tempId === sale.tempId) {
@@ -639,6 +718,7 @@ export const PosPageOffline = () => {
             setIsPaymentDialogOpen(true);
           }
         }}
+        onPrintShiftReport={() => setIsShiftReportOpen(true)}
       />
 
       <Box
@@ -665,11 +745,47 @@ export const PosPageOffline = () => {
             overflow: "hidden",
           }}
         >
+          {/* Toggle Header */}
+          <Box
+            sx={{
+              p: 1,
+              borderBottom: "1px solid",
+              borderColor: "divider",
+              display: "flex",
+              justifyContent: "center",
+            }}
+          >
+            <Tooltip
+              title={
+                isSyncedView ? "عرض المبيعات المعلقة" : "عرض المبيعات المتزامنة"
+              }
+            >
+              <IconButton
+                onClick={() => setIsSyncedView(!isSyncedView)}
+                size="small"
+                sx={{
+                  width: "100%",
+                  borderRadius: 1,
+                  bgcolor: isSyncedView ? "#ecfdf5" : "#fffbeb",
+                  color: isSyncedView ? "#059669" : "#d97706",
+                  border: "1px solid",
+                  borderColor: isSyncedView ? "#a7f3d0" : "#fde68a",
+                  "&:hover": {
+                    bgcolor: isSyncedView ? "#d1fae5" : "#fef3c7",
+                  },
+                }}
+              >
+                {isSyncedView ? <Cloud size={18} /> : <Clock size={18} />}
+              </IconButton>
+            </Tooltip>
+          </Box>
+
           <PendingSalesColumn
-            sales={pendingSales}
+            sales={pendingSales.filter((s) => !!s.is_synced === isSyncedView)}
             selectedSaleId={currentSale.tempId}
             onSaleSelect={handleSelectPendingSale}
             onDelete={handleDeletePendingSale}
+            title={isSyncedView ? "SYNCED" : "PENDING"}
           />
         </Paper>
 
@@ -742,8 +858,46 @@ export const PosPageOffline = () => {
         )}
       </Box>
 
-      {/* PAYMENT DIALOG TEST */}
-      {/* Dialogs now handled by OfflineSaleSummaryColumn */}
+      {/* Shift Report Dialog */}
+      <Dialog
+        open={isShiftReportOpen}
+        onClose={() => setIsShiftReportOpen(false)}
+        maxWidth={false}
+        PaperProps={{
+          sx: { width: "800px", maxWidth: "90vw", height: "90vh", m: 2 },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          تقرير الوردية
+          <IconButton onClick={() => setIsShiftReportOpen(false)}>
+            <X size={24} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ height: "100%", p: 0, overflow: "hidden" }}>
+          <PDFViewer width="100%" height="100%" showToolbar={true}>
+            <PosShiftReportPdf
+              sales={pendingSales}
+              shift={
+                shift && shift.id === selectedShiftId
+                  ? shift
+                  : {
+                      id: selectedShiftId || 0,
+                      opened_at: null,
+                      closed_at: null,
+                      is_open: false,
+                    }
+              }
+              userName="الكاشير"
+            />
+          </PDFViewer>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };

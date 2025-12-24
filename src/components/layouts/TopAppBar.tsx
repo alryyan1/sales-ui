@@ -13,10 +13,13 @@ import {
   Chip,
 } from "@mui/material";
 import { useAuth } from "@/context/AuthContext";
-import { Menu as MenuIcon, Bell, Warehouse } from "lucide-react";
+import { Menu as MenuIcon, Bell, Warehouse, RefreshCcw } from "lucide-react";
 import { useNavigate } from "react-router-dom"; // Import useNavigate
 import { ThemeToggle } from "../layout/ThemeToggle";
 import { DRAWER_WIDTH } from "./types";
+import { dbService, STORES } from "../../services/db";
+import { offlineSaleService } from "../../services/offlineSaleService";
+import { toast } from "sonner";
 
 const COLLAPSED_DRAWER_WIDTH = 72;
 
@@ -33,6 +36,37 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
 }) => {
   const navigate = useNavigate(); // Initialize useNavigate
   const { user } = useAuth();
+
+  const handleResetData = async () => {
+    if (
+      !confirm(
+        "Are you sure you want to refresh products and clients cache? Pending sales will be kept."
+      )
+    ) {
+      return;
+    }
+
+    try {
+      toast.info("Clearing local data (keeping pending sales)...");
+      await dbService.clearStore(STORES.PRODUCTS);
+      await dbService.clearStore(STORES.CLIENTS);
+      // await dbService.clearStore(STORES.PENDING_SALES); // Kept as per request
+      // await dbService.clearStore(STORES.SYNC_QUEUE); // Kept as per request
+
+      toast.info("Re-fetching products...");
+      await offlineSaleService.initializeProducts(
+        user?.warehouse_id || undefined
+      );
+      await offlineSaleService.initializeClients();
+
+      toast.success("Data reset and products re-fetched successfully!");
+      window.location.reload();
+    } catch (error) {
+      console.error("Failed to reset data:", error);
+      toast.error("Failed to reset data");
+    }
+  };
+
   const theme = useTheme();
   const width = isSidebarCollapsed
     ? `calc(100% - ${COLLAPSED_DRAWER_WIDTH}px)`
@@ -81,6 +115,14 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
         </Typography>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <IconButton
+            onClick={handleResetData}
+            color="error"
+            title="Reset Offline Data"
+          >
+            <RefreshCcw size={20} />
+          </IconButton>
+
           {/* Warehouse Display */}
           {user?.warehouse && (
             <Chip

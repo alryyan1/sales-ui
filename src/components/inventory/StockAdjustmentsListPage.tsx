@@ -1,6 +1,6 @@
 // src/components/inventory/StockAdjustmentsListPage.tsx
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 // MUI Components
@@ -27,200 +27,302 @@ import FilterListIcon from "@mui/icons-material/FilterList";
 import AddIcon from "@mui/icons-material/Add";
 
 // Services and Types
-import stockAdjustmentService, { StockAdjustment } from '../../services/stockAdjustmentService';
-import { formatNumber } from '@/constants';
-import { PaginatedResponse } from '@/services/clientService';
-import dayjs from 'dayjs';
-import StockAdjustmentFormModal from './StockAdjustmentFormModal';
+import stockAdjustmentService, {
+  StockAdjustment,
+} from "../../services/stockAdjustmentService";
+import { formatNumber } from "@/constants";
+import { PaginatedResponse } from "@/services/clientService";
+import dayjs from "dayjs";
+import StockAdjustmentFormModal from "./StockAdjustmentFormModal";
+import { warehouseService, Warehouse } from "../../services/warehouseService";
+import Select, { SelectChangeEvent } from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
 
 // Helper function to get reason label in Arabic
 const getReasonLabel = (reason: string): string => {
   const reasonMap: Record<string, string> = {
-    'damage': 'تلف',
-    'expiry': 'انتهاء صلاحية',
-    'theft': 'سرقة',
-    'loss': 'فقدان',
-    'adjustment': 'تعديل',
-    'correction': 'تصحيح',
-    'other': 'أخرى',
+    damage: "تلف",
+    expiry: "انتهاء صلاحية",
+    theft: "سرقة",
+    loss: "فقدان",
+    adjustment: "تعديل",
+    correction: "تصحيح",
+    other: "أخرى",
   };
   return reasonMap[reason] || reason;
 };
 
 // --- Component ---
 const StockAdjustmentsListPage: React.FC = () => {
-    const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-    // --- State ---
-    const [adjustmentsResponse, setAdjustmentsResponse] = useState<PaginatedResponse<StockAdjustment> | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [open, setOpen] = useState(false);
+  // --- State ---
+  const [adjustmentsResponse, setAdjustmentsResponse] =
+    useState<PaginatedResponse<StockAdjustment> | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>("");
 
-    // --- Memoized values from URL ---
-    const currentPage = useMemo(() => Number(searchParams.get('page') || '1'), [searchParams]);
+  // --- Memoized values from URL ---
+  const currentPage = useMemo(
+    () => Number(searchParams.get("page") || "1"),
+    [searchParams]
+  );
 
-    // --- Data Fetching ---
-    const fetchAdjustments = useCallback(async (page: number) => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            const data = await stockAdjustmentService.getAdjustments(page);
-            setAdjustmentsResponse(data);
-        } catch (err) {
-            setError(stockAdjustmentService.getErrorMessage(err));
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
+  // --- Data Fetching ---
+  const fetchAdjustments = useCallback(
+    async (page: number, warehouseId?: string) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const wId =
+          warehouseId && warehouseId !== "all" ? Number(warehouseId) : null;
+        const data = await stockAdjustmentService.getAdjustments(
+          page,
+          20,
+          null,
+          null,
+          null,
+          null,
+          wId
+        );
+        setAdjustmentsResponse(data);
+      } catch (err) {
+        setError(stockAdjustmentService.getErrorMessage(err));
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
 
-    // Fetch on page load or when relevant search params change
-    useEffect(() => {
-        fetchAdjustments(currentPage);
-    }, [fetchAdjustments, currentPage]);
+  // Fetch warehouses
+  useEffect(() => {
+    warehouseService.getAll().then(setWarehouses).catch(console.error);
+  }, []);
 
-    // --- Handlers ---
-    const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set('page', value.toString());
-        navigate({ search: params.toString() });
-    };
+  // Fetch on page load or when relevant search params change
+  useEffect(() => {
+    fetchAdjustments(currentPage, selectedWarehouseId);
+  }, [fetchAdjustments, currentPage, selectedWarehouseId]);
 
-    return (
-        <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, direction: "rtl" }} className="dark:bg-gray-950 min-h-screen">
-            {/* Header */}
-            <Box sx={{ display: "flex", alignItems: "center", mb: 3, gap: 2 }}>
-                <IconButton onClick={() => navigate(-1)} size="small">
-                    <ArrowBackIcon />
-                </IconButton>
-                <Typography variant="h4" component="h1" className="text-gray-800 dark:text-gray-100 font-semibold">
-                    سجل تعديلات المخزون
-                </Typography>
-                <Box sx={{ display: "flex", gap: 1, ml: "auto" }}>
-                    <Button variant="outlined" size="small" startIcon={<FilterListIcon />}>
-                        الفلاتر
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<AddIcon />}
-                        onClick={() => setOpen(true)}
-                    >
-                        إضافة تعديل
-                    </Button>
-                </Box>
-            </Box>
+  // --- Handlers ---
+  const handlePageChange = (
+    _event: React.ChangeEvent<unknown>,
+    value: number
+  ) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", value.toString());
+    navigate({ search: params.toString() });
+  };
 
-            {/* Loading / Error States */}
-            {isLoading && (
-                <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: 5 }}>
-                    <CircularProgress />
-                    <Typography sx={{ ml: 2 }} className="text-gray-600 dark:text-gray-400">
-                        جاري التحميل...
-                    </Typography>
-                </Box>
-            )}
-            {!isLoading && error && (
-                <Alert severity="error" sx={{ my: 2 }}>
-                    {error}
-                </Alert>
-            )}
+  const handleWarehouseChange = (event: SelectChangeEvent) => {
+    setSelectedWarehouseId(event.target.value);
+    // Reset to page 1 when filtering
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", "1");
+    navigate({ search: params.toString() });
+  };
 
-            {/* Adjustments Table */}
-            {!isLoading && !error && adjustmentsResponse && (
-                <>
-                    <Card className="dark:bg-gray-900">
-                        <CardContent sx={{ p: 0 }}>
-                            <Table>
-                                <TableHead>
-                                    <TableRow>
-                                        <TableCell>التاريخ</TableCell>
-                                        <TableCell>المنتج</TableCell>
-                                        <TableCell>رقم الدفعة</TableCell>
-                                        <TableCell align="center">التغيير في الكمية</TableCell>
-                                        <TableCell align="center">الكمية قبل التعديل</TableCell>
-                                        <TableCell align="center">الكمية بعد التعديل</TableCell>
-                                        <TableCell>السبب</TableCell>
-                                        <TableCell>سجل بواسطة</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {adjustmentsResponse.data.length === 0 && (
-                                        <TableRow>
-                                            <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
-                                                <Typography color="text.secondary">
-                                                    لا توجد تعديلات مخزون مسجلة.
-                                                </Typography>
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                    {adjustmentsResponse.data.map((adj) => (
-                                        <TableRow key={adj.id}>
-                                            <TableCell>{dayjs(adj.created_at).format('YYYY-MM-DD')}</TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                                    {adj.product?.name ?? `ID: ${adj.product_id}`}
-                                                </Typography>
-                                                {adj.product?.sku && (
-                                                    <Typography variant="caption" color="text.secondary" display="block">
-                                                        {adj.product.sku}
-                                                    </Typography>
-                                                )}
-                                            </TableCell>
-                                            <TableCell>
-                                                {adj.purchaseItemBatch?.batch_number ?? 
-                                                 (adj.purchase_item_id ? `Batch ID: ${adj.purchase_item_id}` : 'تعديل المخزون الإجمالي')}
-                                            </TableCell>
-                                            <TableCell align="center">
-                                                <Typography
-                                                    variant="body2"
-                                                    sx={{
-                                                        fontWeight: 500,
-                                                        color: adj.quantity_change > 0 ? 'success.main' : 'error.main'
-                                                    }}
-                                                >
-                                                    {adj.quantity_change > 0 ? '+' : ''}{formatNumber(adj.quantity_change)}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell align="center">{formatNumber(adj.quantity_before)}</TableCell>
-                                            <TableCell align="center">{formatNumber(adj.quantity_after)}</TableCell>
-                                            <TableCell>{getReasonLabel(adj.reason)}</TableCell>
-                                            <TableCell>{adj.user?.name ?? '-'}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                    {/* Pagination */}
-                    {adjustmentsResponse.last_page > 1 && (
-                        <Box sx={{ display: "flex", justifyContent: "center", p: 2, mt: 3 }}>
-                            <Pagination
-                                count={adjustmentsResponse.last_page}
-                                page={currentPage}
-                                onChange={handlePageChange}
-                                color="primary"
-                                shape="rounded"
-                                showFirstButton
-                                showLastButton
-                                disabled={isLoading}
-                            />
-                        </Box>
-                    )}
-                </>
-            )}
-
-            <StockAdjustmentFormModal
-                onSaveSuccess={() => {
-                    toast.success("تم حفظ التعديل بنجاح");
-                    fetchAdjustments(currentPage);
-                }}
-                isOpen={open}
-                onClose={() => setOpen(false)}
-            />
+  return (
+    <Box
+      sx={{ p: { xs: 2, sm: 3, md: 4 }, direction: "rtl" }}
+      className="dark:bg-gray-950 min-h-screen"
+    >
+      {/* Header */}
+      <Box sx={{ display: "flex", alignItems: "center", mb: 3, gap: 2 }}>
+        <IconButton onClick={() => navigate(-1)} size="small">
+          <ArrowBackIcon />
+        </IconButton>
+        <Typography
+          variant="h4"
+          component="h1"
+          className="text-gray-800 dark:text-gray-100 font-semibold"
+        >
+          سجل تعديلات المخزون
+        </Typography>
+        <Box sx={{ display: "flex", gap: 1, ml: "auto", alignItems: "center" }}>
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel id="warehouse-select-label">المخزن</InputLabel>
+            <Select
+              labelId="warehouse-select-label"
+              id="warehouse-select"
+              value={selectedWarehouseId}
+              label="المخزن"
+              onChange={handleWarehouseChange}
+            >
+              <MenuItem value="">
+                <em>الكل</em>
+              </MenuItem>
+              {warehouses.map((w) => (
+                <MenuItem key={w.id} value={w.id.toString()}>
+                  {w.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<FilterListIcon />}
+          >
+            الفلاتر
+          </Button>
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<AddIcon />}
+            onClick={() => setOpen(true)}
+          >
+            إضافة تعديل
+          </Button>
         </Box>
-    );
+      </Box>
+
+      {/* Loading / Error States */}
+      {isLoading && (
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            py: 5,
+          }}
+        >
+          <CircularProgress />
+          <Typography
+            sx={{ ml: 2 }}
+            className="text-gray-600 dark:text-gray-400"
+          >
+            جاري التحميل...
+          </Typography>
+        </Box>
+      )}
+      {!isLoading && error && (
+        <Alert severity="error" sx={{ my: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      {/* Adjustments Table */}
+      {!isLoading && !error && adjustmentsResponse && (
+        <>
+          <Card className="dark:bg-gray-900">
+            <CardContent sx={{ p: 0 }}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>التاريخ</TableCell>
+                    <TableCell>المنتج</TableCell>
+                    <TableCell>المخزن</TableCell>
+                    <TableCell>رقم الدفعة</TableCell>
+                    <TableCell align="center">التغيير في الكمية</TableCell>
+                    <TableCell align="center">الكمية قبل التعديل</TableCell>
+                    <TableCell align="center">الكمية بعد التعديل</TableCell>
+                    <TableCell>السبب</TableCell>
+                    <TableCell>سجل بواسطة</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {adjustmentsResponse.data.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+                        <Typography color="text.secondary">
+                          لا توجد تعديلات مخزون مسجلة.
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {adjustmentsResponse.data.map((adj) => (
+                    <TableRow key={adj.id}>
+                      <TableCell>
+                        {dayjs(adj.created_at).format("YYYY-MM-DD")}
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {adj.product?.name ?? `ID: ${adj.product_id}`}
+                        </Typography>
+                        {adj.product?.sku && (
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            display="block"
+                          >
+                            {adj.product.sku}
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell>{adj.warehouse?.name ?? "-"}</TableCell>
+                      <TableCell>
+                        {adj.purchaseItemBatch?.batch_number ??
+                          (adj.purchase_item_id
+                            ? `Batch ID: ${adj.purchase_item_id}`
+                            : "تعديل المخزون الإجمالي")}
+                      </TableCell>
+                      <TableCell align="center">
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 500,
+                            color:
+                              adj.quantity_change > 0
+                                ? "success.main"
+                                : "error.main",
+                          }}
+                        >
+                          {adj.quantity_change > 0 ? "+" : ""}
+                          {formatNumber(adj.quantity_change)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="center">
+                        {formatNumber(adj.quantity_before)}
+                      </TableCell>
+                      <TableCell align="center">
+                        {formatNumber(adj.quantity_after)}
+                      </TableCell>
+                      <TableCell>{getReasonLabel(adj.reason)}</TableCell>
+                      <TableCell>{adj.user?.name ?? "-"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+          {/* Pagination */}
+          {adjustmentsResponse.last_page > 1 && (
+            <Box
+              sx={{ display: "flex", justifyContent: "center", p: 2, mt: 3 }}
+            >
+              <Pagination
+                count={adjustmentsResponse.last_page}
+                page={currentPage}
+                onChange={handlePageChange}
+                color="primary"
+                shape="rounded"
+                showFirstButton
+                showLastButton
+                disabled={isLoading}
+              />
+            </Box>
+          )}
+        </>
+      )}
+
+      <StockAdjustmentFormModal
+        onSaveSuccess={() => {
+          toast.success("تم حفظ التعديل بنجاح");
+          fetchAdjustments(currentPage);
+        }}
+        isOpen={open}
+        onClose={() => setOpen(false)}
+      />
+    </Box>
+  );
 };
 
 export default StockAdjustmentsListPage;

@@ -15,7 +15,7 @@ export const offlineSaleService = {
   /**
    * Initialize local DB with products from backend
    */
-  initializeProducts: async () => {
+  initializeProducts: async (warehouseId?: number) => {
     try {
       // Fetch all products (or enough for POS)
       // This might be heavy, for now we fetch page 1 with 100 limit or specialized endpoint
@@ -25,7 +25,8 @@ export const offlineSaleService = {
         "",
         "name",
         "asc",
-        1000
+        1000,
+        warehouseId
       );
       // Assuming 1000 is enough for demo or MVP. Real app needs batching/sync tokens.
       if (response && response.data) {
@@ -92,20 +93,21 @@ export const offlineSaleService = {
             shift_id: offlineSale.shift_id,
             items: offlineSale.items.map((item) => {
               const product = item.product as Product;
-              const unitType = (item as any).unitType || 'sellable';
+              const unitType = (item as any).unitType || "sellable";
               const unitsPerStocking = product?.units_per_stocking_unit || 1;
-              
+
               // Convert quantity to sellable units if needed
               let quantityInSellable = item.quantity;
               let unitPriceInSellable = Number(item.unit_price);
-              
-              if (unitType === 'stocking') {
+
+              if (unitType === "stocking") {
                 // Convert from stocking units to sellable units
                 quantityInSellable = item.quantity * unitsPerStocking;
                 // Price is per stocking unit, convert to per sellable unit
-                unitPriceInSellable = Number(item.unit_price) / unitsPerStocking;
+                unitPriceInSellable =
+                  Number(item.unit_price) / unitsPerStocking;
               }
-              
+
               return {
                 product_id: item.product_id,
                 quantity: quantityInSellable,
@@ -133,6 +135,7 @@ export const offlineSaleService = {
             is_synced: true,
             id: createdSale.id,
             invoice_number: createdSale.invoice_number,
+            sale_order_number: createdSale.sale_order_number ?? null,
           };
           await dbService.savePendingSale(syncedSale);
 
@@ -251,5 +254,26 @@ export const offlineSaleService = {
 
   getOfflineSales: async () => {
     return await dbService.getPendingSales();
+  },
+
+  /**
+   * Delete a pending sale and remove its sync action if it exists
+   */
+  deletePendingSale: async (tempId: string) => {
+    // 1. Delete from Pending Sales Store
+    await dbService.deletePendingSale(tempId);
+
+    // 2. Remove from Sync Queue if present
+    // We need to check both pending and processing/failed actions
+    const allActions = await dbService.getPendingSyncActions();
+    const actionToRemove = allActions.find(
+      (a) =>
+        a.type === "CREATE_SALE" && (a.payload as OfflineSale).tempId === tempId
+    );
+
+    if (actionToRemove && actionToRemove.id) {
+      console.log("Removing associated sync action:", actionToRemove.id);
+      await dbService.removeSyncAction(actionToRemove.id);
+    }
   },
 };

@@ -18,11 +18,18 @@ import {
   CircularProgress,
   Alert,
   Chip,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
   Search as SearchIcon,
   Inventory as InventoryIcon,
+  CloudDownload as CloudDownloadIcon,
 } from "@mui/icons-material";
 import productService, { Product } from "../../services/productService";
 import { warehouseService, Warehouse } from "../../services/warehouseService";
@@ -37,6 +44,11 @@ const WarehouseProductsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+
+  // Import Dialog State
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [password, setPassword] = useState("");
+  const [importLoading, setImportLoading] = useState(false);
 
   // Debounce search
   useEffect(() => {
@@ -78,7 +90,7 @@ const WarehouseProductsPage: React.FC = () => {
         false,
         false
       );
-      
+
       // Filter products that have stock in this warehouse
       const warehouseProducts = response.data.filter((product) => {
         if (product.warehouses && product.warehouses.length > 0) {
@@ -116,12 +128,7 @@ const WarehouseProductsPage: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box
-        display="flex"
-        alignItems="center"
-        gap={2}
-        mb={3}
-      >
+      <Box display="flex" alignItems="center" gap={2} mb={3}>
         <IconButton onClick={() => navigate("/admin/warehouses")}>
           <ArrowBackIcon />
         </IconButton>
@@ -138,6 +145,18 @@ const WarehouseProductsPage: React.FC = () => {
             )}
           </Box>
         </Box>
+
+        <Button
+          variant="contained"
+          startIcon={<CloudDownloadIcon />}
+          onClick={() => {
+            setImportDialogOpen(true);
+            setPassword("");
+            setError(null);
+          }}
+        >
+          استيراد نواقص المنتجات
+        </Button>
       </Box>
 
       {error && (
@@ -221,12 +240,12 @@ const WarehouseProductsPage: React.FC = () => {
                     </Box>
                   </TableCell>
                   <TableCell>{product.sku || "-"}</TableCell>
-                  <TableCell>
-                    {product.category_name || "-"}
-                  </TableCell>
+                  <TableCell>{product.category_name || "-"}</TableCell>
                   <TableCell align="right">
                     <Chip
-                      label={formatNumber((product as any).warehouse_quantity || 0)}
+                      label={formatNumber(
+                        (product as any).warehouse_quantity || 0
+                      )}
                       color={
                         (product as any).warehouse_quantity > 0
                           ? "success"
@@ -235,14 +254,20 @@ const WarehouseProductsPage: React.FC = () => {
                       size="small"
                     />
                     {product.sellable_unit_name && (
-                      <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ ml: 1 }}
+                      >
                         {product.sellable_unit_name}
                       </Typography>
                     )}
                   </TableCell>
                   <TableCell align="right">
                     {formatCurrency(
-                      Number(product.suggested_sale_price_per_sellable_unit || 0)
+                      Number(
+                        product.suggested_sale_price_per_sellable_unit || 0
+                      )
                     )}
                   </TableCell>
                   <TableCell align="right">
@@ -256,9 +281,68 @@ const WarehouseProductsPage: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Password Dialog for Import */}
+      <Dialog
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+      >
+        <DialogTitle>تأكيد الاستيراد</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            سيقوم هذا الإجراء باستيراد جميع المنتجات غير الموجودة في هذا
+            المستودع مع كمياتها الحالية. يرجى إدخال كلمة المرور للمتابعة.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="كلمة المرور"
+            type="password"
+            fullWidth
+            variant="outlined"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setImportDialogOpen(false)}>إلغاء</Button>
+          <Button
+            onClick={async () => {
+              if (password !== "alryyan1") {
+                setError("كلمة المرور غير صحيحة");
+                // Don't close, let them try again
+                return;
+              }
+
+              setImportLoading(true);
+              // setImportDialogOpen(false); // keep open while loading or close?
+              // better to show loading state inside dialog or close and show global loading.
+              // I'll keep it open but disabled
+              try {
+                const res = await warehouseService.importMissingProducts(
+                  Number(warehouseId)
+                );
+                setImportDialogOpen(false);
+                fetchProducts(); // Refresh
+                setError(null);
+                alert(res.message); // Simple feedback
+              } catch (err) {
+                console.error(err);
+                setError("فشل الاستيراد");
+                setImportDialogOpen(false);
+              } finally {
+                setImportLoading(false);
+              }
+            }}
+            variant="contained"
+            disabled={importLoading}
+          >
+            {importLoading ? "جاري الاستيراد..." : "تأكيد"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
 
 export default WarehouseProductsPage;
-

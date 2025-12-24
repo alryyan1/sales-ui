@@ -107,7 +107,8 @@ const productService = {
     categoryId?: number | null,
     inStockOnly?: boolean,
     lowStockOnly?: boolean,
-    outOfStockOnly?: boolean
+    outOfStockOnly?: boolean,
+    warehouseId?: number
   ): Promise<PaginatedResponse<Product>> => {
     try {
       const params = new URLSearchParams();
@@ -120,6 +121,7 @@ const productService = {
       if (inStockOnly) params.append("in_stock_only", "1");
       if (lowStockOnly) params.append("low_stock_only", "1");
       if (outOfStockOnly) params.append("out_of_stock_only", "1");
+      if (warehouseId) params.append("warehouse_id", warehouseId.toString());
 
       const response = await apiClient.get<PaginatedResponse<Product>>(
         `/products?${params.toString()}`

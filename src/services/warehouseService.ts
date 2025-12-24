@@ -37,6 +37,15 @@ export const warehouseService = {
     await apiClient.delete(`/warehouses/${id}`);
   },
 
+  importMissingProducts: async (
+    id: number
+  ): Promise<{ message: string; count: number }> => {
+    const response = await apiClient.post(
+      `/warehouses/${id}/import-missing-products`
+    );
+    return response.data;
+  },
+
   getValidationErrors,
   getErrorMessage,
 };

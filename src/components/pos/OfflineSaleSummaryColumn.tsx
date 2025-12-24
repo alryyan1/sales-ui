@@ -616,8 +616,10 @@ export const OfflineSaleSummaryColumn: React.FC<
       <Dialog
         open={isPdfDialogOpen}
         onClose={() => setIsPdfDialogOpen(false)}
-        maxWidth="md"
-        fullWidth
+        maxWidth={false}
+        PaperProps={{
+          sx: { width: "380px", maxWidth: "100%", height: "90vh", m: 2 },
+        }}
       >
         <DialogTitle
           sx={{

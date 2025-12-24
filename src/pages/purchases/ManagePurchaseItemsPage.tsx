@@ -259,7 +259,10 @@ const ManagePurchaseItemsPage: React.FC = () => {
     );
   }, [purchase?.items]);
 
-  const isReadOnly = useMemo(() => false, []); // Logic disabled as per request: allow editing even if received
+  const isReadOnly = useMemo(
+    () => purchase?.status === "received",
+    [purchase?.status]
+  );
 
   // ==================== HANDLERS ====================
 
