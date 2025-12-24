@@ -17,15 +17,16 @@ export const navItems: NavItem[] = [
     icon: LayoutDashboard,
     permission: null,
   },
+  {
+    to: "/sales/pos-offline",
+    label: "نقطة البيع (Offline)",
+    icon: CircleDollarSign,
+    permission: null,
+  },
   { to: "/clients", label: "العملاء", icon: Users, permission: null },
   { to: "/suppliers", label: "الموردون", icon: Building, permission: null },
   { to: "/products", label: "المنتجات", icon: BoxIcon, permission: null },
-  {
-    to: "/purchases",
-    label: "المشتريات",
-    icon: ShoppingCart,
-    permission: null,
-  },
+  { to: "/purchases", label: "المشتريات", icon: ShoppingCart, permission: null },
   {
     to: "/inventory/adjustments",
     label: "تعديلات المخزون",
@@ -44,12 +45,7 @@ export const navItems: NavItem[] = [
     icon: CircleDollarSign,
     permission: null,
   },
-  {
-    to: "/sales/pos-offline",
-    label: "نقطة البيع (Offline)",
-    icon: CircleDollarSign,
-    permission: null,
-  },
+ 
 ];
 
 export const reportItems: NavItem[] = [

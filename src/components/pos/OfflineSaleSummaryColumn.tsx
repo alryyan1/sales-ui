@@ -41,6 +41,8 @@ import { DiscountDialog } from "./DiscountDialog";
 import ClientFormModal from "../clients/ClientFormModal";
 import { offlineSaleService } from "../../services/offlineSaleService";
 import { Client } from "../../services/clientService";
+import { dbService } from "../../services/db";
+import settingService, { AppSettings } from "../../services/settingService";
 
 interface OfflineSaleSummaryColumnProps {
   currentSale: OfflineSale;
@@ -70,6 +72,48 @@ export const OfflineSaleSummaryColumn: React.FC<
   const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState(false);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
+  const [settings, setSettings] = useState<AppSettings | null>(null);
+
+  // Load settings on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      // 1. Try to fetch fresh settings from API
+      if (navigator.onLine) {
+        try {
+          console.log("Fetching settings from API...");
+          const remoteSettings = await settingService.getSettings();
+          if (remoteSettings) {
+            console.log("Settings fetched:", remoteSettings);
+            setSettings(remoteSettings);
+            // Try to cache, but don't fail if DB is old/locked
+            try {
+              await dbService.saveSettings(remoteSettings);
+            } catch (dbErr) {
+              console.warn("Failed to cache settings to DB:", dbErr);
+            }
+            return; // Success
+          }
+        } catch (apiErr) {
+          console.error("API Settings fetch failed:", apiErr);
+        }
+      }
+
+      // 2. Fallback to local DB if API failed or offline
+      try {
+        const localSettings = await dbService.getSettings();
+        if (localSettings) {
+          console.log("Loaded cached settings:", localSettings);
+          setSettings(localSettings);
+        }
+      } catch (dbErr) {
+        console.warn(
+          "Local DB settings load failed (store might be missing):",
+          dbErr
+        );
+      }
+    };
+    loadSettings();
+  }, []);
 
   // Date editing state
   const [isDateEditing, setIsDateEditing] = useState(false);
@@ -593,6 +637,7 @@ export const OfflineSaleSummaryColumn: React.FC<
               sale={currentSale}
               items={currentSale.items}
               userName="الكاشير"
+              settings={settings}
             />
           </PDFViewer>
         </DialogContent>

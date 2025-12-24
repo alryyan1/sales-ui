@@ -7,7 +7,8 @@ import {
   StyleSheet,
   Font,
 } from "@react-pdf/renderer";
-import { OfflineSale, OfflineSaleItem } from "../../services/db"; // Adjust path as needed
+import { OfflineSale, OfflineSaleItem } from "../../services/db";
+import { AppSettings } from "../../services/settingService";
 import { formatNumber } from "@/constants";
 
 // Register Arabic Font
@@ -109,12 +110,14 @@ interface PosInvoicePdfProps {
   shiftId?: number;
   userName?: string;
   items: OfflineSaleItem[];
+  settings?: AppSettings | null;
 }
 
 export const PosInvoicePdf: React.FC<PosInvoicePdfProps> = ({
   sale,
   userName,
   items,
+  settings,
 }) => {
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleString("ar-EG");
@@ -138,7 +141,15 @@ export const PosInvoicePdf: React.FC<PosInvoicePdfProps> = ({
       <Page size={[227, 800]} style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Del Pasta Invoice</Text>
+          <Text style={styles.title}>
+            {settings?.company_name || "Del Pasta Invoice"}
+          </Text>
+          {settings?.company_address && (
+            <Text style={styles.subtitle}>{settings.company_address}</Text>
+          )}
+          {settings?.company_phone && (
+            <Text style={styles.subtitle}>{settings.company_phone}</Text>
+          )}
           <Text style={styles.subtitle}>
             رقم الفاتورة: #{sale.tempId || sale.id}
           </Text>
@@ -204,6 +215,7 @@ export const PosInvoicePdf: React.FC<PosInvoicePdfProps> = ({
         {/* Footer */}
         <View style={styles.footer}>
           <Text>شكراً لزيارتكم</Text>
+          {settings?.company_phone && <Text>{settings.company_phone}</Text>}
           <Text>زورونا مرة أخرى</Text>
         </View>
       </Page>

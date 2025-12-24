@@ -1,8 +1,9 @@
 import { Product } from "./productService";
+import { AppSettings } from "./settingService";
 import { Sale, SaleItem } from "./saleService";
 
 // Database version
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const DB_NAME = "SalesPosOfflineDB";
 
 // Store names
@@ -11,6 +12,7 @@ export const STORES = {
   CLIENTS: "clients",
   PENDING_SALES: "pending_sales",
   SYNC_QUEUE: "sync_queue",
+  SETTINGS: "settings",
 };
 
 export interface SyncAction {
@@ -274,6 +276,28 @@ class IndexedDBService {
       request.onerror = () => reject(request.error);
     });
   }
+  // --- SETTINGS ---
+
+  async saveSettings(settings: AppSettings): Promise<void> {
+    const store = await this.getStore(STORES.SETTINGS, "readwrite");
+    return new Promise((resolve, reject) => {
+      const transaction = store.transaction;
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = (e) => reject(e);
+      store.put({ ...settings, id: "current" });
+    });
+  }
+
+  async getSettings(): Promise<AppSettings | null> {
+    const store = await this.getStore(STORES.SETTINGS, "readonly");
+    return new Promise((resolve, reject) => {
+      const request = store.get("current");
+      request.onsuccess = () =>
+        resolve((request.result as AppSettings) || null);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
   // --- UTILS (Admin) ---
 
   async clearStore(storeName: string): Promise<void> {
