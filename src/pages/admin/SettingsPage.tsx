@@ -1,97 +1,49 @@
 // src/pages/admin/SettingsPage.tsx
 import React, { useEffect, useState } from "react";
-import { useForm, SubmitHandler } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { useForm, Controller } from "react-hook-form";
 
-import { useSettings } from "@/context/SettingsContext"; // Import settings context
-import { AppSettings } from "@/services/settingService"; // Import settings type
+import { useSettings } from "@/context/SettingsContext";
+import { AppSettings } from "@/services/settingService";
 import { toast } from "sonner";
 
-// shadcn/ui & Lucide Icons
-import { Button } from "@/components/ui/button";
+// Material-UI Components
 import {
+  Box,
+  Button,
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+  Typography,
+  TextField,
+  Grid,
+  Alert,
+  CircularProgress,
+  Skeleton,
+  Stack,
+  MenuItem,
+  InputLabel,
+  Divider,
+  Paper,
+} from "@mui/material";
 import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea"; // If you have multiline settings
-import { Loader2, Settings as SettingsIcon, AlertCircle } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
-import WhatsAppConfig from "@/components/admin/WhatsAppConfig";
+  Settings as SettingsIcon,
+  Business as BusinessIcon,
+  Language as LanguageIcon,
+  Inventory as InventoryIcon,
+  Description as DescriptionIcon,
+} from "@mui/icons-material";
 import settingService from "@/services/settingService";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
-// --- Zod Schema for Settings Form (Matches AppSettings keys) ---
-// Make all fields optional for partial updates, but RHF will use defaultValues
-// Backend validation will ensure required fields if any (e.g., currency_symbol)
-const settingsFormSchema = z.object({
-  company_name: z.string().optional(),
-  company_address: z.string().optional(),
-  company_phone: z.string().optional(),
-  company_email: z
-    .string()
-    .email({ message: "validation:email" })
-    .or(z.literal(""))
-    .nullable()
-    .optional(),
-  company_logo_url: z
-    .string()
-    .url({ message: "validation:url" })
-    .or(z.literal(""))
-    .nullable()
-    .optional(),
-  currency_symbol: z
-    .string()
-    .max(5, { message: "validation:maxLengthShort" })
-    .optional(), // Make currency symbol optional
-  date_format: z.string().optional(), // Could use z.enum if you have predefined formats
-  timezone: z.string().optional(),
-  global_low_stock_threshold: z.coerce.number().int().min(0).optional(),
-  invoice_prefix: z.string().optional(),
-  purchase_order_prefix: z.string().optional(),
-  default_profit_rate: z.coerce.number().min(0).max(1000).optional(),
-
-  // WhatsApp Settings
-  whatsapp_enabled: z.boolean().optional(),
-  whatsapp_api_url: z.string().url({ message: "validation:url" }).optional(),
-  whatsapp_api_token: z.string().optional(),
-  whatsapp_instance_id: z.string().optional(),
-  whatsapp_default_phone: z.string().optional(),
-});
-
-type SettingsFormValues = z.infer<typeof settingsFormSchema>;
+// Form values type (matches AppSettings but all optional for partial updates)
+type SettingsFormValues = Partial<AppSettings>;
 
 // --- Component ---
 const SettingsPage: React.FC = () => {
-  // Removed useTranslation
-  const { settings, isLoadingSettings, updateSettings } = useSettings(); // Get from context
-
+  const { settings, isLoadingSettings, updateSettings } = useSettings();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   const form = useForm<SettingsFormValues>({
-    resolver: zodResolver(settingsFormSchema),
     defaultValues: {
-      // Initialize with empty or default that match Zod schema
       company_name: "",
       company_address: "",
       company_phone: "",
@@ -104,15 +56,9 @@ const SettingsPage: React.FC = () => {
       invoice_prefix: "INV-",
       purchase_order_prefix: "PO-",
       default_profit_rate: 20.0,
-
-      // WhatsApp defaults
-      whatsapp_enabled: false,
-      whatsapp_api_url: "https://waapi.app/api/v1",
-      whatsapp_api_token: "",
-      whatsapp_instance_id: "",
-      whatsapp_default_phone: "",
     },
   });
+
   const {
     handleSubmit,
     control,
@@ -122,12 +68,13 @@ const SettingsPage: React.FC = () => {
     formState: { isSubmitting },
   } = form;
 
+  const watchedLogoUrl = watch("company_logo_url");
+
   // --- Effect to Populate Form with Loaded Settings ---
   useEffect(() => {
     if (settings) {
       console.log("Populating settings form:", settings);
       reset({
-        // Reset RHF form with values from context
         company_name: settings.company_name || "",
         company_address: settings.company_address || "",
         company_phone: settings.company_phone || "",
@@ -135,356 +82,424 @@ const SettingsPage: React.FC = () => {
         company_logo_url: settings.company_logo_url || "",
         currency_symbol: settings.currency_symbol || "$",
         date_format: settings.date_format || "YYYY-MM-DD",
-        timezone: (settings as any).timezone || "Africa/Khartoum",
+        timezone: settings.timezone || "Africa/Khartoum",
         global_low_stock_threshold: settings.global_low_stock_threshold ?? 10,
         invoice_prefix: settings.invoice_prefix || "INV-",
         purchase_order_prefix: settings.purchase_order_prefix || "PO-",
         default_profit_rate: settings.default_profit_rate ?? 20.0,
-
-        // WhatsApp settings
-        whatsapp_enabled: settings.whatsapp_enabled || false,
-        whatsapp_api_url:
-          settings.whatsapp_api_url || "https://waapi.app/api/v1",
-        whatsapp_api_token: settings.whatsapp_api_token || "",
-        whatsapp_instance_id: settings.whatsapp_instance_id || "",
-        whatsapp_default_phone: settings.whatsapp_default_phone || "",
       });
+      if (settings.company_logo_url) {
+        setLogoPreview(settings.company_logo_url);
+      }
     }
-  }, [settings, reset]); // Depend on isOpen if this were a modal, or just settings
+  }, [settings, reset]);
+
+  // Update logo preview when watched value changes
+  useEffect(() => {
+    if (watchedLogoUrl) {
+      setLogoPreview(watchedLogoUrl);
+    }
+  }, [watchedLogoUrl]);
 
   // --- Form Submission ---
-  const onSubmit: SubmitHandler<SettingsFormValues> = async (data) => {
+  const onSubmit = async (data: SettingsFormValues) => {
     setServerError(null);
     console.log("Submitting settings:", data);
 
     // Prepare data (ensure numbers are numbers, nulls are null)
     const dataToSubmit: Partial<AppSettings> = {
       ...data,
-      global_low_stock_threshold: Number(data.global_low_stock_threshold),
+      global_low_stock_threshold: data.global_low_stock_threshold
+        ? Number(data.global_low_stock_threshold)
+        : undefined,
       company_email: data.company_email || undefined,
       company_logo_url: data.company_logo_url || null,
     };
 
     try {
-      await updateSettings(dataToSubmit); // Call context update function
-      // Success toast is handled by the context's updateSettings
+      await updateSettings(dataToSubmit);
     } catch (err) {
       console.error("Failed to update settings:", err);
-      // Error toast is handled by context, but set local serverError for form display
-      // const generalError = getErrorMessage(err); // Use generic getErrorMessage
-      setServerError("server error ");
-      // Optionally map specific API validation errors back to fields if backend provides them
-      // const apiErrors = getValidationErrors(err);
-      // if (apiErrors) { /* ... map with setFormError ... */ }
+      setServerError("حدث خطأ أثناء تحديث الإعدادات");
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const updated = await settingService.uploadLogo(file);
+      reset({
+        ...getValues(),
+        company_logo_url: updated.company_logo_url || "",
+      });
+      setLogoPreview(updated.company_logo_url || null);
+      toast.success("تم بنجاح", {
+        description: "تم تحديث الشعار بنجاح",
+      });
+    } catch (err) {
+      toast.error("حدث خطأ");
     }
   };
 
   // --- Render Logic ---
   if (isLoadingSettings && !settings) {
-    // Show skeletons only on initial settings load
-
     return (
-      <div className="p-4 md:p-6 lg:p-8 space-y-6">
-        <h1 className="text-2xl md:text-3xl font-semibold">
-          <Skeleton className="h-8 w-48" />
-        </h1>
+      <Box sx={{ p: { xs: 2, md: 3, lg: 4 }, maxWidth: "1200px", mx: "auto" }}>
+        <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
+          <Skeleton variant="circular" width={32} height={32} />
+          <Skeleton variant="text" width={200} height={40} />
+        </Stack>
         <Card>
-          <CardHeader>
-            <CardTitle>
-              <Skeleton className="h-6 w-1/3" />
-            </CardTitle>
-            <CardDescription>
-              <Skeleton className="h-4 w-2/3" />
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="space-y-1">
-                <Skeleton className="h-4 w-1/4" />
-                <Skeleton className="h-9 w-full" />
-              </div>
-            ))}
-            <div className="flex justify-end">
-              <Skeleton className="h-10 w-24" />
-            </div>
+          <CardContent>
+            <Skeleton variant="text" width="40%" height={32} sx={{ mb: 2 }} />
+            <Skeleton variant="text" width="60%" height={24} sx={{ mb: 4 }} />
+            <Stack spacing={3}>
+              {[...Array(5)].map((_, i) => (
+                <Box key={i}>
+                  <Skeleton variant="text" width="25%" height={24} sx={{ mb: 1 }} />
+                  <Skeleton variant="rectangular" width="100%" height={56} />
+                </Box>
+              ))}
+              <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+                <Skeleton variant="rectangular" width={120} height={40} />
+              </Box>
+            </Stack>
           </CardContent>
         </Card>
-      </div>
+      </Box>
     );
   }
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 max-w-6xl mx-auto dark:bg-gray-950 pb-10">
-      <div className="flex items-center mb-6 gap-2">
-        {/* <Button variant="outline" size="icon" onClick={() => navigate('/admin')}><ArrowLeft className="h-4 w-4" /></Button> */}
-        <SettingsIcon className="h-7 w-7 text-primary me-2" />
-        <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 dark:text-gray-100">
+    <Box
+      sx={{
+        p: { xs: 2, md: 3, lg: 4 },
+        maxWidth: "1200px",
+        mx: "auto",
+        pb: 5,
+        direction: "rtl",
+      }}
+    >
+      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 4 }}>
+        <SettingsIcon sx={{ fontSize: 32, color: "primary.main" }} />
+        <Typography variant="h4" component="h1" sx={{ fontWeight: 600 }}>
           الإعدادات العامة
-        </h1>
-      </div>
+        </Typography>
+      </Stack>
 
-      {/* General Settings */}
-      <Card className="dark:bg-gray-900 mb-8">
-        <CardHeader>
-          <CardTitle>إعدادات التطبيق</CardTitle>
-          <CardDescription>تكوين الإعدادات العامة للتطبيق</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              {serverError && !isSubmitting && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>خطأ</AlertTitle>
-                  <AlertDescription>{serverError}</AlertDescription>
-                </Alert>
-              )}
+      <Box component="form" onSubmit={handleSubmit(onSubmit)}>
+        {serverError && !isSubmitting && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {serverError}
+          </Alert>
+        )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={control}
+        {/* Company Information Section */}
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 3 }}>
+              <BusinessIcon color="primary" />
+              <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
+                معلومات الشركة
+              </Typography>
+            </Stack>
+            <Divider sx={{ mb: 3 }} />
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <Controller
                   name="company_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>اسم الشركة</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
                   control={control}
-                  name="company_email"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>البريد الإلكتروني للشركة</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="email"
-                          {...field}
-                          value={field.value || ""}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={control}
-                  name="company_phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>هاتف الشركة</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={control}
-                  name="company_address"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>عنوان الشركة</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} className="min-h-[80px]" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="md:col-span-2">
-                  <FormLabel>شعار الشركة</FormLabel>
-                  <div className="flex items-center gap-3">
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        try {
-                          const updated = await settingService.uploadLogo(file);
-                          reset({
-                            ...getValues(),
-                            company_logo_url: updated.company_logo_url || "",
-                          });
-                          toast.success("تم بنجاح", {
-                            description: "تم تحديث الشعار بنجاح",
-                          });
-                        } catch (err) {
-                          toast.error("حدث خطأ");
-                        }
-                      }}
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label="اسم الشركة"
+                      variant="outlined"
                     />
-                    {(watch("company_logo_url") ||
-                      settings?.company_logo_url) && (
-                      <img
-                        src={
-                          watch("company_logo_url") ||
-                          settings?.company_logo_url ||
-                          ""
-                        }
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Controller
+                  name="company_email"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      type="email"
+                      label="البريد الإلكتروني للشركة"
+                      variant="outlined"
+                      value={field.value || ""}
+                    />
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Controller
+                  name="company_phone"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label="هاتف الشركة"
+                      variant="outlined"
+                    />
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <InputLabel sx={{ mb: 1.5, fontWeight: 500 }}>شعار الشركة</InputLabel>
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <Button variant="outlined" component="label" size="medium">
+                    اختر ملف
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                    />
+                  </Button>
+                  {logoPreview && (
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 1,
+                        border: 1,
+                        borderColor: "divider",
+                        borderRadius: 1,
+                        display: "inline-block",
+                      }}
+                    >
+                      <Box
+                        component="img"
+                        src={logoPreview}
                         alt="Logo"
-                        className="h-20 w-auto rounded border"
+                        sx={{
+                          height: 80,
+                          width: "auto",
+                          maxWidth: 200,
+                          objectFit: "contain",
+                        }}
                       />
-                    )}
-                  </div>
-                </div>
+                    </Paper>
+                  )}
+                </Stack>
+              </Grid>
 
-                <FormField
+              <Grid item xs={12}>
+                <Controller
+                  name="company_address"
                   control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label="عنوان الشركة"
+                      variant="outlined"
+                      multiline
+                      rows={3}
+                    />
+                  )}
+                />
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+
+        {/* Localization & Formatting Section */}
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 3 }}>
+              <LanguageIcon color="primary" />
+              <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
+                الترجمة والتنسيق
+              </Typography>
+            </Stack>
+            <Divider sx={{ mb: 3 }} />
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={4}>
+                <Controller
                   name="currency_symbol"
+                  control={control}
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>رمز العملة</FormLabel>
-                      <FormControl>
-                        <Input {...field} maxLength={5} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label="رمز العملة"
+                      variant="outlined"
+                      inputProps={{ maxLength: 5 }}
+                      helperText="مثال: $, €, د.إ"
+                    />
                   )}
                 />
-                <FormField
-                  control={control}
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <Controller
                   name="date_format"
+                  control={control}
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>صيغة التاريخ</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="YYYY-MM-DD" />
-                      </FormControl>
-                      <FormDescription>
-                        استخدم YYYY للسنة، MM للشهر، DD لليوم
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label="صيغة التاريخ"
+                      variant="outlined"
+                      placeholder="YYYY-MM-DD"
+                      helperText="استخدم YYYY للسنة، MM للشهر، DD لليوم"
+                    />
                   )}
                 />
-                <FormField
-                  control={control}
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <Controller
                   name="timezone"
+                  control={control}
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>المنطقة الزمنية</FormLabel>
-                      <FormControl>
-                        <Select
-                          value={field.value}
-                          onValueChange={field.onChange}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="اختر المنطقة الزمنية" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Africa/Khartoum">
-                              Africa/Khartoum
-                            </SelectItem>
-                            <SelectItem value="Asia/Muscat">
-                              Asia/Muscat
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                    <TextField
+                      {...field}
+                      fullWidth
+                      select
+                      label="المنطقة الزمنية"
+                      variant="outlined"
+                    >
+                      <MenuItem value="Africa/Khartoum">Africa/Khartoum</MenuItem>
+                      <MenuItem value="Asia/Muscat">Asia/Muscat</MenuItem>
+                    </TextField>
                   )}
                 />
-                <FormField
-                  control={control}
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+
+        {/* Business Rules Section */}
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 3 }}>
+              <InventoryIcon color="primary" />
+              <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
+                قواعد العمل
+              </Typography>
+            </Stack>
+            <Divider sx={{ mb: 3 }} />
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <Controller
                   name="global_low_stock_threshold"
+                  control={control}
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>حد تنبيه انخفاض المخزون</FormLabel>
-                      <FormControl>
-                        <Input type="number" min="0" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                    <TextField
+                      {...field}
+                      fullWidth
+                      type="number"
+                      label="حد تنبيه انخفاض المخزون"
+                      variant="outlined"
+                      inputProps={{ min: 0 }}
+                      value={field.value || ""}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                      helperText="سيتم تنبيهك عندما ينخفض المخزون عن هذا الحد"
+                    />
                   )}
                 />
-                <FormField
-                  control={control}
-                  name="invoice_prefix"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>بادئة الفاتورة</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={control}
-                  name="purchase_order_prefix"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>بادئة طلب الشراء</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={control}
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Controller
                   name="default_profit_rate"
+                  control={control}
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>هامش الربح الافتراضي (%)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="0"
-                          max="1000"
-                          step="0.1"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        النسبة المئوية الافتراضية للربح عند إضافة منتجات جديدة
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
+                    <TextField
+                      {...field}
+                      fullWidth
+                      type="number"
+                      label="هامش الربح الافتراضي (%)"
+                      variant="outlined"
+                      inputProps={{ min: 0, max: 1000, step: 0.1 }}
+                      value={field.value || ""}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                      helperText="النسبة المئوية الافتراضية للربح عند إضافة منتجات جديدة"
+                    />
                   )}
                 />
-              </div>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
 
-              <div className="flex justify-end pt-4">
-                <Button
-                  type="submit"
-                  disabled={isSubmitting || isLoadingSettings}
-                >
-                  {isSubmitting && (
-                    <Loader2 className="me-2 h-4 w-4 animate-spin" />
+        {/* Document Prefixes Section */}
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 3 }}>
+              <DescriptionIcon color="primary" />
+              <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
+                بادئات المستندات
+              </Typography>
+            </Stack>
+            <Divider sx={{ mb: 3 }} />
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <Controller
+                  name="invoice_prefix"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label="بادئة الفاتورة"
+                      variant="outlined"
+                      helperText="مثال: INV- سيصبح INV-001"
+                    />
                   )}
-                  حفظ التغييرات
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+                />
+              </Grid>
 
-      {/* WhatsApp Configuration */}
-      {settings && (
-        <div className="mb-8">
-          <WhatsAppConfig
-            settings={settings}
-            onSettingsUpdate={async (data) => {
-              await updateSettings(data);
-            }}
-          />
-        </div>
-      )}
+              <Grid item xs={12} md={6}>
+                <Controller
+                  name="purchase_order_prefix"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label="بادئة طلب الشراء"
+                      variant="outlined"
+                      helperText="مثال: PO- سيصبح PO-001"
+                    />
+                  )}
+                />
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
 
-      {/* WhatsApp Scheduler Section removed as requested */}
-    </div>
+        {/* Submit Button */}
+        <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 3 }}>
+          <Button
+            type="submit"
+            variant="contained"
+            size="large"
+            disabled={isSubmitting || isLoadingSettings}
+            startIcon={
+              isSubmitting ? (
+                <CircularProgress size={20} color="inherit" />
+              ) : (
+                <SettingsIcon />
+              )
+            }
+            sx={{ minWidth: 160 }}
+          >
+            حفظ التغييرات
+          </Button>
+        </Box>
+      </Box>
+    </Box>
   );
 };
 

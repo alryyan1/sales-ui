@@ -3,7 +3,7 @@ import React, { useMemo, useCallback, useState } from 'react';
 import { useFieldArray, useFormContext } from 'react-hook-form';
 
 // MUI Components
-import { Button, Typography, Box, Alert, AlertTitle, TextField, InputAdornment } from '@mui/material';
+import { Button, Typography, Box, Alert, AlertTitle, TextField, InputAdornment, Chip } from '@mui/material';
 import { Add as AddIcon, Error as ErrorIcon, Search as SearchIcon } from '@mui/icons-material';
 
 // Virtualization for performance
@@ -15,10 +15,12 @@ import { PurchaseItemRow } from './PurchaseItemRow';
 
 // Types
 import { Product } from '../../services/productService';
+import { Warehouse } from '../../services/warehouseService';
 
 interface PurchaseItemsListProps {
     isSubmitting: boolean;
     isPurchaseReceived?: boolean;
+    warehouses?: Warehouse[];
 }
 
 // Virtualized row component for better performance
@@ -76,10 +78,14 @@ const VirtualizedRow = React.memo(({
 VirtualizedRow.displayName = 'VirtualizedRow';
 
 export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
-    isSubmitting, isPurchaseReceived = false
+    isSubmitting, isPurchaseReceived = false, warehouses = []
 }) => {
-    const { control, formState: { errors } } = useFormContext();
+    const { control, formState: { errors }, watch } = useFormContext();
     const [searchTerm, setSearchTerm] = useState('');
+    
+    // Get warehouse_id from form and find warehouse name
+    const warehouseId = watch('warehouse_id');
+    const selectedWarehouse = warehouses.find(w => w.id === warehouseId);
 
     const { fields, insert, remove } = useFieldArray({
         control,
@@ -154,33 +160,48 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                 flexWrap: 'wrap',
                 gap: 2
             }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Box sx={{ 
-                        width: 4,
-                        height: 24,
-                        bgcolor: 'primary.main',
-                        borderRadius: 1
-                    }} />
-                    <Typography variant="h6" component="h3" sx={{ 
-                        color: 'text.primary',
-                        fontWeight: 600,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1
-                    }}>
-                        عناصر الشراء
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <Box sx={{ 
-                            px: 1.5,
-                            py: 0.5,
-                            borderRadius: 2,
-                            bgcolor: 'primary.light',
-                            color: 'primary.main',
-                            fontSize: '0.875rem',
-                            fontWeight: 600
+                            width: 4,
+                            height: 24,
+                            bgcolor: 'primary.main',
+                            borderRadius: 1
+                        }} />
+                        <Typography variant="h6" component="h3" sx={{ 
+                            color: 'text.primary',
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1
                         }}>
-                            {fields.length}
-                        </Box>
-                    </Typography>
+                            عناصر الشراء
+                            <Box sx={{ 
+                                px: 1.5,
+                                py: 0.5,
+                                borderRadius: 2,
+                                bgcolor: 'primary.light',
+                                color: 'primary.main',
+                                fontSize: '0.875rem',
+                                fontWeight: 600
+                            }}>
+                                {fields.length}
+                            </Box>
+                        </Typography>
+                    </Box>
+                    {selectedWarehouse && (
+                        <Chip
+                            label={`المخزن: ${selectedWarehouse.name}`}
+                            size="small"
+                            sx={{
+                                bgcolor: 'info.light',
+                                color: 'info.dark',
+                                fontWeight: 600,
+                                border: 1,
+                                borderColor: 'info.main'
+                            }}
+                        />
+                    )}
                 </Box>
 
                 <Button

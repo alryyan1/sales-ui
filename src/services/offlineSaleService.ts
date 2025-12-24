@@ -83,18 +83,36 @@ export const offlineSaleService = {
           const offlineSale = action.payload as OfflineSale;
 
           // Convert OfflineSale to CreateSaleData for backend
+          // Backend expects quantities in sellable units, so convert if needed
           const saleData: CreateSaleData = {
             client_id: offlineSale.client_id,
             sale_date: offlineSale.sale_date,
             status: "completed", // POS sales are usually completed
             notes: offlineSale.notes,
             shift_id: offlineSale.shift_id,
-            items: offlineSale.items.map((item) => ({
-              product_id: item.product_id,
-              quantity: item.quantity,
-              unit_price: item.unit_price,
-              purchase_item_id: item.purchase_item_id,
-            })),
+            items: offlineSale.items.map((item) => {
+              const product = item.product as Product;
+              const unitType = (item as any).unitType || 'sellable';
+              const unitsPerStocking = product?.units_per_stocking_unit || 1;
+              
+              // Convert quantity to sellable units if needed
+              let quantityInSellable = item.quantity;
+              let unitPriceInSellable = Number(item.unit_price);
+              
+              if (unitType === 'stocking') {
+                // Convert from stocking units to sellable units
+                quantityInSellable = item.quantity * unitsPerStocking;
+                // Price is per stocking unit, convert to per sellable unit
+                unitPriceInSellable = Number(item.unit_price) / unitsPerStocking;
+              }
+              
+              return {
+                product_id: item.product_id,
+                quantity: quantityInSellable,
+                unit_price: unitPriceInSellable,
+                purchase_item_id: item.purchase_item_id,
+              };
+            }),
             payments: offlineSale.payments
               ?.filter((p) => Number(p.amount) > 0)
               .map((p) => ({

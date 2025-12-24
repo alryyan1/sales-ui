@@ -19,11 +19,14 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Store as StoreIcon,
+  Inventory as InventoryIcon,
 } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
 import { Warehouse, warehouseService } from "../../services/warehouseService";
 import WarehouseFormDialog from "./WarehouseFormDialog";
 
 const WarehousesListPage: React.FC = () => {
+  const navigate = useNavigate();
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -67,17 +70,21 @@ const WarehousesListPage: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm("Are you sure you want to delete this warehouse?")) {
+    if (window.confirm("هل أنت متأكد من حذف هذا المستودع؟")) {
       try {
         await warehouseService.delete(id);
         fetchWarehouses();
       } catch (error) {
         console.error("Error deleting warehouse:", error);
         alert(
-          "Failed to delete warehouse. It might strictly related to existing records."
+          "فشل حذف المستودع. قد يكون مرتبطاً بسجلات موجودة."
         );
       }
     }
+  };
+
+  const handleViewProducts = (warehouseId: number) => {
+    navigate(`/warehouses/${warehouseId}/products`);
   };
 
   return (
@@ -96,7 +103,7 @@ const WarehousesListPage: React.FC = () => {
           gap={1}
         >
           <StoreIcon fontSize="large" color="primary" />
-          Warehouses (Stores)
+          المستودعات
         </Typography>
         <Button
           variant="contained"
@@ -104,7 +111,7 @@ const WarehousesListPage: React.FC = () => {
           startIcon={<AddIcon />}
           onClick={handleAdd}
         >
-          Add Warehouse
+          إضافة مستودع
         </Button>
       </Box>
 
@@ -113,22 +120,22 @@ const WarehousesListPage: React.FC = () => {
           <TableHead>
             <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
               <TableCell>
-                <strong>ID</strong>
+                <strong>المعرف</strong>
               </TableCell>
               <TableCell>
-                <strong>Name</strong>
+                <strong>الاسم</strong>
               </TableCell>
               <TableCell>
-                <strong>Address</strong>
+                <strong>العنوان</strong>
               </TableCell>
               <TableCell>
-                <strong>Contact Info</strong>
+                <strong>معلومات الاتصال</strong>
               </TableCell>
               <TableCell>
-                <strong>Status</strong>
+                <strong>الحالة</strong>
               </TableCell>
               <TableCell align="right">
-                <strong>Actions</strong>
+                <strong>الإجراءات</strong>
               </TableCell>
             </TableRow>
           </TableHead>
@@ -136,13 +143,13 @@ const WarehousesListPage: React.FC = () => {
             {loading ? (
               <TableRow>
                 <TableCell colSpan={6} align="center">
-                  Loading...
+                  جاري التحميل...
                 </TableCell>
               </TableRow>
             ) : warehouses.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} align="center">
-                  No warehouses found.
+                  لا توجد مستودعات.
                 </TableCell>
               </TableRow>
             ) : (
@@ -154,7 +161,7 @@ const WarehousesListPage: React.FC = () => {
                   <TableCell>{warehouse.contact_info || "-"}</TableCell>
                   <TableCell>
                     <Chip
-                      label={warehouse.is_active ? "Active" : "Inactive"}
+                      label={warehouse.is_active ? "نشط" : "غير نشط"}
                       color={warehouse.is_active ? "success" : "default"}
                       size="small"
                     />
@@ -163,7 +170,16 @@ const WarehousesListPage: React.FC = () => {
                     <IconButton
                       color="primary"
                       size="small"
+                      onClick={() => handleViewProducts(warehouse.id)}
+                      title="عرض المنتجات"
+                    >
+                      <InventoryIcon />
+                    </IconButton>
+                    <IconButton
+                      color="primary"
+                      size="small"
                       onClick={() => handleEdit(warehouse)}
+                      title="تعديل"
                     >
                       <EditIcon />
                     </IconButton>
@@ -172,6 +188,7 @@ const WarehousesListPage: React.FC = () => {
                       size="small"
                       onClick={() => handleDelete(warehouse.id)}
                       disabled={warehouse.id === 1} // Prevent deleting Main Warehouse (ID 1)
+                      title="حذف"
                     >
                       <DeleteIcon />
                     </IconButton>

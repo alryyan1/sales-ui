@@ -5,9 +5,10 @@ import { Product } from "../../services/productService";
 export interface CartItem {
   id?: number; // Optional ID for existing sale items
   product: Product;
-  quantity: number;
-  unitPrice: number;
+  quantity: number; // Quantity in the selected unit type
+  unitPrice: number; // Price per selected unit type
   total: number;
+  unitType?: 'stocking' | 'sellable'; // Unit type: 'stocking' for boxes, 'sellable' for pieces
   selectedBatchId?: number | null; // ID of the selected purchase batch
   selectedBatchNumber?: string | null; // Batch number for display
   selectedBatchExpiryDate?: string | null; // Expiry date of selected batch

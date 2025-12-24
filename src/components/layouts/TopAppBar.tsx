@@ -10,9 +10,10 @@ import {
   Typography,
   Avatar,
   ButtonBase,
+  Chip,
 } from "@mui/material";
 import { useAuth } from "@/context/AuthContext";
-import { Menu as MenuIcon, Bell } from "lucide-react";
+import { Menu as MenuIcon, Bell, Warehouse } from "lucide-react";
 import { ThemeToggle } from "../layout/ThemeToggle";
 import { DRAWER_WIDTH } from "./types";
 
@@ -78,6 +79,24 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
         </Typography>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          {/* Warehouse Display */}
+          {user?.warehouse && (
+            <Chip
+              icon={<Warehouse size={16} />}
+              label={user.warehouse.name}
+              size="small"
+              sx={{
+                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                color: theme.palette.primary.main,
+                fontWeight: 500,
+                height: 28,
+                "& .MuiChip-icon": {
+                  color: theme.palette.primary.main,
+                },
+              }}
+            />
+          )}
+          
           <IconButton size="small" color="inherit">
             <Bell size={20} />
           </IconButton>
@@ -104,7 +123,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
                   fontSize: "0.9rem",
                 }}
               >
-                {user.name.substring(0, 2).toUpperCase()}
+                {user.name ? user.name.substring(0, 2).toUpperCase() : user.username?.substring(0, 2).toUpperCase() || "U"}
               </Avatar>
             </ButtonBase>
           )}

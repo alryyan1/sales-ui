@@ -513,6 +513,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
       <Paper
         sx={{ height: 650, width: "100%", borderRadius: 2, overflow: "hidden" }}
         elevation={0}
+        dir="rtl"
       >
         <DataGrid
           rows={products}
@@ -559,11 +560,12 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
         maxWidth="xs"
         fullWidth
         onClick={(e) => e.stopPropagation()} // Prevent row click from firing underneath
+        dir="ltr"
       >
-        <DialogTitle sx={{ fontWeight: 600, pb: 1 }}>
+        <DialogTitle sx={{ fontWeight: 600, pb: 1 }} dir="ltr">
           تفاصيل المخزون: {stockDialogProduct?.name}
         </DialogTitle>
-        <DialogContent dividers sx={{ p: 0 }}>
+        <DialogContent dividers sx={{ p: 0 }} dir="ltr">
           <List disablePadding>
             {stockDialogProduct?.warehouses?.map((w) => (
               <ListItem key={w.id} divider>
@@ -591,11 +593,12 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
         maxWidth="md"
         fullWidth
         onClick={(e) => e.stopPropagation()}
+        dir="ltr"
       >
-        <DialogTitle sx={{ fontWeight: 600 }}>
+        <DialogTitle sx={{ fontWeight: 600 }} dir="ltr">
           سجل المنتج: {historyDialogProduct?.name}
         </DialogTitle>
-        <DialogContent dividers sx={{ p: 0 }}>
+        <DialogContent dividers sx={{ p: 0 }} dir="ltr">
           <Tabs
             value={historyTab}
             onChange={handleHistoryTabChange}

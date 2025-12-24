@@ -630,6 +630,9 @@ const PurchasesListPage: React.FC = () => {
                         المورد
                       </TableHead>
                       <TableHead className="text-center font-bold">
+                        المخزن
+                      </TableHead>
+                      <TableHead className="text-center font-bold">
                         رقم المرجع
                       </TableHead>
                       <TableHead className="text-center font-bold">
@@ -649,7 +652,7 @@ const PurchasesListPage: React.FC = () => {
                   <TableBody>
                     {purchasesResponse.data.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="h-48 text-center">
+                        <TableCell colSpan={9} className="h-48 text-center">
                           <div className="flex flex-col items-center justify-center">
                             <div className="p-4 bg-muted rounded-full mb-4">
                               <ShoppingCart className="h-12 w-12 text-muted-foreground" />
@@ -704,6 +707,11 @@ const PurchasesListPage: React.FC = () => {
                               <span className="font-semibold">
                                 {purchase.supplier_name || "—"}
                               </span>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="outline" className="font-medium">
+                                {purchase.warehouse_name || "—"}
+                              </Badge>
                             </TableCell>
                             <TableCell className="text-center">
                               <code className="text-sm text-muted-foreground">

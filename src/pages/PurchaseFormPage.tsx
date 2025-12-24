@@ -883,6 +883,7 @@ const PurchaseFormPage: React.FC = () => {
                       <PurchaseItemsList
                         isSubmitting={isSubmitting}
                         isPurchaseReceived={isPurchaseReceived}
+                        warehouses={warehouses}
                       />
                       <Divider sx={{ my: 4, borderColor: "grey.200" }} />
 

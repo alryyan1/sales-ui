@@ -47,13 +47,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const checkAuthStatus = useCallback(async () => {
     console.log("AuthProvider: Checking authentication status...");
     try {
-      // getCurrentUser now relies on token interceptor and returns full user object or null
+      // getCurrentUser now returns user with roles and permissions (same structure as login)
       const currentUser = await authService.getCurrentUser();
       if (currentUser) {
+        console.log("AuthProvider: User data received:", {
+          user: currentUser,
+          roles: currentUser.roles,
+          permissions: currentUser.permissions,
+        });
+        
+        // Use same logic as handleLoginSuccess
+        const userRoles = Array.isArray(currentUser.roles) 
+          ? currentUser.roles 
+          : (currentUser.roles ? [currentUser.roles] : []);
+        const userPermissions = Array.isArray(currentUser.permissions)
+          ? currentUser.permissions
+          : (currentUser.permissions ? [currentUser.permissions] : []);
+        
         setUser(currentUser);
-        setRoles(currentUser.roles || []);
-        setPermissions(currentUser.permissions || []);
-        console.log("AuthProvider: User authenticated", currentUser);
+        setRoles(userRoles);
+        setPermissions(userPermissions);
+        
+        console.log("AuthProvider: User authenticated", {
+          user: currentUser,
+          roles: userRoles,
+          permissions: userPermissions,
+        });
       } else {
         console.log("AuthProvider: No valid user session/token found.");
         clearAuthState();

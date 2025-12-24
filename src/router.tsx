@@ -24,6 +24,7 @@ import RequestStockPage from "./pages/inventory/RequestStockPage";
 import ManageStockRequisitionsListPage from "./pages/inventory/ManageStockRequisitionsListPage";
 import ProcessRequisitionPage from "./components/admin/inventory/ProcessRequisitionPage";
 import WarehousesListPage from "./pages/warehouses/WarehousesListPage";
+import WarehouseProductsPage from "./pages/warehouses/WarehouseProductsPage";
 // Sales & POS
 import PosPage from "./pages/PosPage";
 import PosPageOffline from "./pages/PosPageOffline"; // Ensure this exists
@@ -119,6 +120,16 @@ const router = createHashRouter([
             element: (
               <PermissionGuard requiredPermission="view-products">
                 <ProductsPage />
+              </PermissionGuard>
+            ),
+          },
+
+          // --- Warehouses ---
+          {
+            path: "warehouses/:warehouseId/products",
+            element: (
+              <PermissionGuard requiredPermission="manage-warehouses">
+                <WarehouseProductsPage />
               </PermissionGuard>
             ),
           },
@@ -330,6 +341,14 @@ const router = createHashRouter([
                 element: (
                   <PermissionGuard requiredPermission="manage-warehouses">
                     <WarehousesListPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "warehouses/:warehouseId/products",
+                element: (
+                  <PermissionGuard requiredPermission="manage-warehouses">
+                    <WarehouseProductsPage />
                   </PermissionGuard>
                 ),
               },

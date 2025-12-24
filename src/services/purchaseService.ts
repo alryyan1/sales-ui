@@ -57,6 +57,8 @@ export interface Purchase {
   supplier_name?: string; // Included if eager loaded
   user_id: number | null; // Can be null if user deleted + set null constraint
   user_name?: string; // Included if eager loaded
+  warehouse_id?: number | null; // Warehouse ID
+  warehouse_name?: string; // Warehouse name if eager loaded
   purchase_date: string; // Format YYYY-MM-DD
   reference_number: string | null;
   status: "received" | "pending" | "ordered";

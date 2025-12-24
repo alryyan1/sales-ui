@@ -155,12 +155,35 @@ export const PosPageOffline = () => {
 
   // --- Actions ---
 
-  const addToCart = (product: Product) => {
+  // Helper function to get price based on unit type
+  const getPriceForUnitType = (product: Product, unitType: 'stocking' | 'sellable' = 'sellable'): number => {
+    const unitsPerStocking = product.units_per_stocking_unit || 1;
+    
+    if (unitType === 'stocking') {
+      // Calculate price per stocking unit (box)
+      const sellablePrice = Number(product.last_sale_price_per_sellable_unit || 0);
+      if (sellablePrice === 0 && product.available_batches && product.available_batches.length > 0) {
+        const batchPrice = Number(product.available_batches[0].sale_price || 0);
+        return batchPrice * unitsPerStocking;
+      }
+      return sellablePrice * unitsPerStocking;
+    } else {
+      // Price per sellable unit (piece)
+      let price = Number(product.last_sale_price_per_sellable_unit || 0);
+      if (price === 0 && product.available_batches && product.available_batches.length > 0) {
+        price = Number(product.available_batches[0].sale_price || 0);
+      }
+      return price;
+    }
+  };
+
+  const addToCart = (product: Product, unitType: 'stocking' | 'sellable' = 'sellable') => {
     if (!shift || !shift.is_open) {
       toast.error("يجب فتح الوردية قبل إضافة منتجات");
       return;
     }
 
+    const unitsPerStocking = product.units_per_stocking_unit || 1;
     const currentStock = Number(
       product.current_stock_quantity ?? product.stock_quantity ?? 0
     );
@@ -170,31 +193,58 @@ export const PosPageOffline = () => {
       return;
     }
 
+    // Check if we have enough stock for the selected unit type
+    if (unitType === 'stocking') {
+      const availableStockingUnits = Math.floor(currentStock / unitsPerStocking);
+      if (availableStockingUnits <= 0) {
+        toast.error(`عذراً، لا يوجد مخزون كافٍ. المتاح: ${currentStock} ${product.sellable_unit_name || 'قطعة'}`);
+        return;
+      }
+    }
+
     updateCurrentSale((prev) => {
       const existing = prev.items.find((i) => i.product_id === product.id);
-      // Determine price: try last sale price per sellable unit, then first batch, then default 0
-      let price = Number(product.last_sale_price_per_sellable_unit || 0);
-      if (
-        price === 0 &&
-        product.available_batches &&
-        product.available_batches.length > 0
-      ) {
-        price = Number(product.available_batches[0].sale_price || 0);
-      }
+      const price = getPriceForUnitType(product, unitType);
 
       let newItems;
       if (existing) {
-        newItems = prev.items.map((i) =>
-          i.product_id === product.id ? { ...i, quantity: i.quantity + 1 } : i
-        );
+        // If existing item has different unit type, convert quantity
+        const existingUnitType = (existing as any).unitType || 'sellable';
+        if (existingUnitType === unitType) {
+          // Same unit type, just increment
+          newItems = prev.items.map((i) =>
+            i.product_id === product.id ? { ...i, quantity: i.quantity + 1 } : i
+          );
+        } else {
+          // Different unit type, convert and add
+          const existingQtyInSellable = existingUnitType === 'stocking' 
+            ? existing.quantity * unitsPerStocking 
+            : existing.quantity;
+          const newQtyInSellable = unitType === 'stocking' 
+            ? unitsPerStocking 
+            : 1;
+          const totalSellableQty = existingQtyInSellable + newQtyInSellable;
+          
+          // Convert back to the new unit type
+          const newQty = unitType === 'stocking' 
+            ? Math.floor(totalSellableQty / unitsPerStocking)
+            : totalSellableQty;
+          
+          newItems = prev.items.map((i) =>
+            i.product_id === product.id 
+              ? { ...i, quantity: newQty, unit_price: price, unitType: unitType } 
+              : i
+          );
+        }
       } else {
-        const newItem: OfflineSaleItem = {
+        const newItem: OfflineSaleItem & { unitType?: 'stocking' | 'sellable' } = {
           product_id: product.id,
           product_name: product.name,
           quantity: 1,
           unit_price: price,
           product: product,
           id: undefined, // New item
+          unitType: unitType,
         };
         newItems = [...prev.items, newItem];
       }
@@ -205,9 +255,31 @@ export const PosPageOffline = () => {
 
   const updateQuantity = (productId: number, qty: number) => {
     updateCurrentSale((prev) => {
-      const newItems = prev.items.map((i) =>
-        i.product_id === productId ? { ...i, quantity: qty } : i
-      );
+      const newItems = prev.items.map((i) => {
+        if (i.product_id === productId) {
+          const product = i.product as Product;
+          const unitType = (i as any).unitType || 'sellable';
+          const unitsPerStocking = product?.units_per_stocking_unit || 1;
+          const currentStock = Number(product?.current_stock_quantity ?? product?.stock_quantity ?? 0);
+          
+          // Validate stock availability
+          if (unitType === 'stocking') {
+            const requiredSellableQty = qty * unitsPerStocking;
+            if (requiredSellableQty > currentStock) {
+              toast.error(`المخزون غير كافٍ. المتاح: ${currentStock} ${product?.sellable_unit_name || 'قطعة'}`);
+              return i;
+            }
+          } else {
+            if (qty > currentStock) {
+              toast.error(`المخزون غير كافٍ. المتاح: ${currentStock} ${product?.sellable_unit_name || 'قطعة'}`);
+              return i;
+            }
+          }
+          
+          return { ...i, quantity: qty };
+        }
+        return i;
+      });
       return offlineSaleService.calculateTotals({ ...prev, items: newItems });
     });
   };
@@ -217,6 +289,55 @@ export const PosPageOffline = () => {
       const newItems = prev.items.map((i) =>
         i.product_id === productId ? { ...i, unit_price: newPrice } : i
       );
+      return offlineSaleService.calculateTotals({ ...prev, items: newItems });
+    });
+  };
+
+  // Function to switch unit type for an item
+  const switchUnitType = (productId: number, newUnitType: 'stocking' | 'sellable') => {
+    updateCurrentSale((prev) => {
+      const newItems = prev.items.map((i) => {
+        if (i.product_id === productId) {
+          const product = i.product as Product;
+          const currentUnitType = (i as any).unitType || 'sellable';
+          
+          if (currentUnitType === newUnitType) {
+            return i; // No change needed
+          }
+          
+          const unitsPerStocking = product?.units_per_stocking_unit || 1;
+          
+          // First, convert current quantity to sellable units (base unit)
+          let currentQuantityInSellable: number;
+          if (currentUnitType === 'stocking') {
+            // Current quantity is in stocking units, convert to sellable
+            currentQuantityInSellable = i.quantity * unitsPerStocking;
+          } else {
+            // Current quantity is already in sellable units
+            currentQuantityInSellable = i.quantity;
+          }
+          
+          // Now convert to the new unit type
+          let newQuantity: number;
+          if (newUnitType === 'stocking') {
+            // Convert from sellable to stocking units
+            newQuantity = Math.floor(currentQuantityInSellable / unitsPerStocking);
+            if (newQuantity === 0) {
+              toast.error(`الكمية الحالية (${currentQuantityInSellable} ${product?.sellable_unit_name || 'قطعة'}) غير كافية للتحويل إلى وحدة التخزين (يحتاج ${unitsPerStocking} ${product?.sellable_unit_name || 'قطعة'} على الأقل)`);
+              return i;
+            }
+          } else {
+            // Convert from sellable to sellable (shouldn't happen, but just in case)
+            newQuantity = currentQuantityInSellable;
+          }
+          
+          // Get new price for the unit type
+          const newPrice = getPriceForUnitType(product, newUnitType);
+          
+          return { ...i, quantity: newQuantity, unit_price: newPrice, unitType: newUnitType };
+        }
+        return i;
+      });
       return offlineSaleService.calculateTotals({ ...prev, items: newItems });
     });
   };
@@ -362,6 +483,7 @@ export const PosPageOffline = () => {
       quantity: item.quantity,
       unitPrice: Number(item.unit_price),
       total: Number(item.unit_price) * item.quantity,
+      unitType: (item as any).unitType || 'sellable', // Default to sellable if not set
       selectedBatchId: item.purchase_item_id,
       // We'd ideally store these in OfflineSaleItem to persist display,
       // but for now we try to find them in product.available_batches or fallback
@@ -421,7 +543,7 @@ export const PosPageOffline = () => {
         availableShiftIds={availableShiftIds}
         onShiftSelect={setSelectedShiftId}
         products={products}
-        onAddToCart={addToCart}
+        onAddToCart={(product) => addToCart(product, 'sellable')}
         onNewSale={handleNewSale}
         onPaymentShortcut={() => {
           if (
@@ -488,6 +610,7 @@ export const PosPageOffline = () => {
             onUpdateBatch={async (id, batchId, num, expiry, price) =>
               updateBatch(id, batchId, num, expiry, price)
             }
+            onSwitchUnitType={async (id, unitType) => switchUnitType(id, unitType)}
           />
         </Paper>
 

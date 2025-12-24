@@ -18,6 +18,9 @@ import {
   Typography,
   CircularProgress,
   Skeleton,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
 } from "@mui/material";
 
 // MUI Icons
@@ -41,6 +44,7 @@ interface CurrentSaleItemsColumnProps {
   onUpdateUnitPrice?: (productId: number, newUnitPrice: number) => Promise<void>;
   onRemoveItem: (productId: number) => Promise<void>;
   onUpdateBatch?: (productId: number, batchId: number | null, batchNumber: string | null, expiryDate: string | null, unitPrice: number) => Promise<void>;
+  onSwitchUnitType?: (productId: number, unitType: 'stocking' | 'sellable') => Promise<void>;
   isSalePaid?: boolean;
   deletingItems?: Set<number>;
   updatingItems?: Set<number>;
@@ -53,6 +57,7 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
   onUpdateUnitPrice,
   onRemoveItem,
   onUpdateBatch,
+  onSwitchUnitType,
   isSalePaid = false,
   deletingItems = new Set(),
   updatingItems = new Set(),
@@ -246,53 +251,90 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
 
                       {/* Quantity */}
                       <TableCell align="center">
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                          <IconButton
-                            size="small"
-                            onClick={() => onUpdateQuantity(item.product.id, Math.max(1, item.quantity - 1))}
-                            disabled={item.quantity <= 1 || isSalePaid || updatingItems.has(item.product.id)}
-                          >
-                            {updatingItems.has(item.product.id) ? <CircularProgress size={16} /> : <RemoveIcon fontSize="small" />}
-                          </IconButton>
-                          
-                          {editingQuantity === item.product.id ? (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              <TextField
-                                type="number"
-                                value={editValue}
-                                onChange={(e) => setEditValue(e.target.value)}
-                                onKeyDown={(e) => handleKeyDown(e, item.product.id)}
-                                size="small"
-                                sx={{ width: 60 }}
-                                inputProps={{ min: 1, style: { textAlign: 'center' } }}
-                                autoFocus
-                              />
-                              <IconButton size="small" color="success" onClick={() => handleQuantitySave(item.product.id)}>
-                                <CheckIcon fontSize="small" />
-                              </IconButton>
-                              <IconButton size="small" color="error" onClick={handleQuantityCancel}>
-                                <CloseIcon fontSize="small" />
-                              </IconButton>
-                            </Box>
-                          ) : (
-                            <Typography
-                              variant="body1"
-                              fontWeight="medium"
-                              sx={{ cursor: isSalePaid ? 'default' : 'pointer', px: 1, '&:hover': { bgcolor: isSalePaid ? 'inherit' : 'action.hover' }, borderRadius: 1 }}
-                              onClick={() => handleQuantityClick(item)}
-                              title={isSalePaid ? 'تم الدفع' : 'انقر لتعديل الكمية'}
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                            <IconButton
+                              size="small"
+                              onClick={() => onUpdateQuantity(item.product.id, Math.max(1, item.quantity - 1))}
+                              disabled={item.quantity <= 1 || isSalePaid || updatingItems.has(item.product.id)}
                             >
-                              {item.quantity}
+                              {updatingItems.has(item.product.id) ? <CircularProgress size={16} /> : <RemoveIcon fontSize="small" />}
+                            </IconButton>
+                            
+                            {editingQuantity === item.product.id ? (
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <TextField
+                                  type="number"
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onKeyDown={(e) => handleKeyDown(e, item.product.id)}
+                                  size="small"
+                                  sx={{ width: 60 }}
+                                  inputProps={{ min: 1, style: { textAlign: 'center' } }}
+                                  autoFocus
+                                />
+                                <IconButton size="small" color="success" onClick={() => handleQuantitySave(item.product.id)}>
+                                  <CheckIcon fontSize="small" />
+                                </IconButton>
+                                <IconButton size="small" color="error" onClick={handleQuantityCancel}>
+                                  <CloseIcon fontSize="small" />
+                                </IconButton>
+                              </Box>
+                            ) : (
+                              <Typography
+                                variant="body1"
+                                fontWeight="medium"
+                                sx={{ cursor: isSalePaid ? 'default' : 'pointer', px: 1, '&:hover': { bgcolor: isSalePaid ? 'inherit' : 'action.hover' }, borderRadius: 1 }}
+                                onClick={() => handleQuantityClick(item)}
+                                title={isSalePaid ? 'تم الدفع' : 'انقر لتعديل الكمية'}
+                              >
+                                {item.quantity}
+                              </Typography>
+                            )}
+                            
+                            <IconButton
+                              size="small"
+                              onClick={() => onUpdateQuantity(item.product.id, item.quantity + 1)}
+                              disabled={isSalePaid || updatingItems.has(item.product.id)}
+                            >
+                              {updatingItems.has(item.product.id) ? <CircularProgress size={16} /> : <AddIcon fontSize="small" />}
+                            </IconButton>
+                          </Box>
+                          
+                          {/* Unit Type Selector - Only show if product has both unit types */}
+                          {item.product.units_per_stocking_unit && item.product.units_per_stocking_unit > 1 && onSwitchUnitType && !isSalePaid && (
+                            <ToggleButtonGroup
+                              value={item.unitType || 'sellable'}
+                              exclusive
+                              onChange={(e, newValue) => {
+                                if (newValue !== null && newValue !== item.unitType) {
+                                  onSwitchUnitType(item.product.id, newValue);
+                                }
+                              }}
+                              size="small"
+                              sx={{ height: 28 }}
+                            >
+                              <ToggleButton value="sellable" size="small">
+                                <Tooltip title={item.product.sellable_unit_name || 'قطعة'}>
+                                  <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
+                                    {item.product.sellable_unit_name || 'قطعة'}
+                                  </Typography>
+                                </Tooltip>
+                              </ToggleButton>
+                              <ToggleButton value="stocking" size="small">
+                                <Tooltip title={item.product.stocking_unit_name || 'صندوق'}>
+                                  <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
+                                    {item.product.stocking_unit_name || 'صندوق'}
+                                  </Typography>
+                                </Tooltip>
+                              </ToggleButton>
+                            </ToggleButtonGroup>
+                          )}
+                          {(!item.product.units_per_stocking_unit || item.product.units_per_stocking_unit <= 1) && (
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                              {item.product.sellable_unit_name || 'قطعة'}
                             </Typography>
                           )}
-                          
-                          <IconButton
-                            size="small"
-                            onClick={() => onUpdateQuantity(item.product.id, item.quantity + 1)}
-                            disabled={isSalePaid || updatingItems.has(item.product.id)}
-                          >
-                            {updatingItems.has(item.product.id) ? <CircularProgress size={16} /> : <AddIcon fontSize="small" />}
-                          </IconButton>
                         </Box>
                       </TableCell>
 

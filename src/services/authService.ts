@@ -189,8 +189,23 @@ const authService = {
 
     try {
       // Interceptor adds 'Authorization: Bearer <token>' header
-      const response = await apiClient.get<User>("/user");
-      return response.data;
+      // Response structure matches login: { user: UserResource, roles: [], permissions: [] }
+      const response = await apiClient.get<{ user: User; roles: string[]; permissions: string[] }>("/user");
+      const { user: userData, roles, permissions } = response.data;
+      
+      // Merge roles and permissions into user object to match User interface
+      const userWithRolesAndPermissions: User = {
+        ...userData,
+        roles: roles || userData.roles || [],
+        permissions: permissions || userData.permissions || [],
+      };
+      
+      console.log("getCurrentUser response:", { 
+        user: userWithRolesAndPermissions, 
+        roles: userWithRolesAndPermissions.roles, 
+        permissions: userWithRolesAndPermissions.permissions,
+      });
+      return userWithRolesAndPermissions;
     } catch (error) {
       console.error("Get user error:", error);
       // If API returns 401 Unauthorized, token is likely invalid/expired

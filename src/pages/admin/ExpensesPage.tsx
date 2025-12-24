@@ -1,16 +1,39 @@
 // src/pages/admin/ExpensesPage.tsx
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
-import { Loader2, Plus } from "lucide-react";
-
-// MUI (for filters)
-import TextField from "@mui/material/TextField";
-import InputAdornment from "@mui/material/InputAdornment";
-import SearchIcon from "@mui/icons-material/Search";
-import MenuItem from "@mui/material/MenuItem";
-import SelectMUI, { SelectChangeEvent } from "@mui/material/Select";
-import InputLabel from "@mui/material/InputLabel";
-import FormControl from "@mui/material/FormControl";
+// MUI Components
+import {
+  Box,
+  Button,
+  TextField,
+  InputAdornment,
+  MenuItem,
+  Select,
+  SelectChangeEvent,
+  InputLabel,
+  FormControl,
+  Alert,
+  CircularProgress,
+  Typography,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Pagination,
+  IconButton,
+  Tooltip,
+  Grid,
+} from "@mui/material";
+import {
+  Search as SearchIcon,
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+} from "@mui/icons-material";
 
 // Services
 import expenseService, { Expense } from "@/services/expenseService";
@@ -18,18 +41,6 @@ import expenseCategoryService, {
   ExpenseCategory,
 } from "@/services/ExpenseCategoryService";
 import ExpenseFormModal from "@/components/admin/expenses/ExpenseFormModal";
-
-// shadcn UI
-import { Button } from "@/components/ui/button";
-import { Alert } from "@/components/ui/alert";
-import {
-  Pagination as UIPagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationPrevious,
-  PaginationNext,
-} from "@/components/ui/pagination";
 
 type PaginatedResponse<T> =
   import("@/services/clientService").PaginatedResponse<T>;
@@ -130,7 +141,7 @@ const ExpensesPage: React.FC = () => {
     fetchExpenses();
   };
   const handleDelete = async (expense: ExpenseTableItem) => {
-    if (!confirm("هل أنت متأكد من حذف هذه المصروفات؟")) return;
+    if (!window.confirm("هل أنت متأكد من حذف هذه المصروفات؟")) return;
     try {
       await expenseService.deleteExpense(expense.id);
       fetchExpenses();
@@ -140,204 +151,201 @@ const ExpensesPage: React.FC = () => {
   };
 
   return (
-    <div className="dark:bg-gray-900 h-[calc(100vh-100px)] w-full px-2 py-2">
-      <div className="flex items-center justify-between mb-2">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+    <Box
+      sx={{
+        height: "calc(100vh - 100px)",
+        width: "100%",
+        p: 2,
+        direction: "rtl",
+      }}
+    >
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        sx={{ mb: 2 }}
+      >
+        <Typography variant="h4" component="h1" sx={{ fontWeight: 600 }}>
           المصروفات
-        </h1>
-        <Button onClick={openCreateModal} className="gap-2">
-          <Plus className="size-4" /> إضافة مصروف
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={openCreateModal}
+        >
+          إضافة مصروف
         </Button>
-      </div>
+      </Stack>
 
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr] gap-2 mb-2">
-        <TextField
-          fullWidth
-          size="small"
-          placeholder="بحث..."
-          value={searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            setCurrentPage(1);
-          }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon fontSize="small" />
-              </InputAdornment>
-            ),
-          }}
-        />
-        <FormControl size="small" fullWidth>
-          <InputLabel>القسم</InputLabel>
-          <SelectMUI
-            label="القسم"
-            value={selectedCategory ?? ""}
-            onChange={handleCategoryChange}
-          >
-            <MenuItem value="">
-              <em>كل الأقسام</em>
-            </MenuItem>
-            {categories.map((c) => (
-              <MenuItem key={c.id} value={c.id}>
-                {c.name}
+      <Grid container spacing={2} sx={{ mb: 2 }}>
+        <Grid item xs={12} md={6} lg={3}>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="بحث..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Grid>
+        <Grid item xs={12} md={6} lg={3}>
+          <FormControl size="small" fullWidth>
+            <InputLabel>القسم</InputLabel>
+            <Select
+              label="القسم"
+              value={selectedCategory ?? ""}
+              onChange={handleCategoryChange}
+            >
+              <MenuItem value="">
+                <em>كل الأقسام</em>
               </MenuItem>
-            ))}
-          </SelectMUI>
-        </FormControl>
-        <TextField
-          type="date"
-          size="small"
-          label="من تاريخ"
-          InputLabelProps={{ shrink: true }}
-          value={dateFrom}
-          onChange={(e) => {
-            setDateFrom(e.target.value);
-            setCurrentPage(1);
-          }}
-        />
-        <TextField
-          type="date"
-          size="small"
-          label="إلى تاريخ"
-          InputLabelProps={{ shrink: true }}
-          value={dateTo}
-          onChange={(e) => {
-            setDateTo(e.target.value);
-            setCurrentPage(1);
-          }}
-        />
-      </div>
+              {categories.map((c) => (
+                <MenuItem key={c.id} value={c.id}>
+                  {c.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} md={6} lg={3}>
+          <TextField
+            type="date"
+            size="small"
+            fullWidth
+            label="من تاريخ"
+            InputLabelProps={{ shrink: true }}
+            value={dateFrom}
+            onChange={(e) => {
+              setDateFrom(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+        </Grid>
+        <Grid item xs={12} md={6} lg={3}>
+          <TextField
+            type="date"
+            size="small"
+            fullWidth
+            label="إلى تاريخ"
+            InputLabelProps={{ shrink: true }}
+            value={dateTo}
+            onChange={(e) => {
+              setDateTo(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+        </Grid>
+      </Grid>
 
       {isLoading && (
-        <div className="flex items-center gap-2 py-4">
-          <Loader2 className="size-4 animate-spin" />
-          <span className="text-gray-600 dark:text-gray-400">
+        <Stack direction="row" spacing={2} alignItems="center" sx={{ py: 4 }}>
+          <CircularProgress size={20} />
+          <Typography variant="body2" color="text.secondary">
             جاري التحميل...
-          </span>
-        </div>
+          </Typography>
+        </Stack>
       )}
+
       {!isLoading && error && (
-        <Alert className="border-red-300/40 text-red-700 dark:text-red-400">
+        <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
 
       {!isLoading && !error && response && (
         <>
-          <div className="rounded-md border dark:border-gray-700 w-full overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="dark:border-gray-700">
-                  <th className="px-3 py-2 text-left">#</th>
-                  <th className="px-3 py-2 text-left">التاريخ</th>
-                  <th className="px-3 py-2 text-left">العنوان</th>
-                  <th className="px-3 py-2 text-left">القسم</th>
-                  <th className="px-3 py-2 text-right">المبلغ</th>
-                  <th className="px-3 py-2 text-left">المرجع</th>
-                  <th className="px-3 py-2 text-center">الإجراءات</th>
-                </tr>
-              </thead>
-              <tbody>
+          <TableContainer component={Paper} sx={{ mb: 2 }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>#</TableCell>
+                  <TableCell>التاريخ</TableCell>
+                  <TableCell>العنوان</TableCell>
+                  <TableCell>القسم</TableCell>
+                  <TableCell align="right">المبلغ</TableCell>
+                  <TableCell>المرجع</TableCell>
+                  <TableCell align="center">الإجراءات</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
                 {response.data.map((exp) => (
-                  <tr key={exp.id} className="border-t dark:border-gray-700">
-                    <td className="px-3 py-2">{exp.id}</td>
-                    <td className="px-3 py-2">{exp.expense_date}</td>
-                    <td className="px-3 py-2">{exp.title}</td>
-                    <td className="px-3 py-2">
-                      {exp.expense_category_name || "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right">
+                  <TableRow key={exp.id} hover>
+                    <TableCell>{exp.id}</TableCell>
+                    <TableCell>{exp.expense_date}</TableCell>
+                    <TableCell>{exp.title}</TableCell>
+                    <TableCell>{exp.expense_category_name || "—"}</TableCell>
+                    <TableCell align="right">
                       {Number(exp.amount).toFixed(2)}
-                    </td>
-                    <td className="px-3 py-2">{exp.reference || "—"}</td>
-                    <td className="px-3 py-2 text-center">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditModal(exp)}
-                      >
-                        تعديل
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="ml-2"
-                        onClick={() => handleDelete(exp)}
-                      >
-                        حذف
-                      </Button>
-                    </td>
-                  </tr>
+                    </TableCell>
+                    <TableCell>{exp.reference || "—"}</TableCell>
+                    <TableCell align="center">
+                      <Stack direction="row" spacing={1} justifyContent="center">
+                        <Tooltip title="تعديل">
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => openEditModal(exp)}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="حذف">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleDelete(exp)}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
                 ))}
                 {response.data.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="px-3 py-6 text-center text-muted-foreground dark:text-gray-400"
-                    >
-                      لا توجد نتائج
-                    </td>
-                  </tr>
+                  <TableRow>
+                    <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        لا توجد نتائج
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
                 )}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </Table>
+          </TableContainer>
+
           {response.last_page > 1 && (
-            <div className="flex justify-center p-2">
-              <UIPagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setCurrentPage((p) => Math.max(1, p - 1));
-                      }}
-                    />
-                  </PaginationItem>
-                  {Array.from(
-                    { length: response.last_page },
-                    (_, i) => i + 1
-                  ).map((page) => (
-                    <PaginationItem key={page}>
-                      <PaginationLink
-                        href="#"
-                        isActive={page === currentPage}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setCurrentPage(page);
-                        }}
-                      >
-                        {page}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ))}
-                  <PaginationItem>
-                    <PaginationNext
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setCurrentPage((p) =>
-                          Math.min(response.last_page, p + 1)
-                        );
-                      }}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </UIPagination>
-            </div>
+            <Box sx={{ display: "flex", justifyContent: "center", p: 2 }}>
+              <Pagination
+                count={response.last_page}
+                page={currentPage}
+                onChange={(_, page) => setCurrentPage(page)}
+                color="primary"
+                dir="rtl"
+              />
+            </Box>
           )}
         </>
       )}
+
       <ExpenseFormModal
         isOpen={isModalOpen}
         onClose={closeModal}
         expenseToEdit={editingExpense}
         onSaveSuccess={() => handleSaveSuccess()}
       />
-    </div>
+    </Box>
   );
 };
 
