@@ -11,13 +11,13 @@ import { OfflineSale, OfflineSaleItem } from "../../services/db"; // Adjust path
 import { formatNumber } from "@/constants";
 
 // Register Arabic Font
-// We use 'Amiri' which is standard for Arabic.
+// We use 'Amiri' stored locally in public/fonts to avoid CORS/format issues.
 Font.register({
   family: "Amiri",
   fonts: [
-    { src: "https://fonts.gstatic.com/s/amiri/v26/J7aRnpd8CGxBHpUrtLMA7w.ttf" },
+    { src: "/fonts/Amiri-Regular.ttf" },
     {
-      src: "https://fonts.gstatic.com/s/amiri/v26/J7acnpd8CGxBHp2VkZY4xJ9h.ttf",
+      src: "/fonts/Amiri-Bold.ttf",
       fontWeight: "bold",
     },
   ],

@@ -11,6 +11,10 @@ import {
   Box,
   Typography,
   Autocomplete,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  IconButton,
 } from "@mui/material";
 
 // MUI Icons
@@ -27,7 +31,7 @@ import { OfflineSale } from "../../services/db";
 import { formatNumber, preciseSum, preciseCalculation } from "@/constants";
 import dayjs from "dayjs";
 import { Plus, Printer } from "lucide-react";
-import { pdf } from "@react-pdf/renderer";
+import { PDFViewer } from "@react-pdf/renderer";
 import { toast } from "sonner";
 import { PosInvoicePdf } from "./PosInvoicePdf";
 
@@ -65,6 +69,7 @@ export const OfflineSaleSummaryColumn: React.FC<
   // const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false); // Lifted up
   const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState(false);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
 
   // Date editing state
   const [isDateEditing, setIsDateEditing] = useState(false);
@@ -177,28 +182,8 @@ export const OfflineSaleSummaryColumn: React.FC<
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [grandTotal, currentSale.status]);
 
-  const handlePrintPdf = async () => {
-    try {
-      const blob = await pdf(
-        <PosInvoicePdf
-          sale={currentSale}
-          items={currentSale.items}
-          userName="الكاشير"
-        />
-      ).toBlob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `invoice-${currentSale.tempId || currentSale.id}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("PDF Error:", err);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      toast.error("فشل إنشاء الفاتورة: " + (err as any).message);
-    }
+  const handlePrintPdf = () => {
+    setIsPdfDialogOpen(true);
   };
 
   return (
@@ -582,6 +567,36 @@ export const OfflineSaleSummaryColumn: React.FC<
           }
         }}
       />
+
+      {/* PDF Viewer Dialog */}
+      <Dialog
+        open={isPdfDialogOpen}
+        onClose={() => setIsPdfDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          معاينة الفاتورة
+          <IconButton onClick={() => setIsPdfDialogOpen(false)}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ height: "80vh", p: 0 }}>
+          <PDFViewer width="100%" height="100%" showToolbar={true}>
+            <PosInvoicePdf
+              sale={currentSale}
+              items={currentSale.items}
+              userName="الكاشير"
+            />
+          </PDFViewer>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };
