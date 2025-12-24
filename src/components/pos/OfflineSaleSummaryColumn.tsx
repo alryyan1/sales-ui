@@ -30,10 +30,10 @@ import { CartItem } from "./types";
 import { OfflineSale } from "../../services/db";
 import { formatNumber, preciseSum, preciseCalculation } from "@/constants";
 import dayjs from "dayjs";
-import { Plus, Printer } from "lucide-react";
+import { Plus, Printer, FileText } from "lucide-react";
 import { PDFViewer } from "@react-pdf/renderer";
-import { toast } from "sonner";
 import { PosInvoicePdf } from "./PosInvoicePdf";
+import { OfflineInvoiceA4Pdf } from "./OfflineInvoiceA4Pdf";
 
 // Import the dialogs
 import { OfflinePaymentDialog } from "./OfflinePaymentDialog";
@@ -72,6 +72,7 @@ export const OfflineSaleSummaryColumn: React.FC<
   const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState(false);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
+  const [isA4PdfDialogOpen, setIsA4PdfDialogOpen] = useState(false);
   const [settings, setSettings] = useState<AppSettings | null>(null);
 
   // Load settings on mount
@@ -228,6 +229,10 @@ export const OfflineSaleSummaryColumn: React.FC<
 
   const handlePrintPdf = () => {
     setIsPdfDialogOpen(true);
+  };
+
+  const handlePrintA4Pdf = () => {
+    setIsA4PdfDialogOpen(true);
   };
 
   return (
@@ -534,7 +539,7 @@ export const OfflineSaleSummaryColumn: React.FC<
 
           <Divider />
 
-          {/* Print Invoice Button */}
+          {/* Print Invoice Button (Thermal) */}
           {currentSale.items.length > 0 && (
             <Button
               variant="outlined"
@@ -543,7 +548,21 @@ export const OfflineSaleSummaryColumn: React.FC<
               onClick={handlePrintPdf}
               sx={{ mb: 1, py: 1 }}
             >
-              طباعة فاتورة (PDF)
+              طباعة فاتورة (حراري)
+            </Button>
+          )}
+
+          {/* NEW: Print A4 Invoice Button (Only if client selected) */}
+          {currentSale.items.length > 0 && currentSale.client_id && (
+            <Button
+              variant="outlined"
+              fullWidth
+              color="secondary"
+              startIcon={<FileText size={18} />}
+              onClick={handlePrintA4Pdf}
+              sx={{ mb: 1, py: 1 }}
+            >
+              طباعة فاتورة (A4)
             </Button>
           )}
 
@@ -612,7 +631,7 @@ export const OfflineSaleSummaryColumn: React.FC<
         }}
       />
 
-      {/* PDF Viewer Dialog */}
+      {/* PDF Viewer Dialog - Thermal */}
       <Dialog
         open={isPdfDialogOpen}
         onClose={() => setIsPdfDialogOpen(false)}
@@ -628,7 +647,7 @@ export const OfflineSaleSummaryColumn: React.FC<
             alignItems: "center",
           }}
         >
-          معاينة الفاتورة
+          معاينة الفاتورة الحرارية
           <IconButton onClick={() => setIsPdfDialogOpen(false)}>
             <CloseIcon />
           </IconButton>
@@ -636,6 +655,39 @@ export const OfflineSaleSummaryColumn: React.FC<
         <DialogContent sx={{ height: "80vh", p: 0 }}>
           <PDFViewer width="100%" height="100%" showToolbar={true}>
             <PosInvoicePdf
+              sale={currentSale}
+              items={currentSale.items}
+              userName="الكاشير"
+              settings={settings}
+            />
+          </PDFViewer>
+        </DialogContent>
+      </Dialog>
+
+      {/* PDF Viewer Dialog - A4 */}
+      <Dialog
+        open={isA4PdfDialogOpen}
+        onClose={() => setIsA4PdfDialogOpen(false)}
+        maxWidth={false}
+        PaperProps={{
+          sx: { width: "800px", maxWidth: "90vw", height: "90vh", m: 2 },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          معاينة الفاتورة (A4)
+          <IconButton onClick={() => setIsA4PdfDialogOpen(false)}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ height: "80vh", p: 0 }}>
+          <PDFViewer width="100%" height="100%" showToolbar={true}>
+            <OfflineInvoiceA4Pdf
               sale={currentSale}
               items={currentSale.items}
               userName="الكاشير"

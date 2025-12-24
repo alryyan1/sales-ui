@@ -9,7 +9,7 @@ import SidebarDrawer from "./SidebarDrawer";
 import TopAppBar from "./TopAppBar";
 import UserMenu from "./UserMenu";
 import { DRAWER_WIDTH } from "./types";
-import { navItems, reportItems, adminItems } from "./navItems";
+import { navItems } from "./navItems";
 
 const COLLAPSED_DRAWER_WIDTH = 72;
 
@@ -104,8 +104,6 @@ const RootLayout: React.FC = () => {
         >
           <SidebarDrawer
             navItems={visibleNavItems}
-            reportItems={reportItems}
-            adminItems={adminItems}
             openSections={openSections}
             onSectionToggle={handleSectionToggle}
           />
@@ -126,8 +124,6 @@ const RootLayout: React.FC = () => {
         >
           <SidebarDrawer
             navItems={visibleNavItems}
-            reportItems={reportItems}
-            adminItems={adminItems}
             openSections={openSections}
             onSectionToggle={handleSectionToggle}
             isCollapsed={isSidebarCollapsed}

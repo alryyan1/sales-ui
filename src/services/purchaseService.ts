@@ -284,6 +284,31 @@ const purchaseService = {
   },
 
   /**
+   * Get paginated purchase items.
+   */
+  getPurchaseItems: async (
+    purchaseId: number,
+    page: number = 1,
+    perPage: number = 15,
+    search: string = ""
+  ): Promise<PaginatedResponse<PurchaseItem>> => {
+    try {
+      const params = new URLSearchParams();
+      params.append("page", page.toString());
+      params.append("per_page", perPage.toString());
+      if (search) params.append("search", search);
+
+      const response = await apiClient.get<PaginatedResponse<PurchaseItem>>(
+        `/purchases/${purchaseId}/items?${params.toString()}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching items for purchase ${purchaseId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
    * Update a specific purchase item.
    */
   updatePurchaseItem: async (

@@ -6,6 +6,7 @@ import {
   Document,
   StyleSheet,
   Font,
+  Image,
 } from "@react-pdf/renderer";
 import { OfflineSale, OfflineSaleItem } from "../../services/db";
 import { AppSettings } from "../../services/settingService";
@@ -39,6 +40,12 @@ const styles = StyleSheet.create({
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
+  },
+  logo: {
+    width: 50,
+    height: 50,
+    marginBottom: 5,
+    objectFit: "contain",
   },
   title: {
     fontSize: 16,
@@ -141,6 +148,18 @@ export const PosInvoicePdf: React.FC<PosInvoicePdfProps> = ({
       <Page size={[227, 800]} style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
+          {settings?.company_logo_url && (
+            <Image
+              src={settings.company_logo_url}
+              style={[
+                styles.logo,
+                {
+                  width: settings.logo_width || 50,
+                  height: settings.logo_height || 50,
+                },
+              ]}
+            />
+          )}
           <Text style={styles.title}>
             {settings?.company_name || "Del Pasta Invoice"}
           </Text>
@@ -150,8 +169,11 @@ export const PosInvoicePdf: React.FC<PosInvoicePdfProps> = ({
           {settings?.company_phone && (
             <Text style={styles.subtitle}>{settings.company_phone}</Text>
           )}
+          {settings?.tax_number && (
+            <Text style={styles.subtitle}>الضريبي: {settings.tax_number}</Text>
+          )}
           <Text style={styles.subtitle}>
-            رقم الفاتورة: #{sale.tempId || sale.id}
+            رقم الفاتورة: #{sale.is_synced && sale.id ? sale.id : sale.tempId}
           </Text>
           <Text style={styles.subtitle}>
             {formatDate(sale.offline_created_at)}

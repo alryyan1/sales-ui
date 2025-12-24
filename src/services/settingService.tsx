@@ -1,91 +1,130 @@
 // src/services/settingService.ts
-import apiClient, { getValidationErrors, getErrorMessage, ApiErrorResponse } from '../lib/axios';
-import { AxiosError } from 'axios';
+import apiClient, {
+  getValidationErrors,
+  getErrorMessage,
+  ApiErrorResponse,
+} from "../lib/axios";
+import { AxiosError } from "axios";
 
 // Interface for the settings object (should match keys in config/app_settings.php)
 export interface AppSettings {
-    company_name: string;
-    company_address: string;
-    company_phone: string;
-    company_email: string;
-    company_logo_url: string | null;
-    currency_symbol: string;
-    date_format: string; // e.g., 'YYYY-MM-DD', 'MM/DD/YYYY'
-    global_low_stock_threshold: number;
-    invoice_prefix: string;
-    purchase_order_prefix: string;
-    default_profit_rate: number; // Default profit rate percentage
-    timezone: string;
-    
-    // WhatsApp API Configuration
-    whatsapp_enabled: boolean;
-    whatsapp_api_url: string;
-    whatsapp_api_token: string;
-    whatsapp_instance_id: string;
-    whatsapp_default_phone: string;
-    
-    // Add other settings as defined in your config
-    // UI preferences
-    sidebar_layout?: boolean; // optional flag to switch between header vs sidebar layout
+  company_name: string;
+  company_address: string;
+  company_phone: string;
+  company_email: string;
+  company_logo_url: string | null;
+  currency_symbol: string;
+  date_format: string; // e.g., 'YYYY-MM-DD', 'MM/DD/YYYY'
+  global_low_stock_threshold: number;
+  invoice_prefix: string;
+  purchase_order_prefix: string;
+  default_profit_rate: number; // Default profit rate percentage
+  timezone: string;
+
+  // WhatsApp API Configuration
+  whatsapp_enabled: boolean;
+  whatsapp_api_url: string;
+  whatsapp_api_token: string;
+  whatsapp_instance_id: string;
+  whatsapp_default_phone: string;
+
+  // Add other settings as defined in your config
+  // UI preferences
+  sidebar_layout?: boolean;
+  tax_number?: string;
+  company_header_url?: string | null;
+  invoice_branding_type?: "logo" | "header";
+  logo_position?: "left" | "right" | "both";
+  logo_height?: number;
+  logo_width?: number;
 }
 
 // Type for the update payload (can be partial)
 export type UpdateAppSettingsData = Partial<AppSettings>;
 
-
 const settingService = {
-    /**
-     * Fetch all current application settings.
-     * Requires 'view-settings' permission.
-     */
-    getSettings: async (): Promise<AppSettings> => {
-        try {
-            // Backend returns { data: AppSettings }
-            const response = await apiClient.get<{ data: AppSettings }>('/admin/settings');
-            return response.data.data; // Assuming data is nested under 'data' key
-        } catch (error) {
-            console.error('Error fetching settings:', error);
-            throw error;
-        }
-    },
+  /**
+   * Fetch all current application settings.
+   * Requires 'view-settings' permission.
+   */
+  getSettings: async (): Promise<AppSettings> => {
+    try {
+      // Backend returns { data: AppSettings }
+      const response = await apiClient.get<{ data: AppSettings }>(
+        "/admin/settings"
+      );
+      return response.data.data; // Assuming data is nested under 'data' key
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+      throw error;
+    }
+  },
 
-    /**
-     * Update application settings.
-     * Requires 'update-settings' permission.
-     */
-    updateSettings: async (settingsData: UpdateAppSettingsData): Promise<AppSettings> => {
-        try {
-            // Backend returns { message: '...', data: AppSettings }
-            const response = await apiClient.put<{ message: string, data: AppSettings }>('/admin/settings', settingsData);
-            return response.data.data; // Return the updated settings
-        } catch (error) {
-            console.error('Error updating settings:', error);
-            throw error;
-        }
-    },
+  /**
+   * Update application settings.
+   * Requires 'update-settings' permission.
+   */
+  updateSettings: async (
+    settingsData: UpdateAppSettingsData
+  ): Promise<AppSettings> => {
+    try {
+      // Backend returns { message: '...', data: AppSettings }
+      const response = await apiClient.put<{
+        message: string;
+        data: AppSettings;
+      }>("/admin/settings", settingsData);
+      return response.data.data; // Return the updated settings
+    } catch (error) {
+      console.error("Error updating settings:", error);
+      throw error;
+    }
+  },
 
-    /**
-     * Upload company logo image. Returns updated settings with new company_logo_url.
-     */
-    uploadLogo: async (file: File): Promise<AppSettings> => {
-        const form = new FormData();
-        form.append('logo', file);
-        try {
-            const response = await apiClient.post<{ message: string; url: string; data: AppSettings }>(
-                '/admin/settings/logo',
-                form,
-                { headers: { 'Content-Type': 'multipart/form-data' } }
-            );
-            return response.data.data;
-        } catch (error) {
-            console.error('Error uploading logo:', error);
-            throw error;
-        }
-    },
+  /**
+   * Upload company logo image. Returns updated settings with new company_logo_url.
+   */
+  uploadLogo: async (file: File): Promise<AppSettings> => {
+    const form = new FormData();
+    form.append("logo", file);
+    try {
+      const response = await apiClient.post<{
+        message: string;
+        url: string;
+        data: AppSettings;
+      }>("/admin/settings/logo", form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return response.data.data;
+    } catch (error) {
+      console.error("Error uploading logo:", error);
+      throw error;
+    }
+  },
 
-    // --- Error Helpers ---
-    getValidationErrors,
-    getErrorMessage,
+  /**
+   * Upload company header image.
+   */
+  uploadHeader: async (file: File): Promise<AppSettings> => {
+    const form = new FormData();
+    form.append("header", file);
+    try {
+      const response = await apiClient.post<{
+        message: string;
+        url: string;
+        data: AppSettings;
+      }>("/admin/settings/header", form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return response.data.data;
+    } catch (error) {
+      console.error("Error uploading header:", error);
+      throw error;
+    }
+  },
+
+  // --- Error Helpers ---
+  getValidationErrors,
+  getErrorMessage,
 };
 
 // Re-usable Axios error check function

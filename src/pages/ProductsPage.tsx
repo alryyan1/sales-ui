@@ -1,5 +1,6 @@
 // src/pages/ProductsPage.tsx
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 
 // MUI Components
 import Box from "@mui/material/Box";
@@ -25,6 +26,7 @@ import {
   FileSpreadsheet,
   Upload,
   Search,
+  Layers,
 } from "lucide-react";
 
 // Services and Types
@@ -103,6 +105,7 @@ const ProductsPage: React.FC = () => {
   const [showOnlyInStock, setShowOnlyInStock] = useState(false);
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [showOutOfStockOnly, setShowOutOfStockOnly] = useState(false);
+  const navigate = useNavigate();
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -576,6 +579,25 @@ const ProductsPage: React.FC = () => {
                 </IconButton>
               </Tooltip>
               <Typography variant="caption">إضافة</Typography>
+            </Box>
+
+            {/* Manage Categories */}
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+              }}
+            >
+              <Tooltip title="إدارة الفئات">
+                <IconButton
+                  onClick={() => navigate("/admin/categories")}
+                  color="default"
+                >
+                  <Layers className="h-5 w-5" />
+                </IconButton>
+              </Tooltip>
+              <Typography variant="caption">الفئات</Typography>
             </Box>
           </Box>
         </Box>

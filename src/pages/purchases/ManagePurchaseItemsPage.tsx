@@ -59,6 +59,23 @@ const ManagePurchaseItemsPage: React.FC = () => {
     staleTime: 0,
   });
 
+  // ==================== PAGINATION & SEARCH ====================
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(20);
+  const [search, setSearch] = useState("");
+
+  const {
+    data: purchaseItemsData,
+    isLoading: loadingItems,
+    refetch: refetchItems,
+  } = useQuery({
+    queryKey: ["purchaseItems", purchaseId, page, perPage, search],
+    queryFn: () =>
+      purchaseService.getPurchaseItems(purchaseId!, page, perPage, search),
+    enabled: !!purchaseId,
+    placeholderData: (previousData) => previousData, // Keep previous data while fetching
+  });
+
   // ==================== MUTATIONS ====================
 
   const addItemMutation = useMutation({
@@ -68,6 +85,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
     onSuccess: () => {
       toast.success("تم بنجاح", { description: "تمت إضافة الصنف بنجاح" });
       refetchPurchase();
+      refetchItems();
       setAddItemDialogOpen(false);
     },
     onError: (error: unknown) => {
@@ -446,12 +464,26 @@ const ManagePurchaseItemsPage: React.FC = () => {
 
       {/* Items List */}
       <PurchaseItemsList
-        items={purchase.items || []}
+        items={purchaseItemsData?.data || []}
         productUnits={productUnits}
         isReadOnly={isReadOnly}
         isDeleting={deleteItemMutation.isPending}
         onUpdate={handleItemUpdate}
         onDelete={handleItemDelete}
+        // Pagination Props
+        page={page}
+        perPage={perPage}
+        total={purchaseItemsData?.meta?.total || 0}
+        searchQuery={search}
+        onPageChange={setPage}
+        onPerPageChange={(newPerPage) => {
+          setPerPage(newPerPage);
+          setPage(1); // Reset to page 1 on perPage change
+        }}
+        onSearchChange={(val) => {
+          setSearch(val);
+          setPage(1); // Reset to page 1 on search
+        }}
       />
     </Box>
   );

@@ -25,8 +25,6 @@ import { NavItem } from "./types";
 
 interface SidebarDrawerProps {
   navItems: NavItem[];
-  reportItems: NavItem[];
-  adminItems: NavItem[];
   openSections: Record<string, boolean>;
   onSectionToggle: (section: string) => void;
 
@@ -36,21 +34,13 @@ interface SidebarDrawerProps {
 
 const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
   navItems,
-  reportItems,
-  adminItems,
   openSections,
   onSectionToggle,
-
   isCollapsed = false,
   onToggleCollapse,
 }) => {
   const theme = useTheme();
   const location = useLocation();
-
-  const visibleReportItems = reportItems;
-  const visibleAdminItems = adminItems;
-  const canViewAnyReport = visibleReportItems.length > 0;
-  const canManageAdmin = visibleAdminItems.length > 0;
 
   return (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
@@ -122,6 +112,26 @@ const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
       <Box sx={{ flex: 1, overflow: "auto", py: 1 }}>
         <List>
           {navItems.map((item) => {
+            // Check for children
+            if (item.children && item.children.length > 0) {
+              // Collapsible Group
+              // Use label as key for openSections
+              const sectionKey = item.label;
+
+              if (isCollapsed) return null; // Don't show groups when collapsed (or implement popover)
+
+              return (
+                <CollapsibleNavItem
+                  key={item.label}
+                  item={item}
+                  open={openSections[sectionKey] || false}
+                  onToggle={() => onSectionToggle(sectionKey)}
+                  location={location}
+                />
+              );
+            }
+
+            // Single Item
             const isActive = location.pathname === item.to;
             return (
               <ListItem key={item.to} disablePadding>
@@ -170,38 +180,6 @@ const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
               </ListItem>
             );
           })}
-
-          {/* Reports Section */}
-          {canViewAnyReport && !isCollapsed && (
-            <CollapsibleNavItem
-              item={{
-                to: "#",
-                label: "التقارير",
-                icon: BarChart3,
-                permission: null,
-                children: visibleReportItems,
-              }}
-              open={openSections.reports}
-              onToggle={() => onSectionToggle("reports")}
-              location={location}
-            />
-          )}
-
-          {/* Admin Section */}
-          {canManageAdmin && !isCollapsed && (
-            <CollapsibleNavItem
-              item={{
-                to: "#",
-                label: "الإدارة",
-                icon: Settings,
-                permission: null,
-                children: visibleAdminItems,
-              }}
-              open={openSections.admin}
-              onToggle={() => onSectionToggle("admin")}
-              location={location}
-            />
-          )}
         </List>
       </Box>
     </Box>
