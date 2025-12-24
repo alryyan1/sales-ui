@@ -26,6 +26,7 @@ import {
   Layers,
   Tag,
   Loader2,
+  RefreshCw, // Import RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -34,6 +35,9 @@ import purchaseService from "@/services/purchaseService";
 import { Product } from "@/services/productService";
 import { useSettings } from "@/context/SettingsContext";
 import { AddPurchaseItemData } from "./types";
+
+// Module-level cache
+let globalProductCache: Product[] | null = null;
 
 // Helper: round to exactly 3 decimal places
 const roundToThreeDecimals = (value: number): number => {
@@ -82,7 +86,13 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
   }, []);
 
   // Fetch ALL products for client-side filtering/scanning
-  const fetchAllProducts = useCallback(async () => {
+  const fetchAllProducts = useCallback(async (forceRefresh = false) => {
+    // Use cache if available and not forcing refresh
+    if (!forceRefresh && globalProductCache) {
+      setAllProducts(globalProductCache);
+      return;
+    }
+
     setProductLoading(true);
     try {
       // Fetch a large number of products to act as a cache
@@ -94,10 +104,16 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
 
       // Deduplicate products by ID to prevent key collisions
       const uniqueProducts = Array.from(
-        new Map(products.map((p) => [p.id, p])).values()
-      );
+        new Map(products.map((p) => [p.id, p])).values() // Ensure unique IDs
+      ) as Product[];
 
+      // Update global cache
+      globalProductCache = uniqueProducts;
       setAllProducts(uniqueProducts);
+
+      if (forceRefresh) {
+        toast.success("تم تحديث قائمة المنتجات");
+      }
     } catch (error) {
       console.error("Error fetching products:", error);
       toast.error("خطأ", { description: "فشل تحميل قائمة المنتجات" });
@@ -309,21 +325,39 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
             </Typography>
           </Box>
         </Box>
-        <IconButton
-          onClick={onClose}
-          sx={{
-            bgcolor: "grey.100",
-            "&:hover": { bgcolor: "grey.200" },
-          }}
-        >
-          <X size={20} />
-        </IconButton>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <IconButton
+            onClick={() => fetchAllProducts(true)}
+            title="تحديث قائمة المنتجات"
+            disabled={productLoading}
+            sx={{
+              bgcolor: "grey.100",
+              "&:hover": { bgcolor: "grey.200" },
+            }}
+          >
+            <RefreshCw
+              size={20}
+              className={productLoading ? "animate-spin" : ""}
+            />
+          </IconButton>
+          <IconButton
+            onClick={onClose}
+            sx={{
+              bgcolor: "grey.100",
+              "&:hover": { bgcolor: "grey.200" },
+            }}
+          >
+            <X size={20} />
+          </IconButton>
+        </Box>
       </Box>
 
       <DialogContent sx={{ p: 3 }}>
         <Stack spacing={3}>
           {/* Product Selection */}
-          <Box>
+          <Box dir="ltr">
+            {" "}
+            {/* Force LTR for Autocomplete */}
             <Typography
               variant="body2"
               sx={{

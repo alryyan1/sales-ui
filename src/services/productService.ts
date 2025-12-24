@@ -33,6 +33,7 @@ export interface Product {
   units_per_stocking_unit?: number | null; // e.g., 12 (pieces per box) - ensure backend default is 1
   category_id?: number | null; // Optional if not included in resource
   category_name?: string | null; // Optional if included by resource
+  has_expiry_date?: boolean;
   // Optional accessors that might be added by backend ProductResource
   // --- Stock (always in sellable units) ---
   latest_purchase_cost?: string | number | null;
@@ -81,6 +82,7 @@ export interface ProductFormData {
   stock_alert_level: string | number | null; // Form might use string, API expects integer/null
   // unit?: string | null;
   category_id?: number | null;
+  has_expiry_date?: boolean;
 }
 
 // --- Service Object ---
@@ -179,18 +181,19 @@ const productService = {
 
       // Handle Laravel Resource Collection response
       // ProductResource::collection() returns a collection with 'data' property
+      const responseData = response.data;
       if (
-        response.data &&
-        response.data.data &&
-        Array.isArray(response.data.data)
+        responseData &&
+        "data" in responseData &&
+        Array.isArray((responseData as { data: Product[] }).data)
       ) {
-        return response.data.data; // Laravel Resource Collection format
-      } else if (response.data && Array.isArray(response.data)) {
-        return response.data; // Direct array (fallback)
+        return (responseData as { data: Product[] }).data; // Laravel Resource Collection format
+      } else if (responseData && Array.isArray(responseData)) {
+        return responseData as Product[]; // Direct array (fallback)
       } else {
         console.warn(
           "Unexpected response structure from getProductsByIds:",
-          response.data
+          responseData
         );
         return [];
       }

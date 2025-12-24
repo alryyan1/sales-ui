@@ -40,6 +40,7 @@ interface PurchaseHeaderFormSectionProps {
   isPurchaseReceived?: boolean;
   warehouses?: Warehouse[];
   loadingWarehouses?: boolean;
+  isEditMode?: boolean;
 }
 
 // Status options configuration
@@ -101,6 +102,7 @@ export const PurchaseHeaderFormSection: React.FC<
   isPurchaseReceived = false,
   warehouses,
   loadingWarehouses,
+  isEditMode = false,
 }) => {
   const { control } = useFormContext();
 
@@ -320,7 +322,7 @@ export const PurchaseHeaderFormSection: React.FC<
                         field.onChange(newValue.value);
                       }
                     }}
-                    disabled={isDisabled}
+                    disabled={isDisabled || !isEditMode}
                     size="small"
                     disableClearable
                     renderInput={(params) => (

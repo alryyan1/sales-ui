@@ -63,15 +63,15 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [serverError, setServerError] = useState<string | null>(null);
-  
+
   // State for category creation dialog
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  
+
   // State for units dropdown
   const [stockingUnits, setStockingUnits] = useState<Unit[]>([]);
   const [sellableUnits, setSellableUnits] = useState<Unit[]>([]);
   const [loadingUnits, setLoadingUnits] = useState(true);
-  
+
   // State for unit creation dialogs
   const [isStockingUnitModalOpen, setIsStockingUnitModalOpen] = useState(false);
   const [isSellableUnitModalOpen, setIsSellableUnitModalOpen] = useState(false);
@@ -92,11 +92,12 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       stock_alert_level: 10,
     },
   });
-  
+
   const {
     handleSubmit,
     control,
     reset,
+    setValue,
     formState: { isSubmitting },
     setError,
   } = form;
@@ -116,10 +117,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     } catch (error) {
       console.error("Error fetching categories for product form:", error);
       toast.error("خطأ", {
-        description: categoryService.getErrorMessage(
-          error,
-          "فشل تحميل الفئات"
-        ),
+        description: categoryService.getErrorMessage(error, "فشل تحميل الفئات"),
       });
     } finally {
       setLoadingCategories(false);
@@ -139,10 +137,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     } catch (error) {
       console.error("Error fetching units for product form:", error);
       toast.error("خطأ", {
-        description: unitService.getErrorMessage(
-          error,
-          "فشل تحميل الوحدات"
-        ),
+        description: unitService.getErrorMessage(error, "فشل تحميل الوحدات"),
       });
     } finally {
       setLoadingUnits(false);
@@ -150,24 +145,33 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   }, []);
 
   // --- Handle Category Creation Success ---
-  const handleCategoryCreated = useCallback((newCategory: Category) => {
-    setCategories(prev => [...prev, newCategory]);
-    form.setValue("category_id", String(newCategory.id));
-    setIsCategoryModalOpen(false);
-  }, [form]);
+  const handleCategoryCreated = useCallback(
+    (newCategory: Category) => {
+      setCategories((prev) => [...prev, newCategory]);
+      form.setValue("category_id", String(newCategory.id));
+      setIsCategoryModalOpen(false);
+    },
+    [form]
+  );
 
   // --- Handle Unit Creation Success ---
-  const handleStockingUnitCreated = useCallback((newUnit: Unit) => {
-    setStockingUnits(prev => [...prev, newUnit]);
-    form.setValue("stocking_unit_id", String(newUnit.id));
-    setIsStockingUnitModalOpen(false);
-  }, [form]);
+  const handleStockingUnitCreated = useCallback(
+    (newUnit: Unit) => {
+      setStockingUnits((prev) => [...prev, newUnit]);
+      form.setValue("stocking_unit_id", String(newUnit.id));
+      setIsStockingUnitModalOpen(false);
+    },
+    [form]
+  );
 
-  const handleSellableUnitCreated = useCallback((newUnit: Unit) => {
-    setSellableUnits(prev => [...prev, newUnit]);
-    form.setValue("sellable_unit_id", String(newUnit.id));
-    setIsSellableUnitModalOpen(false);
-  }, [form]);
+  const handleSellableUnitCreated = useCallback(
+    (newUnit: Unit) => {
+      setSellableUnits((prev) => [...prev, newUnit]);
+      form.setValue("sellable_unit_id", String(newUnit.id));
+      setIsSellableUnitModalOpen(false);
+    },
+    [form]
+  );
 
   // --- Effect to Populate/Reset Form and Fetch Categories ---
   useEffect(() => {
@@ -181,10 +185,16 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           name: productToEdit.name || "",
           scientific_name: productToEdit.scientific_name || "",
           sku: productToEdit.sku || "",
-          stocking_unit_id: productToEdit.stocking_unit_id ? String(productToEdit.stocking_unit_id) : "",
-          sellable_unit_id: productToEdit.sellable_unit_id ? String(productToEdit.sellable_unit_id) : "",
+          stocking_unit_id: productToEdit.stocking_unit_id
+            ? String(productToEdit.stocking_unit_id)
+            : "",
+          sellable_unit_id: productToEdit.sellable_unit_id
+            ? String(productToEdit.sellable_unit_id)
+            : "",
           units_per_stocking_unit: productToEdit.units_per_stocking_unit || 1,
-          category_id: productToEdit.category_id ? String(productToEdit.category_id) : "",
+          category_id: productToEdit.category_id
+            ? String(productToEdit.category_id)
+            : "",
           stock_quantity: Number(productToEdit.stock_quantity) || 0,
           stock_alert_level: productToEdit.stock_alert_level || 10,
         });
@@ -202,7 +212,14 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
         });
       }
     }
-  }, [isOpen, isEditMode, productToEdit, reset, fetchCategoriesForSelect, fetchUnitsForSelect]);
+  }, [
+    isOpen,
+    isEditMode,
+    productToEdit,
+    reset,
+    fetchCategoriesForSelect,
+    fetchUnitsForSelect,
+  ]);
 
   // --- Form Submission Handler ---
   const onSubmit = async (data: ProductFormValues) => {
@@ -214,12 +231,18 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       scientific_name: data.scientific_name || null,
       sku: data.sku || null,
       description: null,
-      stocking_unit_id: data.stocking_unit_id ? Number(data.stocking_unit_id) : null,
-      sellable_unit_id: data.sellable_unit_id ? Number(data.sellable_unit_id) : null,
+      stocking_unit_id: data.stocking_unit_id
+        ? Number(data.stocking_unit_id)
+        : null,
+      sellable_unit_id: data.sellable_unit_id
+        ? Number(data.sellable_unit_id)
+        : null,
       units_per_stocking_unit: Number(data.units_per_stocking_unit) || 1,
       category_id: data.category_id ? Number(data.category_id) : null,
       stock_quantity: Number(data.stock_quantity),
-      stock_alert_level: data.stock_alert_level ? Number(data.stock_alert_level) : null,
+      stock_alert_level: data.stock_alert_level
+        ? Number(data.stock_alert_level)
+        : null,
     };
 
     try {
@@ -278,6 +301,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       onClose={handleClose}
       fullWidth
       maxWidth="md"
+      dir="rtl"
     >
       {/* <DialogTitle
         sx={{
@@ -288,7 +312,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           borderColor: "divider",
         }}
       > */}
-       {/* <Typography variant="h6" component="div" fontWeight={600}>
+      {/* <Typography variant="h6" component="div" fontWeight={600}>
           {isEditMode ? "تعديل منتج" : "إضافة منتج جديد"}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
@@ -306,16 +330,12 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           overflowY: "auto",
         }}
       >
-        <Box
-          component="form"
-          onSubmit={handleSubmit(onSubmit)}
-          noValidate
-        >
+        <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
           {/* General Server Error Alert */}
           {serverError && !isSubmitting && (
-            <Alert 
-              severity="error" 
-              sx={{ 
+            <Alert
+              severity="error"
+              sx={{
                 mb: 3,
                 borderRadius: 2,
               }}
@@ -340,14 +360,14 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
               borderRadius: 2,
             }}
           >
-            <Typography 
-              variant="subtitle1" 
+            <Typography
+              variant="subtitle1"
               fontWeight={600}
               sx={{ mb: 2.5, color: "text.primary" }}
             >
               معلومات المنتج الأساسية
             </Typography>
-            
+
             <Box
               sx={{
                 display: "grid",
@@ -355,88 +375,105 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 gap: 2.5,
               }}
             >
-            {/* Name Field */}
-            <Controller
-              control={control}
-              name="name"
-              rules={{
-                required: "اسم المنتج مطلوب",
-                minLength: {
-                  value: 2,
-                  message: "اسم المنتج يجب أن يكون على الأقل حرفين",
-                },
-              }}
-              render={({ field, fieldState }) => (
-                <TextField
-                  {...field}
-                  label="اسم المنتج"
-                  placeholder="اكتب اسم المنتج"
-                  fullWidth
-                  size="small"
-                  disabled={isSubmitting}
-                  error={!!fieldState.error}
-                  helperText={fieldState.error?.message}
-                />
-              )}
-            />
-
-            {/* Scientific Name Field */}
-            <Controller
-              control={control}
-              name="scientific_name"
-              render={({ field, fieldState }) => (
-                <TextField
-                  {...field}
-                  label="الاسم العلمي"
-                  placeholder="(اختياري) الاسم العلمي للمنتج"
-                  fullWidth
-                  size="small"
-                  disabled={isSubmitting}
-                  error={!!fieldState.error}
-                  helperText={fieldState.error?.message}
-                />
-              )}
-            />
-
-            {/* SKU Field (locked when editing) */}
-            <Controller
-              control={control}
-              name="sku"
-              render={({ field, fieldState }) => (
-                <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
+              {/* Name Field */}
+              <Controller
+                control={control}
+                name="name"
+                rules={{
+                  required: "اسم المنتج مطلوب",
+                  minLength: {
+                    value: 2,
+                    message: "اسم المنتج يجب أن يكون على الأقل حرفين",
+                  },
+                }}
+                render={({ field, fieldState }) => (
                   <TextField
                     {...field}
-                    value={field.value ?? ""}
-                    label="الرمز (SKU)"
-                    placeholder="(اختياري) رمز المنتج في النظام"
+                    label="اسم المنتج"
+                    placeholder="اكتب اسم المنتج"
                     fullWidth
                     size="small"
-                    disabled={isSubmitting || isEditMode}
+                    disabled={isSubmitting}
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message}
+                    onChange={(e) => {
+                      field.onChange(e);
+                      // Real-time copy to scientific_name
+                      setValue("scientific_name", e.target.value, {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                      });
+                    }}
+                  />
+                )}
+              />
+
+              {/* Scientific Name Field */}
+              <Controller
+                control={control}
+                name="scientific_name"
+                render={({ field, fieldState }) => (
+                  <TextField
+                    {...field}
+                    label="الاسم العلمي"
+                    placeholder="(اختياري) الاسم العلمي للمنتج"
+                    fullWidth
+                    size="small"
+                    disabled={isSubmitting}
                     error={!!fieldState.error}
                     helperText={fieldState.error?.message}
                   />
-                  <Button
-                    type="button"
-                    variant="outlined"
-                    onClick={() => {
-                      const randomSKU = generateRandomSKU("PROD", 6);
-                      field.onChange(randomSKU);
-                    }}
-                    disabled={isSubmitting || isEditMode}
-                    sx={{ minWidth: 0, px: 1.5 }}
+                )}
+              />
+
+              {/* SKU Field (locked when editing) */}
+              <Controller
+                control={control}
+                name="sku"
+                render={({ field, fieldState }) => (
+                  <Box
+                    sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}
                   >
-                    <RefreshCw className="h-4 w-4" />
-                  </Button>
-                </Box>
-              )}
-            />
+                    <TextField
+                      {...field}
+                      value={field.value ?? ""}
+                      label="الرمز (SKU)"
+                      placeholder="(اختياري) رمز المنتج في النظام"
+                      fullWidth
+                      size="small"
+                      disabled={isSubmitting} // Enabled editing in edit mode
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                        }
+                      }}
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
+                    />
+                    <Button
+                      type="button"
+                      variant="outlined"
+                      onClick={() => {
+                        const randomSKU = generateRandomSKU("PROD", 6);
+                        field.onChange(randomSKU);
+                      }}
+                      disabled={isSubmitting} // Enabled generating new SKU in edit mode
+                      sx={{ minWidth: 0, px: 1.5 }}
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  </Box>
+                )}
+              />
 
               {/* Category Autocomplete */}
               <Controller
                 control={control}
                 name="category_id"
                 render={({ field, fieldState }) => (
-                  <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
+                  <Box
+                    sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}
+                  >
                     <Autocomplete
                       fullWidth
                       size="small"
@@ -501,14 +538,14 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
               borderRadius: 2,
             }}
           >
-            <Typography 
-              variant="subtitle1" 
+            <Typography
+              variant="subtitle1"
               fontWeight={600}
               sx={{ mb: 2.5, color: "text.primary" }}
             >
               الوحدات والمخزون
             </Typography>
-            
+
             <Box
               sx={{
                 display: "grid",
@@ -522,7 +559,9 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 control={control}
                 name="stocking_unit_id"
                 render={({ field, fieldState }) => (
-                  <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
+                  <Box
+                    sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}
+                  >
                     <Autocomplete
                       fullWidth
                       size="small"
@@ -573,13 +612,14 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 )}
               />
 
-
               {/* Sellable Unit Autocomplete */}
               <Controller
                 control={control}
                 name="sellable_unit_id"
                 render={({ field, fieldState }) => (
-                  <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
+                  <Box
+                    sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}
+                  >
                     <Autocomplete
                       fullWidth
                       size="small"
@@ -629,8 +669,14 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   </Box>
                 )}
               />
-  </Box>
-  <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr 1fr", mt:2 }, gap: 2.5 }}>
+            </Box>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr 1fr", mt: 2 },
+                gap: 2.5,
+              }}
+            >
               {/* Units Per Stocking Unit */}
               <Controller
                 control={control}
@@ -774,7 +820,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           </DialogActions>
         </Box>
       </DialogContent>
-      
+
       {/* Category Creation Modal */}
       <CategoryFormModal
         isOpen={isCategoryModalOpen}

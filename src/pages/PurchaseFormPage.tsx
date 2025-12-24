@@ -125,7 +125,7 @@ const PurchaseFormPage: React.FC = () => {
       warehouse_id: 1,
       supplier_id: undefined as any,
       purchase_date: new Date(),
-      status: "pending" as const,
+      status: "pending" as const, // Default "pending"
       currency: "SDG" as "SDG" | "USD",
       reference_number: "",
       notes: "",
@@ -874,6 +874,7 @@ const PurchaseFormPage: React.FC = () => {
                     isPurchaseReceived={isPurchaseReceived}
                     warehouses={warehouses}
                     loadingWarehouses={loadingWarehouses}
+                    isEditMode={isEditMode}
                   />
 
                   {/* Items Section for Edit Mode */}

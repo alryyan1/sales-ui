@@ -52,7 +52,7 @@ interface PosOfflineHeaderProps {
   onAddToCart: (product: Product) => void;
   onNewSale: () => void;
   onPaymentShortcut: () => void; // Trigger for '+' key (opens payment dialog)
-
+  isSaleSelected: boolean;
   // Drawer
   onDrawerToggle?: () => void;
 }
@@ -72,6 +72,7 @@ export const PosOfflineHeader: React.FC<PosOfflineHeaderProps> = ({
   onAddToCart,
   onNewSale,
   onPaymentShortcut,
+  isSaleSelected,
   onDrawerToggle,
 }) => {
   const theme = useTheme();
@@ -127,147 +128,159 @@ export const PosOfflineHeader: React.FC<PosOfflineHeaderProps> = ({
             mx: "auto",
           }}
         >
-          <Autocomplete
-            open={autocompleteOpen}
-            onOpen={() => setAutocompleteOpen(true)}
-            onClose={() => setAutocompleteOpen(false)}
-            options={products}
-            getOptionLabel={(option) =>
-              `${option.name} (${option.sku || "No SKU"})`
-            }
-            value={null}
-            inputValue={inputValue}
-            onInputChange={(_, newInputValue) => {
-              setInputValue(newInputValue);
-            }}
-            autoHighlight
-            fullWidth
-            onChange={(_, newValue) => {
-              if (newValue) {
-                onAddToCart(newValue);
-                setInputValue("");
+          {isSaleSelected ? (
+            <Autocomplete
+              open={autocompleteOpen}
+              onOpen={() => setAutocompleteOpen(true)}
+              onClose={() => setAutocompleteOpen(false)}
+              options={products}
+              getOptionLabel={(option) =>
+                `${option.name} (${option.sku || "No SKU"})`
               }
-            }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                inputRef={inputRef}
-                autoFocus
-                placeholder="اسحب أو ابحث عن منتج..."
-                size="small"
-                sx={{
-                  bgcolor: "grey.50",
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 3,
-                    "& fieldset": { borderColor: "grey.200" },
-                    "&:hover fieldset": { borderColor: "primary.main" },
-                    "&.Mui-focused fieldset": { borderColor: "primary.main" },
-                  },
-                }}
-                InputProps={{
-                  ...params.InputProps,
-                  startAdornment: (
-                    <Search
-                      size={18}
-                      color={theme.palette.text.secondary}
-                      style={{ marginRight: 8, marginLeft: 4 }}
-                    />
-                  ),
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "+") {
-                    e.preventDefault();
-                    onPaymentShortcut();
-                    return;
-                  }
-                  if (e.key === "Enter" && inputValue) {
-                    const exactMatch = products.find(
-                      (p) => p.sku === inputValue || p.sku === inputValue.trim()
-                    );
-                    if (exactMatch) {
-                      onAddToCart(exactMatch);
-                      setInputValue("");
-                      setAutocompleteOpen(false); // Close dropdown
+              value={null}
+              inputValue={inputValue}
+              onInputChange={(_, newInputValue) => {
+                setInputValue(newInputValue);
+              }}
+              autoHighlight
+              fullWidth
+              onChange={(_, newValue) => {
+                if (newValue) {
+                  onAddToCart(newValue);
+                  setInputValue("");
+                }
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  inputRef={inputRef}
+                  autoFocus
+                  placeholder="اسحب أو ابحث عن منتج..."
+                  size="small"
+                  sx={{
+                    bgcolor: "grey.50",
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 3,
+                      "& fieldset": { borderColor: "grey.200" },
+                      "&:hover fieldset": { borderColor: "primary.main" },
+                      "&.Mui-focused fieldset": { borderColor: "primary.main" },
+                    },
+                  }}
+                  InputProps={{
+                    ...params.InputProps,
+                    startAdornment: (
+                      <Search
+                        size={18}
+                        color={theme.palette.text.secondary}
+                        style={{ marginRight: 8, marginLeft: 4 }}
+                      />
+                    ),
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "+") {
                       e.preventDefault();
-                      e.stopPropagation();
+                      onPaymentShortcut();
                       return;
                     }
-                  }
-                  if (params.inputProps.onKeyDown) {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    (params.inputProps.onKeyDown as any)(e);
-                  }
-                }}
-              />
-            )}
-            renderOption={(props, option) => (
-              <li {...props} key={option.id}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    width: "100%",
-                    alignItems: "center",
+                    if (e.key === "Enter" && inputValue) {
+                      const exactMatch = products.find(
+                        (p) =>
+                          p.sku === inputValue || p.sku === inputValue.trim()
+                      );
+                      if (exactMatch) {
+                        onAddToCart(exactMatch);
+                        setInputValue("");
+                        setAutocompleteOpen(false); // Close dropdown
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                      }
+                    }
+                    if (params.inputProps.onKeyDown) {
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      (params.inputProps.onKeyDown as any)(e);
+                    }
                   }}
-                >
-                  <Box>
-                    <Typography variant="body1" fontWeight="bold">
-                      {option.name}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {option.sku}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ textAlign: "right" }}>
-                    <Typography color="primary.main" fontWeight="bold">
-                      {(() => {
-                        let price = Number(
-                          option.last_sale_price_per_sellable_unit || 0
-                        );
-                        if (
-                          price === 0 &&
-                          option.available_batches &&
-                          option.available_batches.length > 0
-                        ) {
-                          price = Number(
-                            option.available_batches[0].sale_price || 0
-                          );
-                        }
-                        return formatNumber(price);
-                      })()}
-                    </Typography>
-                    {/* Stock Warning */}
-                    {(option.current_stock_quantity ??
-                      option.stock_quantity ??
-                      0) <= 0 && (
-                      <Typography variant="caption" color="error.main">
-                        نفذت الكمية
+                />
+              )}
+              renderOption={(props, option) => (
+                <li {...props} key={option.id}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      width: "100%",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Box>
+                      <Typography variant="body1" fontWeight="bold">
+                        {option.name}
                       </Typography>
-                    )}
+                      <Typography variant="caption" color="text.secondary">
+                        {option.sku}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ textAlign: "right" }}>
+                      <Typography color="primary.main" fontWeight="bold">
+                        {(() => {
+                          let price = Number(
+                            option.last_sale_price_per_sellable_unit || 0
+                          );
+                          if (
+                            price === 0 &&
+                            option.available_batches &&
+                            option.available_batches.length > 0
+                          ) {
+                            price = Number(
+                              option.available_batches[0].sale_price || 0
+                            );
+                          }
+                          return formatNumber(price);
+                        })()}
+                      </Typography>
+                      {/* Stock Warning */}
+                      {(option.current_stock_quantity ??
+                        option.stock_quantity ??
+                        0) <= 0 && (
+                        <Typography variant="caption" color="error.main">
+                          نفذت الكمية
+                        </Typography>
+                      )}
+                    </Box>
                   </Box>
-                </Box>
-              </li>
-            )}
-            filterOptions={(options, state) => {
-              const val = state.inputValue.toLowerCase();
-              const filtered = options.filter(
-                (option) =>
-                  option.name.toLowerCase().includes(val) ||
-                  (option.sku && option.sku.toLowerCase().includes(val))
-              );
-              return filtered.sort((a, b) => {
-                const aSku = a.sku?.toLowerCase() || "";
-                const bSku = b.sku?.toLowerCase() || "";
-                const exactA = aSku === val;
-                const exactB = bSku === val;
-                if (exactA && !exactB) return -1;
-                if (!exactA && exactB) return 1;
-                return 0;
-              });
-            }}
-            clearOnBlur
-            handleHomeEndKeys
-          />
+                </li>
+              )}
+              filterOptions={(options, state) => {
+                const val = state.inputValue.toLowerCase();
+                const filtered = options.filter(
+                  (option) =>
+                    option.name.toLowerCase().includes(val) ||
+                    (option.sku && option.sku.toLowerCase().includes(val))
+                );
+                return filtered.sort((a, b) => {
+                  const aSku = a.sku?.toLowerCase() || "";
+                  const bSku = b.sku?.toLowerCase() || "";
+                  const exactA = aSku === val;
+                  const exactB = bSku === val;
+                  if (exactA && !exactB) return -1;
+                  if (!exactA && exactB) return 1;
+                  return 0;
+                });
+              }}
+              clearOnBlur
+              handleHomeEndKeys
+            />
+          ) : (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              align="center"
+              sx={{ p: 1, bgcolor: "grey.50", borderRadius: 2, width: "100%" }}
+            >
+              يرجى تحديد أو إنشاء عملية بيع للبحث عن المنتجات
+            </Typography>
+          )}
         </Box>
 
         {/* Actions Button */}

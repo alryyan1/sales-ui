@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import { useAuth } from "@/context/AuthContext";
 import { Menu as MenuIcon, Bell, Warehouse } from "lucide-react";
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 import { ThemeToggle } from "../layout/ThemeToggle";
 import { DRAWER_WIDTH } from "./types";
 
@@ -30,6 +31,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
   isSidebarCollapsed,
   onMenuOpen,
 }) => {
+  const navigate = useNavigate(); // Initialize useNavigate
   const { user } = useAuth();
   const theme = useTheme();
   const width = isSidebarCollapsed
@@ -85,18 +87,26 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
               icon={<Warehouse size={16} />}
               label={user.warehouse.name}
               size="small"
+              onClick={() =>
+                user.warehouse &&
+                navigate(`/admin/warehouses/${user.warehouse.id}/products`)
+              }
               sx={{
                 bgcolor: alpha(theme.palette.primary.main, 0.1),
                 color: theme.palette.primary.main,
                 fontWeight: 500,
                 height: 28,
+                cursor: "pointer",
                 "& .MuiChip-icon": {
                   color: theme.palette.primary.main,
+                },
+                "&:hover": {
+                  bgcolor: alpha(theme.palette.primary.main, 0.2),
                 },
               }}
             />
           )}
-          
+
           <IconButton size="small" color="inherit">
             <Bell size={20} />
           </IconButton>
@@ -123,7 +133,9 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
                   fontSize: "0.9rem",
                 }}
               >
-                {user.name ? user.name.substring(0, 2).toUpperCase() : user.username?.substring(0, 2).toUpperCase() || "U"}
+                {user.name
+                  ? user.name.substring(0, 2).toUpperCase()
+                  : user.username?.substring(0, 2).toUpperCase() || "U"}
               </Avatar>
             </ButtonBase>
           )}

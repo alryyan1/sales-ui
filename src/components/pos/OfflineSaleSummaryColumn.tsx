@@ -26,7 +26,10 @@ import { CartItem } from "./types";
 import { OfflineSale } from "../../services/db";
 import { formatNumber, preciseSum, preciseCalculation } from "@/constants";
 import dayjs from "dayjs";
-import { Plus } from "lucide-react";
+import { Plus, Printer } from "lucide-react";
+import { pdf } from "@react-pdf/renderer";
+import { toast } from "sonner";
+import { PosInvoicePdf } from "./PosInvoicePdf";
 
 // Import the dialogs
 import { OfflinePaymentDialog } from "./OfflinePaymentDialog";
@@ -173,6 +176,30 @@ export const OfflineSaleSummaryColumn: React.FC<
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [grandTotal, currentSale.status]);
+
+  const handlePrintPdf = async () => {
+    try {
+      const blob = await pdf(
+        <PosInvoicePdf
+          sale={currentSale}
+          items={currentSale.items}
+          userName="الكاشير"
+        />
+      ).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `invoice-${currentSale.tempId || currentSale.id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("PDF Error:", err);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      toast.error("فشل إنشاء الفاتورة: " + (err as any).message);
+    }
+  };
 
   return (
     <Box
@@ -477,6 +504,19 @@ export const OfflineSaleSummaryColumn: React.FC<
           </Box>
 
           <Divider />
+
+          {/* Print Invoice Button */}
+          {currentSale.items.length > 0 && (
+            <Button
+              variant="outlined"
+              fullWidth
+              startIcon={<Printer size={18} />}
+              onClick={handlePrintPdf}
+              sx={{ mb: 1, py: 1 }}
+            >
+              طباعة فاتورة (PDF)
+            </Button>
+          )}
 
           {/* Add Payment Button */}
           <Button
