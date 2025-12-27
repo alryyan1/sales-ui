@@ -1,6 +1,8 @@
 // src/pages/ProductsPage.tsx
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { useProducts } from "../hooks/useProducts";
 
 // MUI Components
 import Box from "@mui/material/Box";
@@ -34,31 +36,6 @@ import productService, { Product } from "../services/productService"; // Use pro
 import categoryService, { Category } from "../services/CategoryService"; // Import category service
 import exportService from "../services/exportService"; // Import export service
 
-// New type that matches the actual API response structure
-interface ProductPaginatedResponse {
-  data: ProductTableItem[];
-  links: {
-    first: string;
-    last: string;
-    prev: string | null;
-    next: string | null;
-  };
-  meta: {
-    current_page: number;
-    from: number;
-    last_page: number;
-    links: Array<{
-      url: string | null;
-      label: string;
-      active: boolean;
-    }>;
-    path: string;
-    per_page: number;
-    to: number;
-    total: number;
-  };
-}
-
 // Custom Components
 import { ProductsTable } from "../components/products/ProductsTable"; // Use ProductsTable named export
 import ProductFormModal from "../components/products/ProductFormModal"; // Use ProductFormModal
@@ -91,10 +68,10 @@ type ProductTableItem = {
 
 const ProductsPage: React.FC = () => {
   // --- State ---
-  const [productsResponse, setProductsResponse] =
-    useState<ProductPaginatedResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // --- State ---
+  // const [productsResponse, setProductsResponse] = useState<ProductPaginatedResponse | null>(null); // Replaced by useProducts
+  // const [isLoading, setIsLoading] = useState(true); // Replaced by useProducts
+  // const [error, setError] = useState<string | null>(null); // Replaced by useProducts
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
@@ -148,43 +125,33 @@ const ProductsPage: React.FC = () => {
     };
   }, [searchTerm]); // Runs whenever the raw searchTerm changes
 
-  // --- Data Fetching (uses debounced term) ---
-  const fetchProducts = useCallback(
-    async (
-      page: number,
-      search: string,
-      categoryId: number | null,
-      perPage: number,
-      inStockOnly: boolean,
-      lowStockOnly: boolean,
-      outOfStockOnly: boolean
-    ) => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        // Use the *debounced* search term for the API call
-        const data = await productService.getProducts(
-          page,
-          search,
-          "created_at",
-          "desc",
-          perPage,
-          categoryId,
-          inStockOnly,
-          lowStockOnly,
-          outOfStockOnly
-        );
-        setProductsResponse(data as unknown as ProductPaginatedResponse);
-      } catch (err) {
-        setError(productService.getErrorMessage(err));
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    []
-  ); // No dependencies needed here
+  // --- React Query Hook ---
+  const {
+    data: productsResponse,
+    isLoading,
+    isError,
+    error: queryError,
+  } = useProducts({
+    page: currentPage,
+    perPage: rowsPerPage,
+    search: debouncedSearchTerm,
+    categoryId: selectedCategory,
+    inStockOnly: showOnlyInStock,
+    lowStockOnly: showLowStockOnly,
+    outOfStockOnly: showOutOfStockOnly,
+  });
 
-  // Fetch categories for filter dropdown
+  // Extract error message if query fails
+  const error = isError
+    ? queryError instanceof Error
+      ? queryError.message
+      : "حدث خطأ أثناء تحميل البيانات"
+    : null;
+
+  // Refetch mechanism via QueryClient (imported below)
+  // const queryClient = useQueryClient(); // Requires import
+
+  // --- Fetch Categories (Could also be moved to useQuery) ---
   const fetchCategories = useCallback(async () => {
     setLoadingCategories(true);
     try {
@@ -208,27 +175,7 @@ const ProductsPage: React.FC = () => {
     fetchCategories();
   }, [fetchCategories]);
 
-  // Effect to fetch data when page, debounced search term, category, or rows per page changes
-  useEffect(() => {
-    fetchProducts(
-      currentPage,
-      debouncedSearchTerm,
-      selectedCategory,
-      rowsPerPage,
-      showOnlyInStock,
-      showLowStockOnly,
-      showOutOfStockOnly
-    );
-  }, [
-    fetchProducts,
-    currentPage,
-    debouncedSearchTerm,
-    selectedCategory,
-    rowsPerPage,
-    showOnlyInStock,
-    showLowStockOnly,
-    showOutOfStockOnly,
-  ]);
+  // Removed manual fetchProducts useEffect as useQuery handles it automatically
 
   // --- Notification Handlers ---
   const showSnackbar = (message: string, type: "success" | "error") => {
@@ -256,21 +203,16 @@ const ProductsPage: React.FC = () => {
   const closeModal = () => {
     setIsModalOpen(false);
   };
+  const queryClient = useQueryClient();
+
   const handleSaveSuccess = () => {
     closeModal();
     showSnackbar("تم حفظ المنتج بنجاح", "success");
-    const pageToFetch = editingProduct ? currentPage : 1;
-    fetchProducts(
-      pageToFetch,
-      debouncedSearchTerm,
-      selectedCategory,
-      rowsPerPage,
-      showOnlyInStock,
-      showLowStockOnly,
-      showOutOfStockOnly
-    ); // Refetch
+    queryClient.invalidateQueries({ queryKey: ["products"] });
     if (!editingProduct) setCurrentPage(1);
   };
+
+  // ... (inside render or other handlers)
 
   // --- Pagination & Search Handlers ---
   const handlePageChange = (
@@ -349,15 +291,7 @@ const ProductsPage: React.FC = () => {
 
   const handleImportSuccess = () => {
     // Refresh the products list after successful import
-    fetchProducts(
-      currentPage,
-      debouncedSearchTerm,
-      selectedCategory,
-      rowsPerPage,
-      showOnlyInStock,
-      showLowStockOnly,
-      showOutOfStockOnly
-    );
+    queryClient.invalidateQueries({ queryKey: ["products"] });
     showSnackbar("تم استيراد المنتجات بنجاح", "success");
   };
 

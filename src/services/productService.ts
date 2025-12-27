@@ -85,6 +85,31 @@ export interface ProductFormData {
   has_expiry_date?: boolean;
 }
 
+// Matches Laravel API Resource Collection structure
+export interface ApiPaginatedResponse<T> {
+  data: T[];
+  links: {
+    first: string;
+    last: string;
+    prev: string | null;
+    next: string | null;
+  };
+  meta: {
+    current_page: number;
+    from: number;
+    last_page: number;
+    links: {
+      url: string | null;
+      label: string;
+      active: boolean;
+    }[];
+    path: string;
+    per_page: number;
+    to: number;
+    total: number;
+  };
+}
+
 // --- Service Object ---
 const productService = {
   /**
@@ -109,7 +134,7 @@ const productService = {
     lowStockOnly?: boolean,
     outOfStockOnly?: boolean,
     warehouseId?: number
-  ): Promise<PaginatedResponse<Product>> => {
+  ): Promise<ApiPaginatedResponse<Product>> => {
     try {
       const params = new URLSearchParams();
       params.append("page", page.toString());
@@ -123,7 +148,7 @@ const productService = {
       if (outOfStockOnly) params.append("out_of_stock_only", "1");
       if (warehouseId) params.append("warehouse_id", warehouseId.toString());
 
-      const response = await apiClient.get<PaginatedResponse<Product>>(
+      const response = await apiClient.get<ApiPaginatedResponse<Product>>(
         `/products?${params.toString()}`
       );
       console.log("getProducts response:", response.data);

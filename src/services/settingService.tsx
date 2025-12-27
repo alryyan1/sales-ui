@@ -37,6 +37,7 @@ export interface AppSettings {
   logo_position?: "left" | "right" | "both";
   logo_height?: number;
   logo_width?: number;
+  pdf_font?: string;
 }
 
 // Type for the update payload (can be partial)

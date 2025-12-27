@@ -1,31 +1,15 @@
 import React from "react";
-import {
-  Page,
-  Text,
-  View,
-  Document,
-  StyleSheet,
-  Font,
-} from "@react-pdf/renderer";
+import { Page, Text, View, Document, StyleSheet } from "@react-pdf/renderer";
 import { OfflineSale } from "../../services/db";
 import { formatNumber } from "@/constants";
 
-// Register Arabic Font
-Font.register({
-  family: "Amiri",
-  fonts: [
-    { src: "/fonts/Amiri-Regular.ttf" },
-    {
-      src: "/fonts/Amiri-Bold.ttf",
-      fontWeight: "bold",
-    },
-  ],
-});
+import { getPdfFont } from "@/utils/pdfFontRegistry";
+import { AppSettings } from "../../services/settingService";
 
 const styles = StyleSheet.create({
   page: {
     padding: 20,
-    fontFamily: "Amiri",
+    // fontFamily: "Amiri",
     fontSize: 10,
     flexDirection: "column",
   },
@@ -108,12 +92,14 @@ interface PosShiftReportPdfProps {
     is_open: boolean;
   } | null;
   userName?: string;
+  settings?: AppSettings | null;
 }
 
 export const PosShiftReportPdf: React.FC<PosShiftReportPdfProps> = ({
   sales,
   shift,
   userName,
+  settings,
 }) => {
   const formatDate = (dateStr: string | number | null) => {
     if (!dateStr) return "-";
@@ -135,7 +121,7 @@ export const PosShiftReportPdf: React.FC<PosShiftReportPdfProps> = ({
   // Payment Breakdown
   const paymentMethods: Record<string, number> = {};
   sales.forEach((sale) => {
-    sale.payments.forEach((p) => {
+    (sale.payments || []).forEach((p) => {
       const method = p.method || "cash";
       paymentMethods[method] = (paymentMethods[method] || 0) + Number(p.amount);
     });
@@ -143,7 +129,10 @@ export const PosShiftReportPdf: React.FC<PosShiftReportPdfProps> = ({
 
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
+      <Page
+        size="A4"
+        style={[styles.page, { fontFamily: getPdfFont(settings) }]}
+      >
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>تقرير الوردية</Text>

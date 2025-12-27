@@ -5,34 +5,20 @@ import {
   View,
   Document,
   StyleSheet,
-  Font,
   Image,
 } from "@react-pdf/renderer";
 import { OfflineSale, OfflineSaleItem } from "../../services/db";
 import { AppSettings } from "../../services/settingService";
 import { formatNumber } from "@/constants";
 
-// Register Arabic Font
-// We use 'Amiri' stored locally in public/fonts to avoid CORS/format issues.
-Font.register({
-  family: "Amiri",
-  fonts: [
-    { src: "/fonts/Amiri-Regular.ttf" },
-    {
-      src: "/fonts/Amiri-Bold.ttf",
-      fontWeight: "bold",
-    },
-  ],
-});
+import { getPdfFont } from "@/utils/pdfFontRegistry";
 
 const styles = StyleSheet.create({
   page: {
     padding: 10,
-    fontFamily: "Amiri",
+    // fontFamily will be set dynamically in the component
     fontSize: 10, // Small font for thermal receipt
     width: "80mm", // Standard thermal paper width
-    // height: 'auto', // react-pdf usually creates pages. For thermal-like continuous, specific height might be needed or just let it flow.
-    // However, usually we define a specific page size. `[226.77, 1000]` for example (80mm width, long height)
   },
   header: {
     marginBottom: 10,
@@ -145,7 +131,10 @@ export const PosInvoicePdf: React.FC<PosInvoicePdfProps> = ({
   return (
     <Document>
       {/* 80mm width is approx 227 points. Height is variable, setting a long height to simulate continuous roll */}
-      <Page size={[227, 800]} style={styles.page}>
+      <Page
+        size={[227, 800]}
+        style={[styles.page, { fontFamily: getPdfFont(settings) }]}
+      >
         {/* Header */}
         <View style={styles.header}>
           {settings?.company_logo_url && (

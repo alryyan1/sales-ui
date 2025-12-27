@@ -6,9 +6,10 @@ import {
   ListChecks,
   Trash2,
   FileText,
-  Loader2,
   Receipt,
+  Loader2,
   Building2,
+  FileDown,
 } from "lucide-react";
 // Shadcn UI Components
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,7 @@ interface PurchaseHeaderProps {
   summaryDialogOpen: boolean;
   onOpenSummaryDialog: () => void;
   onCloseSummaryDialog: () => void;
+  onExportPdf: () => void;
 }
 
 const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
@@ -66,6 +68,7 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
   summaryDialogOpen,
   onOpenSummaryDialog,
   onCloseSummaryDialog,
+  onExportPdf,
 }) => {
   return (
     <div className="bg-white border rounded-xl shadow-sm p-4 mb-6">
@@ -222,6 +225,24 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>ملخص الفاتورة</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onExportPdf}
+                    className="h-9 w-9 text-slate-600 hover:text-blue-600 hover:bg-blue-50"
+                  >
+                    <FileDown className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>تصدير PDF</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

@@ -42,6 +42,7 @@ import LayersIcon from "@mui/icons-material/Layers";
 import { CartItem } from "./types";
 import { formatNumber } from "@/constants";
 import { BatchSelectionDialog } from "./BatchSelectionDialog";
+import { LiveStockDisplay } from "./LiveStockDisplay";
 
 interface CurrentSaleItemsColumnProps {
   currentSaleItems: CartItem[];
@@ -673,65 +674,16 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
 
                       {/* Stock */}
                       <TableCell align="center">
-                        <Box
-                          sx={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            gap: 0.5,
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 0.5,
-                              cursor: "pointer",
-                              "&:hover": { opacity: 0.8 },
-                            }}
-                            onClick={(e) => handleStockClick(e, item.product)}
-                          >
-                            <InventoryIcon
-                              sx={{ fontSize: 16, color: "text.secondary" }}
-                            />
-                            <Typography
-                              variant="body2"
-                              fontWeight="medium"
-                              color={
-                                item.selectedBatchId
-                                  ? "primary.main"
-                                  : isLowStock(
-                                      item.product.stock_quantity,
-                                      item.product.stock_alert_level
-                                    )
-                                  ? "error.main"
-                                  : "success.main"
-                              }
-                            >
-                              {item.selectedBatchId
-                                ? formatNumber(
-                                    item.product.available_batches?.find(
-                                      (b) => b.id === item.selectedBatchId
-                                    )?.remaining_quantity || 0
-                                  )
-                                : formatNumber(item.product.stock_quantity)}
-                            </Typography>
-                          </Box>
-                          {item.selectedBatchId && item.selectedBatchNumber && (
-                            <Typography variant="caption" color="primary.main">
-                              الدفعة: {item.selectedBatchNumber}
-                            </Typography>
+                        <LiveStockDisplay
+                          product={item.product}
+                          selectedBatchId={item.selectedBatchId}
+                          selectedBatchNumber={item.selectedBatchNumber}
+                          isLowStock={isLowStock(
+                            item.product.stock_quantity,
+                            item.product.stock_alert_level
                           )}
-                          {!item.selectedBatchId &&
-                            isLowStock(
-                              item.product.stock_quantity,
-                              item.product.stock_alert_level
-                            ) && (
-                              <Typography variant="caption" color="error.main">
-                                مخزون منخفض
-                              </Typography>
-                            )}
-                        </Box>
+                          onStockClick={handleStockClick}
+                        />
                       </TableCell>
 
                       {/* Delete */}

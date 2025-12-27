@@ -23,10 +23,13 @@ import { toast } from "sonner";
 import { OfflineSaleSummaryColumn } from "../components/pos/OfflineSaleSummaryColumn";
 import { PosOfflineHeader } from "../components/pos/PosOfflineHeader";
 import { PosShiftReportPdf } from "../components/pos/PosShiftReportPdf";
+import { ThermalInvoiceDialog } from "../components/pos/ThermalInvoiceDialog";
+import { Sale } from "../components/pos/types";
 
 export const PosPageOffline = () => {
   const { user } = useAuth();
-  const { isOnline, isSyncing, triggerSync } = useOfflineSync();
+  const { isOnline, isSyncing, triggerSync, lastSyncedProducts } =
+    useOfflineSync();
 
   // Shift state
   const [shift, setShift] = useState<{
@@ -142,6 +145,10 @@ export const PosPageOffline = () => {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isSyncedView, setIsSyncedView] = useState(true);
   const [isShiftReportOpen, setIsShiftReportOpen] = useState(false);
+  const [thermalInvoiceOpen, setThermalInvoiceOpen] = useState(false);
+  const [thermalInvoiceSale, setThermalInvoiceSale] = useState<Sale | null>(
+    null
+  );
 
   // Load Products and Clients on Mount & Auto-update
   useEffect(() => {
@@ -176,12 +183,54 @@ export const PosPageOffline = () => {
     loadAndSync();
   }, [isOnline, user?.warehouse_id]);
 
-  // Reload pending sales list when sync finishes (to show synced status)
+  // Reload pending sales list and refresh products when sync finishes
   useEffect(() => {
     if (!isSyncing) {
       loadPendingSales();
+
+      // Optimized Update: Only update products that changed during sync
+      if (lastSyncedProducts && lastSyncedProducts.length > 0) {
+        console.log(
+          `Optimized: Updating ${lastSyncedProducts.length} products in UI state`
+        );
+
+        setProducts((prevProducts) => {
+          const productMap = new Map(prevProducts.map((p) => [p.id, p]));
+          lastSyncedProducts.forEach((p: Product) => productMap.set(p.id, p));
+          return Array.from(productMap.values());
+        });
+
+        // Update items in current sale if they match
+        if (currentSale.items.length > 0) {
+          updateCurrentSale((prev) => {
+            const newItems = prev.items.map((item) => {
+              const pId = item.product_id;
+              if (!pId) return item;
+
+              const updated = lastSyncedProducts.find(
+                (p: Product) => p.id === pId
+              );
+              if (updated) {
+                console.log(
+                  `Updating active cart item stock for ${updated.name}: ${updated.stock_quantity}`
+                );
+                return {
+                  ...item,
+                  product: {
+                    ...item.product,
+                    stock_quantity: updated.stock_quantity,
+                    current_stock_quantity: updated.stock_quantity,
+                  },
+                };
+              }
+              return item;
+            });
+            return { ...prev, items: newItems };
+          });
+        }
+      }
     }
-  }, [isSyncing]);
+  }, [isSyncing, lastSyncedProducts]);
 
   // --- Actions ---
 
@@ -590,11 +639,16 @@ export const PosPageOffline = () => {
     return () => clearTimeout(timer);
   }, [currentSale]);
 
+  // Ref for header to control focus
+  const headerRef = useRef<{ focusSearch: () => void }>(null);
+
   const handleCompleteSale = async () => {
     try {
       // currentSale already has payments attached via the SummaryColumn
       await offlineSaleService.completeSale(currentSale);
       toast.success("Sale completed and synced!");
+
+      // Removed Thermal Invoice Dialog logic as per user request
     } catch (error: any) {
       console.error("Payment sync error:", error);
       const msg =
@@ -608,12 +662,19 @@ export const PosPageOffline = () => {
     // Reset
     if (shift && shift.is_open) {
       const newDraft = offlineSaleService.createDraftSale(shift.id);
-      await offlineSaleService.saveDraft(newDraft);
+      // await offlineSaleService.saveDraft(newDraft); // DONT SAVE IMMEDIATELY
       setCurrentSale(newDraft);
+      shouldAutoSave.current = false; // Prevent auto-save until user edits
+
+      // Focus search input for next sale
+      setTimeout(() => {
+        headerRef.current?.focusSearch();
+      }, 100);
     } else {
       // If shift closed/not available, just clear UI
       const newDraft = offlineSaleService.createDraftSale(null);
       setCurrentSale(newDraft);
+      shouldAutoSave.current = false;
     }
   };
 
@@ -633,6 +694,11 @@ export const PosPageOffline = () => {
     setCurrentSale(newSale);
     // List refresh handled by useEffect or we can force it here
     await loadPendingSales();
+
+    // Focus search input
+    setTimeout(() => {
+      headerRef.current?.focusSearch();
+    }, 100);
   };
 
   // --- Adapters ---
@@ -686,6 +752,41 @@ export const PosPageOffline = () => {
     return pendingSales.some((s) => s.tempId === currentSale.tempId);
   }, [pendingSales, currentSale.tempId]);
 
+  // Handle Plus Key Action
+  const handlePlusAction = () => {
+    if (!isPendingSaleSelected) {
+      handleNewSale();
+    } else {
+      if (
+        Number(currentSale.total_amount) > 0 &&
+        currentSale.status !== "completed"
+      ) {
+        setIsPaymentDialogOpen(true);
+      }
+    }
+  };
+
+  // Global Key Listener for Shortcuts
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Ignore inputs (Header input handles its own +)
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+
+      if (e.key === "+") {
+        e.preventDefault();
+        handlePlusAction();
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, [isPendingSaleSelected, currentSale, shift]);
+
   return (
     <Box
       sx={{
@@ -696,6 +797,7 @@ export const PosPageOffline = () => {
     >
       {/* TOP HEADER */}
       <PosOfflineHeader
+        ref={headerRef}
         isOnline={isOnline}
         isSyncing={isSyncing}
         onTriggerSync={triggerSync}
@@ -710,14 +812,7 @@ export const PosPageOffline = () => {
         onAddToCart={(product) => addToCart(product, "sellable")}
         onNewSale={handleNewSale}
         isSaleSelected={isPendingSaleSelected}
-        onPaymentShortcut={() => {
-          if (
-            Number(currentSale.total_amount) > 0 &&
-            currentSale.status !== "completed"
-          ) {
-            setIsPaymentDialogOpen(true);
-          }
-        }}
+        onPaymentShortcut={handlePlusAction}
         onPrintShiftReport={() => setIsShiftReportOpen(true)}
       />
 
@@ -898,6 +993,13 @@ export const PosPageOffline = () => {
           </PDFViewer>
         </DialogContent>
       </Dialog>
+
+      {/* Thermal Invoice (Auto-popup) */}
+      <ThermalInvoiceDialog
+        open={thermalInvoiceOpen}
+        onClose={() => setThermalInvoiceOpen(false)}
+        sale={thermalInvoiceSale}
+      />
     </Box>
   );
 };

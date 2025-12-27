@@ -1,7 +1,7 @@
 // src/pages/clients/ClientLedgerPage.tsx
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 import {
   Box,
   Button,
@@ -27,12 +27,16 @@ import {
   InputLabel,
   FormControl,
   Stack,
-} from '@mui/material';
-import { ArrowLeft, FileText } from 'lucide-react';
+} from "@mui/material";
+import { ArrowLeft, FileText } from "lucide-react";
 
-import LoadingSpinner from '@/components/LoadingSpinner';
-import clientLedgerService, { ClientLedger, ClientLedgerEntry } from '@/services/clientLedgerService';
-import { formatCurrency } from '@/constants';
+import LoadingSpinner from "@/components/LoadingSpinner";
+import clientLedgerService, {
+  ClientLedger,
+  ClientLedgerEntry,
+} from "@/services/clientLedgerService";
+import { formatCurrency } from "@/constants";
+import { ClientLedgerPdfDialog } from "@/components/clients/ClientLedgerPdfDialog";
 
 const ClientLedgerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -43,13 +47,16 @@ const ClientLedgerPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [settleAmount, setSettleAmount] = useState<string>('');
-  const [settleDate, setSettleDate] = useState<string>(new Date().toISOString().slice(0,10));
-  const [settleMethod, setSettleMethod] = useState<string>('cash');
+  const [settleAmount, setSettleAmount] = useState<string>("");
+  const [settleDate, setSettleDate] = useState<string>(
+    new Date().toISOString().slice(0, 10)
+  );
+  const [settleMethod, setSettleMethod] = useState<string>("cash");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [reference, setReference] = useState<string>('');
-  const [notes, setNotes] = useState<string>('');
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [reference, setReference] = useState<string>("");
+  const [notes, setNotes] = useState<string>("");
+
+  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
 
   const fetchLedger = async () => {
     if (!clientId) return;
@@ -70,23 +77,15 @@ const ClientLedgerPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
-  const handleDownloadPdf = async () => {
-    if (!clientId) return;
-    setIsGeneratingPdf(true);
-    try {
-      await clientLedgerService.openLedgerPdfInNewTab(clientId);
-    } catch (err) {
-      setError(clientLedgerService.getErrorMessage(err));
-    } finally {
-      setIsGeneratingPdf(false);
-    }
+  const handleDownloadPdf = () => {
+    setPdfDialogOpen(true);
   };
 
   const handleSettle = async () => {
     if (!clientId) return;
     const amountNum = parseFloat(settleAmount);
     if (!amountNum || amountNum <= 0) {
-      setError('المبلغ غير صالح');
+      setError("المبلغ غير صالح");
       return;
     }
     setIsSubmitting(true);
@@ -99,9 +98,9 @@ const ClientLedgerPage: React.FC = () => {
         notes: notes || undefined,
       });
       setDialogOpen(false);
-      setSettleAmount('');
-      setReference('');
-      setNotes('');
+      setSettleAmount("");
+      setReference("");
+      setNotes("");
       await fetchLedger();
     } catch (e) {
       setError(clientLedgerService.getErrorMessage(e));
@@ -110,23 +109,23 @@ const ClientLedgerPage: React.FC = () => {
     }
   };
 
-  const getTypeColor = (type: ClientLedgerEntry['type']) => {
+  const getTypeColor = (type: ClientLedgerEntry["type"]) => {
     switch (type) {
-      case 'sale':
-        return 'error';
-      case 'payment':
-        return 'success';
+      case "sale":
+        return "error";
+      case "payment":
+        return "success";
       default:
-        return 'default';
+        return "default";
     }
   };
 
-  const getTypeLabel = (type: ClientLedgerEntry['type']) => {
+  const getTypeLabel = (type: ClientLedgerEntry["type"]) => {
     switch (type) {
-      case 'sale':
-        return 'عملية بيع';
-      case 'payment':
-        return 'دفعة';
+      case "sale":
+        return "عملية بيع";
+      case "payment":
+        return "دفعة";
       default:
         return type;
     }
@@ -136,7 +135,9 @@ const ClientLedgerPage: React.FC = () => {
     return (
       <Box className="flex justify-center items-center py-10">
         <LoadingSpinner />
-        <span className="ml-2 text-gray-600 dark:text-gray-400">جاري التحميل...</span>
+        <span className="ml-2 text-gray-600 dark:text-gray-400">
+          جاري التحميل...
+        </span>
       </Box>
     );
   }
@@ -162,19 +163,21 @@ const ClientLedgerPage: React.FC = () => {
     <Box className="p-2 md:p-3 h-full overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
-        <Button variant="outlined" size="small" onClick={() => navigate('/clients')}>
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={() => navigate("/clients")}
+        >
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
           كشف حساب العميل - {ledger.client.name}
         </h1>
         <div className="ml-auto flex items-center gap-2">
-          <Button variant="outlined" onClick={handleDownloadPdf} disabled={isGeneratingPdf}>
+          <Button variant="outlined" onClick={handleDownloadPdf}>
             <FileText className="h-4 w-4 mr-2" /> تحميل PDF
           </Button>
-          <Button onClick={() => setDialogOpen(true)}>
-            تسوية الدين
-          </Button>
+          <Button onClick={() => setDialogOpen(true)}>تسوية الدين</Button>
         </div>
       </div>
 
@@ -201,7 +204,9 @@ const ClientLedgerPage: React.FC = () => {
                 <TableBody>
                   {ledger.ledger_entries.map((entry) => (
                     <TableRow key={entry.id}>
-                      <TableCell className="text-center">{format(new Date(entry.date), 'yyyy-MM-dd')}</TableCell>
+                      <TableCell className="text-center">
+                        {format(new Date(entry.date), "yyyy-MM-dd")}
+                      </TableCell>
                       <TableCell className="text-center">
                         <Chip
                           label={getTypeLabel(entry.type)}
@@ -209,15 +214,29 @@ const ClientLedgerPage: React.FC = () => {
                           size="small"
                         />
                       </TableCell>
-                      <TableCell className="text-center">{entry.description}</TableCell>
-                      <TableCell className="text-center">{entry.debit > 0 ? formatCurrency(entry.debit) : '-'}</TableCell>
-                      <TableCell className="text-center">{entry.credit > 0 ? formatCurrency(entry.credit) : '-'}</TableCell>
                       <TableCell className="text-center">
-                        <span className={`font-semibold ${entry.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                        {entry.description}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {entry.debit > 0 ? formatCurrency(entry.debit) : "-"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {entry.credit > 0 ? formatCurrency(entry.credit) : "-"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span
+                          className={`font-semibold ${
+                            entry.balance > 0
+                              ? "text-red-600"
+                              : "text-green-600"
+                          }`}
+                        >
                           {formatCurrency(entry.balance)}
                         </span>
                       </TableCell>
-                      <TableCell className="text-center">{entry.reference || '-'}</TableCell>
+                      <TableCell className="text-center">
+                        {entry.reference || "-"}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -240,7 +259,9 @@ const ClientLedgerPage: React.FC = () => {
                 <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
                   إجمالي المبيعات
                 </h3>
-                <p className="text-3xl font-bold text-red-600">{formatCurrency(ledger.summary.total_sales)}</p>
+                <p className="text-3xl font-bold text-red-600">
+                  {formatCurrency(ledger.summary.total_sales)}
+                </p>
               </CardContent>
             </Card>
             <Card>
@@ -248,7 +269,9 @@ const ClientLedgerPage: React.FC = () => {
                 <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
                   إجمالي الدفعات
                 </h3>
-                <p className="text-3xl font-bold text-green-600">{formatCurrency(ledger.summary.total_payments)}</p>
+                <p className="text-3xl font-bold text-green-600">
+                  {formatCurrency(ledger.summary.total_payments)}
+                </p>
               </CardContent>
             </Card>
             <Card>
@@ -256,7 +279,13 @@ const ClientLedgerPage: React.FC = () => {
                 <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
                   الرصيد الحالي
                 </h3>
-                <p className={`text-3xl font-bold ${ledger.summary.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                <p
+                  className={`text-3xl font-bold ${
+                    ledger.summary.balance > 0
+                      ? "text-red-600"
+                      : "text-green-600"
+                  }`}
+                >
                   {formatCurrency(ledger.summary.balance)}
                 </p>
               </CardContent>
@@ -270,24 +299,41 @@ const ClientLedgerPage: React.FC = () => {
             <CardContent className="p-4">
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">البريد الإلكتروني</p>
-                  <p className="text-gray-900 dark:text-gray-100">{ledger.client.email || '-'}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    البريد الإلكتروني
+                  </p>
+                  <p className="text-gray-900 dark:text-gray-100">
+                    {ledger.client.email || "-"}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">رقم الهاتف</p>
-                  <p className="text-gray-900 dark:text-gray-100">{ledger.client.phone || '-'}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    رقم الهاتف
+                  </p>
+                  <p className="text-gray-900 dark:text-gray-100">
+                    {ledger.client.phone || "-"}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">العنوان</p>
-                  <p className="text-gray-900 dark:text-gray-100">{ledger.client.address || '-'}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    العنوان
+                  </p>
+                  <p className="text-gray-900 dark:text-gray-100">
+                    {ledger.client.address || "-"}
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
-            </div>
+      </div>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
         <DialogTitle>تسوية دين العميل</DialogTitle>
         <DialogContent dividers>
           <Stack direction="column" spacing={2} className="space-y-4">
@@ -343,7 +389,7 @@ const ClientLedgerPage: React.FC = () => {
             />
           </Stack>
         </DialogContent>
-        <DialogActions className='flex justify-between gap-1' >
+        <DialogActions className="flex justify-between gap-1">
           <Button
             variant="outlined"
             onClick={() => setDialogOpen(false)}
@@ -360,8 +406,15 @@ const ClientLedgerPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* PDF Dialog */}
+      <ClientLedgerPdfDialog
+        open={pdfDialogOpen}
+        onClose={() => setPdfDialogOpen(false)}
+        ledger={ledger}
+      />
     </Box>
   );
 };
 
-export default ClientLedgerPage; 
+export default ClientLedgerPage;

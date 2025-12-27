@@ -202,30 +202,8 @@ export const OfflineSaleSummaryColumn: React.FC<
     onCompleteSale();
   };
 
-  // Shortcut for payment (+)
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // Check if user is typing in an input field
-      if (
-        event.target instanceof HTMLInputElement ||
-        event.target instanceof HTMLTextAreaElement
-      ) {
-        return;
-      }
-
-      if (event.key === "+") {
-        event.preventDefault();
-
-        // Check button validation
-        if (grandTotal > 0 && currentSale.status !== "completed") {
-          onPaymentDialogOpenChange(true);
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [grandTotal, currentSale.status]);
+  // Shortcut for payment (+) - REMOVED, handled in parent
+  // useEffect(() => { ... })
 
   const handlePrintPdf = () => {
     setIsPdfDialogOpen(true);
@@ -247,13 +225,13 @@ export const OfflineSaleSummaryColumn: React.FC<
     >
       <Card sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
         <CardContent
-          sx={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}
+          sx={{ display: "flex", flexDirection: "column", gap: 1, flex: 1 }}
         >
           {currentSale.is_synced && currentSale.id && (
             <Box
               sx={{
                 textAlign: "center",
-                fontSize: "2rem",
+                fontSize: "1.5rem",
                 fontWeight: "bold",
                 border: 1,
                 borderBottom: 2,
@@ -331,7 +309,7 @@ export const OfflineSaleSummaryColumn: React.FC<
               justifyContent: "space-between",
               alignItems: "center",
               bgcolor: "blue.50",
-              p: 2,
+              p: 1,
               borderRadius: 1,
             }}
           >
@@ -424,7 +402,7 @@ export const OfflineSaleSummaryColumn: React.FC<
 
           {/* Row 3: Monetary Info */}
           <Box
-            sx={{ display: "flex", flexDirection: "column", gap: 1.5, flex: 1 }}
+            sx={{ display: "flex", flexDirection: "column", gap: 0.5, flex: 1 }}
           >
             {/* Items count and subtotal */}
             <Box sx={{ display: "flex", justifyContent: "space-between" }}>

@@ -7,21 +7,23 @@ import {
   StyleSheet,
   Image as PdfImage,
 } from "@react-pdf/renderer";
-import { OfflineSale, OfflineSaleItem } from "../../services/db";
+import { ClientLedger } from "../../services/clientLedgerService";
 import { AppSettings } from "../../services/settingService";
 import { formatNumber } from "@/constants";
+import { format } from "date-fns";
 
 import { getPdfFont } from "@/utils/pdfFontRegistry";
 
 const styles = StyleSheet.create({
   page: {
     padding: 30, // Standard A4 margin
-    // fontFamily: "Amiri", // Set dynamically
-    fontSize: 12,
+    // fontFamily: "Amiri",
+    fontSize: 10,
+    flexDirection: "column",
   },
   header: {
     marginBottom: 20,
-    flexDirection: "row-reverse", // Logo left, text right (in RTL context visually opposite)
+    flexDirection: "row-reverse",
     justifyContent: "space-between",
     alignItems: "flex-start",
     borderBottomWidth: 1,
@@ -42,18 +44,18 @@ const styles = StyleSheet.create({
     objectFit: "contain",
   },
   companyName: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "bold",
     marginBottom: 5,
     color: "#1a1a1a",
   },
   companyDetail: {
-    fontSize: 10,
+    fontSize: 9,
     color: "#555",
     marginBottom: 2,
   },
-  invoiceTitle: {
-    fontSize: 18,
+  title: {
+    fontSize: 16,
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 15,
@@ -63,18 +65,18 @@ const styles = StyleSheet.create({
   metaSection: {
     flexDirection: "row-reverse",
     justifyContent: "space-between",
-    marginBottom: 20,
+    marginBottom: 15,
     backgroundColor: "#f9fafb",
     padding: 10,
     borderRadius: 4,
   },
   metaColumn: {
     width: "48%",
-    alignItems: "flex-end", // Right align
+    alignItems: "flex-end",
   },
   metaRow: {
     flexDirection: "row-reverse",
-    marginBottom: 5,
+    marginBottom: 4,
     width: "100%",
     justifyContent: "flex-start",
   },
@@ -83,13 +85,13 @@ const styles = StyleSheet.create({
     width: 80,
     textAlign: "right",
     marginLeft: 10,
-    fontSize: 10,
+    fontSize: 9,
     color: "#666",
   },
   metaValue: {
     flex: 1,
     textAlign: "right",
-    fontSize: 11,
+    fontSize: 10,
   },
   table: {
     width: "100%",
@@ -102,34 +104,33 @@ const styles = StyleSheet.create({
     backgroundColor: "#f3f4f6",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
-    padding: 8,
+    padding: 6,
     fontWeight: "bold",
-    fontSize: 10,
+    fontSize: 9,
   },
   tableRow: {
     flexDirection: "row-reverse",
     borderBottomWidth: 1,
     borderBottomColor: "#f3f4f6",
-    padding: 8,
-    fontSize: 10,
+    padding: 6,
+    fontSize: 9,
   },
-  colSeq: { width: "5%", textAlign: "center" },
-  colProduct: { width: "45%", textAlign: "right" },
-  colQty: { width: "15%", textAlign: "center" },
-  colPrice: { width: "15%", textAlign: "left" }, // LTR numbers
-  colTotal: { width: "20%", textAlign: "left" }, // LTR numbers
+  // Columns
+  colDate: { width: "15%", textAlign: "center" },
+  colType: { width: "10%", textAlign: "center" },
+  colDesc: { width: "25%", textAlign: "right" },
+  colDebit: { width: "12%", textAlign: "left" },
+  colCredit: { width: "12%", textAlign: "left" },
+  colBalance: { width: "14%", textAlign: "left" },
+  colRef: { width: "12%", textAlign: "center" },
 
   summarySection: {
     marginTop: 20,
-    flexDirection: "row", // Standard row for LTR alignment of summary box? No, keep it RTL
-    justifyContent: "flex-end", // Move summary to left (visually left in RTL means flex-start? no flex-end is right side)
-    // In RTL PDF: flex-start is Right, flex-end is Left.
-    // We want summary on the LEFT (standard invoice) or RIGHT?
-    // Arabic invoices usually have totals on the Left or Right? Let's put it on the Left (visually).
-    // So justifyContent: 'flex-end'
+    flexDirection: "row",
+    justifyContent: "flex-end",
   },
   summaryBox: {
-    width: "40%",
+    width: "50%",
     borderTopWidth: 1,
     borderTopColor: "#e5e7eb",
     paddingTop: 10,
@@ -137,7 +138,7 @@ const styles = StyleSheet.create({
   summaryRow: {
     flexDirection: "row-reverse",
     justifyContent: "space-between",
-    paddingVertical: 5,
+    paddingVertical: 4,
   },
   summaryLabel: {
     textAlign: "right",
@@ -148,21 +149,13 @@ const styles = StyleSheet.create({
     textAlign: "left",
     fontWeight: "bold",
   },
-  grandTotal: {
-    fontSize: 14,
-    color: "#2563eb", // Primary blue
-    borderTopWidth: 2,
-    borderTopColor: "#bfdbfe",
-    marginTop: 5,
-    paddingTop: 5,
-  },
   footer: {
     position: "absolute",
     bottom: 30,
     left: 30,
     right: 30,
     textAlign: "center",
-    fontSize: 9,
+    fontSize: 8,
     color: "#9ca3af",
     borderTopWidth: 1,
     borderTopColor: "#f3f4f6",
@@ -170,34 +163,25 @@ const styles = StyleSheet.create({
   },
 });
 
-interface OfflineInvoiceA4PdfProps {
-  sale: OfflineSale;
-  items: OfflineSaleItem[];
-  userName?: string;
+interface ClientLedgerPdfProps {
+  ledger: ClientLedger;
   settings?: AppSettings | null;
 }
 
-export const OfflineInvoiceA4Pdf: React.FC<OfflineInvoiceA4PdfProps> = ({
-  sale,
-  items,
-  userName,
+export const ClientLedgerPdf: React.FC<ClientLedgerPdfProps> = ({
+  ledger,
   settings,
 }) => {
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleString("ar-EG");
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case "sale":
+        return "بيع";
+      case "payment":
+        return "دفعة";
+      default:
+        return type;
+    }
   };
-
-  // Calculate totals
-  const subtotal = items.reduce((acc, item) => {
-    const price = Number(item.unit_price);
-    const qty = item.quantity;
-    const total = price * qty;
-    return acc + total;
-  }, 0);
-
-  const discountAmount = Number(sale.discount_amount || 0);
-  const totalAmount = Number(sale.total_amount || 0);
-  const taxAmount = 0; // If you have tax logic, add here
 
   return (
     <Document>
@@ -206,18 +190,15 @@ export const OfflineInvoiceA4Pdf: React.FC<OfflineInvoiceA4PdfProps> = ({
         style={[styles.page, { fontFamily: getPdfFont(settings) }]}
       >
         {/* Header */}
-        {/* Header Logic: Full Header Image vs Standard Logo/Text */}
         {settings?.invoice_branding_type === "header" &&
         settings?.company_header_url ? (
           <View style={{ marginBottom: 20 }}>
-            {/* Full Width Header Image */}
             <PdfImage
               src={settings.company_header_url}
               style={{ width: "100%", height: 100, objectFit: "cover" }}
             />
           </View>
         ) : (
-          /* Standard Header */
           <View
             style={[
               styles.header,
@@ -229,10 +210,6 @@ export const OfflineInvoiceA4Pdf: React.FC<OfflineInvoiceA4PdfProps> = ({
               },
             ]}
           >
-            {/* Unified Render Order: Logo -> Info 
-                If Direction is Row (Left matches): Logo (Left), Info (Right)
-                If Direction is Row-Reverse (Right matches): Logo (Right), Info (Left)
-            */}
             <View style={styles.logoContainer}>
               {settings?.company_logo_url ? (
                 <PdfImage
@@ -270,106 +247,118 @@ export const OfflineInvoiceA4Pdf: React.FC<OfflineInvoiceA4PdfProps> = ({
           </View>
         )}
 
-        <Text style={styles.invoiceTitle}>فاتورة مبيعات / Tax Invoice</Text>
+        <Text style={styles.title}>كشف حساب عميل / Client Statement</Text>
 
-        {/* Client & Invoice Meta */}
+        {/* Client Meta */}
         <View style={styles.metaSection}>
           <View style={styles.metaColumn}>
             <View style={styles.metaRow}>
-              <Text style={styles.metaValue}>
-                {sale.client_name || "عميل نقدي"}
-              </Text>
+              <Text style={styles.metaValue}>{ledger.client.name}</Text>
               <Text style={styles.metaLabel}>العميل:</Text>
             </View>
-            {/* Add client specific details if available in sale object or passed prop */}
-          </View>
-
-          <View style={styles.metaColumn}>
-            <View style={styles.metaRow}>
-              <Text style={styles.metaValue}>#{sale.tempId || sale.id}</Text>
-              <Text style={styles.metaLabel}>رقم الفاتورة:</Text>
-            </View>
-            <View style={styles.metaRow}>
-              <Text style={styles.metaValue}>
-                {formatDate(sale.offline_created_at)}
-              </Text>
-              <Text style={styles.metaLabel}>التاريخ:</Text>
-            </View>
-            {userName && (
+            {ledger.client.phone && (
               <View style={styles.metaRow}>
-                <Text style={styles.metaValue}>{userName}</Text>
-                <Text style={styles.metaLabel}>بواسطة:</Text>
+                <Text style={styles.metaValue}>{ledger.client.phone}</Text>
+                <Text style={styles.metaLabel}>الهاتف:</Text>
               </View>
             )}
+            {ledger.client.email && (
+              <View style={styles.metaRow}>
+                <Text style={styles.metaValue}>{ledger.client.email}</Text>
+                <Text style={styles.metaLabel}>البريد:</Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.metaColumn}>
+            <View style={styles.metaRow}>
+              <Text style={styles.metaValue}>
+                {format(new Date(), "yyyy-MM-dd")}
+              </Text>
+              <Text style={styles.metaLabel}>تاريخ الطباعة:</Text>
+            </View>
           </View>
         </View>
 
         {/* Table */}
         <View style={styles.table}>
           <View style={styles.tableHeader}>
-            <Text style={styles.colSeq}>#</Text>
-            <Text style={styles.colProduct}>المنتج</Text>
-            <Text style={styles.colQty}>الكمية</Text>
-            <Text style={styles.colPrice}>سعر الوحدة</Text>
-            <Text style={styles.colTotal}>الإجمالي</Text>
+            <Text style={styles.colDate}>التاريخ</Text>
+            <Text style={styles.colType}>النوع</Text>
+            <Text style={styles.colDesc}>الوصف</Text>
+            <Text style={styles.colDebit}>مدين</Text>
+            <Text style={styles.colCredit}>دائن</Text>
+            <Text style={styles.colBalance}>الرصيد</Text>
+            <Text style={styles.colRef}>المرجع</Text>
           </View>
-
-          {items.map((item, index) => {
-            const rowTotal = Number(item.unit_price) * item.quantity;
-            return (
-              <View key={index} style={styles.tableRow}>
-                <Text style={styles.colSeq}>{index + 1}</Text>
-                <Text style={styles.colProduct}>
-                  {item.product_name || `Product ${item.product_id}`}
-                </Text>
-                <Text style={styles.colQty}>{item.quantity}</Text>
-                <Text style={styles.colPrice}>
-                  {formatNumber(Number(item.unit_price))}
-                </Text>
-                <Text style={styles.colTotal}>{formatNumber(rowTotal)}</Text>
-              </View>
-            );
-          })}
+          {ledger.ledger_entries.map((entry, index) => (
+            <View key={entry.id || index} style={styles.tableRow}>
+              <Text style={styles.colDate}>
+                {format(new Date(entry.date), "yyyy-MM-dd")}
+              </Text>
+              <Text style={styles.colType}>{getTypeLabel(entry.type)}</Text>
+              <Text style={styles.colDesc}>{entry.description}</Text>
+              <Text style={styles.colDebit}>
+                {entry.debit > 0 ? formatNumber(entry.debit) : "-"}
+              </Text>
+              <Text style={styles.colCredit}>
+                {entry.credit > 0 ? formatNumber(entry.credit) : "-"}
+              </Text>
+              <Text
+                style={[
+                  styles.colBalance,
+                  { color: entry.balance > 0 ? "#dc2626" : "#16a34a" },
+                ]}
+              >
+                {formatNumber(entry.balance)}
+              </Text>
+              <Text style={styles.colRef}>{entry.reference || "-"}</Text>
+            </View>
+          ))}
         </View>
 
-        {/* Summary Footer */}
+        {/* Summary */}
         <View style={styles.summarySection}>
-          <View style={{ flex: 1 }} />{" "}
-          {/* Spacer to push summary to left/right */}
+          <View style={{ flex: 1 }} />
           <View style={styles.summaryBox}>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryValue}>{formatNumber(subtotal)}</Text>
-              <Text style={styles.summaryLabel}>المجموع الفرعي:</Text>
-            </View>
-
-            {discountAmount > 0 && (
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryValue}>
-                  {formatNumber(discountAmount)}
-                </Text>
-                <Text style={styles.summaryLabel}>الخصم:</Text>
-              </View>
-            )}
-
-            {taxAmount > 0 && (
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryValue}>
-                  {formatNumber(taxAmount)}
-                </Text>
-                <Text style={styles.summaryLabel}>الضريبة:</Text>
-              </View>
-            )}
-
-            <View style={[styles.summaryRow, styles.grandTotal]}>
               <Text style={styles.summaryValue}>
-                {formatNumber(totalAmount)}
+                {formatNumber(ledger.summary.total_sales)}
               </Text>
-              <Text style={styles.summaryLabel}>الإجمالي النهائي:</Text>
+              <Text style={styles.summaryLabel}>إجمالي المبيعات:</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryValue}>
+                {formatNumber(ledger.summary.total_payments)}
+              </Text>
+              <Text style={styles.summaryLabel}>إجمالي الدفعات:</Text>
+            </View>
+            <View
+              style={[
+                styles.summaryRow,
+                {
+                  borderTopWidth: 1,
+                  borderTopColor: "#eee",
+                  marginTop: 4,
+                  paddingTop: 4,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.summaryValue,
+                  {
+                    fontSize: 12,
+                    color: ledger.summary.balance > 0 ? "#dc2626" : "#16a34a",
+                  },
+                ]}
+              >
+                {formatNumber(ledger.summary.balance)}
+              </Text>
+              <Text style={styles.summaryLabel}>الرصيد الحالي:</Text>
             </View>
           </View>
         </View>
 
-        {/* Footer */}
         <View style={styles.footer}>
           <Text>نسخة إلكترونية - تم إصدارها بواسطة النظام</Text>
         </View>

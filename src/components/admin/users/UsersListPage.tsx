@@ -276,11 +276,11 @@ const UsersListPage: React.FC = () => {
             <Table aria-label="users table">
               <TableHead>
                 <TableRow>
-                  <TableCell align="center">المستخدم</TableCell>
-                  <TableCell align="center">اسم الدخول</TableCell>
-                  <TableCell align="center">الأدوار</TableCell>
-                  <TableCell align="center">المستودع</TableCell>
-                  <TableCell align="center">الإجراءات</TableCell>
+                  <TableCell className="text-center" align="center">المستخدم</TableCell>
+                  <TableCell className="text-center" align="center">اسم الدخول</TableCell>
+                  <TableCell className="text-center" align="center">الأدوار</TableCell>
+                  <TableCell className="text-center" align="center">المستودع</TableCell>
+                  <TableCell className="text-center" align="center">الإجراءات</TableCell>
                 </TableRow>
               </TableHead>
                 <TableBody>
@@ -301,30 +301,8 @@ const UsersListPage: React.FC = () => {
                   ) : (
                     usersResponse.data.map((user) => (
                       <TableRow key={user.id} hover>
-                        <TableCell align="center">
-                          <Stack direction="row" alignItems="center" spacing={2}>
-                            <Badge
-                              overlap="circular"
-                              anchorOrigin={{
-                                vertical: "bottom",
-                                horizontal: "right",
-                              }}
-                              badgeContent={
-                                user.id === currentUser?.id ? (
-                                  <Box
-                                    sx={{
-                                      width: 12,
-                                      height: 12,
-                                      borderRadius: "50%",
-                                      bgcolor: "success.main",
-                                      border: "2px solid white",
-                                    }}
-                                  />
-                                ) : null
-                              }
-                            >
-                              <Avatar>{getInitials(user.name)}</Avatar>
-                            </Badge>
+                        <TableCell className="text-center" align="center">
+                       
                             <Box>
                               <Typography variant="subtitle2">
                                 {user.name}
@@ -333,14 +311,13 @@ const UsersListPage: React.FC = () => {
                                 <Chip label="أنت" size="small" />
                               )}
                             </Box>
-                          </Stack>
                         </TableCell>
-                        <TableCell align="center">
+                        <TableCell className="text-center" align="center">
                           <Typography variant="body2" fontFamily="monospace">
                             @{user.username}
                           </Typography>
                         </TableCell>
-                        <TableCell align="center">
+                        <TableCell className="text-center" align="center">
                           <Stack
                             direction="row"
                             flexWrap="wrap"
@@ -362,7 +339,7 @@ const UsersListPage: React.FC = () => {
                             })}
                           </Stack>
                         </TableCell>
-                        <TableCell align="center">
+                        <TableCell className="text-center" align="center">
                           {user.warehouse ? (
                             <Stack direction="row" alignItems="center" spacing={1}>
                               <Store size={16} />
@@ -376,7 +353,7 @@ const UsersListPage: React.FC = () => {
                             </Typography>
                           )}
                         </TableCell>
-                        <TableCell align="center">
+                        <TableCell className="text-center" align="center">
                           <Stack direction="row" spacing={1} justifyContent="center">
                             <Tooltip title="تعديل البيانات">
                               <IconButton size="small" onClick={() => openModal(user)}>

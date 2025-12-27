@@ -157,8 +157,64 @@ export interface ReturnableSaleItem extends SaleItem {
   max_returnable_quantity: number;
 }
 
+// --- Sales Return Interfaces ---
+
+export interface SaleReturnItemData {
+  original_sale_item_id: number;
+  product_id: number;
+  quantity_returned: number;
+  condition: "resellable" | "damaged";
+  return_to_purchase_item_id?: number | null; // Optional
+}
+
+export interface CreateSaleReturnData {
+  original_sale_id: number;
+  return_date: string; // YYYY-MM-DD
+  return_reason?: string;
+  notes?: string;
+  status: "pending" | "completed" | "cancelled";
+  credit_action: "refund" | "store_credit" | "none";
+  refunded_amount?: number;
+  items: SaleReturnItemData[];
+}
+
+export interface SaleReturn {
+  id: number;
+  original_sale_id: number;
+  return_date: string;
+  return_reason?: string;
+  status: string;
+  total_returned_amount: string | number;
+  credit_action: string;
+  refunded_amount: string | number;
+  created_at?: string;
+  items?: any[]; // Simplified for now
+  client?: { id: number; name: string };
+  original_sale?: { id: number; invoice_number: string };
+}
+
 // --- Service Object ---
 const saleService = {
+  /**
+   * Get sales returns with pagination & filters
+   */
+  getSaleReturns: async (
+    page = 1,
+    queryParams = ""
+  ): Promise<{ data: SaleReturn[]; meta?: any }> => {
+    try {
+      const url = `/sale-returns?page=${page}&${queryParams}`;
+      const response = await apiClient.get<any>(url);
+      return {
+        data: response.data.data,
+        meta: response.data.meta || response.data, // Fallback if meta structure differs
+      };
+    } catch (error) {
+      console.error("Error fetching sale returns:", error);
+      throw error;
+    }
+  },
+
   /**
    * Get today's sales by created_at (for POS TodaySalesColumn)
    */
@@ -782,6 +838,24 @@ const saleService = {
       return response.data as Sale[];
     } catch (error) {
       console.error("Error fetching today's sales (POS):", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create a new sale return
+   */
+  createSaleReturn: async (data: CreateSaleReturnData): Promise<SaleReturn> => {
+    try {
+      const response = await apiClient.post<
+        { sale_return: SaleReturn } | SaleReturn
+      >("/sale-returns", data);
+      if ("sale_return" in response.data) {
+        return response.data.sale_return;
+      }
+      return response.data as SaleReturn;
+    } catch (error) {
+      console.error("Error creating sale return:", error);
       throw error;
     }
   },

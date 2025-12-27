@@ -38,7 +38,9 @@ import {
   Description as DescriptionIcon,
   Image as ImageIcon,
   Receipt as ReceiptIcon,
+  PictureAsPdf as PdfIcon,
 } from "@mui/icons-material";
+import { PDF_FONTS } from "@/utils/pdfFontRegistry";
 import settingService from "@/services/settingService";
 
 // Form values type (matches AppSettings but all optional for partial updates)
@@ -96,6 +98,7 @@ const SettingsPage: React.FC = () => {
       logo_height: 60,
       logo_width: 60,
       tax_number: "",
+      pdf_font: "Amiri",
     },
   });
 
@@ -130,6 +133,7 @@ const SettingsPage: React.FC = () => {
         logo_height: settings.logo_height || 60,
         logo_width: settings.logo_width || 60,
         tax_number: settings.tax_number || "",
+        pdf_font: settings.pdf_font || "Amiri",
       });
 
       if (settings.company_logo_url) setLogoPreview(settings.company_logo_url);
@@ -163,6 +167,7 @@ const SettingsPage: React.FC = () => {
       logo_height: data.logo_height ? Number(data.logo_height) : 60,
       logo_width: data.logo_width ? Number(data.logo_width) : 60,
       tax_number: data.tax_number || undefined,
+      pdf_font: data.pdf_font || "Amiri",
     };
 
     try {
@@ -247,6 +252,7 @@ const SettingsPage: React.FC = () => {
               iconPosition="start"
               label="تخصيص الفاتورة (Branding)"
             />
+            <Tab icon={<PdfIcon />} iconPosition="start" label="إعدادات PDF" />
           </Tabs>
         </Box>
 
@@ -741,6 +747,50 @@ const SettingsPage: React.FC = () => {
               </CardContent>
             </Card>
           )}
+        </CustomTabPanel>
+
+        {/* --- TAB 2: PDF Settings --- */}
+        <CustomTabPanel value={tabValue} index={2}>
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography
+                variant="h6"
+                gutterBottom
+                sx={{ display: "flex", alignItems: "center", gap: 1 }}
+              >
+                <PdfIcon color="primary" fontSize="small" />
+                إعدادات ملفات PDF
+              </Typography>
+              <Divider sx={{ mb: 3 }} />
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <Controller
+                    name="pdf_font"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        select
+                        fullWidth
+                        label="نوع الخط في ملفات PDF"
+                        helperText="سيتم تطبيق هذا الخط على جميع الفواتير والتقارير"
+                      >
+                        <MenuItem value={PDF_FONTS.AMIRI}>
+                          Amiri (افتراضي - Serif)
+                        </MenuItem>
+                        <MenuItem value={PDF_FONTS.TAJAWAL}>
+                          Tajawal (Sans-Serif)
+                        </MenuItem>
+                        <MenuItem value={PDF_FONTS.IBM_PLEX}>
+                          IBM Plex Sans Arabic (Modern)
+                        </MenuItem>
+                      </TextField>
+                    )}
+                  />
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
         </CustomTabPanel>
 
         {/* Submit Button */}

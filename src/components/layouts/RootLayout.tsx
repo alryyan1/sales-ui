@@ -5,7 +5,7 @@ import { Box, Drawer, useTheme, alpha, Toolbar } from "@mui/material";
 import { Loader2 } from "lucide-react";
 import { Toaster } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import SidebarDrawer from "./SidebarDrawer";
+import SidebarPro from "./SidebarPro";
 import TopAppBar from "./TopAppBar";
 import UserMenu from "./UserMenu";
 import { DRAWER_WIDTH } from "./types";
@@ -18,10 +18,7 @@ const RootLayout: React.FC = () => {
   const theme = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    reports: false,
-    admin: false,
-  });
+
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   if (isLoading) {
@@ -46,13 +43,6 @@ const RootLayout: React.FC = () => {
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
-  };
-
-  const handleSectionToggle = (section: string) => {
-    setOpenSections((prev) => ({
-      ...prev,
-      [section]: !prev[section],
-    }));
   };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -102,10 +92,12 @@ const RootLayout: React.FC = () => {
             },
           }}
         >
-          <SidebarDrawer
+          <SidebarPro
             navItems={visibleNavItems}
-            openSections={openSections}
-            onSectionToggle={handleSectionToggle}
+            collapsed={false}
+            toggled={mobileOpen}
+            onToggle={handleDrawerToggle}
+            onCollapsedChange={() => {}}
           />
         </Drawer>
         <Drawer
@@ -122,12 +114,12 @@ const RootLayout: React.FC = () => {
           }}
           open
         >
-          <SidebarDrawer
+          <SidebarPro
             navItems={visibleNavItems}
-            openSections={openSections}
-            onSectionToggle={handleSectionToggle}
-            isCollapsed={isSidebarCollapsed}
-            onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+            collapsed={isSidebarCollapsed}
+            toggled={false} // Desktop mode
+            onToggle={() => {}}
+            onCollapsedChange={setIsSidebarCollapsed}
           />
         </Drawer>
       </Box>

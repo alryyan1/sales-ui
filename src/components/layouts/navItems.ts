@@ -2,13 +2,11 @@
 import {
   LayoutDashboard,
   Box as BoxIcon,
-  Users,
-  Building,
   ShoppingCart,
   CircleDollarSign,
-  ArrowRightLeft,
   Settings,
   BarChart3,
+  RefreshCw,
 } from "lucide-react";
 import { NavItem } from "./types";
 
@@ -37,6 +35,12 @@ export const navItems: NavItem[] = [
         to: "/sales/pos",
         label: "نقطة البيع (Online)",
         permission: null,
+      },
+      {
+        to: "/sales/returns",
+        label: "مردودات المبيعات",
+        icon: RefreshCw,
+        permission: null, // or "view-sales-returns" if permissions are strict
       },
       { to: "/clients", label: "العملاء", permission: null },
     ],

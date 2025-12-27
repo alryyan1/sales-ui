@@ -72,9 +72,11 @@ export const offlineSaleService = {
   processSyncQueue: async (onError?: (error: any) => void) => {
     const pendingActions = await dbService.getPendingSyncActions();
     const results: { id: number; success: boolean; error?: any }[] = [];
-    if (pendingActions.length === 0) return results;
+    if (pendingActions.length === 0) return { results, updatedProducts: [] };
 
     console.log(`Processing ${pendingActions.length} offline actions...`);
+
+    const productsToUpdate = new Set<number>();
 
     for (const action of pendingActions) {
       if (!action.id) continue;
@@ -141,6 +143,13 @@ export const offlineSaleService = {
 
           await dbService.removeSyncAction(action.id);
           results.push({ id: action.id, success: true });
+
+          // Collect product IDs to update cache
+          if (offlineSale.items && offlineSale.items.length > 0) {
+            offlineSale.items.forEach((item) =>
+              productsToUpdate.add(item.product_id)
+            );
+          }
         }
       } catch (error: any) {
         console.error("Sync action failed:", action, error);
@@ -149,7 +158,35 @@ export const offlineSaleService = {
         // Implement retry logic or mark as failed
       }
     }
-    return results;
+
+    // Batch update cached products for synced items
+    let updatedProductsList: Product[] = [];
+    if (productsToUpdate.size > 0) {
+      try {
+        const idsToFetch = Array.from(productsToUpdate);
+        console.log("Updating local cache for synced products:", idsToFetch);
+        // Fetch fresh data for these products
+        const updatedProducts = await productService.getProductsByIds(
+          idsToFetch
+        );
+
+        if (updatedProducts && updatedProducts.length > 0) {
+          await dbService.saveProducts(updatedProducts);
+          console.log(
+            `Successfully updated ${updatedProducts.length} products in local cache.`
+          );
+          updatedProductsList = updatedProducts;
+        }
+      } catch (updateError) {
+        console.error(
+          "Failed to update product cache after sync:",
+          updateError
+        );
+        // Don't fail the sync result just because cache update failed, but log it
+      }
+    }
+
+    return { results, updatedProducts: updatedProductsList };
   },
 
   // --- POS Operations (Frontend First) ---
@@ -159,6 +196,14 @@ export const offlineSaleService = {
    */
   searchProducts: async (query: string): Promise<Product[]> => {
     return dbService.searchProducts(query);
+  },
+
+  getProductById: async (id: number): Promise<Product | undefined> => {
+    // Small optimization: dbService likely has a direct get method or we can implement it
+    // For now, if dbService doesn't expose it, we might need to add it there.
+    // But let's assume we can add it to dbService or use search for now if we can't edit db.ts easily.
+    // Actually, I can edit db.ts.
+    return dbService.getProduct(id);
   },
 
   searchClients: async (query: string) => {
@@ -233,7 +278,7 @@ export const offlineSaleService = {
 
     // 3. Trigger sync immediately if online
     if (navigator.onLine) {
-      const results = await offlineSaleService.processSyncQueue();
+      const { results } = await offlineSaleService.processSyncQueue();
       const myResult = results.find((r) => r.id === queueId);
       if (myResult && !myResult.success) {
         // Pass the error up so UI can show it

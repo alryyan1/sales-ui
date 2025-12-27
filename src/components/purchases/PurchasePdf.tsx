@@ -7,7 +7,7 @@ import {
   StyleSheet,
   Image as PdfImage,
 } from "@react-pdf/renderer";
-import { OfflineSale, OfflineSaleItem } from "../../services/db";
+import { Purchase, PurchaseItem } from "../../services/purchaseService";
 import { AppSettings } from "../../services/settingService";
 import { formatNumber } from "@/constants";
 
@@ -16,12 +16,12 @@ import { getPdfFont } from "@/utils/pdfFontRegistry";
 const styles = StyleSheet.create({
   page: {
     padding: 30, // Standard A4 margin
-    // fontFamily: "Amiri", // Set dynamically
+    // fontFamily: "Amiri",
     fontSize: 12,
   },
   header: {
     marginBottom: 20,
-    flexDirection: "row-reverse", // Logo left, text right (in RTL context visually opposite)
+    flexDirection: "row-reverse",
     justifyContent: "space-between",
     alignItems: "flex-start",
     borderBottomWidth: 1,
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
     color: "#555",
     marginBottom: 2,
   },
-  invoiceTitle: {
+  title: {
     fontSize: 18,
     fontWeight: "bold",
     textAlign: "center",
@@ -116,17 +116,13 @@ const styles = StyleSheet.create({
   colSeq: { width: "5%", textAlign: "center" },
   colProduct: { width: "45%", textAlign: "right" },
   colQty: { width: "15%", textAlign: "center" },
-  colPrice: { width: "15%", textAlign: "left" }, // LTR numbers
-  colTotal: { width: "20%", textAlign: "left" }, // LTR numbers
+  colCost: { width: "15%", textAlign: "left" },
+  colTotal: { width: "20%", textAlign: "left" },
 
   summarySection: {
     marginTop: 20,
-    flexDirection: "row", // Standard row for LTR alignment of summary box? No, keep it RTL
-    justifyContent: "flex-end", // Move summary to left (visually left in RTL means flex-start? no flex-end is right side)
-    // In RTL PDF: flex-start is Right, flex-end is Left.
-    // We want summary on the LEFT (standard invoice) or RIGHT?
-    // Arabic invoices usually have totals on the Left or Right? Let's put it on the Left (visually).
-    // So justifyContent: 'flex-end'
+    flexDirection: "row",
+    justifyContent: "flex-end",
   },
   summaryBox: {
     width: "40%",
@@ -150,7 +146,7 @@ const styles = StyleSheet.create({
   },
   grandTotal: {
     fontSize: 14,
-    color: "#2563eb", // Primary blue
+    color: "#2563eb",
     borderTopWidth: 2,
     borderTopColor: "#bfdbfe",
     marginTop: 5,
@@ -170,34 +166,28 @@ const styles = StyleSheet.create({
   },
 });
 
-interface OfflineInvoiceA4PdfProps {
-  sale: OfflineSale;
-  items: OfflineSaleItem[];
-  userName?: string;
+interface PurchasePdfProps {
+  purchase: Purchase;
+  items: PurchaseItem[]; // Pass separate items array if pagination/filtering is involved, otherwise use purchase.items
   settings?: AppSettings | null;
 }
 
-export const OfflineInvoiceA4Pdf: React.FC<OfflineInvoiceA4PdfProps> = ({
-  sale,
+export const PurchasePdf: React.FC<PurchasePdfProps> = ({
+  purchase,
   items,
-  userName,
   settings,
 }) => {
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleString("ar-EG");
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString("ar-EG");
   };
 
-  // Calculate totals
-  const subtotal = items.reduce((acc, item) => {
-    const price = Number(item.unit_price);
-    const qty = item.quantity;
-    const total = price * qty;
-    return acc + total;
-  }, 0);
-
-  const discountAmount = Number(sale.discount_amount || 0);
-  const totalAmount = Number(sale.total_amount || 0);
-  const taxAmount = 0; // If you have tax logic, add here
+  // Calculate totals from the passed items (which might be the full list or filtered)
+  // Usually for PDF we want ALL items.
+  const totalQuantity = items.reduce((acc, item) => acc + item.quantity, 0);
+  const totalCost = items.reduce(
+    (acc, item) => acc + item.quantity * Number(item.unit_cost),
+    0
+  );
 
   return (
     <Document>
@@ -206,18 +196,15 @@ export const OfflineInvoiceA4Pdf: React.FC<OfflineInvoiceA4PdfProps> = ({
         style={[styles.page, { fontFamily: getPdfFont(settings) }]}
       >
         {/* Header */}
-        {/* Header Logic: Full Header Image vs Standard Logo/Text */}
         {settings?.invoice_branding_type === "header" &&
         settings?.company_header_url ? (
           <View style={{ marginBottom: 20 }}>
-            {/* Full Width Header Image */}
             <PdfImage
               src={settings.company_header_url}
               style={{ width: "100%", height: 100, objectFit: "cover" }}
             />
           </View>
         ) : (
-          /* Standard Header */
           <View
             style={[
               styles.header,
@@ -229,10 +216,6 @@ export const OfflineInvoiceA4Pdf: React.FC<OfflineInvoiceA4PdfProps> = ({
               },
             ]}
           >
-            {/* Unified Render Order: Logo -> Info 
-                If Direction is Row (Left matches): Logo (Left), Info (Right)
-                If Direction is Row-Reverse (Right matches): Logo (Right), Info (Left)
-            */}
             <View style={styles.logoContainer}>
               {settings?.company_logo_url ? (
                 <PdfImage
@@ -270,37 +253,47 @@ export const OfflineInvoiceA4Pdf: React.FC<OfflineInvoiceA4PdfProps> = ({
           </View>
         )}
 
-        <Text style={styles.invoiceTitle}>فاتورة مبيعات / Tax Invoice</Text>
+        <Text style={styles.title}>طلب مشتريات / Purchase Order</Text>
 
-        {/* Client & Invoice Meta */}
         <View style={styles.metaSection}>
           <View style={styles.metaColumn}>
             <View style={styles.metaRow}>
               <Text style={styles.metaValue}>
-                {sale.client_name || "عميل نقدي"}
+                {purchase.supplier_name || "—"}
               </Text>
-              <Text style={styles.metaLabel}>العميل:</Text>
+              <Text style={styles.metaLabel}>المورد:</Text>
             </View>
-            {/* Add client specific details if available in sale object or passed prop */}
+            <View style={styles.metaRow}>
+              <Text style={styles.metaValue}>
+                {purchase.status === "received"
+                  ? "مستلم"
+                  : purchase.status === "ordered"
+                  ? "تم الطلب"
+                  : "قيد الانتظار"}
+              </Text>
+              <Text style={styles.metaLabel}>الحالة:</Text>
+            </View>
           </View>
 
           <View style={styles.metaColumn}>
             <View style={styles.metaRow}>
-              <Text style={styles.metaValue}>#{sale.tempId || sale.id}</Text>
-              <Text style={styles.metaLabel}>رقم الفاتورة:</Text>
+              <Text style={styles.metaValue}>#{purchase.id}</Text>
+              <Text style={styles.metaLabel}>رقم الطلب:</Text>
             </View>
+            {purchase.reference_number && (
+              <View style={styles.metaRow}>
+                <Text style={styles.metaValue}>
+                  {purchase.reference_number}
+                </Text>
+                <Text style={styles.metaLabel}>المرجع:</Text>
+              </View>
+            )}
             <View style={styles.metaRow}>
               <Text style={styles.metaValue}>
-                {formatDate(sale.offline_created_at)}
+                {formatDate(purchase.purchase_date)}
               </Text>
               <Text style={styles.metaLabel}>التاريخ:</Text>
             </View>
-            {userName && (
-              <View style={styles.metaRow}>
-                <Text style={styles.metaValue}>{userName}</Text>
-                <Text style={styles.metaLabel}>بواسطة:</Text>
-              </View>
-            )}
           </View>
         </View>
 
@@ -310,12 +303,12 @@ export const OfflineInvoiceA4Pdf: React.FC<OfflineInvoiceA4PdfProps> = ({
             <Text style={styles.colSeq}>#</Text>
             <Text style={styles.colProduct}>المنتج</Text>
             <Text style={styles.colQty}>الكمية</Text>
-            <Text style={styles.colPrice}>سعر الوحدة</Text>
+            <Text style={styles.colCost}>التكلفة</Text>
             <Text style={styles.colTotal}>الإجمالي</Text>
           </View>
 
           {items.map((item, index) => {
-            const rowTotal = Number(item.unit_price) * item.quantity;
+            const rowTotal = Number(item.unit_cost) * item.quantity;
             return (
               <View key={index} style={styles.tableRow}>
                 <Text style={styles.colSeq}>{index + 1}</Text>
@@ -323,8 +316,8 @@ export const OfflineInvoiceA4Pdf: React.FC<OfflineInvoiceA4PdfProps> = ({
                   {item.product_name || `Product ${item.product_id}`}
                 </Text>
                 <Text style={styles.colQty}>{item.quantity}</Text>
-                <Text style={styles.colPrice}>
-                  {formatNumber(Number(item.unit_price))}
+                <Text style={styles.colCost}>
+                  {formatNumber(Number(item.unit_cost))}
                 </Text>
                 <Text style={styles.colTotal}>{formatNumber(rowTotal)}</Text>
               </View>
@@ -332,39 +325,17 @@ export const OfflineInvoiceA4Pdf: React.FC<OfflineInvoiceA4PdfProps> = ({
           })}
         </View>
 
-        {/* Summary Footer */}
+        {/* Summary */}
         <View style={styles.summarySection}>
-          <View style={{ flex: 1 }} />{" "}
-          {/* Spacer to push summary to left/right */}
+          <View style={{ flex: 1 }} />
           <View style={styles.summaryBox}>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryValue}>{formatNumber(subtotal)}</Text>
-              <Text style={styles.summaryLabel}>المجموع الفرعي:</Text>
+              <Text style={styles.summaryValue}>{totalQuantity}</Text>
+              <Text style={styles.summaryLabel}>إجمالي الأصناف:</Text>
             </View>
-
-            {discountAmount > 0 && (
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryValue}>
-                  {formatNumber(discountAmount)}
-                </Text>
-                <Text style={styles.summaryLabel}>الخصم:</Text>
-              </View>
-            )}
-
-            {taxAmount > 0 && (
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryValue}>
-                  {formatNumber(taxAmount)}
-                </Text>
-                <Text style={styles.summaryLabel}>الضريبة:</Text>
-              </View>
-            )}
-
             <View style={[styles.summaryRow, styles.grandTotal]}>
-              <Text style={styles.summaryValue}>
-                {formatNumber(totalAmount)}
-              </Text>
-              <Text style={styles.summaryLabel}>الإجمالي النهائي:</Text>
+              <Text style={styles.summaryValue}>{formatNumber(totalCost)}</Text>
+              <Text style={styles.summaryLabel}>إجمالي التكلفة:</Text>
             </View>
           </View>
         </View>

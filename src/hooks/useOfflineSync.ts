@@ -5,6 +5,7 @@ import { offlineSaleService } from "../services/offlineSaleService";
 export const useOfflineSync = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncedProducts, setLastSyncedProducts] = useState<any[]>([]); // Product[] but avoiding circular dep issue if types not perfect
 
   useEffect(() => {
     const handleOnline = () => {
@@ -39,14 +40,20 @@ export const useOfflineSync = () => {
     if (isSyncing) return;
     setIsSyncing(true);
     try {
-      await offlineSaleService.processSyncQueue((error) => {
-        const msg =
-          error?.response?.data?.message || error?.message || "Sync failed";
-        toast.error(`Sync Error: ${msg}`);
-      });
-      // Also refresh products occasionally
-      await offlineSaleService.initializeProducts();
-      await offlineSaleService.initializeClients();
+      // processSyncQueue now returns { results, updatedProducts }
+      const { results, updatedProducts } =
+        await offlineSaleService.processSyncQueue((error) => {
+          const msg =
+            error?.response?.data?.message || error?.message || "Sync failed";
+          toast.error(`Sync Error: ${msg}`);
+        });
+
+      if (updatedProducts && updatedProducts.length > 0) {
+        setLastSyncedProducts(updatedProducts);
+      }
+
+      // Also refresh products occasionally - maybe we skip this now if we rely on partial updates
+      // await offlineSaleService.initializeClients();
     } catch (error: any) {
       console.error("Sync failed:", error);
       const msg =
@@ -57,5 +64,5 @@ export const useOfflineSync = () => {
     }
   };
 
-  return { isOnline, isSyncing, triggerSync };
+  return { isOnline, isSyncing, triggerSync, lastSyncedProducts };
 };

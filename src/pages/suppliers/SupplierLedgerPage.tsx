@@ -16,6 +16,7 @@ import {
   Phone,
   User,
   MoreHorizontal,
+  FileText,
 } from "lucide-react";
 
 // Shadcn UI Components
@@ -49,6 +50,7 @@ import supplierPaymentService, {
 import { formatCurrency } from "@/constants";
 import PaymentFormModal from "@/components/suppliers/PaymentFormModal";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
+import { SupplierLedgerPdfDialog } from "@/components/suppliers/SupplierLedgerPdfDialog";
 
 const SupplierLedgerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -70,6 +72,8 @@ const SupplierLedgerPage: React.FC = () => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [paymentToDelete, setPaymentToDelete] =
     useState<SupplierPayment | null>(null);
+
+  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
 
   // Fetch ledger data
   const fetchLedger = async () => {
@@ -231,13 +235,22 @@ const SupplierLedgerPage: React.FC = () => {
           <p className="text-slate-500 mr-11">{ledger.supplier.name}</p>
         </div>
 
-        <Button
-          onClick={handleAddPayment}
-          className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200"
-        >
-          <Plus className="ml-2 h-4 w-4" />
-          إضافة دفعة
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setPdfDialogOpen(true)}
+            className="flex items-center"
+          >
+            <FileText className="mr-2 h-4 w-4" /> تحميل PDF
+          </Button>
+          <Button
+            onClick={handleAddPayment}
+            className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200"
+          >
+            <Plus className="ml-2 h-4 w-4" />
+            إضافة دفعة
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -534,6 +547,13 @@ const SupplierLedgerPage: React.FC = () => {
         confirmText="حذف"
         cancelText="إلغاء"
         confirmVariant="destructive"
+      />
+
+      {/* PDF Dialog */}
+      <SupplierLedgerPdfDialog
+        open={pdfDialogOpen}
+        onClose={() => setPdfDialogOpen(false)}
+        ledger={ledger}
       />
     </div>
   );

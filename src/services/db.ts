@@ -202,6 +202,15 @@ class IndexedDBService {
     );
   }
 
+  async getProduct(id: number): Promise<Product | undefined> {
+    const store = await this.getStore(STORES.PRODUCTS, "readonly");
+    return new Promise((resolve, reject) => {
+      const request = store.get(id);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
   // --- SALES ---
 
   async savePendingSale(sale: OfflineSale): Promise<string> {
