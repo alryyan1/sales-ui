@@ -4,6 +4,7 @@ import { offlineSaleService } from "../services/offlineSaleService";
 
 export const useOfflineSync = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncedProducts, setLastSyncedProducts] = useState<any[]>([]); // Product[] but avoiding circular dep issue if types not perfect
 
@@ -40,6 +41,7 @@ export const useOfflineSync = () => {
     if (isSyncing) return;
     setIsSyncing(true);
     try {
+    
       // processSyncQueue now returns { results, updatedProducts }
       const { results, updatedProducts } =
         await offlineSaleService.processSyncQueue((error) => {

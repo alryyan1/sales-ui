@@ -30,6 +30,7 @@ export const PosPageOffline = () => {
   const { user } = useAuth();
   const { isOnline, isSyncing, triggerSync, lastSyncedProducts } =
     useOfflineSync();
+    
 
   // Shift state
   const [shift, setShift] = useState<{
@@ -88,10 +89,6 @@ export const PosPageOffline = () => {
   }, [isOnline]);
 
   const handleOpenShift = async () => {
-    if (!isOnline) {
-      toast.error("Cannot open shift while offline");
-      return;
-    }
     try {
       setShiftLoading(true);
       const response = await apiClient.post("/shifts/open");
@@ -114,10 +111,6 @@ export const PosPageOffline = () => {
   };
 
   const handleCloseShift = async () => {
-    if (!isOnline) {
-      toast.error("Cannot close shift while offline");
-      return;
-    }
     try {
       setShiftLoading(true);
       const response = await apiClient.post("/shifts/close");

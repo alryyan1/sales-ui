@@ -204,6 +204,7 @@ const productService = {
         `/product/by-ids`,
         { ids: ids }
       );
+    
       console.log("getProductsByIds response:", response.data);
 
       // Handle Laravel Resource Collection response

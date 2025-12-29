@@ -22,6 +22,8 @@ import {
   X,
   Menu as MenuIcon,
   Printer,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 import { Product } from "../../services/productService";
 import { formatNumber } from "@/constants";
@@ -111,19 +113,41 @@ export const PosOfflineHeader = React.forwardRef<
           color: "text.primary",
           borderBottom: "1px solid",
           borderColor: "divider",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+          transition: "all 0.2s ease-in-out",
         }}
       >
-        <Toolbar sx={{ gap: 2, height: 70 }}>
+        <Toolbar sx={{ gap: 3, height: 80, px: { xs: 2, sm: 3 } }}>
           {/* Brand / Logo */}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1.5,
+              px: 1.5,
+              py: 0.75,
+              borderRadius: 2,
+              transition: "all 0.2s ease-in-out",
+              "&:hover": {
+                bgcolor: "grey.50",
+              },
+            }}
+          >
             <IconButton
               edge="start"
               color="inherit"
               aria-label="menu"
               onClick={onDrawerToggle}
-              sx={{ display: { sm: "none" } }}
+              sx={{
+                display: { sm: "none" },
+                transition: "all 0.2s ease-in-out",
+                "&:hover": {
+                  bgcolor: "grey.100",
+                  transform: "scale(1.05)",
+                },
+              }}
             >
-              <MenuIcon />
+              <MenuIcon size={20} />
             </IconButton>
             <Typography
               variant="h5"
@@ -134,6 +158,7 @@ export const PosOfflineHeader = React.forwardRef<
                 color: "transparent",
                 letterSpacing: "-0.5px",
                 display: { xs: "none", sm: "block" },
+                px: 1,
               }}
             >
               NEXT POS
@@ -146,7 +171,7 @@ export const PosOfflineHeader = React.forwardRef<
               flex: 1,
               display: "flex",
               justifyContent: "center",
-              maxWidth: 600,
+              maxWidth: 650,
               mx: "auto",
             }}
           >
@@ -166,6 +191,21 @@ export const PosOfflineHeader = React.forwardRef<
                 }}
                 autoHighlight
                 fullWidth
+                PaperComponent={(props) => (
+                  <Box
+                    {...props}
+                    sx={{
+                      ...props.sx,
+                      bgcolor: "white",
+                      boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+                      borderRadius: 2,
+                      mt: 1,
+                      border: "1px solid",
+                      borderColor: "grey.200",
+                      overflow: "hidden",
+                    }}
+                  />
+                )}
                 onChange={(_, newValue) => {
                   if (newValue) {
                     onAddToCart(newValue);
@@ -185,12 +225,29 @@ export const PosOfflineHeader = React.forwardRef<
                     size="small"
                     sx={{
                       bgcolor: "grey.50",
+                      transition: "all 0.2s ease-in-out",
                       "& .MuiOutlinedInput-root": {
                         borderRadius: 3,
-                        "& fieldset": { borderColor: "grey.200" },
-                        "&:hover fieldset": { borderColor: "primary.main" },
-                        "&.Mui-focused fieldset": {
-                          borderColor: "primary.main",
+                        fontSize: "0.95rem",
+                        padding: "4px 8px",
+                        transition: "all 0.2s ease-in-out",
+                        "& fieldset": {
+                          borderColor: "grey.200",
+                          borderWidth: 1.5,
+                        },
+                        "&:hover": {
+                          bgcolor: "grey.100",
+                          "& fieldset": {
+                            borderColor: "primary.light",
+                          },
+                        },
+                        "&.Mui-focused": {
+                          bgcolor: "white",
+                          boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
+                          "& fieldset": {
+                            borderColor: "primary.main",
+                            borderWidth: 2,
+                          },
                         },
                       },
                     }}
@@ -232,13 +289,21 @@ export const PosOfflineHeader = React.forwardRef<
                   />
                 )}
                 renderOption={(props, option) => (
-                  <li {...props} key={option.id}>
+                  <li
+                    {...props}
+                    key={option.id}
+                    style={{
+                      padding: "12px 16px",
+                      transition: "all 0.15s ease-in-out",
+                    }}
+                  >
                     <Box
                       sx={{
                         display: "flex",
                         justifyContent: "space-between",
                         width: "100%",
                         alignItems: "center",
+                        py: 0.5,
                       }}
                     >
                       <Box>
@@ -322,10 +387,13 @@ export const PosOfflineHeader = React.forwardRef<
                 color="text.secondary"
                 align="center"
                 sx={{
-                  p: 1,
+                  p: 2,
                   bgcolor: "grey.50",
-                  borderRadius: 2,
+                  borderRadius: 3,
                   width: "100%",
+                  border: "1px dashed",
+                  borderColor: "grey.300",
+                  transition: "all 0.2s ease-in-out",
                 }}
               >
                 يرجى تحديد أو إنشاء عملية بيع للبحث عن المنتجات
@@ -339,29 +407,72 @@ export const PosOfflineHeader = React.forwardRef<
             onClick={onNewSale}
             startIcon={<Plus size={18} />}
             sx={{
-              borderRadius: 8, // More rounded for "bubble" look
+              borderRadius: 3,
               textTransform: "none",
               bgcolor: "primary.main",
-              boxShadow: "0 4px 6px -1px rgba(59, 130, 246, 0.5)",
-              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+              boxShadow: "0 2px 8px rgba(59, 130, 246, 0.25)",
+              transition: "all 0.2s ease-in-out",
+              px: 3,
+              py: 1.25,
+              fontWeight: 600,
+              fontSize: "0.9rem",
+              display: { xs: "none", md: "flex" },
               "&:hover": {
                 bgcolor: "primary.dark",
-                boxShadow: "0 10px 15px -3px rgba(59, 130, 246, 0.5)",
-                transform: "translateY(-2px)",
+                boxShadow: "0 4px 12px rgba(59, 130, 246, 0.35)",
+                transform: "translateY(-1px)",
               },
               "&:active": {
-                transform: "scale(0.95) translateY(0)",
-                boxShadow: "0 2px 4px -1px rgba(59, 130, 246, 0.5)",
+                transform: "translateY(0)",
+                boxShadow: "0 2px 4px rgba(59, 130, 246, 0.2)",
               },
-              display: { xs: "none", md: "flex" },
-              px: 3,
             }}
           >
             بيع جديد
           </Button>
 
           {/* Right Section: Status & Controls */}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1.5,
+              flexWrap: "nowrap",
+            }}
+          >
+            {/* Online/Offline Status Indicator */}
+            <Tooltip title={isOnline ? "متصل" : "غير متصل"}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                  px: 1.5,
+                  py: 0.75,
+                  borderRadius: 2,
+                  bgcolor: isOnline ? alpha(theme.palette.success.main, 0.1) : alpha(theme.palette.error.main, 0.1),
+                  border: "1px solid",
+                  borderColor: isOnline ? alpha(theme.palette.success.main, 0.2) : alpha(theme.palette.error.main, 0.2),
+                }}
+              >
+                {isOnline ? (
+                  <Wifi size={16} color={theme.palette.success.main} />
+                ) : (
+                  <WifiOff size={16} color={theme.palette.error.main} />
+                )}
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: isOnline ? "success.main" : "error.main",
+                    fontWeight: 600,
+                    fontSize: "0.7rem",
+                    display: { xs: "none", lg: "block" },
+                  }}
+                >
+                  {isOnline ? "متصل" : "غير متصل"}
+                </Typography>
+              </Box>
+            </Tooltip>
             {/* Shift Navigation (Previous/Next) */}
             <Box
               sx={{
@@ -370,8 +481,13 @@ export const PosOfflineHeader = React.forwardRef<
                 bgcolor: "grey.50",
                 border: "1px solid",
                 borderColor: "grey.200",
-                borderRadius: 2,
+                borderRadius: 2.5,
                 p: 0.5,
+                transition: "all 0.2s ease-in-out",
+                "&:hover": {
+                  borderColor: "primary.light",
+                  bgcolor: "grey.100",
+                },
               }}
             >
               <IconButton
@@ -384,6 +500,14 @@ export const PosOfflineHeader = React.forwardRef<
                   (availableShiftIds.length > 0 &&
                     selectedShiftId >= Math.max(...availableShiftIds))
                 }
+                sx={{
+                  transition: "all 0.2s ease-in-out",
+                  "&:hover:not(:disabled)": {
+                    bgcolor: "primary.light",
+                    color: "primary.main",
+                    transform: "scale(1.1)",
+                  },
+                }}
               >
                 <ChevronRight size={18} />
               </IconButton>
@@ -392,9 +516,10 @@ export const PosOfflineHeader = React.forwardRef<
                 fontWeight="600"
                 sx={{
                   mx: 2,
-                  minWidth: 60,
+                  minWidth: 70,
                   textAlign: "center",
                   color: "text.primary",
+                  fontSize: "0.875rem",
                 }}
               >
                 وردية #{selectedShiftId || "-"}
@@ -410,6 +535,14 @@ export const PosOfflineHeader = React.forwardRef<
                   (availableShiftIds.length > 0 &&
                     selectedShiftId <= Math.min(...availableShiftIds))
                 }
+                sx={{
+                  transition: "all 0.2s ease-in-out",
+                  "&:hover:not(:disabled)": {
+                    bgcolor: "primary.light",
+                    color: "primary.main",
+                    transform: "scale(1.1)",
+                  },
+                }}
               >
                 <ChevronLeft size={18} />
               </IconButton>
@@ -422,11 +555,18 @@ export const PosOfflineHeader = React.forwardRef<
                 disabled={isSyncing}
                 sx={{
                   border: "1px solid",
-                  borderColor: "divider",
+                  borderColor: isSyncing ? "primary.light" : "grey.300",
                   color: isSyncing ? "primary.main" : "text.secondary",
                   bgcolor: isSyncing
                     ? alpha(theme.palette.primary.main, 0.1)
                     : "transparent",
+                  borderRadius: 2,
+                  transition: "all 0.2s ease-in-out",
+                  "&:hover:not(:disabled)": {
+                    borderColor: "primary.main",
+                    bgcolor: alpha(theme.palette.primary.main, 0.08),
+                    transform: "scale(1.05)",
+                  },
                 }}
               >
                 <RefreshCw
@@ -443,9 +583,16 @@ export const PosOfflineHeader = React.forwardRef<
                 disabled={!selectedShiftId}
                 sx={{
                   border: "1px solid",
-                  borderColor: "divider",
+                  borderColor: "grey.300",
                   color: "text.secondary",
-                  mr: 1,
+                  borderRadius: 2,
+                  transition: "all 0.2s ease-in-out",
+                  "&:hover:not(:disabled)": {
+                    borderColor: "primary.main",
+                    color: "primary.main",
+                    bgcolor: alpha(theme.palette.primary.main, 0.08),
+                    transform: "scale(1.05)",
+                  },
                 }}
               >
                 <Printer size={20} />
@@ -465,6 +612,7 @@ export const PosOfflineHeader = React.forwardRef<
                         height: 8,
                         borderRadius: "50%",
                         bgcolor: "success.main",
+                        boxShadow: `0 0 0 2px ${alpha(theme.palette.success.main, 0.2)}`,
                       }}
                     />
                   }
@@ -474,9 +622,19 @@ export const PosOfflineHeader = React.forwardRef<
                     color: "success.dark",
                     textTransform: "none",
                     display: { xs: "none", md: "flex" },
+                    borderRadius: 2.5,
+                    px: 2.5,
+                    py: 1,
+                    fontWeight: 600,
+                    fontSize: "0.875rem",
+                    transition: "all 0.2s ease-in-out",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
                     "&:hover": {
                       borderColor: "error.main",
                       color: "error.main",
+                      bgcolor: alpha(theme.palette.error.main, 0.05),
+                      transform: "translateY(-1px)",
+                      boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
                     },
                   }}
                 >
@@ -488,12 +646,23 @@ export const PosOfflineHeader = React.forwardRef<
                 variant="contained"
                 color="inherit"
                 onClick={onOpenShift}
-                disabled={shiftLoading || !isOnline}
+                disabled={shiftLoading}
                 sx={{
                   bgcolor: "text.primary",
                   color: "background.paper",
-                  "&:hover": { bgcolor: "text.secondary" },
                   textTransform: "none",
+                  borderRadius: 2.5,
+                  px: 2.5,
+                  py: 1,
+                  fontWeight: 600,
+                  fontSize: "0.875rem",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                  transition: "all 0.2s ease-in-out",
+                  "&:hover:not(:disabled)": {
+                    bgcolor: "text.secondary",
+                    transform: "translateY(-1px)",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+                  },
                 }}
               >
                 {shiftLoading ? (
@@ -508,14 +677,21 @@ export const PosOfflineHeader = React.forwardRef<
               <Tooltip title="إغلاق الوردية">
                 <IconButton
                   onClick={onCloseShift}
-                  disabled={shiftLoading || !isOnline}
+                  disabled={shiftLoading}
                   size="small"
                   sx={{
-                    bgcolor: "error.lighter",
+                    bgcolor: alpha(theme.palette.error.main, 0.1),
                     color: "error.main",
                     border: "1px solid",
                     borderColor: "error.light",
-                    "&:hover": { bgcolor: "error.main", color: "white" },
+                    borderRadius: 2,
+                    transition: "all 0.2s ease-in-out",
+                    "&:hover:not(:disabled)": {
+                      bgcolor: "error.main",
+                      color: "white",
+                      transform: "scale(1.1)",
+                      boxShadow: `0 2px 8px ${alpha(theme.palette.error.main, 0.3)}`,
+                    },
                   }}
                 >
                   <X size={18} />
