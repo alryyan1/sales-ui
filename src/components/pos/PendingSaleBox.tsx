@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, Badge, Box, Typography } from "@mui/material";
-import { CloudDone } from "@mui/icons-material";
+import { CloudDone, PauseCircle } from "@mui/icons-material";
 import { OfflineSale } from "../../services/db";
 
 interface PendingSaleBoxProps {
@@ -40,8 +40,16 @@ export const PendingSaleBox: React.FC<PendingSaleBoxProps> = ({
           width: 50,
           height: 50,
           border: "1px solid",
-          borderColor: isSelected ? "primary.main" : "grey.200",
-          bgcolor: isSelected ? "primary.light" : "white",
+          borderColor: isSelected
+            ? "primary.main"
+            : sale.status === "held"
+            ? "warning.main"
+            : "grey.200",
+          bgcolor: isSelected
+            ? "primary.light"
+            : sale.status === "held"
+            ? "warning.50"
+            : "white",
           boxShadow: isSelected ? "0 0 0 1px #2563eb" : "none",
           "&:hover": { borderColor: "grey.300", boxShadow: 1 },
           position: "relative",
@@ -55,7 +63,7 @@ export const PendingSaleBox: React.FC<PendingSaleBoxProps> = ({
         onClick={() => onSaleSelect(sale)}
       >
         {/* Sync Status Icon */}
-        {/* Sync Status Icon or Pending Indicator */}
+        {/* Sync Status Icon or Pending/Held Indicator */}
         <Box
           sx={{
             position: "absolute",
@@ -63,7 +71,11 @@ export const PendingSaleBox: React.FC<PendingSaleBoxProps> = ({
             left: sale.is_synced ? -5 : -3,
             width: sale.is_synced ? 16 : 8,
             height: sale.is_synced ? 16 : 8,
-            bgcolor: sale.is_synced ? "success.main" : "error.main",
+            bgcolor: sale.is_synced
+              ? "success.main"
+              : sale.status === "held"
+              ? "warning.main"
+              : "error.main",
             borderRadius: "50%",
             display: "flex",
             alignItems: "center",
@@ -74,6 +86,9 @@ export const PendingSaleBox: React.FC<PendingSaleBoxProps> = ({
         >
           {sale.is_synced && (
             <CloudDone sx={{ fontSize: 10, color: "white" }} />
+          )}
+          {!sale.is_synced && sale.status === "held" && (
+            <PauseCircle sx={{ fontSize: 10, color: "white" }} />
           )}
         </Box>
 

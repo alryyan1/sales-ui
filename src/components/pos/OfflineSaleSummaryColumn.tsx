@@ -30,7 +30,7 @@ import { CartItem } from "./types";
 import { OfflineSale } from "../../services/db";
 import { formatNumber, preciseSum, preciseCalculation } from "@/constants";
 import dayjs from "dayjs";
-import { Plus, Printer, FileText } from "lucide-react";
+import { Plus, Printer, FileText, Pause } from "lucide-react";
 import { PDFViewer } from "@react-pdf/renderer";
 import { PosInvoicePdf } from "./PosInvoicePdf";
 import { OfflineInvoiceA4Pdf } from "./OfflineInvoiceA4Pdf";
@@ -517,6 +517,25 @@ export const OfflineSaleSummaryColumn: React.FC<
 
           <Divider />
 
+          {/* Hold Sale Button */}
+          {currentSale.items.length > 0 &&
+            currentSale.status !== "completed" &&
+            !currentSale.is_synced && (
+              <Button
+                variant="outlined"
+                fullWidth
+                color="warning"
+                startIcon={<Pause size={18} />}
+                onClick={() => {
+                  const heldSale = { ...currentSale, status: "held" as const };
+                  onUpdateSale(heldSale);
+                }}
+                sx={{ mb: 1, py: 1 }}
+              >
+                {currentSale.status === "held" ? "معلق" : "تعليق البيع"}
+              </Button>
+            )}
+
           {/* Print Invoice Button (Thermal) */}
           {currentSale.items.length > 0 && (
             <Button
@@ -552,16 +571,29 @@ export const OfflineSaleSummaryColumn: React.FC<
             size="large"
             disabled={grandTotal <= 0 || currentSale.status === "completed"}
             sx={{
-              py: 1.5,
-              fontSize: "1.2rem",
+              py: 2,
+              minHeight: 56,
+              fontSize: "1.3rem",
+              fontWeight: 700,
+              borderRadius: 2,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+              transition: "all 0.2s ease-in-out",
               ...(paidAmount > 0 && {
                 bgcolor: "success.main",
-                "&:hover": { bgcolor: "success.dark" },
+                "&:hover": { 
+                  bgcolor: "success.dark",
+                  transform: "translateY(-2px)",
+                  boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
+                },
+              }),
+              ...(!paidAmount && {
+                "&:hover": {
+                  transform: "translateY(-2px)",
+                  boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
+                },
               }),
             }}
           >
-            {/* Logic: if paid == total, show "Complete" (if not already completed) ?? */}
-            {/* Actually, the dialog handles completion or adding more pays. */}
             {currentSale.status === "completed"
               ? "تم اكتمال البيع"
               : paidAmount > 0

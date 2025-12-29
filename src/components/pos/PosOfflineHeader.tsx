@@ -405,17 +405,18 @@ export const PosOfflineHeader = React.forwardRef<
           <Button
             variant="contained"
             onClick={onNewSale}
-            startIcon={<Plus size={18} />}
+            startIcon={<Plus size={20} />}
             sx={{
               borderRadius: 3,
               textTransform: "none",
               bgcolor: "primary.main",
               boxShadow: "0 2px 8px rgba(59, 130, 246, 0.25)",
               transition: "all 0.2s ease-in-out",
-              px: 3,
-              py: 1.25,
+              px: 4,
+              py: 1.5,
+              minHeight: 44,
               fontWeight: 600,
-              fontSize: "0.9rem",
+              fontSize: "1rem",
               display: { xs: "none", md: "flex" },
               "&:hover": {
                 bgcolor: "primary.dark",
@@ -554,13 +555,15 @@ export const PosOfflineHeader = React.forwardRef<
                 onClick={onTriggerSync}
                 disabled={isSyncing}
                 sx={{
-                  border: "1px solid",
+                  border: "2px solid",
                   borderColor: isSyncing ? "primary.light" : "grey.300",
                   color: isSyncing ? "primary.main" : "text.secondary",
                   bgcolor: isSyncing
                     ? alpha(theme.palette.primary.main, 0.1)
                     : "transparent",
                   borderRadius: 2,
+                  width: 44,
+                  height: 44,
                   transition: "all 0.2s ease-in-out",
                   "&:hover:not(:disabled)": {
                     borderColor: "primary.main",
@@ -570,7 +573,7 @@ export const PosOfflineHeader = React.forwardRef<
                 }}
               >
                 <RefreshCw
-                  size={20}
+                  size={22}
                   className={isSyncing ? "animate-spin" : ""}
                 />
               </IconButton>
@@ -582,10 +585,12 @@ export const PosOfflineHeader = React.forwardRef<
                 onClick={onPrintShiftReport}
                 disabled={!selectedShiftId}
                 sx={{
-                  border: "1px solid",
+                  border: "2px solid",
                   borderColor: "grey.300",
                   color: "text.secondary",
                   borderRadius: 2,
+                  width: 44,
+                  height: 44,
                   transition: "all 0.2s ease-in-out",
                   "&:hover:not(:disabled)": {
                     borderColor: "primary.main",
@@ -595,21 +600,21 @@ export const PosOfflineHeader = React.forwardRef<
                   },
                 }}
               >
-                <Printer size={20} />
+                <Printer size={22} />
               </IconButton>
             </Tooltip>
 
             {/* Shift Status Button */}
             {shift && shift.is_open ? (
               <Tooltip title="إغلاق الوردية">
-                <Button
+                  <Button
                   variant="outlined"
                   color="success"
                   startIcon={
                     <Box
                       sx={{
-                        width: 8,
-                        height: 8,
+                        width: 10,
+                        height: 10,
                         borderRadius: "50%",
                         bgcolor: "success.main",
                         boxShadow: `0 0 0 2px ${alpha(theme.palette.success.main, 0.2)}`,
@@ -618,15 +623,17 @@ export const PosOfflineHeader = React.forwardRef<
                   }
                   onClick={onCloseShift}
                   sx={{
+                    borderWidth: 2,
                     borderColor: "success.light",
                     color: "success.dark",
                     textTransform: "none",
                     display: { xs: "none", md: "flex" },
                     borderRadius: 2.5,
-                    px: 2.5,
-                    py: 1,
+                    px: 3,
+                    py: 1.25,
+                    minHeight: 44,
                     fontWeight: 600,
-                    fontSize: "0.875rem",
+                    fontSize: "0.95rem",
                     transition: "all 0.2s ease-in-out",
                     boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
                     "&:hover": {
@@ -652,10 +659,11 @@ export const PosOfflineHeader = React.forwardRef<
                   color: "background.paper",
                   textTransform: "none",
                   borderRadius: 2.5,
-                  px: 2.5,
-                  py: 1,
+                  px: 3,
+                  py: 1.25,
+                  minHeight: 44,
                   fontWeight: 600,
-                  fontSize: "0.875rem",
+                  fontSize: "0.95rem",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
                   transition: "all 0.2s ease-in-out",
                   "&:hover:not(:disabled)": {
@@ -666,7 +674,7 @@ export const PosOfflineHeader = React.forwardRef<
                 }}
               >
                 {shiftLoading ? (
-                  <CircularProgress size={16} color="inherit" />
+                  <CircularProgress size={18} color="inherit" />
                 ) : (
                   "فتح وردية"
                 )}
@@ -678,23 +686,24 @@ export const PosOfflineHeader = React.forwardRef<
                 <IconButton
                   onClick={onCloseShift}
                   disabled={shiftLoading}
-                  size="small"
                   sx={{
                     bgcolor: alpha(theme.palette.error.main, 0.1),
                     color: "error.main",
-                    border: "1px solid",
+                    border: "2px solid",
                     borderColor: "error.light",
                     borderRadius: 2,
+                    width: 44,
+                    height: 44,
                     transition: "all 0.2s ease-in-out",
                     "&:hover:not(:disabled)": {
                       bgcolor: "error.main",
                       color: "white",
-                      transform: "scale(1.1)",
+                      transform: "scale(1.05)",
                       boxShadow: `0 2px 8px ${alpha(theme.palette.error.main, 0.3)}`,
                     },
                   }}
                 >
-                  <X size={18} />
+                  <X size={22} />
                 </IconButton>
               </Tooltip>
             )}

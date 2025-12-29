@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   Box,
   Paper,
@@ -23,8 +23,6 @@ import { toast } from "sonner";
 import { OfflineSaleSummaryColumn } from "../components/pos/OfflineSaleSummaryColumn";
 import { PosOfflineHeader } from "../components/pos/PosOfflineHeader";
 import { PosShiftReportPdf } from "../components/pos/PosShiftReportPdf";
-import { ThermalInvoiceDialog } from "../components/pos/ThermalInvoiceDialog";
-import { Sale } from "../components/pos/types";
 
 export const PosPageOffline = () => {
   const { user } = useAuth();
@@ -138,10 +136,6 @@ export const PosPageOffline = () => {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isSyncedView, setIsSyncedView] = useState(true);
   const [isShiftReportOpen, setIsShiftReportOpen] = useState(false);
-  const [thermalInvoiceOpen, setThermalInvoiceOpen] = useState(false);
-  const [thermalInvoiceSale, setThermalInvoiceSale] = useState<Sale | null>(
-    null
-  );
 
   // Load Products and Clients on Mount & Auto-update
   useEffect(() => {
@@ -179,7 +173,8 @@ export const PosPageOffline = () => {
   // Reload pending sales list and refresh products when sync finishes
   useEffect(() => {
     if (!isSyncing) {
-      loadPendingSales();
+      loadLocalPendingSales();
+      loadSyncedSales();
 
       // Optimized Update: Only update products that changed during sync
       if (lastSyncedProducts && lastSyncedProducts.length > 0) {
@@ -262,7 +257,7 @@ export const PosPageOffline = () => {
     }
   };
 
-  const addToCart = (
+  const addToCart = useCallback((
     product: Product,
     unitType: "stocking" | "sellable" = "sellable"
   ) => {
@@ -358,7 +353,7 @@ export const PosPageOffline = () => {
 
       return offlineSaleService.calculateTotals({ ...prev, items: newItems });
     });
-  };
+  }, [currentSale.is_synced, shift]);
 
   const updateQuantity = (productId: number, qty: number) => {
     if (currentSale.is_synced) {
@@ -521,88 +516,132 @@ export const PosPageOffline = () => {
     });
   };
 
-  // List of pending (completed but not synced) sales
-  const [pendingSales, setPendingSales] = useState<OfflineSale[]>([]);
+  // List of local pending (unsynced) sales and synced sales (separate sources)
+  const [localPendingSales, setLocalPendingSales] = useState<OfflineSale[]>([]);
+  const [syncedSales, setSyncedSales] = useState<OfflineSale[]>([]);
 
-  const loadPendingSales = async () => {
-    let sales = await offlineSaleService.getOfflineSales();
+  // Load local pending (unsynced) sales from IndexedDB
+  const loadLocalPendingSales = useCallback(async () => {
+    const sales = await offlineSaleService.getOfflineSales();
+    
+    // Filter only unsynced sales
+    const unsyncedSales = sales.filter((s) => !s.is_synced);
 
-    // Fetch server sales for current shift if online
-    if (isOnline && selectedShiftId) {
-      try {
-        const res = await apiClient.get(
-          `/sales?shift_id=${selectedShiftId}&per_page=100`
-        );
-        const serverSalesData = res.data.data || [];
-
-        const localIds = new Set(sales.filter((s) => s.id).map((s) => s.id));
-
-        const mapped: OfflineSale[] = serverSalesData.map((s: any) => ({
-          tempId: `server_${s.id}`,
-          id: s.id,
-          offline_created_at: new Date(s.created_at).getTime(),
-          is_synced: true,
-          shift_id: s.shift_id ? Number(s.shift_id) : null,
-          sale_date: s.sale_date,
-          total_amount: Number(s.total_amount),
-          paid_amount: Number(s.paid_amount),
-          client_id: s.client_id,
-          client_name: s.client_name,
-          invoice_number: s.invoice_number,
-          sale_order_number: s.sale_order_number,
-          status: "completed",
-          items:
-            s.items?.map((i: any) => ({
-              product_id: i.product_id,
-              quantity: i.quantity,
-              unit_price: Number(i.unit_price),
-              product: i.product,
-              product_name: i.product?.name,
-              purchase_item_id: i.purchase_item_id,
-              // minimal mapping for display
-            })) || [],
-          payments: s.payments || [],
-          notes: s.notes,
-          created_at: s.created_at,
-          user_id: s.user_id,
-        }));
-
-        const uniqueServerSales = mapped.filter((s) => !localIds.has(s.id));
-        sales = [...sales, ...uniqueServerSales];
-      } catch (e) {
-        console.warn("Could not fetch shift history", e);
-      }
-    }
-
-    // Compute available shift IDs (from pending sales + current shift if online)
-    const ids = new Set(
-      sales
-        .map((s) => s.shift_id)
-        .filter((id): id is number => typeof id === "number")
-    );
-    if (shift?.id) ids.add(shift.id);
-    const sortedIds = Array.from(ids).sort((a, b) => a - b);
-    setAvailableShiftIds(sortedIds);
-
-    // Filter by selected shift ID if set, otherwise show all (or handle as user prefers)
-    // User asked: "only shows pendings sales that belong to current select shift"
-    let filteredSales = sales;
+    // Filter by selected shift ID if set
+    let filteredSales = unsyncedSales;
     if (selectedShiftId) {
-      filteredSales = sales.filter(
+      filteredSales = unsyncedSales.filter(
         (s) => s.shift_id && Number(s.shift_id) === Number(selectedShiftId)
       );
     }
 
     // Sort by date desc
-    setPendingSales(
+    setLocalPendingSales(
       filteredSales.sort((a, b) => b.offline_created_at - a.offline_created_at)
     );
-  };
+  }, [selectedShiftId]);
+
+  // Load synced sales from server API (always fetch fresh)
+  const loadSyncedSales = useCallback(async () => {
+    if (!isOnline) {
+      setSyncedSales([]);
+      return;
+    }
+
+    if (!selectedShiftId) {
+      setSyncedSales([]);
+      return;
+    }
+
+    try {
+      const res = await apiClient.get(
+        `/sales?shift_id=${selectedShiftId}&per_page=100`
+      );
+      const serverSalesData = res.data.data || [];
+
+      // Get current product data from IndexedDB to enrich with live stock
+      const allLocalProducts = await offlineSaleService.searchProducts("");
+      const productMap = new Map(allLocalProducts.map(p => [p.id, p]));
+
+      const mapped: OfflineSale[] = serverSalesData.map((s: any) => ({
+        tempId: `server_${s.id}`,
+        id: s.id,
+        offline_created_at: new Date(s.created_at).getTime(),
+        is_synced: true,
+        shift_id: s.shift_id ? Number(s.shift_id) : null,
+        sale_date: s.sale_date,
+        total_amount: Number(s.total_amount),
+        paid_amount: Number(s.paid_amount),
+        client_id: s.client_id,
+        client_name: s.client_name,
+        invoice_number: s.invoice_number,
+        sale_order_number: s.sale_order_number,
+        status: "completed",
+        items:
+          s.items?.map((i: any) => {
+            // Try to get current product data from IndexedDB for live stock info
+            const currentProduct = productMap.get(i.product_id);
+            
+            return {
+              product_id: i.product_id,
+              quantity: i.quantity,
+              unit_price: Number(i.unit_price),
+              product: currentProduct || i.product || {
+                id: i.product_id,
+                name: i.product_name || "Unknown Product",
+                sku: i.product_sku || "",
+                stock_quantity: 0,
+                available_batches: [],
+              },
+              product_name: currentProduct?.name || i.product?.name || i.product_name,
+              purchase_item_id: i.purchase_item_id,
+            };
+          }) || [],
+        payments: s.payments || [],
+        notes: s.notes,
+        created_at: s.created_at,
+        user_id: s.user_id,
+      }));
+
+      // Sort by date desc
+      setSyncedSales(
+        mapped.sort((a, b) => b.offline_created_at - a.offline_created_at)
+      );
+    } catch (e) {
+      console.warn("Could not fetch synced sales from server", e);
+      setSyncedSales([]);
+    }
+  }, [isOnline, selectedShiftId]);
+
+  // Update available shift IDs from both sources
+  const updateAvailableShiftIds = useCallback(async () => {
+    const allLocalSales = await offlineSaleService.getOfflineSales();
+    const ids = new Set(
+      allLocalSales
+        .map((s) => s.shift_id)
+        .filter((id): id is number => typeof id === "number")
+    );
+    
+    // Add IDs from synced sales
+    syncedSales.forEach((s) => {
+      if (s.shift_id) ids.add(s.shift_id);
+    });
+
+    if (shift?.id) ids.add(shift.id);
+    const sortedIds = Array.from(ids).sort((a, b) => a - b);
+    setAvailableShiftIds(sortedIds);
+  }, [syncedSales, shift]);
 
   useEffect(() => {
-    loadPendingSales();
+    loadLocalPendingSales();
+    loadSyncedSales();
     // Set up an interval or listener if needed, but for now we reload on actions
-  }, [selectedShiftId, shift]); // Add shift dependency to re-calc available IDs
+  }, [selectedShiftId, shift, isOnline]); // Add isOnline to reload synced when connection changes
+
+  // Update available shift IDs when sales change
+  useEffect(() => {
+    updateAvailableShiftIds();
+  }, [localPendingSales, syncedSales, shift]);
 
   // ... (rest of methods)
 
@@ -626,7 +665,7 @@ export const PosPageOffline = () => {
         // If it's a draft, save it
         // We trust 'shouldAutoSave' implies user intent
         offlineSaleService.saveDraft(currentSale);
-        loadPendingSales();
+        loadLocalPendingSales();
       }
     }, 500); // 500ms debounce
     return () => clearTimeout(timer);
@@ -649,8 +688,9 @@ export const PosPageOffline = () => {
       toast.warning(`Saved offline. Sync failed: ${msg}`);
     }
 
-    // Reload pending sales list
-    await loadPendingSales();
+    // Reload sales lists
+    await loadLocalPendingSales();
+    await loadSyncedSales();
 
     // Reset
     if (shift && shift.is_open) {
@@ -677,7 +717,7 @@ export const PosPageOffline = () => {
   };
 
   // Create new sale
-  const handleNewSale = async () => {
+  const handleNewSale = useCallback(async () => {
     if (!shift || !shift.is_open) {
       toast.error("يجب فتح الوردية أولاً لإنشاء عملية بيع جديدة");
       return;
@@ -686,34 +726,38 @@ export const PosPageOffline = () => {
     await offlineSaleService.saveDraft(newSale);
     setCurrentSale(newSale);
     // List refresh handled by useEffect or we can force it here
-    await loadPendingSales();
+    await loadLocalPendingSales();
 
     // Focus search input
     setTimeout(() => {
       headerRef.current?.focusSearch();
     }, 100);
-  };
+  }, [shift, loadLocalPendingSales]);
 
   // --- Adapters ---
 
   const cartItems: CartItem[] = useMemo(() => {
-    return currentSale.items.map((item) => ({
-      product: item.product as Product,
-      quantity: item.quantity,
-      unitPrice: Number(item.unit_price),
-      total: Number(item.unit_price) * item.quantity,
-      unitType: (item as any).unitType || "sellable", // Default to sellable if not set
-      selectedBatchId: item.purchase_item_id,
-      // We'd ideally store these in OfflineSaleItem to persist display,
-      // but for now we try to find them in product.available_batches or fallback
-      selectedBatchNumber: (item.product as Product).available_batches?.find(
-        (b) => b.id === item.purchase_item_id
-      )?.batch_number,
-      selectedBatchExpiryDate: (
-        item.product as Product
-      ).available_batches?.find((b) => b.id === item.purchase_item_id)
-        ?.expiry_date,
-    }));
+    return currentSale.items.map((item) => {
+      const product = item.product as Product | undefined;
+      const availableBatches = product?.available_batches || [];
+      
+      return {
+        product: product || ({} as Product), // Fallback to empty object if undefined
+        quantity: item.quantity,
+        unitPrice: Number(item.unit_price),
+        total: Number(item.unit_price) * item.quantity,
+        unitType: (item as any).unitType || "sellable", // Default to sellable if not set
+        selectedBatchId: item.purchase_item_id,
+        // We'd ideally store these in OfflineSaleItem to persist display,
+        // but for now we try to find them in product.available_batches or fallback
+        selectedBatchNumber: availableBatches.find(
+          (b) => b.id === item.purchase_item_id
+        )?.batch_number,
+        selectedBatchExpiryDate: availableBatches.find(
+          (b) => b.id === item.purchase_item_id
+        )?.expiry_date,
+      };
+    });
   }, [currentSale.items]);
 
   // Delete pending sale
@@ -734,19 +778,22 @@ export const PosPageOffline = () => {
         // Fallback: clear to empty draft in memory without saving
         const newDraft = offlineSaleService.createDraftSale(null);
         setCurrentSale(newDraft);
-        await loadPendingSales();
+        await loadLocalPendingSales();
       }
     } else {
-      await loadPendingSales();
+      await loadLocalPendingSales();
     }
   };
 
   const isPendingSaleSelected = useMemo(() => {
-    return pendingSales.some((s) => s.tempId === currentSale.tempId);
-  }, [pendingSales, currentSale.tempId]);
+    return (
+      localPendingSales.some((s) => s.tempId === currentSale.tempId) ||
+      syncedSales.some((s) => s.tempId === currentSale.tempId)
+    );
+  }, [localPendingSales, syncedSales, currentSale.tempId]);
 
   // Handle Plus Key Action
-  const handlePlusAction = () => {
+  const handlePlusAction = useCallback(() => {
     if (!isPendingSaleSelected) {
       handleNewSale();
     } else {
@@ -757,7 +804,16 @@ export const PosPageOffline = () => {
         setIsPaymentDialogOpen(true);
       }
     }
-  };
+  }, [isPendingSaleSelected, currentSale]);
+
+  // Handle Hold Sale
+  const handleHoldSale = useCallback(() => {
+    if (currentSale.items.length > 0 && currentSale.status !== "completed" && !currentSale.is_synced) {
+      const heldSale = { ...currentSale, status: "held" as const };
+      updateCurrentSale(heldSale);
+      toast.success(currentSale.status === "held" ? "تم استئناف البيع" : "تم تعليق البيع");
+    }
+  }, [currentSale]);
 
   // Global Key Listener for Shortcuts
   useEffect(() => {
@@ -770,15 +826,37 @@ export const PosPageOffline = () => {
         return;
       }
 
+      // + key: Payment dialog
       if (e.key === "+") {
         e.preventDefault();
         handlePlusAction();
+      }
+      
+      // F2: Hold current sale
+      if (e.key === "F2") {
+        e.preventDefault();
+        handleHoldSale();
+      }
+      
+      // Ctrl/Cmd + N: New sale
+      if ((e.ctrlKey || e.metaKey) && e.key === "n") {
+        e.preventDefault();
+        handleNewSale();
+      }
+      
+      // Ctrl/Cmd + S: Save draft (auto-save already handles this, but we can show a toast)
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        if (currentSale.items.length > 0) {
+          offlineSaleService.saveDraft(currentSale);
+          toast.success("تم حفظ المسودة");
+        }
       }
     };
 
     window.addEventListener("keydown", handleGlobalKeyDown);
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
-  }, [isPendingSaleSelected, currentSale, shift]);
+  }, [handlePlusAction, handleHoldSale, handleNewSale, currentSale]);
 
   return (
     <Box
@@ -869,11 +947,12 @@ export const PosPageOffline = () => {
           </Box>
 
           <PendingSalesColumn
-            sales={pendingSales.filter((s) => !!s.is_synced === isSyncedView)}
+            sales={isSyncedView ? syncedSales : localPendingSales}
             selectedSaleId={currentSale.tempId}
             onSaleSelect={handleSelectPendingSale}
             onDelete={handleDeletePendingSale}
             title={isSyncedView ? "SYNCED" : "PENDING"}
+            isOffline={!isOnline && isSyncedView}
           />
         </Paper>
 
@@ -970,7 +1049,7 @@ export const PosPageOffline = () => {
         <DialogContent sx={{ height: "100%", p: 0, overflow: "hidden" }}>
           <PDFViewer width="100%" height="100%" showToolbar={true}>
             <PosShiftReportPdf
-              sales={pendingSales}
+              sales={[...localPendingSales, ...syncedSales]}
               shift={
                 shift && shift.id === selectedShiftId
                   ? shift
@@ -987,12 +1066,6 @@ export const PosPageOffline = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Thermal Invoice (Auto-popup) */}
-      <ThermalInvoiceDialog
-        open={thermalInvoiceOpen}
-        onClose={() => setThermalInvoiceOpen(false)}
-        sale={thermalInvoiceSale}
-      />
     </Box>
   );
 };
