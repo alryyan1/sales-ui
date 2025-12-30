@@ -92,13 +92,7 @@ export const navItems: NavItem[] = [
     children: [
       { to: "/reports/sales", label: "تقرير المبيعات", permission: null },
       { to: "/reports/purchases", label: "تقرير المشتريات", permission: null },
-      { to: "/reports/inventory", label: "تقرير المخزون", permission: null },
       { to: "/reports/inventory-log", label: "سجل المخزون", permission: null },
-      {
-        to: "/reports/monthly-revenue",
-        label: "الإيرادات الشهرية",
-        permission: null,
-      },
       {
         to: "/reports/sales-discounts",
         label: "المبيعات المخفضة",
@@ -106,7 +100,7 @@ export const navItems: NavItem[] = [
       },
       {
         to: "/reports/daily-income",
-        label: "تقرير الدخل اليومي",
+        label: "تقرير المبيعات الشهري",
         permission: null,
       },
     ],

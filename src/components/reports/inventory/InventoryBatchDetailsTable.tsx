@@ -1,15 +1,17 @@
 // src/components/reports/inventory/InventoryBatchDetailsTable.tsx
 import React from "react";
 
+// MUI Components
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { PurchaseItem as PurchaseItemType } from "@/services/purchaseService"; // Use the detailed type
+  Typography,
+  Box,
+} from "@mui/material";
+import { PurchaseItem as PurchaseItemType } from "@/services/purchaseService";
 import { formatCurrency, formatDate, formatNumber } from "@/constants";
 
 interface InventoryBatchDetailsTableProps {
@@ -22,50 +24,57 @@ export const InventoryBatchDetailsTable: React.FC<
 > = ({ batches, sellableUnitName }) => {
   if (!batches || batches.length === 0) {
     return (
-      <p className="px-4 py-2 text-xs text-muted-foreground">
-        لا توجد دفعات متاحة لهذا المنتج
-      </p>
+      <Box sx={{ px: 2, py: 1 }}>
+        <Typography variant="caption" color="text.secondary">
+          لا توجد دفعات متاحة لهذا المنتج
+        </Typography>
+      </Box>
     );
   }
 
   const displaySellableUnit = sellableUnitName || "وحدة";
 
   return (
-    <Table className="my-2">
-      <TableHeader>
-        <TableRow className="text-xs bg-slate-100 dark:bg-slate-700">
-          <TableHead>رقم الدفعة</TableHead>
-          <TableHead className="text-center">
+    <Table size="small" sx={{ my: 1 }}>
+      <TableHead>
+        <TableRow sx={{ bgcolor: "grey.100" }}>
+          <TableCell sx={{ fontSize: "0.75rem" }}>رقم الدفعة</TableCell>
+          <TableCell align="center" sx={{ fontSize: "0.75rem" }}>
             الكمية المتبقية ({displaySellableUnit})
-          </TableHead>
-          <TableHead>تاريخ الانتهاء</TableHead>
-          <TableHead className="text-right">
+          </TableCell>
+          <TableCell sx={{ fontSize: "0.75rem" }}>تاريخ الانتهاء</TableCell>
+          <TableCell align="right" sx={{ fontSize: "0.75rem" }}>
             التكلفة للوحدة ({displaySellableUnit})
-          </TableHead>{" "}
-          {/* Cost per Sellable Unit */}
-          <TableHead className="text-right">
+          </TableCell>
+          <TableCell align="right" sx={{ fontSize: "0.75rem" }}>
             {`سعر البيع المقترح (${displaySellableUnit})`}
-          </TableHead>
+          </TableCell>
         </TableRow>
-      </TableHeader>
+      </TableHead>
       <TableBody>
         {batches.map((batch) => (
           <TableRow
             key={batch.id}
-            className="text-xs hover:bg-slate-50 dark:hover:bg-slate-700/50"
+            hover
+            sx={{
+              "&:hover": {
+                bgcolor: "action.hover",
+              },
+            }}
           >
-            <TableCell>{batch.batch_number || "-"}</TableCell>
-            <TableCell className="text-center">
+            <TableCell sx={{ fontSize: "0.75rem" }}>
+              {batch.batch_number || "-"}
+            </TableCell>
+            <TableCell align="center" sx={{ fontSize: "0.75rem" }}>
               {formatNumber(batch.remaining_quantity)}
             </TableCell>
-            <TableCell>
+            <TableCell sx={{ fontSize: "0.75rem" }}>
               {batch.expiry_date ? formatDate(batch.expiry_date) : "-"}
             </TableCell>
-            <TableCell className="text-right">
+            <TableCell align="right" sx={{ fontSize: "0.75rem" }}>
               {formatCurrency(batch.cost_per_sellable_unit)}
-            </TableCell>{" "}
-            {/* Display cost_per_sellable_unit */}
-            <TableCell className="text-right">
+            </TableCell>
+            <TableCell align="right" sx={{ fontSize: "0.75rem" }}>
               {batch.sale_price ? formatCurrency(batch.sale_price) : "-"}
             </TableCell>
           </TableRow>

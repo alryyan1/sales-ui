@@ -1,21 +1,25 @@
 // src/components/reports/inventory/InventoryReportTable.tsx
 import React, { useState } from "react";
 
-import { cn } from "@/lib/utils";
-
-// shadcn/ui & Lucide Icons
+// MUI Components
 import {
+  Box,
   Table,
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronRight, AlertTriangle } from "lucide-react";
-// Removed Badge as not used in this specific version, but can be added back if needed
+  IconButton,
+  Collapse,
+  Typography,
+} from "@mui/material";
+
+// Lucide Icons
+import {
+  ChevronDown,
+  ChevronUp,
+  AlertTriangle,
+} from "lucide-react";
 
 // Child Component for batch details
 import { InventoryBatchDetailsTable } from "./InventoryBatchDetailsTable"; // Ensure this path is correct
@@ -59,43 +63,43 @@ export const InventoryReportTable: React.FC<InventoryReportTableProps> = ({
 
   if (products.length === 0) {
     return (
-      <div className="py-10 text-center text-muted-foreground dark:text-gray-400">
-        لم يتم العثور على أي منتجات
-      </div>
+      <Box sx={{ py: 5, textAlign: "center" }}>
+        <Typography variant="body2" color="text.secondary">
+          لم يتم العثور على أي منتجات
+        </Typography>
+      </Box>
     );
   }
 
   return (
-    <Table className="min-w-full">
-      {" "}
-      {/* Ensure table can take full width */}
-      <TableHeader>
-        <TableRow className="dark:border-gray-700">
-          <TableHead className="w-[40px] px-2"></TableHead>{" "}
-          {/* For expand icon */}
-          <TableHead className="px-2 py-3">رمز المنتج (SKU)</TableHead>
-          <TableHead className="px-2 py-3 min-w-[200px]">
+    <Table sx={{ minWidth: "100%" }}>
+      <TableHead>
+        <TableRow sx={{ bgcolor: "grey.50" }}>
+          <TableCell sx={{ width: 40, px: 1.5, py: 2 }}></TableCell>
+          <TableCell sx={{ px: 2, py: 2, fontWeight: 600 }}>رمز المنتج (SKU)</TableCell>
+          <TableCell sx={{ px: 2, py: 2, minWidth: 200, fontWeight: 600 }}>
             اسم المنتج
-          </TableHead>{" "}
-          {/* Give name more space */}
-          <TableHead className="text-center px-2 py-3">
+          </TableCell>
+          <TableCell align="center" sx={{ px: 2, py: 2, fontWeight: 600 }}>
             إجمالي المخزون (وحدة)
-          </TableHead>
-          <TableHead className="text-center px-2 py-3">حد التنبيه</TableHead>
-          <TableHead className="text-right px-2 py-3">
+          </TableCell>
+          <TableCell align="center" sx={{ px: 2, py: 2, fontWeight: 600 }}>
+            حد التنبيه
+          </TableCell>
+          <TableCell align="right" sx={{ px: 2, py: 2, fontWeight: 600 }}>
             أحدث تكلفة للوحدة
-          </TableHead>
-          <TableHead className="text-right px-2 py-3">
+          </TableCell>
+          <TableCell align="right" sx={{ px: 2, py: 2, fontWeight: 600 }}>
             آخر سعر بيع للوحدة
-          </TableHead>
-          <TableHead className="text-center px-2 py-3">
+          </TableCell>
+          <TableCell align="center" sx={{ px: 2, py: 2, fontWeight: 600 }}>
             إجمالي المشتريات
-          </TableHead>
-          <TableHead className="text-center px-2 py-3">
+          </TableCell>
+          <TableCell align="center" sx={{ px: 2, py: 2, fontWeight: 600 }}>
             إجمالي المبيعات
-          </TableHead>
+          </TableCell>
         </TableRow>
-      </TableHeader>
+      </TableHead>
       <TableBody>
         {products.map((product) => {
           const isLow =
@@ -110,72 +114,94 @@ export const InventoryReportTable: React.FC<InventoryReportTableProps> = ({
           return (
             <React.Fragment key={product.id}>
               <TableRow
-                data-state={isOpen ? "open" : "closed"}
-                className={cn(
-                  "dark:border-gray-700 hover:bg-muted/50 dark:hover:bg-gray-700/30",
-                  isLow &&
-                    !isOutOfStock &&
-                    "bg-orange-50 dark:bg-orange-900/40 hover:bg-orange-100/80 dark:hover:bg-orange-800/60",
-                  isOutOfStock &&
-                    "bg-red-50 dark:bg-red-900/40 hover:bg-red-100/80 dark:hover:bg-red-800/60"
-                )}
+                sx={{
+                  bgcolor: isOutOfStock
+                    ? "error.light"
+                    : isLow
+                    ? "warning.light"
+                    : undefined,
+                  transition: "background-color 0.2s ease",
+                  "&:hover": {
+                    bgcolor: isOutOfStock
+                      ? "error.lighter"
+                      : isLow
+                      ? "warning.lighter"
+                      : "action.hover",
+                  },
+                }}
               >
-                <TableCell className="px-2 py-2">
+                <TableCell sx={{ px: 1.5, py: 1.5 }}>
                   {hasBatches ? (
-                    <Button
-                      variant="ghost"
-                      size="icon"
+                    <IconButton
+                      size="small"
                       onClick={() => toggleRow(product.id)}
-                      className="h-8 w-8 data-[state=open]:bg-accent"
+                      sx={{ 
+                        width: 32, 
+                        height: 32,
+                        transition: "transform 0.2s ease",
+                        "&:hover": {
+                          transform: "scale(1.1)",
+                        },
+                      }}
                     >
                       {isOpen ? (
-                        <ChevronDown className="h-4 w-4" />
+                        <ChevronUp size={18} />
                       ) : (
-                        <ChevronRight className="h-4 w-4" />
+                        <ChevronDown size={18} />
                       )}
-                      <span className="sr-only">{isOpen ? "طي" : "توسيع"}</span>{" "}
-                      {/* Add keys */}
-                    </Button>
+                    </IconButton>
                   ) : (
-                    <div className="w-8"></div> // Placeholder for alignment
+                    <Box sx={{ width: 32 }} />
                   )}
                 </TableCell>
-                <TableCell className="px-2 py-3 dark:text-gray-300">
+                <TableCell sx={{ px: 2, py: 1.5 }}>
                   {product.sku || "-"}
                 </TableCell>
-                <TableCell className="px-2 py-3 font-medium dark:text-gray-100">
+                <TableCell sx={{ px: 2, py: 1.5, fontWeight: 500 }}>
                   {product.name}
                 </TableCell>
-                <TableCell className="text-center px-2 py-3 dark:text-gray-100">
-                  {formatNumber(product.stock_quantity)} {sellableUnitName}
-                  {(isLow || isOutOfStock) && (
-                    <AlertTriangle className="inline ms-1 h-4 w-4 text-orange-500" />
-                  )}
+                <TableCell align="center" sx={{ px: 2, py: 1.5 }}>
+                  <Box 
+                    sx={{ 
+                      display: "flex", 
+                      alignItems: "center", 
+                      justifyContent: "center", 
+                      gap: 0.75,
+                    }}
+                  >
+                    {formatNumber(product.stock_quantity)} {sellableUnitName}
+                    {(isLow || isOutOfStock) && (
+                      <AlertTriangle 
+                        size={16} 
+                        style={{ 
+                          color: "var(--mui-palette-warning-main)",
+                        }} 
+                      />
+                    )}
+                  </Box>
                 </TableCell>
-                <TableCell className="text-center px-2 py-3 dark:text-gray-300">
+                <TableCell align="center" sx={{ px: 2, py: 1.5 }}>
                   {product.stock_alert_level !== null
-                    ? `${formatNumber(
-                        product.stock_alert_level
-                      )} ${sellableUnitName}`
+                    ? `${formatNumber(product.stock_alert_level)} ${sellableUnitName}`
                     : "-"}
                 </TableCell>
-                <TableCell className="text-right px-2 py-3 dark:text-gray-100">
+                <TableCell align="right" sx={{ px: 2, py: 1.5 }}>
                   {product.latest_cost_per_sellable_unit
                     ? formatCurrency(product.latest_cost_per_sellable_unit)
                     : "-"}
                 </TableCell>
-                <TableCell className="text-right px-2 py-3 dark:text-gray-100">
+                <TableCell align="right" sx={{ px: 2, py: 1.5 }}>
                   {product.last_sale_price_per_sellable_unit
                     ? formatCurrency(product.last_sale_price_per_sellable_unit)
                     : "-"}
                 </TableCell>
-                <TableCell className="text-center px-2 py-3 dark:text-gray-100">
+                <TableCell align="center" sx={{ px: 2, py: 1.5 }}>
                   {product.total_items_purchased !== null &&
                   product.total_items_purchased !== undefined
                     ? formatNumber(product.total_items_purchased)
                     : "-"}
                 </TableCell>
-                <TableCell className="text-center px-2 py-3 dark:text-gray-100">
+                <TableCell align="center" sx={{ px: 2, py: 1.5 }}>
                   {product.total_items_sold !== null &&
                   product.total_items_sold !== undefined
                     ? formatNumber(product.total_items_sold)
@@ -183,35 +209,34 @@ export const InventoryReportTable: React.FC<InventoryReportTableProps> = ({
                 </TableCell>
               </TableRow>
               {/* Collapsible Content for Batches */}
-              {hasBatches && ( // Render Collapsible only if there are batches
-                <TableRow
-                  data-state={isOpen ? "open" : "closed"}
-                  className={cn(
-                    !isOpen && "hidden",
-                    "bg-slate-50 dark:bg-gray-800/50 dark:border-gray-700"
-                  )}
-                >
-                  <TableCell colSpan={10} className="p-0">
-                    {" "}
-                    {/* Adjusted colSpan to match new number of columns */}
-                    <Collapsible
-                      open={isOpen}
-                      onOpenChange={() => toggleRow(product.id)}
-                      className="w-full"
-                    >
-                      {/* CollapsibleTrigger is handled by the button in the main row */}
-                      <CollapsibleContent className="p-4 border-t dark:border-gray-700">
-                        {" "}
-                        {/* Added border-t for separation */}
-                        <h4 className="text-sm font-semibold mb-2 text-gray-700 dark:text-gray-200">
+              {hasBatches && (
+                <TableRow>
+                  <TableCell colSpan={10} sx={{ p: 0, borderBottom: "none" }}>
+                    <Collapse in={isOpen} timeout="auto" unmountOnExit>
+                      <Box 
+                        sx={{ 
+                          p: 3, 
+                          bgcolor: "grey.50", 
+                          borderTop: 1, 
+                          borderColor: "divider",
+                        }}
+                      >
+                        <Typography 
+                          variant="subtitle2" 
+                          sx={{ 
+                            mb: 2, 
+                            fontWeight: 600,
+                            color: "text.primary",
+                          }}
+                        >
                           {`تفاصيل الدفعات للمنتج: ${product.name}`}
-                        </h4>
+                        </Typography>
                         <InventoryBatchDetailsTable
-                          batches={product.available_batches!} // Assert as batches exist
+                          batches={product.available_batches!}
                           sellableUnitName={product.sellable_unit_name}
                         />
-                      </CollapsibleContent>
-                    </Collapsible>
+                      </Box>
+                    </Collapse>
                   </TableCell>
                 </TableRow>
               )}

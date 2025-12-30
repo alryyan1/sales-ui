@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Box, Typography, CircularProgress } from "@mui/material";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import { formatNumber } from "@/constants";
-import { offlineSaleService } from "../../services/offlineSaleService";
+import productService from "../../services/productService";
 import { Product } from "../../services/productService";
 
 interface LiveStockDisplayProps {
@@ -11,6 +11,7 @@ interface LiveStockDisplayProps {
   selectedBatchNumber?: string | null;
   isLowStock: boolean;
   onStockClick?: (event: React.MouseEvent<HTMLElement>, product: any) => void;
+  currentSaleQuantity?: number;
 }
 
 export const LiveStockDisplay: React.FC<LiveStockDisplayProps> = ({
@@ -19,7 +20,9 @@ export const LiveStockDisplay: React.FC<LiveStockDisplayProps> = ({
   selectedBatchNumber,
   isLowStock,
   onStockClick,
+  currentSaleQuantity = 0,
 }) => {
+  console.log(product,'product',selectedBatchId,'selectedBatchId',selectedBatchNumber,'selectedBatchNumber',isLowStock,'isLowStock',onStockClick,'onStockClick');
   const [loading, setLoading] = useState(false);
   const [currentStock, setCurrentStock] = useState<number>(
     product.stock_quantity
@@ -29,30 +32,27 @@ export const LiveStockDisplay: React.FC<LiveStockDisplayProps> = ({
     let mounted = true;
 
     const fetchLatestStock = async () => {
+      // Only fetch from backend if online
+      if (!navigator.onLine) {
+        // If offline, use the product stock_quantity that was passed in
+        setCurrentStock(product.stock_quantity);
+        return;
+      }
+
       setLoading(true);
       try {
-        // Fetch from local DB as it contains the synced data
-        // We could also potentially try to fetch from API if online,
-        // but offlineSaleService logic is cleaner to keep here.
-        // Assuming searchProducts returns array, we filter by ID.
-        // Or if we had a direct getProduct(id) in offlineSaleService which hits local DB.
-        // offlineSaleService.searchProducts uses dbService.searchProducts which queries by index.
-        // Let's rely on standard search for now or add getProductById to offlineSaleService.
-
-        // Actually, let's use searchProducts with id? No, string search.
-        // It's better to add getProduct to offlineSaleService.
-
-        // For now, simulating "request for this sale item" behavior
-        // by verifying against the local DB which is our "fresh" source after sync.
-
-        const products = await offlineSaleService.searchProducts(product.name);
-        const freshProduct = products.find((p) => p.id === product.id);
+        // Fetch fresh stock from backend API
+        const freshProduct = await productService.getProduct(product.id);
 
         if (mounted && freshProduct) {
           setCurrentStock(freshProduct.stock_quantity);
         }
       } catch (err) {
-        console.error("Failed to fetch live stock", err);
+        console.error("Failed to fetch live stock from backend", err);
+        // On error, fallback to the product stock_quantity that was passed in
+        if (mounted) {
+          setCurrentStock(product.stock_quantity);
+        }
       } finally {
         if (mounted) setLoading(false);
       }
@@ -63,12 +63,15 @@ export const LiveStockDisplay: React.FC<LiveStockDisplayProps> = ({
     return () => {
       mounted = false;
     };
-  }, [product.id, product.name]); // Re-fetch if product identity changes
+  }, [product.id, currentSaleQuantity]); // Re-fetch if product ID or quantity changes
+
+  // Calculate available stock (base stock minus quantity in current sale)
+  const availableStock = Math.max(0, currentStock - currentSaleQuantity);
 
   const displayedStock = selectedBatchId
     ? product.available_batches?.find((b) => b.id === selectedBatchId)
         ?.remaining_quantity || 0
-    : currentStock;
+    : availableStock;
 
   return (
     <Box
@@ -117,10 +120,10 @@ export const LiveStockDisplay: React.FC<LiveStockDisplayProps> = ({
       )}
       {!selectedBatchId &&
         !loading &&
-        /* We should ideally re-calc low stock based on fetched currentStock, 
+        /* We should ideally re-calc low stock based on fetched availableStock, 
            but passing isLowStock prop function is tricky from parent if it relies on value. 
            Let's rely on parent's isLowStock for now or simple check if we had alert level. */
-        currentStock <= (product.stock_alert_level || 0) && (
+        availableStock <= (product.stock_alert_level || 0) && (
           <Typography variant="caption" color="error.main">
             مخزون منخفض
           </Typography>

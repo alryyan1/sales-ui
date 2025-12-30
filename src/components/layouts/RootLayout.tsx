@@ -77,7 +77,7 @@ const RootLayout: React.FC = () => {
         {/* ... Drawer logic ... */}
         <Drawer
           variant="temporary"
-          anchor="left"
+          anchor="right"
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{
@@ -102,7 +102,7 @@ const RootLayout: React.FC = () => {
         </Drawer>
         <Drawer
           variant="permanent"
-          anchor="left"
+          anchor="right"
           sx={{
             display: { xs: "none", sm: "block" },
             "& .MuiDrawer-paper": {

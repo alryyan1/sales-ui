@@ -49,8 +49,15 @@ export const PosPageOffline = () => {
         if (stored) {
           try {
             const parsed = JSON.parse(stored);
-            setShift(parsed);
-            if (!selectedShiftId && parsed?.id) setSelectedShiftId(parsed.id);
+            // Ensure is_open is a boolean
+            const normalizedShift = {
+              ...parsed,
+              is_open: parsed.is_open === true || parsed.is_open === "true" || parsed.is_open === 1,
+            };
+            setShift(normalizedShift);
+            if (!selectedShiftId && normalizedShift?.id) {
+              setSelectedShiftId(normalizedShift.id);
+            }
           } catch (e) {
             console.error("Error parsing stored shift", e);
           }
@@ -62,11 +69,16 @@ export const PosPageOffline = () => {
         const response = await apiClient.get("/shifts/current");
         if (response.status === 200) {
           const shiftData = response.data.data || response.data;
-          setShift(shiftData);
-          localStorage.setItem("current_pos_shift", JSON.stringify(shiftData));
+          // Ensure is_open is a boolean
+          const normalizedShift = {
+            ...shiftData,
+            is_open: shiftData.is_open === true || shiftData.is_open === "true" || shiftData.is_open === 1,
+          };
+          setShift(normalizedShift);
+          localStorage.setItem("current_pos_shift", JSON.stringify(normalizedShift));
           // Initialize selected shift ID
-          if (!selectedShiftId && shiftData?.id) {
-            setSelectedShiftId(shiftData.id);
+          if (!selectedShiftId && normalizedShift?.id) {
+            setSelectedShiftId(normalizedShift.id);
           }
         } else {
           setShift(null);
@@ -84,19 +96,24 @@ export const PosPageOffline = () => {
       }
     };
     fetchShift();
-  }, [isOnline]);
+  }, [isOnline, selectedShiftId]); // Run on mount and when isOnline or selectedShiftId changes
 
   const handleOpenShift = async () => {
     try {
       setShiftLoading(true);
       const response = await apiClient.post("/shifts/open");
       const newShift = response.data.data || response.data;
-      setShift(newShift);
-      localStorage.setItem("current_pos_shift", JSON.stringify(newShift));
+      // Ensure is_open is a boolean
+      const normalizedShift = {
+        ...newShift,
+        is_open: true, // Explicitly set to true when opening
+      };
+      setShift(normalizedShift);
+      localStorage.setItem("current_pos_shift", JSON.stringify(normalizedShift));
 
       // Automatically select the newly opened shift
-      if (newShift?.id) {
-        setSelectedShiftId(newShift.id);
+      if (normalizedShift?.id) {
+        setSelectedShiftId(normalizedShift.id);
       }
 
       toast.success("تم فتح الوردية");
@@ -113,8 +130,13 @@ export const PosPageOffline = () => {
       setShiftLoading(true);
       const response = await apiClient.post("/shifts/close");
       const updatedShift = response.data.data || response.data;
-      setShift(updatedShift);
-      localStorage.setItem("current_pos_shift", JSON.stringify(updatedShift));
+      // Ensure is_open is a boolean
+      const normalizedShift = {
+        ...updatedShift,
+        is_open: false, // Explicitly set to false when closing
+      };
+      setShift(normalizedShift);
+      localStorage.setItem("current_pos_shift", JSON.stringify(normalizedShift));
       toast.success("تم إغلاق الوردية");
     } catch (error) {
       console.error("Failed to close shift:", error);
@@ -198,18 +220,19 @@ export const PosPageOffline = () => {
               const updated = lastSyncedProducts.find(
                 (p: Product) => p.id === pId
               );
-              if (updated) {
+              if (updated && item.product) {
                 console.log(
                   `Updating active cart item stock for ${updated.name}: ${updated.stock_quantity}`
                 );
+                const updatedProduct: Product = {
+                  ...(item.product as Product),
+                  stock_quantity: updated.stock_quantity,
+                  current_stock_quantity: updated.stock_quantity,
+                };
                 return {
                   ...item,
-                  product: {
-                    ...item.product,
-                    stock_quantity: updated.stock_quantity,
-                    current_stock_quantity: updated.stock_quantity,
-                  },
-                };
+                  product: updatedProduct,
+                } as OfflineSaleItem;
               }
               return item;
             });
@@ -266,7 +289,9 @@ export const PosPageOffline = () => {
       return;
     }
 
-    if (!shift || !shift.is_open) {
+    // More robust check for shift.is_open
+    const isShiftOpen = shift?.is_open === true || (typeof shift?.is_open === "string" && shift.is_open === "true") || (typeof shift?.is_open === "number" && shift.is_open === 1);
+    if (!shift || !isShiftOpen) {
       toast.error("يجب فتح الوردية قبل إضافة منتجات");
       return;
     }
@@ -712,17 +737,84 @@ export const PosPageOffline = () => {
   };
 
   // Select sale from history
-  const handleSelectPendingSale = (sale: OfflineSale) => {
-    setCurrentSale(sale);
+  const handleSelectPendingSale = async (sale: OfflineSale) => {
+    // Always refresh product data from IndexedDB to get current stock for all sales
+    if (sale.items.length > 0) {
+      try {
+        const allLocalProducts = await offlineSaleService.searchProducts("");
+        const productMap = new Map(allLocalProducts.map(p => [p.id, p]));
+        
+        // Update sale items with fresh product data
+        const updatedItems = sale.items.map((item) => {
+          const freshProduct = productMap.get(item.product_id);
+          if (freshProduct) {
+            return {
+              ...item,
+              product: freshProduct,
+            };
+          }
+          // If product not found in IndexedDB, try to use existing product data
+          return item;
+        });
+        
+        setCurrentSale({
+          ...sale,
+          items: updatedItems,
+        });
+      } catch (error) {
+        console.error("Error refreshing product data for sale:", error);
+        // Fallback to original sale if refresh fails
+        setCurrentSale(sale);
+      }
+    } else {
+      setCurrentSale(sale);
+    }
   };
 
   // Create new sale
   const handleNewSale = useCallback(async () => {
-    if (!shift || !shift.is_open) {
+    let currentShift = shift;
+    
+    // Refresh shift state if online and shift is null/stale
+    if (isOnline && (!currentShift || !currentShift.id)) {
+      try {
+        const response = await apiClient.get("/shifts/current");
+        if (response.status === 200) {
+          const shiftData = response.data.data || response.data;
+          const normalizedShift = {
+            ...shiftData,
+            is_open: shiftData.is_open === true || shiftData.is_open === "true" || shiftData.is_open === 1,
+          };
+          setShift(normalizedShift);
+          localStorage.setItem("current_pos_shift", JSON.stringify(normalizedShift));
+          if (!selectedShiftId && normalizedShift?.id) {
+            setSelectedShiftId(normalizedShift.id);
+          }
+          // Use the refreshed shift for validation
+          currentShift = normalizedShift;
+        }
+      } catch (error: any) {
+        // If refresh fails, continue with existing shift check
+        console.error("Failed to refresh shift:", error);
+      }
+    }
+
+    // More robust check for shift.is_open (handle boolean, string, or undefined)
+    const isShiftOpen = currentShift?.is_open === true || (typeof currentShift?.is_open === "string" && currentShift.is_open === "true") || (typeof currentShift?.is_open === "number" && currentShift.is_open === 1);
+    
+    if (!currentShift || !isShiftOpen) {
+      console.log("Cannot create sale - Shift state:", currentShift);
       toast.error("يجب فتح الوردية أولاً لإنشاء عملية بيع جديدة");
       return;
     }
-    const newSale = offlineSaleService.createDraftSale(shift.id);
+    
+    if (!currentShift.id) {
+      console.log("Cannot create sale - Shift ID missing:", currentShift);
+      toast.error("خطأ: معرف الوردية غير موجود");
+      return;
+    }
+    
+    const newSale = offlineSaleService.createDraftSale(currentShift.id);
     await offlineSaleService.saveDraft(newSale);
     setCurrentSale(newSale);
     // List refresh handled by useEffect or we can force it here
@@ -732,7 +824,7 @@ export const PosPageOffline = () => {
     setTimeout(() => {
       headerRef.current?.focusSearch();
     }, 100);
-  }, [shift, loadLocalPendingSales]);
+  }, [shift, loadLocalPendingSales, isOnline, selectedShiftId]);
 
   // --- Adapters ---
 
@@ -804,16 +896,7 @@ export const PosPageOffline = () => {
         setIsPaymentDialogOpen(true);
       }
     }
-  }, [isPendingSaleSelected, currentSale]);
-
-  // Handle Hold Sale
-  const handleHoldSale = useCallback(() => {
-    if (currentSale.items.length > 0 && currentSale.status !== "completed" && !currentSale.is_synced) {
-      const heldSale = { ...currentSale, status: "held" as const };
-      updateCurrentSale(heldSale);
-      toast.success(currentSale.status === "held" ? "تم استئناف البيع" : "تم تعليق البيع");
-    }
-  }, [currentSale]);
+  }, [isPendingSaleSelected, currentSale, handleNewSale]);
 
   // Global Key Listener for Shortcuts
   useEffect(() => {
@@ -830,12 +913,6 @@ export const PosPageOffline = () => {
       if (e.key === "+") {
         e.preventDefault();
         handlePlusAction();
-      }
-      
-      // F2: Hold current sale
-      if (e.key === "F2") {
-        e.preventDefault();
-        handleHoldSale();
       }
       
       // Ctrl/Cmd + N: New sale
@@ -856,7 +933,7 @@ export const PosPageOffline = () => {
 
     window.addEventListener("keydown", handleGlobalKeyDown);
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
-  }, [handlePlusAction, handleHoldSale, handleNewSale, currentSale]);
+  }, [handlePlusAction, handleNewSale, currentSale]);
 
   return (
     <Box

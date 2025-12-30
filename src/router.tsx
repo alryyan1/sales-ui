@@ -33,8 +33,6 @@ import SalesReturnsListPage from "./pages/sales/SalesReturnsListPage";
 // Reports
 import SalesReportPage from "./pages/reports/SalesReportPage";
 import PurchaseReportPage from "./pages/reports/PurchaseReportPage";
-import InventoryReportPage from "./pages/reports/InventoryReportPage";
-import MonthlyRevenueReportPage from "./components/reports/MonthlyRevenueReportPage";
 import SalesWithDiscountsPage from "./pages/reports/SalesWithDiscountsPage";
 import DailyIncomeReportPage from "./pages/reports/DailyIncomeReportPage";
 import InventoryLogPage from "./pages/reports/InventoryLogPage";
@@ -245,22 +243,6 @@ const router = createHashRouter([
                 element: (
                   <PermissionGuard requiredPermission="view-reports-purchases">
                     <PurchaseReportPage />
-                  </PermissionGuard>
-                ),
-              },
-              {
-                path: "inventory",
-                element: (
-                  <PermissionGuard requiredPermission="view-reports-inventory">
-                    <InventoryReportPage />
-                  </PermissionGuard>
-                ),
-              },
-              {
-                path: "monthly-revenue",
-                element: (
-                  <PermissionGuard requiredPermission="view-reports-monthly-revenue">
-                    <MonthlyRevenueReportPage />
                   </PermissionGuard>
                 ),
               },

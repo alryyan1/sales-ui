@@ -3,75 +3,46 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-
 import {
   useNavigate,
   useSearchParams,
   Link as RouterLink,
 } from "react-router-dom";
 import { toast } from "sonner";
-import { format, parseISO, startOfMonth } from "date-fns";
-import { cn } from "@/lib/utils";
+import dayjs from "dayjs";
 
-// MUI Components
-import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
-import TextField from "@mui/material/TextField";
-import Autocomplete from "@mui/material/Autocomplete";
-import Button from "@mui/material/Button";
-import CircularProgress from "@mui/material/CircularProgress";
-import Alert from "@mui/material/Alert";
-import IconButton from "@mui/material/IconButton";
-import Tooltip from "@mui/material/Tooltip";
+// Import CSS
+import "./InventoryLogPage.css";
 
-// Icons
-import ArrowLeft from "@mui/icons-material/ArrowBack";
-import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
-import FilterListIcon from "@mui/icons-material/FilterList";
-import ClearIcon from "@mui/icons-material/Clear";
-
-// shadcn/ui & Lucide Icons
+// MUI Components (Used for specific inputs where needed, but avoiding Grid layout)
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
+  TextField,
+  Button,
+  CircularProgress,
+  IconButton,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
+  MenuItem,
+  FormControl,
+  InputLabel,
+  InputAdornment,
+  Collapse,
   Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-  PaginationEllipsis,
-} from "@/components/ui/pagination";
+  Box,
+} from "@mui/material";
 
-import { Badge } from "@/components/ui/badge";
+// Icons (Lucide)
+import {
+  ArrowLeft,
+  Filter,
+  Search,
+  Store,
+  Download,
+  ChevronDown,
+  ChevronUp,
+  User,
+  FileText,
+  AlertCircle,
+} from "lucide-react";
 
 // Services and Types
 import inventoryLogService, {
@@ -79,46 +50,44 @@ import inventoryLogService, {
   PaginatedResponse as LogPaginatedResponse,
 } from "../../services/inventoryLogService";
 import productService, { Product } from "../../services/productService";
-import { formatCurrency, formatDate, formatNumber } from "@/constants";
-import dayjs from "dayjs";
+import { warehouseService, Warehouse } from "../../services/warehouseService";
+import { formatNumber } from "@/constants";
 
-// --- Zod Schema for Filter Form ---
+// --- Zod Schema ---
 const logFilterSchema = z
   .object({
     startDate: z.string().optional(),
     endDate: z.string().optional(),
     productId: z.string().nullable().optional(),
+    warehouseId: z.string().nullable().optional(),
     type: z.string().nullable().optional(),
     search: z.string().optional(),
   })
   .refine(
     (data) =>
       !data.endDate || !data.startDate || data.endDate >= data.startDate,
-    {
-      message: "تاريخ الانتهاء يجب أن يكون بعد تاريخ البدء",
-      path: ["endDate"],
-    }
+    { message: "End date must be after start date", path: ["endDate"] }
   );
 type LogFilterValues = z.infer<typeof logFilterSchema>;
 
 const movementTypes = [
-  { value: "purchase", label: "شراء" },
-  { value: "sale", label: "بيع" },
-  { value: "adjustment", label: "تعديل مخزني" },
-  { value: "requisition_issue", label: "صرف مخزني" },
+  { value: "purchase", label: "شراء", colorClass: "chip-success" },
+  { value: "sale", label: "بيع", colorClass: "chip-error" },
+  { value: "adjustment", label: "تعديل مخزني", colorClass: "chip-warning" },
+  { value: "requisition_issue", label: "صرف مخزني", colorClass: "chip-info" },
 ];
 
-const movementTypeLabels: Record<string, string> = {
-  purchase: "شراء",
-  sale: "بيع",
-  adjustment: "تعديل مخزني",
-  requisition_issue: "صرف مخزني",
-  return: "مرتجع",
+const getMovementLabel = (type: string) => {
+  const t = movementTypes.find((m) => m.value === type);
+  return t ? t.label : type;
 };
 
-// --- Component ---
+const getMovementColorClass = (type: string) => {
+  const t = movementTypes.find((m) => m.value === type);
+  return t ? t.colorClass : "chip-default";
+};
+
 const InventoryLogPage: React.FC = () => {
-  // Removed useTranslation
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -128,42 +97,46 @@ const InventoryLogPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [productsForFilter, setProductsForFilter] = useState<Product[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [loadingProductsFilter, setLoadingProductsFilter] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
 
-  // --- Form for Filters ---
+  // --- Form ---
   const form = useForm<LogFilterValues>({
     resolver: zodResolver(logFilterSchema),
     defaultValues: {
       startDate: searchParams.get("startDate") || "",
       endDate: searchParams.get("endDate") || "",
       productId: searchParams.get("productId") || null,
+      warehouseId: searchParams.get("warehouseId") || null,
       type: searchParams.get("type") || null,
       search: searchParams.get("search") || "",
     },
   });
   const { control, handleSubmit, reset, watch } = form;
 
-  // --- Fetch Products for Filter ---
+  // --- Effects ---
+  useEffect(() => {
+    warehouseService
+      .getAll()
+      .then(setWarehouses)
+      .catch(() =>
+        toast.error("فشل تحميل المستودعات", { id: "warehouse-fetch-error" })
+      );
+    fetchProductsForFilter("");
+  }, []);
+
   const fetchProductsForFilter = useCallback(async (search = "") => {
     setLoadingProductsFilter(true);
     try {
       const data = await productService.getProductsForAutocomplete(search, 100);
       setProductsForFilter(data);
-    } catch (err) {
-      toast.error("خطأ", {
-        description: productService.getErrorMessage(err),
-      });
     } finally {
       setLoadingProductsFilter(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchProductsForFilter("");
-  }, [fetchProductsForFilter]);
-
-  // --- Fetch Log Data ---
   const fetchLog = useCallback(
     async (filters: LogFilterValues, page: number) => {
       setIsLoading(true);
@@ -174,6 +147,9 @@ const InventoryLogPage: React.FC = () => {
           startDate: filters.startDate || undefined,
           endDate: filters.endDate || undefined,
           productId: filters.productId ? Number(filters.productId) : undefined,
+          warehouseId: filters.warehouseId
+            ? Number(filters.warehouseId)
+            : undefined,
           type: filters.type || undefined,
           search: filters.search || undefined,
         };
@@ -184,8 +160,9 @@ const InventoryLogPage: React.FC = () => {
         );
         setLogData(data);
       } catch (err) {
-        console.error("Failed to fetch inventory log:", err);
-        setError("خطأ");
+        console.error(err);
+        setError("فشل في تحميل السجل");
+        toast.error("فشل في تحميل السجل", { id: "log-fetch-error" });
       } finally {
         setIsLoading(false);
       }
@@ -193,17 +170,18 @@ const InventoryLogPage: React.FC = () => {
     []
   );
 
-  // --- Effect to Fetch Log When Filters/Page Change ---
   const currentFilters = useMemo(
     () => ({
       startDate: searchParams.get("startDate") || "",
       endDate: searchParams.get("endDate") || "",
       productId: searchParams.get("productId") || null,
+      warehouseId: searchParams.get("warehouseId") || null,
       type: searchParams.get("type") || null,
       search: searchParams.get("search") || "",
     }),
     [searchParams]
   );
+
   const currentPage = useMemo(
     () => Number(searchParams.get("page") || "1"),
     [searchParams]
@@ -214,58 +192,50 @@ const InventoryLogPage: React.FC = () => {
     fetchLog(currentFilters, currentPage);
   }, [currentFilters, currentPage, fetchLog, reset]);
 
-  // --- Filter/Pagination Handlers ---
+  // --- Handlers ---
   const onFilterSubmit: SubmitHandler<LogFilterValues> = (data) => {
     const params = new URLSearchParams();
-
-    if (data.startDate) {
-      params.set("startDate", data.startDate);
-    }
-    if (data.endDate) {
-      params.set("endDate", data.endDate);
-    }
-    if (data.productId) {
-      params.set("productId", data.productId);
-    }
-    if (data.type) {
-      params.set("type", data.type);
-    }
-    if (data.search) {
-      params.set("search", data.search);
-    }
-
+    Object.entries(data).forEach(([key, value]) => {
+      if (value) params.set(key, value);
+    });
     setSearchParams(params);
   };
 
   const clearFilters = () => {
-    reset();
+    reset({
+      startDate: "",
+      endDate: "",
+      productId: null,
+      warehouseId: null,
+      type: null,
+      search: "",
+    });
     setSearchParams({});
   };
 
-  const handlePageChange = (newPage: number) => {
+  const handlePageChange = (_: any, newPage: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("page", newPage.toString());
     setSearchParams(params);
   };
 
-  // --- PDF Generation ---
   const generatePdf = async () => {
     setIsGeneratingPdf(true);
     try {
-      const filters = watch();
       const apiFilters = {
-        startDate: filters.startDate || undefined,
-        endDate: filters.endDate || undefined,
-        productId: filters.productId ? Number(filters.productId) : undefined,
-        type: filters.type || undefined,
-        search: filters.search || undefined,
+        startDate: watch("startDate") || undefined,
+        endDate: watch("endDate") || undefined,
+        productId: watch("productId") ? Number(watch("productId")) : undefined,
+        warehouseId: watch("warehouseId")
+          ? Number(watch("warehouseId"))
+          : undefined,
+        type: watch("type") || undefined,
+        search: watch("search") || undefined,
       };
-
-      const response = await inventoryLogService.generatePdf(apiFilters);
-
-      // Create blob and download
-      const blob = new Blob([response], { type: "application/pdf" });
-      const url = window.URL.createObjectURL(blob);
+      const blob = await inventoryLogService.generatePdf(apiFilters);
+      const url = window.URL.createObjectURL(
+        new Blob([blob], { type: "application/pdf" })
+      );
       const link = document.createElement("a");
       link.href = url;
       link.download = `inventory-log-${dayjs().format("YYYY-MM-DD")}.pdf`;
@@ -273,392 +243,321 @@ const InventoryLogPage: React.FC = () => {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-
-      toast.success("تم إنشاء ملف PDF بنجاح");
-    } catch (error) {
-      console.error("Failed to generate PDF:", error);
-      toast.error("خطأ", { description: "فشل إنشاء ملف PDF" });
+      toast.success("PDF Created", { id: "pdf-success" });
+    } catch {
+      toast.error("Error creating PDF", { id: "pdf-error" });
     } finally {
       setIsGeneratingPdf(false);
     }
   };
 
-  const getMovementTypeColor = (type: string) => {
-    if (type.includes("purchase")) return "text-green-600 dark:text-green-400";
-    if (type.includes("sale") || type.includes("issue"))
-      return "text-red-600 dark:text-red-400";
-    if (type.includes("adjustment")) return "text-blue-600 dark:text-blue-400";
-    return "text-muted-foreground";
-  };
-
   return (
-    <div className="p-4 md:p-6 lg:p-8 dark:bg-gray-950 min-h-screen pb-10">
+    <div className="inventory-log-page">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <IconButton onClick={() => navigate("/reports")} size="large">
-            <ArrowLeft />
-          </IconButton>
-          <Typography
-            variant="h4"
-            component="h1"
-            className="text-2xl md:text-3xl font-semibold"
-          >
-            سجل حركات المخزون
-          </Typography>
+      <div className="page-header">
+        <div className="header-title-group">
+          <button className="back-button" onClick={() => navigate("/reports")}>
+            <ArrowLeft size={20} className="text-muted" />
+          </button>
+          <div className="header-text">
+            <h1>سجل حركات المخزون</h1>
+            <p>مراقبة حركة المخزون عبر جميع المستودعات</p>
+          </div>
         </div>
         <Button
           variant="contained"
+          size="medium"
           startIcon={
             isGeneratingPdf ? (
-              <CircularProgress size={20} />
+              <CircularProgress size={16} color="inherit" />
             ) : (
-              <PictureAsPdfIcon />
+              <Download size={18} />
             )
           }
           onClick={generatePdf}
           disabled={isGeneratingPdf}
-          size="large"
+          sx={{
+            borderRadius: 2,
+            height: 42,
+            px: 3,
+            textTransform: "none",
+            fontWeight: 600,
+          }}
         >
-          {isGeneratingPdf ? "جاري إنشاء PDF" : "تصدير PDF"}
+          {isGeneratingPdf ? "جاري التصدير..." : "تصدير PDF"}
         </Button>
       </div>
 
-      {/* Filter Form - No Card Wrapper */}
-      <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-        <Typography variant="h6" className="mb-4 text-lg font-semibold">
-          الفلاتر
-        </Typography>
-        <Form {...form}>
+      {/* Filter Card */}
+      <div className="filter-card">
+        <div
+          className="filter-header"
+          onClick={() => setShowFilters(!showFilters)}
+        >
+          <div className="filter-header-title">
+            <Filter size={18} />
+            <span>خيارات التصفية</span>
+          </div>
+          {showFilters ? (
+            <ChevronUp size={18} color="#64748b" />
+          ) : (
+            <ChevronDown size={18} color="#64748b" />
+          )}
+        </div>
+
+        <Collapse in={showFilters}>
           <form onSubmit={handleSubmit(onFilterSubmit)}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 items-end">
-              {/* Start Date */}
-              <FormField
-                control={control}
-                name="startDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-base">تاريخ البدء</FormLabel>
-                    <FormControl>
-                      <TextField
-                        type="date"
+            <div className="filter-grid">
+              <div className="filter-grid-search">
+                <Controller
+                  control={control}
+                  name="search"
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      placeholder="بحث (اسم المنتج، رقم المستند...)"
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Search size={18} color="#94a3b8" />
+                          </InputAdornment>
+                        ),
+                      }}
+                      size="medium"
+                    />
+                  )}
+                />
+              </div>
+              <div>
+                <Controller
+                  control={control}
+                  name="warehouseId"
+                  render={({ field }) => (
+                    <FormControl fullWidth size="medium">
+                      <InputLabel>المستودع</InputLabel>
+                      <Select
                         {...field}
-                        size="medium"
-                        fullWidth
-                        InputProps={{
-                          style: { fontSize: "16px" },
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* End Date */}
-              <FormField
-                control={control}
-                name="endDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-base">تاريخ الانتهاء</FormLabel>
-                    <FormControl>
-                      <TextField
-                        type="date"
-                        {...field}
-                        size="medium"
-                        fullWidth
-                        InputProps={{
-                          style: { fontSize: "16px" },
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Product Filter - MUI Autocomplete */}
-              <FormField
-                control={control}
-                name="productId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-base">المنتج</FormLabel>
-                    <FormControl>
-                      <Autocomplete
-                        options={productsForFilter}
-                        getOptionLabel={(option) => option.name}
-                        value={
-                          productsForFilter.find(
-                            (p) => String(p.id) === field.value
-                          ) || null
-                        }
-                        onChange={(_, newValue) =>
-                          field.onChange(newValue ? String(newValue.id) : null)
-                        }
-                        loading={loadingProductsFilter}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            placeholder="جميع المنتجات"
-                            size="medium"
-                            InputProps={{
-                              ...params.InputProps,
-                              style: { fontSize: "16px" },
-                            }}
-                          />
-                        )}
-                        renderOption={(props, option) => (
-                          <Box component="li" {...props}>
-                            <Typography variant="body1">
-                              {option.name} ({option.sku})
-                            </Typography>
-                          </Box>
-                        )}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Type Filter */}
-              <FormField
-                control={control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-base">نوع الحركة</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value ?? ""}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="text-base">
-                          <SelectValue placeholder="جميع الأنواع" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value=" ">جميع الأنواع</SelectItem>
-                        {movementTypes.map((mt) => (
-                          <SelectItem key={mt.value} value={mt.value}>
-                            {mt.label}
-                          </SelectItem>
+                        value={field.value || ""}
+                        label="المستودع"
+                      >
+                        <MenuItem value="">الكل</MenuItem>
+                        {warehouses.map((w) => (
+                          <MenuItem key={w.id} value={w.id.toString()}>
+                            {w.name}
+                          </MenuItem>
                         ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Search */}
-              <FormField
-                control={control}
-                name="search"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-base">بحث</FormLabel>
-                    <FormControl>
-                      <TextField
-                        placeholder="بحث في السجل..."
-                        {...field}
-                        size="medium"
-                        fullWidth
-                        InputProps={{
-                          style: { fontSize: "16px" },
-                        }}
-                      />
+                      </Select>
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  )}
+                />
+              </div>
+              <div>
+                <Controller
+                  control={control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormControl fullWidth size="medium">
+                      <InputLabel>نوع الحركة</InputLabel>
+                      <Select
+                        {...field}
+                        value={field.value || ""}
+                        label="نوع الحركة"
+                      >
+                        <MenuItem value="">الكل</MenuItem>
+                        {movementTypes.map((t) => (
+                          <MenuItem key={t.value} value={t.value}>
+                            {t.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  )}
+                />
+              </div>
+              <div>
+                <Controller
+                  control={control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      type="date"
+                      label="من تاريخ"
+                      fullWidth
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  )}
+                />
+              </div>
+              <div>
+                <Controller
+                  control={control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      type="date"
+                      label="إلى تاريخ"
+                      fullWidth
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  )}
+                />
+              </div>
             </div>
-            <div className="flex justify-end gap-2 mt-4">
+            <div className="filter-actions">
               <Button
-                type="submit"
-                variant="contained"
-                size="large"
-                startIcon={<FilterListIcon />}
-              >
-                تصفية
-              </Button>
-              <Button
-                type="button"
                 variant="outlined"
-                size="large"
                 onClick={clearFilters}
-                startIcon={<ClearIcon />}
+                sx={{ height: 42 }}
               >
                 مسح
               </Button>
+              <Button
+                type="submit"
+                variant="contained"
+                sx={{ height: 42, px: 4 }}
+              >
+                تطبيق
+              </Button>
             </div>
           </form>
-        </Form>
+        </Collapse>
       </div>
 
-      {/* Results Section */}
-      {isLoading && (
-        <div className="flex justify-center items-center py-10">
-          <CircularProgress size={40} />
-        </div>
-      )}
-
-      {!isLoading && error && (
-        <Alert severity="error" className="mb-6">
-          <Typography variant="h6">خطأ</Typography>
-          <Typography>{error}</Typography>
-        </Alert>
-      )}
-
-      {!isLoading && !error && logData && (
-        <>
-          <Card className="dark:bg-gray-900">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-xl">النتائج</CardTitle>
-              <CardDescription className="text-base">
-                {`عرض ${logData.from}-${logData.to} من ${logData.total}`}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-center text-base font-semibold">
-                      التاريخ
-                    </TableHead>
-                    <TableHead className="text-center text-base font-semibold">
-                      نوع الحركة
-                    </TableHead>
-                    <TableHead className="text-center text-base font-semibold">
-                      المنتج
-                    </TableHead>
-                    <TableHead className="text-center text-base font-semibold">
-                      رقم الدفعة
-                    </TableHead>
-                    <TableHead className="text-center text-base font-semibold">
-                      تغيير الكمية
-                    </TableHead>
-                    <TableHead className="text-center text-base font-semibold">
-                      مرجع المستند
-                    </TableHead>
-                    <TableHead className="text-center text-base font-semibold">
-                      المستخدم
-                    </TableHead>
-                    <TableHead className="text-center text-base font-semibold">
-                      ملاحظات/سبب
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {logData.data.length === 0 && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={8}
-                        className="h-24 text-center text-muted-foreground text-base"
+      {/* Results Table */}
+      <div className="table-card">
+        {isLoading ? (
+          <div className="loading-container">
+            <CircularProgress />
+          </div>
+        ) : error ? (
+          <div className="empty-state">
+            <AlertCircle
+              size={48}
+              color="#ef4444"
+              style={{ marginBottom: 16 }}
+            />
+            <p>{error}</p>
+          </div>
+        ) : !logData || logData.data.length === 0 ? (
+          <div className="empty-state">
+            <Search size={48} style={{ marginBottom: 16, opacity: 0.5 }} />
+            <p>لا توجد سجلات مطابقة للبحث</p>
+          </div>
+        ) : (
+          <>
+            <table className="log-table">
+              <thead>
+                <tr>
+                  <th>التاريخ</th>
+                  <th>العملية</th>
+                  <th>المنتج</th>
+                  <th>المستودع</th>
+                  <th>الكمية</th>
+                  <th>المستند</th>
+                  <th>بواسطة</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logData.data.map((row, i) => (
+                  <tr key={i}>
+                    <td>
+                      <div className="text-sm font-bold">
+                        {dayjs(row.transaction_date).format("YYYY-MM-DD")}
+                      </div>
+                      <div className="text-sm text-muted">
+                        {dayjs(row.transaction_date).format("HH:mm")}
+                      </div>
+                    </td>
+                    <td>
+                      <span
+                        className={`chip ${getMovementColorClass(row.type)}`}
                       >
-                        لا توجد نتائج
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {logData.data.map((entry, index) => (
-                    <TableRow
-                      key={`${entry.type}-${entry.document_id}-${entry.product_id}-${index}`}
+                        {getMovementLabel(row.type)}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="font-bold">{row.product_name}</div>
+                      <div className="text-sm text-muted">
+                        {row.product_sku}
+                      </div>
+                      {row.batch_number && (
+                        <div className="text-sm" style={{ color: "#0ea5e9" }}>
+                          دفعة: {row.batch_number}
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <div className="flex-row gap-2">
+                        <Store size={14} className="text-muted" />
+                        <span className="text-sm">
+                          {row.warehouse_name || "-"}
+                        </span>
+                      </div>
+                    </td>
+                    <td
+                      className={
+                        row.quantity_change > 0
+                          ? "quantity-positive"
+                          : "quantity-negative"
+                      }
                     >
-                      <TableCell className="text-center text-base">
-                        {dayjs(entry.transaction_date).format("YYYY-MM-DD")}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge className="border border-gray-300 text-sm">
-                          {movementTypeLabels[entry.type] || entry.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Typography variant="body1" className="font-medium">
-                          {entry.product_name}
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          className="text-muted-foreground"
-                        >
-                          {entry.product_sku}
-                        </Typography>
-                      </TableCell>
-                      <TableCell className="text-center text-base">
-                        {entry.batch_number || "---"}
-                      </TableCell>
-                      <TableCell
-                        className={`text-center font-bold text-lg ${getMovementTypeColor(
-                          entry.type
-                        )}`}
+                      <span dir="ltr">
+                        {row.quantity_change > 0 ? "+" : ""}
+                        {formatNumber(row.quantity_change)}
+                      </span>
+                    </td>
+                    <td>
+                      <RouterLink
+                        to={
+                          row.type === "purchase"
+                            ? `/purchases/${row.document_id}`
+                            : row.type === "sale"
+                            ? `/sales/${row.document_id}`
+                            : "#"
+                        }
+                        className="link-text"
                       >
-                        {entry.quantity_change > 0 ? "+" : ""}
-                        {formatNumber(entry.quantity_change)}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <RouterLink
-                          to={
-                            entry.type === "purchase"
-                              ? `/purchases/${entry.document_id}`
-                              : entry.type === "sale"
-                              ? `/sales/${entry.document_id}`
-                              : entry.type === "requisition_issue"
-                              ? `/admin/inventory/requisitions/${entry.document_id}/process`
-                              : "#"
-                          }
-                          className="hover:underline text-primary text-base font-medium"
+                        {row.document_reference || `#${row.document_id}`}
+                      </RouterLink>
+                      {row.reason_notes && (
+                        <div
+                          className="text-sm text-muted"
+                          style={{
+                            maxWidth: 200,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
                         >
-                          {entry.document_reference || `#${entry.document_id}`}
-                        </RouterLink>
-                      </TableCell>
-                      <TableCell className="text-center text-base">
-                        {entry.user_name || "-"}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
-                        {entry.reason_notes}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          {/* Pagination */}
-          {logData.last_page > 1 && (
-            <div className="flex justify-center mt-6">
-              <Pagination>
-                <PaginationContent>
-                  <PaginationPrevious
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 1}
-                  >
-                    السابق
-                  </PaginationPrevious>
-                  {Array.from(
-                    { length: logData.last_page },
-                    (_, i) => i + 1
-                  ).map((page) => (
-                    <PaginationItem key={page} active={page === currentPage}>
-                      <PaginationLink onClick={() => handlePageChange(page)}>
-                        {page}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ))}
-                  <PaginationNext
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === logData.last_page}
-                  >
-                    التالي
-                  </PaginationNext>
-                </PaginationContent>
-              </Pagination>
+                          {row.reason_notes}
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <div className="user-badge">
+                        <User size={12} />
+                        {row.user_name || "System"}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="pagination-container">
+              <Pagination
+                count={logData.last_page}
+                page={currentPage}
+                onChange={(e, p) => handlePageChange(e, p)}
+                color="primary"
+                shape="rounded"
+              />
             </div>
-          )}
-        </>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 };

@@ -1,6 +1,6 @@
 // src/pages/reports/SalesReportPage.tsx
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useForm, SubmitHandler } from "react-hook-form";
+import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
@@ -13,69 +13,49 @@ import {
   endOfMonth,
   subMonths,
 } from "date-fns";
-import { cn } from "@/lib/utils";
 
-// shadcn/ui Components
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+// MUI Components
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  Typography,
+  TextField,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
+  MenuItem,
+  FormControl,
+  InputLabel,
   Table,
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  Alert,
+  AlertTitle,
+  CircularProgress,
+  Chip,
+  Pagination,
+  Stack,
+  Autocomplete,
+  Skeleton,
+} from "@mui/material";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import IconButton from "@mui/material/IconButton";
 
-// Icons
+// Lucide Icons
 import {
-  Loader2,
-  Filter,
-  X,
-  FileText,
+  ArrowLeft,
   Download,
   BarChart3,
-  Users,
   DollarSign,
-  ArrowLeft,
-  AlertCircle,
+  Users,
   Eye,
-  ChevronLeft,
-  ChevronRight,
-  Check,
-  ChevronsUpDown,
+  FileText,
+  Filter,
+  X,
+  TrendingUp,
 } from "lucide-react";
 
 // Services and Types
@@ -381,24 +361,22 @@ const SalesReportPage: React.FC = () => {
 
   // --- Get Status Badge ---
   const getStatusBadge = (status?: string) => {
-    const statusConfig = {
+    const statusConfig: Record<string, { label: string; color: "success" | "warning" | "default" | "error" }> = {
       completed: {
-        variant: "default" as const,
-        className:
-          "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
+        label: "مكتمل",
+        color: "success",
       },
       pending: {
-        variant: "secondary" as const,
-        className:
-          "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
+        label: "معلق",
+        color: "warning",
       },
       draft: {
-        variant: "outline" as const,
-        className:
-          "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300",
+        label: "مسودة",
+        color: "default",
       },
       cancelled: {
-        variant: "destructive" as const,
+        label: "ملغي",
+        color: "error",
         className: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
       },
     };
@@ -406,606 +384,814 @@ const SalesReportPage: React.FC = () => {
     const config =
       statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
 
-    const statusLabels: Record<string, string> = {
-      completed: "مكتمل",
-      pending: "معلق",
-      draft: "مسودة",
-      cancelled: "ملغي",
-    };
     return (
-      <Badge variant={config.variant} className={config.className}>
-        {statusLabels[status as string] || status}
-      </Badge>
+      <Chip
+        label={config.label}
+        color={config.color}
+        size="small"
+      />
     );
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <Box sx={{ minHeight: "100vh" }}>
       {/* Header */}
-      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                size="icon"
+      <Box
+        sx={{
+          borderBottom: "1px solid",
+          borderColor: "divider",
+          bgcolor: "background.paper",
+        }}
+      >
+        <Box sx={{ maxWidth: "1400px", mx: "auto", px: { xs: 2, sm: 3, lg: 4 }, py: 2.5 }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
+            <Stack direction="row" alignItems="center" spacing={2}>
+              <IconButton
                 onClick={() => navigate("/dashboard")}
-                className="h-8 w-8"
+                size="small"
+                sx={{
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 2,
+                  transition: "all 0.15s ease",
+                  "&:hover": {
+                    bgcolor: "action.hover",
+                  },
+                }}
               >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                <ArrowLeft size={18} />
+              </IconButton>
+              <Box>
+                <Typography
+                  variant="h6"
+                  component="h1"
+                  sx={{ fontWeight: 600, lineHeight: 1.3 }}
+                >
                   تقرير المبيعات
-                </h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
                   عرض وتصدير تقارير المبيعات
-                </p>
-              </div>
-            </div>
+                </Typography>
+              </Box>
+            </Stack>
 
-            <div className="flex items-center space-x-3">
-              {!isLoading && reportData && reportData.data.length > 0 && (
-                <Button onClick={handleDownloadPdf} variant="outline">
-                  <Download className="h-4 w-4 mr-2" />
-                  تصدير PDF
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Quick Date Presets */}
-        <div className="mb-6">
-          <div className="flex flex-wrap gap-2">
-            {[
-              { key: "today", label: "اليوم" },
-              { key: "yesterday", label: "أمس" },
-              { key: "thisWeek", label: "هذا الأسبوع" },
-              { key: "thisMonth", label: "هذا الشهر" },
-              { key: "lastMonth", label: "الشهر الماضي" },
-            ].map((preset) => (
+            {!isLoading && reportData && reportData.data.length > 0 && (
               <Button
-                key={preset.key}
-                variant="ghost"
-                size="sm"
-                onClick={() => applyDatePreset(preset.key)}
-                className="text-xs"
+                onClick={handleDownloadPdf}
+                variant="contained"
+                size="small"
+                startIcon={<Download size={16} />}
+                sx={{
+                  borderRadius: 2,
+                  textTransform: "none",
+                  px: 2.5,
+                  py: 1,
+                  fontWeight: 500,
+                  boxShadow: "none",
+                  "&:hover": {
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                  },
+                }}
               >
-                {preset.label}
+                تصدير PDF
               </Button>
-            ))}
-          </div>
-        </div>
+            )}
+          </Stack>
+        </Box>
+      </Box>
+
+      <Box sx={{ maxWidth: "1400px", mx: "auto", px: { xs: 2, sm: 3, lg: 4 }, py: 3 }}>
+        {/* Quick Date Presets */}
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            mb: 3,
+            flexWrap: "wrap",
+            gap: 1,
+          }}
+        >
+          {[
+            { key: "today", label: "اليوم" },
+            { key: "yesterday", label: "أمس" },
+            { key: "thisWeek", label: "هذا الأسبوع" },
+            { key: "thisMonth", label: "هذا الشهر" },
+            { key: "lastMonth", label: "الشهر الماضي" },
+          ].map((preset) => (
+            <Chip
+              key={preset.key}
+              label={preset.label}
+              onClick={() => applyDatePreset(preset.key)}
+              variant="outlined"
+              sx={{
+                borderRadius: 2,
+                fontWeight: 500,
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+                "&:hover": {
+                  bgcolor: "primary.light",
+                  borderColor: "primary.main",
+                  color: "primary.main",
+                },
+              }}
+            />
+          ))}
+        </Stack>
 
         {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: { xs: "column", lg: "row" },
+            gap: 3,
+            alignItems: "flex-start",
+          }}
+        >
           {/* Main Content - Table */}
-          <div className="lg:col-span-3">
+          <Box
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              width: { xs: "100%", lg: "auto" },
+            }}
+          >
             {/* Summary Stats */}
             {summaryStats && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                        <BarChart3 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                          إجمالي العمليات
-                        </p>
-                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              <Box
+                sx={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 2.5,
+                  mb: 3,
+                }}
+              >
+                {/* Total Operations Card */}
+                <Box
+                  sx={{
+                    flex: { xs: "1 1 100%", md: "1 1 calc(33.333% - 14px)" },
+                    minWidth: { xs: "100%", md: "240px" },
+                  }}
+                >
+                  <Card
+                    sx={{
+                      height: "100%",
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: 3,
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                      transition: "all 0.2s ease",
+                      "&:hover": {
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                      },
+                    }}
+                  >
+                    <CardContent sx={{ p: 2.5 }}>
+                      <Stack spacing={2}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: "text.secondary",
+                              fontWeight: 500,
+                              fontSize: "0.875rem",
+                            }}
+                          >
+                            إجمالي العمليات
+                          </Typography>
+                          <Box
+                            sx={{
+                              color: "primary.main",
+                              display: "flex",
+                              alignItems: "center",
+                            }}
+                          >
+                            <BarChart3 size={20} />
+                          </Box>
+                        </Box>
+                        <Typography
+                          variant="h4"
+                          sx={{
+                            fontWeight: 700,
+                            color: "text.primary",
+                            lineHeight: 1,
+                          }}
+                        >
                           {summaryStats.totalSales}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                        </Typography>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Box>
 
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                        <DollarSign className="h-6 w-6 text-green-600 dark:text-green-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                          إجمالي المبيعات
-                        </p>
-                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                {/* Total Sales Card */}
+                <Box
+                  sx={{
+                    flex: { xs: "1 1 100%", md: "1 1 calc(33.333% - 14px)" },
+                    minWidth: { xs: "100%", md: "240px" },
+                  }}
+                >
+                  <Card
+                    sx={{
+                      height: "100%",
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: 3,
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                      transition: "all 0.2s ease",
+                      "&:hover": {
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                      },
+                    }}
+                  >
+                    <CardContent sx={{ p: 2.5 }}>
+                      <Stack spacing={2}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: "text.secondary",
+                              fontWeight: 500,
+                              fontSize: "0.875rem",
+                            }}
+                          >
+                            إجمالي المبيعات
+                          </Typography>
+                          <Box
+                            sx={{
+                              color: "success.main",
+                              display: "flex",
+                              alignItems: "center",
+                            }}
+                          >
+                            <DollarSign size={20} />
+                          </Box>
+                        </Box>
+                        <Typography
+                          variant="h4"
+                          sx={{
+                            fontWeight: 700,
+                            color: "text.primary",
+                            lineHeight: 1,
+                          }}
+                        >
                           {formatNumber(summaryStats.totalAmount)}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                        </Typography>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Box>
 
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                        <Users className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                          إجمالي المستحق
-                        </p>
-                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                {/* Total Due Card */}
+                <Box
+                  sx={{
+                    flex: { xs: "1 1 100%", md: "1 1 calc(33.333% - 14px)" },
+                    minWidth: { xs: "100%", md: "240px" },
+                  }}
+                >
+                  <Card
+                    sx={{
+                      height: "100%",
+                      border: "1px solid",
+                      borderColor: summaryStats.totalDue > 0 ? "warning.light" : "divider",
+                      borderRadius: 3,
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                      transition: "all 0.2s ease",
+                      "&:hover": {
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                      },
+                    }}
+                  >
+                    <CardContent sx={{ p: 2.5 }}>
+                      <Stack spacing={2}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: "text.secondary",
+                              fontWeight: 500,
+                              fontSize: "0.875rem",
+                            }}
+                          >
+                            إجمالي المستحق
+                          </Typography>
+                          <Box
+                            sx={{
+                              color: summaryStats.totalDue > 0 ? "warning.main" : "success.main",
+                              display: "flex",
+                              alignItems: "center",
+                            }}
+                          >
+                            <TrendingUp size={20} />
+                          </Box>
+                        </Box>
+                        <Typography
+                          variant="h4"
+                          sx={{
+                            fontWeight: 700,
+                            color: summaryStats.totalDue > 0 ? "warning.dark" : "success.main",
+                            lineHeight: 1,
+                          }}
+                        >
                           {formatNumber(summaryStats.totalDue)}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                        </Typography>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Box>
+              </Box>
             )}
 
             {/* Loading State */}
             {isLoading && (
-              <div className="space-y-4">
-                {[...Array(5)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center space-x-4 p-4 bg-white dark:bg-gray-900 rounded-lg"
-                  >
-                    <Skeleton className="h-12 w-12 rounded-full" />
-                    <div className="space-y-2 flex-1">
-                      <Skeleton className="h-4 w-[250px]" />
-                      <Skeleton className="h-4 w-[200px]" />
-                    </div>
-                    <Skeleton className="h-4 w-[100px]" />
-                  </div>
-                ))}
-              </div>
+              <Card
+                sx={{
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 3,
+                }}
+              >
+                <CardContent sx={{ p: 2.5 }}>
+                  <Stack spacing={2}>
+                    {[...Array(5)].map((_, i) => (
+                      <Stack key={i} direction="row" spacing={2} alignItems="center">
+                        <Skeleton variant="rounded" width={80} height={20} />
+                        <Skeleton variant="rounded" width={100} height={20} />
+                        <Box sx={{ flex: 1 }}>
+                          <Skeleton variant="text" width="60%" height={20} />
+                        </Box>
+                        <Skeleton variant="rounded" width={80} height={24} />
+                      </Stack>
+                    ))}
+                  </Stack>
+                </CardContent>
+              </Card>
             )}
 
             {/* Error State */}
             {!isLoading && error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>خطأ</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
+              <Alert
+                severity="error"
+                sx={{
+                  mb: 3,
+                  borderRadius: 2,
+                  boxShadow: 1,
+                }}
+              >
+                <AlertTitle sx={{ fontWeight: 600 }}>خطأ</AlertTitle>
+                {error}
               </Alert>
             )}
 
             {/* Results */}
             {!isLoading && !error && reportData && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle>النتائج</CardTitle>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      {`عرض ${(currentPage - 1) * 25 + 1}-${Math.min(
+              <Card
+                sx={{
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 3,
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                }}
+              >
+                <CardHeader
+                  sx={{
+                    borderBottom: "1px solid",
+                    borderColor: "divider",
+                    py: 2,
+                    px: 2.5,
+                  }}
+                >
+                  <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
+                    <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 600 }}>
+                      النتائج
+                    </Typography>
+                    <Chip
+                      label={`${(currentPage - 1) * 25 + 1}-${Math.min(
                         currentPage * 25,
                         reportData.total
                       )} من ${reportData.total}`}
-                    </div>
-                  </div>
+                      size="small"
+                      variant="outlined"
+                      sx={{ fontWeight: 500 }}
+                    />
+                  </Stack>
                 </CardHeader>
-                <CardContent>
+                <CardContent sx={{ p: 0 }}>
                   {reportData.data.length === 0 ? (
-                    <div className="text-center py-12">
-                      <FileText className="mx-auto h-12 w-12 text-gray-400" />
-                      <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <Box
+                      sx={{
+                        textAlign: "center",
+                        py: 6,
+                        px: 2,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          display: "inline-flex",
+                          p: 2,
+                          bgcolor: "action.hover",
+                          borderRadius: 3,
+                          mb: 2,
+                        }}
+                      >
+                        <FileText size={32} style={{ opacity: 0.4 }} />
+                      </Box>
+                      <Typography variant="subtitle1" sx={{ mb: 0.5, fontWeight: 600 }}>
                         لا توجد مبيعات
-                      </h3>
-                      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
                         جرب تعديل الفلاتر
-                      </p>
-                    </div>
+                      </Typography>
+                    </Box>
                   ) : (
                     <>
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>التاريخ</TableHead>
-                              <TableHead>الفاتورة</TableHead>
-                              <TableHead>العميل</TableHead>
-                              <TableHead>المستخدم</TableHead>
-                              <TableHead>الحالة</TableHead>
-                              <TableHead className="text-right">
-                                المبلغ الإجمالي
-                              </TableHead>
-                              <TableHead className="text-right">
-                                المدفوع
-                              </TableHead>
-                              <TableHead className="text-right">
-                                المستحق
-                              </TableHead>
-                              <TableHead className="text-right">
-                                الإجراءات
-                              </TableHead>
+                      <Box sx={{ overflowX: "auto" }}>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow
+                              sx={{
+                                bgcolor: "action.hover",
+                                "& .MuiTableCell-root": {
+                                  fontWeight: 600,
+                                  fontSize: "0.8125rem",
+                                  py: 1.5,
+                                  color: "text.secondary",
+                                  borderBottom: "1px solid",
+                                  borderColor: "divider",
+                                },
+                              }}
+                            >
+                              <TableCell>التاريخ</TableCell>
+                              <TableCell>الفاتورة</TableCell>
+                              <TableCell>العميل</TableCell>
+                              <TableCell>المستخدم</TableCell>
+                              <TableCell>الحالة</TableCell>
+                              <TableCell align="right">المبلغ الإجمالي</TableCell>
+                              <TableCell align="right">المدفوع</TableCell>
+                              <TableCell align="right">المستحق</TableCell>
+                              <TableCell align="right">الإجراءات</TableCell>
                             </TableRow>
-                          </TableHeader>
+                          </TableHead>
                           <TableBody>
                             {reportData.data.map((sale) => (
                               <TableRow
                                 key={sale.id}
-                                className="hover:bg-gray-50 dark:hover:bg-gray-800"
+                                hover
+                                sx={{
+                                  "&:last-child td": { border: 0 },
+                                  "& .MuiTableCell-root": {
+                                    py: 1.5,
+                                    fontSize: "0.875rem",
+                                  },
+                                }}
                               >
-                                <TableCell className="font-medium">
-                                  {format(
-                                    parseISO(sale.sale_date),
-                                    "MMM dd, yyyy"
-                                  )}
+                                <TableCell>
+                                  {format(parseISO(sale.sale_date), "MMM dd, yyyy")}
                                 </TableCell>
                                 <TableCell>
                                   {sale.invoice_number || (
-                                    <span className="text-gray-400">—</span>
+                                    <Typography component="span" color="text.secondary">
+                                      —
+                                    </Typography>
                                   )}
                                 </TableCell>
                                 <TableCell>
                                   {sale.client_name || (
-                                    <span className="text-gray-400">—</span>
+                                    <Typography component="span" color="text.secondary">
+                                      —
+                                    </Typography>
                                   )}
                                 </TableCell>
                                 <TableCell>
                                   {sale.user_name || (
-                                    <span className="text-gray-400">—</span>
+                                    <Typography component="span" color="text.secondary">
+                                      —
+                                    </Typography>
                                   )}
                                 </TableCell>
                                 <TableCell>
                                   {getStatusBadge(sale.status)}
                                 </TableCell>
-                                <TableCell className="text-right font-medium">
+                                <TableCell align="right" sx={{ fontWeight: 500 }}>
                                   {formatNumber(sale.total_amount)}
                                 </TableCell>
-                                <TableCell className="text-right">
+                                <TableCell align="right">
                                   {formatNumber(sale.paid_amount)}
                                 </TableCell>
-                                <TableCell className="text-right">
-                                  <span
-                                    className={
+                                <TableCell align="right">
+                                  <Typography
+                                    color={
                                       Number(sale.due_amount) > 0
-                                        ? "text-red-600 dark:text-red-400"
-                                        : "text-green-600 dark:text-green-400"
+                                        ? "error.main"
+                                        : "success.main"
                                     }
                                   >
                                     {formatNumber(sale.due_amount || 0)}
-                                  </span>
+                                  </Typography>
                                 </TableCell>
-                                <TableCell className="text-right">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
+                                <TableCell align="right">
+                                  <IconButton
                                     disabled
                                     title="غير متاح"
+                                    sx={{
+                                      width: 36,
+                                      height: 36,
+                                      border: 1,
+                                      borderColor: "divider",
+                                      borderRadius: 1.5,
+                                    }}
                                   >
-                                    <Eye className="h-4 w-4 opacity-50" />
-                                  </Button>
+                                    <Eye size={16} style={{ opacity: 0.5 }} />
+                                  </IconButton>
                                 </TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
                         </Table>
-                      </div>
+                      </Box>
 
                       {/* Pagination */}
                       {reportData.last_page > 1 && (
-                        <div className="flex items-center justify-between mt-6">
-                          <div className="text-sm text-gray-700 dark:text-gray-300">
-                            {`عرض ${(currentPage - 1) * 25 + 1}-${Math.min(
-                              currentPage * 25,
-                              reportData.total
-                            )} من ${reportData.total}`}
-                          </div>
-
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handlePageChange(currentPage - 1)}
-                              disabled={currentPage === 1}
-                            >
-                              <ChevronLeft className="h-4 w-4" />
-                              السابق
-                            </Button>
-
-                            <div className="flex items-center space-x-1">
-                              {Array.from(
-                                { length: Math.min(5, reportData.last_page) },
-                                (_, i) => {
-                                  const page = i + 1;
-                                  return (
-                                    <Button
-                                      key={page}
-                                      variant={
-                                        currentPage === page
-                                          ? "default"
-                                          : "outline"
-                                      }
-                                      size="sm"
-                                      onClick={() => handlePageChange(page)}
-                                      className="w-8 h-8"
-                                    >
-                                      {page}
-                                    </Button>
-                                  );
-                                }
-                              )}
-                            </div>
-
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handlePageChange(currentPage + 1)}
-                              disabled={currentPage === reportData.last_page}
-                            >
-                              التالي
-                              <ChevronRight className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "center",
+                            py: 2.5,
+                            borderTop: "1px solid",
+                            borderColor: "divider",
+                          }}
+                        >
+                          <Pagination
+                            count={reportData.last_page}
+                            page={currentPage}
+                            onChange={(_, page) => handlePageChange(page)}
+                            color="primary"
+                            disabled={isLoading}
+                            size="small"
+                            sx={{
+                              "& .MuiPaginationItem-root": {
+                                borderRadius: 1.5,
+                              },
+                            }}
+                          />
+                        </Box>
                       )}
                     </>
                   )}
                 </CardContent>
               </Card>
             )}
-          </div>
+          </Box>
 
           {/* Filters Sidebar */}
-          <div className="lg:col-span-1">
-            <Card className="sticky top-6">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center space-x-2">
-                  <Filter className="h-5 w-5" />
-                  <span>الفلاتر</span>
-                </CardTitle>
+          <Box
+            sx={{
+              width: { xs: "100%", lg: "320px" },
+              flexShrink: 0,
+            }}
+          >
+            <Card
+              sx={{
+                position: { lg: "sticky" },
+                top: 24,
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 3,
+                boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+              }}
+            >
+              <CardHeader
+                sx={{
+                  borderBottom: "1px solid",
+                  borderColor: "divider",
+                  py: 2,
+                  px: 2.5,
+                }}
+              >
+                <Stack direction="row" alignItems="center" spacing={1.5}>
+                  <Filter size={18} />
+                  <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 600 }}>
+                    الفلاتر
+                  </Typography>
+                </Stack>
               </CardHeader>
-              <CardContent>
-                <Form {...form}>
-                  <form
-                    onSubmit={handleSubmit(onFilterSubmit)}
-                    className="space-y-4"
-                  >
+              <CardContent sx={{ p: 2.5 }}>
+                <Box component="form" onSubmit={handleSubmit(onFilterSubmit)}>
+                  <Stack spacing={2}>
                     {/* Start Date */}
-                    <FormField
+                    <Controller
                       control={control}
                       name="startDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>تاريخ البدء</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="date"
-                              {...field}
-                              value={field.value || ""}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
+                      render={({ field, fieldState }) => (
+                        <TextField
+                          type="date"
+                          label="تاريخ البدء"
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                          fullWidth
+                          size="small"
+                          error={!!fieldState.error}
+                          helperText={fieldState.error?.message}
+                          InputLabelProps={{ shrink: true }}
+                        />
                       )}
                     />
 
                     {/* End Date */}
-                    <FormField
+                    <Controller
                       control={control}
                       name="endDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>تاريخ الانتهاء</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="date"
-                              {...field}
-                              value={field.value || ""}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
+                      render={({ field, fieldState }) => (
+                        <TextField
+                          type="date"
+                          label="تاريخ الانتهاء"
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                          fullWidth
+                          size="small"
+                          error={!!fieldState.error}
+                          helperText={fieldState.error?.message}
+                          InputLabelProps={{ shrink: true }}
+                        />
                       )}
                     />
 
                     {/* Client Select */}
-                    <FormField
+                    <Controller
                       control={control}
                       name="clientId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>العميل</FormLabel>
+                      render={({ field, fieldState }) => (
+                        <FormControl fullWidth size="small" error={!!fieldState.error}>
+                          <InputLabel>العميل</InputLabel>
                           <Select
-                            onValueChange={field.onChange}
                             value={field.value ?? ""}
+                            onChange={field.onChange}
+                            label="العميل"
                             disabled={loadingFilters}
                           >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="الكل" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value=" ">الكل</SelectItem>
-                              {clients.map((client) => (
-                                <SelectItem
-                                  key={client.id}
-                                  value={String(client.id)}
-                                >
-                                  {client.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
+                            <MenuItem value="">الكل</MenuItem>
+                            {clients.map((client) => (
+                              <MenuItem key={client.id} value={String(client.id)}>
+                                {client.name}
+                              </MenuItem>
+                            ))}
                           </Select>
-                          <FormMessage />
-                        </FormItem>
+                          {fieldState.error && (
+                            <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                              {fieldState.error.message}
+                            </Typography>
+                          )}
+                        </FormControl>
                       )}
                     />
 
                     {/* User Select */}
-                    <FormField
+                    <Controller
                       control={control}
                       name="userId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>المستخدم</FormLabel>
+                      render={({ field, fieldState }) => (
+                        <FormControl fullWidth size="small" error={!!fieldState.error}>
+                          <InputLabel>المستخدم</InputLabel>
                           <Select
-                            onValueChange={field.onChange}
                             value={field.value ?? ""}
+                            onChange={field.onChange}
+                            label="المستخدم"
                             disabled={loadingFilters}
                           >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="الكل" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value=" ">الكل</SelectItem>
-                              {/* User selection temporarily disabled */}
-                            </SelectContent>
+                            <MenuItem value="">الكل</MenuItem>
+                            {/* User selection temporarily disabled */}
                           </Select>
-                          <FormMessage />
-                        </FormItem>
+                          {fieldState.error && (
+                            <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                              {fieldState.error.message}
+                            </Typography>
+                          )}
+                        </FormControl>
                       )}
                     />
 
                     {/* Product Select */}
-                    <FormField
+                    <Controller
                       control={control}
                       name="productId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>المنتج</FormLabel>
-                          <Popover
-                            open={productSearchOpen}
-                            onOpenChange={setProductSearchOpen}
-                          >
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant="outline"
-                                  role="combobox"
-                                  aria-expanded={productSearchOpen}
-                                  className="w-full justify-between"
-                                  disabled={loadingFilters}
-                                >
-                                  {field.value
-                                    ? products.find(
-                                        (product) =>
-                                          String(product.id) === field.value
-                                      )?.name
-                                    : "كل المنتجات"}
-                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
-                              <Command>
-                                <CommandInput placeholder="بحث عن منتج..." />
-                                <CommandList>
-                                  <CommandEmpty>لا توجد منتجات</CommandEmpty>
-                                  <CommandGroup>
-                                    <CommandItem
-                                      value=""
-                                      onSelect={() => {
-                                        field.onChange("");
-                                        setProductSearchOpen(false);
-                                      }}
-                                    >
-                                      <Check
-                                        className={cn(
-                                          "mr-2 h-4 w-4",
-                                          !field.value
-                                            ? "opacity-100"
-                                            : "opacity-0"
-                                        )}
-                                      />
-                                      كل المنتجات
-                                    </CommandItem>
-                                    {products.map((product) => (
-                                      <CommandItem
-                                        key={product.id}
-                                        value={product.name}
-                                        onSelect={() => {
-                                          field.onChange(String(product.id));
-                                          setProductSearchOpen(false);
-                                        }}
-                                      >
-                                        <Check
-                                          className={cn(
-                                            "mr-2 h-4 w-4",
-                                            field.value === String(product.id)
-                                              ? "opacity-100"
-                                              : "opacity-0"
-                                          )}
-                                        />
-                                        {product.name}
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
-                          <FormMessage />
-                        </FormItem>
+                      render={({ field, fieldState }) => (
+                        <Autocomplete
+                          options={products}
+                          getOptionLabel={(option) => option.name || ""}
+                          value={products.find((p) => String(p.id) === field.value) || null}
+                          onChange={(_, newValue) => {
+                            field.onChange(newValue ? String(newValue.id) : "");
+                          }}
+                          disabled={loadingFilters}
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              label="المنتج"
+                              size="small"
+                              error={!!fieldState.error}
+                              helperText={fieldState.error?.message}
+                            />
+                          )}
+                          noOptionsText="لا توجد منتجات"
+                        />
                       )}
                     />
 
                     {/* Status Select */}
-                    <FormField
+                    <Controller
                       control={control}
                       name="status"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>الحالة</FormLabel>
+                      render={({ field, fieldState }) => (
+                        <FormControl fullWidth size="small" error={!!fieldState.error}>
+                          <InputLabel>الحالة</InputLabel>
                           <Select
-                            onValueChange={field.onChange}
                             value={field.value ?? ""}
+                            onChange={field.onChange}
+                            label="الحالة"
                           >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="كل الحالات" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value=" ">كل الحالات</SelectItem>
-                              <SelectItem value="completed">مكتمل</SelectItem>
-                              <SelectItem value="pending">معلق</SelectItem>
-                              <SelectItem value="draft">مسودة</SelectItem>
-                              <SelectItem value="cancelled">ملغي</SelectItem>
-                            </SelectContent>
+                            <MenuItem value="">كل الحالات</MenuItem>
+                            <MenuItem value="completed">مكتمل</MenuItem>
+                            <MenuItem value="pending">معلق</MenuItem>
+                            <MenuItem value="draft">مسودة</MenuItem>
+                            <MenuItem value="cancelled">ملغي</MenuItem>
                           </Select>
-                          <FormMessage />
-                        </FormItem>
+                          {fieldState.error && (
+                            <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                              {fieldState.error.message}
+                            </Typography>
+                          )}
+                        </FormControl>
                       )}
                     />
 
-                    <div className="flex flex-col gap-2 pt-4">
+                    <Stack spacing={1.5} sx={{ pt: 2 }}>
                       <Button
                         type="submit"
+                        variant="contained"
                         disabled={isLoading}
-                        className="w-full"
+                        fullWidth
+                        startIcon={isLoading ? <CircularProgress size={16} /> : <Filter size={16} />}
+                        sx={{
+                          borderRadius: 2,
+                          textTransform: "none",
+                          py: 1.25,
+                          fontWeight: 600,
+                          transition: "all 0.2s ease-in-out",
+                          "&:hover": {
+                            transform: "translateY(-1px)",
+                            boxShadow: 4,
+                          },
+                        }}
                       >
-                        {isLoading ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Filter className="mr-2 h-4 w-4" />
-                        )}
                         تطبيق الفلاتر
                       </Button>
                       <Button
                         type="button"
-                        variant="ghost"
+                        variant="outlined"
                         onClick={clearFilters}
                         disabled={isLoading}
-                        className="w-full"
+                        fullWidth
+                        startIcon={<X size={16} />}
+                        sx={{
+                          borderRadius: 2,
+                          textTransform: "none",
+                          py: 1.25,
+                          fontWeight: 500,
+                          transition: "all 0.2s ease-in-out",
+                          "&:hover": {
+                            transform: "translateY(-1px)",
+                            boxShadow: 2,
+                          },
+                        }}
                       >
-                        <X className="mr-2 h-4 w-4" />
                         مسح الفلاتر
                       </Button>
-                    </div>
-                  </form>
-                </Form>
+                    </Stack>
+                  </Stack>
+                </Box>
               </CardContent>
             </Card>
-          </div>
-        </div>
-      </div>
-    </div>
+          </Box>
+        </Box>
+      </Box>
+    </Box>
   );
 };
 

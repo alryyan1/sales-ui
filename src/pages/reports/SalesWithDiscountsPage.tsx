@@ -1,17 +1,22 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import saleService, { Sale as ApiSale } from "@/services/saleService";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  TextField,
   Table,
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
-} from "@/components/ui/table";
+  Typography,
+  Stack,
+  CircularProgress,
+} from "@mui/material";
 import { formatNumber } from "@/constants";
 
 const SalesWithDiscountsPage: React.FC = () => {
@@ -30,7 +35,7 @@ const SalesWithDiscountsPage: React.FC = () => {
   useEffect(() => {
     fetchSales();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
+  }, [page, startDate, endDate]);
 
   const fetchSales = async () => {
     setLoading(true);
@@ -46,8 +51,12 @@ const SalesWithDiscountsPage: React.FC = () => {
         (s) => Number((s as ApiSale).discount_amount || 0) > 0
       );
       setSales(items);
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to fetch discounted sales", e);
+      const errorMsg = saleService.getErrorMessage
+        ? saleService.getErrorMessage(e)
+        : e?.message || "حدث خطأ أثناء جلب البيانات";
+      toast.error("خطأ", { description: errorMsg });
       setSales([]);
     } finally {
       setLoading(false);
@@ -93,127 +102,136 @@ const SalesWithDiscountsPage: React.FC = () => {
   };
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">تقرير المبيعات المخفضة</h2>
-        <Button onClick={openPdf} variant="outline" size="sm">
-          معاينة PDF
-        </Button>
-      </div>
-      <div className="flex items-end gap-2">
-        <div>
-          <label className="text-sm">البدء</label>
-          <Input
+    <Box sx={{ p: 2 }}>
+      <Stack spacing={2}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Typography variant="h5" component="h2" sx={{ fontWeight: 700 }}>
+            تقرير المبيعات المخفضة
+          </Typography>
+          <Button onClick={openPdf} variant="outlined" size="small">
+            معاينة PDF
+          </Button>
+        </Stack>
+        <Stack direction="row" spacing={2} alignItems="flex-end">
+          <TextField
             type="date"
+            label="البدء"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
+            size="small"
+            InputLabelProps={{ shrink: true }}
           />
-        </div>
-        <div>
-          <label className="text-sm">الانتهاء</label>
-          <Input
+          <TextField
             type="date"
+            label="الانتهاء"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
+            size="small"
+            InputLabelProps={{ shrink: true }}
           />
-        </div>
-        <Button
-          onClick={() => {
-            setPage(1);
-            fetchSales();
-          }}
-          disabled={loading}
-        >
-          تصفية
-        </Button>
-      </div>
+          <Button
+            onClick={() => {
+              setPage(1);
+              fetchSales();
+            }}
+            disabled={loading}
+            variant="contained"
+            startIcon={loading ? <CircularProgress size={16} /> : undefined}
+          >
+            {loading ? "جاري التحميل..." : "تصفية"}
+          </Button>
+        </Stack>
 
-      {/* Discount summary cards */}
-      <div className="flex items-center gap-2">
-        <Card className="inline-block">
-          <CardContent className="p-2 text-center">
-            <div className="text-xs text-gray-500">إجمالي الخصم</div>
-            <div className="text-2xl font-bold text-red-600">
-              {formatNumber(totals.totalDiscount)}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="inline-block">
-          <CardContent className="p-2 text-center">
-            <div className="text-xs text-gray-500">العدد</div>
-            <div className="text-2xl font-bold">
-              {formatNumber(sales.length)}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        {/* Discount summary cards */}
+        <Stack direction="row" spacing={2}>
+          <Card>
+            <CardContent sx={{ p: 2, textAlign: "center" }}>
+              <Typography variant="caption" color="text.secondary">
+                إجمالي الخصم
+              </Typography>
+              <Typography variant="h5" sx={{ fontWeight: 700, color: "error.main" }}>
+                {formatNumber(totals.totalDiscount)}
+              </Typography>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent sx={{ p: 2, textAlign: "center" }}>
+              <Typography variant="caption" color="text.secondary">
+                العدد
+              </Typography>
+              <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                {formatNumber(sales.length)}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Stack>
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-center">#</TableHead>
-                  <TableHead className="text-center">التاريخ</TableHead>
-                  <TableHead className="text-center">العميل</TableHead>
-                  <TableHead className="text-center">المجموع</TableHead>
-                  <TableHead className="text-center">المدفوع</TableHead>
-                  <TableHead className="text-center">الخصم</TableHead>
-                  <TableHead className="text-center">النوع</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
+        <Card>
+          <CardContent sx={{ p: 0 }}>
+            <Box sx={{ overflowX: "auto" }}>
+              <Table>
+                <TableHead>
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center p-6">
-                      جاري التحميل...
-                    </TableCell>
+                    <TableCell align="center">#</TableCell>
+                    <TableCell align="center">التاريخ</TableCell>
+                    <TableCell align="center">العميل</TableCell>
+                    <TableCell align="center">المجموع</TableCell>
+                    <TableCell align="center">المدفوع</TableCell>
+                    <TableCell align="center">الخصم</TableCell>
+                    <TableCell align="center">النوع</TableCell>
                   </TableRow>
-                ) : sales.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center p-6">
-                      لا توجد مبيعات مخفضة
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  sales.map((s) => (
-                    <TableRow key={s.id}>
-                      <TableCell className="text-center">#{s.id}</TableCell>
-                      <TableCell className="text-center">
-                        {(s as ApiSale).sale_date}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {(s as ApiSale).client_name || "-"}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {formatNumber(Number(s.total_amount))}
-                      </TableCell>
-                      <TableCell className="text-center text-green-600">
-                        {formatNumber(Number(s.paid_amount))}
-                      </TableCell>
-                      <TableCell className="text-center text-red-600">
-                        {formatNumber(
-                          Number(
-                            (s.discount_amount as
-                              | number
-                              | string
-                              | undefined) || 0
-                          )
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {(s.discount_type as string | undefined) || "-"}
+                </TableHead>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                        <CircularProgress size={24} />
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+                  ) : sales.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          لا توجد مبيعات مخفضة
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    sales.map((s) => (
+                      <TableRow key={s.id}>
+                        <TableCell align="center">#{s.id}</TableCell>
+                        <TableCell align="center">
+                          {(s as ApiSale).sale_date}
+                        </TableCell>
+                        <TableCell align="center">
+                          {(s as ApiSale).client_name || "-"}
+                        </TableCell>
+                        <TableCell align="center">
+                          {formatNumber(Number(s.total_amount))}
+                        </TableCell>
+                        <TableCell align="center" sx={{ color: "success.main" }}>
+                          {formatNumber(Number(s.paid_amount))}
+                        </TableCell>
+                        <TableCell align="center" sx={{ color: "error.main" }}>
+                          {formatNumber(
+                            Number(
+                              (s.discount_amount as number | string | undefined) || 0
+                            )
+                          )}
+                        </TableCell>
+                        <TableCell align="center">
+                          {(s.discount_type as string | undefined) || "-"}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </Box>
+          </CardContent>
+        </Card>
+      </Stack>
+    </Box>
   );
 };
 

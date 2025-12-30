@@ -3,18 +3,18 @@ import { createTheme } from "@mui/material/styles";
 import { arEG } from "@mui/material/locale";
 import createCache from "@emotion/cache";
 import { prefixer } from "stylis";
-import rtlPlugin from "stylis-plugin-rtl";
 
-// Create cache for Emotion (WITH rtlPlugin for proper RTL support)
+// Create cache for Brand (LTR default)
+// Removed rtlPlugin to ensure LTR direction
 export const cacheRtl = createCache({
-  key: "mui-rtl",
-  stylisPlugins: [prefixer, rtlPlugin],
+  key: "mui-style",
+  stylisPlugins: [prefixer],
 });
 
-// Create MUI theme with Arabic RTL support
+// Create MUI theme (LTR)
 const theme = createTheme(
   {
-    direction: "rtl",
+    direction: "ltr",
     typography: {
       fontFamily: '"Tajawal", "Arial", sans-serif',
       h1: { fontWeight: 700 },
@@ -66,10 +66,10 @@ const theme = createTheme(
       MuiCssBaseline: {
         styleOverrides: {
           html: {
-            direction: "rtl",
+            direction: "ltr",
           },
           body: {
-            direction: "rtl",
+            direction: "ltr",
             fontFamily: '"Tajawal", "Arial", sans-serif',
           },
         },

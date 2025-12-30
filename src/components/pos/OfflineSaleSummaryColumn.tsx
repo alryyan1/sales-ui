@@ -30,7 +30,7 @@ import { CartItem } from "./types";
 import { OfflineSale } from "../../services/db";
 import { formatNumber, preciseSum, preciseCalculation } from "@/constants";
 import dayjs from "dayjs";
-import { Plus, Printer, FileText, Pause } from "lucide-react";
+import { Plus, Printer, FileText } from "lucide-react";
 import { PDFViewer } from "@react-pdf/renderer";
 import { PosInvoicePdf } from "./PosInvoicePdf";
 import { OfflineInvoiceA4Pdf } from "./OfflineInvoiceA4Pdf";
@@ -48,7 +48,7 @@ interface OfflineSaleSummaryColumnProps {
   currentSale: OfflineSale;
   currentSaleItems: CartItem[]; // To calculate subtotal etc
   onUpdateSale: (sale: OfflineSale) => void;
-  onCompleteSale: () => void; // Trigger for parent to sync/finalize
+  onCompleteSale: () => Promise<void> | void; // Trigger for parent to sync/finalize
   isPaymentDialogOpen: boolean;
   onPaymentDialogOpenChange: (isOpen: boolean) => void;
   clients: any[]; // Passed from parent
@@ -196,10 +196,10 @@ export const OfflineSaleSummaryColumn: React.FC<
   };
 
   // Final Payment Success (from dialog "Complete Sale")
-  const handlePaymentComplete = () => {
+  const handlePaymentComplete = async () => {
     // The payment dialog updates the sale object with payments.
     // Now we just confirm completion
-    onCompleteSale();
+    await onCompleteSale();
   };
 
   // Shortcut for payment (+) - REMOVED, handled in parent
@@ -516,25 +516,6 @@ export const OfflineSaleSummaryColumn: React.FC<
           </Box>
 
           <Divider />
-
-          {/* Hold Sale Button */}
-          {currentSale.items.length > 0 &&
-            currentSale.status !== "completed" &&
-            !currentSale.is_synced && (
-              <Button
-                variant="outlined"
-                fullWidth
-                color="warning"
-                startIcon={<Pause size={18} />}
-                onClick={() => {
-                  const heldSale = { ...currentSale, status: "held" as const };
-                  onUpdateSale(heldSale);
-                }}
-                sx={{ mb: 1, py: 1 }}
-              >
-                {currentSale.status === "held" ? "معلق" : "تعليق البيع"}
-              </Button>
-            )}
 
           {/* Print Invoice Button (Thermal) */}
           {currentSale.items.length > 0 && (

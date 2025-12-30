@@ -77,7 +77,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
       position="fixed"
       sx={{
         width: { sm: width },
-        ml: {
+        mr: {
           sm: isSidebarCollapsed
             ? `${COLLAPSED_DRAWER_WIDTH}px`
             : `${DRAWER_WIDTH}px`,
@@ -87,6 +87,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
         color: "text.primary",
         borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
         boxShadow: "none",
+        direction: "rtl",
         transition: theme.transitions.create(["width", "margin"], {
           easing: theme.transitions.easing.sharp,
           duration: theme.transitions.duration.leavingScreen,

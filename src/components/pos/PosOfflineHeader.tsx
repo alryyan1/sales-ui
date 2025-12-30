@@ -171,7 +171,7 @@ export const PosOfflineHeader = React.forwardRef<
               flex: 1,
               display: "flex",
               justifyContent: "center",
-              maxWidth: 650,
+              maxWidth: 900,
               mx: "auto",
             }}
           >
@@ -405,18 +405,19 @@ export const PosOfflineHeader = React.forwardRef<
           <Button
             variant="contained"
             onClick={onNewSale}
-            startIcon={<Plus size={20} />}
+            startIcon={<Plus size={16} />}
             sx={{
               borderRadius: 3,
               textTransform: "none",
               bgcolor: "primary.main",
               boxShadow: "0 2px 8px rgba(59, 130, 246, 0.25)",
               transition: "all 0.2s ease-in-out",
-              px: 4,
-              py: 1.5,
-              minHeight: 44,
+              px: 2,
+              py: 0.75,
+              minHeight: 32,
               fontWeight: 600,
-              fontSize: "1rem",
+              fontSize: "0.85rem",
+              gap: 0.5,
               display: { xs: "none", md: "flex" },
               "&:hover": {
                 bgcolor: "primary.dark",
@@ -613,11 +614,12 @@ export const PosOfflineHeader = React.forwardRef<
                   startIcon={
                     <Box
                       sx={{
-                        width: 10,
-                        height: 10,
+                        width: 6,
+                        height: 6,
                         borderRadius: "50%",
                         bgcolor: "success.main",
                         boxShadow: `0 0 0 2px ${alpha(theme.palette.success.main, 0.2)}`,
+                        mr: 0.5,
                       }}
                     />
                   }
@@ -629,11 +631,12 @@ export const PosOfflineHeader = React.forwardRef<
                     textTransform: "none",
                     display: { xs: "none", md: "flex" },
                     borderRadius: 2.5,
-                    px: 3,
-                    py: 1.25,
-                    minHeight: 44,
+                    px: 2,
+                    py: 0.75,
+                    minHeight: 32,
                     fontWeight: 600,
-                    fontSize: "0.95rem",
+                    fontSize: "0.85rem",
+                    gap: 0.5,
                     transition: "all 0.2s ease-in-out",
                     boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
                     "&:hover": {
@@ -659,11 +662,11 @@ export const PosOfflineHeader = React.forwardRef<
                   color: "background.paper",
                   textTransform: "none",
                   borderRadius: 2.5,
-                  px: 3,
-                  py: 1.25,
-                  minHeight: 44,
+                  px: 2,
+                  py: 0.75,
+                  minHeight: 32,
                   fontWeight: 600,
-                  fontSize: "0.95rem",
+                  fontSize: "0.85rem",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
                   transition: "all 0.2s ease-in-out",
                   "&:hover:not(:disabled)": {

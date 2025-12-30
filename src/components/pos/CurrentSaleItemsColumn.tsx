@@ -315,6 +315,7 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                   {currentSaleItems.map((item, index) => (
                     <TableRow key={item.product.id} hover>
                       {/* Row Number */}
+                      {console.log(item)}
                       <TableCell align="center">
                         <Box
                           sx={{
@@ -440,6 +441,7 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                                   onKeyDown={(e) =>
                                     handleKeyDown(e, item.product.id)
                                   }
+                                  onFocus={(e) => e.target.select()}
                                   size="small"
                                   sx={{ width: 60 }}
                                   inputProps={{
@@ -603,6 +605,7 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                               onKeyDown={(e) =>
                                 handleKeyDown(e, item.product.id)
                               }
+                              onFocus={(e) => e.target.select()}
                               size="small"
                               sx={{ width: 80 }}
                               inputProps={{
@@ -683,6 +686,7 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                             item.product.stock_alert_level
                           )}
                           onStockClick={handleStockClick}
+                          currentSaleQuantity={item.quantity}
                         />
                       </TableCell>
 

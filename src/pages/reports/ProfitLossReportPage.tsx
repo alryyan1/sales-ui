@@ -7,43 +7,32 @@ import * as z from "zod";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { format, parseISO, startOfMonth, endOfMonth } from "date-fns";
-import { cn } from "@/lib/utils";
 
-// shadcn/ui & Lucide Icons
-import { Button } from "@/components/ui/button";
+// MUI Components
 import {
+  Box,
+  Button,
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+  Typography,
+  Alert,
+  AlertTitle,
+  CircularProgress,
+  Stack,
+  Grid,
+  Divider,
+} from "@mui/material";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  Loader2,
-  Filter,
-  X,
-  AlertCircle,
-  ArrowLeft,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  CalendarIcon,
-} from "lucide-react";
+  Filter as FilterIcon,
+  Clear as ClearIcon,
+  ArrowBack as ArrowBackIcon,
+  Error as ErrorIcon,
+  TrendingUp as TrendingUpIcon,
+  TrendingDown as TrendingDownIcon,
+  Remove as RemoveIcon,
+} from "@mui/icons-material";
 
 // API Client & Types
 import apiClient, { getErrorMessage } from "@/lib/axios";
@@ -185,237 +174,184 @@ const ProfitLossReportPage: React.FC = () => {
   };
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 dark:bg-gray-950 min-h-screen pb-10">
+    <Box sx={{ p: { xs: 2, md: 3, lg: 4 }, minHeight: "100vh", pb: 10 }}>
       {/* Header */}
-      <div className="flex items-center mb-6 gap-2">
+      <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
         <Button
-          variant="outline"
-          size="icon"
+          variant="outlined"
+          size="small"
           onClick={() => navigate("/dashboard")}
+          sx={{ minWidth: 40, width: 40, height: 40 }}
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowBackIcon fontSize="small" />
         </Button>
-        <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 dark:text-gray-100">
+        <Typography variant="h4" component="h1" sx={{ fontWeight: 600 }}>
           تقرير الأرباح والخسائر
-        </h1>
-      </div>
+        </Typography>
+      </Stack>
 
       {/* Filter Form Card */}
-      <Card className="dark:bg-gray-900 mb-6">
+      <Card sx={{ mb: 3 }}>
         <CardHeader>
-          <CardTitle className="text-lg">الفلاتر</CardTitle>
+          <Typography variant="h6" component="h2">
+            الفلاتر
+          </Typography>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={handleSubmit(onFilterSubmit)}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
-                {/* Start Date */}
-                <FormField
+          <Box component="form" onSubmit={handleSubmit(onFilterSubmit)}>
+            <Grid container spacing={2} alignItems="flex-end">
+              {/* Start Date */}
+              <Grid item xs={12} sm={6} md={4}>
+                <Controller
                   control={control}
                   name="startDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      {" "}
-                      <FormLabel>تاريخ البدء*</FormLabel>{" "}
-                      <Popover>
-                        {" "}
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {" "}
-                              <CalendarIcon className="me-2 h-4 w-4" />{" "}
-                              {field.value ? (
-                                format(field.value, "PPP", {
-                                  locale: require("date-fns/locale/ar-SA"),
-                                })
-                              ) : (
-                                <span>اختر التاريخ</span>
-                              )}{" "}
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar
-                            mode="single"
-                            selected={field.value ?? undefined}
-                            onSelect={field.onChange}
-                            initialFocus
-                            locale={require("date-fns/locale/ar-SA")}
-                          />
-                        </PopoverContent>{" "}
-                      </Popover>{" "}
-                      <FormMessage>
-                        {formState.errors.startDate?.message}
-                      </FormMessage>{" "}
-                    </FormItem>
+                  render={({ field, fieldState }) => (
+                    <DatePicker
+                      label="تاريخ البدء *"
+                      value={field.value ?? null}
+                      onChange={field.onChange}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          size: "small",
+                          required: true,
+                          error: !!fieldState.error,
+                          helperText: fieldState.error?.message,
+                        },
+                      }}
+                    />
                   )}
                 />
-                {/* End Date */}
-                <FormField
+              </Grid>
+              {/* End Date */}
+              <Grid item xs={12} sm={6} md={4}>
+                <Controller
                   control={control}
                   name="endDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      {" "}
-                      <FormLabel>تاريخ الانتهاء*</FormLabel>{" "}
-                      <Popover>
-                        {" "}
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {" "}
-                              <CalendarIcon className="me-2 h-4 w-4" />{" "}
-                              {field.value ? (
-                                format(field.value, "PPP", {
-                                  locale: require("date-fns/locale/ar-SA"),
-                                })
-                              ) : (
-                                <span>اختر التاريخ</span>
-                              )}{" "}
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar
-                            mode="single"
-                            selected={field.value ?? undefined}
-                            onSelect={field.onChange}
-                            initialFocus
-                            locale={require("date-fns/locale/ar-SA")}
-                          />
-                        </PopoverContent>{" "}
-                      </Popover>{" "}
-                      <FormMessage>
-                        {formState.errors.endDate?.message}
-                      </FormMessage>{" "}
-                    </FormItem>
+                  render={({ field, fieldState }) => (
+                    <DatePicker
+                      label="تاريخ الانتهاء *"
+                      value={field.value ?? null}
+                      onChange={field.onChange}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          size: "small",
+                          required: true,
+                          error: !!fieldState.error,
+                          helperText: fieldState.error?.message,
+                        },
+                      }}
+                    />
                   )}
                 />
-                {/* Add Client/Product filters here if needed */}
-                {/* Filter/Clear Buttons */}
-                <div className="flex justify-start sm:justify-end gap-2 md:col-start-3">
-                  {" "}
-                  {/* Align buttons */}
+              </Grid>
+              {/* Filter/Clear Buttons */}
+              <Grid item xs={12} sm={12} md={4}>
+                <Stack direction="row" spacing={2} justifyContent={{ xs: "flex-start", md: "flex-end" }}>
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outlined"
                     onClick={clearFilters}
                     disabled={isLoading}
+                    startIcon={<ClearIcon />}
                   >
-                    {" "}
-                    <X className="me-2 h-4 w-4" />
                     مسح الفلاتر
                   </Button>
-                  <Button type="submit" disabled={isLoading}>
-                    {" "}
-                    {isLoading ? (
-                      <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Filter className="me-2 h-4 w-4" />
-                    )}{" "}
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={isLoading}
+                    startIcon={isLoading ? <CircularProgress size={16} /> : <FilterIcon />}
+                  >
                     توليد التقرير
-                  </Button>{" "}
-                  {/* Use specific button text */}
-                </div>
-              </div>
-            </form>
-          </Form>
+                  </Button>
+                </Stack>
+              </Grid>
+            </Grid>
+          </Box>
         </CardContent>
       </Card>
 
       {/* Report Results Section */}
       {isLoading && (
-        <div className="flex justify-center items-center py-10">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        </div>
+        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: 5 }}>
+          <CircularProgress />
+        </Box>
       )}
       {!isLoading && error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
+        <Alert severity="error" sx={{ mb: 3 }}>
           <AlertTitle>خطأ</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          {error}
         </Alert>
       )}
       {!isLoading && !error && reportData && (
-        <Card className="dark:bg-gray-900">
+        <Card>
           <CardHeader>
-            <CardTitle>ملخص الأرباح والخسائر</CardTitle> {/* Add key */}
-            <CardDescription>{`للفترة من ${dayjs(reportData.start_date).format(
-              "YYYY-MM-DD"
-            )} إلى ${dayjs(reportData.end_date).format(
-              "YYYY-MM-DD"
-            )}`}</CardDescription>{" "}
-            {/* Add key */}
+            <Typography variant="h6" component="h2">
+              ملخص الأرباح والخسائر
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {`للفترة من ${dayjs(reportData.start_date).format(
+                "YYYY-MM-DD"
+              )} إلى ${dayjs(reportData.end_date).format("YYYY-MM-DD")}`}
+            </Typography>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-center border-b pb-2 dark:border-gray-700">
-              <span className="text-muted-foreground">إجمالي الإيرادات</span>{" "}
-              {/* Add key */}
-              <span className="font-semibold text-green-600 dark:text-green-400 flex items-center gap-1">
-                {" "}
-                <TrendingUp className="h-4 w-4" />{" "}
-                {formatNumber(reportData.revenue)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center border-b pb-2 dark:border-gray-700">
-              <span className="text-muted-foreground">
-                تكلفة البضاعة المباعة
-              </span>{" "}
-              {/* Add key */}
-              <span className="font-semibold text-red-600 dark:text-red-400 flex items-center gap-1">
-                {" "}
-                <TrendingDown className="h-4 w-4" />{" "}
-                {formatNumber(reportData.cost_of_goods_sold)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center pt-2">
-              <span className="text-lg font-bold text-gray-800 dark:text-gray-100">
-                مجمل الربح
-              </span>{" "}
-              {/* Add key */}
-              <span
-                className={`text-lg font-bold flex items-center gap-1 ${
-                  reportData.gross_profit >= 0
-                    ? "text-green-600 dark:text-green-400"
-                    : "text-red-600 dark:text-red-400"
-                }`}
-              >
-                <Minus
-                  className={cn(
-                    "h-4 w-4",
-                    reportData.gross_profit >= 0 && "hidden"
+          <CardContent>
+            <Stack spacing={2}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", pb: 1, borderBottom: 1, borderColor: "divider" }}>
+                <Typography variant="body2" color="text.secondary">
+                  إجمالي الإيرادات
+                </Typography>
+                <Stack direction="row" alignItems="center" spacing={0.5}>
+                  <TrendingUpIcon sx={{ fontSize: 16, color: "success.main" }} />
+                  <Typography variant="body1" sx={{ fontWeight: 600, color: "success.main" }}>
+                    {formatNumber(reportData.revenue)}
+                  </Typography>
+                </Stack>
+              </Box>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", pb: 1, borderBottom: 1, borderColor: "divider" }}>
+                <Typography variant="body2" color="text.secondary">
+                  تكلفة البضاعة المباعة
+                </Typography>
+                <Stack direction="row" alignItems="center" spacing={0.5}>
+                  <TrendingDownIcon sx={{ fontSize: 16, color: "error.main" }} />
+                  <Typography variant="body1" sx={{ fontWeight: 600, color: "error.main" }}>
+                    {formatNumber(reportData.cost_of_goods_sold)}
+                  </Typography>
+                </Stack>
+              </Box>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", pt: 1 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  مجمل الربح
+                </Typography>
+                <Stack direction="row" alignItems="center" spacing={0.5}>
+                  {reportData.gross_profit < 0 && (
+                    <RemoveIcon sx={{ fontSize: 16 }} />
                   )}
-                />{" "}
-                {/* Show minus only if negative */}
-                {formatNumber(reportData.gross_profit)}
-              </span>
-            </div>
-            {/* Optionally add Total Purchase Cost if calculated and needed */}
-            {/* <div className="flex justify-between items-center border-t pt-2 mt-2 dark:border-gray-700">
-                             <span className="text-sm text-muted-foreground">{t('reports:totalPurchaseCost')}</span>
-                             <span className="text-sm font-medium">{formatCurrency(reportData.total_purchase_cost)}</span>
-                         </div> */}
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight: 700,
+                      color: reportData.gross_profit >= 0 ? "success.main" : "error.main",
+                    }}
+                  >
+                    {formatNumber(reportData.gross_profit)}
+                  </Typography>
+                </Stack>
+              </Box>
+            </Stack>
           </CardContent>
         </Card>
       )}
       {!isLoading && !error && !reportData && (
-        <p className="text-center text-muted-foreground py-10">
-          الرجاء تحديد نطاق التاريخ لعرض التقرير
-        </p> // Prompt to select dates if no data yet // Add key
+        <Box sx={{ textAlign: "center", py: 5 }}>
+          <Typography variant="body1" color="text.secondary">
+            الرجاء تحديد نطاق التاريخ لعرض التقرير
+          </Typography>
+        </Box>
       )}
-    </div>
+    </Box>
   );
 };
 

@@ -1,15 +1,22 @@
 // src/components/common/PdfViewerDialog.tsx
 import React, { useState, useEffect } from "react";
 
-// shadcn/ui components
+// MUI Components
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Loader2, Download, X } from "lucide-react";
+  Button,
+  Box,
+  Typography,
+  CircularProgress,
+  IconButton,
+  Stack,
+  Alert,
+} from "@mui/material";
+
+// Lucide Icons
+import { Download, X } from "lucide-react";
 
 interface PdfViewerDialogProps {
   isOpen: boolean;
@@ -53,64 +60,155 @@ export const PdfViewerDialog: React.FC<PdfViewerDialogProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl w-[95vw] h-[90vh] p-0">
-        <DialogHeader className="flex flex-row items-center justify-between p-4 border-b">
-          <DialogTitle className="text-lg font-semibold">
+    <Dialog
+      open={isOpen}
+      onClose={onClose}
+      maxWidth="lg"
+      fullWidth
+      PaperProps={{
+        sx: {
+          width: "95vw",
+          maxWidth: "1200px",
+          height: "90vh",
+          maxHeight: "90vh",
+          borderRadius: 3,
+        },
+      }}
+    >
+      <DialogContent sx={{ p: 0, height: "100%", display: "flex", flexDirection: "column" }}>
+        {/* Header */}
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            p: 3,
+            borderBottom: 1,
+            borderColor: "divider",
+          }}
+        >
+          <DialogTitle
+            sx={{
+              p: 0,
+              m: 0,
+              fontWeight: 600,
+              fontSize: "1.125rem",
+            }}
+          >
             {title || "تقرير المخزون"}
           </DialogTitle>
-          <div className="flex items-center gap-2">
+          <Stack direction="row" spacing={1.5} alignItems="center">
             <Button
-              variant="outline"
-              size="sm"
+              variant="outlined"
+              size="small"
               onClick={handleDownload}
-              className="flex items-center gap-2"
+              startIcon={<Download size={18} />}
+              sx={{
+                borderRadius: 2,
+                textTransform: "none",
+                fontWeight: 500,
+              }}
             >
-              <Download className="h-4 w-4" />
               تحميل
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
+            <IconButton
               onClick={onClose}
-              className="h-8 w-8 p-0"
+              size="small"
+              sx={{
+                border: 1,
+                borderColor: "divider",
+                "&:hover": {
+                  borderColor: "primary.main",
+                  bgcolor: "action.hover",
+                },
+              }}
             >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </DialogHeader>
-        
-        <div className="flex-1 relative">
+              <X size={18} />
+            </IconButton>
+          </Stack>
+        </Box>
+
+        {/* Content Area */}
+        <Box
+          sx={{
+            flex: 1,
+            position: "relative",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+          }}
+        >
+          {/* Loading State */}
           {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
-              <div className="flex flex-col items-center gap-2">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">
+            <Box
+              sx={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                bgcolor: "background.paper",
+                zIndex: 10,
+              }}
+            >
+              <Stack spacing={2} alignItems="center">
+                <CircularProgress size={32} />
+                <Typography variant="body2" color="text.secondary">
                   جاري تحميل ملف PDF...
-                </p>
-              </div>
-            </div>
+                </Typography>
+              </Stack>
+            </Box>
           )}
-          
-          {error && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
-              <div className="flex flex-col items-center gap-2 text-center">
-                <p className="text-sm text-destructive">{error}</p>
-                <Button variant="outline" size="sm" onClick={onClose}>
+
+          {/* Error State */}
+          {error && !isLoading && (
+            <Box
+              sx={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                bgcolor: "background.paper",
+                zIndex: 10,
+                p: 3,
+              }}
+            >
+              <Stack spacing={2} alignItems="center" sx={{ textAlign: "center" }}>
+                <Alert severity="error" sx={{ width: "100%", maxWidth: 400 }}>
+                  {error}
+                </Alert>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={onClose}
+                  sx={{
+                    borderRadius: 2,
+                    textTransform: "none",
+                  }}
+                >
                   إغلاق
                 </Button>
-              </div>
-            </div>
+              </Stack>
+            </Box>
           )}
-          
-          <iframe
+
+          {/* PDF Iframe */}
+          <Box
+            component="iframe"
             src={pdfUrl}
-            className="w-full h-full border-0"
             onLoad={handleIframeLoad}
             onError={handleIframeError}
             title={title || "تقرير المخزون"}
+            sx={{
+              width: "100%",
+              height: "100%",
+              border: 0,
+              flex: 1,
+            }}
           />
-        </div>
+        </Box>
       </DialogContent>
     </Dialog>
   );
