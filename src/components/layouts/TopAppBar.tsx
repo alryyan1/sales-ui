@@ -13,13 +13,15 @@ import {
   Chip,
 } from "@mui/material";
 import { useAuth } from "@/context/AuthContext";
-import { Menu as MenuIcon, Bell, Warehouse, RefreshCcw } from "lucide-react";
+import { Menu as MenuIcon, Warehouse, RefreshCcw, Keyboard } from "lucide-react";
 import { useNavigate } from "react-router-dom"; // Import useNavigate
 import { ThemeToggle } from "../layout/ThemeToggle";
 import { DRAWER_WIDTH } from "./types";
 import { dbService, STORES } from "../../services/db";
 import { offlineSaleService } from "../../services/offlineSaleService";
 import { toast } from "sonner";
+import { NotificationBell } from "../notifications/NotificationBell";
+import { KeyboardShortcutsDialog } from "../common/KeyboardShortcutsDialog";
 
 const COLLAPSED_DRAWER_WIDTH = 72;
 
@@ -36,6 +38,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
 }) => {
   const navigate = useNavigate(); // Initialize useNavigate
   const { user } = useAuth();
+  const [shortcutsDialogOpen, setShortcutsDialogOpen] = React.useState(false);
 
   const handleResetData = async () => {
     if (
@@ -117,6 +120,14 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <IconButton
+            onClick={() => setShortcutsDialogOpen(true)}
+            color="inherit"
+            title="اختصارات لوحة المفاتيح"
+          >
+            <Keyboard size={20} />
+          </IconButton>
+
+          <IconButton
             onClick={handleResetData}
             color="error"
             title="Reset Offline Data"
@@ -150,9 +161,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
             />
           )}
 
-          <IconButton size="small" color="inherit">
-            <Bell size={20} />
-          </IconButton>
+          <NotificationBell />
           <ThemeToggle />
 
           {user && (
@@ -184,6 +193,11 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
           )}
         </Box>
       </Toolbar>
+
+      <KeyboardShortcutsDialog
+        open={shortcutsDialogOpen}
+        onClose={() => setShortcutsDialogOpen(false)}
+      />
     </AppBar>
   );
 };

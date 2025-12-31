@@ -276,8 +276,12 @@ export const offlineSaleService = {
       payload: completedSale,
     });
 
-    // 3. Trigger sync immediately if online
-    if (navigator.onLine) {
+    // 3. Trigger sync immediately if backend is accessible
+    // Import backendHealthService dynamically to avoid circular dependency
+    const { backendHealthService } = await import("./backendHealthService");
+    const backendAccessible = await backendHealthService.checkBackendAccessible();
+    
+    if (backendAccessible) {
       const { results } = await offlineSaleService.processSyncQueue();
       const myResult = results.find((r) => r.id === queueId);
       if (myResult && !myResult.success) {

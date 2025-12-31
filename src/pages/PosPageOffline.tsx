@@ -195,8 +195,18 @@ export const PosPageOffline = () => {
   // Reload pending sales list and refresh products when sync finishes
   useEffect(() => {
     if (!isSyncing) {
-      loadLocalPendingSales();
-      loadSyncedSales();
+      const now = Date.now();
+      const timeSinceLastLoad = now - lastLoadTimeRef.current;
+      
+      // Only reload synced sales if enough time has passed since last load
+      if (timeSinceLastLoad >= LOAD_DEBOUNCE_MS) {
+        loadLocalPendingSales();
+        loadSyncedSales();
+        lastLoadTimeRef.current = now;
+      } else {
+        // Still reload local pending sales (lightweight operation)
+        loadLocalPendingSales();
+      }
 
       // Optimized Update: Only update products that changed during sync
       if (lastSyncedProducts && lastSyncedProducts.length > 0) {
@@ -324,16 +334,37 @@ export const PosPageOffline = () => {
     updateCurrentSale((prev) => {
       const existing = prev.items.find((i) => i.product_id === product.id);
       const price = getPriceForUnitType(product, unitType);
+      const currentStock = Number(
+        product?.current_stock_quantity ?? product?.stock_quantity ?? 0
+      );
 
       let newItems;
+      let quantityToDeduct = 0; // Quantity to deduct from stock in sellable units
+
       if (existing) {
         // If existing item has different unit type, convert quantity
         const existingUnitType = (existing as any).unitType || "sellable";
         if (existingUnitType === unitType) {
           // Same unit type, just increment
-          newItems = prev.items.map((i) =>
-            i.product_id === product.id ? { ...i, quantity: i.quantity + 1 } : i
-          );
+          const addedQty = unitType === "stocking" ? unitsPerStocking : 1;
+          quantityToDeduct = addedQty;
+          
+          newItems = prev.items.map((i) => {
+            if (i.product_id === product.id) {
+              // Update product stock in the item
+              const updatedProduct: Product = {
+                ...(i.product as Product),
+                stock_quantity: Math.max(0, currentStock - addedQty),
+                current_stock_quantity: Math.max(0, currentStock - addedQty),
+              };
+              return { 
+                ...i, 
+                quantity: i.quantity + 1,
+                product: updatedProduct,
+              };
+            }
+            return i;
+          });
         } else {
           // Different unit type, convert and add
           const existingQtyInSellable =
@@ -343,6 +374,7 @@ export const PosPageOffline = () => {
           const newQtyInSellable =
             unitType === "stocking" ? unitsPerStocking : 1;
           const totalSellableQty = existingQtyInSellable + newQtyInSellable;
+          quantityToDeduct = newQtyInSellable;
 
           // Convert back to the new unit type
           const newQty =
@@ -350,18 +382,35 @@ export const PosPageOffline = () => {
               ? Math.floor(totalSellableQty / unitsPerStocking)
               : totalSellableQty;
 
-          newItems = prev.items.map((i) =>
-            i.product_id === product.id
-              ? {
-                  ...i,
-                  quantity: newQty,
-                  unit_price: price,
-                  unitType: unitType,
-                }
-              : i
-          );
+          newItems = prev.items.map((i) => {
+            if (i.product_id === product.id) {
+              // Update product stock in the item
+              const updatedProduct: Product = {
+                ...(i.product as Product),
+                stock_quantity: Math.max(0, currentStock - newQtyInSellable),
+                current_stock_quantity: Math.max(0, currentStock - newQtyInSellable),
+              };
+              return {
+                ...i,
+                quantity: newQty,
+                unit_price: price,
+                unitType: unitType,
+                product: updatedProduct,
+              };
+            }
+            return i;
+          });
         }
       } else {
+        // New item - deduct quantity from stock
+        quantityToDeduct = unitType === "stocking" ? unitsPerStocking : 1;
+        
+        const updatedProduct: Product = {
+          ...product,
+          stock_quantity: Math.max(0, currentStock - quantityToDeduct),
+          current_stock_quantity: Math.max(0, currentStock - quantityToDeduct),
+        };
+        
         const newItem: OfflineSaleItem & {
           unitType?: "stocking" | "sellable";
         } = {
@@ -369,11 +418,27 @@ export const PosPageOffline = () => {
           product_name: product.name,
           quantity: 1,
           unit_price: price,
-          product: product,
+          product: updatedProduct,
           id: undefined, // New item
           unitType: unitType,
         };
         newItems = [...prev.items, newItem];
+      }
+
+      // Update products state to reflect stock change
+      if (quantityToDeduct > 0) {
+        setProducts((prevProducts) => {
+          return prevProducts.map((p) => {
+            if (p.id === product.id) {
+              return {
+                ...p,
+                stock_quantity: Math.max(0, currentStock - quantityToDeduct),
+                current_stock_quantity: Math.max(0, currentStock - quantityToDeduct),
+              };
+            }
+            return p;
+          });
+        });
       }
 
       return offlineSaleService.calculateTotals({ ...prev, items: newItems });
@@ -385,43 +450,84 @@ export const PosPageOffline = () => {
       toast.error("لا يمكن تعديل عملية بيع تمت مزامنتها");
       return;
     }
+    
+    // Find the current item to get old quantity
+    const currentItem = currentSale.items.find((i) => i.product_id === productId);
+    if (!currentItem) return;
+    
+    const product = currentItem.product as Product;
+    const unitType = (currentItem as any).unitType || "sellable";
+    const unitsPerStocking = product?.units_per_stocking_unit || 1;
+    const currentStock = Number(
+      product?.current_stock_quantity ?? product?.stock_quantity ?? 0
+    );
+
+    // Calculate quantity difference in sellable units
+    const oldQuantity = currentItem.quantity;
+    const oldQuantityInSellable = unitType === "stocking" 
+      ? oldQuantity * unitsPerStocking 
+      : oldQuantity;
+    const newQuantityInSellable = unitType === "stocking" 
+      ? qty * unitsPerStocking 
+      : qty;
+    const quantityDiff = newQuantityInSellable - oldQuantityInSellable;
+
+    // Validate stock availability
+    if (unitType === "stocking") {
+      const requiredSellableQty = qty * unitsPerStocking;
+      if (requiredSellableQty > currentStock) {
+        toast.error(
+          `المخزون غير كافٍ. المتاح: ${currentStock} ${
+            product?.sellable_unit_name || "قطعة"
+          }`
+        );
+        return;
+      }
+    } else {
+      if (qty > currentStock) {
+        toast.error(
+          `المخزون غير كافٍ. المتاح: ${currentStock} ${
+            product?.sellable_unit_name || "قطعة"
+          }`
+        );
+        return;
+      }
+    }
+
+    // Update sale items
     updateCurrentSale((prev) => {
       const newItems = prev.items.map((i) => {
         if (i.product_id === productId) {
-          const product = i.product as Product;
-          const unitType = (i as any).unitType || "sellable";
-          const unitsPerStocking = product?.units_per_stocking_unit || 1;
-          const currentStock = Number(
-            product?.current_stock_quantity ?? product?.stock_quantity ?? 0
-          );
-
-          // Validate stock availability
-          if (unitType === "stocking") {
-            const requiredSellableQty = qty * unitsPerStocking;
-            if (requiredSellableQty > currentStock) {
-              toast.error(
-                `المخزون غير كافٍ. المتاح: ${currentStock} ${
-                  product?.sellable_unit_name || "قطعة"
-                }`
-              );
-              return i;
-            }
-          } else {
-            if (qty > currentStock) {
-              toast.error(
-                `المخزون غير كافٍ. المتاح: ${currentStock} ${
-                  product?.sellable_unit_name || "قطعة"
-                }`
-              );
-              return i;
-            }
-          }
-
-          return { ...i, quantity: qty };
+          // Update product stock in the item
+          const updatedProduct: Product = {
+            ...(i.product as Product),
+            stock_quantity: Math.max(0, currentStock - quantityDiff),
+            current_stock_quantity: Math.max(0, currentStock - quantityDiff),
+          };
+          
+          return { 
+            ...i, 
+            quantity: qty,
+            product: updatedProduct,
+          };
         }
         return i;
       });
       return offlineSaleService.calculateTotals({ ...prev, items: newItems });
+    });
+
+    // Update products state to reflect stock change
+    setProducts((prevProducts) => {
+      return prevProducts.map((p) => {
+        if (p.id === productId) {
+          return {
+            ...p,
+            stock_quantity: Math.max(0, currentStock - quantityDiff),
+            current_stock_quantity: Math.max(0, currentStock - quantityDiff),
+          };
+        }
+        return p;
+      });
     });
   };
 
@@ -507,15 +613,89 @@ export const PosPageOffline = () => {
     });
   };
 
-  const removeItem = (productId: number) => {
+  const removeItem = async (productId: number) => {
     if (currentSale.is_synced) {
       toast.error("لا يمكن تعديل عملية بيع تمت مزامنتها");
       return;
     }
+    
+    // Find the item to get its quantity for stock restoration
+    const itemToRemove = currentSale.items.find((i) => i.product_id === productId);
+    let quantityToRestore = 0;
+    
+    if (itemToRemove) {
+      const product = itemToRemove.product as Product;
+      const unitType = (itemToRemove as any).unitType || "sellable";
+      const unitsPerStocking = product?.units_per_stocking_unit || 1;
+      
+      // Calculate quantity to restore in sellable units
+      quantityToRestore = unitType === "stocking" 
+        ? itemToRemove.quantity * unitsPerStocking 
+        : itemToRemove.quantity;
+    }
+    
+    let shouldDeleteSale = false;
+    let saleTempId: string | null = null;
+    
     updateCurrentSale((prev) => {
       const newItems = prev.items.filter((i) => i.product_id !== productId);
-      return offlineSaleService.calculateTotals({ ...prev, items: newItems });
+      const updatedSale = offlineSaleService.calculateTotals({ ...prev, items: newItems });
+      
+      // Check if all items are removed and sale is pending
+      if (newItems.length === 0 && prev.tempId && !prev.is_synced) {
+        shouldDeleteSale = true;
+        saleTempId = prev.tempId;
+      }
+      
+      return updatedSale;
     });
+
+    // Restore stock quantity when item is removed
+    if (itemToRemove && quantityToRestore > 0) {
+      const product = itemToRemove.product as Product;
+      const currentStock = Number(
+        product?.current_stock_quantity ?? product?.stock_quantity ?? 0
+      );
+      
+      // Update products state to restore stock
+      setProducts((prevProducts) => {
+        return prevProducts.map((p) => {
+          if (p.id === productId) {
+            return {
+              ...p,
+              stock_quantity: currentStock + quantityToRestore,
+              current_stock_quantity: currentStock + quantityToRestore,
+            };
+          }
+          return p;
+        });
+      });
+    }
+    
+    // If all items removed, delete the pending sale and reload from IndexedDB
+    if (shouldDeleteSale && saleTempId) {
+      try {
+        await offlineSaleService.deletePendingSale(saleTempId);
+        toast.success("تم حذف عملية البيع المعلقة تلقائياً");
+        
+        // Create a new draft sale
+        if (shift && shift.is_open) {
+          const newDraft = offlineSaleService.createDraftSale(shift.id);
+          setCurrentSale(newDraft);
+          shouldAutoSave.current = false;
+        } else {
+          const newDraft = offlineSaleService.createDraftSale(null);
+          setCurrentSale(newDraft);
+          shouldAutoSave.current = false;
+        }
+        
+        // Reload pending sales from IndexedDB
+        await loadLocalPendingSales();
+      } catch (error) {
+        console.error("Failed to delete pending sale:", error);
+        toast.error("فشل حذف عملية البيع المعلقة");
+      }
+    }
   };
 
   const updateBatch = (
@@ -566,18 +746,35 @@ export const PosPageOffline = () => {
     );
   }, [selectedShiftId]);
 
+  // Track if loadSyncedSales is currently running to prevent concurrent calls
+  const isLoadingSyncedSalesRef = useRef(false);
+  const lastSyncedSalesLoadRef = useRef<number>(0);
+  const MIN_TIME_BETWEEN_LOADS = 3000; // Minimum 3 seconds between loads
+  
   // Load synced sales from server API (always fetch fresh)
   const loadSyncedSales = useCallback(async () => {
-    if (!isOnline) {
-      setSyncedSales([]);
-      return;
-    }
-
     if (!selectedShiftId) {
       setSyncedSales([]);
       return;
     }
 
+    // Prevent concurrent calls
+    if (isLoadingSyncedSalesRef.current) {
+      return;
+    }
+
+    // Prevent too frequent calls
+    const now = Date.now();
+    const timeSinceLastLoad = now - lastSyncedSalesLoadRef.current;
+    if (timeSinceLastLoad < MIN_TIME_BETWEEN_LOADS) {
+      return;
+    }
+
+    isLoadingSyncedSalesRef.current = true;
+    lastSyncedSalesLoadRef.current = now;
+
+    // Try to fetch regardless of isOnline status
+    // Don't clear existing synced sales if fetch fails - keep them visible
     try {
       const res = await apiClient.get(
         `/sales?shift_id=${selectedShiftId}&per_page=100`
@@ -634,9 +831,12 @@ export const PosPageOffline = () => {
       );
     } catch (e) {
       console.warn("Could not fetch synced sales from server", e);
-      setSyncedSales([]);
+      // Don't clear existing synced sales - keep them visible even if fetch fails
+      // This allows synced sales to remain visible when backend is temporarily unavailable
+    } finally {
+      isLoadingSyncedSalesRef.current = false;
     }
-  }, [isOnline, selectedShiftId]);
+  }, [selectedShiftId]);
 
   // Update available shift IDs from both sources
   const updateAvailableShiftIds = useCallback(async () => {
@@ -657,11 +857,44 @@ export const PosPageOffline = () => {
     setAvailableShiftIds(sortedIds);
   }, [syncedSales, shift]);
 
+  // Track previous online status and last load time to prevent loops
+  const prevIsOnlineRef = useRef<boolean | null>(null);
+  const lastLoadTimeRef = useRef<number>(0);
+  const lastShiftIdRef = useRef<number | null>(null);
+  const LOAD_DEBOUNCE_MS = 5000; // Don't reload more than once every 5 seconds
+  
+  // Reload when shift or selectedShiftId changes (but not on every render)
   useEffect(() => {
-    loadLocalPendingSales();
-    loadSyncedSales();
-    // Set up an interval or listener if needed, but for now we reload on actions
-  }, [selectedShiftId, shift, isOnline]); // Add isOnline to reload synced when connection changes
+    const currentShiftId = selectedShiftId || shift?.id || null;
+    
+    // Only reload if shift actually changed
+    if (currentShiftId !== lastShiftIdRef.current) {
+      lastShiftIdRef.current = currentShiftId;
+      loadLocalPendingSales();
+      loadSyncedSales();
+      lastLoadTimeRef.current = Date.now();
+    }
+  }, [selectedShiftId, shift?.id]); // Removed function dependencies to prevent loops
+  
+  // Separate effect to handle coming back online (without causing loop)
+  useEffect(() => {
+    const wasOffline = prevIsOnlineRef.current === false;
+    const isNowOnline = isOnline === true;
+    const cameBackOnline = wasOffline && isNowOnline;
+    
+    if (cameBackOnline) {
+      const now = Date.now();
+      const timeSinceLastLoad = now - lastLoadTimeRef.current;
+      
+      // Only reload if enough time has passed
+      if (timeSinceLastLoad >= LOAD_DEBOUNCE_MS) {
+        loadSyncedSales();
+        lastLoadTimeRef.current = now;
+      }
+    }
+    
+    prevIsOnlineRef.current = isOnline;
+  }, [isOnline]); // Only depends on isOnline, removed loadSyncedSales from deps
 
   // Update available shift IDs when sales change
   useEffect(() => {

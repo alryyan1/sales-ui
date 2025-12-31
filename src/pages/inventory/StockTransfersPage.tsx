@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 // import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import {
@@ -39,23 +39,25 @@ export default function StockTransfersPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [filters] = useState<{ product_id?: number }>({});
 
-  const loadTransfers = async () => {
+  const loadTransfers = useCallback(async () => {
     try {
       setLoading(true);
       const data = await stockTransferService.getAll(page, 15, filters);
-      setTransfers(data.data);
-      setTotalPages(data.last_page);
+      setTransfers(data.data || []);
+      setTotalPages(data.last_page || 1);
     } catch (error) {
-      console.error(error);
-      toast.error("Failed to load transfers");
+      console.error("Error loading stock transfers:", error);
+      toast.error("فشل تحميل التحويلات");
+      setTransfers([]);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, filters]);
 
   useEffect(() => {
     loadTransfers();
-  }, [page]); // Reload when page changes
+  }, [loadTransfers]);
 
   return (
     <div className="container mx-auto py-8 space-y-6">
@@ -112,10 +114,12 @@ export default function StockTransfersPage() {
                       transfers.map((transfer) => (
                         <TableRow key={transfer.id}>
                           <TableCell>
-                            {format(
-                              new Date(transfer.transfer_date),
-                              "MMM dd, yyyy"
-                            )}
+                            {transfer.transfer_date
+                              ? format(
+                                  new Date(transfer.transfer_date),
+                                  "yyyy-MM-dd"
+                                )
+                              : "-"}
                           </TableCell>
                           <TableCell className="font-medium">
                             {transfer.product?.name}
@@ -126,7 +130,9 @@ export default function StockTransfersPage() {
                           <TableCell>{transfer.from_warehouse?.name}</TableCell>
                           <TableCell>{transfer.to_warehouse?.name}</TableCell>
                           <TableCell className="text-right font-bold">
-                            {transfer.quantity}
+                            {typeof transfer.quantity === "number"
+                              ? transfer.quantity.toLocaleString()
+                              : transfer.quantity}
                           </TableCell>
                           <TableCell>{transfer.user?.name || "-"}</TableCell>
                         </TableRow>

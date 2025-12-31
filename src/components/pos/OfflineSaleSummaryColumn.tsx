@@ -78,8 +78,11 @@ export const OfflineSaleSummaryColumn: React.FC<
   // Load settings on mount
   useEffect(() => {
     const loadSettings = async () => {
-      // 1. Try to fetch fresh settings from API
-      if (navigator.onLine) {
+      // 1. Try to fetch fresh settings from API if backend is accessible
+      const { backendHealthService } = await import("../../services/backendHealthService");
+      const backendAccessible = await backendHealthService.checkBackendAccessible();
+      
+      if (backendAccessible) {
         try {
           console.log("Fetching settings from API...");
           const remoteSettings = await settingService.getSettings();

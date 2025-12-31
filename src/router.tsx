@@ -30,6 +30,7 @@ import PosPage from "./pages/PosPage";
 import PosPageOffline from "./pages/PosPageOffline"; // Ensure this exists
 import SalesReturnsPage from "./pages/sales/SalesReturnsPage";
 import SalesReturnsListPage from "./pages/sales/SalesReturnsListPage";
+import SaleDetailsPage from "./pages/sales/SaleDetailsPage";
 // Reports
 import SalesReportPage from "./pages/reports/SalesReportPage";
 import PurchaseReportPage from "./pages/reports/PurchaseReportPage";
@@ -50,6 +51,7 @@ import IndexedDBManagerPage from "./pages/admin/IndexedDBManagerPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
 import { AuthProvider } from "./context/AuthContext";
+import { NotificationProvider } from "./context/NotificationContext";
 
 const router = createHashRouter([
   // Auth routes (without navbar)
@@ -74,7 +76,9 @@ const router = createHashRouter([
     path: "/",
     element: (
       <AuthProvider>
-        <RootLayout />
+        <NotificationProvider>
+          <RootLayout />
+        </NotificationProvider>
       </AuthProvider>
     ),
     errorElement: <NotFoundPage />,
@@ -191,6 +195,14 @@ const router = createHashRouter([
                     ),
                   },
                 ],
+              },
+              {
+                path: ":id",
+                element: (
+                  <PermissionGuard requiredPermission="view-sales">
+                    <SaleDetailsPage />
+                  </PermissionGuard>
+                ),
               },
             ],
           },

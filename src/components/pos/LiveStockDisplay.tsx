@@ -1,77 +1,144 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { Box, Typography, CircularProgress } from "@mui/material";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import { formatNumber } from "@/constants";
 import productService from "../../services/productService";
 import { Product } from "../../services/productService";
+import { backendHealthService } from "../../services/backendHealthService";
 
 interface LiveStockDisplayProps {
   product: Product;
   selectedBatchId?: number | null;
   selectedBatchNumber?: string | null;
-  isLowStock: boolean;
-  onStockClick?: (event: React.MouseEvent<HTMLElement>, product: any) => void;
+  isLowStock?: boolean; // Optional: for backward compatibility, but calculated internally
+  onStockClick?: (event: React.MouseEvent<HTMLElement>, product: Product) => void;
   currentSaleQuantity?: number;
+  isOnline?: boolean; // Optional: pass from parent to avoid health check
 }
 
 export const LiveStockDisplay: React.FC<LiveStockDisplayProps> = ({
   product,
   selectedBatchId,
   selectedBatchNumber,
-  isLowStock,
+  isLowStock: isLowStockProp,
   onStockClick,
   currentSaleQuantity = 0,
+  isOnline: isOnlineProp,
 }) => {
-  console.log(product,'product',selectedBatchId,'selectedBatchId',selectedBatchNumber,'selectedBatchNumber',isLowStock,'isLowStock',onStockClick,'onStockClick');
   const [loading, setLoading] = useState(false);
-  const [currentStock, setCurrentStock] = useState<number>(
-    product.stock_quantity
-  );
+  const [currentStock, setCurrentStock] = useState<number>(product.stock_quantity);
+  const mountedRef = useRef(true);
+  const lastFetchTimeRef = useRef<number>(0);
+  const MIN_FETCH_INTERVAL = 2000; // Minimum 2 seconds between fetches for same product
+
+  // Determine if backend is accessible
+  const checkBackendAccess = useCallback(async (): Promise<boolean> => {
+    // If isOnline prop is provided, use it (more efficient)
+    if (isOnlineProp !== undefined) {
+      return isOnlineProp;
+    }
+    // Otherwise, check backend health (with caching)
+    return await backendHealthService.checkBackendAccessible();
+  }, [isOnlineProp]);
+
+  // Fetch latest stock from backend
+  const fetchLatestStock = useCallback(async () => {
+    if (!mountedRef.current) return;
+
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTimeRef.current;
+    
+    // Prevent too frequent fetches
+    if (timeSinceLastFetch < MIN_FETCH_INTERVAL) {
+      return;
+    }
+
+    const backendAccessible = await checkBackendAccess();
+    
+    if (!backendAccessible) {
+      // If backend not accessible, keep current stock (don't update)
+      return;
+    }
+
+    setLoading(true);
+    lastFetchTimeRef.current = now;
+
+    try {
+      const freshProduct = await productService.getProduct(product.id);
+
+      if (mountedRef.current && freshProduct) {
+        setCurrentStock(freshProduct.stock_quantity);
+      }
+    } catch (err) {
+      console.error("Failed to fetch live stock from backend", err);
+      // On error, keep current stock (don't update to avoid showing stale data)
+    } finally {
+      if (mountedRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [product.id, checkBackendAccess]);
 
   useEffect(() => {
-    let mounted = true;
-
-    const fetchLatestStock = async () => {
-      // Only fetch from backend if online
-      if (!navigator.onLine) {
-        // If offline, use the product stock_quantity that was passed in
-        setCurrentStock(product.stock_quantity);
-        return;
-      }
-
-      setLoading(true);
-      try {
-        // Fetch fresh stock from backend API
-        const freshProduct = await productService.getProduct(product.id);
-
-        if (mounted && freshProduct) {
-          setCurrentStock(freshProduct.stock_quantity);
-        }
-      } catch (err) {
-        console.error("Failed to fetch live stock from backend", err);
-        // On error, fallback to the product stock_quantity that was passed in
-        if (mounted) {
-          setCurrentStock(product.stock_quantity);
-        }
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
+    mountedRef.current = true;
+    
+    // Initial fetch
     fetchLatestStock();
 
     return () => {
-      mounted = false;
+      mountedRef.current = false;
     };
-  }, [product.id, currentSaleQuantity]); // Re-fetch if product ID or quantity changes
+  }, [product.id, currentSaleQuantity, fetchLatestStock]);
 
   // Calculate available stock (base stock minus quantity in current sale)
-  const availableStock = Math.max(0, currentStock - currentSaleQuantity);
+  const availableStock = useMemo(
+    () => Math.max(0, currentStock - currentSaleQuantity),
+    [currentStock, currentSaleQuantity]
+  );
 
-  const displayedStock = selectedBatchId
-    ? product.available_batches?.find((b) => b.id === selectedBatchId)
-        ?.remaining_quantity || 0
-    : availableStock;
+  // Calculate displayed stock based on batch selection
+  const displayedStock = useMemo(() => {
+    if (selectedBatchId) {
+        console.log("selectedBatchId", selectedBatchId,product,'product',product.available_batches ,'available_batches');
+      // For batch selection, show batch remaining quantity
+      const batch = product.available_batches?.find((b) => b.id === selectedBatchId);
+      return batch?.remaining_quantity ?? currentStock;
+    }
+    // For general stock, show available stock (after deducting current sale quantity)
+    return availableStock;
+  }, [selectedBatchId, product.available_batches, availableStock]);
+
+  // Calculate if stock is low based on current stock and alert level
+  const isActuallyLowStock = useMemo(() => {
+    if (selectedBatchId) {
+      // For batch selection, check batch remaining quantity
+      const batch = product.available_batches?.find((b) => b.id === selectedBatchId);
+      return batch ? batch.remaining_quantity <= (product.stock_alert_level || 0) : false;
+    }
+    // Use calculated value, fallback to prop if calculation not possible
+    const calculated = availableStock <= (product.stock_alert_level || 0);
+    return product.stock_alert_level !== null && product.stock_alert_level !== undefined
+      ? calculated
+      : (isLowStockProp ?? false);
+  }, [selectedBatchId, product.available_batches, product.stock_alert_level, availableStock, isLowStockProp]);
+
+  // Determine stock color based on state
+  const stockColor = useMemo(() => {
+    if (selectedBatchId) {
+      return "primary.main";
+    }
+    return isActuallyLowStock ? "error.main" : "success.main";
+  }, [selectedBatchId, isActuallyLowStock]);
+
+  // Handle stock click
+  const handleStockClick = useCallback(
+    (e: React.MouseEvent<HTMLElement>) => {
+      if (onStockClick) {
+        onStockClick(e, product);
+      }
+    },
+    [onStockClick, product]
+  );
 
   return (
     <Box
@@ -87,10 +154,12 @@ export const LiveStockDisplay: React.FC<LiveStockDisplayProps> = ({
           display: "flex",
           alignItems: "center",
           gap: 0.5,
-          cursor: "pointer",
-          "&:hover": { opacity: 0.8 },
+          cursor: onStockClick ? "pointer" : "default",
+          "&:hover": onStockClick ? { opacity: 0.8 } : {},
+          transition: "opacity 0.2s ease",
         }}
-        onClick={(e) => onStockClick && onStockClick(e, product)}
+        onClick={handleStockClick}
+        title={onStockClick ? "انقر لعرض تفاصيل المخزون" : undefined}
       >
         <InventoryIcon sx={{ fontSize: 16, color: "text.secondary" }} />
 
@@ -100,34 +169,24 @@ export const LiveStockDisplay: React.FC<LiveStockDisplayProps> = ({
           <Typography
             variant="body2"
             fontWeight="medium"
-            color={
-              selectedBatchId
-                ? "primary.main"
-                : isLowStock // Note: isLowStock checks passed prop, might differ from fresh stock?
-                ? // Ideally we calculate isLowStock here too but for now use prop logic visually
-                  "error.main"
-                : "success.main"
-            }
+            color={stockColor}
           >
             {formatNumber(displayedStock)}
           </Typography>
         )}
       </Box>
+      
       {selectedBatchId && selectedBatchNumber && (
         <Typography variant="caption" color="primary.main">
           الدفعة: {selectedBatchNumber}
         </Typography>
       )}
-      {!selectedBatchId &&
-        !loading &&
-        /* We should ideally re-calc low stock based on fetched availableStock, 
-           but passing isLowStock prop function is tricky from parent if it relies on value. 
-           Let's rely on parent's isLowStock for now or simple check if we had alert level. */
-        availableStock <= (product.stock_alert_level || 0) && (
-          <Typography variant="caption" color="error.main">
-            مخزون منخفض
-          </Typography>
-        )}
+      
+      {!selectedBatchId && !loading && isActuallyLowStock && (
+        <Typography variant="caption" color="error.main">
+          مخزون منخفض
+        </Typography>
+      )}
     </Box>
   );
 };
