@@ -27,7 +27,8 @@ import { InventoryBatchDetailsTable } from "./InventoryBatchDetailsTable"; // En
 // Types
 import { Product as ProductType } from "@/services/productService";
 import { PurchaseItem as PurchaseItemType } from "@/services/purchaseService";
-import { formatNumber, formatCurrency } from "@/constants";
+import { formatNumber } from "@/constants";
+import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 
 // Interface for Product with potentially loaded batches
 // This should match the structure of data coming from the API for this report
@@ -50,6 +51,7 @@ export const InventoryReportTable: React.FC<InventoryReportTableProps> = ({
   isLoading = false, // Default to false
   // fetchBatchesForProduct
 }) => {
+  const formatCurrency = useFormatCurrency();
   const [openRows, setOpenRows] = useState<Record<number, boolean>>({}); // Tracks expanded rows by productId
 
   const toggleRow = (productId: number) => {

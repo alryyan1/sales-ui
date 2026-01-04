@@ -12,7 +12,8 @@ import {
   Box,
 } from "@mui/material";
 import { PurchaseItem as PurchaseItemType } from "@/services/purchaseService";
-import { formatCurrency, formatDate, formatNumber } from "@/constants";
+import { formatDate, formatNumber } from "@/constants";
+import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 
 interface InventoryBatchDetailsTableProps {
   batches: PurchaseItemType[];
@@ -22,6 +23,8 @@ interface InventoryBatchDetailsTableProps {
 export const InventoryBatchDetailsTable: React.FC<
   InventoryBatchDetailsTableProps
 > = ({ batches, sellableUnitName }) => {
+  const formatCurrency = useFormatCurrency();
+  
   if (!batches || batches.length === 0) {
     return (
       <Box sx={{ px: 2, py: 1 }}>

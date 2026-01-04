@@ -142,14 +142,14 @@ export const formatDate = (
  *
  * @param value The number to format.
  * @param locale The locale string (e.g., 'en-US', 'ar-SA'). Defaults to browser's locale.
- * @param currencyCode The ISO 4217 currency code (e.g., 'USD', 'EUR', 'SAR'). Defaults to 'USD'.
+ * @param currencySymbolOrCode The currency symbol (e.g., 'ريال', '$') or ISO 4217 currency code (e.g., 'USD', 'EUR', 'SAR'). Defaults to 'SDG'.
  * @param options Intl.NumberFormat options for currency.
  * @returns A formatted currency string or a fallback string ('---').
  */
 export const formatCurrency = (
     value: string | number | null | undefined,
     locale?: string,       // Example: 'ar-SA' for Arabic (Saudi Arabia)
-    currencyCode: string = 'SDG', // Default currency set globally to Sudanese Pound
+    currencySymbolOrCode: string = 'SDG', // Default currency set globally to Sudanese Pound
     options?: Intl.NumberFormatOptions
 ): string => {
     if (value === null || value === undefined) return '---';
@@ -159,27 +159,39 @@ export const formatCurrency = (
         console.warn("formatCurrency received a non-numeric value:", value);
         return '---';
     }
-    console.log(currencyCode)
-    const defaultOptions: Intl.NumberFormatOptions = {
-        style: 'currency',
-        currency: currencyCode,
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    };
-    
-    // Merge options properly - user options should override defaults
-    const finalOptions = {
-        ...defaultOptions,
-        ...options,
-    };
 
-    try {
-        // If no locale is provided, Intl.NumberFormat uses the browser's default locale.
-        return new Intl.NumberFormat(locale, finalOptions).format(numberValue);
-    } catch (e) {
-        console.error("Error formatting currency:", e, "Value:", value, "Currency:", currencyCode);
-        // Fallback to simpler formatting if Intl fails
-        return `${currencyCode} ${Math.round(numberValue)}`;
+    // Check if currencySymbolOrCode is a 3-letter currency code (like USD, SAR, EUR)
+    const isCurrencyCode = /^[A-Z]{3}$/.test(currencySymbolOrCode);
+    
+    if (isCurrencyCode) {
+        // Use Intl.NumberFormat for standard currency codes
+        const defaultOptions: Intl.NumberFormatOptions = {
+            style: 'currency',
+            currency: currencySymbolOrCode,
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        };
+        
+        // Merge options properly - user options should override defaults
+        const finalOptions = {
+            ...defaultOptions,
+            ...options,
+        };
+
+        try {
+            // If no locale is provided, Intl.NumberFormat uses the browser's default locale.
+            return new Intl.NumberFormat(locale, finalOptions).format(numberValue);
+        } catch (e) {
+            console.error("Error formatting currency:", e, "Value:", value, "Currency:", currencySymbolOrCode);
+            // Fallback to simpler formatting if Intl fails
+            return `${currencySymbolOrCode} ${formatNumber(numberValue)}`;
+        }
+    } else {
+        // For custom currency symbols (like "ريال", "$"), format manually
+        const formattedNumber = formatNumber(numberValue, options?.maximumFractionDigits ?? 0);
+        // RTL-aware: Put symbol after number for Arabic, before for English
+        const isRTL = locale?.startsWith('ar') || document.documentElement.dir === 'rtl';
+        return isRTL ? `${formattedNumber} ${currencySymbolOrCode}` : `${currencySymbolOrCode} ${formattedNumber}`;
     }
 };
 

@@ -26,6 +26,7 @@ import {
 
 // Utils
 import { formatNumber, preciseCalculation } from "@/constants";
+import { useCurrencySymbol } from "@/hooks/useFormatCurrency";
 
 interface DiscountDialogProps {
   open: boolean;
@@ -46,6 +47,7 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
   dueAmount = Infinity,
   onSave,
 }) => {
+  const currencySymbol = useCurrencySymbol();
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>(currentType);
   const [discountAmount, setDiscountAmount] = useState<string>(currentAmount.toString());
   const [error, setError] = useState<string | null>(null);
@@ -158,7 +160,7 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
               sx={{ mt: 1 }}
             >
               <MenuItem value="percentage">نسبة مئوية (%)</MenuItem>
-              <MenuItem value="fixed">مبلغ ثابت ($)</MenuItem>
+              <MenuItem value="fixed">مبلغ ثابت ({currencySymbol})</MenuItem>
             </Select>
           </FormControl>
 

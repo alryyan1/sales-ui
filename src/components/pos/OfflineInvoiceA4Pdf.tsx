@@ -198,6 +198,7 @@ export const OfflineInvoiceA4Pdf: React.FC<OfflineInvoiceA4PdfProps> = ({
   const discountAmount = Number(sale.discount_amount || 0);
   const totalAmount = Number(sale.total_amount || 0);
   const taxAmount = 0; // If you have tax logic, add here
+  const currencySymbol = settings?.currency_symbol || "SDG";
 
   return (
     <Document>
@@ -324,9 +325,9 @@ export const OfflineInvoiceA4Pdf: React.FC<OfflineInvoiceA4PdfProps> = ({
                 </Text>
                 <Text style={styles.colQty}>{item.quantity}</Text>
                 <Text style={styles.colPrice}>
-                  {formatNumber(Number(item.unit_price))}
+                  {formatNumber(Number(item.unit_price))} {currencySymbol}
                 </Text>
-                <Text style={styles.colTotal}>{formatNumber(rowTotal)}</Text>
+                <Text style={styles.colTotal}>{formatNumber(rowTotal)} {currencySymbol}</Text>
               </View>
             );
           })}
@@ -338,14 +339,14 @@ export const OfflineInvoiceA4Pdf: React.FC<OfflineInvoiceA4PdfProps> = ({
           {/* Spacer to push summary to left/right */}
           <View style={styles.summaryBox}>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryValue}>{formatNumber(subtotal)}</Text>
+              <Text style={styles.summaryValue}>{formatNumber(subtotal)} {currencySymbol}</Text>
               <Text style={styles.summaryLabel}>المجموع الفرعي:</Text>
             </View>
 
             {discountAmount > 0 && (
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryValue}>
-                  {formatNumber(discountAmount)}
+                  {formatNumber(discountAmount)} {currencySymbol}
                 </Text>
                 <Text style={styles.summaryLabel}>الخصم:</Text>
               </View>
@@ -354,7 +355,7 @@ export const OfflineInvoiceA4Pdf: React.FC<OfflineInvoiceA4PdfProps> = ({
             {taxAmount > 0 && (
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryValue}>
-                  {formatNumber(taxAmount)}
+                  {formatNumber(taxAmount)} {currencySymbol}
                 </Text>
                 <Text style={styles.summaryLabel}>الضريبة:</Text>
               </View>
@@ -362,7 +363,7 @@ export const OfflineInvoiceA4Pdf: React.FC<OfflineInvoiceA4PdfProps> = ({
 
             <View style={[styles.summaryRow, styles.grandTotal]}>
               <Text style={styles.summaryValue}>
-                {formatNumber(totalAmount)}
+                {formatNumber(totalAmount)} {currencySymbol}
               </Text>
               <Text style={styles.summaryLabel}>الإجمالي النهائي:</Text>
             </View>

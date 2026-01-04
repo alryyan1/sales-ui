@@ -37,6 +37,7 @@ import {
 import { PaymentMethod } from "./types";
 import { OfflineSale } from "../../services/db";
 import { formatNumber, preciseSum } from "@/constants";
+import { useCurrencySymbol } from "@/hooks/useFormatCurrency";
 
 // Payment Method Options with Icons and Colors
 const PAYMENT_METHODS: {
@@ -70,6 +71,7 @@ export const OfflinePaymentDialog: React.FC<OfflinePaymentDialogProps> = ({
   onComplete,
 }) => {
   const theme = useTheme();
+  const currencySymbol = useCurrencySymbol();
 
   // State for new payment form
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
@@ -349,7 +351,7 @@ export const OfflinePaymentDialog: React.FC<OfflinePaymentDialogProps> = ({
                     color="primary.main"
                   >
                     {formatNumber(remainingDue)}{" "}
-                    <span style={{ fontSize: "0.8rem" }}>SDG</span>
+                    <span style={{ fontSize: "0.8rem" }}>{currencySymbol}</span>
                   </Typography>
                 </Stack>
               </Box>
@@ -433,7 +435,7 @@ export const OfflinePaymentDialog: React.FC<OfflinePaymentDialogProps> = ({
                   helperText={error}
                   InputProps={{
                     startAdornment: (
-                      <InputAdornment position="start">SDG</InputAdornment>
+                      <InputAdornment position="start">{currencySymbol}</InputAdornment>
                     ),
                     sx: { fontSize: "1.25rem", fontWeight: "bold" },
                   }}
@@ -574,7 +576,7 @@ export const OfflinePaymentDialog: React.FC<OfflinePaymentDialogProps> = ({
                               variant="caption"
                               color="text.secondary"
                             >
-                              {formatNumber(Number(p.amount))} SDG
+                              {formatNumber(Number(p.amount))} {currencySymbol}
                             </Typography>
                           </Box>
                         </Box>

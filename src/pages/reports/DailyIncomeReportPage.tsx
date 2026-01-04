@@ -60,6 +60,7 @@ import {
 
 import apiClient from "@/lib/axios";
 import { formatCurrency, formatDate } from "@/constants";
+import { useFormatCurrency, useCurrencySymbol } from "@/hooks/useFormatCurrency";
 import { toast } from "sonner";
 
 // --- Types ---
@@ -196,7 +197,8 @@ const pdfStyles = StyleSheet.create({
 // PDF Document Component
 const DailyIncomeReportPDF: React.FC<{
   data: MonthlyRevenueReportData;
-}> = ({ data }) => {
+  currencySymbol?: string;
+}> = ({ data, currencySymbol = "SDG" }) => {
   const totalIncome = data.daily_breakdown.reduce(
     (sum, row) => sum + row.total_payments_recorded_on_day,
     0
@@ -227,14 +229,16 @@ const DailyIncomeReportPDF: React.FC<{
                 Object.values(data.month_summary.total_payments_by_method).reduce(
                   (a, b) => a + b,
                   0
-                )
+                ),
+                undefined,
+                currencySymbol
               )}
             </Text>
           </View>
           <View style={pdfStyles.summaryRow}>
             <Text style={pdfStyles.summaryLabel}>إجمالي المبيعات (الفواتير):</Text>
             <Text style={pdfStyles.summaryValue}>
-              {formatCurrency(data.month_summary.total_revenue)}
+              {formatCurrency(data.month_summary.total_revenue, undefined, currencySymbol)}
             </Text>
           </View>
         </View>
@@ -259,11 +263,11 @@ const DailyIncomeReportPDF: React.FC<{
               <Text style={[pdfStyles.tableCell, { flex: 1.2 }]}>{formatDate(row.date)}</Text>
               <Text style={[pdfStyles.tableCell, { flex: 1 }]}>{row.day_of_week}</Text>
               <Text style={[pdfStyles.tableCell, { flex: 1.3 }]}>
-                {formatCurrency(row.total_payments_recorded_on_day)}
+                {formatCurrency(row.total_payments_recorded_on_day, undefined, currencySymbol)}
               </Text>
               {paymentMethods.map((method) => (
                 <Text key={`${row.date}-${method}`} style={pdfStyles.tableCell}>
-                  {formatCurrency(row.payments_by_method[method] || 0)}
+                  {formatCurrency(row.payments_by_method[method] || 0, undefined, currencySymbol)}
                 </Text>
               ))}
             </View>
@@ -274,7 +278,7 @@ const DailyIncomeReportPDF: React.FC<{
             <Text style={[pdfStyles.totalCell, { flex: 1.2 }]}>الإجمالي</Text>
             <Text style={[pdfStyles.totalCell, { flex: 1 }]}></Text>
             <Text style={[pdfStyles.totalCell, { flex: 1.3 }]}>
-              {formatCurrency(totalIncome)}
+              {formatCurrency(totalIncome, undefined, currencySymbol)}
             </Text>
             {paymentMethods.map((method) => (
               <Text key={`sum-${method}`} style={pdfStyles.totalCell}>
@@ -282,7 +286,9 @@ const DailyIncomeReportPDF: React.FC<{
                   data.daily_breakdown.reduce(
                     (sum, row) => sum + (row.payments_by_method[method] || 0),
                     0
-                  )
+                  ),
+                  undefined,
+                  currencySymbol
                 )}
               </Text>
             ))}
@@ -301,6 +307,8 @@ const DailyIncomeReportPDF: React.FC<{
 const DailyIncomeReportPage: React.FC = () => {
   // const { t, i18n } = useTranslation(["reports", "common", "months"]);
   const navigate = useNavigate();
+  const formatCurrency = useFormatCurrency();
+  const currencySymbol = useCurrencySymbol();
 
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState<number>(
@@ -366,7 +374,7 @@ const DailyIncomeReportPage: React.FC = () => {
 
     try {
       setIsGeneratingPdf(true);
-      const doc = <DailyIncomeReportPDF data={reportData} />;
+      const doc = <DailyIncomeReportPDF data={reportData} currencySymbol={currencySymbol} />;
       const asPdf = pdf(doc);
       const blob = await asPdf.toBlob();
       const url = URL.createObjectURL(blob);

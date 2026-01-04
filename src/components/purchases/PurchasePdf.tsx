@@ -188,6 +188,7 @@ export const PurchasePdf: React.FC<PurchasePdfProps> = ({
     (acc, item) => acc + item.quantity * Number(item.unit_cost),
     0
   );
+  const currencySymbol = settings?.currency_symbol || "SDG";
 
   return (
     <Document>
@@ -317,9 +318,9 @@ export const PurchasePdf: React.FC<PurchasePdfProps> = ({
                 </Text>
                 <Text style={styles.colQty}>{item.quantity}</Text>
                 <Text style={styles.colCost}>
-                  {formatNumber(Number(item.unit_cost))}
+                  {formatNumber(Number(item.unit_cost))} {currencySymbol}
                 </Text>
-                <Text style={styles.colTotal}>{formatNumber(rowTotal)}</Text>
+                <Text style={styles.colTotal}>{formatNumber(rowTotal)} {currencySymbol}</Text>
               </View>
             );
           })}
@@ -334,7 +335,7 @@ export const PurchasePdf: React.FC<PurchasePdfProps> = ({
               <Text style={styles.summaryLabel}>إجمالي الأصناف:</Text>
             </View>
             <View style={[styles.summaryRow, styles.grandTotal]}>
-              <Text style={styles.summaryValue}>{formatNumber(totalCost)}</Text>
+              <Text style={styles.summaryValue}>{formatNumber(totalCost)} {currencySymbol}</Text>
               <Text style={styles.summaryLabel}>إجمالي التكلفة:</Text>
             </View>
           </View>

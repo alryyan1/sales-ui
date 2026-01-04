@@ -27,7 +27,7 @@ import { ArrowLeft, ShoppingCart, DollarSign, FileText, User, Calendar, Printer 
 
 // Services and Types
 import saleService, { Sale } from "../../services/saleService";
-import { formatCurrency } from "@/constants";
+import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 import dayjs from "dayjs";
 
 // Payment method labels in Arabic
@@ -49,6 +49,7 @@ const SaleDetailsPage: React.FC = () => {
   const [sale, setSale] = useState<Sale | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const formatCurrency = useFormatCurrency();
 
   useEffect(() => {
     const fetchSaleDetails = async (saleId: number) => {

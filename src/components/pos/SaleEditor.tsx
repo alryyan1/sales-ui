@@ -38,6 +38,7 @@ import {
 
 // Types
 import { formatNumber, preciseCalculation } from "@/constants";
+import { useCurrencySymbol } from "@/hooks/useFormatCurrency";
 import { CartItem, Sale } from "./types";
 import { Product } from "../../services/productService";
 import saleService from "../../services/saleService";
@@ -56,6 +57,7 @@ export const SaleEditor: React.FC<SaleEditorProps> = ({
   onClose,
   onSaleUpdated
 }) => {
+  const currencySymbol = useCurrencySymbol();
   const [editingItems, setEditingItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -280,7 +282,7 @@ export const SaleEditor: React.FC<SaleEditorProps> = ({
                       value={item.unitPrice}
                       onChange={(e) => updateItemPrice(item.product.id, parseFloat(e.target.value) || 0)}
                       InputProps={{
-                        startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                        startAdornment: <InputAdornment position="start">{currencySymbol}</InputAdornment>,
                       }}
                       sx={{ width: 100 }}
                     />

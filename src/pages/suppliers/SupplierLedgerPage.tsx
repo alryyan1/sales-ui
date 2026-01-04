@@ -47,7 +47,7 @@ import supplierPaymentService, {
   PaymentMethod,
   PaymentType,
 } from "@/services/supplierPaymentService";
-import { formatCurrency } from "@/constants";
+import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 import PaymentFormModal from "@/components/suppliers/PaymentFormModal";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
 import { SupplierLedgerPdfDialog } from "@/components/suppliers/SupplierLedgerPdfDialog";
@@ -56,6 +56,7 @@ const SupplierLedgerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const supplierId = Number(id);
+  const formatCurrency = useFormatCurrency();
 
   // State
   const [ledger, setLedger] = useState<SupplierLedger | null>(null);

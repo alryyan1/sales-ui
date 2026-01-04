@@ -127,6 +127,7 @@ export const PosInvoicePdf: React.FC<PosInvoicePdfProps> = ({
   const discountAmount = Number(sale.discount_amount || 0);
   const totalAmount = Number(sale.total_amount || 0);
   const taxAmount = 0; // Assumed 0 or included
+  const currencySymbol = settings?.currency_symbol || "SDG";
 
   return (
     <Document>
@@ -189,7 +190,7 @@ export const PosInvoicePdf: React.FC<PosInvoicePdfProps> = ({
             </Text>
             <Text style={styles.colQty}>{item.quantity}</Text>
             <Text style={styles.colPrice}>
-              {formatNumber(Number(item.unit_price) * item.quantity)}
+              {formatNumber(Number(item.unit_price) * item.quantity)} {currencySymbol}
             </Text>
           </View>
         ))}
@@ -199,26 +200,26 @@ export const PosInvoicePdf: React.FC<PosInvoicePdfProps> = ({
         {/* Totals */}
         <View style={styles.totalRow}>
           <Text style={styles.label}>المجموع:</Text>
-          <Text style={styles.value}>{formatNumber(subtotal)}</Text>
+          <Text style={styles.value}>{formatNumber(subtotal)} {currencySymbol}</Text>
         </View>
 
         {taxAmount > 0 && (
           <View style={styles.row}>
             <Text style={styles.label}>الضريبة:</Text>
-            <Text style={styles.value}>{formatNumber(taxAmount)}</Text>
+            <Text style={styles.value}>{formatNumber(taxAmount)} {currencySymbol}</Text>
           </View>
         )}
 
         {discountAmount > 0 && (
           <View style={styles.row}>
             <Text style={styles.label}>الخصم:</Text>
-            <Text style={styles.value}>{formatNumber(discountAmount)}</Text>
+            <Text style={styles.value}>{formatNumber(discountAmount)} {currencySymbol}</Text>
           </View>
         )}
 
         <View style={[styles.totalRow, { fontSize: 14 }]}>
           <Text style={styles.label}>الإجمالي:</Text>
-          <Text style={styles.value}>{formatNumber(totalAmount)}</Text>
+          <Text style={styles.value}>{formatNumber(totalAmount)} {currencySymbol}</Text>
         </View>
 
         <View style={styles.divider} />

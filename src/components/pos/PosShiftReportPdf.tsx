@@ -101,6 +101,7 @@ export const PosShiftReportPdf: React.FC<PosShiftReportPdfProps> = ({
   userName,
   settings,
 }) => {
+  const currencySymbol = settings?.currency_symbol || "SDG";
   const formatDate = (dateStr: string | number | null) => {
     if (!dateStr) return "-";
     return new Date(dateStr).toLocaleString("ar-EG");
@@ -169,7 +170,7 @@ export const PosShiftReportPdf: React.FC<PosShiftReportPdfProps> = ({
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>إجمالي المبيعات:</Text>
                 <Text style={styles.summaryValue}>
-                  {formatNumber(totalRevenue)}
+                  {formatNumber(totalRevenue)} {currencySymbol}
                 </Text>
               </View>
             </View>
@@ -177,13 +178,13 @@ export const PosShiftReportPdf: React.FC<PosShiftReportPdfProps> = ({
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>إجمالي المدفوع:</Text>
                 <Text style={styles.summaryValue}>
-                  {formatNumber(totalPaid)}
+                  {formatNumber(totalPaid)} {currencySymbol}
                 </Text>
               </View>
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>المستحق (الآجل):</Text>
                 <Text style={styles.summaryValue}>
-                  {formatNumber(totalDue)}
+                  {formatNumber(totalDue)} {currencySymbol}
                 </Text>
               </View>
             </View>
@@ -204,7 +205,7 @@ export const PosShiftReportPdf: React.FC<PosShiftReportPdfProps> = ({
                     : method}
                   :
                 </Text>
-                <Text style={styles.summaryValue}>{formatNumber(amount)}</Text>
+                <Text style={styles.summaryValue}>{formatNumber(amount)} {currencySymbol}</Text>
               </View>
             ))
           ) : (
@@ -240,10 +241,10 @@ export const PosShiftReportPdf: React.FC<PosShiftReportPdfProps> = ({
                 {sale.is_synced ? "متزامن" : "معلق"}
               </Text>
               <Text style={styles.col5}>
-                {formatNumber(Number(sale.paid_amount))}
+                {formatNumber(Number(sale.paid_amount))} {currencySymbol}
               </Text>
               <Text style={styles.col6}>
-                {formatNumber(Number(sale.total_amount))}
+                {formatNumber(Number(sale.total_amount))} {currencySymbol}
               </Text>
             </View>
           ))}

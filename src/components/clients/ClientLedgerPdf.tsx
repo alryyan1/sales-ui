@@ -172,6 +172,8 @@ export const ClientLedgerPdf: React.FC<ClientLedgerPdfProps> = ({
   ledger,
   settings,
 }) => {
+  const currencySymbol = settings?.currency_symbol || "SDG";
+  
   const getTypeLabel = (type: string) => {
     switch (type) {
       case "sale":
@@ -298,10 +300,10 @@ export const ClientLedgerPdf: React.FC<ClientLedgerPdfProps> = ({
               <Text style={styles.colType}>{getTypeLabel(entry.type)}</Text>
               <Text style={styles.colDesc}>{entry.description}</Text>
               <Text style={styles.colDebit}>
-                {entry.debit > 0 ? formatNumber(entry.debit) : "-"}
+                {entry.debit > 0 ? `${formatNumber(entry.debit)} ${currencySymbol}` : "-"}
               </Text>
               <Text style={styles.colCredit}>
-                {entry.credit > 0 ? formatNumber(entry.credit) : "-"}
+                {entry.credit > 0 ? `${formatNumber(entry.credit)} ${currencySymbol}` : "-"}
               </Text>
               <Text
                 style={[
@@ -309,7 +311,7 @@ export const ClientLedgerPdf: React.FC<ClientLedgerPdfProps> = ({
                   { color: entry.balance > 0 ? "#dc2626" : "#16a34a" },
                 ]}
               >
-                {formatNumber(entry.balance)}
+                {formatNumber(entry.balance)} {currencySymbol}
               </Text>
               <Text style={styles.colRef}>{entry.reference || "-"}</Text>
             </View>
@@ -322,13 +324,13 @@ export const ClientLedgerPdf: React.FC<ClientLedgerPdfProps> = ({
           <View style={styles.summaryBox}>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryValue}>
-                {formatNumber(ledger.summary.total_sales)}
+                {formatNumber(ledger.summary.total_sales)} {currencySymbol}
               </Text>
               <Text style={styles.summaryLabel}>إجمالي المبيعات:</Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryValue}>
-                {formatNumber(ledger.summary.total_payments)}
+                {formatNumber(ledger.summary.total_payments)} {currencySymbol}
               </Text>
               <Text style={styles.summaryLabel}>إجمالي الدفعات:</Text>
             </View>
@@ -352,7 +354,7 @@ export const ClientLedgerPdf: React.FC<ClientLedgerPdfProps> = ({
                   },
                 ]}
               >
-                {formatNumber(ledger.summary.balance)}
+                {formatNumber(ledger.summary.balance)} {currencySymbol}
               </Text>
               <Text style={styles.summaryLabel}>الرصيد الحالي:</Text>
             </View>

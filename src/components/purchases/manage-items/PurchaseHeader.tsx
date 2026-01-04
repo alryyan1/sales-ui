@@ -70,6 +70,8 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
   onCloseSummaryDialog,
   onExportPdf,
 }) => {
+  const formatCurrency = useFormatCurrency();
+  
   return (
     <div className="bg-white border rounded-xl shadow-sm p-4 mb-6">
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
