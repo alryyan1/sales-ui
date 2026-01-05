@@ -1,6 +1,7 @@
 import React from "react";
 import { Page, Text, View, Document, StyleSheet } from "@react-pdf/renderer";
 import { OfflineSale } from "../../services/db";
+import { Sale } from "../../services/saleService";
 import { formatNumber } from "@/constants";
 
 import { PDF_FONTS } from "@/utils/pdfFontRegistry";
@@ -218,7 +219,7 @@ const styles = StyleSheet.create({
 });
 
 interface PosShiftReportPdfProps {
-  sales: OfflineSale[];
+  sales: OfflineSale[] | Sale[];
   shift: {
     id: number;
     opened_at: string | null;
@@ -239,6 +240,11 @@ export const PosShiftReportPdf: React.FC<PosShiftReportPdfProps> = ({
   const formatDate = (dateStr: string | number | null) => {
     if (!dateStr) return "-";
     return new Date(dateStr).toLocaleString("en-US");
+  };
+
+  // Helper function to check if sale is OfflineSale
+  const isOfflineSale = (sale: OfflineSale | Sale): sale is OfflineSale => {
+    return 'tempId' in sale || 'offline_created_at' in sale || 'is_synced' in sale;
   };
 
   // Calculations
@@ -379,35 +385,42 @@ export const PosShiftReportPdf: React.FC<PosShiftReportPdfProps> = ({
                 <Text style={[styles.col5, styles.headerText]}>المدفوع</Text>
               </View>
 
-              {sales.map((sale, i) => (
-                <View 
-                  key={i} 
-                  style={[styles.row, i % 2 === 1 ? styles.rowAlternate : {}]}
-                >
-                  <Text style={styles.col1}>
-                    {String(sale.id || sale.tempId).substring(0, 8)}
-                  </Text>
-                  <Text style={styles.col2}>
-                    {new Date(sale.offline_created_at).toLocaleTimeString("ar-EG", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </Text>
-                  <Text style={styles.col3}>{sale.client_name || "عميل عام"}</Text>
-                  <View style={[styles.col4, sale.is_synced ? styles.statusSynced : styles.statusPending]}>
-                    <Text style={{ fontSize: 7 }}>
-                      {sale.is_synced ? "✓ متزامن" : "⏳ معلق"}
+              {sales.map((sale, i) => {
+                const saleId = isOfflineSale(sale) ? (sale.id || sale.tempId) : sale.id;
+                const saleDate = isOfflineSale(sale) 
+                  ? sale.offline_created_at 
+                  : (sale.created_at ? new Date(sale.created_at).getTime() : Date.now());
+                const isSynced = isOfflineSale(sale) ? sale.is_synced : true;
+                
+                return (
+                  <View 
+                    key={i} 
+                    style={[styles.row, i % 2 === 1 ? styles.rowAlternate : {}]}
+                  >
+                    <Text style={styles.col1}>
+                      {String(saleId).substring(0, 8)}
+                    </Text>
+                    <Text style={styles.col2}>
+                      {new Date(saleDate).toLocaleTimeString("ar-EG", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </Text>
+                    <Text style={styles.col3}>{sale.client_name || "عميل عام"}</Text>
+                    <View style={[styles.col4, isSynced ? styles.statusSynced : styles.statusPending]}>
+                      <Text style={{ fontSize: 7 }}>
+                        {isSynced ? "✓ متزامن" : "⏳ معلق"}
+                      </Text>
+                    </View>
+                    <Text style={styles.col5}>
+                      {formatNumber(Number(sale.total_amount))} {currencySymbol}
+                    </Text>
+                    <Text style={styles.col6}>
+                      {formatNumber(Number(sale.paid_amount))} {currencySymbol}
                     </Text>
                   </View>
-                  <Text style={styles.col5}>
-                    {formatNumber(Number(sale.total_amount))} {currencySymbol}
-                  </Text>
-                  <Text style={styles.col6}>
-                    {formatNumber(Number(sale.paid_amount))} {currencySymbol}
-                  </Text>
-                
-                </View>
-              ))}
+                );
+              })}
               
               {/* Total Row */}
               <View >

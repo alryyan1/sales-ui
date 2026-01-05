@@ -11,7 +11,6 @@ import {
   parseISO,
   startOfMonth,
   endOfMonth,
-  subMonths,
 } from "date-fns";
 
 // MUI Components
@@ -46,7 +45,6 @@ import {
   Paper,
   Divider,
 } from "@mui/material";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import IconButton from "@mui/material/IconButton";
 
 // Lucide Icons
@@ -55,8 +53,6 @@ import {
   Download,
   BarChart3,
   DollarSign,
-  Users,
-  Eye,
   FileText,
   Filter,
   X,
@@ -71,6 +67,9 @@ import clientService, { Client } from "@/services/clientService";
 import productService, { Product } from "@/services/productService";
 import { PaginatedResponse } from "@/services/clientService";
 import apiClient from "@/lib/axios";
+import { PosShiftReportPdf } from "@/components/pos/PosShiftReportPdf";
+import settingService, { AppSettings } from "@/services/settingService";
+import { PDFViewer } from "@react-pdf/renderer";
 
 // Helpers
 import { formatNumber } from "@/constants";
@@ -112,10 +111,12 @@ const SalesReportPage: React.FC = () => {
   const [shifts, setShifts] = useState<{ id: number; name?: string; shift_date?: string }[]>([]);
   const [currentShiftId, setCurrentShiftId] = useState<number | null>(null);
   const [loadingFilters, setLoadingFilters] = useState(false);
-  const [productSearchOpen, setProductSearchOpen] = useState(false);
   const [saleDetailsDialogOpen, setSaleDetailsDialogOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [loadingSaleDetails, setLoadingSaleDetails] = useState(false);
+  const [shiftReportDialogOpen, setShiftReportDialogOpen] = useState(false);
+  const [selectedShift, setSelectedShift] = useState<{ id: number; opened_at: string | null; closed_at: string | null; is_open: boolean } | null>(null);
+  const [settings, setSettings] = useState<AppSettings | null>(null);
 
   // --- Initialize Form with URL Search Params ---
   const form = useForm<ReportFilterValues>({
@@ -165,6 +166,12 @@ const SalesReportPage: React.FC = () => {
 
   useEffect(() => {
     fetchFilterData();
+    // Fetch settings for PDF
+    settingService.getSettings().then((response) => {
+      setSettings(response);
+    }).catch(() => {
+      // Ignore errors
+    });
   }, [fetchFilterData]);
 
   // --- Auto-select current shift on first load ---
@@ -280,7 +287,54 @@ const SalesReportPage: React.FC = () => {
 
 
   // --- Download PDF ---
-  const handleDownloadPdf = () => {
+  const handleDownloadPdf = async () => {
+    const currentFilterValues = watch();
+    
+    // If shift is selected, use PosShiftReportPdf
+    if (currentFilterValues.shiftId) {
+      try {
+        // Find shift from shifts list or fetch current shift
+        const shiftId = Number(currentFilterValues.shiftId);
+        const shiftFromList = shifts.find(s => s.id === shiftId);
+        
+        if (shiftFromList) {
+          // Try to get full shift details from current shift if it matches
+          const currentShiftResponse = await apiClient.get("/shifts/current").catch(() => ({ data: null }));
+          const currentShift = currentShiftResponse.data?.data || currentShiftResponse.data;
+          
+          if (currentShift && currentShift.id === shiftId) {
+            setSelectedShift({
+              id: currentShift.id,
+              opened_at: currentShift.opened_at,
+              closed_at: currentShift.closed_at,
+              is_open: currentShift.is_open || !currentShift.closed_at,
+            });
+          } else {
+            // Use shift from list with estimated dates
+            setSelectedShift({
+              id: shiftFromList.id,
+              opened_at: shiftFromList.shift_date ? `${shiftFromList.shift_date}T00:00:00` : null,
+              closed_at: null,
+              is_open: true,
+            });
+          }
+          setShiftReportDialogOpen(true);
+        } else {
+          // Fallback to backend PDF
+          handleBackendPdf();
+        }
+      } catch (error) {
+        console.error("Error fetching shift:", error);
+        // Fallback to backend PDF
+        handleBackendPdf();
+      }
+    } else {
+      // Use backend PDF for non-shift reports
+      handleBackendPdf();
+    }
+  };
+
+  const handleBackendPdf = () => {
     const currentFilterValues = watch();
     const params = new URLSearchParams();
 
@@ -1537,6 +1591,61 @@ const SalesReportPage: React.FC = () => {
               </Box>
             </Stack>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      {/* Shift Report PDF Dialog */}
+      <Dialog
+        open={shiftReportDialogOpen}
+        onClose={() => {
+          setShiftReportDialogOpen(false);
+          setSelectedShift(null);
+        }}
+        maxWidth="lg"
+        fullWidth
+        dir="rtl"
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            height: "90vh",
+            maxHeight: "90vh",
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            borderBottom: "1px solid",
+            borderColor: "divider",
+            pb: 2,
+          }}
+        >
+          <Typography variant="h6" fontWeight="bold">
+            تقرير الوردية #{selectedShift?.id}
+          </Typography>
+          <IconButton
+            onClick={() => {
+              setShiftReportDialogOpen(false);
+              setSelectedShift(null);
+            }}
+            size="small"
+          >
+            <X size={18} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0, height: "calc(90vh - 64px)", overflow: "hidden" }}>
+          {reportData && reportData.data.length > 0 && selectedShift && (
+            <PDFViewer width="100%" height="100%" showToolbar={true}>
+              <PosShiftReportPdf
+                sales={reportData.data}
+                shift={selectedShift}
+                userName={reportData.data[0]?.user_name || undefined}
+                settings={settings}
+              />
+            </PDFViewer>
+          )}
         </DialogContent>
       </Dialog>
     </Box>
