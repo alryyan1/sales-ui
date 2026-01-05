@@ -40,6 +40,11 @@ import {
   Stack,
   Autocomplete,
   Skeleton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Paper,
+  Divider,
 } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import IconButton from "@mui/material/IconButton";
@@ -56,6 +61,8 @@ import {
   Filter,
   X,
   TrendingUp,
+  Wallet,
+  CreditCard,
 } from "lucide-react";
 
 // Services and Types
@@ -63,6 +70,7 @@ import saleService, { Sale } from "@/services/saleService";
 import clientService, { Client } from "@/services/clientService";
 import productService, { Product } from "@/services/productService";
 import { PaginatedResponse } from "@/services/clientService";
+import apiClient from "@/lib/axios";
 
 // Helpers
 import { formatNumber } from "@/constants";
@@ -74,7 +82,7 @@ const reportFilterSchema = z
     endDate: z.string().nullable().optional(),
     clientId: z.string().nullable().optional(),
     userId: z.string().nullable().optional(),
-    status: z.string().nullable().optional(),
+    shiftId: z.string().nullable().optional(),
     productId: z.string().nullable().optional(),
   })
   .refine(
@@ -101,8 +109,13 @@ const SalesReportPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [shifts, setShifts] = useState<{ id: number; name?: string; shift_date?: string }[]>([]);
+  const [currentShiftId, setCurrentShiftId] = useState<number | null>(null);
   const [loadingFilters, setLoadingFilters] = useState(false);
   const [productSearchOpen, setProductSearchOpen] = useState(false);
+  const [saleDetailsDialogOpen, setSaleDetailsDialogOpen] = useState(false);
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [loadingSaleDetails, setLoadingSaleDetails] = useState(false);
 
   // --- Initialize Form with URL Search Params ---
   const form = useForm<ReportFilterValues>({
@@ -116,7 +129,7 @@ const SalesReportPage: React.FC = () => {
         format(endOfMonth(new Date()), "yyyy-MM-dd"),
       clientId: searchParams.get("clientId") || null,
       userId: searchParams.get("userId") || null,
-      status: searchParams.get("status") || null,
+      shiftId: searchParams.get("shiftId") || null,
       productId: searchParams.get("productId") || null,
     },
   });
@@ -126,12 +139,20 @@ const SalesReportPage: React.FC = () => {
   const fetchFilterData = useCallback(async () => {
     setLoadingFilters(true);
     try {
-      const [clientsResponse, productsResponse] = await Promise.all([
+      const [clientsResponse, productsResponse, shiftsResponse, currentShiftResponse] = await Promise.all([
         clientService.getClients(),
         productService.getProducts(),
+        apiClient.get("/shifts").catch(() => ({ data: { data: [] } })), // Fetch shifts list, handle error gracefully
+        apiClient.get("/shifts/current").catch(() => ({ data: null })), // Fetch current shift, handle error gracefully
       ]);
       setClients(clientsResponse.data);
       setProducts(productsResponse.data);
+      setShifts(shiftsResponse.data?.data || shiftsResponse.data || []);
+      
+      // Set current shift ID if available
+      if (currentShiftResponse.data?.id) {
+        setCurrentShiftId(currentShiftResponse.data.id);
+      }
     } catch (error) {
       console.error("Error loading filters:", error);
       toast.error("خطأ", {
@@ -145,6 +166,16 @@ const SalesReportPage: React.FC = () => {
   useEffect(() => {
     fetchFilterData();
   }, [fetchFilterData]);
+
+  // --- Auto-select current shift on first load ---
+  useEffect(() => {
+    // Only auto-select if shiftId is not in URL params and currentShiftId is available
+    if (!searchParams.get("shiftId") && currentShiftId !== null) {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set("shiftId", String(currentShiftId));
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [currentShiftId, searchParams, setSearchParams]);
 
   // --- Fetch Report Data ---
   const fetchReport = useCallback(
@@ -161,7 +192,7 @@ const SalesReportPage: React.FC = () => {
           filters.endDate ? format(filters.endDate, "yyyy-MM-dd") : undefined,
           filters.clientId ? Number(filters.clientId) : undefined,
           filters.userId ? Number(filters.userId) : undefined,
-          filters.status || undefined,
+          filters.shiftId ? Number(filters.shiftId) : undefined,
           25
         );
         setReportData(data);
@@ -188,7 +219,7 @@ const SalesReportPage: React.FC = () => {
         format(endOfMonth(new Date()), "yyyy-MM-dd"),
       clientId: searchParams.get("clientId") || null,
       userId: searchParams.get("userId") || null,
-      status: searchParams.get("status") || null,
+      shiftId: searchParams.get("shiftId") || null,
       productId: searchParams.get("productId") || null,
     }),
     [searchParams]
@@ -205,7 +236,7 @@ const SalesReportPage: React.FC = () => {
       endDate: currentFilters.endDate,
       clientId: currentFilters.clientId,
       userId: currentFilters.userId,
-      status: currentFilters.status,
+      shiftId: currentFilters.shiftId,
       productId: currentFilters.productId,
     });
     fetchReport(currentFilters, currentPage);
@@ -222,7 +253,7 @@ const SalesReportPage: React.FC = () => {
     }
     if (data.clientId) newParams.set("clientId", data.clientId);
     if (data.userId) newParams.set("userId", data.userId);
-    if (data.status) newParams.set("status", data.status);
+    if (data.shiftId) newParams.set("shiftId", data.shiftId);
     if (data.productId) newParams.set("productId", data.productId);
     newParams.set("page", "1");
 
@@ -235,7 +266,7 @@ const SalesReportPage: React.FC = () => {
       endDate: format(endOfMonth(new Date()), "yyyy-MM-dd"),
       clientId: null,
       userId: null,
-      status: null,
+      shiftId: null,
       productId: null,
     });
     setSearchParams({ page: "1" });
@@ -247,52 +278,6 @@ const SalesReportPage: React.FC = () => {
     setSearchParams(newParams);
   };
 
-  // --- Quick Date Presets ---
-  const applyDatePreset = (preset: string) => {
-    const today = new Date();
-    let startDate: Date;
-    let endDate: Date;
-
-    switch (preset) {
-      case "today": {
-        startDate = today;
-        endDate = today;
-        break;
-      }
-      case "yesterday": {
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        startDate = yesterday;
-        endDate = yesterday;
-        break;
-      }
-      case "thisWeek": {
-        const startOfWeek = new Date(today);
-        startOfWeek.setDate(today.getDate() - today.getDay());
-        startDate = startOfWeek;
-        endDate = today;
-        break;
-      }
-      case "thisMonth": {
-        startDate = startOfMonth(today);
-        endDate = endOfMonth(today);
-        break;
-      }
-      case "lastMonth": {
-        startDate = startOfMonth(subMonths(today, 1));
-        endDate = endOfMonth(subMonths(today, 1));
-        break;
-      }
-      default:
-        return;
-    }
-
-    const newParams = new URLSearchParams(searchParams);
-    newParams.set("startDate", format(startDate, "yyyy-MM-dd"));
-    newParams.set("endDate", format(endDate, "yyyy-MM-dd"));
-    newParams.set("page", "1");
-    setSearchParams(newParams);
-  };
 
   // --- Download PDF ---
   const handleDownloadPdf = () => {
@@ -317,8 +302,8 @@ const SalesReportPage: React.FC = () => {
     if (currentFilterValues.userId) {
       params.append("user_id", String(currentFilterValues.userId));
     }
-    if (currentFilterValues.status) {
-      params.append("status", currentFilterValues.status);
+    if (currentFilterValues.shiftId) {
+      params.append("shift_id", String(currentFilterValues.shiftId));
     }
 
     const pdfUrl = `${
@@ -345,53 +330,31 @@ const SalesReportPage: React.FC = () => {
       (sum, sale) => sum + Number(sale.due_amount || 0),
       0
     );
-    const completedSales = reportData.data.filter(
-      (sale) => sale.status === "completed"
-    ).length;
+
+    // Calculate Cash and Bank totals from payments
+    const totalCash = reportData.data.reduce((sum, sale) => {
+      if (!sale.payments) return sum;
+      return sum + sale.payments
+        .filter((p) => p.method === "cash")
+        .reduce((pSum, p) => pSum + Number(p.amount), 0);
+    }, 0);
+
+    const totalBank = reportData.data.reduce((sum, sale) => {
+      if (!sale.payments) return sum;
+      return sum + sale.payments
+        .filter((p) => ["visa", "mastercard", "mada", "bank_transfer"].includes(p.method))
+        .reduce((pSum, p) => pSum + Number(p.amount), 0);
+    }, 0);
 
     return {
       totalSales,
       totalAmount,
       totalPaid,
       totalDue,
-      completedSales,
-      completionRate: totalSales > 0 ? (completedSales / totalSales) * 100 : 0,
+      totalCash,
+      totalBank,
     };
   }, [reportData]);
-
-  // --- Get Status Badge ---
-  const getStatusBadge = (status?: string) => {
-    const statusConfig: Record<string, { label: string; color: "success" | "warning" | "default" | "error" }> = {
-      completed: {
-        label: "مكتمل",
-        color: "success",
-      },
-      pending: {
-        label: "معلق",
-        color: "warning",
-      },
-      draft: {
-        label: "مسودة",
-        color: "default",
-      },
-      cancelled: {
-        label: "ملغي",
-        color: "error",
-        className: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
-      },
-    };
-
-    const config =
-      statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
-
-    return (
-      <Chip
-        label={config.label}
-        color={config.color}
-        size="small"
-      />
-    );
-  };
 
   return (
     <Box sx={{ minHeight: "100vh" }}>
@@ -461,43 +424,6 @@ const SalesReportPage: React.FC = () => {
       </Box>
 
       <Box sx={{ maxWidth: "1400px", mx: "auto", px: { xs: 2, sm: 3, lg: 4 }, py: 3 }}>
-        {/* Quick Date Presets */}
-        <Stack
-          direction="row"
-          spacing={1}
-          sx={{
-            mb: 3,
-            flexWrap: "wrap",
-            gap: 1,
-          }}
-        >
-          {[
-            { key: "today", label: "اليوم" },
-            { key: "yesterday", label: "أمس" },
-            { key: "thisWeek", label: "هذا الأسبوع" },
-            { key: "thisMonth", label: "هذا الشهر" },
-            { key: "lastMonth", label: "الشهر الماضي" },
-          ].map((preset) => (
-            <Chip
-              key={preset.key}
-              label={preset.label}
-              onClick={() => applyDatePreset(preset.key)}
-              variant="outlined"
-              sx={{
-                borderRadius: 2,
-                fontWeight: 500,
-                cursor: "pointer",
-                transition: "all 0.15s ease",
-                "&:hover": {
-                  bgcolor: "primary.light",
-                  borderColor: "primary.main",
-                  color: "primary.main",
-                },
-              }}
-            />
-          ))}
-        </Stack>
-
         {/* Two Column Layout */}
         <Box
           sx={{
@@ -716,6 +642,134 @@ const SalesReportPage: React.FC = () => {
                     </CardContent>
                   </Card>
                 </Box>
+
+                {/* Total Cash Card */}
+                <Box
+                  sx={{
+                    flex: { xs: "1 1 100%", md: "1 1 calc(33.333% - 14px)" },
+                    minWidth: { xs: "100%", md: "240px" },
+                  }}
+                >
+                  <Card
+                    sx={{
+                      height: "100%",
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: 3,
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                      transition: "all 0.2s ease",
+                      "&:hover": {
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                      },
+                    }}
+                  >
+                    <CardContent sx={{ p: 2.5 }}>
+                      <Stack spacing={2}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: "text.secondary",
+                              fontWeight: 500,
+                              fontSize: "0.875rem",
+                            }}
+                          >
+                            إجمالي النقد
+                          </Typography>
+                          <Box
+                            sx={{
+                              color: "success.main",
+                              display: "flex",
+                              alignItems: "center",
+                            }}
+                          >
+                            <Wallet size={20} />
+                          </Box>
+                        </Box>
+                        <Typography
+                          variant="h4"
+                          sx={{
+                            fontWeight: 700,
+                            color: "text.primary",
+                            lineHeight: 1,
+                          }}
+                        >
+                          {formatNumber(summaryStats.totalCash)}
+                        </Typography>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Box>
+
+                {/* Total Bank Card */}
+                <Box
+                  sx={{
+                    flex: { xs: "1 1 100%", md: "1 1 calc(33.333% - 14px)" },
+                    minWidth: { xs: "100%", md: "240px" },
+                  }}
+                >
+                  <Card
+                    sx={{
+                      height: "100%",
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: 3,
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                      transition: "all 0.2s ease",
+                      "&:hover": {
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                      },
+                    }}
+                  >
+                    <CardContent sx={{ p: 2.5 }}>
+                      <Stack spacing={2}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: "text.secondary",
+                              fontWeight: 500,
+                              fontSize: "0.875rem",
+                            }}
+                          >
+                            إجمالي البنك
+                          </Typography>
+                          <Box
+                            sx={{
+                              color: "primary.main",
+                              display: "flex",
+                              alignItems: "center",
+                            }}
+                          >
+                            <CreditCard size={20} />
+                          </Box>
+                        </Box>
+                        <Typography
+                          variant="h4"
+                          sx={{
+                            fontWeight: 700,
+                            color: "text.primary",
+                            lineHeight: 1,
+                          }}
+                        >
+                          {formatNumber(summaryStats.totalBank)}
+                        </Typography>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Box>
               </Box>
             )}
 
@@ -767,19 +821,21 @@ const SalesReportPage: React.FC = () => {
                   border: "1px solid",
                   borderColor: "divider",
                   borderRadius: 3,
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                  overflow: "hidden",
                 }}
               >
                 <CardHeader
                   sx={{
-                    borderBottom: "1px solid",
-                    borderColor: "divider",
-                    py: 2,
-                    px: 2.5,
+                    borderBottom: "2px solid",
+                    borderColor: "primary.main",
+                    py: 2.5,
+                    px: 3,
+                    bgcolor: "grey.50",
                   }}
                 >
                   <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
-                    <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 600 }}>
+                    <Typography variant="h6" component="h2" sx={{ fontWeight: 700, color: "primary.main" }}>
                       النتائج
                     </Typography>
                     <Chip
@@ -788,8 +844,9 @@ const SalesReportPage: React.FC = () => {
                         reportData.total
                       )} من ${reportData.total}`}
                       size="small"
-                      variant="outlined"
-                      sx={{ fontWeight: 500 }}
+                      variant="filled"
+                      color="primary"
+                      sx={{ fontWeight: 600 }}
                     />
                   </Stack>
                 </CardHeader>
@@ -823,30 +880,29 @@ const SalesReportPage: React.FC = () => {
                   ) : (
                     <>
                       <Box sx={{ overflowX: "auto" }}>
-                        <Table size="small">
+                        <Table size="medium" sx={{ minWidth: 800 }}>
                           <TableHead>
                             <TableRow
                               sx={{
-                                bgcolor: "action.hover",
+                                bgcolor: "primary.main",
                                 "& .MuiTableCell-root": {
-                                  fontWeight: 600,
-                                  fontSize: "0.8125rem",
-                                  py: 1.5,
-                                  color: "text.secondary",
-                                  borderBottom: "1px solid",
-                                  borderColor: "divider",
+                                  fontWeight: 700,
+                                  fontSize: "0.875rem",
+                                  py: 2,
+                                  color: "white",
+                                  borderBottom: "2px solid",
+                                  borderColor: "primary.dark",
                                 },
                               }}
                             >
-                              <TableCell>التاريخ</TableCell>
-                              <TableCell>الفاتورة</TableCell>
-                              <TableCell>العميل</TableCell>
-                              <TableCell>المستخدم</TableCell>
-                              <TableCell>الحالة</TableCell>
-                              <TableCell align="right">المبلغ الإجمالي</TableCell>
-                              <TableCell align="right">المدفوع</TableCell>
-                              <TableCell align="right">المستحق</TableCell>
-                              <TableCell align="right">الإجراءات</TableCell>
+                              <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }}>رقم البيع</TableCell>
+                              <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }}>التاريخ</TableCell>
+                              <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }}>العميل</TableCell>
+                              <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }}>المستخدم</TableCell>
+                              <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }} align="center">المدفوعات</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.875rem" }}>المبلغ الإجمالي</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.875rem" }}>المدفوع</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.875rem" }}>المستحق</TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
@@ -854,72 +910,102 @@ const SalesReportPage: React.FC = () => {
                               <TableRow
                                 key={sale.id}
                                 hover
+                                onClick={async () => {
+                                  setLoadingSaleDetails(true);
+                                  setSaleDetailsDialogOpen(true);
+                                  try {
+                                    const fullSale = await saleService.getSale(sale.id);
+                                    setSelectedSale(fullSale);
+                                  } catch (error) {
+                                    console.error("Failed to fetch sale details:", error);
+                                    toast.error("خطأ", {
+                                      description: "فشل تحميل تفاصيل البيع",
+                                    });
+                                    setSaleDetailsDialogOpen(false);
+                                  } finally {
+                                    setLoadingSaleDetails(false);
+                                  }
+                                }}
                                 sx={{
+                                  cursor: "pointer",
+                                  transition: "all 0.2s ease",
+                                  "&:hover": {
+                                    bgcolor: "action.hover",
+                                    transform: "translateX(-2px)",
+                                  },
                                   "&:last-child td": { border: 0 },
                                   "& .MuiTableCell-root": {
-                                    py: 1.5,
+                                    py: 2,
                                     fontSize: "0.875rem",
+                                    borderBottom: "1px solid",
+                                    borderColor: "divider",
                                   },
                                 }}
                               >
-                                <TableCell>
-                                  {format(parseISO(sale.sale_date), "MMM dd, yyyy")}
+                                <TableCell sx={{ fontWeight: 600, color: "primary.main" }}>
+                                  #{sale.id}
                                 </TableCell>
                                 <TableCell>
-                                  {sale.invoice_number || (
-                                    <Typography component="span" color="text.secondary">
-                                      —
+                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                    {format(parseISO(sale.sale_date), "yyyy-MM-dd")}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell>
+                                  {sale.client_name ? (
+                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                      {sale.client_name}
+                                    </Typography>
+                                  ) : (
+                                    <Typography component="span" color="text.secondary" variant="body2">
+                                      عميل غير محدد
                                     </Typography>
                                   )}
                                 </TableCell>
                                 <TableCell>
-                                  {sale.client_name || (
-                                    <Typography component="span" color="text.secondary">
+                                  {sale.user_name ? (
+                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                      {sale.user_name}
+                                    </Typography>
+                                  ) : (
+                                    <Typography component="span" color="text.secondary" variant="body2">
                                       —
                                     </Typography>
                                   )}
                                 </TableCell>
-                                <TableCell>
-                                  {sale.user_name || (
-                                    <Typography component="span" color="text.secondary">
+                                <TableCell align="center">
+                                  {sale.payments && sale.payments.length > 0 ? (
+                                    <Chip
+                                      label={`${sale.payments.length} ${sale.payments.length === 1 ? "دفعة" : "دفعات"}`}
+                                      size="small"
+                                      variant="outlined"
+                                      sx={{
+                                        borderColor: "primary.main",
+                                        color: "primary.main",
+                                        fontWeight: 600,
+                                      }}
+                                    />
+                                  ) : (
+                                    <Typography component="span" color="text.secondary" variant="body2">
                                       —
                                     </Typography>
                                   )}
                                 </TableCell>
-                                <TableCell>
-                                  {getStatusBadge(sale.status)}
-                                </TableCell>
-                                <TableCell align="right" sx={{ fontWeight: 500 }}>
+                                <TableCell align="right" sx={{ fontWeight: 600, fontSize: "0.9375rem" }}>
                                   {formatNumber(sale.total_amount)}
                                 </TableCell>
-                                <TableCell align="right">
+                                <TableCell align="right" sx={{ fontWeight: 500, color: "success.main" }}>
                                   {formatNumber(sale.paid_amount)}
                                 </TableCell>
                                 <TableCell align="right">
                                   <Typography
-                                    color={
-                                      Number(sale.due_amount) > 0
-                                        ? "error.main"
-                                        : "success.main"
-                                    }
+                                    variant="body2"
+                                    sx={{
+                                      fontWeight: 600,
+                                      color: Number(sale.due_amount) > 0 ? "error.main" : "success.main",
+                                    }}
                                   >
                                     {formatNumber(sale.due_amount || 0)}
                                   </Typography>
-                                </TableCell>
-                                <TableCell align="right">
-                                  <IconButton
-                                    disabled
-                                    title="غير متاح"
-                                    sx={{
-                                      width: 36,
-                                      height: 36,
-                                      border: 1,
-                                      borderColor: "divider",
-                                      borderRadius: 1.5,
-                                    }}
-                                  >
-                                    <Eye size={16} style={{ opacity: 0.5 }} />
-                                  </IconButton>
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -1087,6 +1173,35 @@ const SalesReportPage: React.FC = () => {
                       )}
                     />
 
+                    {/* Shift Select */}
+                    <Controller
+                      control={control}
+                      name="shiftId"
+                      render={({ field, fieldState }) => (
+                        <FormControl fullWidth size="small" error={!!fieldState.error}>
+                          <InputLabel>الوردية</InputLabel>
+                          <Select
+                            value={field.value ?? ""}
+                            onChange={field.onChange}
+                            label="الوردية"
+                            disabled={loadingFilters}
+                          >
+                            <MenuItem value="">الكل</MenuItem>
+                            {shifts.map((shift) => (
+                              <MenuItem key={shift.id} value={String(shift.id)}>
+                                {shift.name || `الوردية #${shift.id}`} {shift.shift_date ? `(${shift.shift_date})` : ""}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                          {fieldState.error && (
+                            <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                              {fieldState.error.message}
+                            </Typography>
+                          )}
+                        </FormControl>
+                      )}
+                    />
+
                     {/* Product Select */}
                     <Controller
                       control={control}
@@ -1111,33 +1226,6 @@ const SalesReportPage: React.FC = () => {
                           )}
                           noOptionsText="لا توجد منتجات"
                         />
-                      )}
-                    />
-
-                    {/* Status Select */}
-                    <Controller
-                      control={control}
-                      name="status"
-                      render={({ field, fieldState }) => (
-                        <FormControl fullWidth size="small" error={!!fieldState.error}>
-                          <InputLabel>الحالة</InputLabel>
-                          <Select
-                            value={field.value ?? ""}
-                            onChange={field.onChange}
-                            label="الحالة"
-                          >
-                            <MenuItem value="">كل الحالات</MenuItem>
-                            <MenuItem value="completed">مكتمل</MenuItem>
-                            <MenuItem value="pending">معلق</MenuItem>
-                            <MenuItem value="draft">مسودة</MenuItem>
-                            <MenuItem value="cancelled">ملغي</MenuItem>
-                          </Select>
-                          {fieldState.error && (
-                            <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
-                              {fieldState.error.message}
-                            </Typography>
-                          )}
-                        </FormControl>
                       )}
                     />
 
@@ -1191,6 +1279,266 @@ const SalesReportPage: React.FC = () => {
           </Box>
         </Box>
       </Box>
+
+      {/* Sale Details Dialog */}
+      <Dialog
+        open={saleDetailsDialogOpen}
+        onClose={() => {
+          setSaleDetailsDialogOpen(false);
+          setSelectedSale(null);
+        }}
+        maxWidth="md"
+        fullWidth
+        dir="rtl"
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            maxHeight: "90vh",
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            borderBottom: "1px solid",
+            borderColor: "divider",
+            pb: 2,
+          }}
+        >
+          <Typography variant="h6" fontWeight="bold">
+            تفاصيل البيع #{selectedSale?.id}
+          </Typography>
+          <IconButton
+            onClick={() => {
+              setSaleDetailsDialogOpen(false);
+              setSelectedSale(null);
+            }}
+            size="small"
+          >
+            <X size={18} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 3 }}>
+          {loadingSaleDetails ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : selectedSale ? (
+            <Stack spacing={3}>
+              {/* Sale Info */}
+              <Box>
+                <Typography variant="subtitle2" fontWeight="bold" color="text.secondary" sx={{ mb: 1 }}>
+                  معلومات البيع
+                </Typography>
+                <Paper elevation={0} sx={{ p: 2, bgcolor: "grey.50", borderRadius: 2 }}>
+                  <Stack spacing={1}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                      <Typography variant="body2" color="text.secondary">التاريخ:</Typography>
+                      <Typography variant="body2" fontWeight="medium">
+                        {format(parseISO(selectedSale.sale_date), "yyyy-MM-dd")}
+                      </Typography>
+                    </Box>
+                    {selectedSale.invoice_number && (
+                      <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                        <Typography variant="body2" color="text.secondary">رقم الفاتورة:</Typography>
+                        <Typography variant="body2" fontWeight="medium">
+                          {selectedSale.invoice_number}
+                        </Typography>
+                      </Box>
+                    )}
+                    {selectedSale.client_name && (
+                      <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                        <Typography variant="body2" color="text.secondary">العميل:</Typography>
+                        <Typography variant="body2" fontWeight="medium">
+                          {selectedSale.client_name}
+                        </Typography>
+                      </Box>
+                    )}
+                    {selectedSale.user_name && (
+                      <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                        <Typography variant="body2" color="text.secondary">المستخدم:</Typography>
+                        <Typography variant="body2" fontWeight="medium">
+                          {selectedSale.user_name}
+                        </Typography>
+                      </Box>
+                    )}
+                  </Stack>
+                </Paper>
+              </Box>
+
+              {/* Sale Items */}
+              {selectedSale.items && selectedSale.items.length > 0 && (
+                <Box>
+                  <Typography variant="subtitle2" fontWeight="bold" color="text.secondary" sx={{ mb: 1 }}>
+                    العناصر ({selectedSale.items.length})
+                  </Typography>
+                  <Paper elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow sx={{ bgcolor: "action.hover" }}>
+                          <TableCell sx={{ fontWeight: 600 }}>المنتج</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 600 }}>الكمية</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 600 }}>سعر الوحدة</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 600 }}>الإجمالي</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {selectedSale.items.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell>
+                              <Typography variant="body2" fontWeight="medium">
+                                {item.product_name || item.product?.name || "غير معروف"}
+                              </Typography>
+                              {item.batch_number_sold && (
+                                <Typography variant="caption" color="text.secondary">
+                                  دفعة: {item.batch_number_sold}
+                                </Typography>
+                              )}
+                            </TableCell>
+                            <TableCell align="right">
+                              <Typography variant="body2">{item.quantity}</Typography>
+                            </TableCell>
+                            <TableCell align="right">
+                              <Typography variant="body2">{formatNumber(Number(item.unit_price))}</Typography>
+                            </TableCell>
+                            <TableCell align="right">
+                              <Typography variant="body2" fontWeight="medium">
+                                {formatNumber(Number(item.total_price || item.quantity * Number(item.unit_price)))}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </Paper>
+                </Box>
+              )}
+
+              {/* Payments */}
+              {selectedSale.payments && selectedSale.payments.length > 0 && (
+                <Box>
+                  <Typography variant="subtitle2" fontWeight="bold" color="text.secondary" sx={{ mb: 1.5 }}>
+                    المدفوعات ({selectedSale.payments.length})
+                  </Typography>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 1.5,
+                    }}
+                  >
+                    {selectedSale.payments.map((payment, index) => (
+                      <Paper
+                        key={payment.id || index}
+                        elevation={0}
+                        sx={{
+                          p: 1.5,
+                          border: "1px solid",
+                          borderColor: "divider",
+                          borderRadius: 2,
+                          flex: "1 1 auto",
+                          minWidth: "200px",
+                          maxWidth: "100%",
+                        }}
+                      >
+                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, mb: 0.5 }}>
+                          <Chip
+                            label={
+                              payment.method === "cash"
+                                ? "نقدي"
+                                : payment.method === "visa"
+                                ? "فيزا"
+                                : payment.method === "mastercard"
+                                ? "ماستركارد"
+                                : payment.method === "bank_transfer"
+                                ? "تحويل بنكي"
+                                : payment.method === "mada"
+                                ? "مدى"
+                                : payment.method === "store_credit"
+                                ? "رصيد متجر"
+                                : payment.method === "other"
+                                ? "أخرى"
+                                : payment.method === "refund"
+                                ? "استرداد"
+                                : payment.method
+                            }
+                            size="small"
+                            variant="outlined"
+                            sx={{
+                              borderColor: "primary.main",
+                              color: "primary.main",
+                              fontSize: "0.7rem",
+                              height: 24,
+                            }}
+                          />
+                          <Typography variant="body1" fontWeight="bold" color="success.main">
+                            {formatNumber(Number(payment.amount))}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, alignItems: "center" }}>
+                          <Typography variant="caption" color="text.secondary">
+                            {payment.payment_date ? (payment.payment_date.includes("T") ? format(parseISO(payment.payment_date), "yyyy-MM-dd") : payment.payment_date) : "-"}
+                          </Typography>
+                          {payment.reference_number && (
+                            <>
+                              <Typography variant="caption" color="text.secondary">•</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {payment.reference_number}
+                              </Typography>
+                            </>
+                          )}
+                          {payment.user_name && (
+                            <>
+                              <Typography variant="caption" color="text.secondary">•</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {payment.user_name}
+                              </Typography>
+                            </>
+                          )}
+                        </Box>
+                        {payment.notes && (
+                          <Typography variant="caption" color="text.secondary" sx={{ fontStyle: "italic", mt: 0.5, display: "block" }}>
+                            {payment.notes}
+                          </Typography>
+                        )}
+                      </Paper>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
+              {/* Summary */}
+              <Divider />
+              <Box>
+                <Stack spacing={1}>
+                  <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                    <Typography variant="body1" fontWeight="bold">المبلغ الإجمالي:</Typography>
+                    <Typography variant="body1" fontWeight="bold">
+                      {formatNumber(selectedSale.total_amount)}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                    <Typography variant="body1" fontWeight="bold">المدفوع:</Typography>
+                    <Typography variant="body1" fontWeight="bold" color="success.main">
+                      {formatNumber(selectedSale.paid_amount)}
+                    </Typography>
+                  </Box>
+                  {Number(selectedSale.due_amount || 0) > 0 && (
+                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                      <Typography variant="body1" fontWeight="bold">المستحق:</Typography>
+                      <Typography variant="body1" fontWeight="bold" color="warning.main">
+                        {formatNumber(selectedSale.due_amount || 0)}
+                      </Typography>
+                    </Box>
+                  )}
+                </Stack>
+              </Box>
+            </Stack>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };

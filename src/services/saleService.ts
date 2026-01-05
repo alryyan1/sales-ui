@@ -78,6 +78,8 @@ export interface Sale {
   user_name?: string;
   user?: User; // Full user object if loaded
 
+  shift_id?: number | null; // Shift ID for the sale
+
   sale_date: string; // YYYY-MM-DD
   invoice_number: string | null;
   // Status column was removed from the backend; keep optional for backward compatibility
@@ -308,7 +310,7 @@ const saleService = {
     endDate?: string,
     clientId?: number | null,
     userId?: number | null,
-    status?: string,
+    shiftId?: number | null,
     limit: number = 25
   ): Promise<PaginatedResponse<Sale>> => {
     try {
@@ -319,7 +321,7 @@ const saleService = {
       if (endDate) params.append("end_date", endDate);
       if (clientId) params.append("client_id", clientId.toString());
       if (userId) params.append("user_id", userId.toString());
-      if (status) params.append("status", status);
+      if (shiftId) params.append("shift_id", shiftId.toString());
 
       const response = await apiClient.get<PaginatedResponse<Sale>>(
         `/reports/sales?${params.toString()}`

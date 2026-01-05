@@ -17,21 +17,45 @@ export const offlineSaleService = {
    */
   initializeProducts: async (warehouseId?: number) => {
     try {
-      // Fetch all products (or enough for POS)
-      // This might be heavy, for now we fetch page 1 with 100 limit or specialized endpoint
-      // Ideally backend endpoint for "all pos products"
-      const response = await productService.getProducts(
-        1,
-        "",
-        "name",
-        "asc",
-        1000,
-        warehouseId
-      );
-      // Assuming 1000 is enough for demo or MVP. Real app needs batching/sync tokens.
-      if (response && response.data) {
-        await dbService.saveProducts(response.data);
+      // Fetch all products by looping through all pages
+      let page = 1;
+      let hasMore = true;
+      const allProducts: Product[] = [];
+
+      while (hasMore) {
+        const response = await productService.getProducts(
+          page,
+          "",
+          "name",
+          "asc",
+          1000, // Fetch 1000 products per page
+          undefined, // categoryId
+          undefined, // inStockOnly
+          undefined, // lowStockOnly
+          undefined, // outOfStockOnly
+          warehouseId
+        );
+
+        if (response && response.data) {
+          allProducts.push(...response.data);
+
+          // Check if there are more pages
+          if (response.meta && response.meta.current_page < response.meta.last_page) {
+            page++;
+          } else {
+            hasMore = false;
+          }
+        } else {
+          hasMore = false;
+        }
       }
+
+      // Save all products to IndexedDB
+      if (allProducts.length > 0) {
+        await dbService.saveProducts(allProducts);
+        console.log(`Successfully cached ${allProducts.length} products`);
+      }
+
       return true;
     } catch (error) {
       console.error("Failed to initialize products offline cache:", error);
@@ -138,6 +162,8 @@ export const offlineSaleService = {
             id: createdSale.id,
             invoice_number: createdSale.invoice_number,
             sale_order_number: createdSale.sale_order_number ?? null,
+            payments: createdSale.payments || offlineSale.payments || [], // Preserve payments from server response
+            paid_amount: createdSale.paid_amount || offlineSale.paid_amount || 0, // Update paid_amount from server
           };
           await dbService.savePendingSale(syncedSale);
 
@@ -323,6 +349,35 @@ export const offlineSaleService = {
     if (actionToRemove && actionToRemove.id) {
       console.log("Removing associated sync action:", actionToRemove.id);
       await dbService.removeSyncAction(actionToRemove.id);
+    }
+  },
+
+  /**
+   * Delete all pending (unsynced) sales from IndexedDB
+   * This is typically called when opening a new shift to start fresh
+   */
+  deleteAllPendingSales: async () => {
+    try {
+      // 1. Get all sales from IndexedDB
+      const allSales = await offlineSaleService.getOfflineSales();
+
+      // 2. Filter for unsynced sales only
+      const unsyncedSales = allSales.filter((sale) => !sale.is_synced);
+
+      console.log(`Deleting ${unsyncedSales.length} unsynced sales...`);
+
+      // 3. Delete each unsynced sale and its sync actions
+      for (const sale of unsyncedSales) {
+        if (sale.tempId) {
+          await offlineSaleService.deletePendingSale(sale.tempId);
+        }
+      }
+
+      console.log(`Successfully deleted ${unsyncedSales.length} unsynced sales`);
+      return unsyncedSales.length;
+    } catch (error) {
+      console.error("Failed to delete all pending sales:", error);
+      throw error;
     }
   },
 };

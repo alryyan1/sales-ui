@@ -6,6 +6,7 @@ export const PDF_FONTS = {
   AMIRI: "Amiri",
   TAJAWAL: "Tajawal",
   IBM_PLEX: "IBM Plex Sans Arabic",
+  ARIAL: "Arial",
 };
 
 export const registerPdfFonts = () => {
@@ -35,6 +36,17 @@ export const registerPdfFonts = () => {
     fonts: [
       { src: "/fonts/IBMPlexSansArabic-Regular.ttf" },
       { src: "/fonts/IBMPlexSansArabic-Bold.ttf", fontWeight: "bold" },
+    ],
+  });
+
+  // Register Arial
+  Font.register({
+    family: PDF_FONTS.ARIAL,
+    fonts: [
+      { src: "/fonts/ARIAL.ttf" },
+      { src: "/fonts/ARIAL.ttf", fontStyle: "italic" }, // Use regular font for italic
+      { src: "/fonts/ARIAL.ttf", fontWeight: "bold" },
+      { src: "/fonts/ARIAL.ttf", fontWeight: "bold", fontStyle: "italic" }, // Use regular font for bold italic
     ],
   });
 };

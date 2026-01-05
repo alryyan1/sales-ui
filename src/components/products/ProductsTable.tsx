@@ -513,7 +513,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
       <Paper
         sx={{ height: 650, width: "100%", borderRadius: 2, overflow: "hidden" }}
         elevation={0}
-        dir="rtl"
+        dir="ltr"
       >
         <DataGrid
           rows={products}

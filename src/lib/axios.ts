@@ -31,7 +31,20 @@ apiClient.interceptors.request.use(
              console.log('Interceptor: No token found, sending request without Authorization header'); // For debugging
         }
 
-        // 3. Return the modified config object
+        // 3. Xdebug Session Trigger (for debugging)
+        // Enable Xdebug by setting localStorage.setItem('xdebug_enabled', 'true')
+        // Or use browser extension (recommended)
+        const xdebugEnabled = localStorage.getItem('xdebug_enabled') === 'true';
+        if (xdebugEnabled) {
+            // Add Xdebug session cookie or query parameter
+            if (config.params) {
+                config.params.XDEBUG_SESSION_START = '1';
+            } else {
+                config.params = { XDEBUG_SESSION_START: '1' };
+            }
+        }
+
+        // 4. Return the modified config object
         return config;
     },
     (error) => {

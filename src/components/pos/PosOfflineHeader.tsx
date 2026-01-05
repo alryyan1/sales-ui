@@ -57,6 +57,7 @@ interface PosOfflineHeaderProps {
   onNewSale: () => void;
   onPaymentShortcut: () => void; // Trigger for '+' key (opens payment dialog)
   isSaleSelected: boolean;
+  isPageLoading?: boolean; // Page loading state to disable PDF button
   // Drawer
   onDrawerToggle?: () => void;
 }
@@ -88,6 +89,7 @@ export const PosOfflineHeader = React.forwardRef<
       isSaleSelected,
       onDrawerToggle,
       onPrintShiftReport,
+      isPageLoading = false,
     },
     ref
   ) => {
@@ -581,10 +583,10 @@ export const PosOfflineHeader = React.forwardRef<
             </Tooltip>
 
             {/* Shift Report Button */}
-            <Tooltip title="تقرير الوردية">
+            <Tooltip title={isPageLoading ? "جاري تحميل البيانات..." : "تقرير الوردية"}>
               <IconButton
                 onClick={onPrintShiftReport}
-                disabled={!selectedShiftId}
+                disabled={!selectedShiftId || shiftLoading || isSyncing || isPageLoading}
                 sx={{
                   border: "2px solid",
                   borderColor: "grey.300",

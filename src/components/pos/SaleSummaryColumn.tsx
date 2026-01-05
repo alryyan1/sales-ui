@@ -30,6 +30,8 @@ import saleService from "../../services/saleService";
 import { PaymentDialog } from "./PaymentDialog";
 import { DiscountDialog } from "./DiscountDialog";
 import dayjs from "dayjs";
+import { PaymentMethod } from "./types";
+import { Chip, Paper } from "@mui/material";
 
 interface SaleSummaryColumnProps {
   currentSaleItems: CartItem[];
@@ -162,6 +164,8 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
       };
       
       setSaleInfo(transformedSale);
+      console.log('Sale info fetched:', transformedSale);
+      console.log('Payments:', transformedSale.payments);
     } catch (error) {
       console.error('Failed to fetch sale info:', error);
       setSaleInfo(null);
@@ -291,6 +295,21 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
   };
 
   const isCurrentlyLoading = isLoading || isFetchingSaleInfo;
+
+  // Helper function to translate payment methods to Arabic
+  const getPaymentMethodLabel = (method: PaymentMethod): string => {
+    const methodMap: Record<PaymentMethod, string> = {
+      cash: "نقدي",
+      visa: "فيزا",
+      mastercard: "ماستركارد",
+      bank_transfer: "تحويل بنكي",
+      mada: "مدى",
+      store_credit: "رصيد متجر",
+      other: "أخرى",
+      refund: "استرداد",
+    };
+    return methodMap[method] || method;
+  };
 
   return (
     <Box sx={{  width: '100%', display: 'flex', flexDirection: 'column', p: 2, gap: 2, overflowY: 'auto', height: '100%' }}>
@@ -505,6 +524,82 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
                   </Box>
                 )}
               </Box>
+
+              {/* Payments List Section */}
+              {saleInfo?.payments && saleInfo.payments.length > 0 && (
+                <>
+                  <Divider />
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    <Typography variant="subtitle2" fontWeight="bold" color="text.secondary" sx={{ mb: 0.5 }}>
+                      المدفوعات ({saleInfo.payments.length})
+                    </Typography>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 1,
+                        maxHeight: 200,
+                        overflowY: 'auto',
+                        pr: 0.5,
+                      }}
+                    >
+                      {saleInfo.payments.map((payment, index) => (
+                        <Paper
+                          key={payment.id || index}
+                          elevation={0}
+                          sx={{
+                            p: 1.5,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 0.5,
+                            bgcolor: 'grey.50',
+                            borderRadius: 1,
+                            border: '1px solid',
+                            borderColor: 'grey.200',
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Chip
+                              label={getPaymentMethodLabel(payment.method)}
+                              size="small"
+                              variant="outlined"
+                              sx={{
+                                fontSize: '0.7rem',
+                                height: 24,
+                                borderColor: 'primary.main',
+                                color: 'primary.main',
+                              }}
+                            />
+                            <Typography variant="body2" fontWeight="bold" color="success.main">
+                              {formatNumber(Number(payment.amount))}
+                            </Typography>
+                          </Box>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
+                            <Typography variant="caption" color="text.secondary">
+                              {payment.payment_date ? dayjs(payment.payment_date).format('YYYY-MM-DD') : '-'}
+                            </Typography>
+                            {payment.reference_number && (
+                              <Typography variant="caption" color="text.secondary">
+                                المرجع: {payment.reference_number}
+                              </Typography>
+                            )}
+                          </Box>
+                          {payment.user_name && (
+                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.25 }}>
+                              بواسطة: {payment.user_name}
+                            </Typography>
+                          )}
+                          {payment.notes && (
+                            <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic', mt: 0.25 }}>
+                              {payment.notes}
+                            </Typography>
+                          )}
+                        </Paper>
+                      ))}
+                    </Box>
+                  </Box>
+                </>
+              )}
 
               <Divider />
 

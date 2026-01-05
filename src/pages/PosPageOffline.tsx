@@ -116,6 +116,16 @@ export const PosPageOffline = () => {
         setSelectedShiftId(normalizedShift.id);
       }
 
+      // Delete all pending (unsynced) sales when opening a new shift
+      try {
+        await offlineSaleService.deleteAllPendingSales();
+        // Reload pending sales list to update the UI
+        await loadLocalPendingSales();
+      } catch (deleteError) {
+        console.error("Failed to delete pending sales:", deleteError);
+        // Don't fail the shift opening if deletion fails, just log it
+      }
+
       toast.success("تم فتح الوردية");
     } catch (error) {
       console.error("Failed to open shift:", error);
@@ -158,34 +168,40 @@ export const PosPageOffline = () => {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isSyncedView, setIsSyncedView] = useState(true);
   const [isShiftReportOpen, setIsShiftReportOpen] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(true);
 
   // Load Products and Clients on Mount & Auto-update
   useEffect(() => {
     const loadAndSync = async () => {
-      // 1. Load local data first (fast render)
-      const localProducts = await offlineSaleService.searchProducts("");
-      if (localProducts.length > 0) setProducts(localProducts);
+      setIsPageLoading(true);
+      try {
+        // 1. Load local data first (fast render)
+        const localProducts = await offlineSaleService.searchProducts("");
+        if (localProducts.length > 0) setProducts(localProducts);
 
-      const localClients = await offlineSaleService.searchClients("");
-      if (localClients.length > 0) setClients(localClients);
+        const localClients = await offlineSaleService.searchClients("");
+        if (localClients.length > 0) setClients(localClients);
 
-      // 2. If online, fetch fresh data
-      if (isOnline) {
-        try {
-          await offlineSaleService.initializeProducts(
-            user?.warehouse_id || undefined
-          );
-          await offlineSaleService.initializeClients();
+        // 2. If online, fetch fresh data
+        if (isOnline) {
+          try {
+            await offlineSaleService.initializeProducts(
+              user?.warehouse_id || undefined
+            );
+            await offlineSaleService.initializeClients();
 
-          // 3. Refresh state from updated DB
-          const freshProducts = await offlineSaleService.searchProducts("");
-          setProducts(freshProducts);
+            // 3. Refresh state from updated DB
+            const freshProducts = await offlineSaleService.searchProducts("");
+            setProducts(freshProducts);
 
-          const freshClients = await offlineSaleService.searchClients("");
-          setClients(freshClients);
-        } catch (e) {
-          console.error("Auto-update failed", e);
+            const freshClients = await offlineSaleService.searchClients("");
+            setClients(freshClients);
+          } catch (e) {
+            console.error("Auto-update failed", e);
+          }
         }
+      } finally {
+        setIsPageLoading(false);
       }
     };
 
@@ -1119,9 +1135,13 @@ export const PosPageOffline = () => {
 
   // Handle Plus Key Action
   const handlePlusAction = useCallback(() => {
-    if (!isPendingSaleSelected) {
+    // If no sale is selected OR current sale is empty (no items), create new sale
+    const isCurrentSaleEmpty = currentSale.items.length === 0;
+    
+    if (!isPendingSaleSelected || isCurrentSaleEmpty) {
       handleNewSale();
     } else {
+      // If a sale is selected and has items, open payment dialog
       if (
         Number(currentSale.total_amount) > 0 &&
         currentSale.status !== "completed"
@@ -1195,6 +1215,7 @@ export const PosPageOffline = () => {
         isSaleSelected={isPendingSaleSelected}
         onPaymentShortcut={handlePlusAction}
         onPrintShiftReport={() => setIsShiftReportOpen(true)}
+        isPageLoading={isPageLoading}
       />
 
       <Box

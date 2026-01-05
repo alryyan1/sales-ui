@@ -39,8 +39,9 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   subtitle: {
-    fontSize: 10,
-    color: "#555",
+    fontSize: 12,
+    fontWeight: "bold",
+
   },
   divider: {
     borderBottomWidth: 1,

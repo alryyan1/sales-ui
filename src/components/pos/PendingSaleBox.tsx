@@ -41,12 +41,12 @@ export const PendingSaleBox: React.FC<PendingSaleBoxProps> = ({
           height: 50,
           border: "1px solid",
           borderColor: isSelected
-            ? "primary.main"
+            ? "primary.light"
             : sale.status === "held"
             ? "warning.main"
             : "grey.200",
           bgcolor: isSelected
-            ? "primary.light"
+            ? ""
             : sale.status === "held"
             ? "warning.50"
             : "white",

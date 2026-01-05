@@ -784,6 +784,9 @@ const SettingsPage: React.FC = () => {
                         <MenuItem value={PDF_FONTS.IBM_PLEX}>
                           IBM Plex Sans Arabic (Modern)
                         </MenuItem>
+                        <MenuItem value={PDF_FONTS.ARIAL}>
+                          Arial (Standard)
+                        </MenuItem>
                       </TextField>
                     )}
                   />
