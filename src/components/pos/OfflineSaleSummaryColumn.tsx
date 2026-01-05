@@ -183,13 +183,25 @@ export const OfflineSaleSummaryColumn: React.FC<
     amount: number,
     type: "percentage" | "fixed"
   ) => {
+    console.log("[Discount] handleDiscountUpdate called:", { amount, type });
+    // Ensure amount is a number
+    const discountAmount = Number(amount) || 0;
     const updatedSale = {
       ...currentSale,
-      discount_amount: amount,
+      discount_amount: discountAmount,
       discount_type: type,
     };
+    console.log("[Discount] updatedSale before calculateTotals:", {
+      discount_amount: updatedSale.discount_amount,
+      discount_type: updatedSale.discount_type,
+    });
     // Recalculate totals
     const calculatedSale = offlineSaleService.calculateTotals(updatedSale);
+    console.log("[Discount] calculatedSale after calculateTotals:", {
+      discount_amount: calculatedSale.discount_amount,
+      discount_type: calculatedSale.discount_type,
+      total_amount: calculatedSale.total_amount,
+    });
 
     onUpdateSale(calculatedSale);
   };

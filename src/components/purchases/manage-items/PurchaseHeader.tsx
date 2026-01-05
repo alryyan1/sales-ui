@@ -30,7 +30,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 // Custom Components & Utils
 import PurchaseSummaryDialog from "@/components/purchases/PurchaseSummaryDialog";
-import { formatCurrency } from "@/constants";
+import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 import { Purchase } from "@/services/purchaseService";
 import { PurchaseSummary } from "./types";
 import { cn } from "@/lib/utils";

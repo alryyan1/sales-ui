@@ -5,6 +5,7 @@ import { Box, Drawer, useTheme, alpha, Toolbar } from "@mui/material";
 import { Loader2 } from "lucide-react";
 import { Toaster } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { PosFilterProvider } from "@/context/PosFilterContext";
 import SidebarPro from "./SidebarPro";
 import TopAppBar from "./TopAppBar";
 import UserMenu from "./UserMenu";
@@ -54,14 +55,15 @@ const RootLayout: React.FC = () => {
   };
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh" }}>
-      <Toaster richColors position="bottom-center" theme="system" />
+    <PosFilterProvider>
+      <Box sx={{ display: "flex", minHeight: "100vh" }}>
+        <Toaster richColors position="bottom-center" theme="system" />
 
-      <TopAppBar
-        onDrawerToggle={handleDrawerToggle}
-        isSidebarCollapsed={isSidebarCollapsed}
-        onMenuOpen={handleMenuOpen}
-      />
+        <TopAppBar
+          onDrawerToggle={handleDrawerToggle}
+          isSidebarCollapsed={isSidebarCollapsed}
+          onMenuOpen={handleMenuOpen}
+        />
 
       {/* Sidebar Drawer */}
       <Box
@@ -144,6 +146,7 @@ const RootLayout: React.FC = () => {
 
       <UserMenu anchorEl={anchorEl} onClose={handleMenuClose} />
     </Box>
+    </PosFilterProvider>
   );
 };
 

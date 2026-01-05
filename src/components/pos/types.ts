@@ -39,6 +39,7 @@ export interface Sale {
   invoice_number?: string | null;
   // Status column was removed from the backend; keep optional for backward compatibility
   status?: 'completed' | 'pending' | 'draft' | 'cancelled';
+  is_returned?: boolean; // Whether this sale has been returned
   total_amount: number;
   paid_amount: number;
   due_amount?: number;

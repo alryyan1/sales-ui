@@ -364,7 +364,7 @@ const SalesReportPage: React.FC = () => {
       import.meta.env.VITE_API_BASE_URL
     }/reports/sales/pdf?${params.toString()}`;
     window.open(pdfUrl, "_blank");
-    toast.info("جاري بدء تحميل PDF...");
+    toast.info("جاري فتح PDF في تبويب جديد...");
   };
 
   // --- Calculate Summary Stats ---
@@ -934,7 +934,7 @@ const SalesReportPage: React.FC = () => {
                   ) : (
                     <>
                       <Box sx={{ overflowX: "auto" }}>
-                        <Table size="medium" sx={{ minWidth: 800 }}>
+                        <Table size="medium" sx={{ minWidth: 900 }}>
                           <TableHead>
                             <TableRow
                               sx={{
@@ -954,6 +954,7 @@ const SalesReportPage: React.FC = () => {
                               <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }}>العميل</TableCell>
                               <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }}>المستخدم</TableCell>
                               <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }} align="center">المدفوعات</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.875rem" }}>الخصم</TableCell>
                               <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.875rem" }}>المبلغ الإجمالي</TableCell>
                               <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.875rem" }}>المدفوع</TableCell>
                               <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.875rem" }}>المستحق</TableCell>
@@ -1038,6 +1039,32 @@ const SalesReportPage: React.FC = () => {
                                         fontWeight: 600,
                                       }}
                                     />
+                                  ) : (
+                                    <Typography component="span" color="text.secondary" variant="body2">
+                                      —
+                                    </Typography>
+                                  )}
+                                </TableCell>
+                                <TableCell align="right">
+                                  {sale.discount_amount && Number(sale.discount_amount) > 0 ? (
+                                    <Box>
+                                      <Typography
+                                        variant="body2"
+                                        sx={{
+                                          fontWeight: 600,
+                                          color: "warning.main",
+                                        }}
+                                      >
+                                        {formatNumber(sale.discount_amount)}
+                                      </Typography>
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                        sx={{ display: "block", mt: 0.25 }}
+                                      >
+                                        {(sale as any).discount_type === "percentage" ? "%" : "ثابت"}
+                                      </Typography>
+                                    </Box>
                                   ) : (
                                     <Typography component="span" color="text.secondary" variant="body2">
                                       —
@@ -1567,6 +1594,15 @@ const SalesReportPage: React.FC = () => {
               <Divider />
               <Box>
                 <Stack spacing={1}>
+                  {selectedSale.discount_amount && Number(selectedSale.discount_amount) > 0 && (
+                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                      <Typography variant="body1" fontWeight="bold">الخصم:</Typography>
+                      <Typography variant="body1" fontWeight="bold" color="warning.main">
+                        {formatNumber(selectedSale.discount_amount)}
+                        {selectedSale.discount_type === "percentage" ? " %" : ""}
+                      </Typography>
+                    </Box>
+                  )}
                   <Box sx={{ display: "flex", justifyContent: "space-between" }}>
                     <Typography variant="body1" fontWeight="bold">المبلغ الإجمالي:</Typography>
                     <Typography variant="body1" fontWeight="bold">

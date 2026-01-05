@@ -89,6 +89,7 @@ export interface Sale {
   due_amount?: string | number; // Calculated (total_amount - paid_amount)
   discount_amount?: string | number; // Discount amount
   discount_type?: "percentage" | "fixed"; // Discount type
+  is_returned?: boolean; // Whether this sale has been returned
 
   notes: string | null;
   created_at: string;
@@ -106,6 +107,8 @@ export interface CreateSaleData {
   status: "completed" | "pending" | "draft" | "cancelled";
   notes?: string | null;
   shift_id?: number | null;
+  discount_amount?: number | string; // Discount amount
+  discount_type?: "percentage" | "fixed"; // Discount type
   items: Array<{
     product_id: number;
     purchase_item_id?: number | null; // If specific batch is selected

@@ -117,6 +117,8 @@ export const offlineSaleService = {
             status: "completed", // POS sales are usually completed
             notes: offlineSale.notes,
             shift_id: offlineSale.shift_id,
+            discount_amount: offlineSale.discount_amount ? Number(offlineSale.discount_amount) : undefined,
+            discount_type: offlineSale.discount_type || undefined,
             items: offlineSale.items.map((item) => {
               const product = item.product as Product;
               const unitType = (item as any).unitType || "sellable";
@@ -153,7 +155,19 @@ export const offlineSaleService = {
               })),
           };
 
+          console.log("[Discount] Syncing sale to backend with discount:", {
+            discount_amount: saleData.discount_amount,
+            discount_type: saleData.discount_type,
+            tempId: offlineSale.tempId,
+          });
+
           const createdSale = await saleService.createSale(saleData);
+          
+          console.log("[Discount] Sale synced successfully, response:", {
+            id: createdSale.id,
+            discount_amount: createdSale.discount_amount,
+            discount_type: createdSale.discount_type,
+          });
 
           // If successful, update local pending sale to synced
           const syncedSale: OfflineSale = {
@@ -282,10 +296,21 @@ export const offlineSaleService = {
       }
     }
 
-    return {
+    const result = {
       ...sale,
       total_amount: finalTotal > 0 ? finalTotal : 0,
+      // Explicitly preserve discount fields to ensure they're not lost
+      discount_amount: sale.discount_amount,
+      discount_type: sale.discount_type,
     };
+    
+    console.log("[Discount] calculateTotals result:", {
+      discount_amount: result.discount_amount,
+      discount_type: result.discount_type,
+      total_amount: result.total_amount,
+    });
+    
+    return result;
   },
 
   /**

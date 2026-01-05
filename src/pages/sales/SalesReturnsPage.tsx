@@ -1,91 +1,223 @@
-import React, { useState } from "react";
+// src/pages/sales/SalesReturnsPage.tsx
+import React, { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+
+// shadcn/ui Components
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
-  Box,
-  Typography,
-  Paper,
-  TextField,
-  Button,
-  Grid,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
+  TableHeader,
   TableRow,
-  Checkbox,
-  FormControl,
-  InputLabel,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
   Select,
-  MenuItem,
-  Alert,
-  InputAdornment,
-} from "@mui/material";
-import { Search, Loader2, RefreshCw, Undo2, History } from "lucide-react";
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
+
+// Lucide Icons
+import {
+  Search,
+  Loader2,
+  ArrowLeft,
+  CheckCircle2,
+  AlertCircle,
+  User,
+  Calendar,
+  DollarSign,
+  FileText,
+  History,
+  Undo2,
+} from "lucide-react";
+
+// Services and Types
 import saleService, {
   Sale,
   SaleItem,
   CreateSaleReturnData,
   SaleReturnItemData,
 } from "../../services/saleService";
-import { toast } from "sonner";
+import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 import { formatNumber } from "@/constants";
-import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
-const SalesReturnsPage = () => {
+const SalesReturnsPage: React.FC = () => {
   const navigate = useNavigate();
-  // Search State
+  const [searchParams] = useSearchParams();
+  const queryClient = useQueryClient();
+  const formatCurrency = useFormatCurrency();
+
+  // Get saleId from query parameters
+  const saleIdParam = searchParams.get("saleId");
+
+  // Step 1: Search state
   const [invoiceNumber, setInvoiceNumber] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [sale, setSale] = useState<Sale | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Return Form State
-  const [selectedItems, setSelectedItems] = useState<{
-    [itemId: number]: {
-      quantity: number;
-      condition: "resellable" | "damaged";
-    };
-  }>({});
-
+  // Step 2-4: Selected sale and return data
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [selectedItems, setSelectedItems] = useState<
+    Record<
+      number,
+      {
+        quantity: number;
+        condition: "resellable" | "damaged";
+        maxReturnable: number;
+      }
+    >
+  >({});
   const [returnReason, setReturnReason] = useState("");
   const [notes, setNotes] = useState("");
   const [creditAction, setCreditAction] = useState<"refund" | "store_credit">(
     "refund"
   );
-  const [submitting, setSubmitting] = useState(false);
 
-  // Search Handler
-  const handleSearch = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!invoiceNumber.trim()) return;
+  // Current step tracking
+  const currentStep = selectedSale
+    ? Object.keys(selectedItems).length > 0
+      ? 4
+      : 3
+    : searchQuery
+    ? 2
+    : 1;
 
-    setLoading(true);
-    setSale(null);
-    setSelectedItems({}); // Reset form
-
-    try {
-      // Searching by query params: ?search=INV-XXXX
-      // We expect a list, take the first match
+  // Step 1: Search for sale
+  const {
+    data: searchResults,
+    isLoading: isSearching,
+    refetch: searchSale,
+  } = useQuery({
+    queryKey: ["search-sale", searchQuery],
+    queryFn: async () => {
+      if (!searchQuery.trim()) return null;
       const result = await saleService.getSales(
         1,
-        `search=${encodeURIComponent(invoiceNumber.trim())}`
+        `search=${encodeURIComponent(searchQuery.trim())}`
       );
+      return result.data || [];
+    },
+    enabled: false, // Manual trigger
+    retry: false,
+  });
 
-      if (result.data && result.data.length > 0) {
-        // Fetch full details of the first match
-        const fullSale = await saleService.getSale(result.data[0].id);
-        setSale(fullSale);
-      } else {
-        toast.error("لم يتم العثور على فاتورة بهذا الرقم");
-      }
-    } catch (error) {
-      console.error("Search error:", error);
-      toast.error("حدث خطأ أثناء البحث");
-    } finally {
-      setLoading(false);
+  // Fetch sale by ID from query parameter
+  const {
+    data: saleFromParam,
+    isLoading: isLoadingSaleFromParam,
+    error: errorSaleFromParam,
+  } = useQuery({
+    queryKey: ["sale-by-id", saleIdParam],
+    queryFn: async () => {
+      if (!saleIdParam) return null;
+      const saleId = Number(saleIdParam);
+      if (isNaN(saleId)) return null;
+      return await saleService.getSale(saleId);
+    },
+    enabled: !!saleIdParam && !selectedSale,
+    retry: false,
+  });
+
+  // Fetch full sale details when a sale is selected
+  const {
+    data: saleDetails,
+    isLoading: isLoadingDetails,
+    error: saleError,
+  } = useQuery({
+    queryKey: ["sale-details", selectedSale?.id],
+    queryFn: async () => {
+      if (!selectedSale?.id) return null;
+      return await saleService.getSale(selectedSale.id);
+    },
+    enabled: !!selectedSale?.id,
+  });
+
+  // Auto-select sale from query parameter
+  useEffect(() => {
+    if (saleFromParam && !selectedSale) {
+      setSelectedSale(saleFromParam);
+      setSearchQuery("");
+      setInvoiceNumber("");
     }
+  }, [saleFromParam, selectedSale]);
+
+  // Show error if sale from param failed to load
+  useEffect(() => {
+    if (errorSaleFromParam && saleIdParam) {
+      toast.error("فشل تحميل الفاتورة. يرجى التحقق من رقم الفاتورة.");
+    }
+  }, [errorSaleFromParam, saleIdParam]);
+
+  // Create return mutation
+  const createReturnMutation = useMutation({
+    mutationFn: async (data: CreateSaleReturnData) => {
+      return await saleService.createSaleReturn(data);
+    },
+    onSuccess: () => {
+      toast.success("تم إنشاء طلب الإرجاع بنجاح");
+      queryClient.invalidateQueries({ queryKey: ["sale-returns"] });
+      // Reset form
+      handleReset();
+      navigate("/sales/returns");
+    },
+    onError: (error: unknown) => {
+      const errorMsg =
+        (error as { response?: { data?: { message?: string; errors?: Record<string, unknown[]> } } })?.response?.data?.message || "فشل إنشاء طلب الإرجاع";
+      const errorData = (error as { response?: { data?: { errors?: Record<string, unknown[]> } } })?.response?.data?.errors;
+      if (errorData) {
+        const firstErr = Object.values(errorData)[0];
+        if (Array.isArray(firstErr) && firstErr.length > 0) {
+          toast.error(String(firstErr[0]));
+        } else {
+          toast.error(errorMsg);
+        }
+      } else {
+        toast.error(errorMsg);
+      }
+    },
+  });
+
+  // Handlers
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!invoiceNumber.trim()) {
+      toast.error("يرجى إدخال رقم الفاتورة");
+      return;
+    }
+    setSearchQuery(invoiceNumber.trim());
+    setSelectedSale(null);
+    setSelectedItems({});
+    searchSale();
   };
 
-  // Item Selection Handler
+  const handleSelectSale = (sale: Sale) => {
+    setSelectedSale(sale);
+    setSelectedItems({});
+    setSearchQuery("");
+    setInvoiceNumber("");
+  };
+
   const handleItemToggle = (item: SaleItem) => {
     if (!item.id) return;
 
@@ -94,9 +226,12 @@ const SalesReturnsPage = () => {
       if (newItems[item.id!]) {
         delete newItems[item.id!];
       } else {
+        // Calculate max returnable (considering already returned items)
+        // For now, assume all quantity is returnable (backend will validate)
         newItems[item.id!] = {
-          quantity: 1, // Default 1
+          quantity: 1,
           condition: "resellable",
+          maxReturnable: item.quantity,
         };
       }
       return newItems;
@@ -106,24 +241,35 @@ const SalesReturnsPage = () => {
   const handleItemChange = (
     itemId: number,
     field: "quantity" | "condition",
-    value: any
+    value: string | number
   ) => {
-    setSelectedItems((prev) => ({
-      ...prev,
-      [itemId]: {
-        ...prev[itemId],
-        [field]: field === "quantity" ? Number(value) : value,
-      },
-    }));
+    setSelectedItems((prev) => {
+      if (!prev[itemId]) return prev;
+      const item = prev[itemId];
+      if (field === "quantity") {
+        const qty = Math.max(1, Math.min(item.maxReturnable, Number(value)));
+        return {
+          ...prev,
+          [itemId]: { ...item, quantity: qty },
+        };
+      }
+      // For condition, ensure it's a valid value
+      const conditionValue = value === "resellable" || value === "damaged" 
+        ? value 
+        : "resellable" as "resellable" | "damaged";
+      return {
+        ...prev,
+        [itemId]: { ...item, condition: conditionValue },
+      };
+    });
   };
 
-  // Calculations
-  const calculateTotalRefund = () => {
-    if (!sale) return 0;
+  const calculateTotalRefund = (): number => {
+    if (!saleDetails) return 0;
     let total = 0;
     Object.entries(selectedItems).forEach(([itemIdStr, data]) => {
       const itemId = Number(itemIdStr);
-      const item = sale.items?.find((i) => i.id === itemId);
+      const item = saleDetails.items?.find((i) => i.id === itemId);
       if (item) {
         total += Number(item.unit_price) * data.quantity;
       }
@@ -131,41 +277,44 @@ const SalesReturnsPage = () => {
     return total;
   };
 
-  // Submission Handler
   const handleSubmit = async () => {
-    if (!sale) return;
+    if (!saleDetails) return;
 
     const itemsToReturn: SaleReturnItemData[] = [];
     let isValid = true;
 
-    // Build payload
+    // Build payload and validate
     Object.entries(selectedItems).forEach(([itemIdStr, data]) => {
       const itemId = Number(itemIdStr);
-      const originalItem = sale.items?.find((i) => i.id === itemId);
+      const originalItem = saleDetails.items?.find((i) => i.id === itemId);
 
-      if (!originalItem) return;
+      if (!originalItem || !originalItem.id) {
+        isValid = false;
+        return;
+      }
 
-      if (data.quantity > originalItem.quantity) {
+      if (data.quantity > data.maxReturnable) {
         toast.error(
-          `الكمية المرجعة للصنف ${originalItem.product?.name} تتجاوز الكمية المباعة`
+          `الكمية المرجعة للصنف ${originalItem.product?.name || originalItem.product_name} تتجاوز الكمية المتاحة`
         );
         isValid = false;
         return;
       }
+
       if (data.quantity <= 0) {
         toast.error(
-          `الكمية يجب أن تكون أكبر من 0 للصنف ${originalItem.product?.name}`
+          `الكمية يجب أن تكون أكبر من 0 للصنف ${originalItem.product?.name || originalItem.product_name}`
         );
         isValid = false;
         return;
       }
 
       itemsToReturn.push({
-        original_sale_item_id: originalItem.id!,
+        original_sale_item_id: originalItem.id,
         product_id: originalItem.product_id,
         quantity_returned: data.quantity,
         condition: data.condition,
-        return_to_purchase_item_id: originalItem.purchase_item_id, // Attempt to return to same batch
+        return_to_purchase_item_id: originalItem.purchase_item_id || null,
       });
     });
 
@@ -176,427 +325,504 @@ const SalesReturnsPage = () => {
     }
 
     const payload: CreateSaleReturnData = {
-      original_sale_id: sale.id,
-      return_date: new Date().toISOString().split("T")[0], // Today
-      return_reason: returnReason || "No reason provided",
+      original_sale_id: saleDetails.id,
+      return_date: new Date().toISOString().split("T")[0],
+      return_reason: returnReason || "لا يوجد سبب محدد",
       notes: notes,
-      status: "completed", // Auto-complete for now
+      status: "completed",
       credit_action: creditAction,
       refunded_amount: calculateTotalRefund(),
       items: itemsToReturn,
     };
 
-    setSubmitting(true);
-    try {
-      await saleService.createSaleReturn(payload);
-      toast.success("تم إنشاء طلب الإرجاع بنجاح");
-      // Reset
-      setSale(null);
-      setInvoiceNumber("");
-      setSelectedItems({});
-      setReturnReason("");
-      setNotes("");
-    } catch (error: any) {
-      console.error("Return creation failed:", error);
-      const msg = error?.response?.data?.message || "فشل إنشاء طلب الإرجاع";
-      // Check for backend validation errors (e.g. max quantity exceeded)
-      if (error?.response?.data?.errors) {
-        const firstErr = Object.values(error.response.data.errors)[0];
-        if (Array.isArray(firstErr)) toast.error(firstErr[0]);
-        else toast.error(msg);
-      } else {
-        toast.error(msg);
-      }
-    } finally {
-      setSubmitting(false);
-    }
+    createReturnMutation.mutate(payload);
   };
 
+  const handleReset = () => {
+    setSelectedSale(null);
+    setSelectedItems({});
+    setReturnReason("");
+    setNotes("");
+    setCreditAction("refund");
+    setInvoiceNumber("");
+    setSearchQuery("");
+  };
+
+  const totalRefund = calculateTotalRefund();
+
   return (
-    <Box sx={{ p: 3, maxWidth: 1200, mx: "auto", direction: "ltr" }}>
-      <Box
-        sx={{
-          mb: 4,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-          <Typography variant="h4" fontWeight="bold" color="primary">
-            مردودات المبيعات
-          </Typography>
-          <Undo2 size={32} className="text-blue-500" />
-        </Box>
+    <div className="p-4 md:p-6 lg:p-8 space-y-6 dark:bg-gray-950 min-h-screen">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/sales/returns")}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <Undo2 className="h-6 w-6 text-blue-600" />
+              مردودات المبيعات
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              إنشاء طلب إرجاع جديد
+            </p>
+          </div>
+        </div>
         <Button
-          variant="outlined"
-          startIcon={<History />}
+          variant="outline"
           onClick={() => navigate("/sales/returns")}
+          className="gap-2"
         >
+          <History className="h-4 w-4" />
           سجل المردودات
         </Button>
-      </Box>
+      </div>
 
-      {/* Steps: 1. Search */}
-      <Paper
-        elevation={0}
-        sx={{
-          p: 3,
-          mb: 3,
-          border: "1px solid",
-          borderColor: "divider",
-          borderRadius: 2,
-        }}
-      >
-        <Typography variant="h6" gutterBottom fontWeight="bold">
-          الخطوة 1: البحث عن الفاتورة
-        </Typography>
-        <Box
-          component="form"
-          onSubmit={handleSearch}
-          sx={{ display: "flex", gap: 2, alignItems: "center" }}
-        >
-          <TextField
-            label="رقم الفاتورة (Invoice No)"
-            placeholder="مثال: INV-1001"
-            value={invoiceNumber}
-            onChange={(e) => setInvoiceNumber(e.target.value)}
-            fullWidth
-            size="medium"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">#</InputAdornment>
-              ),
-            }}
-          />
-          <Button
-            type="submit"
-            variant="contained"
-            size="large"
-            disabled={loading || !invoiceNumber.trim()}
-            startIcon={
-              loading ? <Loader2 className="animate-spin" /> : <Search />
-            }
-            sx={{ px: 4, height: 56 }}
-          >
-            بحث
-          </Button>
-        </Box>
-      </Paper>
+      {/* Step 1: Search Sale */}
+      <Card className="dark:bg-gray-900 dark:border-gray-700">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <div
+              className={cn(
+                "flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold",
+                currentStep >= 1
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
+              )}
+            >
+              1
+            </div>
+            <CardTitle>البحث عن الفاتورة</CardTitle>
+          </div>
+          <CardDescription>
+            أدخل رقم الفاتورة للبحث عن عملية البيع
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Loading state when fetching sale from query parameter */}
+          {isLoadingSaleFromParam && (
+            <div className="mb-4 space-y-2">
+              <Skeleton className="h-10 w-full" />
+              <p className="text-sm text-muted-foreground text-center">
+                جاري تحميل الفاتورة...
+              </p>
+            </div>
+          )}
 
-      {/* Steps: 2. Details & Form */}
-      {sale && (
-        <Paper
-          elevation={0}
-          sx={{
-            p: 3,
-            border: "1px solid",
-            borderColor: "divider",
-            borderRadius: 2,
-          }}
-        >
-          {/* Header Info */}
-          <Box
-            sx={{
-              mb: 3,
-              p: 2,
-              bgcolor: "grey.50",
-              borderRadius: 2,
-              display: "flex",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: 2,
-            }}
-          >
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                العميل
-              </Typography>
-              <Typography variant="body1" fontWeight="bold">
-                {sale.client?.name || "عميل نقدي"}
-              </Typography>
-            </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                تاريخ البيع
-              </Typography>
-              <Typography variant="body1" fontWeight="bold">
-                {sale.sale_date}
-              </Typography>
-            </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                الإجمالي
-              </Typography>
-              <Typography variant="body1" fontWeight="bold">
-                {formatNumber(sale.total_amount)}
-              </Typography>
-            </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                حالة البيع
-              </Typography>
-              <Typography
-                variant="body1"
-                fontWeight="bold"
-                color={
-                  sale.status === "completed" ? "success.main" : "warning.main"
-                }
+          <form onSubmit={handleSearch} className="flex gap-2">
+            <div className="flex-1">
+              <Label htmlFor="invoice-search" className="sr-only">
+                رقم الفاتورة
+              </Label>
+              <Input
+                id="invoice-search"
+                placeholder="مثال: INV-1001"
+                value={invoiceNumber}
+                onChange={(e) => setInvoiceNumber(e.target.value)}
+                disabled={isSearching || !!saleDetails || isLoadingSaleFromParam}
+                className="text-lg"
+              />
+            </div>
+            <Button
+              type="submit"
+              disabled={isSearching || !invoiceNumber.trim() || !!saleDetails || isLoadingSaleFromParam}
+              className="gap-2"
+            >
+              {isSearching ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Search className="h-4 w-4" />
+              )}
+              بحث
+            </Button>
+          </form>
+
+          {/* Search Results */}
+          {isSearching && (
+            <div className="mt-4 space-y-2">
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+            </div>
+          )}
+
+          {searchResults && searchResults.length > 0 && !saleDetails && (
+            <div className="mt-4 space-y-2">
+              <p className="text-sm text-muted-foreground">
+                تم العثور على {searchResults.length} نتيجة
+              </p>
+              {searchResults.map((sale) => (
+                <Card
+                  key={sale.id}
+                  className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  onClick={() => handleSelectSale(sale)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold">
+                          {sale.invoice_number || `#${sale.id}`}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {sale.client?.name || "عميل نقدي"} • {sale.sale_date}
+                        </p>
+                      </div>
+                      <Badge variant="outline">
+                        {formatCurrency(Number(sale.total_amount))}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {searchResults && searchResults.length === 0 && !isSearching && (
+            <Alert className="mt-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                لم يتم العثور على فاتورة بهذا الرقم
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Step 2: Sale Details */}
+      {saleDetails && (
+        <Card className="dark:bg-gray-900 dark:border-gray-700">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <div
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold",
+                  currentStep >= 2
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
+                )}
               >
-                {sale.status}
-              </Typography>
-            </Box>
-          </Box>
+                2
+              </div>
+              <CardTitle>تفاصيل الفاتورة</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoadingDetails ? (
+              <div className="space-y-2">
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+              </div>
+            ) : saleError ? (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  فشل تحميل تفاصيل الفاتورة
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <User className="h-4 w-4" />
+                    العميل
+                  </div>
+                  <p className="font-semibold">
+                    {saleDetails.client?.name || "عميل نقدي"}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Calendar className="h-4 w-4" />
+                    تاريخ البيع
+                  </div>
+                  <p className="font-semibold">{saleDetails.sale_date}</p>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <DollarSign className="h-4 w-4" />
+                    الإجمالي
+                  </div>
+                  <p className="font-semibold">
+                    {formatCurrency(Number(saleDetails.total_amount))}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <FileText className="h-4 w-4" />
+                    رقم الفاتورة
+                  </div>
+                  <p className="font-semibold">
+                    {saleDetails.invoice_number || `#${saleDetails.id}`}
+                  </p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
-          <Typography
-            variant="h6"
-            gutterBottom
-            fontWeight="bold"
-            sx={{ mt: 4 }}
-          >
-            الخطوة 2: تحديد الأصناف للإرجاع
-          </Typography>
+      {/* Step 3: Select Items */}
+      {saleDetails && (
+        <Card className="dark:bg-gray-900 dark:border-gray-700">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <div
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold",
+                  currentStep >= 3
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
+                )}
+              >
+                3
+              </div>
+              <CardTitle>تحديد الأصناف للإرجاع</CardTitle>
+            </div>
+            <CardDescription>
+              قم بتحديد الأصناف التي يرغب العميل بإرجاعها
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Alert className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                حدد الأصناف المراد إرجاعها واختر الحالة (سليم/تالف)
+              </AlertDescription>
+            </Alert>
 
-          <Alert severity="info" sx={{ mb: 2 }}>
-            قم بتحديد الأصناف التي يرغب العميل بإرجاعها وتعديل الكمية إذا لزم
-            الأمر.
-          </Alert>
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">
+                      <span className="sr-only">اختيار</span>
+                    </TableHead>
+                    <TableHead>الصنف</TableHead>
+                    <TableHead className="text-center">الكمية المباعة</TableHead>
+                    <TableHead className="text-center">سعر الوحدة</TableHead>
+                    <TableHead className="text-center w-32">
+                      الكمية المرجعة
+                    </TableHead>
+                    <TableHead className="text-center w-40">الحالة</TableHead>
+                    <TableHead className="text-right">قيمة الإرجاع</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {saleDetails.items?.map((item) => {
+                    if (!item.id) return null;
+                    const isSelected = !!selectedItems[item.id];
+                    const selection = selectedItems[item.id] || {
+                      quantity: 1,
+                      condition: "resellable" as const,
+                      maxReturnable: item.quantity,
+                    };
 
-          <TableContainer
-            sx={{
-              border: "1px solid",
-              borderColor: "divider",
-              borderRadius: 1,
-              mb: 3,
-            }}
-          >
-            <Table>
-              <TableHead sx={{ bgcolor: "grey.100" }}>
-                <TableRow>
-                  <TableCell padding="checkbox">
-                    <Typography variant="caption">إرجاع</Typography>
-                  </TableCell>
-                  <TableCell>الصنف</TableCell>
-                  <TableCell align="center">الكمية المباعة</TableCell>
-                  <TableCell align="center">سعر الوحدة</TableCell>
-                  <TableCell align="center" width={120}>
-                    الكمية المرجعة
-                  </TableCell>
-                  <TableCell align="center" width={150}>
-                    الحالة
-                  </TableCell>
-                  <TableCell align="right">قيمة الإرجاع</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {sale.items?.map((item) => {
-                  if (!item.id) return null;
-                  const isSelected = !!selectedItems[item.id];
-                  const currentSelection = selectedItems[item.id] || {
-                    quantity: 1,
-                    condition: "resellable",
-                  };
-
-                  return (
-                    <TableRow key={item.id} selected={isSelected} hover>
-                      <TableCell padding="checkbox">
-                        <Checkbox
-                          checked={isSelected}
-                          onChange={() => handleItemToggle(item)}
-                          color="error" // Red for return
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight="bold">
-                          {item.product?.name || item.product_name}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {item.product?.sku}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="center">{item.quantity}</TableCell>
-                      <TableCell align="center">
-                        {formatNumber(Number(item.unit_price))}
-                      </TableCell>
-                      <TableCell align="center">
-                        <TextField
-                          type="number"
-                          size="small"
-                          disabled={!isSelected}
-                          value={isSelected ? currentSelection.quantity : ""}
-                          onChange={(e) =>
-                            handleItemChange(
-                              item.id!,
-                              "quantity",
-                              e.target.value
-                            )
-                          }
-                          inputProps={{ min: 1, max: item.quantity }}
-                          error={
-                            isSelected &&
-                            (currentSelection.quantity > item.quantity ||
-                              currentSelection.quantity <= 0)
-                          }
-                        />
-                      </TableCell>
-                      <TableCell align="center">
-                        <FormControl
-                          size="small"
-                          fullWidth
-                          disabled={!isSelected}
-                        >
-                          <Select
-                            value={currentSelection.condition}
+                    return (
+                      <TableRow
+                        key={item.id}
+                        className={cn(
+                          isSelected && "bg-blue-50 dark:bg-blue-950/20"
+                        )}
+                      >
+                        <TableCell>
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => handleItemToggle(item)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">
+                              {item.product?.name || item.product_name}
+                            </p>
+                            {item.product?.sku && (
+                              <p className="text-xs text-muted-foreground">
+                                {item.product.sku}
+                              </p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {formatNumber(item.quantity)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {formatCurrency(Number(item.unit_price))}
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={selection.maxReturnable}
+                            value={isSelected ? selection.quantity : ""}
                             onChange={(e) =>
                               handleItemChange(
                                 item.id!,
-                                "condition",
+                                "quantity",
                                 e.target.value
                               )
                             }
+                            disabled={!isSelected}
+                            className="text-center w-full"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={isSelected ? selection.condition : ""}
+                            onValueChange={(value) =>
+                              handleItemChange(
+                                item.id!,
+                                "condition",
+                                value
+                              )
+                            }
+                            disabled={!isSelected}
                           >
-                            <MenuItem value="resellable">
-                              سليم (قابل للبيع)
-                            </MenuItem>
-                            <MenuItem value="damaged">تالف</MenuItem>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="اختر الحالة" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="resellable">
+                                سليم (قابل للبيع)
+                              </SelectItem>
+                              <SelectItem value="damaged">تالف</SelectItem>
+                            </SelectContent>
                           </Select>
-                        </FormControl>
-                      </TableCell>
-                      <TableCell
-                        align="right"
-                        sx={{
-                          fontWeight: "bold",
-                          color: isSelected ? "error.main" : "text.secondary",
-                        }}
-                      >
-                        {isSelected
-                          ? formatNumber(
-                              currentSelection.quantity *
-                                Number(item.unit_price)
-                            )
-                          : "-"}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
-
-          {Object.keys(selectedItems).length > 0 && (
-            <Box
-              sx={{
-                mt: 4,
-                p: 3,
-                border: "1px dashed",
-                borderColor: "primary.main",
-                borderRadius: 2,
-                bgcolor: "primary.50",
-              }}
-            >
-              <Typography
-                variant="h6"
-                gutterBottom
-                fontWeight="bold"
-                color="primary.dark"
-              >
-                الخطوة 3: ملخص وخيارات الإرجاع
-              </Typography>
-
-              <Grid container spacing={3}>
-                <Grid size={{ xs: 12, md: 4 }}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    إجمالي قيمة الإرجاع
-                  </Typography>
-                  <Typography variant="h4" fontWeight="bold" color="error.main">
-                    {formatNumber(calculateTotalRefund())}{" "}
-                    <Typography
-                      component="span"
-                      variant="body1"
-                      color="text.secondary"
-                    >
-                      ر.س
-                    </Typography>
-                  </Typography>
-                </Grid>
-
-                <Grid size={{ xs: 12, md: 4 }}>
-                  <FormControl fullWidth>
-                    <InputLabel>طريقة الإرجاع</InputLabel>
-                    <Select
-                      label="طريقة الإرجاع"
-                      value={creditAction}
-                      onChange={(e) => setCreditAction(e.target.value as any)}
-                    >
-                      <MenuItem value="refund">إسترداد نقدي (Refund)</MenuItem>
-                      <MenuItem value="store_credit">
-                        رصيد للعميل (Credit)
-                      </MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-
-                <Grid size={{ xs: 12, md: 4 }}>
-                  <TextField
-                    label="سبب الإرجاع"
-                    fullWidth
-                    value={returnReason}
-                    onChange={(e) => setReturnReason(e.target.value)}
-                    placeholder="مثال: المنتج تالف، العميل غير رأيه..."
-                  />
-                </Grid>
-
-                <Grid size={12}>
-                  <TextField
-                    label="ملاحظات إضافية"
-                    fullWidth
-                    multiline
-                    rows={2}
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                  />
-                </Grid>
-              </Grid>
-
-              <Box
-                sx={{
-                  mt: 4,
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: 2,
-                }}
-              >
-                <Button
-                  variant="outlined"
-                  color="inherit"
-                  onClick={() => setSale(null)}
-                  disabled={submitting}
-                >
-                  إلغاء
-                </Button>
-                <Button
-                  variant="contained"
-                  color="error" // Red for return action
-                  size="large"
-                  onClick={handleSubmit}
-                  disabled={submitting || calculateTotalRefund() <= 0}
-                  startIcon={
-                    submitting ? (
-                      <Loader2 className="animate-spin" />
-                    ) : (
-                      <RefreshCw />
-                    )
-                  }
-                  sx={{ px: 4 }}
-                >
-                  تأكيد الإرجاع
-                </Button>
-              </Box>
-            </Box>
-          )}
-        </Paper>
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {isSelected
+                            ? formatCurrency(
+                                selection.quantity * Number(item.unit_price)
+                              )
+                            : "-"}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       )}
-    </Box>
+
+      {/* Step 4: Review and Submit */}
+      {saleDetails && Object.keys(selectedItems).length > 0 && (
+        <Card className="dark:bg-gray-900 dark:border-gray-700">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <div
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold",
+                  currentStep >= 4
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
+                )}
+              >
+                4
+              </div>
+              <CardTitle>ملخص الإرجاع</CardTitle>
+            </div>
+            <CardDescription>
+              راجع المعلومات وأكمل عملية الإرجاع
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">
+                  إجمالي قيمة الإرجاع
+                </p>
+                <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+                  {formatCurrency(totalRefund)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">
+                  عدد الأصناف
+                </p>
+                <p className="text-2xl font-bold">
+                  {Object.keys(selectedItems).length}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">
+                  طريقة الإرجاع
+                </p>
+                <Select
+                  value={creditAction}
+                  onValueChange={(value) =>
+                    setCreditAction(value as "refund" | "store_credit")
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="refund">إسترداد نقدي</SelectItem>
+                    <SelectItem value="store_credit">رصيد للعميل</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Form Fields */}
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="return-reason">سبب الإرجاع</Label>
+                <Input
+                  id="return-reason"
+                  placeholder="مثال: المنتج تالف، العميل غير رأيه..."
+                  value={returnReason}
+                  onChange={(e) => setReturnReason(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="return-notes">ملاحظات إضافية</Label>
+                <Textarea
+                  id="return-notes"
+                  placeholder="أي ملاحظات إضافية..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={handleReset}
+                disabled={createReturnMutation.isPending}
+              >
+                إلغاء
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={
+                  createReturnMutation.isPending || totalRefund <= 0
+                }
+                className="gap-2"
+              >
+                {createReturnMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4" />
+                )}
+                تأكيد الإرجاع
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 };
+
 export default SalesReturnsPage;

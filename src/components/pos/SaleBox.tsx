@@ -15,6 +15,9 @@ import {
   Check as CheckIcon,
 } from "@mui/icons-material";
 
+// Lucide Icons
+import { RefreshCw } from "lucide-react";
+
 // Types
 import { Sale } from "./types";
 
@@ -131,6 +134,34 @@ export const SaleBox: React.FC<SaleBoxProps> = ({
               >
                 {sale.sale_order_number || sale.id}
               </Typography>
+            </Box>
+          )}
+
+          {/* Return icon when sale is returned */}
+          {Boolean(sale.is_returned) && (
+            <Box
+              component="div"
+              sx={{ 
+                position: "absolute", 
+                top: 2, 
+                left: 2, 
+                zIndex: 5,
+                height: 14,
+                width: 14,
+                bgcolor: "orange.main",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "1px solid",
+                borderColor: "orange.dark",
+              }}
+              title="تم إرجاع هذه الفاتورة"
+            >
+              <RefreshCw 
+                size={8} 
+                style={{ color: "white", display: "block" }}
+              />
             </Box>
           )}
 

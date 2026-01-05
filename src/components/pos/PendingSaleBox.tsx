@@ -1,6 +1,15 @@
 import React from "react";
 import { Card, Badge, Box, Typography } from "@mui/material";
 import { CloudDone, PauseCircle } from "@mui/icons-material";
+import { RefreshCw, Eye, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import {
+  ContextMenu,
+  ContextMenuTrigger,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+} from "@/components/ui/context-menu";
 import { OfflineSale } from "../../services/db";
 
 interface PendingSaleBoxProps {
@@ -18,7 +27,33 @@ export const PendingSaleBox: React.FC<PendingSaleBoxProps> = ({
   index,
   onDelete,
 }) => {
+  const navigate = useNavigate();
   const isSelected = selectedSaleId === sale.tempId;
+
+  // Navigation handlers
+  const handleCreateReturn = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (sale.is_synced && sale.id) {
+      navigate(`/sales/returns/new?saleId=${sale.id}`);
+    }
+  };
+
+  const handleViewDetails = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (sale.is_synced && sale.id) {
+      navigate(`/sales/${sale.id}`);
+    }
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!sale.is_synced && onDelete) {
+      onDelete(sale);
+    }
+  };
+
+  // Check if sale is synced and has an ID
+  const isSyncedWithId = sale.is_synced && sale.id;
 
   return (
     <Box sx={{ position: "relative", mb: 0.2 }}>
@@ -33,7 +68,9 @@ export const PendingSaleBox: React.FC<PendingSaleBoxProps> = ({
         }}
       />
 
-      <Card
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <Card
         sx={{
           cursor: "pointer",
           transition: "all 0.2s",
@@ -169,7 +206,59 @@ export const PendingSaleBox: React.FC<PendingSaleBoxProps> = ({
             })}
           </Typography>
         </Box>
-      </Card>
+
+        {/* Return icon when sale is returned */}
+        {Boolean(sale.is_returned) && (
+  <Box
+    sx={{ 
+      position: "absolute", 
+      bottom: 2, 
+      left: 2, 
+      zIndex: 5,
+      height: 16, // Slightly larger for better visibility
+      width: 16,
+      // Use 'warning.main' if 'orange.main' is not in your theme
+      bgcolor: "warning.main", 
+      borderRadius: "50%",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      border: "1px solid white", // White border helps it pop
+      boxShadow: 1
+    }}
+    title="تم إرجاع هذه الفاتورة"
+  >
+    <RefreshCw 
+      size={10} 
+      strokeWidth={3} // Make the lines thicker for small sizes
+      color="white" 
+    />
+      </Box>
+)}
+          </Card>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          {isSyncedWithId && (
+            <>
+              <ContextMenuItem onClick={handleCreateReturn}>
+                <RefreshCw className="ml-2 h-4 w-4" />
+                إنشاء إرجاع
+              </ContextMenuItem>
+              <ContextMenuItem onClick={handleViewDetails}>
+                <Eye className="ml-2 h-4 w-4" />
+                عرض التفاصيل
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+            </>
+          )}
+          {!sale.is_synced && onDelete && (
+            <ContextMenuItem onClick={handleDelete} variant="destructive">
+              <Trash2 className="ml-2 h-4 w-4" />
+              حذف الفاتورة
+            </ContextMenuItem>
+          )}
+        </ContextMenuContent>
+      </ContextMenu>
     </Box>
   );
 };

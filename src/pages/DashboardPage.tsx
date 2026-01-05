@@ -51,11 +51,15 @@ interface SalesSummary {
   total_amount?: number; // Optional
   today_count: number;
   this_month_count: number;
+  filtered_amount?: number; // Filtered by date range
+  filtered_count?: number; // Filtered by date range
 }
 interface PurchasesSummary {
   today_amount?: number; // Optional
   this_month_amount: number;
   this_month_count: number;
+  filtered_amount?: number; // Filtered by date range
+  filtered_count?: number; // Filtered by date range
 }
 interface InventorySummary {
   total_products: number;
@@ -88,6 +92,11 @@ const DashboardPage: React.FC = () => {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Date range state - initialized to today
+  const today = new Date().toISOString().split("T")[0]; // Format: YYYY-MM-DD
+  const [startDate, setStartDate] = useState<string>(today);
+  const [endDate, setEndDate] = useState<string>(today);
 
   // Control charts visibility to avoid heavy initial requests
   const [showCharts, setShowCharts] = useState<boolean>(false);
@@ -123,8 +132,12 @@ const DashboardPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
+      const params = new URLSearchParams({
+        start_date: startDate,
+        end_date: endDate,
+      });
       const response = await apiClient.get<{ data: DashboardSummaryData }>(
-        "/dashboard/summary"
+        `/dashboard/summary?${params.toString()}`
       );
       setSummaryData(response.data.data);
       console.log("Dashboard data fetched:", response.data.data);
@@ -136,11 +149,11 @@ const DashboardPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []); // Dependency for translation in error message
+  }, [startDate, endDate]); // Dependencies: startDate and endDate
 
   useEffect(() => {
     fetchSummary();
-  }, [fetchSummary]); // Fetch on component mount
+  }, [fetchSummary]); // Fetch on component mount and when dates change
 
   // --- Fetch monthly totals for a whole year using existing monthly-revenue endpoint ---
   const fetchYearlyMonthlyTotals = useCallback(
@@ -304,6 +317,46 @@ const DashboardPage: React.FC = () => {
         لوحة التحكم
       </h1>
 
+      {/* Date Range Filter */}
+      <Card className="dark:bg-gray-900 dark:border-gray-700 max-w-[400px]">
+        <CardContent className="pt-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <label
+                htmlFor="start-date"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
+               من تاريخ 
+              </label>
+              <input
+                id="start-date"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                max={endDate}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div className="flex-1">
+              <label
+                htmlFor="end-date"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
+                الي  تاريخ   
+              </label>
+              <input
+                id="end-date"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                min={startDate}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {isLoading ? (
         renderSkeletons()
       ) : !summaryData ? (
@@ -318,47 +371,55 @@ const DashboardPage: React.FC = () => {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
             {" "}
             {/* 3 cards per row on larger screens */}
-            {/* Sales This Month Card */}
+            {/* Sales Card (Filtered by Date Range) */}
             <Card
               className="dark:bg-gray-900 hover:shadow-lg transition-shadow cursor-pointer dark:border-gray-700"
               onClick={() => navigate("/sales")}
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  مبيعات الشهر الحالي
+                  المبيعات
                 </CardTitle>
                 <CircleDollarSign className="h-5 w-5 text-muted-foreground dark:text-gray-500" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {formatCurrency(summaryData.sales.this_month_amount)}
+                  {formatCurrency(
+                    summaryData.sales.filtered_amount ??
+                      summaryData.sales.this_month_amount
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground dark:text-gray-400">
                   {`عدد العمليات: ${formatNumber(
-                    summaryData.sales.this_month_count
+                    summaryData.sales.filtered_count ??
+                      summaryData.sales.this_month_count
                   )}`}
                   <ArrowRight className="inline h-3 w-3 ms-1 opacity-70" />
                 </p>
               </CardContent>
             </Card>
-            {/* Purchases This Month Card */}
+            {/* Purchases Card (Filtered by Date Range) */}
             <Card
               className="dark:bg-gray-900 hover:shadow-lg transition-shadow cursor-pointer dark:border-gray-700"
               onClick={() => navigate("/purchases")}
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  مشتريات الشهر الحالي
+                  المشتريات
                 </CardTitle>
                 <ShoppingCart className="h-5 w-5 text-muted-foreground dark:text-gray-500" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {formatCurrency(summaryData.purchases.this_month_amount)}
+                  {formatCurrency(
+                    summaryData.purchases.filtered_amount ??
+                      summaryData.purchases.this_month_amount
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground dark:text-gray-400">
                   {`عدد العمليات: ${formatNumber(
-                    summaryData.purchases.this_month_count
+                    summaryData.purchases.filtered_count ??
+                      summaryData.purchases.this_month_count
                   )}`}
                   <ArrowRight className="inline h-3 w-3 ms-1 opacity-70" />
                 </p>

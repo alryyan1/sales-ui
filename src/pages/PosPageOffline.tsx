@@ -12,8 +12,10 @@ import { Cloud, Clock, X } from "lucide-react";
 import apiClient from "@/lib/axios";
 import { PDFViewer } from "@react-pdf/renderer";
 import { useAuth } from "@/context/AuthContext";
+import { usePosFilters } from "@/context/PosFilterContext";
 import { useOfflineSync } from "../hooks/useOfflineSync";
 import { offlineSaleService } from "../services/offlineSaleService";
+import saleService from "../services/saleService";
 import { dbService, OfflineSale, OfflineSaleItem } from "../services/db";
 import { Product } from "../services/productService";
 import { CurrentSaleItemsColumn } from "../components/pos/CurrentSaleItemsColumn";
@@ -741,6 +743,196 @@ export const PosPageOffline = () => {
   const [localPendingSales, setLocalPendingSales] = useState<OfflineSale[]>([]);
   const [syncedSales, setSyncedSales] = useState<OfflineSale[]>([]);
 
+  // Loading states for filters
+  const [isLoadingId, setIsLoadingId] = useState(false);
+  const [isLoadingDate, setIsLoadingDate] = useState(false);
+
+  // Filter state from context
+  const { filterDate, filterSaleId, setFilterSaleId, registerFetchFunctions } = usePosFilters();
+
+  // Helper function to map backend Sale to OfflineSale format
+  const mapSaleToOfflineSale = useCallback(async (s: any): Promise<OfflineSale> => {
+    // Get current product data from IndexedDB to enrich with live stock
+    const allLocalProducts = await offlineSaleService.searchProducts("");
+    const productMap = new Map(allLocalProducts.map(p => [p.id, p]));
+
+    return {
+      tempId: `server_${s.id}`,
+      id: s.id,
+      offline_created_at: new Date(s.created_at).getTime(),
+      is_synced: true,
+      shift_id: s.shift_id ? Number(s.shift_id) : null,
+      sale_date: s.sale_date,
+      total_amount: Number(s.total_amount),
+      paid_amount: Number(s.paid_amount),
+      client_id: s.client_id,
+      client_name: s.client_name,
+      invoice_number: s.invoice_number,
+      sale_order_number: s.sale_order_number,
+      status: "completed",
+      is_returned: Boolean(s.is_returned),
+      discount_amount: s.discount_amount ? Number(s.discount_amount) : undefined,
+      discount_type: s.discount_type || undefined,
+      items:
+        s.items?.map((i: any) => {
+          // Try to get current product data from IndexedDB for live stock info
+          const currentProduct = productMap.get(i.product_id);
+          
+          return {
+            product_id: i.product_id,
+            quantity: i.quantity,
+            unit_price: Number(i.unit_price),
+            product: currentProduct || i.product || {
+              id: i.product_id,
+              name: i.product_name || "Unknown Product",
+              sku: i.product_sku || "",
+              stock_quantity: 0,
+              available_batches: [],
+            },
+            product_name: currentProduct?.name || i.product?.name || i.product_name,
+            purchase_item_id: i.purchase_item_id,
+          };
+        }) || [],
+      payments: s.payments || [],
+      notes: s.notes,
+      created_at: s.created_at,
+      user_id: s.user_id,
+    };
+  }, []);
+
+  // Select sale from history (will be used in fetchSaleById)
+  const handleSelectPendingSale = useCallback(async (sale: OfflineSale) => {
+    console.log("[Discount] handleSelectPendingSale: loading sale with discount:", {
+      discount_amount: sale.discount_amount,
+      discount_type: sale.discount_type,
+      tempId: sale.tempId,
+    });
+    // Always refresh product data from IndexedDB to get current stock for all sales
+    if (sale.items.length > 0) {
+      try {
+        const allLocalProducts = await offlineSaleService.searchProducts("");
+        const productMap = new Map(allLocalProducts.map(p => [p.id, p]));
+        
+        // Update sale items with fresh product data
+        const updatedItems = sale.items.map((item) => {
+          const freshProduct = productMap.get(item.product_id);
+          if (freshProduct) {
+            return {
+              ...item,
+              product: freshProduct,
+            };
+          }
+          // If product not found in IndexedDB, try to use existing product data
+          return item;
+        });
+        
+        const updatedSale = {
+          ...sale,
+          items: updatedItems,
+          // Explicitly preserve discount fields
+          discount_amount: sale.discount_amount,
+          discount_type: sale.discount_type,
+        };
+        
+        console.log("[Discount] handleSelectPendingSale: setting sale with discount:", {
+          discount_amount: updatedSale.discount_amount,
+          discount_type: updatedSale.discount_type,
+        });
+        
+        setCurrentSale(updatedSale);
+      } catch (error) {
+        console.error("Error refreshing product data for sale:", error);
+        // Fallback to original sale if refresh fails
+        setCurrentSale(sale);
+      }
+    } else {
+      setCurrentSale(sale);
+    }
+  }, []);
+
+  // Fetch sale by ID from backend
+  const fetchSaleById = useCallback(async (id: number) => {
+    try {
+      const sale = await saleService.getSale(id);
+      const offlineSale = await mapSaleToOfflineSale(sale);
+      
+      // Add to synced sales if not already there
+      setSyncedSales((prev) => {
+        const exists = prev.find((s) => s.id === offlineSale.id);
+        if (exists) {
+          return prev;
+        }
+        return [offlineSale, ...prev].sort((a, b) => b.offline_created_at - a.offline_created_at);
+      });
+      
+      // Select the fetched sale
+      await handleSelectPendingSale(offlineSale);
+      
+      // Clear the ID input
+      setFilterSaleId("");
+      
+      toast.success(`تم العثور على عملية البيع #${id}`);
+    } catch (error: any) {
+      console.error("Error fetching sale by ID:", error);
+      const errorMsg = error?.response?.data?.message || error?.message || "فشل جلب عملية البيع";
+      toast.error(errorMsg);
+    }
+  }, [mapSaleToOfflineSale, setFilterSaleId, handleSelectPendingSale]);
+
+  // Fetch sales by date from backend
+  const fetchSalesByDate = useCallback(async (date: string) => {
+    setIsLoadingDate(true);
+    try {
+      // Fetch sales for the selected date
+      const response = await saleService.getSales(
+        1,
+        `start_date=${date}&end_date=${date}`,
+        "",
+        date,
+        date,
+        1000 // Large limit to get all sales for the day
+      );
+
+      const serverSalesData = response.data || [];
+
+      // Map all sales to OfflineSale format
+      const mappedSales = await Promise.all(
+        serverSalesData.map((s: any) => mapSaleToOfflineSale(s))
+      );
+
+      // Update synced sales with fetched data
+      setSyncedSales(
+        mappedSales.sort((a, b) => b.offline_created_at - a.offline_created_at)
+      );
+
+      toast.success(`تم جلب ${mappedSales.length} عملية بيع للتاريخ ${date}`);
+    } catch (error: any) {
+      console.error("Error fetching sales by date:", error);
+      const errorMsg = error?.response?.data?.message || error?.message || "فشل جلب المبيعات";
+      toast.error(errorMsg);
+    } finally {
+      setIsLoadingDate(false);
+    }
+  }, [mapSaleToOfflineSale]);
+
+  // Register fetch functions with context
+  useEffect(() => {
+    registerFetchFunctions(
+      fetchSaleById,
+      fetchSalesByDate,
+      isLoadingId,
+      isLoadingDate
+    );
+  }, [fetchSaleById, fetchSalesByDate, isLoadingId, isLoadingDate, registerFetchFunctions]);
+
+  // Reload normal sales when date filter is cleared
+  useEffect(() => {
+    if (!filterDate && selectedShiftId) {
+      // Date filter was cleared, reload normal sales for the shift
+      loadSyncedSales();
+    }
+  }, [filterDate, selectedShiftId]); // Note: loadSyncedSales is intentionally not in deps to avoid loops
+
   // Load local pending (unsynced) sales from IndexedDB
   const loadLocalPendingSales = useCallback(async () => {
     const sales = await offlineSaleService.getOfflineSales();
@@ -815,6 +1007,9 @@ export const PosPageOffline = () => {
         invoice_number: s.invoice_number,
         sale_order_number: s.sale_order_number,
         status: "completed",
+        is_returned: Boolean(s.is_returned),
+        discount_amount: s.discount_amount ? Number(s.discount_amount) : undefined,
+        discount_type: s.discount_type || undefined,
         items:
           s.items?.map((i: any) => {
             // Try to get current product data from IndexedDB for live stock info
@@ -926,7 +1121,24 @@ export const PosPageOffline = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updateCurrentSale = (action: React.SetStateAction<OfflineSale>) => {
     shouldAutoSave.current = true;
-    setCurrentSale(action);
+    
+    // If action is a function, we need to get the current sale first
+    if (typeof action === 'function') {
+      setCurrentSale((prev) => {
+        const updated = action(prev);
+        console.log("[Discount] updateCurrentSale (function):", {
+          discount_amount: updated.discount_amount,
+          discount_type: updated.discount_type,
+        });
+        return updated;
+      });
+    } else {
+      console.log("[Discount] updateCurrentSale (object):", {
+        discount_amount: action.discount_amount,
+        discount_type: action.discount_type,
+      });
+      setCurrentSale(action);
+    }
   };
 
   // Auto-save current sale changes to local DB (Debounced)
@@ -936,6 +1148,11 @@ export const PosPageOffline = () => {
     }
     const timer = setTimeout(() => {
       if (currentSale) {
+        console.log("[Discount] Auto-save: saving sale with discount:", {
+          discount_amount: currentSale.discount_amount,
+          discount_type: currentSale.discount_type,
+          tempId: currentSale.tempId,
+        });
         // If it's a draft, save it
         // We trust 'shouldAutoSave' implies user intent
         offlineSaleService.saveDraft(currentSale);
@@ -985,40 +1202,6 @@ export const PosPageOffline = () => {
     }
   };
 
-  // Select sale from history
-  const handleSelectPendingSale = async (sale: OfflineSale) => {
-    // Always refresh product data from IndexedDB to get current stock for all sales
-    if (sale.items.length > 0) {
-      try {
-        const allLocalProducts = await offlineSaleService.searchProducts("");
-        const productMap = new Map(allLocalProducts.map(p => [p.id, p]));
-        
-        // Update sale items with fresh product data
-        const updatedItems = sale.items.map((item) => {
-          const freshProduct = productMap.get(item.product_id);
-          if (freshProduct) {
-            return {
-              ...item,
-              product: freshProduct,
-            };
-          }
-          // If product not found in IndexedDB, try to use existing product data
-          return item;
-        });
-        
-        setCurrentSale({
-          ...sale,
-          items: updatedItems,
-        });
-      } catch (error) {
-        console.error("Error refreshing product data for sale:", error);
-        // Fallback to original sale if refresh fails
-        setCurrentSale(sale);
-      }
-    } else {
-      setCurrentSale(sale);
-    }
-  };
 
   // Create new sale
   const handleNewSale = useCallback(async () => {
