@@ -370,7 +370,7 @@ const SalesReportPage: React.FC = () => {
         .reduce((pSum, p) => pSum + Math.abs(Number(p.amount)), 0);
     }, 0);
 
-    const totalNet = totalAmount - totalRefund;
+    const totalNet = totalAmount - totalDiscount - totalRefund;
 
     // Calculate Cash and Bank totals
     const totalCash = reportData.data.reduce((sum, sale) => {
