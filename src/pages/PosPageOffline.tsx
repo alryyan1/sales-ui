@@ -30,7 +30,7 @@ export const PosPageOffline = () => {
   const { user } = useAuth();
   const { isOnline, isSyncing, triggerSync, lastSyncedProducts } =
     useOfflineSync();
-    
+
 
   // Shift state
   const [shift, setShift] = useState<{
@@ -215,7 +215,7 @@ export const PosPageOffline = () => {
     if (!isSyncing) {
       const now = Date.now();
       const timeSinceLastLoad = now - lastLoadTimeRef.current;
-      
+
       // Only reload synced sales if enough time has passed since last load
       if (timeSinceLastLoad >= LOAD_DEBOUNCE_MS) {
         loadLocalPendingSales();
@@ -341,8 +341,7 @@ export const PosPageOffline = () => {
       );
       if (availableStockingUnits <= 0) {
         toast.error(
-          `عذراً، لا يوجد مخزون كافٍ. المتاح: ${currentStock} ${
-            product.sellable_unit_name || "قطعة"
+          `عذراً، لا يوجد مخزون كافٍ. المتاح: ${currentStock} ${product.sellable_unit_name || "قطعة"
           }`
         );
         return;
@@ -366,7 +365,7 @@ export const PosPageOffline = () => {
           // Same unit type, just increment
           const addedQty = unitType === "stocking" ? unitsPerStocking : 1;
           quantityToDeduct = addedQty;
-          
+
           newItems = prev.items.map((i) => {
             if (i.product_id === product.id) {
               // Update product stock in the item
@@ -375,8 +374,8 @@ export const PosPageOffline = () => {
                 stock_quantity: Math.max(0, currentStock - addedQty),
                 current_stock_quantity: Math.max(0, currentStock - addedQty),
               };
-              return { 
-                ...i, 
+              return {
+                ...i,
                 quantity: i.quantity + 1,
                 product: updatedProduct,
               };
@@ -422,13 +421,13 @@ export const PosPageOffline = () => {
       } else {
         // New item - deduct quantity from stock
         quantityToDeduct = unitType === "stocking" ? unitsPerStocking : 1;
-        
+
         const updatedProduct: Product = {
           ...product,
           stock_quantity: Math.max(0, currentStock - quantityToDeduct),
           current_stock_quantity: Math.max(0, currentStock - quantityToDeduct),
         };
-        
+
         const newItem: OfflineSaleItem & {
           unitType?: "stocking" | "sellable";
         } = {
@@ -468,11 +467,11 @@ export const PosPageOffline = () => {
       toast.error("لا يمكن تعديل عملية بيع تمت مزامنتها");
       return;
     }
-    
+
     // Find the current item to get old quantity
     const currentItem = currentSale.items.find((i) => i.product_id === productId);
     if (!currentItem) return;
-    
+
     const product = currentItem.product as Product;
     const unitType = (currentItem as any).unitType || "sellable";
     const unitsPerStocking = product?.units_per_stocking_unit || 1;
@@ -482,11 +481,11 @@ export const PosPageOffline = () => {
 
     // Calculate quantity difference in sellable units
     const oldQuantity = currentItem.quantity;
-    const oldQuantityInSellable = unitType === "stocking" 
-      ? oldQuantity * unitsPerStocking 
+    const oldQuantityInSellable = unitType === "stocking"
+      ? oldQuantity * unitsPerStocking
       : oldQuantity;
-    const newQuantityInSellable = unitType === "stocking" 
-      ? qty * unitsPerStocking 
+    const newQuantityInSellable = unitType === "stocking"
+      ? qty * unitsPerStocking
       : qty;
     const quantityDiff = newQuantityInSellable - oldQuantityInSellable;
 
@@ -495,8 +494,7 @@ export const PosPageOffline = () => {
       const requiredSellableQty = qty * unitsPerStocking;
       if (requiredSellableQty > currentStock) {
         toast.error(
-          `المخزون غير كافٍ. المتاح: ${currentStock} ${
-            product?.sellable_unit_name || "قطعة"
+          `المخزون غير كافٍ. المتاح: ${currentStock} ${product?.sellable_unit_name || "قطعة"
           }`
         );
         return;
@@ -504,8 +502,7 @@ export const PosPageOffline = () => {
     } else {
       if (qty > currentStock) {
         toast.error(
-          `المخزون غير كافٍ. المتاح: ${currentStock} ${
-            product?.sellable_unit_name || "قطعة"
+          `المخزون غير كافٍ. المتاح: ${currentStock} ${product?.sellable_unit_name || "قطعة"
           }`
         );
         return;
@@ -522,9 +519,9 @@ export const PosPageOffline = () => {
             stock_quantity: Math.max(0, currentStock - quantityDiff),
             current_stock_quantity: Math.max(0, currentStock - quantityDiff),
           };
-          
-          return { 
-            ...i, 
+
+          return {
+            ...i,
             quantity: qty,
             product: updatedProduct,
           };
@@ -602,10 +599,8 @@ export const PosPageOffline = () => {
             );
             if (newQuantity === 0) {
               toast.error(
-                `الكمية الحالية (${currentQuantityInSellable} ${
-                  product?.sellable_unit_name || "قطعة"
-                }) غير كافية للتحويل إلى وحدة التخزين (يحتاج ${unitsPerStocking} ${
-                  product?.sellable_unit_name || "قطعة"
+                `الكمية الحالية (${currentQuantityInSellable} ${product?.sellable_unit_name || "قطعة"
+                }) غير كافية للتحويل إلى وحدة التخزين (يحتاج ${unitsPerStocking} ${product?.sellable_unit_name || "قطعة"
                 } على الأقل)`
               );
               return i;
@@ -636,35 +631,35 @@ export const PosPageOffline = () => {
       toast.error("لا يمكن تعديل عملية بيع تمت مزامنتها");
       return;
     }
-    
+
     // Find the item to get its quantity for stock restoration
     const itemToRemove = currentSale.items.find((i) => i.product_id === productId);
     let quantityToRestore = 0;
-    
+
     if (itemToRemove) {
       const product = itemToRemove.product as Product;
       const unitType = (itemToRemove as any).unitType || "sellable";
       const unitsPerStocking = product?.units_per_stocking_unit || 1;
-      
+
       // Calculate quantity to restore in sellable units
-      quantityToRestore = unitType === "stocking" 
-        ? itemToRemove.quantity * unitsPerStocking 
+      quantityToRestore = unitType === "stocking"
+        ? itemToRemove.quantity * unitsPerStocking
         : itemToRemove.quantity;
     }
-    
+
     let shouldDeleteSale = false;
     let saleTempId: string | null = null;
-    
+
     updateCurrentSale((prev) => {
       const newItems = prev.items.filter((i) => i.product_id !== productId);
       const updatedSale = offlineSaleService.calculateTotals({ ...prev, items: newItems });
-      
+
       // Check if all items are removed and sale is pending
       if (newItems.length === 0 && prev.tempId && !prev.is_synced) {
         shouldDeleteSale = true;
         saleTempId = prev.tempId;
       }
-      
+
       return updatedSale;
     });
 
@@ -674,7 +669,7 @@ export const PosPageOffline = () => {
       const currentStock = Number(
         product?.current_stock_quantity ?? product?.stock_quantity ?? 0
       );
-      
+
       // Update products state to restore stock
       setProducts((prevProducts) => {
         return prevProducts.map((p) => {
@@ -689,13 +684,13 @@ export const PosPageOffline = () => {
         });
       });
     }
-    
+
     // If all items removed, delete the pending sale and reload from IndexedDB
     if (shouldDeleteSale && saleTempId) {
       try {
         await offlineSaleService.deletePendingSale(saleTempId);
         toast.success("تم حذف عملية البيع المعلقة تلقائياً");
-        
+
         // Create a new draft sale
         if (shift && shift.is_open) {
           const newDraft = offlineSaleService.createDraftSale(shift.id);
@@ -706,7 +701,7 @@ export const PosPageOffline = () => {
           setCurrentSale(newDraft);
           shouldAutoSave.current = false;
         }
-        
+
         // Reload pending sales from IndexedDB
         await loadLocalPendingSales();
       } catch (error) {
@@ -777,7 +772,7 @@ export const PosPageOffline = () => {
         s.items?.map((i: any) => {
           // Try to get current product data from IndexedDB for live stock info
           const currentProduct = productMap.get(i.product_id);
-          
+
           return {
             product_id: i.product_id,
             quantity: i.quantity,
@@ -812,7 +807,7 @@ export const PosPageOffline = () => {
       try {
         const allLocalProducts = await offlineSaleService.searchProducts("");
         const productMap = new Map(allLocalProducts.map(p => [p.id, p]));
-        
+
         // Update sale items with fresh product data
         const updatedItems = sale.items.map((item) => {
           const freshProduct = productMap.get(item.product_id);
@@ -825,7 +820,7 @@ export const PosPageOffline = () => {
           // If product not found in IndexedDB, try to use existing product data
           return item;
         });
-        
+
         const updatedSale = {
           ...sale,
           items: updatedItems,
@@ -833,12 +828,12 @@ export const PosPageOffline = () => {
           discount_amount: sale.discount_amount,
           discount_type: sale.discount_type,
         };
-        
+
         console.log("[Discount] handleSelectPendingSale: setting sale with discount:", {
           discount_amount: updatedSale.discount_amount,
           discount_type: updatedSale.discount_type,
         });
-        
+
         setCurrentSale(updatedSale);
       } catch (error) {
         console.error("Error refreshing product data for sale:", error);
@@ -855,7 +850,7 @@ export const PosPageOffline = () => {
     try {
       const sale = await saleService.getSale(id);
       const offlineSale = await mapSaleToOfflineSale(sale);
-      
+
       // Add to synced sales if not already there
       setSyncedSales((prev) => {
         const exists = prev.find((s) => s.id === offlineSale.id);
@@ -864,13 +859,13 @@ export const PosPageOffline = () => {
         }
         return [offlineSale, ...prev].sort((a, b) => b.offline_created_at - a.offline_created_at);
       });
-      
+
       // Select the fetched sale
       await handleSelectPendingSale(offlineSale);
-      
+
       // Clear the ID input
       setFilterSaleId("");
-      
+
       toast.success(`تم العثور على عملية البيع #${id}`);
     } catch (error: any) {
       console.error("Error fetching sale by ID:", error);
@@ -936,7 +931,7 @@ export const PosPageOffline = () => {
   // Load local pending (unsynced) sales from IndexedDB
   const loadLocalPendingSales = useCallback(async () => {
     const sales = await offlineSaleService.getOfflineSales();
-    
+
     // Filter only unsynced sales
     const unsyncedSales = sales.filter((s) => !s.is_synced);
 
@@ -958,7 +953,7 @@ export const PosPageOffline = () => {
   const isLoadingSyncedSalesRef = useRef(false);
   const lastSyncedSalesLoadRef = useRef<number>(0);
   const MIN_TIME_BETWEEN_LOADS = 3000; // Minimum 3 seconds between loads
-  
+
   // Load synced sales from server API (always fetch fresh)
   const loadSyncedSales = useCallback(async () => {
     if (!selectedShiftId) {
@@ -1014,7 +1009,7 @@ export const PosPageOffline = () => {
           s.items?.map((i: any) => {
             // Try to get current product data from IndexedDB for live stock info
             const currentProduct = productMap.get(i.product_id);
-            
+
             return {
               product_id: i.product_id,
               quantity: i.quantity,
@@ -1057,7 +1052,7 @@ export const PosPageOffline = () => {
         .map((s) => s.shift_id)
         .filter((id): id is number => typeof id === "number")
     );
-    
+
     // Add IDs from synced sales
     syncedSales.forEach((s) => {
       if (s.shift_id) ids.add(s.shift_id);
@@ -1073,11 +1068,11 @@ export const PosPageOffline = () => {
   const lastLoadTimeRef = useRef<number>(0);
   const lastShiftIdRef = useRef<number | null>(null);
   const LOAD_DEBOUNCE_MS = 5000; // Don't reload more than once every 5 seconds
-  
+
   // Reload when shift or selectedShiftId changes (but not on every render)
   useEffect(() => {
     const currentShiftId = selectedShiftId || shift?.id || null;
-    
+
     // Only reload if shift actually changed
     if (currentShiftId !== lastShiftIdRef.current) {
       lastShiftIdRef.current = currentShiftId;
@@ -1086,24 +1081,24 @@ export const PosPageOffline = () => {
       lastLoadTimeRef.current = Date.now();
     }
   }, [selectedShiftId, shift?.id]); // Removed function dependencies to prevent loops
-  
+
   // Separate effect to handle coming back online (without causing loop)
   useEffect(() => {
     const wasOffline = prevIsOnlineRef.current === false;
     const isNowOnline = isOnline === true;
     const cameBackOnline = wasOffline && isNowOnline;
-    
+
     if (cameBackOnline) {
       const now = Date.now();
       const timeSinceLastLoad = now - lastLoadTimeRef.current;
-      
+
       // Only reload if enough time has passed
       if (timeSinceLastLoad >= LOAD_DEBOUNCE_MS) {
         loadSyncedSales();
         lastLoadTimeRef.current = now;
       }
     }
-    
+
     prevIsOnlineRef.current = isOnline;
   }, [isOnline]); // Only depends on isOnline, removed loadSyncedSales from deps
 
@@ -1121,7 +1116,7 @@ export const PosPageOffline = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updateCurrentSale = (action: React.SetStateAction<OfflineSale>) => {
     shouldAutoSave.current = true;
-    
+
     // If action is a function, we need to get the current sale first
     if (typeof action === 'function') {
       setCurrentSale((prev) => {
@@ -1206,7 +1201,7 @@ export const PosPageOffline = () => {
   // Create new sale
   const handleNewSale = useCallback(async () => {
     let currentShift = shift;
-    
+
     // Refresh shift state if online and shift is null/stale
     if (isOnline && (!currentShift || !currentShift.id)) {
       try {
@@ -1233,19 +1228,19 @@ export const PosPageOffline = () => {
 
     // More robust check for shift.is_open (handle boolean, string, or undefined)
     const isShiftOpen = currentShift?.is_open === true || (typeof currentShift?.is_open === "string" && currentShift.is_open === "true") || (typeof currentShift?.is_open === "number" && currentShift.is_open === 1);
-    
+
     if (!currentShift || !isShiftOpen) {
       console.log("Cannot create sale - Shift state:", currentShift);
       toast.error("يجب فتح الوردية أولاً لإنشاء عملية بيع جديدة");
       return;
     }
-    
+
     if (!currentShift.id) {
       console.log("Cannot create sale - Shift ID missing:", currentShift);
       toast.error("خطأ: معرف الوردية غير موجود");
       return;
     }
-    
+
     const newSale = offlineSaleService.createDraftSale(currentShift.id);
     await offlineSaleService.saveDraft(newSale);
     setCurrentSale(newSale);
@@ -1264,7 +1259,7 @@ export const PosPageOffline = () => {
     return currentSale.items.map((item) => {
       const product = item.product as Product | undefined;
       const availableBatches = product?.available_batches || [];
-      
+
       return {
         product: product || ({} as Product), // Fallback to empty object if undefined
         quantity: item.quantity,
@@ -1320,7 +1315,7 @@ export const PosPageOffline = () => {
   const handlePlusAction = useCallback(() => {
     // If no sale is selected OR current sale is empty (no items), create new sale
     const isCurrentSaleEmpty = currentSale.items.length === 0;
-    
+
     if (!isPendingSaleSelected || isCurrentSaleEmpty) {
       handleNewSale();
     } else {
@@ -1350,13 +1345,13 @@ export const PosPageOffline = () => {
         e.preventDefault();
         handlePlusAction();
       }
-      
+
       // Ctrl/Cmd + N: New sale
       if ((e.ctrlKey || e.metaKey) && e.key === "n") {
         e.preventDefault();
         handleNewSale();
       }
-      
+
       // Ctrl/Cmd + S: Save draft (auto-save already handles this, but we can show a toast)
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
@@ -1467,6 +1462,7 @@ export const PosPageOffline = () => {
             onDelete={handleDeletePendingSale}
             title={isSyncedView ? "SYNCED" : "PENDING"}
             isOffline={!isOnline && isSyncedView}
+            onRefresh={isSyncedView ? loadSyncedSales : undefined}
           />
         </Paper>
 
@@ -1568,11 +1564,11 @@ export const PosPageOffline = () => {
                 shift && shift.id === selectedShiftId
                   ? shift
                   : {
-                      id: selectedShiftId || 0,
-                      opened_at: null,
-                      closed_at: null,
-                      is_open: false,
-                    }
+                    id: selectedShiftId || 0,
+                    opened_at: null,
+                    closed_at: null,
+                    is_open: false,
+                  }
               }
               userName="الكاشير"
             />

@@ -10,6 +10,7 @@ interface PendingSalesColumnProps {
   onDelete?: (sale: OfflineSale) => void;
   title?: string;
   isOffline?: boolean;
+  onRefresh?: () => void;
 }
 
 export const PendingSalesColumn: React.FC<PendingSalesColumnProps> = ({
@@ -19,6 +20,7 @@ export const PendingSalesColumn: React.FC<PendingSalesColumnProps> = ({
   onDelete,
   title,
   isOffline = false,
+  onRefresh,
 }) => {
   return (
     <Box
@@ -54,6 +56,7 @@ export const PendingSalesColumn: React.FC<PendingSalesColumnProps> = ({
           onSaleSelect={onSaleSelect}
           index={sales.length - index}
           onDelete={onDelete}
+          onRefresh={onRefresh}
         />
       ))}
 
@@ -67,8 +70,8 @@ export const PendingSalesColumn: React.FC<PendingSalesColumnProps> = ({
           {isOffline
             ? "يتطلب اتصال بالإنترنت"
             : title === "SYNCED"
-            ? "لا توجد مبيعات متزامنة"
-            : "لا توجد مبيعات معلقة"}
+              ? "لا توجد مبيعات متزامنة"
+              : "لا توجد مبيعات معلقة"}
         </Typography>
       )}
     </Box>
