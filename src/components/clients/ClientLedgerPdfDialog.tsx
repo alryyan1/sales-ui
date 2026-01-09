@@ -10,7 +10,7 @@ import {
 } from "@mui/material";
 import { X } from "lucide-react";
 import { PDFViewer } from "@react-pdf/renderer";
-import { ClientLedgerPdf } from "./ClientLedgerPdf";
+import ClientLedgerPdf from "./ClientLedgerPdf";
 import { ClientLedger } from "../../services/clientLedgerService";
 import { useSettings } from "@/context/SettingsContext";
 
@@ -69,7 +69,11 @@ export const ClientLedgerPdfDialog: React.FC<ClientLedgerPdfDialogProps> = ({
       <DialogContent dividers sx={{ p: 0, flex: 1, overflow: "hidden" }}>
         <Box sx={{ width: "100%", height: "100%" }}>
           <PDFViewer width="100%" height="100%" showToolbar={true}>
-            <ClientLedgerPdf ledger={ledger} settings={settings} />
+            <ClientLedgerPdf
+              client={ledger.client}
+              ledgerEntries={ledger.ledger_entries}
+              companyName={settings?.company_name || "اسم الشركة"}
+            />
           </PDFViewer>
         </Box>
       </DialogContent>

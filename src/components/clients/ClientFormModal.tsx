@@ -1,8 +1,6 @@
 // src/components/clients/ClientFormModal.tsx
 import React, { useEffect, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
-import * as z from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -13,26 +11,19 @@ import {
   Button,
   Box,
   Alert,
+  CircularProgress,
 } from "@mui/material";
-import { Loader2 } from "lucide-react";
 
 // Services and Types
 import clientService, { Client } from "../../services/clientService";
 
-// --- Zod Schema for Validation ---
-const clientFormSchema = z.object({
-  name: z.string().min(1, { message: "الاسم مطلوب" }),
-  email: z
-    .string()
-    .email({ message: "صيغة البريد الإلكتروني غير صحيحة" })
-    .nullable()
-    .or(z.literal(""))
-    .optional(),
-  phone: z.string().nullable().optional(),
-  address: z.string().nullable().optional(),
-});
-
-type ClientFormValues = z.infer<typeof clientFormSchema>;
+// --- Types ---
+type ClientFormValues = {
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+};
 
 // --- Component Props ---
 interface ClientFormModalProps {
@@ -53,7 +44,6 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
   const [serverError, setServerError] = useState<string | null>(null);
 
   const form = useForm<ClientFormValues>({
-    resolver: zodResolver(clientFormSchema),
     defaultValues: {
       name: "",
       email: "",
@@ -156,11 +146,20 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <Dialog open={isOpen} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{isEditMode ? "تعديل عميل" : "إضافة عميل"}</DialogTitle>
+    <Dialog
+      open={isOpen}
+      onClose={onClose}
+      fullWidth
+      maxWidth="sm"
+      dir="rtl" // Ensure RTL direction if needed for Arabic
+    >
+      <DialogTitle sx={{ fontWeight: 600 }}>
+        {isEditMode ? "تعديل عميل" : "إضافة عميل"}
+      </DialogTitle>
       <DialogContent dividers>
         <Box
           component="form"
+          id="client-form"
           onSubmit={handleSubmit(onSubmit)}
           noValidate
           sx={{ mt: 1 }}
@@ -185,9 +184,10 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
                 required
                 placeholder="أدخل اسم العميل"
                 disabled={isSubmitting}
-                {...register("name")}
+                {...register("name", { required: "الاسم مطلوب" })}
                 error={!!errors.name}
                 helperText={errors.name?.message}
+                size="small"
               />
             </Box>
 
@@ -197,20 +197,28 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
               fullWidth
               placeholder="example@email.com"
               disabled={isSubmitting}
-              {...register("email")}
+              {...register("email", {
+                pattern: {
+                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                  message: "صيغة البريد الإلكتروني غير صحيحة",
+                },
+              })}
               error={!!errors.email}
               helperText={errors.email?.message}
+              size="small"
             />
 
             <TextField
               label="رقم الهاتف"
               type="tel"
               fullWidth
+              required
               placeholder="05xxxxxxxx"
               disabled={isSubmitting}
-              {...register("phone")}
+              {...register("phone", { required: "رقم الهاتف مطلوب" })}
               error={!!errors.phone}
               helperText={errors.phone?.message}
+              size="small"
             />
 
             <Box sx={{ gridColumn: { xs: "span 1", sm: "span 2" } }}>
@@ -227,25 +235,29 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
               />
             </Box>
           </Box>
-
-          <DialogActions sx={{ mt: 2 }}>
-            <Button
-              type="button"
-              variant="outlined"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
-              إلغاء
-            </Button>
-            <Button type="submit" variant="contained" disabled={isSubmitting}>
-              {isSubmitting && (
-                <Loader2 className="me-2 h-4 w-4 animate-spin" />
-              )}
-              حفظ
-            </Button>
-          </DialogActions>
         </Box>
       </DialogContent>
+      <DialogActions sx={{ p: 2 }}>
+        <Button
+          type="button"
+          variant="outlined"
+          onClick={onClose}
+          disabled={isSubmitting}
+        >
+          إلغاء
+        </Button>
+        <Button
+          type="submit"
+          form="client-form"
+          variant="contained"
+          disabled={isSubmitting}
+          startIcon={
+            isSubmitting && <CircularProgress size={20} color="inherit" />
+          }
+        >
+          حفظ
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };

@@ -42,24 +42,6 @@ export const PosPageOffline = () => {
   const { getSetting, isLoadingSettings } = useSettings();
   const posMode = getSetting("pos_mode", "shift") as "shift" | "days";
 
-  if (isLoadingSettings) {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          height: "100vh",
-          alignItems: "center",
-          justifyContent: "center",
-          flexDirection: "column",
-          gap: 2,
-        }}
-      >
-        <CircularProgress />
-        <Typography>جاري تحميل الإعدادات...</Typography>
-      </Box>
-    );
-  }
-
   // Date state for days mode (initialize early, before shift state)
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     // Use local time instead of UTC (which toISOString uses)
@@ -155,6 +137,9 @@ export const PosPageOffline = () => {
     };
     fetchShift();
   }, [isOnline, posMode]); // Run on mount and when isOnline or posMode changes
+
+  // State for tracking client update loading
+  const [isUpdatingClient, setIsUpdatingClient] = useState(false);
 
   // Clear selectedShiftId when switching to days mode and reset tracking refs
   useEffect(() => {
@@ -1361,6 +1346,39 @@ export const PosPageOffline = () => {
     }
   };
 
+  // Handler for sale updates that checks if client changed on synced sale
+  const handleSaleUpdate = async (updated: OfflineSale) => {
+    const prevSale = currentSale;
+
+    // Check if this is a synced sale and client_id changed
+    const isSynced = updated.is_synced && updated.id;
+    const clientChanged = prevSale.client_id !== updated.client_id;
+
+    if (isSynced && clientChanged && isOnline) {
+      setIsUpdatingClient(true);
+      try {
+        // Update backend immediately
+        await apiClient.put(`/sales/${updated.id}`, {
+          client_id: updated.client_id,
+        });
+
+        // Update local sale
+        updateCurrentSale(updated);
+
+        // Refresh synced sales to get updated data
+        await loadSyncedSales();
+      } catch (error) {
+        console.error("Failed to update client:", error);
+        // Show error to user (you may want to add toast notification here)
+      } finally {
+        setIsUpdatingClient(false);
+      }
+    } else {
+      // Regular local update for non-synced sales
+      updateCurrentSale(updated);
+    }
+  };
+
   // Auto-save current sale changes to local DB (Debounced)
   useEffect(() => {
     if (!shouldAutoSave.current) {
@@ -1627,6 +1645,24 @@ export const PosPageOffline = () => {
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
   }, [handlePlusAction, handleNewSale, currentSale]);
 
+  if (isLoadingSettings) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          height: "100vh",
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "column",
+          gap: 2,
+        }}
+      >
+        <CircularProgress />
+        <Typography>جاري تحميل الإعدادات...</Typography>
+      </Box>
+    );
+  }
+
   return (
     <Box
       sx={{
@@ -1779,11 +1815,12 @@ export const PosPageOffline = () => {
             <OfflineSaleSummaryColumn
               currentSale={currentSale}
               currentSaleItems={cartItems}
-              onUpdateSale={(updated) => updateCurrentSale(updated)}
+              onUpdateSale={handleSaleUpdate}
               onCompleteSale={handleCompleteSale}
               isPaymentDialogOpen={isPaymentDialogOpen}
               onPaymentDialogOpenChange={setIsPaymentDialogOpen}
               clients={clients}
+              isUpdatingClient={isUpdatingClient}
               onClientAdded={async (client) => {
                 // Optimistic/Local update for speed
                 await dbService.saveClients([client]);

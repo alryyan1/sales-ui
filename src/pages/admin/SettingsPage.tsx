@@ -1,10 +1,17 @@
 // src/pages/admin/SettingsPage.tsx
 import React, { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
-
 import { useSettings } from "@/context/SettingsContext";
 import { AppSettings } from "@/services/settingService";
 import { toast } from "sonner";
+import settingService from "@/services/settingService";
+import { PDF_FONTS } from "@/utils/pdfFontRegistry";
+
+// Settings Subcomponents
+import { CompanyInfoSettings } from "@/components/settings/CompanyInfoSettings";
+import { BusinessRulesSettings } from "@/components/settings/BusinessRulesSettings";
+import { PosSettings } from "@/components/settings/PosSettings";
+import { PdfSettings } from "@/components/settings/PdfSettings";
 
 // Material-UI Components
 import {
@@ -17,19 +24,28 @@ import {
   Grid,
   Alert,
   CircularProgress,
-  Skeleton,
   Stack,
   MenuItem,
   InputLabel,
   Divider,
   Paper,
-  Tabs,
-  Tab,
   RadioGroup,
   FormControlLabel,
   Radio,
   FormControl,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  useTheme,
+  alpha,
+  Avatar,
+  Tabs,
+  Tab,
 } from "@mui/material";
+
+// Icons
 import {
   Settings as SettingsIcon,
   Business as BusinessIcon,
@@ -39,40 +55,22 @@ import {
   Image as ImageIcon,
   Receipt as ReceiptIcon,
   PictureAsPdf as PdfIcon,
+  Save as SaveIcon,
+  Store as StoreIcon,
+  CloudUpload as CloudUploadIcon,
 } from "@mui/icons-material";
-import { PDF_FONTS } from "@/utils/pdfFontRegistry";
-import settingService from "@/services/settingService";
 
-// Form values type (matches AppSettings but all optional for partial updates)
+// Form values type
 type SettingsFormValues = Partial<AppSettings>;
-
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-
-function CustomTabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`settings-tabpanel-${index}`}
-      aria-labelledby={`settings-tab-${index}`}
-      {...other}
-    >
-      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
-    </div>
-  );
-}
 
 // --- Component ---
 const SettingsPage: React.FC = () => {
+  const theme = useTheme();
   const { settings, isLoadingSettings, updateSettings } = useSettings();
   const [serverError, setServerError] = useState<string | null>(null);
-  const [tabValue, setTabValue] = useState(0);
+
+  // Tab/Section State
+  const [activeSection, setActiveSection] = useState(0);
 
   // Previews
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -107,7 +105,6 @@ const SettingsPage: React.FC = () => {
     handleSubmit,
     control,
     reset,
-    getValues,
     watch,
     setValue,
     formState: { isSubmitting },
@@ -117,18 +114,13 @@ const SettingsPage: React.FC = () => {
   const watchedHeaderUrl = watch("company_header_url");
   const watchedBrandingType = watch("invoice_branding_type");
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
-
-  // --- Effect to Populate Form with Loaded Settings ---
+  // --- Effects ---
   useEffect(() => {
     if (settings) {
       reset({
         ...settings,
         global_low_stock_threshold: settings.global_low_stock_threshold ?? 10,
         default_profit_rate: settings.default_profit_rate ?? 20.0,
-        // Ensure defaults for new fields if missing
         invoice_branding_type: settings.invoice_branding_type || "logo",
         logo_position: settings.logo_position || "right",
         logo_height: settings.logo_height || 60,
@@ -144,7 +136,6 @@ const SettingsPage: React.FC = () => {
     }
   }, [settings, reset]);
 
-  // Update previews when watched value changes
   useEffect(() => {
     if (watchedLogoUrl) setLogoPreview(watchedLogoUrl);
   }, [watchedLogoUrl]);
@@ -153,11 +144,9 @@ const SettingsPage: React.FC = () => {
     if (watchedHeaderUrl) setHeaderPreview(watchedHeaderUrl);
   }, [watchedHeaderUrl]);
 
-  // --- Form Submission ---
+  // --- Handlers ---
   const onSubmit = async (data: SettingsFormValues) => {
     setServerError(null);
-
-    // Prepare data
     const dataToSubmit: Partial<AppSettings> = {
       ...data,
       global_low_stock_threshold: data.global_low_stock_threshold
@@ -206,10 +195,50 @@ const SettingsPage: React.FC = () => {
     }
   };
 
-  // --- Render Logic ---
+  // --- Navigation Sections ---
+  const sections = [
+    {
+      id: 0,
+      label: "بيانات الشركة",
+      icon: <BusinessIcon />,
+      description: "الاسم، العنوان، وأرقام التواصل",
+    },
+    {
+      id: 1,
+      label: "قواعد العمل والمخزون",
+      icon: <InventoryIcon />,
+      description: "العملة، التنبيهات، والضرائب",
+    },
+    {
+      id: 2,
+      label: "نقاط البيع (POS)",
+      icon: <StoreIcon />,
+      description: "إعدادات الورديات وطرق البيع",
+    },
+    {
+      id: 3,
+      label: "تخصيص الفواتير",
+      icon: <ImageIcon />,
+      description: "الشعار، الهيدر، والمظهر",
+    },
+    {
+      id: 4,
+      label: "إعدادات PDF",
+      icon: <PdfIcon />,
+      description: "الخطوط وتنسيق الطباعة",
+    },
+  ];
+
   if (isLoadingSettings && !settings) {
     return (
-      <Box sx={{ p: 4, maxWidth: "1200px", mx: "auto" }}>
+      <Box
+        sx={{
+          height: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <CircularProgress />
       </Box>
     );
@@ -217,398 +246,113 @@ const SettingsPage: React.FC = () => {
 
   return (
     <Box
-      sx={{
-        p: { xs: 2, md: 3, lg: 4 },
-        maxWidth: "1200px",
-        mx: "auto",
-        pb: 5,
-        direction: "rtl",
-      }}
+      sx={{ p: { xs: 2, md: 4 }, maxWidth: 1400, mx: "auto", direction: "rtl" }}
     >
-      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 4 }}>
-        <SettingsIcon sx={{ fontSize: 32, color: "primary.main" }} />
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 600 }}>
-          إعدادات النظام
-        </Typography>
-      </Stack>
+      {/* Page Header */}
+      <Box
+        sx={{
+          mb: 4,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <Stack direction="row" spacing={2} alignItems="center">
+          <Avatar sx={{ bgcolor: "primary.main", width: 48, height: 48 }}>
+            <SettingsIcon sx={{ fontSize: 28 }} />
+          </Avatar>
+          <Box>
+            <Typography variant="h4" fontWeight="bold" color="text.primary">
+              إعدادات النظام
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              تحكم في جميع خصائص وإعدادات التطبيق من مكان واحد
+            </Typography>
+          </Box>
+        </Stack>
+      </Box>
 
+      {/* Main Layout */}
       <Box component="form" onSubmit={handleSubmit(onSubmit)}>
-        {serverError && !isSubmitting && (
-          <Alert severity="error" sx={{ mb: 3 }}>
+        {serverError && (
+          <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
             {serverError}
           </Alert>
         )}
 
-        <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+        {/* Tabs Navigation */}
+        <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
           <Tabs
-            value={tabValue}
-            onChange={handleTabChange}
-            aria-label="settings tabs"
+            value={activeSection}
+            onChange={(e, newValue) => setActiveSection(newValue)}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{
+              "& .MuiTab-root": {
+                minHeight: 64,
+                textTransform: "none",
+                fontSize: "0.95rem",
+                fontWeight: 500,
+              },
+            }}
           >
-            <Tab
-              icon={<BusinessIcon />}
-              iconPosition="start"
-              label="معلومات الشركة والنظام"
-            />
-            <Tab
-              icon={<ReceiptIcon />}
-              iconPosition="start"
-              label="تخصيص الفاتورة (Branding)"
-            />
-            <Tab icon={<PdfIcon />} iconPosition="start" label="إعدادات PDF" />
+            {sections.map((section) => (
+              <Tab
+                key={section.id}
+                value={section.id}
+                icon={section.icon}
+                iconPosition="start"
+                label={section.label}
+              />
+            ))}
           </Tabs>
         </Box>
 
-        {/* --- TAB 0: General Settings --- */}
-        <CustomTabPanel value={tabValue} index={0}>
-          {/* Company Information Section */}
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography
-                variant="h6"
-                gutterBottom
-                sx={{ display: "flex", alignItems: "center", gap: 1 }}
-              >
-                <BusinessIcon color="primary" fontSize="small" />
-                بيانات الشركة الأساسية
-              </Typography>
-              <Divider sx={{ mb: 3 }} />
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                  <Controller
-                    name="company_name"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        label="اسم الشركة"
-                        variant="outlined"
-                      />
-                    )}
-                  />
-                </Grid>
+        {/* Content Area */}
+        <Box>
+          <Stack spacing={3} sx={{ pb: 10 }}>
+            {/* SECTION 0: Company Info */}
+            {activeSection === 0 && <CompanyInfoSettings control={control} />}
 
-                <Grid item xs={12} md={6}>
-                  <Controller
-                    name="company_email"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        type="email"
-                        label="البريد الإلكتروني"
-                        value={field.value || ""}
-                      />
-                    )}
-                  />
-                </Grid>
+            {/* SECTION 1: Business Rules */}
+            {activeSection === 1 && <BusinessRulesSettings control={control} />}
 
-                <Grid item xs={12} md={6}>
-                  <Controller
-                    name="company_phone"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        label="رقم الهاتف"
-                        variant="outlined"
-                      />
-                    )}
-                  />
-                </Grid>
+            {/* SECTION 2: POS Settings */}
+            {activeSection === 2 && <PosSettings control={control} />}
 
-                <Grid item xs={12} md={6}>
-                  <Controller
-                    name="tax_number"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        label="الرقم الضريبي"
-                        value={field.value || ""}
-                      />
-                    )}
-                  />
-                </Grid>
+            {/* SECTION 3: Branding */}
+            {activeSection === 3 && (
+              <Card sx={{ borderRadius: 3, boxShadow: theme.shadows[1] }}>
+                <CardContent sx={{ p: 4 }}>
+                  <Typography
+                    variant="h6"
+                    fontWeight={600}
+                    gutterBottom
+                    sx={{ mb: 3 }}
+                  >
+                    هوية الفواتير (Branding)
+                  </Typography>
 
-                <Grid item xs={12}>
-                  <Controller
-                    name="company_address"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        label="العنوان"
-                        multiline
-                        rows={2}
-                      />
-                    )}
-                  />
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-
-          {/* Localization & Formatting */}
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography
-                variant="h6"
-                gutterBottom
-                sx={{ display: "flex", alignItems: "center", gap: 1 }}
-              >
-                <LanguageIcon color="primary" fontSize="small" />
-                الترجمة والتنسيق
-              </Typography>
-              <Divider sx={{ mb: 3 }} />
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={4}>
-                  <Controller
-                    name="currency_symbol"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        label="رمز العملة"
-                        helperText="مثال: AED, SAR, $"
-                      />
-                    )}
-                  />
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <Controller
-                    name="date_format"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        label="صيغة التاريخ"
-                        placeholder="YYYY-MM-DD"
-                      />
-                    )}
-                  />
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <Controller
-                    name="timezone"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        select
-                        label="المنطقة الزمنية"
-                      >
-                        <MenuItem value="Africa/Khartoum">
-                          Africa/Khartoum
-                        </MenuItem>
-                        <MenuItem value="Asia/Muscat">Asia/Muscat</MenuItem>
-                        <MenuItem value="Asia/Riyadh">Asia/Riyadh</MenuItem>
-                        <MenuItem value="Asia/Dubai">Asia/Dubai</MenuItem>
-                      </TextField>
-                    )}
-                  />
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-
-          {/* Business Rules */}
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography
-                variant="h6"
-                gutterBottom
-                sx={{ display: "flex", alignItems: "center", gap: 1 }}
-              >
-                <InventoryIcon color="primary" fontSize="small" />
-                قواعد العمل والمخزون
-              </Typography>
-              <Divider sx={{ mb: 3 }} />
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                  <Controller
-                    name="global_low_stock_threshold"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        type="number"
-                        label="حد تنبيه المخزون المنخفض"
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
-                    )}
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Controller
-                    name="default_profit_rate"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        type="number"
-                        label="هامش الربح الافتراضي (%)"
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
-                    )}
-                  />
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-
-          {/* POS Mode Configuration */}
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography
-                variant="h6"
-                gutterBottom
-                sx={{ display: "flex", alignItems: "center", gap: 1 }}
-              >
-                <ReceiptIcon color="primary" fontSize="small" />
-                إعدادات نظام نقاط البيع (POS)
-              </Typography>
-              <Divider sx={{ mb: 3 }} />
-              <Grid container spacing={3}>
-                <Grid item xs={12}>
-                  <FormControl component="fieldset">
+                  <FormControl
+                    component="fieldset"
+                    sx={{ mb: 4, width: "100%" }}
+                  >
                     <Typography
                       variant="subtitle2"
-                      fontWeight="bold"
+                      color="text.secondary"
                       gutterBottom
                     >
-                      وضع التشغيل:
-                    </Typography>
-                    <Controller
-                      name="pos_mode"
-                      control={control}
-                      render={({ field }) => (
-                        <RadioGroup row {...field} value={field.value || "shift"}>
-                          <FormControlLabel
-                            value="shift"
-                            control={<Radio />}
-                            label="وضع الورديات (يتطلب فتح وإغلاق الورديات)"
-                          />
-                          <FormControlLabel
-                            value="days"
-                            control={<Radio />}
-                            label="وضع الأيام (لا يتطلب ورديات، المبيعات حسب تاريخ الإنشاء)"
-                          />
-                        </RadioGroup>
-                      )}
-                    />
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
-                      في وضع الأيام، لن تحتاج لفتح أو إغلاق ورديات. سيتم عرض المبيعات حسب تاريخ الإنشاء.
-                    </Typography>
-                  </FormControl>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-
-          {/* Document Prefixes Section */}
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Stack
-                direction="row"
-                spacing={1.5}
-                alignItems="center"
-                sx={{ mb: 3 }}
-              >
-                <DescriptionIcon color="primary" />
-                <Typography
-                  variant="h6"
-                  component="h2"
-                  sx={{ fontWeight: 600 }}
-                >
-                  بادئات المستندات
-                </Typography>
-              </Stack>
-              <Divider sx={{ mb: 3 }} />
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                  <Controller
-                    name="invoice_prefix"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        label="بادئة الفاتورة"
-                        variant="outlined"
-                        helperText="مثال: INV- سيصبح INV-001"
-                      />
-                    )}
-                  />
-                </Grid>
-
-                <Grid item xs={12} md={6}>
-                  <Controller
-                    name="purchase_order_prefix"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        label="بادئة طلب الشراء"
-                        variant="outlined"
-                        helperText="مثال: PO- سيصبح PO-001"
-                      />
-                    )}
-                  />
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-        </CustomTabPanel>
-
-        {/* --- TAB 1: Invoice Branding --- */}
-        <CustomTabPanel value={tabValue} index={1}>
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography
-                variant="h6"
-                gutterBottom
-                sx={{ display: "flex", alignItems: "center", gap: 1 }}
-              >
-                <ImageIcon color="primary" fontSize="small" />
-                تخصيص مظهر الفاتورة (A4)
-              </Typography>
-              <Alert severity="info" sx={{ mb: 3 }}>
-                اختر بين استخدام "شعار الشركة" التقليدي أو "صورة هيدر كاملة".
-                الفاتورة الحرارية ستستخدم الشعار دائماً.
-              </Alert>
-              <Divider sx={{ mb: 3 }} />
-
-              <Grid container spacing={3}>
-                <Grid item xs={12}>
-                  <FormControl component="fieldset">
-                    <Typography
-                      variant="subtitle2"
-                      fontWeight="bold"
-                      gutterBottom
-                    >
-                      نوع الترويسة (Header Type):
+                      نمط الترويسة
                     </Typography>
                     <Controller
                       name="invoice_branding_type"
                       control={control}
                       render={({ field }) => (
-                        <RadioGroup row {...field}>
+                        <RadioGroup row {...field} sx={{ gap: 4 }}>
                           <FormControlLabel
                             value="logo"
                             control={<Radio />}
-                            label="شعار + بيانات نصية"
+                            label="شعار و نص (Logo & Text)"
                           />
                           <FormControlLabel
                             value="header"
@@ -619,203 +363,205 @@ const SettingsPage: React.FC = () => {
                       )}
                     />
                   </FormControl>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
 
-          {/* Show specific sections based on selection */}
-          {watchedBrandingType === "logo" && (
-            <Card sx={{ mb: 3, border: "1px solid #1976d2" }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  إعدادات الشعار
-                </Typography>
-                <Grid container spacing={3}>
-                  <Grid item xs={12} md={6}>
-                    <InputLabel sx={{ mb: 1 }}>موضع الشعار</InputLabel>
-                    <Controller
-                      name="logo_position"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField {...field} select fullWidth>
-                          <MenuItem value="right">يمين (Right)</MenuItem>
-                          <MenuItem value="left">يسار (Left)</MenuItem>
-                          <MenuItem value="both">كلاهما (Both)</MenuItem>
-                        </TextField>
-                      )}
-                    />
-                  </Grid>
+                  <Divider sx={{ mb: 4 }} />
 
-                  <Grid item xs={12} md={6}>
-                    <InputLabel sx={{ mb: 1 }}>موضع الشعار</InputLabel>
-                    <Controller
-                      name="logo_position"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField {...field} select fullWidth>
-                          <MenuItem value="right">يمين (Right)</MenuItem>
-                          <MenuItem value="left">يسار (Left)</MenuItem>
-                          <MenuItem value="both">كلاهما (Both)</MenuItem>
-                        </TextField>
-                      )}
-                    />
-                  </Grid>
-
-                  <Grid item xs={6} md={3}>
-                    <InputLabel sx={{ mb: 1 }}>عرض الشعار (px)</InputLabel>
-                    <Controller
-                      name="logo_width"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          type="number"
-                          fullWidth
-                          placeholder="60"
-                          onChange={(e) =>
-                            field.onChange(Number(e.target.value))
-                          }
-                        />
-                      )}
-                    />
-                  </Grid>
-
-                  <Grid item xs={6} md={3}>
-                    <InputLabel sx={{ mb: 1 }}>ارتفاع الشعار (px)</InputLabel>
-                    <Controller
-                      name="logo_height"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          type="number"
-                          fullWidth
-                          placeholder="60"
-                          onChange={(e) =>
-                            field.onChange(Number(e.target.value))
-                          }
-                        />
-                      )}
-                    />
-                  </Grid>
-
-                  <Grid item xs={12} md={6}>
-                    <InputLabel sx={{ mb: 1 }}>رفع الشعار</InputLabel>
-                    <Stack direction="row" spacing={2} alignItems="center">
-                      <Button
-                        variant="outlined"
-                        component="label"
-                        startIcon={<ImageIcon />}
-                      >
-                        اختر ملف الشعار
-                        <input
-                          type="file"
-                          hidden
-                          accept="image/*"
-                          onChange={handleLogoUpload}
-                        />
-                      </Button>
-                      {logoPreview && (
-                        <Paper
-                          variant="outlined"
+                  {watchedBrandingType === "logo" && (
+                    <Stack spacing={4}>
+                      <Box>
+                        <Typography variant="subtitle2" gutterBottom>
+                          رفع الشعار
+                        </Typography>
+                        <Box
                           sx={{
-                            p: 1,
-                            backgroundColor: "#f5f5f5",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
+                            border: "2px dashed",
+                            borderColor: "divider",
+                            borderRadius: 2,
+                            p: 3,
+                            textAlign: "center",
                           }}
                         >
-                          <img
-                            src={logoPreview}
-                            alt="Logo"
-                            style={{
-                              maxHeight: watchedHeaderUrl
-                                ? 60
-                                : Number(watch("logo_height") || 60),
-                              maxWidth: watchedHeaderUrl
-                                ? 100
-                                : Number(watch("logo_width") || 100),
-                              // Use watched values for preview if possible
+                          {logoPreview ? (
+                            <Box
+                              sx={{
+                                mb: 2,
+                                height: 100,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
+                            >
+                              <img
+                                src={logoPreview}
+                                alt="Logo"
+                                style={{
+                                  maxHeight: "100%",
+                                  maxWidth: "100%",
+                                }}
+                              />
+                            </Box>
+                          ) : (
+                            <ImageIcon
+                              sx={{
+                                fontSize: 48,
+                                color: "text.disabled",
+                                mb: 1,
+                              }}
+                            />
+                          )}
+                          <Button
+                            variant="outlined"
+                            component="label"
+                            startIcon={<CloudUploadIcon />}
+                          >
+                            رفع ملف جديد
+                            <input
+                              type="file"
+                              hidden
+                              accept="image/*"
+                              onChange={handleLogoUpload}
+                            />
+                          </Button>
+                        </Box>
+                      </Box>
+
+                      <Controller
+                        name="logo_position"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            select
+                            fullWidth
+                            label="محاذاة الشعار"
+                          >
+                            <MenuItem value="right">يمين (Right)</MenuItem>
+                            <MenuItem value="left">يسار (Left)</MenuItem>
+                            <MenuItem value="center">وسط (Center)</MenuItem>
+                          </TextField>
+                        )}
+                      />
+                      <Stack direction="row" spacing={2}>
+                        <Controller
+                          name="logo_width"
+                          control={control}
+                          render={({ field }) => (
+                            <TextField
+                              {...field}
+                              type="number"
+                              fullWidth
+                              label="العرض (px)"
+                              onChange={(e) =>
+                                field.onChange(Number(e.target.value))
+                              }
+                            />
+                          )}
+                        />
+                        <Controller
+                          name="logo_height"
+                          control={control}
+                          render={({ field }) => (
+                            <TextField
+                              {...field}
+                              type="number"
+                              fullWidth
+                              label="الارتفاع (px)"
+                              onChange={(e) =>
+                                field.onChange(Number(e.target.value))
+                              }
+                            />
+                          )}
+                        />
+                      </Stack>
+                    </Stack>
+                  )}
+
+                  {watchedBrandingType === "header" && (
+                    <Box>
+                      <Typography variant="subtitle2" gutterBottom>
+                        صورة الهيدر الكاملة
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        paragraph
+                      >
+                        ستظهر هذه الصورة بعرض الصفحة الكامل في أعلى الفاتورة.
+                        سيتم إخفاء بيانات الشركة النصية.
+                      </Typography>
+                      <Box
+                        sx={{
+                          border: "2px dashed",
+                          borderColor: "divider",
+                          borderRadius: 2,
+                          p: 3,
+                          textAlign: "center",
+                        }}
+                      >
+                        {headerPreview ? (
+                          <Box
+                            sx={{
+                              mb: 2,
+                              height: 120,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              overflow: "hidden",
+                            }}
+                          >
+                            <img
+                              src={headerPreview}
+                              alt="Header"
+                              style={{
+                                height: "100%",
+                                objectFit: "cover",
+                                width: "100%",
+                              }}
+                            />
+                          </Box>
+                        ) : (
+                          <Box
+                            sx={{
+                              height: 80,
+                              bgcolor: "action.hover",
+                              mb: 2,
+                              borderRadius: 1,
                             }}
                           />
-                        </Paper>
-                      )}
-                    </Stack>
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
-          )}
-
-          {watchedBrandingType === "header" && (
-            <Card sx={{ mb: 3, border: "1px solid #ed6c02" }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  إعدادات الهيدر الكامل
-                </Typography>
-                <Typography variant="body2" color="text.secondary" paragraph>
-                  سيتم عرض هذه الصورة في أعلى صفحة A4 بعرض الصفحة الكامل. سيتم
-                  إخفاء اسم الشركة وبياناتها النصية لأنها مفترض أن تكون موجودة
-                  داخل التصميم.
-                </Typography>
-
-                <Stack spacing={2}>
-                  <Button
-                    variant="contained"
-                    component="label"
-                    sx={{ width: "fit-content" }}
-                    startIcon={<ImageIcon />}
-                    color="warning"
-                  >
-                    رفع صورة الهيدر (Header Image)
-                    <input
-                      type="file"
-                      hidden
-                      accept="image/*"
-                      onChange={handleHeaderUpload}
-                    />
-                  </Button>
-
-                  {headerPreview && (
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="caption">معاينة:</Typography>
-                      <Paper
-                        elevation={3}
-                        sx={{
-                          width: "100%",
-                          maxWidth: "600px", // Limit width for UI preview
-                          height: "100px",
-                          backgroundImage: `url(${headerPreview})`,
-                          backgroundSize: "cover",
-                          backgroundPosition: "center",
-                          border: "1px dashed #ccc",
-                        }}
-                      />
+                        )}
+                        <Button
+                          variant="contained"
+                          component="label"
+                          startIcon={<CloudUploadIcon />}
+                          color="secondary"
+                        >
+                          رفع صورة الهيدر
+                          <input
+                            type="file"
+                            hidden
+                            accept="image/*"
+                            onChange={handleHeaderUpload}
+                          />
+                        </Button>
+                      </Box>
                     </Box>
                   )}
-                </Stack>
-              </CardContent>
-            </Card>
-          )}
-        </CustomTabPanel>
+                </CardContent>
+              </Card>
+            )}
 
-        {/* --- TAB 2: PDF Settings --- */}
-        <CustomTabPanel value={tabValue} index={2}>
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography
-                variant="h6"
-                gutterBottom
-                sx={{ display: "flex", alignItems: "center", gap: 1 }}
-              >
-                <PdfIcon color="primary" fontSize="small" />
-                إعدادات ملفات PDF
-              </Typography>
-              <Divider sx={{ mb: 3 }} />
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
+            {/* SECTION 4: PDF & Printing */}
+            {activeSection === 4 && (
+              <Card sx={{ borderRadius: 3, boxShadow: theme.shadows[1] }}>
+                <CardContent sx={{ p: 4 }}>
+                  <Typography
+                    variant="h6"
+                    fontWeight={600}
+                    gutterBottom
+                    sx={{ mb: 3 }}
+                  >
+                    إعدادات الطباعة و PDF
+                  </Typography>
                   <Controller
                     name="pdf_font"
                     control={control}
@@ -824,44 +570,54 @@ const SettingsPage: React.FC = () => {
                         {...field}
                         select
                         fullWidth
-                        label="نوع الخط في ملفات PDF"
-                        helperText="سيتم تطبيق هذا الخط على جميع الفواتير والتقارير"
+                        label="نوع الخط العربي (Arabic Font)"
+                        helperText="يؤثر على طريقة ظهور النصوص العربية في الفواتير المصدرة PDF"
                       >
                         <MenuItem value={PDF_FONTS.AMIRI}>
-                          Amiri (افتراضي - Serif)
+                          Amiri (خط نسخ كلاسيكي - Serif)
                         </MenuItem>
                         <MenuItem value={PDF_FONTS.TAJAWAL}>
-                          Tajawal (Sans-Serif)
+                          Tajawal (خط حديث - Sans Serif)
                         </MenuItem>
                         <MenuItem value={PDF_FONTS.IBM_PLEX}>
-                          IBM Plex Sans Arabic (Modern)
+                          IBM Plex Sans Arabic (خط عصري - Modern)
                         </MenuItem>
                         <MenuItem value={PDF_FONTS.ARIAL}>
-                          Arial (Standard)
+                          Arial (قياسي - Standard)
                         </MenuItem>
                       </TextField>
                     )}
                   />
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-        </CustomTabPanel>
+                </CardContent>
+              </Card>
+            )}
+          </Stack>
+        </Box>
 
-        {/* Submit Button */}
-        <Box
+        {/* Floating Save Bar */}
+        <Paper
+          elevation={4}
           sx={{
-            position: "sticky",
-            bottom: 0,
-            backgroundColor: "background.paper",
-            p: 2,
-            borderTop: 1,
-            borderColor: "divider",
+            position: "fixed",
+            bottom: 24,
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "auto",
+            minWidth: 300,
+            borderRadius: 10,
+            py: 1.5,
+            px: 3,
             display: "flex",
-            justifyContent: "flex-end",
-            zIndex: 10,
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 4,
+            zIndex: 1000,
+            border: `1px solid ${theme.palette.divider}`,
           }}
         >
+          <Typography variant="body2" fontWeight={500} color="text.secondary">
+            هل قمت بإجراء تعديلات؟
+          </Typography>
           <Button
             type="submit"
             variant="contained"
@@ -871,14 +627,14 @@ const SettingsPage: React.FC = () => {
               isSubmitting ? (
                 <CircularProgress size={20} color="inherit" />
               ) : (
-                <SettingsIcon />
+                <SaveIcon />
               )
             }
-            sx={{ minWidth: 200 }}
+            sx={{ borderRadius: 5, px: 4 }}
           >
             حفظ التغييرات
           </Button>
-        </Box>
+        </Paper>
       </Box>
     </Box>
   );

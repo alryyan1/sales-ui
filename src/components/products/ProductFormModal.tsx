@@ -18,7 +18,15 @@ import {
   Paper,
   IconButton,
 } from "@mui/material";
-import { Loader2, AlertCircle, RefreshCw, Plus, Upload, X, Image as ImageIcon } from "lucide-react";
+import {
+  Loader2,
+  AlertCircle,
+  RefreshCw,
+  Plus,
+  Upload,
+  X,
+  Image as ImageIcon,
+} from "lucide-react";
 
 // Services and Types
 import productService, {
@@ -79,6 +87,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   // State for unit creation dialogs
   const [isStockingUnitModalOpen, setIsStockingUnitModalOpen] = useState(false);
   const [isSellableUnitModalOpen, setIsSellableUnitModalOpen] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // --- React Hook Form Setup ---
   const form = useForm<ProductFormValues>({
@@ -489,7 +498,10 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       size="small"
                       disabled={isSubmitting || uploadingImage}
                       error={!!fieldState.error}
-                      helperText={fieldState.error?.message || "يمكنك إدخال رابط URL أو رفع ملف صورة"}
+                      helperText={
+                        fieldState.error?.message ||
+                        "يمكنك إدخال رابط URL أو رفع ملف صورة"
+                      }
                       InputProps={{
                         endAdornment: (
                           <Box sx={{ display: "flex", gap: 0.5 }}>
@@ -501,10 +513,11 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                               onChange={async (e) => {
                                 const file = e.target.files?.[0];
                                 if (!file) return;
-                                
+
                                 if (file.size > 2 * 1024 * 1024) {
                                   toast.error("حجم الملف كبير جداً", {
-                                    description: "الحد الأقصى لحجم الصورة هو 2MB",
+                                    description:
+                                      "الحد الأقصى لحجم الصورة هو 2MB",
                                   });
                                   return;
                                 }
@@ -516,7 +529,9 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
                                   let productId = productToEdit?.id;
                                   if (!productId) {
-                                    toast.error("يرجى حفظ المنتج أولاً ثم رفع الصورة");
+                                    toast.error(
+                                      "يرجى حفظ المنتج أولاً ثم رفع الصورة"
+                                    );
                                     setUploadingImage(false);
                                     return;
                                   }
@@ -532,26 +547,47 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                                   );
 
                                   if (response.data?.product?.image_url) {
-                                    field.onChange(response.data.product.image_url);
+                                    field.onChange(
+                                      response.data.product.image_url
+                                    );
                                     toast.success("تم رفع الصورة بنجاح");
                                   }
                                 } catch (error: any) {
-                                  console.error("Error uploading image:", error);
+                                  console.error(
+                                    "Error uploading image:",
+                                    error
+                                  );
                                   toast.error("فشل رفع الصورة", {
-                                    description: error?.response?.data?.message || "حدث خطأ غير متوقع",
+                                    description:
+                                      error?.response?.data?.message ||
+                                      "حدث خطأ غير متوقع",
                                   });
                                 } finally {
                                   setUploadingImage(false);
                                 }
                               }}
                             />
-                            <label htmlFor={`image-upload-${productToEdit?.id || "new"}`}>
+                            <label
+                              htmlFor={`image-upload-${
+                                productToEdit?.id || "new"
+                              }`}
+                            >
                               <Button
                                 component="span"
                                 variant="outlined"
                                 size="small"
-                                disabled={isSubmitting || uploadingImage || !productToEdit}
-                                startIcon={uploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                                disabled={
+                                  isSubmitting ||
+                                  uploadingImage ||
+                                  !productToEdit
+                                }
+                                startIcon={
+                                  uploadingImage ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Upload className="h-4 w-4" />
+                                  )
+                                }
                                 sx={{ minWidth: "auto", px: 1.5 }}
                               >
                                 {uploadingImage ? "جاري الرفع..." : "رفع"}
@@ -572,7 +608,13 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       }}
                     />
                     {field.value && (
-                      <Box sx={{ mt: 2, display: "flex", justifyContent: "center" }}>
+                      <Box
+                        sx={{
+                          mt: 2,
+                          display: "flex",
+                          justifyContent: "center",
+                        }}
+                      >
                         <ProductImage
                           imageUrl={field.value}
                           productName={form.watch("name") || "Product"}

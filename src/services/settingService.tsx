@@ -11,6 +11,7 @@ export interface AppSettings {
   company_name: string;
   company_address: string;
   company_phone: string;
+  company_phone_2?: string;
   company_email: string;
   company_logo_url: string | null;
   currency_symbol: string;

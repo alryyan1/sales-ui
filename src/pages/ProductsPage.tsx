@@ -76,7 +76,7 @@ const ProductsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [showOnlyInStock, setShowOnlyInStock] = useState(false);
@@ -311,7 +311,7 @@ const ProductsPage: React.FC = () => {
       <Box
         className="dark:bg-gray-900 h-[calc(100vh-100px)] w-full max-w-none products-page-full-width"
         sx={{
-          direction: "rtl",
+          direction: "ltr",
           width: "100%",
           maxWidth: "none",
           margin: 0,

@@ -22,13 +22,8 @@ import {
   TableHead,
   TableRow,
   Pagination,
+  Box,
 } from "@mui/material";
-import {
-  DataGrid,
-  GridColDef,
-  GridRenderCellParams,
-  GridToolbar,
-} from "@mui/x-data-grid";
 import { Edit, AlertTriangle, Copy, Check, Info, History } from "lucide-react";
 
 // Types
@@ -37,7 +32,6 @@ import productService, {
 } from "@/services/productService";
 import { formatNumber, formatCurrency } from "@/constants";
 import { useSettings } from "@/context/SettingsContext";
-import { ProductImage } from "./ProductImage";
 
 // Interface for Product with potentially loaded batches
 interface ProductWithOptionalBatches
@@ -173,323 +167,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
     }
   };
 
-  const columns: GridColDef[] = [
-    {
-      field: "id",
-      headerName: "#",
-      width: 70,
-      align: "center",
-      headerAlign: "center",
-    },
-    {
-      field: "sku",
-      headerName: "الرمز (SKU)",
-      width: 150,
-      align: "center",
-      headerAlign: "center",
-      renderCell: (params: GridRenderCellParams) => {
-        const sku = params.value as string;
-        if (!sku)
-          return (
-            <Typography variant="body2" color="text.disabled">
-              ---
-            </Typography>
-          );
-        return (
-          <Stack
-            direction="row"
-            spacing={0.5}
-            alignItems="center"
-            justifyContent="center"
-          >
-            <Typography variant="body2" component="span">
-              {sku}
-            </Typography>
-            <Tooltip title={copiedSku === sku ? "تم النسخ" : "نسخ SKU"}>
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  copyToClipboard(sku);
-                }}
-                disabled={isLoading}
-                sx={{ width: 24, height: 24, p: 0 }}
-              >
-                {copiedSku === sku ? (
-                  <Check
-                    style={{
-                      width: 14,
-                      height: 14,
-                      color: "var(--mui-palette-success-main)",
-                    }}
-                  />
-                ) : (
-                  <Copy style={{ width: 14, height: 14 }} />
-                )}
-              </IconButton>
-            </Tooltip>
-          </Stack>
-        );
-      },
-    },
-    {
-      field: "name",
-      headerName: "اسم المنتج",
-      minWidth: 200,
-      flex: 1,
-      align: "right", // Arabic names align right traditionally
-      headerAlign: "right",
-      renderCell: (params: GridRenderCellParams) => (
-        <Typography variant="body2" fontWeight={600}>
-          {params.value}
-        </Typography>
-      ),
-    },
-    {
-      field: "scientific_name",
-      headerName: "الاسم العلمي",
-      width: 150,
-      align: "center",
-      headerAlign: "center",
-      valueFormatter: (value) => value || "---",
-    },
-    {
-      field: "category_name",
-      headerName: "الفئة",
-      width: 130,
-      align: "center",
-      headerAlign: "center",
-      renderCell: (params: GridRenderCellParams) =>
-        params.value ? (
-          <Chip
-            label={params.value}
-            size="small"
-            variant="outlined"
-            sx={{ fontSize: "0.75rem", height: 24 }}
-          />
-        ) : (
-          <Typography variant="body2" color="text.disabled">
-            ---
-          </Typography>
-        ),
-    },
-    {
-      field: "sellable_unit_name",
-      headerName: "وحدة البيع",
-      width: 100,
-      align: "center",
-      headerAlign: "center",
-      valueFormatter: (value) => value || "---",
-    },
-    {
-      field: "stocking_unit_name",
-      headerName: "وحدة التخزين",
-      width: 100,
-      align: "center",
-      headerAlign: "center",
-      valueFormatter: (value) => value || "---",
-    },
-    {
-      field: "units_per_stocking_unit",
-      headerName: "نسبة التحويل",
-      width: 100,
-      align: "center",
-      headerAlign: "center",
-      valueFormatter: (value) => value || "---",
-    },
-    {
-      field: "created_at",
-      headerName: "تم إنشاؤه في",
-      width: 120,
-      align: "center",
-      headerAlign: "center",
-      valueGetter: (value) =>
-        value ? new Date(value).toLocaleDateString("en-GB") : "---",
-    },
-    {
-      field: "stock_alert_level",
-      headerName: "تنبيه المخزون",
-      width: 110,
-      align: "center",
-      headerAlign: "center",
-      valueFormatter: (value) => (value !== null ? formatNumber(value) : "---"),
-    },
-    {
-      field: "current_stock_quantity", // Accessor might not be in row directly if type mismatch
-      headerName: "إجمالي المخزون",
-      width: 130,
-      align: "center",
-      headerAlign: "center",
-      renderCell: (params: GridRenderCellParams) => {
-        const product = params.row as ProductWithOptionalBatches;
-        const stockQty = Number(
-          product.current_stock_quantity ?? product.stock_quantity ?? 0
-        );
-        const isLow =
-          product.stock_alert_level !== null &&
-          stockQty <= (product.stock_alert_level as number);
-        const isOutOfStock = stockQty <= 0;
-
-        return (
-          <Stack
-            direction="row"
-            spacing={0.5}
-            alignItems="center"
-            justifyContent="center"
-          >
-            <Typography variant="body1" fontWeight={600}>
-              {formatNumber(stockQty)}
-            </Typography>
-            {(isLow || isOutOfStock) && (
-              <Tooltip
-                title={isOutOfStock ? "نفاد المخزون" : "تنبيه: المخزون منخفض"}
-              >
-                <AlertTriangle
-                  style={{
-                    width: 16,
-                    height: 16,
-                    color: isOutOfStock
-                      ? "var(--mui-palette-error-main)"
-                      : "var(--mui-palette-warning-main)",
-                  }}
-                />
-              </Tooltip>
-            )}
-          </Stack>
-        );
-      },
-    },
-    {
-      field: "warehouse_info",
-      headerName: "المخازن",
-      width: 60,
-      align: "center",
-      headerAlign: "center",
-      sortable: false,
-      renderCell: (params: GridRenderCellParams) => {
-        const product = params.row as ProductWithOptionalBatches;
-        if (!product.warehouses?.length) return null;
-
-        return (
-          <Tooltip title="تفاصيل المخزون">
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleOpenStockDialog(product);
-              }}
-              sx={{ p: 0.5 }}
-            >
-              <Info
-                style={{
-                  width: 18,
-                  height: 18,
-                  color: "var(--mui-palette-info-main)",
-                }}
-              />
-            </IconButton>
-          </Tooltip>
-        );
-      },
-    },
-    {
-      field: "latest_cost_per_sellable_unit",
-      headerName: "أحدث تكلفة",
-      width: 120,
-      align: "center",
-      headerAlign: "center",
-      valueFormatter: (value) =>
-        value ? formatCurrency(Number(value)) : "---",
-    },
-    {
-      field: "last_sale_price_per_sellable_unit",
-      headerName: "آخر سعر بيع",
-      width: 120,
-      align: "center",
-      headerAlign: "center",
-      valueFormatter: (value) =>
-        value ? formatCurrency(Number(value)) : "---",
-    },
-    {
-      field: "suggested_sale_price_per_sellable_unit",
-      headerName: "السعر المقترح",
-      width: 120,
-      align: "center",
-      headerAlign: "center",
-      valueFormatter: (value) =>
-        value ? formatCurrency(Number(value)) : "---",
-    },
-    {
-      field: "total_items_purchased",
-      headerName: "تم شراؤه",
-      width: 100,
-      align: "center",
-      headerAlign: "center",
-      valueFormatter: (value) => (value ? formatNumber(Number(value)) : "0"),
-    },
-    {
-      field: "total_items_sold",
-      headerName: "تم بيعه",
-      width: 100,
-      align: "center",
-      headerAlign: "center",
-      valueFormatter: (value) => (value ? formatNumber(Number(value)) : "0"),
-    },
-    {
-      field: "actions",
-      headerName: "إجراءات",
-      width: 120,
-      align: "center",
-      headerAlign: "center",
-      sortable: false,
-      renderCell: (params: GridRenderCellParams) => (
-        <Stack direction="row" spacing={1}>
-          <Tooltip title="السجل">
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleOpenHistoryDialog(
-                  params.row as ProductWithOptionalBatches
-                );
-              }}
-              disabled={isLoading}
-              sx={{
-                color: "text.secondary",
-                "&:hover": {
-                  bgcolor: "action.hover",
-                  color: "text.primary",
-                },
-              }}
-            >
-              <History style={{ width: 18, height: 18 }} />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="تعديل">
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(params.row as ProductWithOptionalBatches);
-              }}
-              disabled={isLoading}
-              sx={{
-                color: "primary.main",
-                "&:hover": {
-                  bgcolor: "primary.light",
-                  color: "primary.contrastText",
-                },
-              }}
-            >
-              <Edit style={{ width: 18, height: 18 }} />
-            </IconButton>
-          </Tooltip>
-        </Stack>
-      ),
-    },
-  ];
-
-  if (products.length === 0) {
+  if (products.length === 0 && !isLoading) {
     return (
       <Paper
         elevation={0}
@@ -512,50 +190,280 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
     );
   }
 
+  const totalPages = Math.ceil(rowCount / paginationModel.pageSize);
+
   return (
     <>
       <Paper
-        sx={{ height: 650, width: "100%", borderRadius: 2, overflow: "hidden" }}
+        sx={{ width: "100%", borderRadius: 2, overflow: "hidden", mb: 2 }}
         elevation={0}
         dir="ltr"
       >
-        <DataGrid
-          rows={products}
-          columns={columns}
-          loading={isLoading}
-          disableRowSelectionOnClick
-          onRowClick={(params) =>
-            onEdit(params.row as ProductWithOptionalBatches)
-          }
-          // Server-side pagination
-          rowCount={rowCount}
-          paginationModel={paginationModel}
-          onPaginationModelChange={onPaginationModelChange}
-          paginationMode="server"
-          slots={{ toolbar: GridToolbar }}
-          slotProps={{
-            toolbar: {
-              showQuickFilter: true,
-              quickFilterProps: { debounceMs: 500 },
-            },
-          }}
-          sx={{
-            border: 0,
-            "& .MuiDataGrid-cell": {
-              borderBottom: "1px solid #f0f0f0",
-            },
-            "& .MuiDataGrid-columnHeaders": {
-              backgroundColor: "action.hover", // Match previous style
-              borderBottom: "1px solid #e0e0e0",
-              fontSize: "0.875rem",
-              fontWeight: 600,
-            },
-            "& .MuiDataGrid-row": {
-              cursor: "pointer",
-            },
-          }}
-          pageSizeOptions={[10, 25, 50, 100]}
-        />
+        <TableContainer sx={{ maxHeight: "calc(100vh - 250px)" }}>
+          <Table stickyHeader size="small" sx={{ minWidth: 650 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell align="center">#</TableCell>
+                <TableCell align="center">الرمز (SKU)</TableCell>
+                <TableCell align="right">اسم المنتج</TableCell>
+                <TableCell align="center">الاسم العلمي</TableCell>
+                <TableCell align="center">الفئة</TableCell>
+                <TableCell align="center">وحدة البيع</TableCell>
+                <TableCell align="center">وحدة التخزين</TableCell>
+                <TableCell align="center">نسبة التحويل</TableCell>
+                <TableCell align="center">تم إنشاؤه في</TableCell>
+                <TableCell align="center">تنبيه المخزون</TableCell>
+                <TableCell align="center">إجمالي المخزون</TableCell>
+                <TableCell align="center">المخازن</TableCell>
+                <TableCell align="center">أحدث تكلفة</TableCell>
+                <TableCell align="center">آخر سعر بيع</TableCell>
+                <TableCell align="center">السعر المقترح</TableCell>
+                <TableCell align="center">إجراءات</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {products.map((product) => {
+                const stockQty = Number(
+                  product.current_stock_quantity ?? product.stock_quantity ?? 0
+                );
+                const isLow =
+                  product.stock_alert_level !== null &&
+                  stockQty <= (product.stock_alert_level as number);
+                const isOutOfStock = stockQty <= 0;
+
+                return (
+                  <TableRow
+                    key={product.id}
+                    hover
+                    sx={{ cursor: "pointer" }}
+                    onClick={() => onEdit(product)}
+                  >
+                    <TableCell align="center">{product.id}</TableCell>
+                    <TableCell align="center">
+                      <Stack
+                        direction="row"
+                        spacing={0.5}
+                        alignItems="center"
+                        justifyContent="center"
+                      >
+                        <Typography variant="body2" component="span">
+                          {product.sku || "---"}
+                        </Typography>
+                        {product.sku && (
+                          <Tooltip
+                            title={
+                              copiedSku === product.sku ? "تم النسخ" : "نسخ SKU"
+                            }
+                          >
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                copyToClipboard(product.sku!);
+                              }}
+                              disabled={isLoading}
+                              sx={{ width: 24, height: 24, p: 0 }}
+                            >
+                              {copiedSku === product.sku ? (
+                                <Check
+                                  style={{
+                                    width: 14,
+                                    height: 14,
+                                    color: "var(--mui-palette-success-main)",
+                                  }}
+                                />
+                              ) : (
+                                <Copy style={{ width: 14, height: 14 }} />
+                              )}
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Stack>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="body2" fontWeight={600}>
+                        {product.name}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="center">
+                      {product.scientific_name || "---"}
+                    </TableCell>
+                    <TableCell align="center">
+                      {product.category_name ? (
+                        <Chip
+                          label={product.category_name}
+                          size="small"
+                          variant="outlined"
+                          sx={{ fontSize: "0.75rem", height: 24 }}
+                        />
+                      ) : (
+                        "---"
+                      )}
+                    </TableCell>
+                    <TableCell align="center">
+                      {product.sellable_unit_name || "---"}
+                    </TableCell>
+                    <TableCell align="center">
+                      {product.stocking_unit_name || "---"}
+                    </TableCell>
+                    <TableCell align="center">
+                      {product.units_per_stocking_unit || "---"}
+                    </TableCell>
+                    <TableCell align="center">
+                      {product.created_at
+                        ? new Date(product.created_at).toLocaleDateString(
+                            "en-GB"
+                          )
+                        : "---"}
+                    </TableCell>
+                    <TableCell align="center">
+                      {product.stock_alert_level !== null
+                        ? formatNumber(product.stock_alert_level)
+                        : "---"}
+                    </TableCell>
+                    <TableCell align="center">
+                      <Stack
+                        direction="row"
+                        spacing={0.5}
+                        alignItems="center"
+                        justifyContent="center"
+                      >
+                        <Typography variant="body1" fontWeight={600}>
+                          {formatNumber(stockQty)}
+                        </Typography>
+                        {(isLow || isOutOfStock) && (
+                          <Tooltip
+                            title={
+                              isOutOfStock
+                                ? "نفاد المخزون"
+                                : "تنبيه: المخزون منخفض"
+                            }
+                          >
+                            <AlertTriangle
+                              style={{
+                                width: 16,
+                                height: 16,
+                                color: isOutOfStock
+                                  ? "var(--mui-palette-error-main)"
+                                  : "var(--mui-palette-warning-main)",
+                              }}
+                            />
+                          </Tooltip>
+                        )}
+                      </Stack>
+                    </TableCell>
+                    <TableCell align="center">
+                      {product.warehouses?.length ? (
+                        <Tooltip title="تفاصيل المخزون">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenStockDialog(product);
+                            }}
+                            sx={{ p: 0.5 }}
+                          >
+                            <Info
+                              style={{
+                                width: 18,
+                                height: 18,
+                                color: "var(--mui-palette-info-main)",
+                              }}
+                            />
+                          </IconButton>
+                        </Tooltip>
+                      ) : null}
+                    </TableCell>
+                    <TableCell align="center">
+                      {product.latest_cost_per_sellable_unit
+                        ? formatCurrency(
+                            Number(product.latest_cost_per_sellable_unit)
+                          )
+                        : "---"}
+                    </TableCell>
+                    <TableCell align="center">
+                      {product.last_sale_price_per_sellable_unit
+                        ? formatCurrency(
+                            Number(product.last_sale_price_per_sellable_unit)
+                          )
+                        : "---"}
+                    </TableCell>
+                    <TableCell align="center">
+                      {product.suggested_sale_price_per_sellable_unit
+                        ? formatCurrency(
+                            Number(
+                              product.suggested_sale_price_per_sellable_unit
+                            )
+                          )
+                        : "---"}
+                    </TableCell>
+                    <TableCell align="center">
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        justifyContent="center"
+                      >
+                        <Tooltip title="السجل">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenHistoryDialog(product);
+                            }}
+                            disabled={isLoading}
+                            sx={{
+                              color: "text.secondary",
+                              "&:hover": {
+                                bgcolor: "action.hover",
+                                color: "text.primary",
+                              },
+                            }}
+                          >
+                            <History style={{ width: 18, height: 18 }} />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="تعديل">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEdit(product);
+                            }}
+                            disabled={isLoading}
+                            sx={{
+                              color: "primary.main",
+                              "&:hover": {
+                                bgcolor: "primary.light",
+                                color: "primary.contrastText",
+                              },
+                            }}
+                          >
+                            <Edit style={{ width: 18, height: 18 }} />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
+
+        {/* Pagination Control */}
+        <Box sx={{ p: 2, display: "flex", justifyContent: "center" }}>
+          <Pagination
+            count={totalPages}
+            page={paginationModel.page + 1} // Convert 0-index to 1-index
+            onChange={(e, val) =>
+              onPaginationModelChange({ ...paginationModel, page: val - 1 })
+            } // Convert 1-index back to 0-index
+            color="primary"
+            shape="rounded"
+            showFirstButton
+            showLastButton
+          />
+        </Box>
       </Paper>
       {/* Warehouse Stock Breakdown Dialog */}
       <Dialog

@@ -17,6 +17,7 @@ import {
   IconButton,
   Chip,
   Paper,
+  Stack,
 } from "@mui/material";
 
 // MUI Icons
@@ -55,6 +56,7 @@ interface OfflineSaleSummaryColumnProps {
   onPaymentDialogOpenChange: (isOpen: boolean) => void;
   clients: any[]; // Passed from parent
   onClientAdded: (client: Client) => void;
+  isUpdatingClient?: boolean; // Loading state for client updates
 }
 
 export const OfflineSaleSummaryColumn: React.FC<
@@ -68,6 +70,7 @@ export const OfflineSaleSummaryColumn: React.FC<
   onPaymentDialogOpenChange,
   clients,
   onClientAdded,
+  isUpdatingClient = false,
 }) => {
   // Dialog states
   // const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false); // Lifted up
@@ -75,16 +78,20 @@ export const OfflineSaleSummaryColumn: React.FC<
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
   const [isA4PdfDialogOpen, setIsA4PdfDialogOpen] = useState(false);
-  const [isPaymentsViewDialogOpen, setIsPaymentsViewDialogOpen] = useState(false);
+  const [isPaymentsViewDialogOpen, setIsPaymentsViewDialogOpen] =
+    useState(false);
   const [settings, setSettings] = useState<AppSettings | null>(null);
 
   // Load settings on mount
   useEffect(() => {
     const loadSettings = async () => {
       // 1. Try to fetch fresh settings from API if backend is accessible
-      const { backendHealthService } = await import("../../services/backendHealthService");
-      const backendAccessible = await backendHealthService.checkBackendAccessible();
-      
+      const { backendHealthService } = await import(
+        "../../services/backendHealthService"
+      );
+      const backendAccessible =
+        await backendHealthService.checkBackendAccessible();
+
       if (backendAccessible) {
         try {
           console.log("Fetching settings from API...");
@@ -294,6 +301,8 @@ export const OfflineSaleSummaryColumn: React.FC<
                     client_name: newValue ? newValue.name : null,
                   });
                 }}
+                loading={isUpdatingClient}
+                disabled={isUpdatingClient}
                 renderInput={(params) => (
                   <TextField
                     {...params}
@@ -549,36 +558,39 @@ export const OfflineSaleSummaryColumn: React.FC<
           </Box>
 
           {/* Payments List Section */}
-       
 
           <Divider />
+          <Stack
+            direction={"row"}
+            gap={1}
+            justifyItems={"center"}
+            alignItems={"center"}
+          >
+            {/* Print Invoice Button (Thermal) */}
+            {currentSale.items.length > 0 && (
+              <Button
+                variant="outlined"
+                fullWidth
+                onClick={handlePrintPdf}
+                sx={{ mb: 1, py: 1 }}
+              >
+                فاتورة (حراري)
+              </Button>
+            )}
 
-          {/* Print Invoice Button (Thermal) */}
-          {currentSale.items.length > 0 && (
-            <Button
-              variant="outlined"
-              fullWidth
-              startIcon={<Printer size={18} />}
-              onClick={handlePrintPdf}
-              sx={{ mb: 1, py: 1 }}
-            >
-              طباعة فاتورة (حراري)
-            </Button>
-          )}
-
-          {/* NEW: Print A4 Invoice Button (Only if client selected) */}
-          {currentSale.items.length > 0 && currentSale.client_id && (
-            <Button
-              variant="outlined"
-              fullWidth
-              color="secondary"
-              startIcon={<FileText size={18} />}
-              onClick={handlePrintA4Pdf}
-              sx={{ mb: 1, py: 1 }}
-            >
-              طباعة فاتورة (A4)
-            </Button>
-          )}
+            {/* NEW: Print A4 Invoice Button (Only if client selected) */}
+            {currentSale.items.length > 0 && currentSale.client_id && (
+              <Button
+                variant="outlined"
+                fullWidth
+                color="secondary"
+                onClick={handlePrintA4Pdf}
+                sx={{ mb: 1, py: 1 }}
+              >
+                فاتورة (A4)
+              </Button>
+            )}
+          </Stack>
 
           {/* Add Payment Button */}
           <Button
@@ -594,16 +606,16 @@ export const OfflineSaleSummaryColumn: React.FC<
             size="large"
             disabled={grandTotal <= 0}
             sx={{
-              py: 2,
-              minHeight: 56,
-              fontSize: "1.3rem",
+              // py: 2,
+              // minHeight: 56,
+              // fontSize: "1.3rem",
               fontWeight: 700,
               borderRadius: 2,
               boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
               transition: "all 0.2s ease-in-out",
               ...(paidAmount > 0 && {
                 bgcolor: "success.main",
-                "&:hover": { 
+                "&:hover": {
                   bgcolor: "success.dark",
                   transform: "translateY(-2px)",
                   boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
@@ -758,12 +770,31 @@ export const OfflineSaleSummaryColumn: React.FC<
           <Typography variant="h6" fontWeight="bold">
             المدفوعات ({payments.length})
           </Typography>
-          <IconButton
-            onClick={() => setIsPaymentsViewDialogOpen(false)}
-            sx={{ color: "white" }}
-          >
-            <CloseIcon />
-          </IconButton>
+          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => {
+                setIsPaymentsViewDialogOpen(false);
+                onPaymentDialogOpenChange(true);
+              }}
+              sx={{
+                bgcolor: "white",
+                color: "primary.main",
+                "&:hover": { bgcolor: "grey.100" },
+                fontWeight: "bold",
+              }}
+              startIcon={<Plus size={18} />}
+            >
+              إضافة دفعة
+            </Button>
+            <IconButton
+              onClick={() => setIsPaymentsViewDialogOpen(false)}
+              sx={{ color: "white" }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
         </DialogTitle>
         <Divider />
         <DialogContent sx={{ p: 3 }}>

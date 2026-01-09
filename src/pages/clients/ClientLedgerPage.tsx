@@ -2,12 +2,12 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { pdf } from "@react-pdf/renderer";
 import {
   Box,
   Button,
   Card,
   CardContent,
-  CardHeader,
   Typography,
   Table,
   TableBody,
@@ -27,26 +27,37 @@ import {
   InputLabel,
   FormControl,
   Stack,
+  Paper,
+  Divider,
+  CircularProgress,
+  IconButton,
 } from "@mui/material";
-import { ArrowLeft, FileText } from "lucide-react";
+import {
+  ArrowLeft,
+  FileText,
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  Wallet,
+} from "lucide-react";
 
-import LoadingSpinner from "@/components/LoadingSpinner";
 import clientLedgerService, {
   ClientLedger,
   ClientLedgerEntry,
 } from "@/services/clientLedgerService";
-import { formatCurrency } from "@/constants";
-import { ClientLedgerPdfDialog } from "@/components/clients/ClientLedgerPdfDialog";
+import ClientLedgerPdf from "@/components/clients/ClientLedgerPdf";
+import { useSettings } from "@/context/SettingsContext";
 
 const ClientLedgerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const clientId = Number(id);
 
+  const { settings } = useSettings();
   const [ledger, setLedger] = useState<ClientLedger | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [settleDialogOpen, setSettleDialogOpen] = useState(false);
   const [settleAmount, setSettleAmount] = useState<string>("");
   const [settleDate, setSettleDate] = useState<string>(
     new Date().toISOString().slice(0, 10)
@@ -55,8 +66,7 @@ const ClientLedgerPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reference, setReference] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
-
-  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const fetchLedger = async () => {
     if (!clientId) return;
@@ -77,8 +87,37 @@ const ClientLedgerPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
-  const handleDownloadPdf = () => {
-    setPdfDialogOpen(true);
+  const handleDownloadPdf = async () => {
+    if (!ledger) return;
+
+    setIsGeneratingPdf(true);
+    try {
+      // Create the PDF document
+      const doc = (
+        <ClientLedgerPdf
+          client={ledger.client}
+          ledgerEntries={ledger.ledger_entries}
+          companyName={settings?.company_name || "اسم الشركة"}
+          settings={settings}
+        />
+      );
+
+      // Generate blob
+      const asPdf = pdf(doc);
+      const blob = await asPdf.toBlob();
+
+      // Create blob URL and open in new tab
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+
+      // Clean up the URL after a delay
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    } catch (err) {
+      console.error("Error generating PDF:", err);
+      setError("فشل في إنشاء ملف PDF");
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const handleSettle = async () => {
@@ -97,7 +136,7 @@ const ClientLedgerPage: React.FC = () => {
         reference_number: reference || undefined,
         notes: notes || undefined,
       });
-      setDialogOpen(false);
+      setSettleDialogOpen(false);
       setSettleAmount("");
       setReference("");
       setNotes("");
@@ -109,7 +148,9 @@ const ClientLedgerPage: React.FC = () => {
     }
   };
 
-  const getTypeColor = (type: ClientLedgerEntry["type"]) => {
+  const getTypeColor = (
+    type: ClientLedgerEntry["type"]
+  ): "error" | "success" | "default" => {
     switch (type) {
       case "sale":
         return "error";
@@ -133,221 +174,335 @@ const ClientLedgerPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <Box className="flex justify-center items-center py-10">
-        <LoadingSpinner />
-        <span className="ml-2 text-gray-600 dark:text-gray-400">
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "400px",
+        }}
+      >
+        <CircularProgress />
+        <Typography sx={{ ml: 2 }} color="text.secondary">
           جاري التحميل...
-        </span>
+        </Typography>
       </Box>
     );
   }
 
   if (error) {
     return (
-      <Alert severity="error" className="my-4">
-        <AlertTitle>خطأ</AlertTitle>
-        {error}
-      </Alert>
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">
+          <AlertTitle>خطأ</AlertTitle>
+          {error}
+          <Button
+            onClick={fetchLedger}
+            sx={{ mt: 2 }}
+            variant="outlined"
+            size="small"
+          >
+            إعادة المحاولة
+          </Button>
+        </Alert>
+      </Box>
     );
   }
 
   if (!ledger) {
     return (
-      <Alert className="my-4" severity="info">
-        كشف الحساب غير متوفر لهذا العميل.
-      </Alert>
+      <Box sx={{ p: 3 }}>
+        <Alert severity="info">كشف الحساب غير متوفر لهذا العميل.</Alert>
+      </Box>
     );
   }
 
   return (
-    <Box className="p-2 md:p-3 h-full overflow-hidden">
+    <Box sx={{ p: { xs: 2, md: 3 }, height: "100%", overflow: "hidden" }}>
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 2,
+          mb: 3,
+          flexWrap: "wrap",
+        }}
+      >
+        <IconButton onClick={() => navigate("/clients")} size="small">
+          <ArrowLeft />
+        </IconButton>
+        <Typography variant="h4" fontWeight="bold" sx={{ flex: 1 }}>
+          كشف حساب العميل
+        </Typography>
         <Button
           variant="outlined"
-          size="small"
-          onClick={() => navigate("/clients")}
+          startIcon={
+            isGeneratingPdf ? <CircularProgress size={16} /> : <FileText />
+          }
+          onClick={handleDownloadPdf}
+          disabled={isGeneratingPdf}
+          sx={{ textTransform: "none" }}
         >
-          <ArrowLeft className="h-4 w-4" />
+          {isGeneratingPdf ? "جاري الإنشاء..." : "فتح PDF"}
         </Button>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          كشف حساب العميل - {ledger.client.name}
-        </h1>
-        <div className="ml-auto flex items-center gap-2">
-          <Button variant="outlined" onClick={handleDownloadPdf}>
-            <FileText className="h-4 w-4 mr-2" /> تحميل PDF
-          </Button>
-          <Button onClick={() => setDialogOpen(true)}>تسوية الدين</Button>
-        </div>
-      </div>
+        <Button
+          variant="contained"
+          startIcon={<Wallet />}
+          onClick={() => setSettleDialogOpen(true)}
+          sx={{ textTransform: "none" }}
+        >
+          تسوية الدين
+        </Button>
+      </Box>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 h-[calc(100vh-140px)] overflow-hidden">
-        {/* Left: Ledger table */}
-        <div className="lg:col-span-2 min-h-0">
-          <Card>
-            <CardHeader>
-              <Typography variant="h6">حركات الحساب</Typography>
-            </CardHeader>
-            <CardContent className="h-[calc(100%-56px)] overflow-auto">
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell className="text-center">التاريخ</TableCell>
-                    <TableCell className="text-center">النوع</TableCell>
-                    <TableCell className="text-center">الوصف</TableCell>
-                    <TableCell className="text-center">مدين</TableCell>
-                    <TableCell className="text-center">دائن</TableCell>
-                    <TableCell className="text-center">الرصيد</TableCell>
-                    <TableCell className="text-center">المرجع</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {ledger.ledger_entries.map((entry) => (
-                    <TableRow key={entry.id}>
-                      <TableCell className="text-center">
-                        {format(new Date(entry.date), "yyyy-MM-dd")}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Chip
-                          label={getTypeLabel(entry.type)}
-                          color={getTypeColor(entry.type) as any}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {entry.description}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {entry.debit > 0 ? formatCurrency(entry.debit) : "-"}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {entry.credit > 0 ? formatCurrency(entry.credit) : "-"}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <span
-                          className={`font-semibold ${
-                            entry.balance > 0
-                              ? "text-red-600"
-                              : "text-green-600"
-                          }`}
-                        >
-                          {formatCurrency(entry.balance)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {entry.reference || "-"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-
-              {ledger.ledger_entries.length === 0 && (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  لا توجد حركات في كشف الحساب.
-                </div>
+      {/* Client Info Banner */}
+      <Paper
+        elevation={0}
+        sx={{
+          p: 3,
+          mb: 3,
+          bgcolor: "primary.50",
+          border: "1px solid",
+          borderColor: "primary.200",
+        }}
+      >
+        <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
+          <Box>
+            <Typography variant="h5" fontWeight="bold" gutterBottom>
+              {ledger.client.name}
+            </Typography>
+            <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+              {ledger.client.phone && (
+                <Typography variant="body2" color="text.secondary">
+                  📞 {ledger.client.phone}
+                </Typography>
               )}
-            </CardContent>
-          </Card>
-        </div>
+              {ledger.client.email && (
+                <Typography variant="body2" color="text.secondary">
+                  📧 {ledger.client.email}
+                </Typography>
+              )}
+              {ledger.client.address && (
+                <Typography variant="body2" color="text.secondary">
+                  📍 {ledger.client.address}
+                </Typography>
+              )}
+            </Box>
+          </Box>
+        </Box>
+      </Paper>
 
-        {/* Right: Summary + Client info */}
-        <div className="space-y-3 min-h-0 overflow-auto">
-          <div className="space-y-4">
-            <Card>
-              <CardContent className="p-4">
-                <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+      {/* Summary Cards */}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "1fr",
+            sm: "repeat(3, 1fr)",
+          },
+          gap: 2,
+          mb: 3,
+        }}
+      >
+        <Card>
+          <CardContent>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <Box
+                sx={{
+                  p: 1.5,
+                  borderRadius: 2,
+                  bgcolor: "error.50",
+                  color: "error.main",
+                }}
+              >
+                <TrendingUp size={24} />
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="caption" color="text.secondary">
                   إجمالي المبيعات
-                </h3>
-                <p className="text-3xl font-bold text-red-600">
-                  {formatCurrency(ledger.summary.total_sales)}
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                </Typography>
+                <Typography variant="h5" fontWeight="bold" color="error.main">
+                  {ledger.summary.total_sales.toLocaleString()}
+                </Typography>
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <Box
+                sx={{
+                  p: 1.5,
+                  borderRadius: 2,
+                  bgcolor: "success.50",
+                  color: "success.main",
+                }}
+              >
+                <TrendingDown size={24} />
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="caption" color="text.secondary">
                   إجمالي الدفعات
-                </h3>
-                <p className="text-3xl font-bold text-green-600">
-                  {formatCurrency(ledger.summary.total_payments)}
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                </Typography>
+                <Typography variant="h5" fontWeight="bold" color="success.main">
+                  {ledger.summary.total_payments.toLocaleString()}
+                </Typography>
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <Box
+                sx={{
+                  p: 1.5,
+                  borderRadius: 2,
+                  bgcolor:
+                    ledger.summary.balance > 0 ? "error.50" : "success.50",
+                  color:
+                    ledger.summary.balance > 0 ? "error.main" : "success.main",
+                }}
+              >
+                <DollarSign size={24} />
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="caption" color="text.secondary">
                   الرصيد الحالي
-                </h3>
-                <p
-                  className={`text-3xl font-bold ${
-                    ledger.summary.balance > 0
-                      ? "text-red-600"
-                      : "text-green-600"
-                  }`}
+                </Typography>
+                <Typography
+                  variant="h5"
+                  fontWeight="bold"
+                  color={
+                    ledger.summary.balance > 0 ? "error.main" : "success.main"
+                  }
                 >
-                  {formatCurrency(ledger.summary.balance)}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+                  {ledger.summary.balance.toLocaleString()}
+                </Typography>
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
 
-          <Card>
-            <CardHeader className="py-3">
-              <Typography variant="h6">بيانات العميل</Typography>
-            </CardHeader>
-            <CardContent className="p-4">
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
-                    البريد الإلكتروني
-                  </p>
-                  <p className="text-gray-900 dark:text-gray-100">
-                    {ledger.client.email || "-"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
-                    رقم الهاتف
-                  </p>
-                  <p className="text-gray-900 dark:text-gray-100">
-                    {ledger.client.phone || "-"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
-                    العنوان
-                  </p>
-                  <p className="text-gray-900 dark:text-gray-100">
-                    {ledger.client.address || "-"}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      {/* Ledger Table */}
+      <Card
+        sx={{
+          height: "calc(100vh - 500px)",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <CardContent
+          sx={{
+            flex: 1,
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <Typography variant="h6" fontWeight="bold" gutterBottom>
+            حركات الحساب
+          </Typography>
+          <Divider sx={{ mb: 2 }} />
 
+          <Box sx={{ flex: 1, overflow: "auto" }}>
+            <Table stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell align="center">التاريخ</TableCell>
+                  <TableCell align="center">النوع</TableCell>
+                  <TableCell align="center">الوصف</TableCell>
+                  <TableCell align="center">مدين</TableCell>
+                  <TableCell align="center">دائن</TableCell>
+                  <TableCell align="center">الرصيد</TableCell>
+                  <TableCell align="center">المرجع</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {ledger.ledger_entries.map((entry, index) => (
+                  <TableRow
+                    key={entry.id}
+                    sx={{
+                      "&:hover": { bgcolor: "action.hover" },
+                      bgcolor:
+                        index % 2 === 0 ? "background.paper" : "action.hover",
+                    }}
+                  >
+                    <TableCell align="center">
+                      {format(new Date(entry.date), "yyyy-MM-dd")}
+                    </TableCell>
+                    <TableCell align="center">
+                      <Chip
+                        label={getTypeLabel(entry.type)}
+                        color={getTypeColor(entry.type)}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell align="center">{entry.description}</TableCell>
+                    <TableCell align="center" dir="ltr">
+                      {entry.debit > 0 ? entry.debit.toLocaleString() : "-"}
+                    </TableCell>
+                    <TableCell align="center" dir="ltr">
+                      {entry.credit > 0 ? entry.credit.toLocaleString() : "-"}
+                    </TableCell>
+                    <TableCell align="center" dir="ltr">
+                      <Typography
+                        fontWeight="bold"
+                        color={
+                          entry.balance > 0 ? "error.main" : "success.main"
+                        }
+                      >
+                        {entry.balance.toLocaleString()}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="center">
+                      {entry.reference || "-"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+            {ledger.ledger_entries.length === 0 && (
+              <Box
+                sx={{
+                  textAlign: "center",
+                  py: 8,
+                  color: "text.secondary",
+                }}
+              >
+                <Typography>لا توجد حركات في كشف الحساب.</Typography>
+              </Box>
+            )}
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* Settle Debt Dialog */}
       <Dialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
+        open={settleDialogOpen}
+        onClose={() => setSettleDialogOpen(false)}
         fullWidth
         maxWidth="sm"
       >
         <DialogTitle>تسوية دين العميل</DialogTitle>
         <DialogContent dividers>
-          <Stack direction="column" spacing={2} className="space-y-4">
+          <Stack spacing={2.5} sx={{ pt: 1 }}>
             <TextField
-              id="amount"
               label="المبلغ"
               type="number"
               fullWidth
               inputProps={{ min: 0, step: 0.01 }}
               value={settleAmount}
               onChange={(e) => setSettleAmount(e.target.value)}
+              placeholder="أدخل المبلغ المدفوع"
             />
             <TextField
-              id="date"
               label="تاريخ الدفع"
               type="date"
               fullWidth
@@ -356,9 +511,8 @@ const ClientLedgerPage: React.FC = () => {
               InputLabelProps={{ shrink: true }}
             />
             <FormControl fullWidth>
-              <InputLabel id="method-label">طريقة الدفع</InputLabel>
+              <InputLabel>طريقة الدفع</InputLabel>
               <Select
-                labelId="method-label"
                 value={settleMethod}
                 label="طريقة الدفع"
                 onChange={(e) => setSettleMethod(e.target.value)}
@@ -372,27 +526,27 @@ const ClientLedgerPage: React.FC = () => {
               </Select>
             </FormControl>
             <TextField
-              id="reference"
-              label="المرجع"
+              label="المرجع (اختياري)"
               fullWidth
               value={reference}
               onChange={(e) => setReference(e.target.value)}
+              placeholder="رقم الشيك، رقم العملية، إلخ"
             />
             <TextField
-              id="notes"
-              label="ملاحظات"
+              label="ملاحظات (اختياري)"
               fullWidth
               multiline
               minRows={2}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
+              placeholder="أي ملاحظات إضافية"
             />
           </Stack>
         </DialogContent>
-        <DialogActions className="flex justify-between gap-1">
+        <DialogActions sx={{ px: 3, py: 2 }}>
           <Button
             variant="outlined"
-            onClick={() => setDialogOpen(false)}
+            onClick={() => setSettleDialogOpen(false)}
             disabled={isSubmitting}
           >
             إلغاء
@@ -401,18 +555,12 @@ const ClientLedgerPage: React.FC = () => {
             variant="contained"
             onClick={handleSettle}
             disabled={isSubmitting}
+            startIcon={isSubmitting ? <CircularProgress size={16} /> : null}
           >
-            تأكيد التسوية
+            {isSubmitting ? "جاري التسوية..." : "تأكيد التسوية"}
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* PDF Dialog */}
-      <ClientLedgerPdfDialog
-        open={pdfDialogOpen}
-        onClose={() => setPdfDialogOpen(false)}
-        ledger={ledger}
-      />
     </Box>
   );
 };
