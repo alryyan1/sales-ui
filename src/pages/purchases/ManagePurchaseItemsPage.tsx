@@ -17,8 +17,9 @@ import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 
 // Services
 import purchaseService from "@/services/purchaseService";
-import productService from "@/services/productService";
-import apiClient from "@/lib/axios";
+import productService, {
+  Product as ProductType,
+} from "@/services/productService";
 
 // Subcomponents
 import {
@@ -27,7 +28,6 @@ import {
   PurchaseItemsList,
   AddPurchaseItemData,
   ProductUnitsMap,
-  Product,
 } from "@/components/purchases/manage-items";
 import { PurchasePdfDialog } from "@/components/purchases/PurchasePdfDialog";
 
@@ -66,11 +66,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
   const [perPage, setPerPage] = useState(20);
   const [search, setSearch] = useState("");
 
-  const {
-    data: purchaseItemsData,
-    isLoading: loadingItems,
-    refetch: refetchItems,
-  } = useQuery({
+  const { data: purchaseItemsData, refetch: refetchItems } = useQuery({
     queryKey: ["purchaseItems", purchaseId, page, perPage, search],
     queryFn: () =>
       purchaseService.getPurchaseItems(purchaseId!, page, perPage, search),
@@ -150,6 +146,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
     onSuccess: () => {
       toast.success("تم بنجاح", { description: "تم تحديث الصنف بنجاح" });
       refetchPurchase();
+      refetchItems();
     },
     onError: (error: unknown) => {
       toast.error("خطأ", {
@@ -165,6 +162,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
     onSuccess: () => {
       toast.success("تم بنجاح", { description: "تم حذف الصنف بنجاح" });
       refetchPurchase();
+      refetchItems();
     },
     onError: (error: unknown) => {
       toast.error("خطأ", {
@@ -175,33 +173,13 @@ const ManagePurchaseItemsPage: React.FC = () => {
 
   const addAllProductsMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiClient.get<{ data: Product[] }>(
-        "/products?limit=1000"
-      );
-      const allProducts = response.data.data || response.data;
-      const existingProductIds =
-        purchase?.items?.map((item) => item.product_id) || [];
-      const newProducts = allProducts.filter(
-        (product) => !existingProductIds.includes(product.id)
-      );
-
-      const promises = newProducts.map((product) => {
-        const data: AddPurchaseItemData = {
-          product_id: product.id,
-          quantity: 0,
-          unit_cost: Number(product.latest_cost_per_sellable_unit) || 0,
-          sale_price:
-            Number(product.suggested_sale_price_per_sellable_unit) || 0,
-        };
-        return purchaseService.addPurchaseItem(purchaseId!, data);
-      });
-
-      await Promise.all(promises);
-      return newProducts.length;
+      const response = await purchaseService.addAllMissingProducts(purchaseId!);
+      return response.added_count;
     },
     onSuccess: (count) => {
       toast.success("تم بنجاح", { description: `تمت إضافة ${count} منتج` });
       refetchPurchase();
+      refetchItems();
     },
     onError: (error: unknown) => {
       toast.error("خطأ", {
@@ -212,19 +190,17 @@ const ManagePurchaseItemsPage: React.FC = () => {
 
   const deleteZeroQuantityItemsMutation = useMutation({
     mutationFn: async () => {
-      const zeroQuantityItems =
-        purchase?.items?.filter((item) => item.quantity === 0) || [];
-      const promises = zeroQuantityItems.map((item) =>
-        purchaseService.deletePurchaseItem(purchaseId!, item.id)
+      const response = await purchaseService.deleteZeroQuantityItems(
+        purchaseId!
       );
-      await Promise.all(promises);
-      return zeroQuantityItems.length;
+      return response.deleted_count;
     },
     onSuccess: (count) => {
       toast.success("تم بنجاح", {
         description: `تم حذف ${count} صنف بكمية صفر`,
       });
       refetchPurchase();
+      refetchItems();
     },
     onError: (error: unknown) => {
       toast.error("خطأ", {
@@ -254,6 +230,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
     onSuccess: () => {
       toast.success("تم بنجاح", { description: "تم تحديث حالة المشتريات" });
       refetchPurchase();
+      refetchItems();
     },
     onError: (error: unknown) => {
       toast.error("خطأ", {
@@ -357,7 +334,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
       try {
         const products = await productService.getProductsByIds(uniqueIds);
         const map: ProductUnitsMap = {};
-        products.forEach((p) => {
+        products.forEach((p: ProductType) => {
           map[p.id] = {
             stocking_unit_name: p.stocking_unit_name ?? null,
             sellable_unit_name: p.sellable_unit_name ?? null,
@@ -504,7 +481,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
         // Pagination Props
         page={page}
         perPage={perPage}
-        total={purchaseItemsData?.meta?.total || 0}
+        total={purchaseItemsData?.total || 0}
         searchQuery={search}
         onPageChange={setPage}
         onPerPageChange={(newPerPage) => {

@@ -34,6 +34,8 @@ import { toast } from "sonner";
 import { OfflineSaleSummaryColumn } from "../components/pos/OfflineSaleSummaryColumn";
 import { PosOfflineHeader } from "../components/pos/PosOfflineHeader";
 import { PosShiftReportPdf } from "../components/pos/PosShiftReportPdf";
+import { CalculatorSummaryDialog } from "../components/pos/CalculatorSummaryDialog";
+import settingService from "@/services/settingService";
 
 export const PosPageOffline = () => {
   const { user } = useAuth();
@@ -41,7 +43,7 @@ export const PosPageOffline = () => {
     useOfflineSync();
   const { getSetting, isLoadingSettings } = useSettings();
   const posMode = getSetting("pos_mode", "shift") as "shift" | "days";
-
+  // console.log(settingService.getSettings(),'settingsservice')
   // Date state for days mode (initialize early, before shift state)
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     // Use local time instead of UTC (which toISOString uses)
@@ -61,15 +63,13 @@ export const PosPageOffline = () => {
     is_open: boolean;
   } | null>(null);
   const [shiftLoading, setShiftLoading] = useState(false);
-  const [selectedShiftId, setSelectedShiftId] = useState<number | null>(() => {
-    // Initialize to null in days mode to prevent race conditions
-    return posMode === "days" ? null : null;
-  });
+  const [selectedShiftId, setSelectedShiftId] = useState<number | null>(null);
   const [availableShiftIds, setAvailableShiftIds] = useState<number[]>([]);
+  const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
 
   useEffect(() => {
-    // Skip shift fetching in days mode
-    if (posMode === "days") {
+    // Skip shift fetching in days mode or if settings are still loading
+    if (isLoadingSettings || posMode === "days") {
       return;
     }
 
@@ -136,7 +136,7 @@ export const PosPageOffline = () => {
       }
     };
     fetchShift();
-  }, [isOnline, posMode]); // Run on mount and when isOnline or posMode changes
+  }, [isOnline, posMode, isLoadingSettings]); // Run on mount and when isOnline, posMode or isLoadingSettings changes
 
   // State for tracking client update loading
   const [isUpdatingClient, setIsUpdatingClient] = useState(false);
@@ -233,6 +233,8 @@ export const PosPageOffline = () => {
 
   // Load Products and Clients on Mount & Auto-update
   useEffect(() => {
+    if (isLoadingSettings) return;
+
     const loadAndSync = async () => {
       setIsPageLoading(true);
       try {
@@ -267,7 +269,7 @@ export const PosPageOffline = () => {
     };
 
     loadAndSync();
-  }, [isOnline, user?.warehouse_id]);
+  }, [isOnline, user?.warehouse_id, isLoadingSettings]);
 
   // Reload pending sales list and refresh products when sync finishes
   useEffect(() => {
@@ -276,7 +278,7 @@ export const PosPageOffline = () => {
       const timeSinceLastLoad = now - lastLoadTimeRef.current;
 
       // Only reload synced sales if enough time has passed since last load
-      if (timeSinceLastLoad >= LOAD_DEBOUNCE_MS) {
+      if (timeSinceLastLoad >= LOAD_DEBOUNCE_MS && !isLoadingSettings) {
         loadLocalPendingSales();
         loadSyncedSales();
         lastLoadTimeRef.current = now;
@@ -1095,6 +1097,11 @@ export const PosPageOffline = () => {
 
   // Load synced sales from server API (always fetch fresh)
   const loadSyncedSales = useCallback(async () => {
+    if (isLoadingSettings) {
+      console.log("[loadSyncedSales] Settings still loading, skipping");
+      return;
+    }
+
     // In days mode, require selectedDate; in shift mode, require selectedShiftId
     console.log("[loadSyncedSales] Called with:", {
       posMode,
@@ -1223,14 +1230,15 @@ export const PosPageOffline = () => {
       setSyncedSales(
         mapped.sort((a, b) => b.offline_created_at - a.offline_created_at)
       );
-    } catch (e) {
-      console.warn("Could not fetch synced sales from server", e);
+    } catch (error: any) {
+      console.error("[loadSyncedSales] Failed to load synced sales:", error);
       // Don't clear existing synced sales - keep them visible even if fetch fails
       // This allows synced sales to remain visible when backend is temporarily unavailable
+      lastSyncedSalesLoadRef.current = Date.now();
     } finally {
       isLoadingSyncedSalesRef.current = false;
     }
-  }, [selectedShiftId, posMode, selectedDate]);
+  }, [posMode, selectedDate, selectedShiftId, isLoadingSettings]);
 
   // Update available shift IDs from both sources
   const updateAvailableShiftIds = useCallback(async () => {
@@ -1260,6 +1268,8 @@ export const PosPageOffline = () => {
 
   // Reload when shift/selectedShiftId changes (shift mode) or selectedDate changes (days mode)
   useEffect(() => {
+    if (isLoadingSettings) return;
+
     // Wait a tick to ensure mode state is fully initialized
     const timer = setTimeout(() => {
       if (posMode === "days") {
@@ -1290,7 +1300,7 @@ export const PosPageOffline = () => {
     }, 100); // Small delay to ensure state is settled
 
     return () => clearTimeout(timer);
-  }, [selectedShiftId, shift?.id, posMode, selectedDate]); // Removed function dependencies to prevent loops
+  }, [selectedShiftId, shift?.id, posMode, selectedDate, isLoadingSettings]); // Added isLoadingSettings to deps
 
   // Separate effect to handle coming back online (without causing loop)
   useEffect(() => {
@@ -1692,6 +1702,7 @@ export const PosPageOffline = () => {
         isSaleSelected={isPendingSaleSelected}
         onPaymentShortcut={handlePlusAction}
         onPrintShiftReport={() => setIsShiftReportOpen(true)}
+        onShowSummary={() => setIsSummaryDialogOpen(true)}
         isPageLoading={isPageLoading}
         posMode={posMode}
       />
@@ -1876,6 +1887,19 @@ export const PosPageOffline = () => {
           </PDFViewer>
         </DialogContent>
       </Dialog>
+
+      {/* Calculator Summary Dialog */}
+      <CalculatorSummaryDialog
+        open={isSummaryDialogOpen}
+        onClose={() => setIsSummaryDialogOpen(false)}
+        sales={syncedSales}
+        periodTitle={
+          posMode === "shift"
+            ? `الوردية #${selectedShiftId || shift?.id || "-"}`
+            : `يوم ${selectedDate}`
+        }
+        dateFrom={selectedDate}
+      />
     </Box>
   );
 };

@@ -311,7 +311,7 @@ const ProductsPage: React.FC = () => {
       <Box
         className="dark:bg-gray-900 h-[calc(100vh-100px)] w-full max-w-none products-page-full-width"
         sx={{
-          direction: "ltr",
+          direction: "",
           width: "100%",
           maxWidth: "none",
           margin: 0,

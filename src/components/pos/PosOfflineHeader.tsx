@@ -24,6 +24,7 @@ import {
   Printer,
   Wifi,
   WifiOff,
+  Calculator,
 } from "lucide-react";
 import { Product } from "../../services/productService";
 import { formatNumber } from "@/constants";
@@ -51,7 +52,7 @@ interface PosOfflineHeaderProps {
   onShiftSelect: (id: number | null) => void;
   onPrintShiftReport: () => void;
   posMode?: "shift" | "days"; // POS operation mode
-  
+
   // Date Management (for days mode)
   selectedDate?: string;
   onDateSelect?: (date: string) => void;
@@ -65,6 +66,7 @@ interface PosOfflineHeaderProps {
   isPageLoading?: boolean; // Page loading state to disable PDF button
   // Drawer
   onDrawerToggle?: () => void;
+  onShowSummary?: () => void;
 }
 
 export interface PosOfflineHeaderRef {
@@ -96,6 +98,7 @@ export const PosOfflineHeader = React.forwardRef<
       isSaleSelected,
       onDrawerToggle,
       onPrintShiftReport,
+      onShowSummary,
       isPageLoading = false,
       posMode = "shift",
     },
@@ -461,9 +464,13 @@ export const PosOfflineHeader = React.forwardRef<
                   px: 1.5,
                   py: 0.75,
                   borderRadius: 2,
-                  bgcolor: isOnline ? alpha(theme.palette.success.main, 0.1) : alpha(theme.palette.error.main, 0.1),
+                  bgcolor: isOnline
+                    ? alpha(theme.palette.success.main, 0.1)
+                    : alpha(theme.palette.error.main, 0.1),
                   border: "1px solid",
-                  borderColor: isOnline ? alpha(theme.palette.success.main, 0.2) : alpha(theme.palette.error.main, 0.2),
+                  borderColor: isOnline
+                    ? alpha(theme.palette.success.main, 0.2)
+                    : alpha(theme.palette.error.main, 0.2),
                 }}
               >
                 {isOnline ? (
@@ -560,7 +567,7 @@ export const PosOfflineHeader = React.forwardRef<
                 </IconButton>
               </Box>
             )}
-            
+
             {/* Date Picker - Only show in days mode */}
             {posMode === "days" && (
               <Box
@@ -627,12 +634,45 @@ export const PosOfflineHeader = React.forwardRef<
               </IconButton>
             </Tooltip>
 
+            {/* Calculator Summary Trigger */}
+            <Tooltip title="ملخص الحسابات">
+              <IconButton
+                onClick={onShowSummary}
+                sx={{
+                  border: "2px solid",
+                  borderColor: "grey.300",
+                  color: "text.secondary",
+                  borderRadius: 2,
+                  width: 44,
+                  height: 44,
+                  transition: "all 0.2s ease-in-out",
+                  "&:hover": {
+                    borderColor: "primary.main",
+                    color: "primary.main",
+                    bgcolor: alpha(theme.palette.primary.main, 0.08),
+                    transform: "scale(1.05)",
+                  },
+                }}
+              >
+                <Calculator size={22} />
+              </IconButton>
+            </Tooltip>
+
             {/* Shift Report Button - Only show in shift mode */}
             {posMode === "shift" && (
-              <Tooltip title={isPageLoading ? "جاري تحميل البيانات..." : "تقرير الوردية"}>
+              <Tooltip
+                title={
+                  isPageLoading ? "جاري تحميل البيانات..." : "تقرير الوردية"
+                }
+              >
                 <IconButton
                   onClick={onPrintShiftReport}
-                  disabled={!selectedShiftId || shiftLoading || isSyncing || isPageLoading}
+                  disabled={
+                    !selectedShiftId ||
+                    shiftLoading ||
+                    isSyncing ||
+                    isPageLoading
+                  }
                   sx={{
                     border: "2px solid",
                     borderColor: "grey.300",
@@ -669,7 +709,10 @@ export const PosOfflineHeader = React.forwardRef<
                             height: 6,
                             borderRadius: "50%",
                             bgcolor: "success.main",
-                            boxShadow: `0 0 0 2px ${alpha(theme.palette.success.main, 0.2)}`,
+                            boxShadow: `0 0 0 2px ${alpha(
+                              theme.palette.success.main,
+                              0.2
+                            )}`,
                             mr: 0.5,
                           }}
                         />
@@ -753,7 +796,10 @@ export const PosOfflineHeader = React.forwardRef<
                           bgcolor: "error.main",
                           color: "white",
                           transform: "scale(1.05)",
-                          boxShadow: `0 2px 8px ${alpha(theme.palette.error.main, 0.3)}`,
+                          boxShadow: `0 2px 8px ${alpha(
+                            theme.palette.error.main,
+                            0.3
+                          )}`,
                         },
                       }}
                     >

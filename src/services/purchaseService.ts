@@ -355,6 +355,40 @@ const purchaseService = {
   },
 
   /**
+   * Delete all items with quantity = 0 for the specified purchase.
+   */
+  deleteZeroQuantityItems: async (
+    purchaseId: number
+  ): Promise<{ purchase: Purchase; deleted_count: number }> => {
+    try {
+      const response = await apiClient.delete(
+        `/purchases/${purchaseId}/items-zero-quantity`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error deleting zero quantity items:", error);
+      throw new Error(getErrorMessage(error));
+    }
+  },
+
+  /**
+   * Add all products not currently in the purchase.
+   */
+  addAllMissingProducts: async (
+    purchaseId: number
+  ): Promise<{ purchase: Purchase; added_count: number }> => {
+    try {
+      const response = await apiClient.post(
+        `/purchases/${purchaseId}/add-all-missing-products`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error adding all missing products:", error);
+      throw new Error(getErrorMessage(error));
+    }
+  },
+
+  /**
    * Import purchase items from Excel file - Preview: Preview data with column mapping
    * @param file Excel file
    * @param columnMapping Mapping of purchase item fields to Excel columns
