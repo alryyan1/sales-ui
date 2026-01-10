@@ -31,7 +31,7 @@ const styles = StyleSheet.create({
   logo: {
     height: "100%",
     objectFit: "contain",
-  },
+  }, 
   infoSection: {
     flexDirection: "row",
     justifyContent: "space-between",

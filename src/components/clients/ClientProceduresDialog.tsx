@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
   Button,
   Typography,
@@ -23,9 +22,9 @@ import {
 } from "lucide-react";
 import { Client } from "../../services/clientService";
 import { PDFDownloadLink } from "@react-pdf/renderer";
-import ClientLedgerPdf from "./ClientLedgerPdf";
+import { ClientLedgerPdf } from "./ClientLedgerPdf";
 import clientLedgerService, {
-  ClientLedgerEntry,
+  ClientLedger,
 } from "../../services/clientLedgerService";
 
 interface ClientProceduresDialogProps {
@@ -50,7 +49,7 @@ const ClientProceduresDialog: React.FC<ClientProceduresDialogProps> = ({
   companyName = "اسم الشركة",
 }) => {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const [ledgerData, setLedgerData] = useState<ClientLedgerEntry[]>([]);
+  const [ledger, setLedger] = useState<ClientLedger | null>(null);
 
   // Better approach for "Download PDF": Button that triggers fetch, then renders the download link conditionally.
   const [readyToDownload, setReadyToDownload] = useState(false);
@@ -63,7 +62,7 @@ const ClientProceduresDialog: React.FC<ClientProceduresDialogProps> = ({
       // Function name is 'getLedger' in service, assuming it returns ClientLedger object which has ledger_entries
       const response = await clientLedgerService.getLedger(client.id);
       // The service returns the whole object structure, we need ledger_entries
-      setLedgerData(response.ledger_entries);
+      setLedger(response);
       setReadyToDownload(true);
     } catch (error) {
       console.error("Failed to fetch ledger for PDF", error);
@@ -319,7 +318,7 @@ const ClientProceduresDialog: React.FC<ClientProceduresDialogProps> = ({
 
           <div className="col-span-1">
             {/* PDF Generation Logic */}
-            {!readyToDownload ? (
+            {!readyToDownload || !ledger ? (
               <Button
                 variant="outlined"
                 fullWidth
@@ -363,11 +362,7 @@ const ClientProceduresDialog: React.FC<ClientProceduresDialogProps> = ({
             ) : (
               <PDFDownloadLink
                 document={
-                  <ClientLedgerPdf
-                    client={client}
-                    ledgerEntries={ledgerData}
-                    companyName={companyName}
-                  />
+                  <ClientLedgerPdf ledger={ledger} companyName={companyName} />
                 }
                 fileName={`ledger_${client.name}_${
                   new Date().toISOString().split("T")[0]

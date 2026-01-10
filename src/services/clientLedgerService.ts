@@ -3,11 +3,12 @@ import apiClient from "../lib/axios";
 
 export interface ClientLedgerEntry {
   id: string;
+  sale_id?: number;
   date: string;
-  type: 'sale' | 'payment';
+  type: "sale" | "payment";
   description: string;
-  debit: number;   // Amount client owes (e.g., sale)
-  credit: number;  // Amount received from client (payment)
+  debit: number; // Amount client owes (e.g., sale)
+  credit: number; // Amount received from client (payment)
   balance: number;
   reference?: string;
   notes?: string;
@@ -40,17 +41,29 @@ const clientLedgerService = {
   openLedgerPdfInNewTab: async (clientId: number): Promise<void> => {
     // Fetch with auth headers, then open blob in new tab to avoid auth redirect issues
     const response = await apiClient.get(`/clients/${clientId}/ledger/pdf`, {
-      responseType: 'blob',
+      responseType: "blob",
     });
-    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const blob = new Blob([response.data], { type: "application/pdf" });
     const url = window.URL.createObjectURL(blob);
-    window.open(url, '_blank');
+    window.open(url, "_blank");
     // Revoke URL later to keep tab working
     setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
   },
 
-  settleDebt: async (clientId: number, data: { amount: number; payment_date: string; method: string; reference_number?: string; notes?: string; }) => {
-    const response = await apiClient.post(`/clients/${clientId}/settle-debt`, data);
+  settleDebt: async (
+    clientId: number,
+    data: {
+      amount: number;
+      payment_date: string;
+      method: string;
+      reference_number?: string;
+      notes?: string;
+    }
+  ) => {
+    const response = await apiClient.post(
+      `/clients/${clientId}/settle-debt`,
+      data
+    );
     return response.data;
   },
 
@@ -58,8 +71,8 @@ const clientLedgerService = {
     if (error?.response?.data?.message) return error.response.data.message;
     if (error?.response?.data?.error) return error.response.data.error;
     if (error?.message) return error.message;
-    return 'An error occurred while processing your request.';
+    return "An error occurred while processing your request.";
   },
 };
 
-export default clientLedgerService; 
+export default clientLedgerService;

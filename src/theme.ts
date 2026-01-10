@@ -75,7 +75,11 @@ const theme = createTheme(
         },
       },
       MuiButton: {
+        
         styleOverrides: {
+          startIcon: {
+            marginLeft: "12px",
+          },
           root: {
             textTransform: "none",
             fontWeight: 600,

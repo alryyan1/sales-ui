@@ -39,13 +39,18 @@ import {
   TrendingUp,
   TrendingDown,
   Wallet,
+  Receipt,
+  X,
 } from "lucide-react";
 
 import clientLedgerService, {
   ClientLedger,
   ClientLedgerEntry,
 } from "@/services/clientLedgerService";
-import ClientLedgerPdf from "@/components/clients/ClientLedgerPdf";
+import { ClientLedgerPdf } from "@/components/clients/ClientLedgerPdf";
+import { OfflineInvoiceA4Pdf } from "@/components/pos/OfflineInvoiceA4Pdf";
+import saleService from "@/services/saleService";
+import { OfflineSale, OfflineSaleItem } from "@/services/db";
 import { useSettings } from "@/context/SettingsContext";
 
 const ClientLedgerPage: React.FC = () => {
@@ -67,6 +72,65 @@ const ClientLedgerPage: React.FC = () => {
   const [reference, setReference] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [fetchingSaleId, setFetchingSaleId] = useState<number | null>(null);
+  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+
+  const handleSaleClick = async (entry: ClientLedgerEntry) => {
+    if (entry.type !== "sale" || !entry.sale_id) return;
+
+    setFetchingSaleId(entry.sale_id);
+    setError(null);
+
+    try {
+      // Fetch full sale details including items
+      const sale = await saleService.getSale(entry.sale_id);
+
+      if (!sale) {
+        throw new Error("لم يتم العثور على بيانات العملية");
+      }
+
+      // Map Sale to OfflineSale format for the PDF component
+      const offlineSale: OfflineSale = {
+        ...sale,
+        tempId: String(sale.id),
+        offline_created_at: new Date(sale.created_at).getTime(),
+        is_synced: true,
+        items: (sale.items || []).map((item) => ({
+          ...item,
+          product_name: item.product_name || item.product?.name,
+          unit_price: Number(item.unit_price),
+        })) as OfflineSaleItem[],
+        status: (sale.status as any) || "completed",
+        client_id: sale.client_id,
+        client_name: sale.client_name || sale.client?.name,
+      };
+
+      // Create the PDF document
+      const doc = (
+        <OfflineInvoiceA4Pdf
+          sale={offlineSale}
+          items={offlineSale.items}
+          settings={settings}
+          userName={sale.user_name || ""}
+        />
+      );
+
+      // Generate blob
+      const asPdf = pdf(doc);
+      const blob = await asPdf.toBlob();
+
+      // Create blob URL
+      const url = URL.createObjectURL(blob);
+      setPdfUrl(url);
+      setPdfDialogOpen(true);
+    } catch (err: any) {
+      console.error("Error generating invoice PDF:", err);
+      setError(err.message || "فشل في إنشاء فاتورة PDF");
+    } finally {
+      setFetchingSaleId(null);
+    }
+  };
 
   const fetchLedger = async () => {
     if (!clientId) return;
@@ -87,6 +151,15 @@ const ClientLedgerPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
+  // Clean up PDF URLs to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (pdfUrl && pdfUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(pdfUrl);
+      }
+    };
+  }, [pdfUrl]);
+
   const handleDownloadPdf = async () => {
     if (!ledger) return;
 
@@ -95,10 +168,9 @@ const ClientLedgerPage: React.FC = () => {
       // Create the PDF document
       const doc = (
         <ClientLedgerPdf
-          client={ledger.client}
-          ledgerEntries={ledger.ledger_entries}
-          companyName={settings?.company_name || "اسم الشركة"}
+          ledger={ledger}
           settings={settings}
+          companyName={settings?.company_name || "اسم الشركة"}
         />
       );
 
@@ -232,9 +304,14 @@ const ClientLedgerPage: React.FC = () => {
         <IconButton onClick={() => navigate("/clients")} size="small">
           <ArrowLeft />
         </IconButton>
-        <Typography variant="h4" fontWeight="bold" sx={{ flex: 1 }}>
-          كشف حساب العميل
-        </Typography>
+        <Stack direction={"column"}>
+          <Typography variant="h4" fontWeight="bold" sx={{ flex: 1 }}>
+            كشف حساب العميل {ledger.client.name}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {ledger.client.phone}
+          </Typography>
+        </Stack>
         <Button
           variant="outlined"
           startIcon={
@@ -242,56 +319,21 @@ const ClientLedgerPage: React.FC = () => {
           }
           onClick={handleDownloadPdf}
           disabled={isGeneratingPdf}
-          sx={{ textTransform: "none" }}
+          sx={{
+            textTransform: "none",
+            "& .MuiButton-startIcon": { marginLeft: "12px" },
+          }}
         >
           {isGeneratingPdf ? "جاري الإنشاء..." : "فتح PDF"}
         </Button>
         <Button
-          variant="contained"
+          variant="outlined"
           startIcon={<Wallet />}
           onClick={() => setSettleDialogOpen(true)}
-          sx={{ textTransform: "none" }}
         >
           تسوية الدين
         </Button>
       </Box>
-
-      {/* Client Info Banner */}
-      <Paper
-        elevation={0}
-        sx={{
-          p: 3,
-          mb: 3,
-          bgcolor: "primary.50",
-          border: "1px solid",
-          borderColor: "primary.200",
-        }}
-      >
-        <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
-          <Box>
-            <Typography variant="h5" fontWeight="bold" gutterBottom>
-              {ledger.client.name}
-            </Typography>
-            <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
-              {ledger.client.phone && (
-                <Typography variant="body2" color="text.secondary">
-                  📞 {ledger.client.phone}
-                </Typography>
-              )}
-              {ledger.client.email && (
-                <Typography variant="body2" color="text.secondary">
-                  📧 {ledger.client.email}
-                </Typography>
-              )}
-              {ledger.client.address && (
-                <Typography variant="body2" color="text.secondary">
-                  📍 {ledger.client.address}
-                </Typography>
-              )}
-            </Box>
-          </Box>
-        </Box>
-      </Paper>
 
       {/* Summary Cards */}
       <Box
@@ -392,7 +434,7 @@ const ClientLedgerPage: React.FC = () => {
       {/* Ledger Table */}
       <Card
         sx={{
-          height: "calc(100vh - 500px)",
+          height: "calc(100vh - 120px)",
           display: "flex",
           flexDirection: "column",
         }}
@@ -421,6 +463,8 @@ const ClientLedgerPage: React.FC = () => {
                   <TableCell align="center">دائن</TableCell>
                   <TableCell align="center">الرصيد</TableCell>
                   <TableCell align="center">المرجع</TableCell>
+                  <TableCell align="center">ملاحظات</TableCell>
+                  <TableCell align="center">إجراءات</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -428,7 +472,9 @@ const ClientLedgerPage: React.FC = () => {
                   <TableRow
                     key={entry.id}
                     sx={{
-                      "&:hover": { bgcolor: "action.hover" },
+                      "&:hover": {
+                        bgcolor: "action.hover",
+                      },
                       bgcolor:
                         index % 2 === 0 ? "background.paper" : "action.hover",
                     }}
@@ -463,6 +509,31 @@ const ClientLedgerPage: React.FC = () => {
                     <TableCell align="center">
                       {entry.reference || "-"}
                     </TableCell>
+                    <TableCell align="center">{entry.notes || "-"}</TableCell>
+                    <TableCell align="center">
+                      {entry.type === "sale" && entry.sale_id ? (
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => handleSaleClick(entry)}
+                          disabled={fetchingSaleId !== null}
+                          startIcon={
+                            fetchingSaleId === entry.sale_id ? (
+                              <CircularProgress size={16} />
+                            ) : (
+                              <Receipt size={16} />
+                            )
+                          }
+                          sx={{ minWidth: "fit-content" }}
+                        >
+                          {fetchingSaleId === entry.sale_id
+                            ? "جاري التحميل..."
+                            : "طباعه الفاتوره"}
+                        </Button>
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -482,6 +553,46 @@ const ClientLedgerPage: React.FC = () => {
           </Box>
         </CardContent>
       </Card>
+
+      {/* PDF Viewer Dialog */}
+      <Dialog
+        open={pdfDialogOpen}
+        onClose={() => setPdfDialogOpen(false)}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: { height: "90vh", display: "flex", flexDirection: "column" },
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            p: 2,
+            borderBottom: 1,
+            borderColor: "divider",
+          }}
+        >
+          <Typography variant="h6" fontWeight="bold">
+            معاينة الفاتورة
+          </Typography>
+          <IconButton onClick={() => setPdfDialogOpen(false)} size="small">
+            <X size={20} />
+          </IconButton>
+        </Box>
+        <DialogContent sx={{ p: 0, flex: 1, overflow: "hidden" }}>
+          {pdfUrl && (
+            <iframe
+              src={pdfUrl}
+              width="100%"
+              height="100%"
+              style={{ border: "none" }}
+              title="Invoice PDF"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Settle Debt Dialog */}
       <Dialog

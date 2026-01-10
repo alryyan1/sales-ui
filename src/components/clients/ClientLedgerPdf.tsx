@@ -116,13 +116,14 @@ const styles = StyleSheet.create({
     fontSize: 9,
   },
   // Columns
-  colDate: { width: "15%", textAlign: "center" },
-  colType: { width: "10%", textAlign: "center" },
-  colDesc: { width: "25%", textAlign: "right" },
-  colDebit: { width: "12%", textAlign: "left" },
-  colCredit: { width: "12%", textAlign: "left" },
-  colBalance: { width: "14%", textAlign: "left" },
-  colRef: { width: "12%", textAlign: "center" },
+  colDate: { width: "12%", textAlign: "center" },
+  colType: { width: "8%", textAlign: "center" },
+  colDesc: { width: "20%", textAlign: "right" },
+  colDebit: { width: "10%", textAlign: "left" },
+  colCredit: { width: "10%", textAlign: "left" },
+  colBalance: { width: "12%", textAlign: "left" },
+  colRef: { width: "10%", textAlign: "center" },
+  colNotes: { width: "18%", textAlign: "right" },
 
   summarySection: {
     marginTop: 20,
@@ -166,14 +167,16 @@ const styles = StyleSheet.create({
 interface ClientLedgerPdfProps {
   ledger: ClientLedger;
   settings?: AppSettings | null;
+  companyName?: string;
 }
 
 export const ClientLedgerPdf: React.FC<ClientLedgerPdfProps> = ({
   ledger,
   settings,
+  companyName,
 }) => {
   const currencySymbol = settings?.currency_symbol || "SDG";
-  
+
   const getTypeLabel = (type: string) => {
     switch (type) {
       case "sale":
@@ -228,7 +231,7 @@ export const ClientLedgerPdf: React.FC<ClientLedgerPdfProps> = ({
             </View>
             <View style={styles.companyInfo}>
               <Text style={styles.companyName}>
-                {settings?.company_name || "اسم الشركة"}
+                {settings?.company_name || companyName || "اسم الشركة"}
               </Text>
               {settings?.company_address && (
                 <Text style={styles.companyDetail}>
@@ -291,6 +294,7 @@ export const ClientLedgerPdf: React.FC<ClientLedgerPdfProps> = ({
             <Text style={styles.colCredit}>دائن</Text>
             <Text style={styles.colBalance}>الرصيد</Text>
             <Text style={styles.colRef}>المرجع</Text>
+            <Text style={styles.colNotes}>ملاحظات</Text>
           </View>
           {ledger.ledger_entries.map((entry, index) => (
             <View key={entry.id || index} style={styles.tableRow}>
@@ -300,10 +304,14 @@ export const ClientLedgerPdf: React.FC<ClientLedgerPdfProps> = ({
               <Text style={styles.colType}>{getTypeLabel(entry.type)}</Text>
               <Text style={styles.colDesc}>{entry.description}</Text>
               <Text style={styles.colDebit}>
-                {entry.debit > 0 ? `${formatNumber(entry.debit)} ${currencySymbol}` : "-"}
+                {entry.debit > 0
+                  ? `${formatNumber(entry.debit)} ${currencySymbol}`
+                  : "-"}
               </Text>
               <Text style={styles.colCredit}>
-                {entry.credit > 0 ? `${formatNumber(entry.credit)} ${currencySymbol}` : "-"}
+                {entry.credit > 0
+                  ? `${formatNumber(entry.credit)} ${currencySymbol}`
+                  : "-"}
               </Text>
               <Text
                 style={[
@@ -314,6 +322,7 @@ export const ClientLedgerPdf: React.FC<ClientLedgerPdfProps> = ({
                 {formatNumber(entry.balance)} {currencySymbol}
               </Text>
               <Text style={styles.colRef}>{entry.reference || "-"}</Text>
+              <Text style={styles.colNotes}>{entry.notes || "-"}</Text>
             </View>
           ))}
         </View>
