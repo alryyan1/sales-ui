@@ -987,6 +987,15 @@ export const PosPageOffline = () => {
     [mapSaleToOfflineSale, setFilterSaleId, handleSelectPendingSale]
   );
 
+  // Calculate expected sale number for new drafts
+  const expectedSaleNumber = useMemo(() => {
+    if (syncedSales.length === 0) return 1;
+    const maxOrderNum = Math.max(
+      ...syncedSales.map((s) => s.sale_order_number || 0)
+    );
+    return maxOrderNum + 1;
+  }, [syncedSales]);
+
   // Fetch sales by date from backend
   const fetchSalesByDate = useCallback(
     async (date: string) => {
@@ -1188,6 +1197,15 @@ export const PosPageOffline = () => {
         sale_date: s.sale_date,
         total_amount: Number(s.total_amount),
         paid_amount: Number(s.paid_amount),
+        payments:
+          s.payments?.map((p: any) => ({
+            id: p.id,
+            amount: Number(p.amount),
+            payment_method: p.payment_method,
+            payment_date: p.payment_date,
+            user_id: p.user_id,
+            user: p.user,
+          })) || [],
         client_id: s.client_id,
         client_name: s.client_name,
         invoice_number: s.invoice_number,
@@ -1220,7 +1238,6 @@ export const PosPageOffline = () => {
               purchase_item_id: i.purchase_item_id,
             };
           }) || [],
-        payments: s.payments || [],
         notes: s.notes,
         created_at: s.created_at,
         user_id: s.user_id,
@@ -1825,6 +1842,7 @@ export const PosPageOffline = () => {
           >
             <OfflineSaleSummaryColumn
               currentSale={currentSale}
+              expectedSaleNumber={expectedSaleNumber}
               currentSaleItems={cartItems}
               onUpdateSale={handleSaleUpdate}
               onCompleteSale={handleCompleteSale}

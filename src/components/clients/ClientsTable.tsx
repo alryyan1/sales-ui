@@ -40,14 +40,24 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
         <Table aria-label="جدول العملاء">
           <TableHead>
             <TableRow>
-              <TableCell align="center">#</TableCell>
-              <TableCell>الاسم</TableCell>
+              <TableCell align="center" className="text-xl font-bold">
+                #
+              </TableCell>
+              <TableCell sx={{fontSize:'20px',textAlign:'center'}}  className="text-2xl text-center">الاسم</TableCell>
               {/* <TableCell align="center">البريد الإلكتروني</TableCell> */}
-              <TableCell align="center">رقم الهاتف</TableCell>
+              <TableCell sx={{fontSize:'18px'}} className="text-xl text-center" align="center">
+                رقم الهاتف
+              </TableCell>
               {/* <TableCell align="center">العنوان</TableCell> */}
-              <TableCell align="center">إجمالي المديونية</TableCell>
-              <TableCell align="center">إجمالي المدفوعات</TableCell>
-              <TableCell align="center">الرصيد</TableCell>
+              <TableCell sx={{fontSize:'18px'}} className="text-xl text-center" align="center">
+                إجمالي المديونية
+              </TableCell>
+              <TableCell sx={{fontSize:'18px'}} className="text-xl text-center" align="center">
+                إجمالي المدفوعات
+              </TableCell>
+              <TableCell sx={{fontSize:'18px'}} className="text-xl text-center" align="center">
+                الرصيد
+              </TableCell>
               {/* Removed Actions Header */}
             </TableRow>
           </TableHead>
@@ -57,28 +67,48 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
                 key={client.id}
                 onClick={() => onClientClick && onClientClick(client)}
                 sx={{
+                  textAlign:'center',
                   cursor: onClientClick ? "pointer" : "default",
                   "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.04)" },
                 }}
               >
                 {/* Client Data Cells */}
-                <TableCell align="center">{client.id || "---"}</TableCell>
-                <TableCell>{client.name}</TableCell>
+                <TableCell sx={{fontSize:'18px'}} align="center" className="text-xl">
+                  {client.id || "---"}
+                </TableCell>
+                <TableCell sx={{fontSize:'18px'}} className="text-xl text-center" align="center">
+                  {client.name}
+                </TableCell>
                 {/* <TableCell align="center">{client.email || "---"}</TableCell> */}
-                <TableCell align="center">{client.phone || "---"}</TableCell>
+                <TableCell sx={{fontSize:'18px'}} className="text-xl text-center" align="center">
+                  {client.phone || "---"}
+                </TableCell>
                 {/* <TableCell align="center">{client.address || "---"}</TableCell> */}
 
                 {/* Financial Summary */}
-                <TableCell align="center" dir="ltr">
+                <TableCell
+                 sx={{fontSize:'18px'}}
+                  className="text-xl text-center"
+                  align="center"
+                  dir="ltr"
+                >
                   {(client.total_debit || 0).toLocaleString()}
                 </TableCell>
-                <TableCell align="center" dir="ltr">
+                <TableCell
+                 sx={{fontSize:'18px'}}
+                  className="text-xl text-center"
+                  align="center"
+                  dir="ltr"
+                >
                   {(client.total_credit || 0).toLocaleString()}
                 </TableCell>
                 <TableCell
+                 
                   align="center"
                   dir="ltr"
+                  className="text-xl"
                   sx={{
+                    fontSize:'18px',
                     color:
                       (client.balance || 0) > 0 ? "error.main" : "success.main",
                     fontWeight: "bold",

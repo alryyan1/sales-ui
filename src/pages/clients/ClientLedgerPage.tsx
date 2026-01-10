@@ -330,6 +330,7 @@ const ClientLedgerPage: React.FC = () => {
           variant="outlined"
           startIcon={<Wallet />}
           onClick={() => setSettleDialogOpen(true)}
+          disabled={ledger.summary.balance === 0}
         >
           تسوية الدين
         </Button>

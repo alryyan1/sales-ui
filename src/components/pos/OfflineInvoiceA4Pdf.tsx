@@ -355,7 +355,7 @@ export const OfflineInvoiceA4Pdf: React.FC<OfflineInvoiceA4PdfProps> = ({
         <View style={styles.summaryContainer}>
           <View style={styles.summaryBox}>
             {/* Last Due */}
-            <View style={styles.summaryRow}>
+            {/* <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Last Due</Text>
               <View
                 style={[
@@ -365,16 +365,16 @@ export const OfflineInvoiceA4Pdf: React.FC<OfflineInvoiceA4PdfProps> = ({
               >
                 <Text style={styles.summaryValueBlue}>{lastDue}</Text>
               </View>
-            </View>
-
+            </View> */}
+{/* 
             <View
               style={{ height: 1, backgroundColor: "#000", marginBottom: 5 }}
-            />
+            /> */}
 
-            <View style={styles.summaryRow}>
+            {/* <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Invoice Total</Text>
               <Text style={styles.summaryValue}>{formatMoney(total)}</Text>
-            </View>
+            </View> */}
 
             <View
               style={{ height: 1, backgroundColor: "#000", marginBottom: 5 }}

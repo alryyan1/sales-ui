@@ -33,7 +33,7 @@ import { CartItem, PaymentMethod } from "./types";
 import { OfflineSale } from "../../services/db";
 import { formatNumber, preciseSum, preciseCalculation } from "@/constants";
 import dayjs from "dayjs";
-import { Plus, Printer, FileText } from "lucide-react";
+import { Plus } from "lucide-react";
 import { PDFViewer } from "@react-pdf/renderer";
 import { PosInvoicePdf } from "./PosInvoicePdf";
 import { OfflineInvoiceA4Pdf } from "./OfflineInvoiceA4Pdf";
@@ -57,12 +57,14 @@ interface OfflineSaleSummaryColumnProps {
   clients: any[]; // Passed from parent
   onClientAdded: (client: Client) => void;
   isUpdatingClient?: boolean; // Loading state for client updates
+  expectedSaleNumber?: number; // The next order number to be assigned
 }
 
 export const OfflineSaleSummaryColumn: React.FC<
   OfflineSaleSummaryColumnProps
 > = ({
   currentSale,
+  expectedSaleNumber,
   currentSaleItems,
   onUpdateSale,
   onCompleteSale,
@@ -267,7 +269,7 @@ export const OfflineSaleSummaryColumn: React.FC<
         <CardContent
           sx={{ display: "flex", flexDirection: "column", gap: 1, flex: 1 }}
         >
-          {currentSale.is_synced && currentSale.id && (
+          {(currentSale.is_synced || expectedSaleNumber !== undefined) && (
             <Box
               sx={{
                 textAlign: "center",
@@ -275,13 +277,17 @@ export const OfflineSaleSummaryColumn: React.FC<
                 fontWeight: "bold",
                 border: 1,
                 borderBottom: 2,
-                background: "linear-gradient(90deg, #3b82f6 0%, #6366f1 100%)",
+                background: currentSale.is_synced
+                  ? "linear-gradient(90deg, #3b82f6 0%, #6366f1 100%)"
+                  : "linear-gradient(90deg, #10b981 0%, #3b82f6 100%)",
                 color: "white",
                 borderRadius: 1,
                 py: 1,
               }}
             >
-              {`#${currentSale.id}`}
+              {currentSale.is_synced
+                ? `#${currentSale.sale_order_number || currentSale.id}`
+                : `#${expectedSaleNumber}`}
             </Box>
           )}
 

@@ -241,45 +241,7 @@ const ClientProceduresDialog: React.FC<ClientProceduresDialogProps> = ({
             </Button>
           </div>
 
-          <div className="col-span-1">
-            <Button
-              variant="outlined"
-              fullWidth
-              startIcon={<ShoppingCart size={18} />}
-              onClick={() => {
-                if (onNewSale) onNewSale(client.id);
-                onClose();
-              }}
-              sx={{
-                height: 60,
-                justifyContent: "flex-start",
-                borderColor: "divider",
-                color: "text.primary",
-                "&:hover": {
-                  borderColor: "success.main",
-                  bgcolor: "success.50",
-                },
-              }}
-            >
-              <Box sx={{ textAlign: "right" }}>
-                <Typography
-                  variant="button"
-                  display="block"
-                  sx={{ lineHeight: 1.2 }}
-                >
-                  عملية بيع جديدة
-                </Typography>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ textTransform: "none" }}
-                >
-                  انتقال لنقطة البيع
-                </Typography>
-              </Box>
-            </Button>
-          </div>
-
+       
           <div className="col-span-1">
             <Button
               variant="outlined"

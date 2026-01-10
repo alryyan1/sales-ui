@@ -39,7 +39,6 @@ export const navItems: NavItem[] = [
       {
         to: "/sales/returns",
         label: "مردودات المبيعات",
-        icon: RefreshCw,
         permission: null, // or "view-sales-returns" if permissions are strict
       },
       { to: "/clients", label: "العملاء", permission: null },
