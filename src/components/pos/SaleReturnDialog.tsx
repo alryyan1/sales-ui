@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { useTranslation } from "react-i18next";
 
 // MUI Components
 import {
@@ -29,6 +28,7 @@ import {
   Alert,
   AlertTitle,
   CircularProgress,
+  Divider,
 } from "@mui/material";
 import { Close as CloseIcon } from "@mui/icons-material";
 
@@ -143,18 +143,40 @@ export const SaleReturnDialog: React.FC<SaleReturnDialogProps> = ({
     });
   };
 
-  const calculateTotalRefund = (): number => {
-    if (!saleDetails) return 0;
-    let total = 0;
+  const refundBreakdown = React.useMemo(() => {
+    if (!saleDetails)
+      return { grossReturn: 0, discountAdjustment: 0, netRefund: 0 };
+
+    let grossReturn = 0;
     Object.entries(selectedItems).forEach(([itemIdStr, data]) => {
       const itemId = Number(itemIdStr);
       const item = saleDetails.items?.find((i) => i.id === itemId);
       if (item) {
-        total += Number(item.unit_price) * data.quantity;
+        grossReturn += Number(item.unit_price) * data.quantity;
       }
     });
-    return total;
-  };
+
+    const originalSubtotal = Number(saleDetails.total_amount) || 0;
+    const originalDiscountAmount = Number(saleDetails.discount_amount) || 0;
+    const discountType = saleDetails.discount_type || "fixed";
+
+    let discountAdjustment = 0;
+    if (originalSubtotal > 0 && originalDiscountAmount > 0) {
+      if (discountType === "percentage") {
+        discountAdjustment = (grossReturn * originalDiscountAmount) / 100;
+      } else {
+        // Proportional fixed discount: (Gross Return / Original Subtotal) * Original Discount
+        discountAdjustment =
+          (grossReturn / originalSubtotal) * originalDiscountAmount;
+      }
+    }
+
+    // Round to 2 decimal places to avoid floating point issues
+    discountAdjustment = Math.round(discountAdjustment * 100) / 100;
+    const netRefund = Math.max(0, grossReturn - discountAdjustment);
+
+    return { grossReturn, discountAdjustment, netRefund };
+  }, [saleDetails, selectedItems]);
 
   const createReturnMutation = useMutation({
     mutationFn: async (data: CreateSaleReturnData) => {
@@ -164,13 +186,13 @@ export const SaleReturnDialog: React.FC<SaleReturnDialogProps> = ({
       toast.success("تم إنشاء طلب الإرجاع بنجاح");
 
       // Create expense if refund was selected
-      if (creditAction === "refund" && totalRefund > 0) {
+      if (creditAction === "refund" && refundBreakdown.netRefund > 0) {
         try {
           await expenseService.createExpense({
             title: `إرجاع مبيعات - فاتورة #${
               saleDetails?.invoice_number || saleId
             }`,
-            amount: totalRefund,
+            amount: refundBreakdown.netRefund,
             expense_date: new Date().toISOString().split("T")[0],
             payment_method: paymentMethod,
             description: `إرجاع أصناف من الفاتورة رقم ${
@@ -231,8 +253,6 @@ export const SaleReturnDialog: React.FC<SaleReturnDialogProps> = ({
       return;
     }
 
-    if (!isValid) return;
-
     const payload: CreateSaleReturnData = {
       original_sale_id: saleDetails.id,
       return_date: new Date().toISOString().split("T")[0],
@@ -240,14 +260,12 @@ export const SaleReturnDialog: React.FC<SaleReturnDialogProps> = ({
       notes: notes,
       status: "completed",
       credit_action: creditAction,
-      refunded_amount: calculateTotalRefund(),
+      refunded_amount: refundBreakdown.netRefund,
       items: itemsToReturn,
     };
 
     createReturnMutation.mutate(payload);
   };
-
-  const totalRefund = calculateTotalRefund();
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
@@ -430,14 +448,46 @@ export const SaleReturnDialog: React.FC<SaleReturnDialogProps> = ({
                   </Box>
                   <Box sx={{ minWidth: 200, textAlign: "right" }}>
                     <Typography variant="body2" color="text.secondary">
-                      إجمالي الإرجاع
+                      قيمة المرتجع (قبل الخصم)
+                    </Typography>
+                    <Typography variant="h6" fontWeight="medium">
+                      {formatNumber(refundBreakdown.grossReturn)}
+                    </Typography>
+
+                    {refundBreakdown.discountAdjustment > 0 && (
+                      <>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ mt: 1 }}
+                        >
+                          تعديل الخصم ({" "}
+                          {saleDetails.discount_type === "percentage"
+                            ? `${saleDetails.discount_amount}%`
+                            : "نسبة"}{" "}
+                          )
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          fontWeight="medium"
+                          color="error.main"
+                        >
+                          -{formatNumber(refundBreakdown.discountAdjustment)}
+                        </Typography>
+                      </>
+                    )}
+
+                    <Divider sx={{ my: 1 }} />
+
+                    <Typography variant="body2" color="text.secondary">
+                      صافي المسترد
                     </Typography>
                     <Typography
                       variant="h4"
                       fontWeight="bold"
-                      color="error.main"
+                      color="success.main"
                     >
-                      {formatNumber(totalRefund)}
+                      {formatNumber(refundBreakdown.netRefund)}
                     </Typography>
                     <Typography
                       variant="body2"
