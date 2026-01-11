@@ -29,7 +29,8 @@ export interface Payment {
     | "bank_transfer"
     | "mada"
     | "other"
-    | "store_credit";
+    | "store_credit"
+    | "refund";
   amount: string | number; // String from form, number for API
   payment_date: string; // YYYY-MM-DD
   reference_number?: string | null;
@@ -314,7 +315,9 @@ const saleService = {
     clientId?: number | null,
     userId?: number | null,
     shiftId?: number | null,
-    limit: number = 25
+    productId?: number | null,
+    limit: number = 25,
+    posMode?: "shift" | "days"
   ): Promise<PaginatedResponse<Sale>> => {
     try {
       const params = new URLSearchParams();
@@ -325,6 +328,8 @@ const saleService = {
       if (clientId) params.append("client_id", clientId.toString());
       if (userId) params.append("user_id", userId.toString());
       if (shiftId) params.append("shift_id", shiftId.toString());
+      if (productId) params.append("product_id", productId.toString());
+      if (posMode) params.append("pos_mode", posMode);
 
       const response = await apiClient.get<PaginatedResponse<Sale>>(
         `/reports/sales?${params.toString()}`

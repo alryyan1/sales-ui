@@ -66,7 +66,11 @@ const ManagePurchaseItemsPage: React.FC = () => {
   const [perPage, setPerPage] = useState(20);
   const [search, setSearch] = useState("");
 
-  const { data: purchaseItemsData, refetch: refetchItems } = useQuery({
+  const { 
+    data: purchaseItemsData, 
+    refetch: refetchItems,
+    isFetching: isLoadingItems 
+  } = useQuery({
     queryKey: ["purchaseItems", purchaseId, page, perPage, search],
     queryFn: () =>
       purchaseService.getPurchaseItems(purchaseId!, page, perPage, search),
@@ -478,11 +482,10 @@ const ManagePurchaseItemsPage: React.FC = () => {
         isDeleting={deleteItemMutation.isPending}
         onUpdate={handleItemUpdate}
         onDelete={handleItemDelete}
-        // Pagination Props
-        page={page}
-        perPage={perPage}
-        total={purchaseItemsData?.total || 0}
+        // Laravel Pagination
+        pagination={purchaseItemsData || null}
         searchQuery={search}
+        isLoading={isLoadingItems}
         onPageChange={setPage}
         onPerPageChange={(newPerPage) => {
           setPerPage(newPerPage);

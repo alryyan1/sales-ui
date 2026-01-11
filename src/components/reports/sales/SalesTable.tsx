@@ -1,28 +1,37 @@
 import React from "react";
-import {
-  Box,
-  Card,
-  CardContent,
-  CardHeader,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Chip,
-  Pagination,
-  Stack,
-  Skeleton,
-  Alert,
-  AlertTitle,
-} from "@mui/material";
 import { FileText } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useSalesReport } from "@/hooks/useSalesReport";
 import { useSettings } from "@/context/SettingsContext";
 import { formatNumber } from "@/constants";
 import { ReportFilterValues } from "./ReportFilters";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 interface SalesTableProps {
   filterValues: ReportFilterValues;
@@ -59,27 +68,20 @@ export const SalesTable: React.FC<SalesTableProps> = ({
   // --- Loading State ---
   if (isLoading) {
     return (
-      <Card
-        sx={{
-          border: "1px solid",
-          borderColor: "divider",
-          borderRadius: 3,
-          mb: 3,
-        }}
-      >
-        <CardContent sx={{ p: 2.5 }}>
-          <Stack spacing={2}>
+      <Card className="mb-6">
+        <CardContent className="p-6">
+          <div className="space-y-4">
             {[...Array(5)].map((_, i) => (
-              <Stack key={i} direction="row" spacing={2} alignItems="center">
-                <Skeleton variant="rounded" width={80} height={20} />
-                <Skeleton variant="rounded" width={100} height={20} />
-                <Box sx={{ flex: 1 }}>
-                  <Skeleton variant="text" width="60%" height={20} />
-                </Box>
-                <Skeleton variant="rounded" width={80} height={24} />
-              </Stack>
+              <div key={i} className="flex items-center gap-4">
+                <Skeleton className="h-5 w-20 rounded" />
+                <Skeleton className="h-5 w-24 rounded" />
+                <div className="flex-1">
+                  <Skeleton className="h-5 w-3/5 rounded" />
+                </div>
+                <Skeleton className="h-6 w-20 rounded" />
+              </div>
             ))}
-          </Stack>
+          </div>
         </CardContent>
       </Card>
     );
@@ -88,16 +90,12 @@ export const SalesTable: React.FC<SalesTableProps> = ({
   // --- Error State ---
   if (error) {
     return (
-      <Alert
-        severity="error"
-        sx={{
-          mb: 3,
-          borderRadius: 2,
-          boxShadow: 1,
-        }}
-      >
-        <AlertTitle sx={{ fontWeight: 600 }}>خطأ</AlertTitle>
-        {(error as Error)?.message || "حدث خطأ أثناء تحميل البيانات"}
+      <Alert variant="destructive" className="mb-6">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle className="font-semibold">خطأ</AlertTitle>
+        <AlertDescription>
+          {(error as Error)?.message || "حدث خطأ أثناء تحميل البيانات"}
+        </AlertDescription>
       </Alert>
     );
   }
@@ -106,319 +104,220 @@ export const SalesTable: React.FC<SalesTableProps> = ({
   if (!reportData) return null;
 
   return (
-    <Card
-      sx={{
-        border: "1px solid",
-        borderColor: "divider",
-        borderRadius: 3,
-        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-        overflow: "hidden",
-      }}
-    >
-      <CardHeader
-        sx={{
-          borderBottom: "2px solid",
-          borderColor: "primary.main",
-          py: 2.5,
-          px: 3,
-          bgcolor: "grey.50",
-        }}
-      >
-        <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="space-between"
-          flexWrap="wrap"
-          gap={2}
-        >
-          <Typography
-            variant="h6"
-            component="h2"
-            sx={{ fontWeight: 700, color: "primary.main" }}
-          >
-            النتائج
-          </Typography>
-          <Chip
-            label={`${(currentPage - 1) * 25 + 1}-${Math.min(
-              currentPage * 25,
-              reportData.total
-            )} من ${reportData.total}`}
-            size="small"
-            variant="filled"
-            color="primary"
-            sx={{ fontWeight: 600 }}
-          />
-        </Stack>
-      </CardHeader>
-      <CardContent sx={{ p: 0 }}>
+    <Card className="mb-6 overflow-hidden shadow-sm">
+   
+      {/* <CardContent className="p-0"> */}
         {reportData.data.length === 0 ? (
-          <Box
-            sx={{
-              textAlign: "center",
-              py: 6,
-              px: 2,
-            }}
-          >
-            <Box
-              sx={{
-                display: "inline-flex",
-                p: 2,
-                bgcolor: "action.hover",
-                borderRadius: 3,
-                mb: 2,
-              }}
-            >
-              <FileText size={32} style={{ opacity: 0.4 }} />
-            </Box>
-            <Typography variant="subtitle1" sx={{ mb: 0.5, fontWeight: 600 }}>
-              لا توجد مبيعات
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
+          <div className="text-center py-12 px-4">
+            <div className="inline-flex p-4 bg-muted rounded-xl mb-4">
+              <FileText size={32} className="opacity-40" />
+            </div>
+            <h3 className="text-lg font-semibold mb-1">لا توجد مبيعات</h3>
+            <p className="text-sm text-muted-foreground">
               جرب تعديل الفلاتر
-            </Typography>
-          </Box>
+            </p>
+          </div>
         ) : (
           <>
-            <Box sx={{ overflowX: "auto" }}>
-              <Table size="medium" sx={{ minWidth: 900 }}>
-                <TableHead>
-                  <TableRow
-                    sx={{
-                      bgcolor: "primary.main",
-                      "& .MuiTableCell-root": {
-                        fontWeight: 700,
-                        fontSize: "0.875rem",
-                        py: 2,
-                        color: "white",
-                        borderBottom: "2px solid",
-                        borderColor: "primary.dark",
-                      },
-                    }}
-                  >
-                    <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }}>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="text-center  ">
+                    <TableHead className="text-center">
                       رقم العمليه
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }}>
+                    </TableHead>
+                    <TableHead className="text-center">
                       التاريخ
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }}>
+                    </TableHead>
+                    <TableHead className="text-center">
                       العميل
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }}>
+                    </TableHead>
+                    <TableHead className="text-center">
                       المستخدم
-                    </TableCell>
-                    <TableCell
-                      sx={{ fontWeight: 700, fontSize: "0.875rem" }}
-                      align="center"
-                    >
+                    </TableHead>
+                    <TableHead className="text-center">
                       المدفوعات
-                    </TableCell>
-                    <TableCell
-                      align="right"
-                      sx={{ fontWeight: 700, fontSize: "0.875rem" }}
-                    >
+                    </TableHead>
+                    <TableHead className=" text-center">
                       الخصم
-                    </TableCell>
-                    <TableCell
-                      align="right"
-                      sx={{ fontWeight: 700, fontSize: "0.875rem" }}
-                    >
+                    </TableHead>
+                    <TableHead className=" text-center">
                       المبلغ الإجمالي
-                    </TableCell>
-                    <TableCell
-                      align="right"
-                      sx={{ fontWeight: 700, fontSize: "0.875rem" }}
-                    >
+                    </TableHead>
+                    <TableHead className=" text-center">
                       المدفوع
-                    </TableCell>
-                    <TableCell
-                      align="right"
-                      sx={{ fontWeight: 700, fontSize: "0.875rem" }}
-                    >
+                    </TableHead>
+                    <TableHead className=" text-center">
                       المستحق
-                    </TableCell>
+                    </TableHead>
                   </TableRow>
-                </TableHead>
+                </TableHeader>
                 <TableBody>
                   {reportData.data.map((sale) => (
                     <TableRow
                       key={sale.id}
-                      hover
                       onClick={() => onRowClick(sale.id)}
-                      sx={{
-                        cursor: "pointer",
-                        transition: "all 0.2s ease",
-                        "&:hover": {
-                          bgcolor: "action.hover",
-                          transform: "translateX(-2px)",
-                        },
-                        "&:last-child td": { border: 0 },
-                        "& .MuiTableCell-root": {
-                          py: 2,
-                          fontSize: "0.875rem",
-                          borderBottom: "1px solid",
-                          borderColor: "divider",
-                        },
-                      }}
+                      className="cursor-pointer text-center transition-all hover:bg-muted/50 "
                     >
-                      <TableCell
-                        sx={{ fontWeight: 600, color: "primary.main" }}
-                      >
+                      <TableCell className="text-center">
                         #{sale.id}
                       </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      <TableCell className="text-center">
+                        <span className="text-center text-sm font-medium">
                           {format(parseISO(sale.sale_date), "yyyy-MM-dd")}
-                        </Typography>
+                        </span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-center">
                         {sale.client_name ? (
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          <span className="text-center text-sm font-medium">
                             {sale.client_name}
-                          </Typography>
+                          </span>
                         ) : (
-                          <Typography
-                            component="span"
-                            color="text.secondary"
-                            variant="body2"
-                          >
+                          <span className="text-center text-sm text-muted-foreground">
                             عميل غير محدد
-                          </Typography>
+                          </span>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-center">
                         {sale.user_name ? (
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          <span className="text-center text-sm font-medium">
                             {sale.user_name}
-                          </Typography>
+                          </span>
                         ) : (
-                          <Typography
-                            component="span"
-                            color="text.secondary"
-                            variant="body2"
-                          >
+                          <span className="text-center text-sm text-muted-foreground">
                             —
-                          </Typography>
+                          </span>
                         )}
                       </TableCell>
-                      <TableCell align="center">
+                      <TableCell className="text-center">
                         {sale.payments && sale.payments.length > 0 ? (
-                          <Chip
-                            label={`${sale.payments.length} ${
+                          <Badge
+                            variant="outline"
+                            className="border-primary text-primary font-semibold"
+                          >
+                            {`${sale.payments.length} ${
                               sale.payments.length === 1 ? "دفعة" : "دفعات"
                             }`}
-                            size="small"
-                            variant="outlined"
-                            sx={{
-                              borderColor: "primary.main",
-                              color: "primary.main",
-                              fontWeight: 600,
-                            }}
-                          />
+                          </Badge>
                         ) : (
-                          <Typography
-                            component="span"
-                            color="text.secondary"
-                            variant="body2"
-                          >
+                          <span className="text-center text-sm text-muted-foreground">
                             —
-                          </Typography>
+                          </span>
                         )}
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell className="text-center">
                         {sale.discount_amount &&
                         Number(sale.discount_amount) > 0 ? (
-                          <Box>
-                            <Typography
-                              variant="body2"
-                              sx={{
-                                fontWeight: 600,
-                                color: "warning.main",
-                              }}
-                            >
+                          <div>
+                            <span className="text-center text-sm font-semibold text-yellow-600 dark:text-yellow-500">
                               {formatNumber(sale.discount_amount)}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                              sx={{ display: "block", mt: 0.25 }}
-                            >
+                            </span>
+                            <span className="block text-center text-xs text-muted-foreground mt-1">
                               {(sale as any).discount_type === "percentage"
                                 ? "%"
                                 : "ثابت"}
-                            </Typography>
-                          </Box>
+                            </span>
+                          </div>
                         ) : (
-                          <Typography
-                            component="span"
-                            color="text.secondary"
-                            variant="body2"
-                          >
+                          <span className="text-center text-sm text-muted-foreground">
                             —
-                          </Typography>
+                          </span>
                         )}
                       </TableCell>
-                      <TableCell
-                        align="right"
-                        sx={{ fontWeight: 600, fontSize: "0.9375rem" }}
-                      >
+                      <TableCell className="text-center font-semibold text-base">
                         {formatNumber(sale.total_amount)}
                       </TableCell>
-                      <TableCell
-                        align="right"
-                        sx={{ fontWeight: 500, color: "success.main" }}
-                      >
+                      <TableCell className="text-center font-medium text-green-600 dark:text-green-500">
                         {formatNumber(sale.paid_amount)}
                       </TableCell>
-                      <TableCell align="right">
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontWeight: 600,
-                            color:
-                              Number(sale.due_amount || 0) > 0
-                                ? "error.main"
-                                : "success.main",
-                          }}
+                      <TableCell className="text-center">
+                        <span
+                          className={`text-sm font-semibold ${
+                            Number(sale.due_amount || 0) > 0
+                              ? "text-red-600 dark:text-red-500"
+                              : "text-green-600 dark:text-green-500"
+                          }`}
                         >
                           {formatNumber(sale.due_amount || 0)}
-                        </Typography>
+                        </span>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            </Box>
+            </div>
 
             {/* Pagination */}
             {reportData.last_page > 1 && (
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "center",
-                  py: 2.5,
-                  borderTop: "1px solid",
-                  borderColor: "divider",
-                }}
-              >
-                <Pagination
-                  count={reportData.last_page}
-                  page={currentPage}
-                  onChange={(_, page) => onPageChange(page)}
-                  color="primary"
-                  disabled={isLoading}
-                  size="small"
-                  sx={{
-                    "& .MuiPaginationItem-root": {
-                      borderRadius: 1.5,
-                    },
-                  }}
-                />
-              </Box>
+              <div className="flex justify-center py-6 border-t">
+                <Pagination>
+                  <PaginationContent>
+                    {currentPage > 1 && (
+                      <PaginationItem>
+                        <PaginationPrevious
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            onPageChange(currentPage - 1);
+                          }}
+                          className={isLoading ? "pointer-events-none opacity-50" : ""}
+                        />
+                      </PaginationItem>
+                    )}
+                    {Array.from({ length: reportData.last_page }, (_, i) => i + 1)
+                      .filter((page) => {
+                        // Show first page, last page, current page, and pages around current
+                        if (page === 1 || page === reportData.last_page) return true;
+                        if (Math.abs(page - currentPage) <= 1) return true;
+                        return false;
+                      })
+                      .map((page, index, array) => {
+                        // Add ellipsis
+                        const prevPage = array[index - 1];
+                        const showEllipsisBefore = prevPage && page - prevPage > 1;
+                        
+                        return (
+                          <React.Fragment key={page}>
+                            {showEllipsisBefore && (
+                              <PaginationItem>
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                            )}
+                            <PaginationItem>
+                              <PaginationLink
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  if (!isLoading) onPageChange(page);
+                                }}
+                                isActive={page === currentPage}
+                                className={isLoading ? "pointer-events-none opacity-50" : ""}
+                              >
+                                {page}
+                              </PaginationLink>
+                            </PaginationItem>
+                          </React.Fragment>
+                        );
+                      })}
+                    {currentPage < reportData.last_page && (
+                      <PaginationItem>
+                        <PaginationNext
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            onPageChange(currentPage + 1);
+                          }}
+                          className={isLoading ? "pointer-events-none opacity-50" : ""}
+                        />
+                      </PaginationItem>
+                    )}
+                  </PaginationContent>
+                </Pagination>
+              </div>
             )}
           </>
         )}
-      </CardContent>
+      {/* </CardContent> */}
     </Card>
   );
 };

@@ -13,6 +13,8 @@ import {
   CheckCircle2,
   RotateCcw,
   ShoppingCart,
+  Wallet,
+  Building2,
 } from "lucide-react";
 import { formatNumber } from "@/constants";
 import { useSalesReport } from "@/hooks/useSalesReport";
@@ -27,26 +29,15 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
   const { getSetting } = useSettings();
   const posMode = getSetting("pos_mode", "shift") as "shift" | "days";
 
-  // Fetch all data for stats (without pagination limit ideally, but API might limit it)
-  // For accurate stats over a date range, we usually need a separate "summary" endpoint
-  // or fetch a large limit. Since the current implementation fetched paginated data
-  // in SalesReportPage and calculated stats on *that*, we will replicate that behavior
-  // or implies the user accepts stats for the *current view* or wants *total* stats.
-  // IMPORTANT: The previous implementation in SalesReportPage seemed to calculate stats based on `reportData.data`
-  // which is just the *current page* if paginated. That seems wrong for "Total Sales" etc unless limit was high.
-  // The original code had `limit: 25`. So stats were only for 26 items?
-  // User might want stats for ALL filtered data.
-  // Use a high limit for stats or check if API supports summary.
-  // Replicating original behavior: usage of useSalesReport with same filters.
-
   const { data: reportData, isLoading } = useSalesReport({
-    page: 1, // Stats usually aggregations, but if backend returns paginated...
+    page: 1,
     startDate: filterValues.startDate,
     endDate: filterValues.endDate,
     clientId: filterValues.clientId ? Number(filterValues.clientId) : null,
     userId: filterValues.userId ? Number(filterValues.userId) : null,
     shiftId: filterValues.shiftId ? Number(filterValues.shiftId) : null,
-    limit: 1000, // Fetch reasonable number for stats
+    productId: filterValues.productId ? Number(filterValues.productId) : null,
+    limit: 500, // Fetch a larger set for stats calculation
     posMode,
   });
 
@@ -120,251 +111,205 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
 
   if (isLoading) {
     return (
-      <Stack spacing={3} sx={{ mb: 3 }}>
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: {
-              xs: "repeat(1, 1fr)",
-              sm: "repeat(2, 1fr)",
-              md: "repeat(3, 1fr)",
-              lg: "repeat(6, 1fr)",
-            },
-            gap: 2.5,
-          }}
-        >
-          {[...Array(6)].map((_, i) => (
-            <Skeleton
-              key={i}
-              variant="rounded"
-              height={100}
-              sx={{ borderRadius: 3 }}
-            />
-          ))}
-        </Box>
-      </Stack>
-    );
-  }
-
-  // If no stats (shouldn't happen with default), return null or empty state
-  // But we want to show zeros if no data
-  if (!summaryStats) return null;
-
-  return (
-    <Stack spacing={3} sx={{ mb: 3 }}>
-      {/* Row 1: Amount, Discount, Paid, Refund, Net, SalesCount */}
       <Box
         sx={{
           display: "grid",
           gridTemplateColumns: {
             xs: "repeat(1, 1fr)",
             sm: "repeat(2, 1fr)",
-            md: "repeat(3, 1fr)",
-            lg: "repeat(6, 1fr)",
+            lg: "repeat(5, 1fr)",
           },
-          gap: 2.5,
+          gap: 3,
+          mb: 4,
         }}
       >
-        {/* Total Amount */}
-        <Card
-          sx={{
-            borderRadius: 3,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-          }}
-        >
-          <CardContent sx={{ p: 1, textAlign: "center" }}>
-            <Stack spacing={2} alignItems="center">
-              <Box
-                sx={{
-                  color: "primary.main",
-                  p: 1,
-                  bgcolor: "primary.lighter",
-                  borderRadius: "50%",
-                }}
-              >
-                <TrendingUp size={24} />
-              </Box>
-              <Box>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  fontWeight={500}
-                  gutterBottom
-                >
-                  إجمالي المبيعات
-                </Typography>
-                <Typography variant="h5" fontWeight={700}>
-                  {formatNumber(summaryStats.totalAmount)}
-                </Typography>
-              </Box>
-            </Stack>
-          </CardContent>
-        </Card>
-
-        {/* Discount */}
-        <Card
-          sx={{
-            borderRadius: 3,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-          }}
-        >
-          <CardContent sx={{ p: 1, textAlign: "center" }}>
-            <Stack spacing={2} alignItems="center">
-              <Box
-                sx={{
-                  color: "warning.main",
-                  p: 1,
-                  bgcolor: "warning.lighter",
-                  borderRadius: "50%",
-                }}
-              >
-                <Percent size={24} />
-              </Box>
-              <Box>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  fontWeight={500}
-                  gutterBottom
-                >
-                  الخصم
-                </Typography>
-                <Typography variant="h5" fontWeight={700} color="warning.main">
-                  {formatNumber(summaryStats.totalDiscount)}
-                </Typography>
-              </Box>
-            </Stack>
-          </CardContent>
-        </Card>
-
-        {/* Paid */}
-        <Card
-          sx={{
-            borderRadius: 3,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-          }}
-        >
-          <CardContent sx={{ p: 1, textAlign: "center" }}>
-            <Stack spacing={2} alignItems="center">
-              <Box
-                sx={{
-                  color: "success.main",
-                  p: 1,
-                  bgcolor: "success.lighter",
-                  borderRadius: "50%",
-                }}
-              >
-                <CheckCircle2 size={24} />
-              </Box>
-              <Box>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  fontWeight={500}
-                  gutterBottom
-                >
-                  المدفوع
-                </Typography>
-                <Typography variant="h5" fontWeight={700} color="success.main">
-                  {formatNumber(summaryStats.totalPaid)}
-                </Typography>
-              </Box>
-              <Stack direction="row" spacing={2} justifyContent="center">
-                <Typography variant="caption" color="text.secondary">
-                  نقد:{" "}
-                  <Box
-                    component="span"
-                    sx={{ fontWeight: 600, color: "success.main" }}
-                  >
-                    {formatNumber(summaryStats.totalCash)}
-                  </Box>
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  بنك:{" "}
-                  <Box
-                    component="span"
-                    sx={{ fontWeight: 600, color: "primary.main" }}
-                  >
-                    {formatNumber(summaryStats.totalBank)}
-                  </Box>
-                </Typography>
-              </Stack>
-            </Stack>
-          </CardContent>
-        </Card>
-
-        {/* Refund */}
-        <Card
-          sx={{
-            borderRadius: 3,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-          }}
-        >
-          <CardContent sx={{ p: 1, textAlign: "center" }}>
-            <Stack spacing={2} alignItems="center">
-              <Box
-                sx={{
-                  color: "error.main",
-                  p: 1,
-                  bgcolor: "error.lighter",
-                  borderRadius: "50%",
-                }}
-              >
-                <RotateCcw size={24} />
-              </Box>
-              <Box>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  fontWeight={500}
-                  gutterBottom
-                >
-                  المرتجع
-                </Typography>
-                <Typography variant="h5" fontWeight={700} color="error.main">
-                  {formatNumber(summaryStats.totalRefund)}
-                </Typography>
-              </Box>
-            </Stack>
-          </CardContent>
-        </Card>
-
-        {/* Sales Count */}
-        <Card
-          sx={{
-            borderRadius: 3,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-          }}
-        >
-          <CardContent sx={{ p: 1, textAlign: "center" }}>
-            <Stack spacing={2} alignItems="center">
-              <Box
-                sx={{
-                  color: "text.secondary",
-                  p: 1,
-                  bgcolor: "action.hover",
-                  borderRadius: "50%",
-                }}
-              >
-                <ShoppingCart size={24} />
-              </Box>
-              <Box>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  fontWeight={500}
-                  gutterBottom
-                >
-                  عدد العمليات
-                </Typography>
-                <Typography variant="h5" fontWeight={700}>
-                  {summaryStats.totalSales}
-                </Typography>
-              </Box>
-            </Stack>
-          </CardContent>
-        </Card>
+        {[...Array(5)].map((_, i) => (
+          <Skeleton
+            key={i}
+            variant="rounded"
+            height={160}
+            sx={{ borderRadius: 4, bgcolor: "rgba(0,0,0,0.04)" }}
+          />
+        ))}
       </Box>
-    </Stack>
+    );
+  }
+
+  const statCards = [
+    {
+      title: "إجمالي المبيعات",
+      value: summaryStats.totalAmount,
+      icon: <TrendingUp size={24} />,
+      color: "#6366f1",
+      gradient: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
+      subtitle: `الصافي: ${formatNumber(summaryStats.totalNet)}`,
+    },
+    {
+      title: "المدفوع",
+      value: summaryStats.totalPaid,
+      icon: <CheckCircle2 size={24} />,
+      color: "#22c55e",
+      gradient: "linear-gradient(135deg, #22c55e 0%, #10b981 100%)",
+      extra: (
+        <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+            <Wallet size={12} style={{ opacity: 0.7 }} />
+            <Typography
+              variant="caption"
+              sx={{ opacity: 0.9, fontWeight: 600 }}
+            >
+              {formatNumber(summaryStats.totalCash)}
+            </Typography>
+          </Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+            <Building2 size={12} style={{ opacity: 0.7 }} />
+            <Typography
+              variant="caption"
+              sx={{ opacity: 0.9, fontWeight: 600 }}
+            >
+              {formatNumber(summaryStats.totalBank)}
+            </Typography>
+          </Box>
+        </Stack>
+      ),
+    },
+    {
+      title: "المستحق",
+      value: summaryStats.totalDue,
+      icon: <ShoppingCart size={24} />,
+      color: "#f59e0b",
+      gradient: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+      subtitle: `${summaryStats.totalSales} عملية`,
+    },
+    {
+      title: "الخصم",
+      value: summaryStats.totalDiscount,
+      icon: <Percent size={24} />,
+      color: "#ec4899",
+      gradient: "linear-gradient(135deg, #ec4899 0%, #d946ef 100%)",
+    },
+    {
+      title: "المرتجع",
+      value: summaryStats.totalRefund,
+      icon: <RotateCcw size={24} />,
+      color: "#ef4444",
+      gradient: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)",
+    },
+  ];
+
+  return (
+    <Box
+      sx={{
+        display: "grid",
+        gridTemplateColumns: {
+          xs: "repeat(1, 1fr)",
+          sm: "repeat(2, 1fr)",
+          lg: "repeat(5, 1fr)",
+        },
+        gap: 2.5,
+        mb: 4,
+      }}
+    >
+      {statCards.map((card, index) => (
+        <Card
+          key={index}
+          sx={{
+            position: "relative",
+            overflow: "hidden",
+            borderRadius: 4,
+            border: "1px solid rgba(255, 255, 255, 0.3)",
+            background: "rgba(255, 255, 255, 0.7)",
+            backdropFilter: "blur(20px)",
+            boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.07)",
+            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            "&:hover": {
+              transform: "translateY(-4px)",
+              boxShadow: "0 12px 40px 0 rgba(31, 38, 135, 0.12)",
+              "& .icon-wrapper": {
+                transform: "scale(1.1) rotate(5deg)",
+              },
+            },
+          }}
+        >
+          {/* Decorative Gradient Blob */}
+          <Box
+            sx={{
+              position: "absolute",
+              top: -20,
+              right: -20,
+              width: 100,
+              height: 100,
+              background: card.gradient,
+              opacity: 0.05,
+              borderRadius: "50%",
+              filter: "blur(20px)",
+            }}
+          />
+
+          <CardContent sx={{ p: 2.5 }}>
+            <Stack spacing={2.5}>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="flex-start"
+              >
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    color: "text.secondary",
+                    fontWeight: 600,
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  {card.title}
+                </Typography>
+                <Box
+                  className="icon-wrapper"
+                  sx={{
+                    p: 1.25,
+                    borderRadius: 3,
+                    background: card.gradient,
+                    color: "white",
+                    display: "flex",
+                    transition: "transform 0.3s ease",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                  }}
+                >
+                  {card.icon}
+                </Box>
+              </Stack>
+
+              <Box>
+                <Typography
+                  variant="h4"
+                  sx={{
+                    fontWeight: 800,
+                    color: "text.primary",
+                    fontSize: { xs: "1.75rem", lg: "1.85rem" },
+                    lineHeight: 1,
+                  }}
+                >
+                  {formatNumber(card.value)}
+                </Typography>
+                {card.subtitle && (
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      display: "block",
+                      mt: 1,
+                      color: "text.secondary",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {card.subtitle}
+                  </Typography>
+                )}
+                {card.extra}
+              </Box>
+            </Stack>
+          </CardContent>
+        </Card>
+      ))}
+    </Box>
   );
 };

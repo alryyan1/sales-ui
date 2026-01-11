@@ -56,7 +56,7 @@ const PurchaseItemCard: React.FC<PurchaseItemCardProps> = ({
         {/* Product Info */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', fontSize: '0.875rem' }}>
-            {totalItems - index}
+            {index + 1}
           </Avatar>
           <Box>
             <Typography variant="subtitle2" fontWeight="medium">

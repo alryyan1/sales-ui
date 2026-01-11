@@ -11,66 +11,37 @@ import { PDF_FONTS } from "@/utils/pdfFontRegistry";
 import { CompanyInfoSettings } from "@/components/settings/CompanyInfoSettings";
 import { BusinessRulesSettings } from "@/components/settings/BusinessRulesSettings";
 import { PosSettings } from "@/components/settings/PosSettings";
-import { PdfSettings } from "@/components/settings/PdfSettings";
 
-// Material-UI Components
+// shadcn/ui Components
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Typography,
-  TextField,
-  Grid,
-  Alert,
-  CircularProgress,
-  Stack,
-  MenuItem,
-  InputLabel,
-  Divider,
-  Paper,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  FormControl,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  useTheme,
-  alpha,
-  Avatar,
-  Tabs,
-  Tab,
-} from "@mui/material";
-
-// Icons
-import {
-  Settings as SettingsIcon,
-  Business as BusinessIcon,
-  Language as LanguageIcon,
-  Inventory as InventoryIcon,
-  Description as DescriptionIcon,
-  Image as ImageIcon,
-  Receipt as ReceiptIcon,
-  PictureAsPdf as PdfIcon,
-  Save as SaveIcon,
-  Store as StoreIcon,
-  CloudUpload as CloudUploadIcon,
-} from "@mui/icons-material";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Separator } from "@/components/ui/separator";
+import { Loader2, Settings, Building2, Package, Store, Image, FileText, Upload, Save } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Form values type
 type SettingsFormValues = Partial<AppSettings>;
 
 // --- Component ---
 const SettingsPage: React.FC = () => {
-  const theme = useTheme();
   const { settings, isLoadingSettings, updateSettings } = useSettings();
   const [serverError, setServerError] = useState<string | null>(null);
 
   // Tab/Section State
-  const [activeSection, setActiveSection] = useState(0);
+  const [activeSection, setActiveSection] = useState("0");
 
   // Previews
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -195,448 +166,390 @@ const SettingsPage: React.FC = () => {
     }
   };
 
-  // --- Navigation Sections ---
-  const sections = [
-    {
-      id: 0,
-      label: "بيانات الشركة",
-      icon: <BusinessIcon />,
-      description: "الاسم، العنوان، وأرقام التواصل",
-    },
-    {
-      id: 1,
-      label: "قواعد العمل والمخزون",
-      icon: <InventoryIcon />,
-      description: "العملة، التنبيهات، والضرائب",
-    },
-    {
-      id: 2,
-      label: "نقاط البيع (POS)",
-      icon: <StoreIcon />,
-      description: "إعدادات الورديات وطرق البيع",
-    },
-    {
-      id: 3,
-      label: "تخصيص الفواتير",
-      icon: <ImageIcon />,
-      description: "الشعار، الهيدر، والمظهر",
-    },
-    {
-      id: 4,
-      label: "إعدادات PDF",
-      icon: <PdfIcon />,
-      description: "الخطوط وتنسيق الطباعة",
-    },
-  ];
-
   if (isLoadingSettings && !settings) {
     return (
-      <Box
-        sx={{
-          height: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <CircularProgress />
-      </Box>
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
     );
   }
 
   return (
-    <Box
-      sx={{ p: { xs: 2, md: 4 }, maxWidth: 1400, mx: "auto", direction: "rtl" }}
-    >
-      {/* Page Header */}
-      <Box
-        sx={{
-          mb: 4,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <Stack direction="row" spacing={2} alignItems="center">
-          <Avatar sx={{ bgcolor: "primary.main", width: 48, height: 48 }}>
-            <SettingsIcon sx={{ fontSize: 28 }} />
-          </Avatar>
-          <Box>
-            <Typography variant="h4" fontWeight="bold" color="text.primary">
-              إعدادات النظام
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              تحكم في جميع خصائص وإعدادات التطبيق من مكان واحد
-            </Typography>
-          </Box>
-        </Stack>
-      </Box>
+    <div className="min-h-screen bg-background p-4 md:p-8" dir="rtl">
+      <div className="mx-auto max-w-7xl">
+        {/* Page Header */}
+        <div className="mb-8 border-b pb-6">
+          <div className="flex items-center gap-4">
+            <Avatar className="h-14 w-14 bg-primary shadow-md">
+              <AvatarFallback className="bg-primary text-primary-foreground">
+                <Settings className="h-7 w-7" />
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">
+                إعدادات النظام
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                تحكم في جميع خصائص وإعدادات التطبيق من مكان واحد
+              </p>
+            </div>
+          </div>
+        </div>
 
-      {/* Main Layout */}
-      <Box component="form" onSubmit={handleSubmit(onSubmit)}>
-        {serverError && (
-          <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
-            {serverError}
-          </Alert>
-        )}
+        {/* Main Layout */}
+        <form onSubmit={handleSubmit(onSubmit)}>
+          {serverError && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertDescription>{serverError}</AlertDescription>
+            </Alert>
+          )}
 
-        {/* Tabs Navigation */}
-        <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
+          {/* Tabs Navigation */}
           <Tabs
             value={activeSection}
-            onChange={(e, newValue) => setActiveSection(newValue)}
-            variant="scrollable"
-            scrollButtons="auto"
-            sx={{
-              "& .MuiTab-root": {
-                minHeight: 64,
-                textTransform: "none",
-                fontSize: "0.95rem",
-                fontWeight: 500,
-              },
-            }}
+            onValueChange={setActiveSection}
+            className="mb-6"
           >
-            {sections.map((section) => (
-              <Tab
-                key={section.id}
-                value={section.id}
-                icon={section.icon}
-                iconPosition="start"
-                label={section.label}
-              />
-            ))}
-          </Tabs>
-        </Box>
+            <TabsList className="h-auto w-full justify-start border-b bg-transparent p-0">
+              <TabsTrigger
+                value="0"
+                className="h-18 rounded-none border-b-2 border-transparent px-4 py-4 data-[state=active]:border-primary data-[state=active]:bg-transparent"
+              >
+                <div className="flex items-center gap-2 text-right">
+                  <Building2 className="h-5 w-5" />
+                  <div>
+                    <div className="font-medium">بيانات الشركة</div>
+                    <div className="text-xs text-muted-foreground">
+                      الاسم، العنوان، وأرقام التواصل
+                    </div>
+                  </div>
+                </div>
+              </TabsTrigger>
+              <TabsTrigger
+                value="1"
+                className="h-18 rounded-none border-b-2 border-transparent px-4 py-4 data-[state=active]:border-primary data-[state=active]:bg-transparent"
+              >
+                <div className="flex items-center gap-2 text-right">
+                  <Package className="h-5 w-5" />
+                  <div>
+                    <div className="font-medium">قواعد العمل والمخزون</div>
+                    <div className="text-xs text-muted-foreground">
+                      العملة، التنبيهات، والضرائب
+                    </div>
+                  </div>
+                </div>
+              </TabsTrigger>
+              <TabsTrigger
+                value="2"
+                className="h-18 rounded-none border-b-2 border-transparent px-4 py-4 data-[state=active]:border-primary data-[state=active]:bg-transparent"
+              >
+                <div className="flex items-center gap-2 text-right">
+                  <Store className="h-5 w-5" />
+                  <div>
+                    <div className="font-medium">نقاط البيع (POS)</div>
+                    <div className="text-xs text-muted-foreground">
+                      إعدادات الورديات وطرق البيع
+                    </div>
+                  </div>
+                </div>
+              </TabsTrigger>
+              <TabsTrigger
+                value="3"
+                className="h-18 rounded-none border-b-2 border-transparent px-4 py-4 data-[state=active]:border-primary data-[state=active]:bg-transparent"
+              >
+                <div className="flex items-center gap-2 text-right">
+                  <Image className="h-5 w-5" />
+                  <div>
+                    <div className="font-medium">تخصيص الفواتير</div>
+                    <div className="text-xs text-muted-foreground">
+                      الشعار، الهيدر، والمظهر
+                    </div>
+                  </div>
+                </div>
+              </TabsTrigger>
+              <TabsTrigger
+                value="4"
+                className="h-18 rounded-none border-b-2 border-transparent px-4 py-4 data-[state=active]:border-primary data-[state=active]:bg-transparent"
+              >
+                <div className="flex items-center gap-2 text-right">
+                  <FileText className="h-5 w-5" />
+                  <div>
+                    <div className="font-medium">إعدادات PDF</div>
+                    <div className="text-xs text-muted-foreground">
+                      الخطوط وتنسيق الطباعة
+                    </div>
+                  </div>
+                </div>
+              </TabsTrigger>
+            </TabsList>
 
-        {/* Content Area */}
-        <Box>
-          <Stack spacing={3} sx={{ pb: 10 }}>
-            {/* SECTION 0: Company Info */}
-            {activeSection === 0 && <CompanyInfoSettings control={control} />}
+            {/* Content Area */}
+            <div className="space-y-6 pb-24">
+              {/* SECTION 0: Company Info */}
+              <TabsContent value="0">
+                <CompanyInfoSettings control={control} />
+              </TabsContent>
 
-            {/* SECTION 1: Business Rules */}
-            {activeSection === 1 && <BusinessRulesSettings control={control} />}
+              {/* SECTION 1: Business Rules */}
+              <TabsContent value="1">
+                <BusinessRulesSettings control={control} />
+              </TabsContent>
 
-            {/* SECTION 2: POS Settings */}
-            {activeSection === 2 && <PosSettings control={control} />}
+              {/* SECTION 2: POS Settings */}
+              <TabsContent value="2">
+                <PosSettings control={control} />
+              </TabsContent>
 
-            {/* SECTION 3: Branding */}
-            {activeSection === 3 && (
-              <Card sx={{ borderRadius: 3, boxShadow: theme.shadows[1] }}>
-                <CardContent sx={{ p: 4 }}>
-                  <Typography
-                    variant="h6"
-                    fontWeight={600}
-                    gutterBottom
-                    sx={{ mb: 3 }}
-                  >
-                    هوية الفواتير (Branding)
-                  </Typography>
-
-                  <FormControl
-                    component="fieldset"
-                    sx={{ mb: 4, width: "100%" }}
-                  >
-                    <Typography
-                      variant="subtitle2"
-                      color="text.secondary"
-                      gutterBottom
-                    >
-                      نمط الترويسة
-                    </Typography>
-                    <Controller
-                      name="invoice_branding_type"
-                      control={control}
-                      render={({ field }) => (
-                        <RadioGroup row {...field} sx={{ gap: 4 }}>
-                          <FormControlLabel
-                            value="logo"
-                            control={<Radio />}
-                            label="شعار و نص (Logo & Text)"
-                          />
-                          <FormControlLabel
-                            value="header"
-                            control={<Radio />}
-                            label="صورة هيدر كاملة (Full Header Image)"
-                          />
-                        </RadioGroup>
-                      )}
-                    />
-                  </FormControl>
-
-                  <Divider sx={{ mb: 4 }} />
-
-                  {watchedBrandingType === "logo" && (
-                    <Stack spacing={4}>
-                      <Box>
-                        <Typography variant="subtitle2" gutterBottom>
-                          رفع الشعار
-                        </Typography>
-                        <Box
-                          sx={{
-                            border: "2px dashed",
-                            borderColor: "divider",
-                            borderRadius: 2,
-                            p: 3,
-                            textAlign: "center",
-                          }}
-                        >
-                          {logoPreview ? (
-                            <Box
-                              sx={{
-                                mb: 2,
-                                height: 100,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                              }}
-                            >
-                              <img
-                                src={logoPreview}
-                                alt="Logo"
-                                style={{
-                                  maxHeight: "100%",
-                                  maxWidth: "100%",
-                                }}
-                              />
-                            </Box>
-                          ) : (
-                            <ImageIcon
-                              sx={{
-                                fontSize: 48,
-                                color: "text.disabled",
-                                mb: 1,
-                              }}
-                            />
-                          )}
-                          <Button
-                            variant="outlined"
-                            component="label"
-                            startIcon={<CloudUploadIcon />}
-                          >
-                            رفع ملف جديد
-                            <input
-                              type="file"
-                              hidden
-                              accept="image/*"
-                              onChange={handleLogoUpload}
-                            />
-                          </Button>
-                        </Box>
-                      </Box>
-
+              {/* SECTION 3: Branding */}
+              <TabsContent value="3">
+                <Card className="border shadow-sm">
+                  <CardHeader>
+                    <CardTitle>هوية الفواتير (Branding)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-4">
+                      <Label className="text-sm font-medium text-muted-foreground">
+                        نمط الترويسة
+                      </Label>
                       <Controller
-                        name="logo_position"
+                        name="invoice_branding_type"
                         control={control}
                         render={({ field }) => (
-                          <TextField
-                            {...field}
-                            select
-                            fullWidth
-                            label="محاذاة الشعار"
+                          <RadioGroup
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            className="flex gap-8"
                           >
-                            <MenuItem value="right">يمين (Right)</MenuItem>
-                            <MenuItem value="left">يسار (Left)</MenuItem>
-                            <MenuItem value="center">وسط (Center)</MenuItem>
-                          </TextField>
+                            <div className="flex items-center space-x-2 space-x-reverse">
+                              <RadioGroupItem value="logo" id="logo" />
+                              <Label htmlFor="logo" className="cursor-pointer">
+                                شعار و نص (Logo & Text)
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2 space-x-reverse">
+                              <RadioGroupItem value="header" id="header" />
+                              <Label htmlFor="header" className="cursor-pointer">
+                                صورة هيدر كاملة (Full Header Image)
+                              </Label>
+                            </div>
+                          </RadioGroup>
                         )}
                       />
-                      <Stack direction="row" spacing={2}>
+                    </div>
+
+                    <Separator />
+
+                    {watchedBrandingType === "logo" && (
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="mb-2 block text-sm font-medium">
+                            رفع الشعار
+                          </Label>
+                          <div className="rounded-lg border-2 border-dashed border-border bg-muted/50 p-6 text-center transition-colors hover:border-primary hover:bg-muted">
+                            {logoPreview ? (
+                              <div className="mb-4 flex h-24 items-center justify-center">
+                                <img
+                                  src={logoPreview}
+                                  alt="Logo"
+                                  className="max-h-full max-w-full object-contain"
+                                />
+                              </div>
+                            ) : (
+                              <Image className="mx-auto mb-2 h-12 w-12 text-muted-foreground" />
+                            )}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              asChild
+                              className="mt-2"
+                            >
+                              <label className="cursor-pointer">
+                                <Upload className="mr-2 h-4 w-4" />
+                                رفع ملف جديد
+                                <input
+                                  type="file"
+                                  className="hidden"
+                                  accept="image/*"
+                                  onChange={handleLogoUpload}
+                                />
+                              </label>
+                            </Button>
+                          </div>
+                        </div>
+
                         <Controller
-                          name="logo_width"
+                          name="logo_position"
                           control={control}
                           render={({ field }) => (
-                            <TextField
-                              {...field}
-                              type="number"
-                              fullWidth
-                              label="العرض (px)"
-                              onChange={(e) =>
-                                field.onChange(Number(e.target.value))
-                              }
-                            />
+                            <div className="space-y-2">
+                              <Label>محاذاة الشعار</Label>
+                              <Select
+                                value={field.value}
+                                onValueChange={field.onChange}
+                              >
+                                <SelectTrigger className="w-full" dir="ltr">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="right">يمين (Right)</SelectItem>
+                                  <SelectItem value="left">يسار (Left)</SelectItem>
+                                  <SelectItem value="center">وسط (Center)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
                           )}
                         />
-                        <Controller
-                          name="logo_height"
-                          control={control}
-                          render={({ field }) => (
-                            <TextField
-                              {...field}
-                              type="number"
-                              fullWidth
-                              label="الارتفاع (px)"
-                              onChange={(e) =>
-                                field.onChange(Number(e.target.value))
-                              }
-                            />
-                          )}
-                        />
-                      </Stack>
-                    </Stack>
-                  )}
 
-                  {watchedBrandingType === "header" && (
-                    <Box>
-                      <Typography variant="subtitle2" gutterBottom>
-                        صورة الهيدر الكاملة
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        paragraph
-                      >
-                        ستظهر هذه الصورة بعرض الصفحة الكامل في أعلى الفاتورة.
-                        سيتم إخفاء بيانات الشركة النصية.
-                      </Typography>
-                      <Box
-                        sx={{
-                          border: "2px dashed",
-                          borderColor: "divider",
-                          borderRadius: 2,
-                          p: 3,
-                          textAlign: "center",
-                        }}
-                      >
-                        {headerPreview ? (
-                          <Box
-                            sx={{
-                              mb: 2,
-                              height: 120,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              overflow: "hidden",
-                            }}
-                          >
-                            <img
-                              src={headerPreview}
-                              alt="Header"
-                              style={{
-                                height: "100%",
-                                objectFit: "cover",
-                                width: "100%",
-                              }}
-                            />
-                          </Box>
-                        ) : (
-                          <Box
-                            sx={{
-                              height: 80,
-                              bgcolor: "action.hover",
-                              mb: 2,
-                              borderRadius: 1,
-                            }}
+                        <div className="grid grid-cols-2 gap-4">
+                          <Controller
+                            name="logo_width"
+                            control={control}
+                            render={({ field }) => (
+                              <div className="space-y-2">
+                                <Label>العرض (px)</Label>
+                                <Input
+                                  type="number"
+                                  {...field}
+                                  onChange={(e) =>
+                                    field.onChange(Number(e.target.value))
+                                  }
+                                  className="text-left"
+                                  dir="ltr"
+                                />
+                              </div>
+                            )}
                           />
-                        )}
-                        <Button
-                          variant="contained"
-                          component="label"
-                          startIcon={<CloudUploadIcon />}
-                          color="secondary"
-                        >
-                          رفع صورة الهيدر
-                          <input
-                            type="file"
-                            hidden
-                            accept="image/*"
-                            onChange={handleHeaderUpload}
+                          <Controller
+                            name="logo_height"
+                            control={control}
+                            render={({ field }) => (
+                              <div className="space-y-2">
+                                <Label>الارتفاع (px)</Label>
+                                <Input
+                                  type="number"
+                                  {...field}
+                                  onChange={(e) =>
+                                    field.onChange(Number(e.target.value))
+                                  }
+                                  className="text-left"
+                                  dir="ltr"
+                                />
+                              </div>
+                            )}
                           />
-                        </Button>
-                      </Box>
-                    </Box>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* SECTION 4: PDF & Printing */}
-            {activeSection === 4 && (
-              <Card sx={{ borderRadius: 3, boxShadow: theme.shadows[1] }}>
-                <CardContent sx={{ p: 4 }}>
-                  <Typography
-                    variant="h6"
-                    fontWeight={600}
-                    gutterBottom
-                    sx={{ mb: 3 }}
-                  >
-                    إعدادات الطباعة و PDF
-                  </Typography>
-                  <Controller
-                    name="pdf_font"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        select
-                        fullWidth
-                        label="نوع الخط العربي (Arabic Font)"
-                        helperText="يؤثر على طريقة ظهور النصوص العربية في الفواتير المصدرة PDF"
-                      >
-                        <MenuItem value={PDF_FONTS.AMIRI}>
-                          Amiri (خط نسخ كلاسيكي - Serif)
-                        </MenuItem>
-                        <MenuItem value={PDF_FONTS.TAJAWAL}>
-                          Tajawal (خط حديث - Sans Serif)
-                        </MenuItem>
-                        <MenuItem value={PDF_FONTS.IBM_PLEX}>
-                          IBM Plex Sans Arabic (خط عصري - Modern)
-                        </MenuItem>
-                        <MenuItem value={PDF_FONTS.ARIAL}>
-                          Arial (قياسي - Standard)
-                        </MenuItem>
-                      </TextField>
+                        </div>
+                      </div>
                     )}
-                  />
-                </CardContent>
-              </Card>
-            )}
-          </Stack>
-        </Box>
 
-        {/* Floating Save Bar */}
-        <Paper
-          elevation={4}
-          sx={{
-            position: "fixed",
-            bottom: 24,
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: "auto",
-            minWidth: 300,
-            borderRadius: 10,
-            py: 1.5,
-            px: 3,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 4,
-            zIndex: 1000,
-            border: `1px solid ${theme.palette.divider}`,
-          }}
-        >
-          <Typography variant="body2" fontWeight={500} color="text.secondary">
-            هل قمت بإجراء تعديلات؟
-          </Typography>
-          <Button
-            type="submit"
-            variant="contained"
-            size="large"
-            disabled={isSubmitting || isLoadingSettings}
-            startIcon={
-              isSubmitting ? (
-                <CircularProgress size={20} color="inherit" />
+                    {watchedBrandingType === "header" && (
+                      <div>
+                        <Label className="mb-1 block text-sm font-medium">
+                          صورة الهيدر الكاملة
+                        </Label>
+                        <p className="mb-4 text-sm text-muted-foreground">
+                          ستظهر هذه الصورة بعرض الصفحة الكامل في أعلى الفاتورة.
+                          سيتم إخفاء بيانات الشركة النصية.
+                        </p>
+                        <div className="rounded-lg border-2 border-dashed border-border bg-muted/50 p-6 text-center transition-colors hover:border-primary hover:bg-muted">
+                          {headerPreview ? (
+                            <div className="mb-4 h-32 overflow-hidden rounded">
+                              <img
+                                src={headerPreview}
+                                alt="Header"
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="mb-4 h-20 rounded bg-muted" />
+                          )}
+                          <Button type="button" variant="default" asChild>
+                            <label className="cursor-pointer">
+                              <Upload className="mr-2 h-4 w-4" />
+                              رفع صورة الهيدر
+                              <input
+                                type="file"
+                                className="hidden"
+                                accept="image/*"
+                                onChange={handleHeaderUpload}
+                              />
+                            </label>
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* SECTION 4: PDF & Printing */}
+              <TabsContent value="4">
+                <Card className="border shadow-sm">
+                  <CardHeader>
+                    <CardTitle>إعدادات الطباعة و PDF</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Controller
+                      name="pdf_font"
+                      control={control}
+                      render={({ field }) => (
+                        <div className="space-y-2">
+                          <Label>نوع الخط العربي (Arabic Font)</Label>
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                          >
+                            <SelectTrigger className="w-full" dir="ltr">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={PDF_FONTS.AMIRI}>
+                                Amiri (خط نسخ كلاسيكي - Serif)
+                              </SelectItem>
+                              <SelectItem value={PDF_FONTS.TAJAWAL}>
+                                Tajawal (خط حديث - Sans Serif)
+                              </SelectItem>
+                              <SelectItem value={PDF_FONTS.IBM_PLEX}>
+                                IBM Plex Sans Arabic (خط عصري - Modern)
+                              </SelectItem>
+                              <SelectItem value={PDF_FONTS.ARIAL}>
+                                Arial (قياسي - Standard)
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <p className="text-sm text-muted-foreground">
+                            يؤثر على طريقة ظهور النصوص العربية في الفواتير المصدرة PDF
+                          </p>
+                        </div>
+                      )}
+                    />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </div>
+          </Tabs>
+
+          {/* Floating Save Bar */}
+          <div className="fixed bottom-6 left-1/2 z-50 flex min-w-[400px] max-w-[90%] -translate-x-1/2 items-center justify-between gap-4 rounded-lg border bg-card p-4 shadow-lg">
+            <p className="hidden text-sm font-medium text-muted-foreground sm:block">
+              هل قمت بإجراء تعديلات؟
+            </p>
+            <Button
+              type="submit"
+              size="lg"
+              disabled={isSubmitting || isLoadingSettings}
+              className="font-semibold"
+            >
+              {isSubmitting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                <SaveIcon />
-              )
-            }
-            sx={{ borderRadius: 5, px: 4 }}
-          >
-            حفظ التغييرات
-          </Button>
-        </Paper>
-      </Box>
-    </Box>
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              حفظ التغييرات
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 };
 

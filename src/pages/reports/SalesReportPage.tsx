@@ -1,102 +1,44 @@
 // src/pages/reports/SalesReportPage.tsx
-import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useForm, Controller, SubmitHandler } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 
 // MUI Components
 import {
   Box,
   Button,
-  Card,
-  CardContent,
-  CardHeader,
   Typography,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Alert,
-  AlertTitle,
-  CircularProgress,
-  Chip,
-  Pagination,
   Stack,
-  Autocomplete,
-  Skeleton,
   Dialog,
   DialogTitle,
   DialogContent,
-  Paper,
-  Divider,
 } from "@mui/material";
 import IconButton from "@mui/material/IconButton";
 
 // Lucide Icons
-import {
-  ArrowLeft,
-  Download,
-  BarChart3,
-  DollarSign,
-  FileText,
-  Filter,
-  X,
-  TrendingUp,
-  Percent,
-  RotateCcw,
-  ShoppingCart,
-  CheckCircle2,
-  PieChart,
-} from "lucide-react";
+import { ArrowLeft, Download, FileText, X } from "lucide-react";
 
+import apiClient from "@/lib/axios";
 // Services and Types
 import saleService, { Sale } from "@/services/saleService";
-import clientService, { Client } from "@/services/clientService";
-import productService, { Product } from "@/services/productService";
-import { PaginatedResponse } from "@/services/clientService";
-import apiClient from "@/lib/axios";
 import { PosShiftReportPdf } from "@/components/pos/PosShiftReportPdf";
-import settingService, { AppSettings } from "@/services/settingService";
+import { useSettings } from "@/context/SettingsContext";
 import { PDFViewer } from "@react-pdf/renderer";
 
-// Helpers
-import { formatNumber } from "@/constants";
 // React Query Hooks
 import { useClients } from "@/hooks/useClients";
 import { useProducts } from "@/hooks/useProducts";
 import { useShifts } from "@/hooks/useShifts";
 import { useSalesReport } from "@/hooks/useSalesReport";
 
-// --- Zod Schema for Filter Form ---
-const reportFilterSchema = z
-  .object({
-    startDate: z.string().nullable().optional(),
-    endDate: z.string().nullable().optional(),
-    clientId: z.string().nullable().optional(),
-    userId: z.string().nullable().optional(),
-    shiftId: z.string().nullable().optional(),
-    productId: z.string().nullable().optional(),
-  })
-  .refine(
-    (data) =>
-      !data.endDate || !data.startDate || data.endDate >= data.startDate,
-    {
-      message: "تاريخ الانتهاء يجب أن يكون بعد تاريخ البدء",
-      path: ["endDate"],
-    }
-  );
-
-type ReportFilterValues = z.infer<typeof reportFilterSchema>;
+// New Sub-components
+import ReportFilters, {
+  ReportFilterValues,
+} from "@/components/reports/sales/ReportFilters";
+import { ReportStats } from "@/components/reports/sales/ReportStats";
+import { SalesTable } from "@/components/reports/sales/SalesTable";
+import SaleDetailsDialog from "@/components/reports/sales/SaleDetailsDialog";
 
 // --- Component ---
 const SalesReportPage: React.FC = () => {
@@ -114,22 +56,9 @@ const SalesReportPage: React.FC = () => {
     closed_at: string | null;
     is_open: boolean;
   } | null>(null);
-  const [settings, setSettings] = useState<AppSettings | null>(null);
 
-  // --- Initialize Form with URL Search Params ---
-  const form = useForm<ReportFilterValues>({
-    resolver: zodResolver(reportFilterSchema),
-    defaultValues: {
-      startDate:
-        searchParams.get("startDate") || format(new Date(), "yyyy-MM-dd"),
-      endDate: searchParams.get("endDate") || format(new Date(), "yyyy-MM-dd"),
-      clientId: searchParams.get("clientId") || null,
-      userId: searchParams.get("userId") || null,
-      shiftId: searchParams.get("shiftId") || null,
-      productId: searchParams.get("productId") || null,
-    },
-  });
-  const { control, handleSubmit, reset, watch } = form;
+  const { getSetting, settings } = useSettings();
+  const posMode = getSetting("pos_mode", "shift") as "shift" | "days";
 
   // --- Current Filters and Page ---
   const currentFilters = useMemo(
@@ -137,96 +66,56 @@ const SalesReportPage: React.FC = () => {
       startDate:
         searchParams.get("startDate") || format(new Date(), "yyyy-MM-dd"),
       endDate: searchParams.get("endDate") || format(new Date(), "yyyy-MM-dd"),
-      clientId: searchParams.get("clientId")
-        ? Number(searchParams.get("clientId"))
-        : null,
-      userId: searchParams.get("userId")
-        ? Number(searchParams.get("userId"))
-        : null,
-      shiftId: searchParams.get("shiftId")
-        ? Number(searchParams.get("shiftId"))
-        : null,
-      productId: searchParams.get("productId")
-        ? Number(searchParams.get("productId"))
-        : null,
+      clientId: searchParams.get("clientId") || null,
+      userId: searchParams.get("userId") || null,
+      shiftId: searchParams.get("shiftId") || null,
+      productId: searchParams.get("productId") || null,
     }),
     [searchParams]
   );
+
+  const initialFilterValues: ReportFilterValues = currentFilters;
 
   const currentPage = useMemo(
     () => Number(searchParams.get("page") || "1"),
     [searchParams]
   );
 
-  // --- React Query Hooks ---
-
-  // 1. Fetch Clients
+  // --- React Query Hooks (for shift report PDF data) ---
   const { data: clientsData, isLoading: loadingClients } = useClients();
   const clients = clientsData?.data || [];
 
-  // 2. Fetch Products
   const { data: productsData, isLoading: loadingProducts } = useProducts({
     page: 1,
-    perPage: 1000, // Fetch all for dropdown
+    perPage: 1000,
   });
   const products = productsData?.data || [];
 
-  // 3. Fetch Shifts
   const { data: shifts = [], isLoading: loadingShifts } = useShifts();
 
-  // 4. Fetch Sales Report
-  const {
-    data: reportData,
-    isLoading,
-    isError,
-    error,
-  } = useSalesReport({
+  const { data: reportData } = useSalesReport({
     page: currentPage,
     startDate: currentFilters.startDate,
     endDate: currentFilters.endDate,
-    clientId: currentFilters.clientId,
-    userId: currentFilters.userId,
-    shiftId: currentFilters.shiftId,
+    clientId: currentFilters.clientId ? Number(currentFilters.clientId) : null,
+    userId: currentFilters.userId ? Number(currentFilters.userId) : null,
+    shiftId: currentFilters.shiftId ? Number(currentFilters.shiftId) : null,
+    productId: currentFilters.productId
+      ? Number(currentFilters.productId)
+      : null,
     limit: 25,
+    posMode,
   });
 
   const loadingFilters = loadingClients || loadingProducts || loadingShifts;
 
-  // --- Effects ---
-
-  // Fetch Settings (Keep as is for now or move to hook later)
-  useEffect(() => {
-    settingService
-      .getSettings()
-      .then((response) => {
-        setSettings(response);
-      })
-      .catch(() => {
-        // Ignore errors
-      });
-  }, []);
-
-  // Update form values when URL params change
-  useEffect(() => {
-    reset({
-      startDate: currentFilters.startDate,
-      endDate: currentFilters.endDate,
-      clientId: currentFilters.clientId
-        ? String(currentFilters.clientId)
-        : null,
-      userId: currentFilters.userId ? String(currentFilters.userId) : null,
-      shiftId: currentFilters.shiftId ? String(currentFilters.shiftId) : null,
-      productId: currentFilters.productId
-        ? String(currentFilters.productId)
-        : null,
-    });
-  }, [currentFilters, reset]);
-
   // --- Auto-select last shift on first load ---
   useEffect(() => {
-    // Only auto-select if shiftId is not in URL params and shifts are available
-    if (!searchParams.get("shiftId") && shifts.length > 0) {
-      // Find shift with max ID (last shift)
+    if (
+      posMode === "shift" &&
+      !searchParams.get("shiftId") &&
+      shifts.length > 0
+    ) {
       const lastShift = shifts.reduce((prev, current) =>
         prev.id > current.id ? prev : current
       );
@@ -234,35 +123,22 @@ const SalesReportPage: React.FC = () => {
       newParams.set("shiftId", String(lastShift.id));
       setSearchParams(newParams, { replace: true });
     }
-  }, [shifts, searchParams, setSearchParams]);
+  }, [shifts, searchParams, setSearchParams, posMode]);
 
   // --- Filter Handlers ---
-  const onFilterSubmit: SubmitHandler<ReportFilterValues> = (data) => {
+  const onFilterSubmit = (data: ReportFilterValues) => {
     const newParams = new URLSearchParams();
-    if (data.startDate) {
-      newParams.set("startDate", data.startDate);
-    }
-    if (data.endDate) {
-      newParams.set("endDate", data.endDate);
-    }
+    if (data.startDate) newParams.set("startDate", data.startDate);
+    if (data.endDate) newParams.set("endDate", data.endDate);
     if (data.clientId) newParams.set("clientId", data.clientId);
     if (data.userId) newParams.set("userId", data.userId);
     if (data.shiftId) newParams.set("shiftId", data.shiftId);
     if (data.productId) newParams.set("productId", data.productId);
     newParams.set("page", "1");
-
     setSearchParams(newParams);
   };
 
   const clearFilters = () => {
-    reset({
-      startDate: format(new Date(), "yyyy-MM-dd"),
-      endDate: format(new Date(), "yyyy-MM-dd"),
-      clientId: null,
-      userId: null,
-      shiftId: null,
-      productId: null,
-    });
     setSearchParams({ page: "1" });
   };
 
@@ -274,17 +150,12 @@ const SalesReportPage: React.FC = () => {
 
   // --- Download PDF ---
   const handleDownloadPdf = async () => {
-    const currentFilterValues = watch();
-
-    // If shift is selected, use PosShiftReportPdf
-    if (currentFilterValues.shiftId) {
+    if (currentFilters.shiftId) {
       try {
-        // Find shift from shifts list or fetch current shift
-        const shiftId = Number(currentFilterValues.shiftId);
+        const shiftId = Number(currentFilters.shiftId);
         const shiftFromList = shifts.find((s) => s.id === shiftId);
 
         if (shiftFromList) {
-          // Try to get full shift details from current shift if it matches
           const currentShiftResponse = await apiClient
             .get("/shifts/current")
             .catch(() => ({ data: null }));
@@ -299,7 +170,6 @@ const SalesReportPage: React.FC = () => {
               is_open: currentShift.is_open || !currentShift.closed_at,
             });
           } else {
-            // Use shift from list with estimated dates
             setSelectedShift({
               id: shiftFromList.id,
               opened_at: shiftFromList.shift_date
@@ -311,45 +181,29 @@ const SalesReportPage: React.FC = () => {
           }
           setShiftReportDialogOpen(true);
         } else {
-          // Fallback to backend PDF
           handleBackendPdf();
         }
       } catch (error) {
         console.error("Error fetching shift:", error);
-        // Fallback to backend PDF
         handleBackendPdf();
       }
     } else {
-      // Use backend PDF for non-shift reports
       handleBackendPdf();
     }
   };
 
   const handleBackendPdf = () => {
-    const currentFilterValues = watch();
     const params = new URLSearchParams();
-
-    if (currentFilterValues.startDate) {
-      params.append(
-        "start_date",
-        format(currentFilterValues.startDate, "yyyy-MM-dd")
-      );
-    }
-    if (currentFilterValues.endDate) {
-      params.append(
-        "end_date",
-        format(currentFilterValues.endDate, "yyyy-MM-dd")
-      );
-    }
-    if (currentFilterValues.clientId) {
-      params.append("client_id", String(currentFilterValues.clientId));
-    }
-    if (currentFilterValues.userId) {
-      params.append("user_id", String(currentFilterValues.userId));
-    }
-    if (currentFilterValues.shiftId) {
-      params.append("shift_id", String(currentFilterValues.shiftId));
-    }
+    if (currentFilters.startDate)
+      params.append("start_date", currentFilters.startDate);
+    if (currentFilters.endDate)
+      params.append("end_date", currentFilters.endDate);
+    if (currentFilters.clientId)
+      params.append("client_id", String(currentFilters.clientId));
+    if (currentFilters.userId)
+      params.append("user_id", String(currentFilters.userId));
+    if (currentFilters.shiftId)
+      params.append("shift_id", String(currentFilters.shiftId));
 
     const pdfUrl = `${
       import.meta.env.VITE_API_BASE_URL
@@ -357,77 +211,6 @@ const SalesReportPage: React.FC = () => {
     window.open(pdfUrl, "_blank");
     toast.info("جاري فتح PDF في تبويب جديد...");
   };
-
-  // --- Calculate Summary Stats ---
-  const summaryStats = useMemo(() => {
-    if (!reportData?.data) return null;
-
-    const totalSales = reportData.data.length;
-    const totalAmount = reportData.data.reduce(
-      (sum, sale) => sum + Number(sale.total_amount),
-      0
-    );
-    const totalPaid = reportData.data.reduce(
-      (sum, sale) => sum + Number(sale.paid_amount),
-      0
-    );
-    const totalDue = reportData.data.reduce(
-      (sum, sale) => sum + Number(sale.due_amount || 0),
-      0
-    );
-    const totalDiscount = reportData.data.reduce(
-      (sum, sale) => sum + Number(sale.discount_amount || 0),
-      0
-    );
-
-    // Calculate Refunds
-    const totalRefund = reportData.data.reduce((sum, sale) => {
-      if (!sale.payments) return sum;
-      return (
-        sum +
-        sale.payments
-          .filter((p) => p.method === "refund")
-          .reduce((pSum, p) => pSum + Math.abs(Number(p.amount)), 0)
-      );
-    }, 0);
-
-    const totalNet = totalAmount - totalDiscount - totalRefund;
-
-    // Calculate Cash and Bank totals
-    const totalCash = reportData.data.reduce((sum, sale) => {
-      if (!sale.payments) return sum;
-      return (
-        sum +
-        sale.payments
-          .filter((p) => p.method === "cash")
-          .reduce((pSum, p) => pSum + Number(p.amount), 0)
-      );
-    }, 0);
-
-    const totalBank = reportData.data.reduce((sum, sale) => {
-      if (!sale.payments) return sum;
-      return (
-        sum +
-        sale.payments
-          .filter((p) =>
-            ["visa", "mastercard", "mada", "bank_transfer"].includes(p.method)
-          )
-          .reduce((pSum, p) => pSum + Number(p.amount), 0)
-      );
-    }, 0);
-
-    return {
-      totalSales,
-      totalAmount,
-      totalPaid,
-      totalDue,
-      totalCash,
-      totalBank,
-      totalDiscount,
-      totalRefund,
-      totalNet,
-    };
-  }, [reportData]);
 
   return (
     <Box sx={{ minHeight: "100vh" }}>
@@ -458,9 +241,7 @@ const SalesReportPage: React.FC = () => {
                     borderColor: "divider",
                     borderRadius: 2,
                     transition: "all 0.15s ease",
-                    "&:hover": {
-                      bgcolor: "action.hover",
-                    },
+                    "&:hover": { bgcolor: "action.hover" },
                   }}
                 >
                   <ArrowLeft size={18} />
@@ -483,228 +264,53 @@ const SalesReportPage: React.FC = () => {
                 </Box>
               </Stack>
 
-              {!isLoading && reportData && reportData.data.length > 0 && (
-                <Stack direction="row" spacing={2}>
-                  <Button
-                    onClick={handleBackendPdf}
-                    variant="outlined"
-                    size="small"
-                    startIcon={<FileText size={16} />}
-                    sx={{
-                      borderRadius: 2,
-                      textTransform: "none",
-                      px: 2.5,
-                      py: 1,
-                      fontWeight: 500,
-                    }}
-                  >
-                    تصدير تقرير مفصل
-                  </Button>
-                  <Button
-                    onClick={handleDownloadPdf}
-                    variant="contained"
-                    size="small"
-                    startIcon={<Download size={16} />}
-                    sx={{
-                      borderRadius: 2,
-                      textTransform: "none",
-                      px: 2.5,
-                      py: 1,
-                      fontWeight: 500,
-                      boxShadow: "none",
-                      "&:hover": {
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                      },
-                    }}
-                  >
-                    تصدير PDF
-                  </Button>
-                </Stack>
-              )}
+              <Stack direction="row" gap={1} spacing={2}>
+                <Button
+                  onClick={handleBackendPdf}
+                  variant="outlined"
+                  size="small"
+                  startIcon={<FileText size={16} />}
+                  sx={{
+                    borderRadius: 2,
+                    textTransform: "none",
+                    px: 2.5,
+                    py: 1,
+                    fontWeight: 500,
+                  }}
+                >
+                  تصدير تقرير مفصل
+                </Button>
+                <Button
+                  onClick={handleDownloadPdf}
+                  variant="contained"
+                  size="small"
+                  startIcon={<Download size={16} />}
+                  sx={{
+                    borderRadius: 2,
+                    textTransform: "none",
+                    px: 2.5,
+                    py: 1,
+                    fontWeight: 500,
+                    boxShadow: "none",
+                    "&:hover": { boxShadow: "0 2px 8px rgba(0,0,0,0.15)" },
+                  }}
+                >
+                  تصدير PDF
+                </Button>
+              </Stack>
             </Stack>
 
-            {/* Filters Bar - Single Row */}
-            <Box component="form" onSubmit={handleSubmit(onFilterSubmit)}>
-              <Stack
-                direction="row"
-                flexWrap="wrap"
-                gap={2}
-                alignItems="center"
-              >
-                {/* Start Date */}
-                <Box sx={{ minWidth: 150 }}>
-                  <Controller
-                    control={control}
-                    name="startDate"
-                    render={({ field, fieldState }) => (
-                      <TextField
-                        type="date"
-                        label="تاريخ البدء"
-                        value={field.value || ""}
-                        onChange={field.onChange}
-                        fullWidth
-                        size="small"
-                        error={!!fieldState.error}
-                        helperText={fieldState.error?.message}
-                        InputLabelProps={{ shrink: true }}
-                      />
-                    )}
-                  />
-                </Box>
-
-                {/* End Date */}
-                <Box sx={{ minWidth: 150 }}>
-                  <Controller
-                    control={control}
-                    name="endDate"
-                    render={({ field, fieldState }) => (
-                      <TextField
-                        type="date"
-                        label="تاريخ الانتهاء"
-                        value={field.value || ""}
-                        onChange={field.onChange}
-                        fullWidth
-                        size="small"
-                        error={!!fieldState.error}
-                        helperText={fieldState.error?.message}
-                        InputLabelProps={{ shrink: true }}
-                      />
-                    )}
-                  />
-                </Box>
-
-                {/* Client Select */}
-                <Box sx={{ minWidth: 150 }}>
-                  <Controller
-                    control={control}
-                    name="clientId"
-                    render={({ field, fieldState }) => (
-                      <FormControl
-                        fullWidth
-                        size="small"
-                        error={!!fieldState.error}
-                      >
-                        <InputLabel>العميل</InputLabel>
-                        <Select
-                          value={field.value ?? ""}
-                          onChange={field.onChange}
-                          label="العميل"
-                          disabled={loadingFilters}
-                        >
-                          <MenuItem value="">الكل</MenuItem>
-                          {clients.map((client) => (
-                            <MenuItem key={client.id} value={String(client.id)}>
-                              {client.name}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    )}
-                  />
-                </Box>
-
-                {/* User Select (Optional - currently hidden/disabled in original but let's keep it if it wa there) */}
-                {/* The original code had User select but "User selection temporarily disabled" comment inside options */}
-
-                {/* Shift Select */}
-                <Box sx={{ minWidth: 150 }}>
-                  <Controller
-                    control={control}
-                    name="shiftId"
-                    render={({ field, fieldState }) => (
-                      <FormControl
-                        fullWidth
-                        size="small"
-                        error={!!fieldState.error}
-                      >
-                        <InputLabel>الوردية</InputLabel>
-                        <Select
-                          value={field.value ?? ""}
-                          onChange={field.onChange}
-                          label="الوردية"
-                          disabled={loadingFilters}
-                        >
-                          <MenuItem value="">الكل</MenuItem>
-                          {shifts.map((shift) => (
-                            <MenuItem key={shift.id} value={String(shift.id)}>
-                              {shift.name || `الوردية #${shift.id}`}{" "}
-                              {shift.shift_date ? `(${shift.shift_date})` : ""}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    )}
-                  />
-                </Box>
-
-                {/* Product Select */}
-                <Box sx={{ minWidth: 200 }}>
-                  <Controller
-                    control={control}
-                    name="productId"
-                    render={({ field, fieldState }) => (
-                      <Autocomplete
-                        options={products}
-                        getOptionLabel={(option) => option.name || ""}
-                        value={
-                          products.find((p) => String(p.id) === field.value) ||
-                          null
-                        }
-                        onChange={(_, newValue) => {
-                          field.onChange(newValue ? String(newValue.id) : "");
-                        }}
-                        disabled={loadingFilters}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            label="المنتج"
-                            size="small"
-                            error={!!fieldState.error}
-                          />
-                        )}
-                        noOptionsText="لا توجد منتجات"
-                      />
-                    )}
-                  />
-                </Box>
-
-                <Stack direction="row" spacing={1}>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    disabled={isLoading}
-                    startIcon={
-                      isLoading ? (
-                        <CircularProgress size={16} />
-                      ) : (
-                        <Filter size={16} />
-                      )
-                    }
-                    sx={{
-                      borderRadius: 2,
-                      textTransform: "none",
-                      fontWeight: 600,
-                    }}
-                  >
-                    تطبيق
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outlined"
-                    onClick={clearFilters}
-                    disabled={isLoading}
-                    startIcon={<X size={16} />}
-                    sx={{
-                      borderRadius: 2,
-                      textTransform: "none",
-                      fontWeight: 500,
-                    }}
-                  >
-                    مسح
-                  </Button>
-                </Stack>
-              </Stack>
-            </Box>
+            {/* Filters component */}
+            <ReportFilters
+              initialValues={initialFilterValues}
+              onFilterSubmit={onFilterSubmit}
+              onClearFilters={clearFilters}
+              clients={clients}
+              products={products}
+              shifts={shifts}
+              loadingFilters={loadingFilters}
+              posMode={posMode}
+            />
           </Stack>
         </Box>
       </Box>
@@ -717,1165 +323,64 @@ const SalesReportPage: React.FC = () => {
           py: 3,
         }}
       >
-        <Box sx={{ width: "100%" }}>
-          {/* Summary Stats */}
-          {summaryStats && (
-            <Stack spacing={3} sx={{ mb: 3 }}>
-              {/* Row 1: Amount, Discount, Paid, Refund, Net, SalesCount */}
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "repeat(1, 1fr)",
-                    sm: "repeat(2, 1fr)",
-                    md: "repeat(3, 1fr)",
-                    lg: "repeat(6, 1fr)",
-                  },
-                  gap: 2.5,
-                }}
-              >
-                {/* Total Amount */}
-                <Card
-                  sx={{
-                    borderRadius: 3,
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                  }}
-                >
-                  <CardContent sx={{ p: 3, textAlign: "center" }}>
-                    <Stack spacing={2} alignItems="center">
-                      <Box
-                        sx={{
-                          color: "primary.main",
-                          p: 1.5,
-                          bgcolor: "primary.lighter",
-                          borderRadius: "50%",
-                        }}
-                      >
-                        <TrendingUp size={24} />
-                      </Box>
-                      <Box>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          fontWeight={500}
-                          gutterBottom
-                        >
-                          إجمالي المبيعات
-                        </Typography>
-                        <Typography variant="h3" fontWeight={700}>
-                          {formatNumber(summaryStats.totalAmount)}
-                        </Typography>
-                      </Box>
-                    </Stack>
-                  </CardContent>
-                </Card>
+        {/* Stats Component */}
+        <ReportStats filterValues={currentFilters} />
 
-                {/* Discount */}
-                <Card
-                  sx={{
-                    borderRadius: 3,
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                  }}
-                >
-                  <CardContent sx={{ p: 3, textAlign: "center" }}>
-                    <Stack spacing={2} alignItems="center">
-                      <Box
-                        sx={{
-                          color: "warning.main",
-                          p: 1.5,
-                          bgcolor: "warning.lighter",
-                          borderRadius: "50%",
-                        }}
-                      >
-                        <Percent size={24} />
-                      </Box>
-                      <Box>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          fontWeight={500}
-                          gutterBottom
-                        >
-                          الخصم
-                        </Typography>
-                        <Typography
-                          variant="h3"
-                          fontWeight={700}
-                          color="warning.main"
-                        >
-                          {formatNumber(summaryStats.totalDiscount)}
-                        </Typography>
-                      </Box>
-                    </Stack>
-                  </CardContent>
-                </Card>
-
-                {/* Paid */}
-                <Card
-                  sx={{
-                    borderRadius: 3,
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                  }}
-                >
-                  <CardContent sx={{ p: 3, textAlign: "center" }}>
-                    <Stack spacing={2} alignItems="center">
-                      <Box
-                        sx={{
-                          color: "success.main",
-                          p: 1.5,
-                          bgcolor: "success.lighter",
-                          borderRadius: "50%",
-                        }}
-                      >
-                        <CheckCircle2 size={24} />
-                      </Box>
-                      <Box>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          fontWeight={500}
-                          gutterBottom
-                        >
-                          المدفوع
-                        </Typography>
-                        <Typography
-                          variant="h3"
-                          fontWeight={700}
-                          color="success.main"
-                        >
-                          {formatNumber(summaryStats.totalPaid)}
-                        </Typography>
-                      </Box>
-                    </Stack>
-                  </CardContent>
-                </Card>
-
-                {/* Refund */}
-                <Card
-                  sx={{
-                    borderRadius: 3,
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                  }}
-                >
-                  <CardContent sx={{ p: 3, textAlign: "center" }}>
-                    <Stack spacing={2} alignItems="center">
-                      <Box
-                        sx={{
-                          color: "error.main",
-                          p: 1.5,
-                          bgcolor: "error.lighter",
-                          borderRadius: "50%",
-                        }}
-                      >
-                        <RotateCcw size={24} />
-                      </Box>
-                      <Box>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          fontWeight={500}
-                          gutterBottom
-                        >
-                          المرتجع
-                        </Typography>
-                        <Typography
-                          variant="h3"
-                          fontWeight={700}
-                          color="error.main"
-                        >
-                          {formatNumber(summaryStats.totalRefund)}
-                        </Typography>
-                      </Box>
-                    </Stack>
-                  </CardContent>
-                </Card>
-
-                {/* Net */}
-                <Card
-                  sx={{
-                    borderRadius: 3,
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                  }}
-                >
-                  <CardContent sx={{ p: 3, textAlign: "center" }}>
-                    <Stack spacing={2} alignItems="center">
-                      <Box
-                        sx={{
-                          color: "info.main",
-                          p: 1.5,
-                          bgcolor: "info.lighter",
-                          borderRadius: "50%",
-                        }}
-                      >
-                        <PieChart size={24} />
-                      </Box>
-                      <Box>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          fontWeight={500}
-                          gutterBottom
-                        >
-                          الصافي
-                        </Typography>
-                        <Typography
-                          variant="h3"
-                          fontWeight={700}
-                          color="primary.main"
-                        >
-                          {formatNumber(summaryStats.totalNet)}
-                        </Typography>
-                      </Box>
-                      <Stack
-                        direction="row"
-                        spacing={2}
-                        justifyContent="center"
-                      >
-                        <Typography variant="caption" color="text.secondary">
-                          نقد:{" "}
-                          <Box
-                            component="span"
-                            sx={{ fontWeight: 600, color: "success.main" }}
-                          >
-                            {formatNumber(summaryStats.totalCash)}
-                          </Box>
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          بنك:{" "}
-                          <Box
-                            component="span"
-                            sx={{ fontWeight: 600, color: "primary.main" }}
-                          >
-                            {formatNumber(summaryStats.totalBank)}
-                          </Box>
-                        </Typography>
-                      </Stack>
-                    </Stack>
-                  </CardContent>
-                </Card>
-
-                {/* Sales Count */}
-                <Card
-                  sx={{
-                    borderRadius: 3,
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                  }}
-                >
-                  <CardContent sx={{ p: 3, textAlign: "center" }}>
-                    <Stack spacing={2} alignItems="center">
-                      <Box
-                        sx={{
-                          color: "text.secondary",
-                          p: 1.5,
-                          bgcolor: "action.hover",
-                          borderRadius: "50%",
-                        }}
-                      >
-                        <ShoppingCart size={24} />
-                      </Box>
-                      <Box>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          fontWeight={500}
-                          gutterBottom
-                        >
-                          عدد العمليات
-                        </Typography>
-                        <Typography variant="h3" fontWeight={700}>
-                          {summaryStats.totalSales}
-                        </Typography>
-                      </Box>
-                    </Stack>
-                  </CardContent>
-                </Card>
-              </Box>
-            </Stack>
-          )}
-
-          {/* Loading State */}
-          {isLoading && (
-            <Card
-              sx={{
-                border: "1px solid",
-                borderColor: "divider",
-                borderRadius: 3,
-                mb: 3,
-              }}
-            >
-              <CardContent sx={{ p: 2.5 }}>
-                <Stack spacing={2}>
-                  {[...Array(5)].map((_, i) => (
-                    <Stack
-                      key={i}
-                      direction="row"
-                      spacing={2}
-                      alignItems="center"
-                    >
-                      <Skeleton variant="rounded" width={80} height={20} />
-                      <Skeleton variant="rounded" width={100} height={20} />
-                      <Box sx={{ flex: 1 }}>
-                        <Skeleton variant="text" width="60%" height={20} />
-                      </Box>
-                      <Skeleton variant="rounded" width={80} height={24} />
-                    </Stack>
-                  ))}
-                </Stack>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Error State */}
-          {!isLoading && error && (
-            <Alert
-              severity="error"
-              sx={{
-                mb: 3,
-                borderRadius: 2,
-                boxShadow: 1,
-              }}
-            >
-              <AlertTitle sx={{ fontWeight: 600 }}>خطأ</AlertTitle>
-              {error}
-            </Alert>
-          )}
-
-          {/* Results Table */}
-          {!isLoading && !error && reportData && (
-            <Card
-              sx={{
-                border: "1px solid",
-                borderColor: "divider",
-                borderRadius: 3,
-                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                overflow: "hidden",
-              }}
-            >
-              <CardHeader
-                sx={{
-                  borderBottom: "2px solid",
-                  borderColor: "primary.main",
-                  py: 2.5,
-                  px: 3,
-                  bgcolor: "grey.50",
-                }}
-              >
-                <Stack
-                  direction="row"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  flexWrap="wrap"
-                  gap={2}
-                >
-                  <Typography
-                    variant="h6"
-                    component="h2"
-                    sx={{ fontWeight: 700, color: "primary.main" }}
-                  >
-                    النتائج
-                  </Typography>
-                  <Chip
-                    label={`${(currentPage - 1) * 25 + 1}-${Math.min(
-                      currentPage * 25,
-                      reportData.total
-                    )} من ${reportData.total}`}
-                    size="small"
-                    variant="filled"
-                    color="primary"
-                    sx={{ fontWeight: 600 }}
-                  />
-                </Stack>
-              </CardHeader>
-              <CardContent sx={{ p: 0 }}>
-                {reportData.data.length === 0 ? (
-                  <Box
-                    sx={{
-                      textAlign: "center",
-                      py: 6,
-                      px: 2,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        display: "inline-flex",
-                        p: 2,
-                        bgcolor: "action.hover",
-                        borderRadius: 3,
-                        mb: 2,
-                      }}
-                    >
-                      <FileText size={32} style={{ opacity: 0.4 }} />
-                    </Box>
-                    <Typography
-                      variant="subtitle1"
-                      sx={{ mb: 0.5, fontWeight: 600 }}
-                    >
-                      لا توجد مبيعات
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      جرب تعديل الفلاتر
-                    </Typography>
-                  </Box>
-                ) : (
-                  <>
-                    <Box sx={{ overflowX: "auto" }}>
-                      <Table size="medium" sx={{ minWidth: 900 }}>
-                        <TableHead>
-                          <TableRow
-                            sx={{
-                              bgcolor: "primary.main",
-                              "& .MuiTableCell-root": {
-                                fontWeight: 700,
-                                fontSize: "0.875rem",
-                                py: 2,
-                                color: "white",
-                                borderBottom: "2px solid",
-                                borderColor: "primary.dark",
-                              },
-                            }}
-                          >
-                            <TableCell
-                              sx={{ fontWeight: 700, fontSize: "0.875rem" }}
-                            >
-                              رقم البيع
-                            </TableCell>
-                            <TableCell
-                              sx={{ fontWeight: 700, fontSize: "0.875rem" }}
-                            >
-                              التاريخ
-                            </TableCell>
-                            <TableCell
-                              sx={{ fontWeight: 700, fontSize: "0.875rem" }}
-                            >
-                              العميل
-                            </TableCell>
-                            <TableCell
-                              sx={{ fontWeight: 700, fontSize: "0.875rem" }}
-                            >
-                              المستخدم
-                            </TableCell>
-                            <TableCell
-                              sx={{ fontWeight: 700, fontSize: "0.875rem" }}
-                              align="center"
-                            >
-                              المدفوعات
-                            </TableCell>
-                            <TableCell
-                              align="right"
-                              sx={{ fontWeight: 700, fontSize: "0.875rem" }}
-                            >
-                              الخصم
-                            </TableCell>
-                            <TableCell
-                              align="right"
-                              sx={{ fontWeight: 700, fontSize: "0.875rem" }}
-                            >
-                              المبلغ الإجمالي
-                            </TableCell>
-                            <TableCell
-                              align="right"
-                              sx={{ fontWeight: 700, fontSize: "0.875rem" }}
-                            >
-                              المدفوع
-                            </TableCell>
-                            <TableCell
-                              align="right"
-                              sx={{ fontWeight: 700, fontSize: "0.875rem" }}
-                            >
-                              المستحق
-                            </TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {reportData.data.map((sale) => (
-                            <TableRow
-                              key={sale.id}
-                              hover
-                              onClick={async () => {
-                                setLoadingSaleDetails(true);
-                                setSaleDetailsDialogOpen(true);
-                                try {
-                                  const fullSale = await saleService.getSale(
-                                    sale.id
-                                  );
-                                  setSelectedSale(fullSale);
-                                } catch (error) {
-                                  console.error(
-                                    "Failed to fetch sale details:",
-                                    error
-                                  );
-                                  toast.error("خطأ", {
-                                    description: "فشل تحميل تفاصيل البيع",
-                                  });
-                                  setSaleDetailsDialogOpen(false);
-                                } finally {
-                                  setLoadingSaleDetails(false);
-                                }
-                              }}
-                              sx={{
-                                cursor: "pointer",
-                                transition: "all 0.2s ease",
-                                "&:hover": {
-                                  bgcolor: "action.hover",
-                                  transform: "translateX(-2px)",
-                                },
-                                "&:last-child td": { border: 0 },
-                                "& .MuiTableCell-root": {
-                                  py: 2,
-                                  fontSize: "0.875rem",
-                                  borderBottom: "1px solid",
-                                  borderColor: "divider",
-                                },
-                              }}
-                            >
-                              <TableCell
-                                sx={{ fontWeight: 600, color: "primary.main" }}
-                              >
-                                #{sale.id}
-                              </TableCell>
-                              <TableCell>
-                                <Typography
-                                  variant="body2"
-                                  sx={{ fontWeight: 500 }}
-                                >
-                                  {format(
-                                    parseISO(sale.sale_date),
-                                    "yyyy-MM-dd"
-                                  )}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                {sale.client_name ? (
-                                  <Typography
-                                    variant="body2"
-                                    sx={{ fontWeight: 500 }}
-                                  >
-                                    {sale.client_name}
-                                  </Typography>
-                                ) : (
-                                  <Typography
-                                    component="span"
-                                    color="text.secondary"
-                                    variant="body2"
-                                  >
-                                    عميل غير محدد
-                                  </Typography>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {sale.user_name ? (
-                                  <Typography
-                                    variant="body2"
-                                    sx={{ fontWeight: 500 }}
-                                  >
-                                    {sale.user_name}
-                                  </Typography>
-                                ) : (
-                                  <Typography
-                                    component="span"
-                                    color="text.secondary"
-                                    variant="body2"
-                                  >
-                                    —
-                                  </Typography>
-                                )}
-                              </TableCell>
-                              <TableCell align="center">
-                                {sale.payments && sale.payments.length > 0 ? (
-                                  <Chip
-                                    label={`${sale.payments.length} ${
-                                      sale.payments.length === 1
-                                        ? "دفعة"
-                                        : "دفعات"
-                                    }`}
-                                    size="small"
-                                    variant="outlined"
-                                    sx={{
-                                      borderColor: "primary.main",
-                                      color: "primary.main",
-                                      fontWeight: 600,
-                                    }}
-                                  />
-                                ) : (
-                                  <Typography
-                                    component="span"
-                                    color="text.secondary"
-                                    variant="body2"
-                                  >
-                                    —
-                                  </Typography>
-                                )}
-                              </TableCell>
-                              <TableCell align="right">
-                                {sale.discount_amount &&
-                                Number(sale.discount_amount) > 0 ? (
-                                  <Box>
-                                    <Typography
-                                      variant="body2"
-                                      sx={{
-                                        fontWeight: 600,
-                                        color: "warning.main",
-                                      }}
-                                    >
-                                      {formatNumber(sale.discount_amount)}
-                                    </Typography>
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      sx={{ display: "block", mt: 0.25 }}
-                                    >
-                                      {(sale as any).discount_type ===
-                                      "percentage"
-                                        ? "%"
-                                        : "ثابت"}
-                                    </Typography>
-                                  </Box>
-                                ) : (
-                                  <Typography
-                                    component="span"
-                                    color="text.secondary"
-                                    variant="body2"
-                                  >
-                                    —
-                                  </Typography>
-                                )}
-                              </TableCell>
-                              <TableCell
-                                align="right"
-                                sx={{ fontWeight: 600, fontSize: "0.9375rem" }}
-                              >
-                                {formatNumber(sale.total_amount)}
-                              </TableCell>
-                              <TableCell
-                                align="right"
-                                sx={{ fontWeight: 500, color: "success.main" }}
-                              >
-                                {formatNumber(sale.paid_amount)}
-                              </TableCell>
-                              <TableCell align="right">
-                                <Typography
-                                  variant="body2"
-                                  sx={{
-                                    fontWeight: 600,
-                                    color:
-                                      Number(sale.due_amount) > 0
-                                        ? "error.main"
-                                        : "success.main",
-                                  }}
-                                >
-                                  {formatNumber(sale.due_amount || 0)}
-                                </Typography>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </Box>
-
-                    {/* Pagination */}
-                    {reportData.last_page > 1 && (
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "center",
-                          py: 2.5,
-                          borderTop: "1px solid",
-                          borderColor: "divider",
-                        }}
-                      >
-                        <Pagination
-                          count={reportData.last_page}
-                          page={currentPage}
-                          onChange={(_, page) => handlePageChange(page)}
-                          color="primary"
-                          disabled={isLoading}
-                          size="small"
-                          sx={{
-                            "& .MuiPaginationItem-root": {
-                              borderRadius: 1.5,
-                            },
-                          }}
-                        />
-                      </Box>
-                    )}
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          )}
-        </Box>
+        {/* Sales Table Component */}
+        <SalesTable
+          filterValues={currentFilters}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
+          onRowClick={async (id) => {
+            setLoadingSaleDetails(true);
+            setSaleDetailsDialogOpen(true);
+            try {
+              const fullSale = await saleService.getSale(id);
+              setSelectedSale(fullSale);
+            } catch (err) {
+              console.error("Failed to fetch sale details:", err);
+              toast.error("خطأ في تحميل تفاصيل العملية");
+              setSaleDetailsDialogOpen(false);
+            } finally {
+              setLoadingSaleDetails(false);
+            }
+          }}
+        />
       </Box>
 
       {/* Sale Details Dialog */}
-      <Dialog
+      <SaleDetailsDialog
         open={saleDetailsDialogOpen}
         onClose={() => {
           setSaleDetailsDialogOpen(false);
           setSelectedSale(null);
         }}
-        maxWidth="md"
-        fullWidth
-        dir="rtl"
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            maxHeight: "90vh",
-          },
-        }}
-      >
-        <DialogTitle
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            borderBottom: "1px solid",
-            borderColor: "divider",
-            pb: 2,
-          }}
-        >
-          <Typography variant="h6" fontWeight="bold">
-            تفاصيل البيع #{selectedSale?.id}
-          </Typography>
-          <IconButton
-            onClick={() => {
-              setSaleDetailsDialogOpen(false);
-              setSelectedSale(null);
-            }}
-            size="small"
-          >
-            <X size={18} />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ p: 3 }}>
-          {loadingSaleDetails ? (
-            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : selectedSale ? (
-            <Stack spacing={3}>
-              {/* Sale Info */}
-              <Box>
-                <Typography
-                  variant="subtitle2"
-                  fontWeight="bold"
-                  color="text.secondary"
-                  sx={{ mb: 1 }}
-                >
-                  معلومات البيع
-                </Typography>
-                <Paper
-                  elevation={0}
-                  sx={{ p: 2, bgcolor: "grey.50", borderRadius: 2 }}
-                >
-                  <Stack spacing={1}>
-                    <Box
-                      sx={{ display: "flex", justifyContent: "space-between" }}
-                    >
-                      <Typography variant="body2" color="text.secondary">
-                        التاريخ:
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {format(parseISO(selectedSale.sale_date), "yyyy-MM-dd")}
-                      </Typography>
-                    </Box>
-                    {selectedSale.invoice_number && (
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <Typography variant="body2" color="text.secondary">
-                          رقم الفاتورة:
-                        </Typography>
-                        <Typography variant="body2" fontWeight="medium">
-                          {selectedSale.invoice_number}
-                        </Typography>
-                      </Box>
-                    )}
-                    {selectedSale.client_name && (
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <Typography variant="body2" color="text.secondary">
-                          العميل:
-                        </Typography>
-                        <Typography variant="body2" fontWeight="medium">
-                          {selectedSale.client_name}
-                        </Typography>
-                      </Box>
-                    )}
-                    {selectedSale.user_name && (
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <Typography variant="body2" color="text.secondary">
-                          المستخدم:
-                        </Typography>
-                        <Typography variant="body2" fontWeight="medium">
-                          {selectedSale.user_name}
-                        </Typography>
-                      </Box>
-                    )}
-                  </Stack>
-                </Paper>
-              </Box>
+        sale={selectedSale}
+        loading={loadingSaleDetails}
+      />
 
-              {/* Sale Items */}
-              {selectedSale.items && selectedSale.items.length > 0 && (
-                <Box>
-                  <Typography
-                    variant="subtitle2"
-                    fontWeight="bold"
-                    color="text.secondary"
-                    sx={{ mb: 1 }}
-                  >
-                    العناصر ({selectedSale.items.length})
-                  </Typography>
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      border: "1px solid",
-                      borderColor: "divider",
-                      borderRadius: 2,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow sx={{ bgcolor: "action.hover" }}>
-                          <TableCell sx={{ fontWeight: 600 }}>المنتج</TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 600 }}>
-                            الكمية
-                          </TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 600 }}>
-                            سعر الوحدة
-                          </TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 600 }}>
-                            الإجمالي
-                          </TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {selectedSale.items.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell>
-                              <Typography variant="body2" fontWeight="medium">
-                                {item.product_name ||
-                                  item.product?.name ||
-                                  "غير معروف"}
-                              </Typography>
-                              {item.batch_number_sold && (
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                >
-                                  دفعة: {item.batch_number_sold}
-                                </Typography>
-                              )}
-                            </TableCell>
-                            <TableCell align="right">
-                              <Typography variant="body2">
-                                {item.quantity}
-                              </Typography>
-                            </TableCell>
-                            <TableCell align="right">
-                              <Typography variant="body2">
-                                {formatNumber(Number(item.unit_price))}
-                              </Typography>
-                            </TableCell>
-                            <TableCell align="right">
-                              <Typography variant="body2" fontWeight="medium">
-                                {formatNumber(
-                                  Number(
-                                    item.total_price ||
-                                      item.quantity * Number(item.unit_price)
-                                  )
-                                )}
-                              </Typography>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </Paper>
-                </Box>
-              )}
-
-              {/* Payments */}
-              {selectedSale.payments && selectedSale.payments.length > 0 && (
-                <Box>
-                  <Typography
-                    variant="subtitle2"
-                    fontWeight="bold"
-                    color="text.secondary"
-                    sx={{ mb: 1.5 }}
-                  >
-                    المدفوعات ({selectedSale.payments.length})
-                  </Typography>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 1.5,
-                    }}
-                  >
-                    {selectedSale.payments.map((payment, index) => (
-                      <Paper
-                        key={payment.id || index}
-                        elevation={0}
-                        sx={{
-                          p: 1.5,
-                          border: "1px solid",
-                          borderColor: "divider",
-                          borderRadius: 2,
-                          flex: "1 1 auto",
-                          minWidth: "200px",
-                          maxWidth: "100%",
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            gap: 1,
-                            mb: 0.5,
-                          }}
-                        >
-                          <Chip
-                            label={
-                              payment.method === "cash"
-                                ? "نقدي"
-                                : payment.method === "visa"
-                                ? "فيزا"
-                                : payment.method === "mastercard"
-                                ? "ماستركارد"
-                                : payment.method === "bank_transfer"
-                                ? "تحويل بنكي"
-                                : payment.method === "mada"
-                                ? "مدى"
-                                : payment.method === "store_credit"
-                                ? "رصيد متجر"
-                                : payment.method === "other"
-                                ? "أخرى"
-                                : payment.method === "refund"
-                                ? "استرداد"
-                                : payment.method
-                            }
-                            size="small"
-                            variant="outlined"
-                            sx={{
-                              borderColor: "primary.main",
-                              color: "primary.main",
-                              fontSize: "0.7rem",
-                              height: 24,
-                            }}
-                          />
-                          <Typography
-                            variant="body1"
-                            fontWeight="bold"
-                            color="success.main"
-                          >
-                            {formatNumber(Number(payment.amount))}
-                          </Typography>
-                        </Box>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: 0.5,
-                            alignItems: "center",
-                          }}
-                        >
-                          <Typography variant="caption" color="text.secondary">
-                            {payment.payment_date
-                              ? payment.payment_date.includes("T")
-                                ? format(
-                                    parseISO(payment.payment_date),
-                                    "yyyy-MM-dd"
-                                  )
-                                : payment.payment_date
-                              : "-"}
-                          </Typography>
-                          {payment.reference_number && (
-                            <>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                              >
-                                •
-                              </Typography>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                              >
-                                {payment.reference_number}
-                              </Typography>
-                            </>
-                          )}
-                          {payment.user_name && (
-                            <>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                              >
-                                •
-                              </Typography>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                              >
-                                {payment.user_name}
-                              </Typography>
-                            </>
-                          )}
-                        </Box>
-                        {payment.notes && (
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{
-                              fontStyle: "italic",
-                              mt: 0.5,
-                              display: "block",
-                            }}
-                          >
-                            {payment.notes}
-                          </Typography>
-                        )}
-                      </Paper>
-                    ))}
-                  </Box>
-                </Box>
-              )}
-
-              {/* Summary */}
-              <Divider />
-              <Box>
-                <Stack spacing={1}>
-                  {selectedSale.discount_amount &&
-                    Number(selectedSale.discount_amount) > 0 && (
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <Typography variant="body1" fontWeight="bold">
-                          الخصم:
-                        </Typography>
-                        <Typography
-                          variant="body1"
-                          fontWeight="bold"
-                          color="warning.main"
-                        >
-                          {formatNumber(selectedSale.discount_amount)}
-                          {selectedSale.discount_type === "percentage"
-                            ? " %"
-                            : ""}
-                        </Typography>
-                      </Box>
-                    )}
-                  <Box
-                    sx={{ display: "flex", justifyContent: "space-between" }}
-                  >
-                    <Typography variant="body1" fontWeight="bold">
-                      المبلغ الإجمالي:
-                    </Typography>
-                    <Typography variant="body1" fontWeight="bold">
-                      {formatNumber(selectedSale.total_amount)}
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{ display: "flex", justifyContent: "space-between" }}
-                  >
-                    <Typography variant="body1" fontWeight="bold">
-                      المدفوع:
-                    </Typography>
-                    <Typography
-                      variant="body1"
-                      fontWeight="bold"
-                      color="success.main"
-                    >
-                      {formatNumber(selectedSale.paid_amount)}
-                    </Typography>
-                  </Box>
-                  {Number(selectedSale.due_amount || 0) > 0 && (
-                    <Box
-                      sx={{ display: "flex", justifyContent: "space-between" }}
-                    >
-                      <Typography variant="body1" fontWeight="bold">
-                        المستحق:
-                      </Typography>
-                      <Typography
-                        variant="body1"
-                        fontWeight="bold"
-                        color="warning.main"
-                      >
-                        {formatNumber(selectedSale.due_amount || 0)}
-                      </Typography>
-                    </Box>
-                  )}
-                </Stack>
-              </Box>
-            </Stack>
-          ) : null}
-        </DialogContent>
-      </Dialog>
-
-      {/* Shift Report PDF Dialog */}
+      {/* Shift Report Dialog */}
       <Dialog
         open={shiftReportDialogOpen}
-        onClose={() => {
-          setShiftReportDialogOpen(false);
-          setSelectedShift(null);
-        }}
+        onClose={() => setShiftReportDialogOpen(false)}
         maxWidth="lg"
         fullWidth
-        dir="rtl"
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            height: "90vh",
-            maxHeight: "90vh",
-          },
-        }}
       >
         <DialogTitle
           sx={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            borderBottom: "1px solid",
-            borderColor: "divider",
-            pb: 2,
           }}
         >
-          <Typography variant="h6" fontWeight="bold">
-            تقرير الوردية #{selectedShift?.id}
-          </Typography>
-          <IconButton
-            onClick={() => {
-              setShiftReportDialogOpen(false);
-              setSelectedShift(null);
-            }}
-            size="small"
-          >
+          <Typography variant="h6">تقرير الوردية</Typography>
+          <IconButton onClick={() => setShiftReportDialogOpen(false)}>
             <X size={18} />
           </IconButton>
         </DialogTitle>
-        <DialogContent
-          sx={{ p: 0, height: "calc(90vh - 64px)", overflow: "hidden" }}
-        >
-          {reportData && reportData.data.length > 0 && selectedShift && (
-            <PDFViewer width="100%" height="100%" showToolbar={true}>
+        <DialogContent sx={{ height: "80vh", p: 0 }}>
+          {selectedShift && reportData && (
+            <PDFViewer width="100%" height="100%" style={{ border: "none" }}>
               <PosShiftReportPdf
                 sales={reportData.data}
                 shift={selectedShift}

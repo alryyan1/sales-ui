@@ -8,6 +8,7 @@ import {
   MenuItem,
   Divider,
   Stack,
+  useTheme,
 } from "@mui/material";
 import { AppSettings } from "@/services/settingService";
 
@@ -18,13 +19,39 @@ interface BusinessRulesSettingsProps {
 export const BusinessRulesSettings = ({
   control,
 }: BusinessRulesSettingsProps) => {
+  const theme = useTheme();
+
+  const textFieldSx = {
+    "& .MuiInputBase-input": {
+      direction: "ltr",
+      textAlign: "left",
+    },
+    "& .MuiInputBase-root": {
+      direction: "ltr",
+    },
+    "& .MuiSelect-select": {
+      direction: "ltr",
+      textAlign: "left",
+    },
+  };
+
   return (
     <Card
-      sx={{ borderRadius: 3, boxShadow: 1, mx: "auto", maxWidth: 900 }}
-      dir="rtl"
+      sx={{
+        borderRadius: 2,
+        boxShadow: theme.shadows[2],
+        mx: "auto",
+        maxWidth: 900,
+        border: `1px solid ${theme.palette.divider}`,
+      }}
     >
-      <CardContent sx={{ p: 4 }}>
-        <Typography variant="h6" fontWeight={600} gutterBottom sx={{ mb: 3 }}>
+      <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+        <Typography
+          variant="h6"
+          fontWeight={600}
+          gutterBottom
+          sx={{ mb: 4, color: "text.primary" }}
+        >
           الإعدادات المحلية وقواعد العمل
         </Typography>
         <Stack spacing={4}>
@@ -33,7 +60,7 @@ export const BusinessRulesSettings = ({
               variant="subtitle2"
               color="text.secondary"
               gutterBottom
-              sx={{ mb: 2 }}
+              sx={{ mb: 2, fontWeight: 500 }}
             >
               تنسيق النظام
             </Typography>
@@ -50,6 +77,7 @@ export const BusinessRulesSettings = ({
                       fullWidth
                       label="رمز العملة"
                       helperText="مثال: SDG, SAR, $"
+                      sx={textFieldSx}
                     />
                   )}
                 />
@@ -66,6 +94,7 @@ export const BusinessRulesSettings = ({
                       fullWidth
                       label="صيغة التاريخ"
                       placeholder="YYYY-MM-DD"
+                      sx={textFieldSx}
                     />
                   )}
                 />
@@ -80,6 +109,7 @@ export const BusinessRulesSettings = ({
                       select
                       fullWidth
                       label="المنطقة الزمنية"
+                      sx={textFieldSx}
                     >
                       <MenuItem value="Africa/Khartoum">
                         Africa/Khartoum
@@ -101,7 +131,7 @@ export const BusinessRulesSettings = ({
               variant="subtitle2"
               color="text.secondary"
               gutterBottom
-              sx={{ mb: 2 }}
+              sx={{ mb: 2, fontWeight: 500 }}
             >
               قواعد المخزون والمبيعات
             </Typography>
@@ -124,6 +154,7 @@ export const BusinessRulesSettings = ({
                           <Typography variant="caption">وحدة</Typography>
                         ),
                       }}
+                      sx={textFieldSx}
                     />
                   )}
                 />
@@ -146,6 +177,7 @@ export const BusinessRulesSettings = ({
                           <Typography variant="caption">%</Typography>
                         ),
                       }}
+                      sx={textFieldSx}
                     />
                   )}
                 />
@@ -160,7 +192,7 @@ export const BusinessRulesSettings = ({
               variant="subtitle2"
               color="text.secondary"
               gutterBottom
-              sx={{ mb: 2 }}
+              sx={{ mb: 2, fontWeight: 500 }}
             >
               ترقيم المستندات
             </Typography>
@@ -177,6 +209,7 @@ export const BusinessRulesSettings = ({
                       fullWidth
                       label="بادئة الفاتورة"
                       helperText="مثال: INV- (الناتج: INV-001)"
+                      sx={textFieldSx}
                     />
                   )}
                 />
@@ -193,6 +226,7 @@ export const BusinessRulesSettings = ({
                       fullWidth
                       label="بادئة طلب الشراء"
                       helperText="مثال: PO- (الناتج: PO-001)"
+                      sx={textFieldSx}
                     />
                   )}
                 />
