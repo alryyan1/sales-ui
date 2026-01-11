@@ -51,11 +51,23 @@ export const CalculatorSummaryDialog: React.FC<
   React.useEffect(() => {
     if (open) {
       setLocalSelectedDate(dateFrom);
+      // Invalidate queries when dialog opens to force fresh data fetch
+      queryClient.invalidateQueries({
+        queryKey: ["expenses-summary", dateFrom],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["synced-sales-summary", dateFrom],
+      });
     }
-  }, [open, dateFrom]);
+  }, [open, dateFrom, queryClient]);
 
   // Fetch Expenses for localSelectedDate
-  const { data: expensesData, isLoading: isLoadingExpenses } = useQuery({
+  const { 
+    data: expensesData, 
+    isLoading: isLoadingExpenses, 
+    isFetching: isFetchingExpenses,
+    refetch: refetchExpenses 
+  } = useQuery({
     queryKey: ["expenses-summary", localSelectedDate],
     queryFn: () =>
       expenseService.getExpenses(1, 1000, {
@@ -63,6 +75,8 @@ export const CalculatorSummaryDialog: React.FC<
         date_to: localSelectedDate,
       }),
     enabled: open,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
   });
 
   const handleExpenseSaveSuccess = () => {
@@ -72,7 +86,12 @@ export const CalculatorSummaryDialog: React.FC<
     });
   };
 
-  const { data: syncedSalesData, isLoading: isLoadingSynced } = useQuery({
+  const { 
+    data: syncedSalesData, 
+    isLoading: isLoadingSynced, 
+    isFetching: isFetchingSynced,
+    refetch: refetchSales 
+  } = useQuery({
     queryKey: ["synced-sales-summary", localSelectedDate],
     queryFn: async () => {
       const res = await saleService.getSales(
@@ -85,20 +104,44 @@ export const CalculatorSummaryDialog: React.FC<
       );
       return res.data;
     },
-    enabled: open && localSelectedDate !== dateFrom,
+    enabled: open,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
   });
 
-  const isLoading =
-    isLoadingExpenses || (localSelectedDate !== dateFrom && isLoadingSynced);
+  // Refetch data when dialog opens
+  React.useEffect(() => {
+    if (open) {
+      // Refetch both expenses and sales when dialog opens
+      refetchExpenses();
+      refetchSales();
+    }
+  }, [open, refetchExpenses, refetchSales]);
+
+  // Invalidate and refetch when date changes
+  React.useEffect(() => {
+    if (open && localSelectedDate) {
+      queryClient.invalidateQueries({
+        queryKey: ["expenses-summary", localSelectedDate],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["synced-sales-summary", localSelectedDate],
+      });
+    }
+  }, [localSelectedDate, open, queryClient]);
+
+  // Show loading when initially loading OR when fetching/refetching data
+  const isLoading = isLoadingExpenses || isLoadingSynced || isFetchingExpenses || isFetchingSynced;
 
   // Determine which sales to use (strictly use synced/ID-carrying sales)
   const filterSynced = (arr: (OfflineSale | Sale)[] = []) =>
     arr.filter((s) => (s as any).is_synced || (s as Sale).id);
 
-  const effectiveSales =
-    localSelectedDate === dateFrom
-      ? filterSynced(initialSales)
-      : syncedSalesData || [];
+  // Prefer fetched synced sales data when available (even if empty array means no sales),
+  // otherwise fall back to filtered initial sales
+  const effectiveSales = syncedSalesData !== undefined
+    ? syncedSalesData
+    : filterSynced(initialSales);
 
   const totalSalesAmount = (effectiveSales as any[]).reduce(
     (sum: number, sale: any) => sum + Number(sale.total_amount || 0),
@@ -258,22 +301,11 @@ export const CalculatorSummaryDialog: React.FC<
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Button
-            variant="contained"
+            variant="outlined"
             color="secondary"
             size="small"
-            startIcon={<Plus size={18} />}
             onClick={() => setIsExpenseModalOpen(true)}
-            sx={{
-              borderRadius: 2,
-              fontWeight: "bold",
-              textTransform: "none",
-              boxShadow: "none",
-              px: 2,
-              "&:hover": {
-                boxShadow: "none",
-                bgcolor: "secondary.dark",
-              },
-            }}
+           
           >
             إضافه مصروف
           </Button>

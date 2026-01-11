@@ -18,6 +18,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { formatNumber } from "@/constants";
+import { SalesWithDiscountsPdfDialog } from "@/components/reports/sales/SalesWithDiscountsPdfDialog";
 
 const SalesWithDiscountsPage: React.FC = () => {
   // Removed useTranslation
@@ -31,6 +32,7 @@ const SalesWithDiscountsPage: React.FC = () => {
   const [endDate, setEndDate] = useState<string>(toYmd(lastDay));
   const [page, setPage] = useState(1);
   const [perPage] = useState(50);
+  const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchSales();
@@ -86,25 +88,13 @@ const SalesWithDiscountsPage: React.FC = () => {
   }, [sales]);
 
   const openPdf = () => {
-    const w = window as unknown as { API_BASE?: string };
-    const im = import.meta as unknown as {
-      env?: { VITE_API_BASE_URL?: string };
-    };
-    const baseApi = w.API_BASE || im.env?.VITE_API_BASE_URL || "";
-    const base = baseApi.replace("/api", "");
-    const query = new URLSearchParams({
-      start_date: startDate,
-      end_date: endDate,
-      has_discount: "1",
-    }).toString();
-    const url = `${base}/api/reports/sales-pdf?${query}`;
-    window.open(url, "_blank");
+    setIsPdfDialogOpen(true);
   };
 
   return (
     <Box sx={{ p: 2 }}>
       <Stack spacing={2}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Stack direction="row" gap={1} alignItems="center" justifyContent="space-between">
           <Typography variant="h5" component="h2" sx={{ fontWeight: 700 }}>
             تقرير المبيعات المخفضة
           </Typography>
@@ -112,7 +102,7 @@ const SalesWithDiscountsPage: React.FC = () => {
             معاينة PDF
           </Button>
         </Stack>
-        <Stack direction="row" spacing={2} alignItems="flex-end">
+        <Stack direction="row" gap={1} spacing={2} alignItems="flex-end">
           <TextField
             type="date"
             label="البدء"
@@ -143,7 +133,7 @@ const SalesWithDiscountsPage: React.FC = () => {
         </Stack>
 
         {/* Discount summary cards */}
-        <Stack direction="row" spacing={2}>
+        <Stack direction="row" gap={1} spacing={2}>
           <Card>
             <CardContent sx={{ p: 2, textAlign: "center" }}>
               <Typography variant="caption" color="text.secondary">
@@ -231,6 +221,16 @@ const SalesWithDiscountsPage: React.FC = () => {
           </CardContent>
         </Card>
       </Stack>
+
+      {/* PDF Dialog */}
+      <SalesWithDiscountsPdfDialog
+        open={isPdfDialogOpen}
+        onClose={() => setIsPdfDialogOpen(false)}
+        sales={sales}
+        startDate={startDate}
+        endDate={endDate}
+        totals={totals}
+      />
     </Box>
   );
 };

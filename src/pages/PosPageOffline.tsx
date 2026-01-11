@@ -536,7 +536,7 @@ export const PosPageOffline = () => {
         return offlineSaleService.calculateTotals({ ...prev, items: newItems });
       });
     },
-    [currentSale.is_synced, shift]
+    [currentSale.is_synced, shift, posMode]
   );
 
   const updateQuantity = (productId: number, qty: number) => {
@@ -1373,33 +1373,132 @@ export const PosPageOffline = () => {
     }
   };
 
-  // Handler for sale updates that checks if client changed on synced sale
+  // Handler for sale updates that checks if client or payments changed on synced sale
   const handleSaleUpdate = async (updated: OfflineSale) => {
     const prevSale = currentSale;
 
-    // Check if this is a synced sale and client_id changed
+    // Check if this is a synced sale
     const isSynced = updated.is_synced && updated.id;
     const clientChanged = prevSale.client_id !== updated.client_id;
+    
+    // Check if payments changed by comparing lengths and amounts
+    const prevPayments = prevSale.payments || [];
+    const updatedPayments = updated.payments || [];
+    const paymentsChanged = 
+      prevPayments.length !== updatedPayments.length ||
+      prevPayments.some((p, idx) => {
+        const updatedP = updatedPayments[idx];
+        return !updatedP || 
+          Number(p.amount) !== Number(updatedP.amount) ||
+          p.method !== updatedP.method;
+      });
 
-    if (isSynced && clientChanged && isOnline) {
-      setIsUpdatingClient(true);
-      try {
-        // Update backend immediately
-        await apiClient.put(`/sales/${updated.id}`, {
-          client_id: updated.client_id,
-        });
+    if (isSynced && isOnline) {
+      // Handle client update
+      if (clientChanged) {
+        setIsUpdatingClient(true);
+        try {
+          // Update backend immediately
+          await apiClient.put(`/sales/${updated.id}`, {
+            client_id: updated.client_id,
+          });
 
-        // Update local sale
-        updateCurrentSale(updated);
+          // Update local sale
+          updateCurrentSale(updated);
 
-        // Refresh synced sales to get updated data
-        await loadSyncedSales();
-      } catch (error) {
-        console.error("Failed to update client:", error);
-        // Show error to user (you may want to add toast notification here)
-      } finally {
-        setIsUpdatingClient(false);
+          // Refresh synced sales to get updated data
+          await loadSyncedSales();
+        } catch (error) {
+          console.error("Failed to update client:", error);
+          toast.error("فشل تحديث العميل");
+        } finally {
+          setIsUpdatingClient(false);
+        }
+        return;
       }
+
+      // Handle payment updates
+      if (paymentsChanged) {
+        try {
+          // Find new payments (those without IDs or not in previous payments)
+          const prevPaymentIds = new Set(
+            prevPayments.map((p: any) => p.id).filter(Boolean)
+          );
+          
+          // Add new payments that don't have IDs (newly added)
+          for (const payment of updatedPayments) {
+            const paymentId = (payment as any).id;
+            // If payment doesn't have an ID, it's a new payment that needs to be synced
+            if (!paymentId || !prevPaymentIds.has(paymentId)) {
+              // Only sync if it doesn't have an ID (truly new)
+              // If it has an ID but wasn't in prev, it might be from a refresh, skip
+              if (!paymentId) {
+                await saleService.addPayment(updated.id!, {
+                  method: payment.method,
+                  amount: Number(payment.amount),
+                  reference_number: (payment as any).reference_number || null,
+                  notes: (payment as any).notes || null,
+                });
+              }
+            }
+          }
+
+          // Delete payments that were removed (compare by index/amount)
+          // This is a simplified approach - in production you might want more robust comparison
+          if (updatedPayments.length < prevPayments.length) {
+            // Get current payments from backend to find which ones to delete
+            try {
+              const saleData = await saleService.getSale(updated.id!);
+              const backendPayments = saleData.payments || [];
+              
+              // Find payments that exist in backend but not in updated payments
+              for (const backendPayment of backendPayments) {
+                const stillExists = updatedPayments.some(
+                  (up: any) => up.id === backendPayment.id
+                );
+                if (!stillExists && backendPayment.id) {
+                  await saleService.deletePayment(updated.id!, backendPayment.id);
+                }
+              }
+            } catch (error) {
+              console.error("Failed to sync payment deletions:", error);
+            }
+          }
+
+          // Refresh synced sales to get updated data with payment IDs
+          await loadSyncedSales();
+          
+          // If current sale is synced, refresh it from backend to get payment IDs
+          if (updated.id) {
+            try {
+              const refreshedSale = await saleService.getSale(updated.id);
+              const mappedSale = await mapSaleToOfflineSale(refreshedSale);
+              updateCurrentSale(mappedSale);
+            } catch (error) {
+              console.error("Failed to refresh sale after payment sync:", error);
+              // Fallback to local update
+              updateCurrentSale(updated);
+            }
+          } else {
+            updateCurrentSale(updated);
+          }
+          
+          toast.success("تم تحديث المدفوعات بنجاح");
+        } catch (error: any) {
+          console.error("Failed to sync payments:", error);
+          const errorMsg =
+            error?.response?.data?.message ||
+            error?.message ||
+            "فشل تحديث المدفوعات";
+          toast.error(errorMsg);
+          // Still update local state even if sync fails
+          updateCurrentSale(updated);
+        }
+        return;
+      }
+
+      // If no changes that need syncing, just update locally
+      updateCurrentSale(updated);
     } else {
       // Regular local update for non-synced sales
       updateCurrentSale(updated);
@@ -1432,9 +1531,40 @@ export const PosPageOffline = () => {
 
   const handleCompleteSale = async () => {
     try {
-      // currentSale already has payments attached via the SummaryColumn
-      await offlineSaleService.completeSale(currentSale);
-      toast.success("Sale completed and synced!");
+      // Check if this is a synced sale (already exists on backend)
+      const isSynced = currentSale.is_synced && currentSale.id;
+
+      if (isSynced) {
+        // For synced sales, ensure all payments are synced
+        // Payments should already be synced via handleSaleUpdate, but double-check
+        const payments = currentSale.payments || [];
+        
+        // Ensure all payments without IDs are synced
+        if (isOnline) {
+          for (const payment of payments) {
+            if (!(payment as any).id) {
+              try {
+                await saleService.addPayment(currentSale.id!, {
+                  method: payment.method,
+                  amount: Number(payment.amount),
+                  reference_number: (payment as any).reference_number || null,
+                  notes: (payment as any).notes || null,
+                });
+              } catch (error) {
+                console.error("Failed to sync payment:", error);
+              }
+            }
+          }
+        }
+
+        // Refresh synced sales to get latest data
+        await loadSyncedSales();
+        toast.success("تم تحديث عملية البيع بنجاح");
+      } else {
+        // For new sales, complete and sync as usual
+        await offlineSaleService.completeSale(currentSale);
+        toast.success("تم إتمام عملية البيع بنجاح");
+      }
 
       // Removed Thermal Invoice Dialog logic as per user request
     } catch (error: any) {

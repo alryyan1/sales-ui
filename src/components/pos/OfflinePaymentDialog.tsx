@@ -437,7 +437,7 @@ export const OfflinePaymentDialog: React.FC<OfflinePaymentDialogProps> = ({
                     startAdornment: (
                       <InputAdornment position="start">{currencySymbol}</InputAdornment>
                     ),
-                    sx: { fontSize: "1.25rem", fontWeight: "bold" },
+                    sx: { fontSize: "1rem", fontWeight: "bold" },
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
