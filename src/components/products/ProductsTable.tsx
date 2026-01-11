@@ -23,6 +23,11 @@ import {
   TableRow,
   Pagination,
   Box,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  SelectChangeEvent,
 } from "@mui/material";
 import { Edit, AlertTriangle, Copy, Check, Info, History } from "lucide-react";
 
@@ -31,7 +36,6 @@ import productService, {
   Product as ProductType,
 } from "@/services/productService";
 import { formatNumber, formatCurrency } from "@/constants";
-import { useSettings } from "@/context/SettingsContext";
 
 // Interface for Product with potentially loaded batches
 interface ProductWithOptionalBatches
@@ -39,42 +43,50 @@ interface ProductWithOptionalBatches
     ProductType,
     | "latest_cost_per_sellable_unit"
     | "suggested_sale_price_per_sellable_unit"
-    | "scientific_name"
   > {
-  available_batches?: {
-    batch_id: number;
-    quantity: number;
-    expiry_date?: string;
-  }[];
   category_name?: string | null;
   latest_cost_per_sellable_unit?: string | number | null;
   suggested_sale_price_per_sellable_unit?: string | number | null;
   sellable_unit_name?: string | null;
   stocking_unit_name?: string | null;
   units_per_stocking_unit?: number | null;
-  scientific_name?: string | null;
 }
 
 interface ProductsTableProps {
   products: ProductWithOptionalBatches[];
   isLoading?: boolean;
   onEdit: (product: ProductWithOptionalBatches) => void;
-  // Server-side pagination props
-  rowCount: number;
-  paginationModel: { page: number; pageSize: number };
-  onPaginationModelChange: (model: { page: number; pageSize: number }) => void;
+  // Laravel pagination props
+  paginationMeta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    from: number;
+    to: number;
+  };
+  paginationLinks: {
+    first: string;
+    last: string;
+    prev: string | null;
+    next: string | null;
+  };
+  currentPage: number;
+  rowsPerPage: number;
+  onPageChange: (event: React.ChangeEvent<unknown>, page: number) => void;
+  onRowsPerPageChange: (event: SelectChangeEvent<number>) => void;
 }
 
 export const ProductsTable: React.FC<ProductsTableProps> = ({
   products,
   isLoading = false,
   onEdit,
-  rowCount,
-  paginationModel,
-  onPaginationModelChange,
+  paginationMeta,
+  currentPage,
+  rowsPerPage,
+  onPageChange,
+  onRowsPerPageChange,
 }) => {
-  const { getSetting } = useSettings();
-  const showImagesInList = getSetting("product_images_show_in_list", true);
   const [copiedSku, setCopiedSku] = useState<string | null>(null);
   const [stockDialogProduct, setStockDialogProduct] =
     useState<ProductWithOptionalBatches | null>(null);
@@ -129,7 +141,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
   };
 
   const handleHistoryTabChange = (
-    event: React.SyntheticEvent,
+    _event: React.SyntheticEvent,
     newValue: number
   ) => {
     setHistoryTab(newValue);
@@ -144,7 +156,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
   };
 
   const handleHistoryPageChange = (
-    event: React.ChangeEvent<unknown>,
+    _event: React.ChangeEvent<unknown>,
     value: number
   ) => {
     setHistoryPage(value);
@@ -190,8 +202,6 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
     );
   }
 
-  const totalPages = Math.ceil(rowCount / paginationModel.pageSize);
-
   return (
     <>
       <Paper
@@ -199,25 +209,25 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
         elevation={0}
         dir="ltr"
       >
-        <TableContainer sx={{ maxHeight: "calc(100vh - 250px)" }}>
+        <TableContainer sx={{ maxHeight: "calc(100vh - 100px)" }}>
           <Table stickyHeader size="small" sx={{ minWidth: 650 }}>
             <TableHead>
               <TableRow>
                 <TableCell align="center">#</TableCell>
-                <TableCell align="center">الرمز (SKU)</TableCell>
+                <TableCell align="center"> (SKU)</TableCell>
                 <TableCell align="right">اسم المنتج</TableCell>
                 <TableCell align="center">الاسم العلمي</TableCell>
                 <TableCell align="center">الفئة</TableCell>
                 <TableCell align="center">وحدة البيع</TableCell>
                 <TableCell align="center">وحدة التخزين</TableCell>
-                <TableCell align="center">نسبة التحويل</TableCell>
+                <TableCell align="center">عدد الوحدات </TableCell>
                 <TableCell align="center">تم إنشاؤه في</TableCell>
                 <TableCell align="center">تنبيه المخزون</TableCell>
                 <TableCell align="center">إجمالي المخزون</TableCell>
                 <TableCell align="center">المخازن</TableCell>
                 <TableCell align="center">أحدث تكلفة</TableCell>
                 <TableCell align="center">آخر سعر بيع</TableCell>
-                <TableCell align="center">السعر المقترح</TableCell>
+                {/* <TableCell align="center">السعر المقترح</TableCell> */}
                 <TableCell align="center">إجراءات</TableCell>
               </TableRow>
             </TableHead>
@@ -280,7 +290,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                         )}
                       </Stack>
                     </TableCell>
-                    <TableCell align="right">
+                    <TableCell align="left">
                       <Typography variant="body2" fontWeight={600}>
                         {product.name}
                       </Typography>
@@ -388,15 +398,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                           )
                         : "---"}
                     </TableCell>
-                    <TableCell align="center">
-                      {product.suggested_sale_price_per_sellable_unit
-                        ? formatCurrency(
-                            Number(
-                              product.suggested_sale_price_per_sellable_unit
-                            )
-                          )
-                        : "---"}
-                    </TableCell>
+            
                     <TableCell align="center">
                       <Stack
                         direction="row"
@@ -450,18 +452,47 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
           </Table>
         </TableContainer>
 
-        {/* Pagination Control */}
-        <Box sx={{ p: 2, display: "flex", justifyContent: "center" }}>
+        {/* Laravel Pagination Control */}
+        <Box
+          sx={{
+            p: 2,
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              عرض {paginationMeta.from} إلى {paginationMeta.to} من أصل{" "}
+              {paginationMeta.total} منتج
+            </Typography>
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <InputLabel>عدد الصفوف</InputLabel>
+              <Select
+                value={rowsPerPage}
+                onChange={onRowsPerPageChange}
+                label="عدد الصفوف"
+                disabled={isLoading}
+              >
+                <MenuItem value={50}>50</MenuItem>
+                <MenuItem value={100}>100</MenuItem>
+                <MenuItem value={200}>200</MenuItem>
+                <MenuItem value={500}>500</MenuItem>
+                <MenuItem value={1000}>1000</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
           <Pagination
-            count={totalPages}
-            page={paginationModel.page + 1} // Convert 0-index to 1-index
-            onChange={(e, val) =>
-              onPaginationModelChange({ ...paginationModel, page: val - 1 })
-            } // Convert 1-index back to 0-index
+            count={paginationMeta.last_page}
+            page={currentPage}
+            onChange={onPageChange}
             color="primary"
             shape="rounded"
             showFirstButton
             showLastButton
+            disabled={isLoading}
           />
         </Box>
       </Paper>

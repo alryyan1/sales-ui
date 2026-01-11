@@ -16,6 +16,7 @@ export interface User {
   permissions?: string[];
   warehouse_id?: number | null;
   warehouse?: { id: number; name: string } | null;
+  allowed_navs?: string[] | null; // null means all navs (superadmin), empty array means no navs
 }
 // AuthResponse type (ensure it includes roles/permissions)
 

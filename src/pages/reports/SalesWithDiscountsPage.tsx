@@ -98,9 +98,9 @@ const SalesWithDiscountsPage: React.FC = () => {
           <Typography variant="h5" component="h2" sx={{ fontWeight: 700 }}>
             تقرير المبيعات المخفضة
           </Typography>
-          <Button onClick={openPdf} variant="outlined" size="small">
+          {/* <Button onClick={openPdf} variant="outlined" size="small">
             معاينة PDF
-          </Button>
+          </Button> */}
         </Stack>
         <Stack direction="row" gap={1} spacing={2} alignItems="flex-end">
           <TextField

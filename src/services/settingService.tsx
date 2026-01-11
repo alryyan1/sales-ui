@@ -40,6 +40,7 @@ export interface AppSettings {
   logo_width?: number;
   pdf_font?: string;
   pos_mode?: "shift" | "days"; // POS operation mode: shift-based or day-based
+  pos_filter_sales_by_user?: boolean; // Filter sales by logged-in user in POS
   product_images_show_in_list?: boolean;
   product_images_show_in_pos?: boolean;
   product_images_show_in_invoices?: boolean;

@@ -11,7 +11,6 @@ import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
-import Pagination from "@mui/material/Pagination";
 import Snackbar from "@mui/material/Snackbar";
 import TextField from "@mui/material/TextField";
 import InputAdornment from "@mui/material/InputAdornment";
@@ -32,7 +31,7 @@ import {
 } from "lucide-react";
 
 // Services and Types
-import productService, { Product } from "../services/productService"; // Use product service
+import { Product } from "../services/productService"; // Use product service
 import categoryService, { Category } from "../services/CategoryService"; // Import category service
 import exportService from "../services/exportService"; // Import export service
 
@@ -47,6 +46,7 @@ type ProductTableItem = {
   name: string;
   sku: string | null;
   description: string | null;
+  image_url: string | null;
   category_id: number | null;
   stocking_unit_name: string | null;
   sellable_unit_name: string | null;
@@ -55,6 +55,7 @@ type ProductTableItem = {
   stock_alert_level: number | null;
   created_at: string;
   updated_at: string;
+  scientific_name?: string | null;
   // Optional fields that ProductsTable expects but aren't in API response
   available_batches?: {
     batch_id: number;
@@ -64,6 +65,15 @@ type ProductTableItem = {
   category_name?: string | null;
   latest_cost_per_sellable_unit?: string | number | null;
   suggested_sale_price_per_sellable_unit?: string | number | null;
+  current_stock_quantity?: number;
+  warehouses?: {
+    id: number;
+    name: string;
+    pivot: {
+      quantity: number;
+      min_stock_level: number | null;
+    };
+  }[];
 };
 
 const ProductsPage: React.FC = () => {
@@ -76,7 +86,8 @@ const ProductsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const [rowsPerPage, setRowsPerPage] = useState(50);
+  const [rowsPerPage, setRowsPerPage] = useState(100);
+  const [isPaginationLoading, setIsPaginationLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [showOnlyInStock, setShowOnlyInStock] = useState(false);
@@ -129,6 +140,7 @@ const ProductsPage: React.FC = () => {
   const {
     data: productsResponse,
     isLoading,
+    isFetching,
     isError,
     error: queryError,
   } = useProducts({
@@ -140,6 +152,9 @@ const ProductsPage: React.FC = () => {
     lowStockOnly: showLowStockOnly,
     outOfStockOnly: showOutOfStockOnly,
   });
+
+  // Show loading when fetching (pagination/rows change) or when explicitly set
+  const isLoadingData = isLoading || isFetching || isPaginationLoading;
 
   // Extract error message if query fails
   const error = isError
@@ -219,7 +234,10 @@ const ProductsPage: React.FC = () => {
     _event: React.ChangeEvent<unknown>,
     value: number
   ) => {
+    setIsPaginationLoading(true);
     setCurrentPage(value);
+    // Reset loading after a short delay to allow query to start
+    setTimeout(() => setIsPaginationLoading(false), 100);
   };
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
@@ -230,9 +248,12 @@ const ProductsPage: React.FC = () => {
     setCurrentPage(1); // Reset to page 1 when filter changes
   };
   const handleRowsPerPageChange = (event: SelectChangeEvent<number>) => {
+    setIsPaginationLoading(true);
     const newRowsPerPage = event.target.value as number;
     setRowsPerPage(newRowsPerPage);
     setCurrentPage(1); // Reset to page 1 when rows per page changes
+    // Reset loading after a short delay to allow query to start
+    setTimeout(() => setIsPaginationLoading(false), 100);
   };
   const handleStockFilterToggle = () => {
     setShowOnlyInStock(!showOnlyInStock);
@@ -668,8 +689,8 @@ const ProductsPage: React.FC = () => {
                     },
                   }}
                 >
-                  <MenuItem value={10}>10</MenuItem>
                   <MenuItem value={50}>50</MenuItem>
+                  <MenuItem value={100}>100</MenuItem>
                   <MenuItem value={200}>200</MenuItem>
                   <MenuItem value={500}>500</MenuItem>
                   <MenuItem value={1000}>1000</MenuItem>
@@ -679,7 +700,7 @@ const ProductsPage: React.FC = () => {
           </Box>
         </Box>
         {/* Loading / Error States */}
-        {isLoading && (
+        {isLoadingData && (
           <Box sx={{ display: "flex", justifyContent: "center", py: 5, px: 2 }}>
             <CircularProgress />
             <Typography
@@ -690,28 +711,25 @@ const ProductsPage: React.FC = () => {
             </Typography>
           </Box>
         )}
-        {!isLoading && error && (
+        {!isLoadingData && error && (
           <Alert severity="error" sx={{ my: 2, mx: 2 }}>
             {error}
           </Alert>
         )}
         {/* Content Area */}
-        {!isLoading && !error && productsResponse && (
+        {!isLoadingData && !error && productsResponse && (
           <Box sx={{ mt: 2, width: "100%", px: 2 }}>
             <ProductsTable
               products={productsResponse.data as ProductTableItem[]}
               onEdit={(product) => openModal(product as ProductTableItem)}
-              isLoading={false}
-              // Pagination Props
-              rowCount={productsResponse.meta.total}
-              paginationModel={{
-                page: currentPage - 1, // DataGrid is 0-indexed
-                pageSize: rowsPerPage,
-              }}
-              onPaginationModelChange={(model) => {
-                setRowsPerPage(model.pageSize);
-                setCurrentPage(model.page + 1); // Convert back to 1-indexed
-              }}
+              isLoading={isLoadingData}
+              // Laravel Pagination Props
+              paginationMeta={productsResponse.meta}
+              paginationLinks={productsResponse.links}
+              currentPage={currentPage}
+              rowsPerPage={rowsPerPage}
+              onPageChange={handlePageChange}
+              onRowsPerPageChange={handleRowsPerPageChange}
             />
             {/* No Products Message */}
             {productsResponse.data.length === 0 && (

@@ -221,7 +221,7 @@ export const PosPageOffline = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [clients, setClients] = useState<any[]>([]); // Using any for client type for now as we didn't import strict type
   const [currentSale, setCurrentSale] = useState<OfflineSale>(
-    offlineSaleService.createDraftSale()
+    offlineSaleService.createDraftSale(null, user?.id ?? null)
   );
   // MOVED TO HEADER: inputValue, autocompleteOpen, inputRef
 
@@ -780,15 +780,15 @@ export const PosPageOffline = () => {
 
         // Create a new draft sale
         if (posMode === "days") {
-          const newDraft = offlineSaleService.createDraftSale(null);
+          const newDraft = offlineSaleService.createDraftSale(null, user?.id ?? null);
           setCurrentSale(newDraft);
           shouldAutoSave.current = false;
         } else if (shift && shift.is_open) {
-          const newDraft = offlineSaleService.createDraftSale(shift.id);
+          const newDraft = offlineSaleService.createDraftSale(shift.id, user?.id ?? null);
           setCurrentSale(newDraft);
           shouldAutoSave.current = false;
         } else {
-          const newDraft = offlineSaleService.createDraftSale(null);
+          const newDraft = offlineSaleService.createDraftSale(null, user?.id ?? null);
           setCurrentSale(newDraft);
           shouldAutoSave.current = false;
         }
@@ -1581,7 +1581,7 @@ export const PosPageOffline = () => {
     // Reset
     if (posMode === "days") {
       // In days mode, create new draft without shift
-      const newDraft = offlineSaleService.createDraftSale(null);
+      const newDraft = offlineSaleService.createDraftSale(null, user?.id ?? null);
       setCurrentSale(newDraft);
       shouldAutoSave.current = false;
       setTimeout(() => {
@@ -1589,7 +1589,7 @@ export const PosPageOffline = () => {
       }, 100);
     } else if (shift && shift.is_open) {
       // In shift mode, require shift
-      const newDraft = offlineSaleService.createDraftSale(shift.id);
+      const newDraft = offlineSaleService.createDraftSale(shift.id, user?.id ?? null);
       // await offlineSaleService.saveDraft(newDraft); // DONT SAVE IMMEDIATELY
       setCurrentSale(newDraft);
       shouldAutoSave.current = false; // Prevent auto-save until user edits
@@ -1600,7 +1600,7 @@ export const PosPageOffline = () => {
       }, 100);
     } else {
       // If shift closed/not available, just clear UI
-      const newDraft = offlineSaleService.createDraftSale(null);
+      const newDraft = offlineSaleService.createDraftSale(null, user?.id ?? null);
       setCurrentSale(newDraft);
       shouldAutoSave.current = false;
     }
@@ -1610,7 +1610,7 @@ export const PosPageOffline = () => {
   const handleNewSale = useCallback(async () => {
     // In days mode, skip shift validation
     if (posMode === "days") {
-      const newSale = offlineSaleService.createDraftSale(null);
+      const newSale = offlineSaleService.createDraftSale(null, user?.id ?? null);
       await offlineSaleService.saveDraft(newSale);
       setCurrentSale(newSale);
       await loadLocalPendingSales();
@@ -1672,7 +1672,7 @@ export const PosPageOffline = () => {
       return;
     }
 
-    const newSale = offlineSaleService.createDraftSale(currentShift.id);
+    const newSale = offlineSaleService.createDraftSale(currentShift.id, user?.id ?? null);
     await offlineSaleService.saveDraft(newSale);
     setCurrentSale(newSale);
     // List refresh handled by useEffect or we can force it here
@@ -1724,14 +1724,14 @@ export const PosPageOffline = () => {
     if (currentSale.tempId === sale.tempId) {
       if (posMode === "days") {
         // In days mode, create new draft without shift
-        const newDraft = offlineSaleService.createDraftSale(null);
+        const newDraft = offlineSaleService.createDraftSale(null, user?.id ?? null);
         setCurrentSale(newDraft);
         await loadLocalPendingSales();
       } else if (shift && shift.is_open) {
         handleNewSale();
       } else {
         // Fallback: clear to empty draft in memory without saving
-        const newDraft = offlineSaleService.createDraftSale(null);
+        const newDraft = offlineSaleService.createDraftSale(null, user?.id ?? null);
         setCurrentSale(newDraft);
         await loadLocalPendingSales();
       }

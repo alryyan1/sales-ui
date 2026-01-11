@@ -74,6 +74,30 @@ const expenseService = {
     await apiClient.delete(`/admin/expenses/${id}`);
   },
 
+  getMonthlyExpenses: async (year: number, month: number): Promise<{
+    year: number;
+    month: number;
+    month_name: string;
+    daily_breakdown: Array<{
+      date: string;
+      total: number;
+      cash_total: number;
+      bank_total: number;
+      expenses: Expense[];
+    }>;
+    month_summary: {
+      total: number;
+      cash_total: number;
+      bank_total: number;
+    };
+  }> => {
+    const params = new URLSearchParams();
+    params.append('year', String(year));
+    params.append('month', String(month));
+    const res = await apiClient.get(`/reports/monthly-expenses?${params.toString()}`);
+    return res.data;
+  },
+
   getValidationErrors,
   getErrorMessage,
 };

@@ -8,6 +8,7 @@ import {
   FormControlLabel,
   Radio,
   FormControl,
+  Switch,
   alpha,
   useTheme,
 } from "@mui/material";
@@ -94,6 +95,54 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
                     sx={{ alignItems: "flex-start" }}
                   />
                 </RadioGroup>
+              )}
+            />
+          </FormControl>
+        </Box>
+
+        <Box
+          sx={{
+            bgcolor: alpha(theme.palette.primary.main, 0.05),
+            p: 3,
+            borderRadius: 2,
+            border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+            mt: 3,
+          }}
+        >
+          <FormControl component="fieldset" sx={{ width: "100%" }}>
+            <Typography
+              variant="subtitle1"
+              fontWeight={600}
+              gutterBottom
+              sx={{ mb: 2 }}
+            >
+              تصفية المبيعات
+            </Typography>
+            <Controller
+              name="pos_filter_sales_by_user"
+              control={control}
+              render={({ field }) => (
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={Boolean(field.value)}
+                      onChange={(e) => field.onChange(e.target.checked)}
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography variant="body1" fontWeight={500} gutterBottom>
+                        عرض مبيعات المستخدم الحالي فقط
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        عند تفعيل هذا الخيار، سيتم عرض مبيعات المستخدم المسجل
+                        حالياً فقط في قائمة المبيعات المعلقة. عند إلغاء التفعيل،
+                        سيتم عرض جميع المبيعات.
+                      </Typography>
+                    </Box>
+                  }
+                  sx={{ alignItems: "flex-start" }}
+                />
               )}
             />
           </FormControl>

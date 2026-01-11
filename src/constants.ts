@@ -217,3 +217,36 @@ export const formatCurrency = (
       : `${currencySymbolOrCode} ${formattedNumber}`;
   }
 };
+
+/**
+ * Format date as dd,mm,yyyy (e.g., 15,01,2025)
+ */
+export const formatDateDDMMYYYY = (
+  dateInput: string | Date | number | null | undefined
+): string => {
+  if (!dateInput) return "---";
+
+  let dateToFormat: Date;
+  if (typeof dateInput === "string") {
+    dateToFormat = new Date(
+      dateInput.includes("T") ? dateInput : dateInput + "T00:00:00"
+    );
+  } else if (dateInput instanceof Date) {
+    dateToFormat = dateInput;
+  } else if (typeof dateInput === "number") {
+    dateToFormat = new Date(dateInput);
+  } else {
+    return "---";
+  }
+
+  if (isNaN(dateToFormat.getTime())) {
+    console.warn("formatDateDDMMYYYY received an invalid date input:", dateInput);
+    return "---";
+  }
+
+  const day = String(dateToFormat.getDate()).padStart(2, "0");
+  const month = String(dateToFormat.getMonth() + 1).padStart(2, "0");
+  const year = dateToFormat.getFullYear();
+
+  return `${day},${month},${year}`;
+};

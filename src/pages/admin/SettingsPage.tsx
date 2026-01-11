@@ -37,7 +37,7 @@ type SettingsFormValues = Partial<AppSettings>;
 
 // --- Component ---
 const SettingsPage: React.FC = () => {
-  const { settings, isLoadingSettings, updateSettings } = useSettings();
+  const { settings, isLoadingSettings, updateSettings, fetchSettings } = useSettings();
   const [serverError, setServerError] = useState<string | null>(null);
 
   // Tab/Section State
@@ -69,6 +69,7 @@ const SettingsPage: React.FC = () => {
       tax_number: "",
       pdf_font: "Amiri",
       pos_mode: "shift",
+      pos_filter_sales_by_user: false,
     },
   });
 
@@ -86,6 +87,11 @@ const SettingsPage: React.FC = () => {
   const watchedBrandingType = watch("invoice_branding_type");
 
   // --- Effects ---
+  // Fetch settings when component mounts to ensure fresh data
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
+
   useEffect(() => {
     if (settings) {
       reset({
@@ -99,6 +105,7 @@ const SettingsPage: React.FC = () => {
         tax_number: settings.tax_number || "",
         pdf_font: settings.pdf_font || "Amiri",
         pos_mode: settings.pos_mode || "shift",
+        pos_filter_sales_by_user: settings.pos_filter_sales_by_user || false,
       });
 
       if (settings.company_logo_url) setLogoPreview(settings.company_logo_url);
@@ -131,6 +138,7 @@ const SettingsPage: React.FC = () => {
       tax_number: data.tax_number || undefined,
       pdf_font: data.pdf_font || "Amiri",
       pos_mode: data.pos_mode || "shift",
+      pos_filter_sales_by_user: Boolean(data.pos_filter_sales_by_user),
     };
 
     try {

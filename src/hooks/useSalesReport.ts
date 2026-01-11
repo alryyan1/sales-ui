@@ -51,5 +51,7 @@ export function useSalesReport({
         posMode
       ),
     placeholderData: keepPreviousData,
+    refetchOnMount: true,
+    staleTime: 0,
   });
 }

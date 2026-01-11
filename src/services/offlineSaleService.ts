@@ -253,7 +253,7 @@ export const offlineSaleService = {
   /**
    * Create a new temporary sale object
    */
-  createDraftSale: (shiftId: number | null = null): OfflineSale => {
+  createDraftSale: (shiftId: number | null = null, userId: number | null = null): OfflineSale => {
     return {
       tempId: generateId(),
       offline_created_at: Date.now(),
@@ -270,7 +270,7 @@ export const offlineSaleService = {
       created_at: new Date().toISOString(),
       items: [],
       payments: [],
-      user_id: null,
+      user_id: userId ?? null,
     };
   },
 

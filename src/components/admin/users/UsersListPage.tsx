@@ -3,41 +3,43 @@ import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  Box,
-  Container,
-  Typography,
-  Button,
-  Card,
-  CardContent,
-  TextField,
-  InputAdornment,
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
+  TableHeader,
   TableRow,
-  IconButton,
-  Chip,
-  Pagination,
-  Alert,
-  AlertTitle,
+} from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
   Tooltip,
-  Stack,
-  Avatar,
-  Badge,
-  Skeleton,
-} from "@mui/material";
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import {
   Search,
   Plus,
   Edit,
-  Trash2,
   Users,
   Store,
   X,
+  AlertCircle,
 } from "lucide-react";
-
 import { useQuery } from "@tanstack/react-query";
 
 // Services and Types
@@ -47,7 +49,6 @@ import userService from "@/services/userService";
 
 // Custom Components
 import UserFormModal from "./UserFormModal";
-import ConfirmationDialog from "@/components/common/ConfirmationDialog";
 
 const UsersListPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -78,13 +79,10 @@ const UsersListPage: React.FC = () => {
     return () => clearTimeout(handler);
   }, [searchTerm, setSearchParams, initialSearch]);
 
-  const handlePageChange = (
-    _event: React.ChangeEvent<unknown>,
-    value: number
-  ) => {
-    setPage(value);
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
     setSearchParams((prev) => {
-      prev.set("page", value.toString());
+      prev.set("page", newPage.toString());
       return prev;
     });
   };
@@ -112,9 +110,6 @@ const UsersListPage: React.FC = () => {
   // --- Modal & Action State ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [userToDeleteId, setUserToDeleteId] = useState<number | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   // --- Handlers ---
   const openModal = (user: User | null = null) => {
@@ -133,266 +128,273 @@ const UsersListPage: React.FC = () => {
     toast.success(editingUser ? "تم التحديث بنجاح" : "تم الإنشاء بنجاح");
   };
 
-  const openConfirmDialog = (id: number) => {
-    setUserToDeleteId(id);
-    setIsConfirmOpen(true);
-  };
-
-  const closeConfirmDialog = () => {
-    if (!isDeleting) {
-      setIsConfirmOpen(false);
-      setTimeout(() => setUserToDeleteId(null), 300);
-    }
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!userToDeleteId) return;
-    setIsDeleting(true);
-    try {
-      await userService.deleteUser(userToDeleteId);
-      toast.success("تم الحذف بنجاح");
-      closeConfirmDialog();
-      refetch();
-    } catch (err: any) {
-      toast.error("حدث خطأ", {
-        description: userService.getErrorMessage(err),
-      });
-      closeConfirmDialog();
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   return (
-    <Container maxWidth="xl">
+    <div className="container mx-auto max-w-7xl p-6" dir="rtl">
       {/* Header Section */}
-      <Box sx={{ mb: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Box>
-          <Typography variant="h4" component="h1" gutterBottom>
-            إدارة المستخدمين
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">إدارة المستخدمين</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             إدارة حسابات المستخدمين، الصلاحيات، والمستودعات المرتبطة بهم
-          </Typography>
-        </Box>
+          </p>
+        </div>
 
-        <Button
-          variant="contained"
-          startIcon={<Plus size={20} />}
-          onClick={() => openModal()}
-        >
+        <Button onClick={() => openModal()}>
+          <Plus className="mr-2 h-4 w-4" />
           مستخدم جديد
         </Button>
-      </Box>
+      </div>
 
       {/* Search & Filter Card */}
-      <Card sx={{ mb: 4 }}>
-        <CardContent>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="ابحث عن مستخدم بالاسم أو اسم المستخدم..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search size={20} />
-                  </InputAdornment>
-                ),
-                endAdornment: searchTerm && (
-                  <InputAdornment position="end">
-                    <IconButton
-                      size="small"
-                      onClick={() => setSearchTerm("")}
-                    >
-                      <X size={16} />
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="ابحث عن مستخدم بالاسم أو اسم المستخدم..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pr-10"
+              />
+              {searchTerm && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute left-1 top-1/2 h-6 w-6 -translate-y-1/2"
+                  onClick={() => setSearchTerm("")}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
             {usersResponse && (
-              <Chip label={`${usersResponse.total} مستخدم`} />
+              <Badge variant="secondary" className="text-sm">
+                {usersResponse.total} مستخدم
+              </Badge>
             )}
-          </Stack>
+          </div>
         </CardContent>
       </Card>
 
       {/* Loading State */}
       {isLoading && (
         <Card>
-          <TableContainer>
+          <CardContent className="pt-6">
             <Table>
-              <TableHead>
+              <TableHeader>
                 <TableRow>
                   {[1, 2, 3, 4, 5].map((i) => (
-                    <TableCell key={i}>
-                      <Skeleton height={24} />
-                    </TableCell>
+                    <TableHead key={i} className="text-center">
+                      <Skeleton className="h-5 w-24" />
+                    </TableHead>
                   ))}
                 </TableRow>
-              </TableHead>
+              </TableHeader>
               <TableBody>
                 {[1, 2, 3, 4, 5].map((i) => (
                   <TableRow key={i}>
                     {[1, 2, 3, 4, 5].map((j) => (
-                      <TableCell key={j}>
-                        <Skeleton height={40} />
+                      <TableCell key={j} className="text-center">
+                        <Skeleton className="h-5 w-full" />
                       </TableCell>
                     ))}
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          </TableContainer>
+          </CardContent>
         </Card>
       )}
 
       {/* Error State */}
       {isError && (
-        <Alert severity="error" sx={{ mb: 4 }}>
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
           <AlertTitle>خطأ في تحميل البيانات</AlertTitle>
-          {error instanceof Error
-            ? error.message
-            : "حدث خطأ غير متوقع أثناء الاتصال بالخادم."}
+          <AlertDescription>
+            {error instanceof Error
+              ? error.message
+              : "حدث خطأ غير متوقع أثناء الاتصال بالخادم."}
+          </AlertDescription>
         </Alert>
       )}
 
       {/* Data Table */}
       {!isLoading && !isError && usersResponse && (
         <Card>
-          <TableContainer>
-            <Table aria-label="users table">
-              <TableHead>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell className="text-center" align="center">المستخدم</TableCell>
-                  <TableCell className="text-center" align="center">اسم الدخول</TableCell>
-                  <TableCell className="text-center" align="center">الأدوار</TableCell>
-                  <TableCell className="text-center" align="center">المستودع</TableCell>
-                  <TableCell className="text-center" align="center">الإجراءات</TableCell>
+                  <TableHead className="text-center">المستخدم</TableHead>
+                  <TableHead className="text-center">اسم الدخول</TableHead>
+                  <TableHead className="text-center">الأدوار</TableHead>
+                  <TableHead className="text-center">المستودع</TableHead>
+                  <TableHead className="text-center">الإجراءات</TableHead>
                 </TableRow>
-              </TableHead>
-                <TableBody>
-                  {usersResponse.data.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} align="center">
-                        <Stack alignItems="center" spacing={2}>
-                          <Users size={48} />
-                          <Typography variant="h6" color="text.secondary">
+              </TableHeader>
+              <TableBody>
+                {usersResponse.data.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center">
+                      <div className="flex flex-col items-center justify-center gap-4 py-8">
+                        <Users className="h-12 w-12 text-muted-foreground" />
+                        <div className="text-center">
+                          <h3 className="text-lg font-semibold text-muted-foreground">
                             لا توجد نتائج مطابقة
-                          </Typography>
-                          <Typography variant="body2" color="text.disabled">
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
                             حاول ضبط مصطلحات البحث الخاصة بك
-                          </Typography>
-                        </Stack>
+                          </p>
+                        </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  usersResponse.data.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="font-medium">{user.name}</span>
+                          {user.id === currentUser?.id && (
+                            <Badge variant="default" className="text-xs">
+                              أنت
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span className="font-mono text-sm">@{user.username}</span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex flex-wrap items-center justify-center gap-1">
+                          {(user.roles ?? []).map((roleName) => {
+                            const isAdmin =
+                              roleName === "admin" || roleName === "ادمن";
+                            return (
+                              <Badge
+                                key={roleName}
+                                variant={isAdmin ? "default" : "outline"}
+                                className="text-xs"
+                              >
+                                {roleName}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {user.warehouse ? (
+                          <div className="flex items-center justify-center gap-2">
+                            <Store className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{user.warehouse.name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            غير محدد
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openModal(user)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>تعديل البيانات</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    usersResponse.data.map((user) => (
-                      <TableRow key={user.id} hover>
-                        <TableCell className="text-center" align="center">
-                       
-                            <Box>
-                              <Typography variant="subtitle2">
-                                {user.name}
-                              </Typography>
-                              {user.id === currentUser?.id && (
-                                <Chip label="أنت" size="small" />
-                              )}
-                            </Box>
-                        </TableCell>
-                        <TableCell className="text-center" align="center">
-                          <Typography variant="body2" fontFamily="monospace">
-                            @{user.username}
-                          </Typography>
-                        </TableCell>
-                        <TableCell className="text-center" align="center">
-                          <Stack
-                            direction="row"
-                            flexWrap="wrap"
-                            gap={0.5}
-                            justifyContent="center"
-                          >
-                            {(user.roles ?? []).map((roleName) => {
-                              const isAdmin =
-                                roleName === "admin" || roleName === "ادمن";
-                              return (
-                                <Chip
-                                  key={roleName}
-                                  label={roleName}
-                                  size="small"
-                                  color={isAdmin ? "primary" : "default"}
-                                  variant={isAdmin ? "filled" : "outlined"}
-                                />
-                              );
-                            })}
-                          </Stack>
-                        </TableCell>
-                        <TableCell className="text-center" align="center">
-                          {user.warehouse ? (
-                            <Stack direction="row" alignItems="center" spacing={1}>
-                              <Store size={16} />
-                              <Typography variant="body2">
-                                {user.warehouse.name}
-                              </Typography>
-                            </Stack>
-                          ) : (
-                            <Typography variant="caption" color="text.disabled">
-                              غير محدد
-                            </Typography>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center" align="center">
-                          <Stack direction="row" spacing={1} justifyContent="center">
-                            <Tooltip title="تعديل البيانات">
-                              <IconButton size="small" onClick={() => openModal(user)}>
-                                <Edit size={16} />
-                              </IconButton>
-                            </Tooltip>
-                            {currentUser?.id !== user.id && (
-                              <Tooltip title="حذف المستخدم">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => openConfirmDialog(user.id)}
-                                  disabled={isDeleting}
-                                >
-                                  <Trash2 size={16} />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                          </Stack>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Card>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
 
       {/* Pagination */}
-      {!isLoading && !isError && usersResponse && usersResponse.last_page > 1 && (
-        <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
-          <Pagination
-            count={usersResponse.last_page}
-            page={page}
-            onChange={handlePageChange}
-            color="primary"
-          />
-        </Box>
-      )}
+      {!isLoading &&
+        !isError &&
+        usersResponse &&
+        usersResponse.last_page > 1 && (
+          <div className="mt-6 flex justify-center">
+            <Pagination>
+              <PaginationContent>
+                {page > 1 && (
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handlePageChange(page - 1);
+                      }}
+                    />
+                  </PaginationItem>
+                )}
+
+                {Array.from({ length: usersResponse.last_page }, (_, i) => i + 1)
+                  .filter((p) => {
+                    // Show first page, last page, current page, and pages around current
+                    return (
+                      p === 1 ||
+                      p === usersResponse.last_page ||
+                      (p >= page - 1 && p <= page + 1)
+                    );
+                  })
+                  .map((p, index, array) => {
+                    // Add ellipsis if there's a gap
+                    const prevPage = array[index - 1];
+                    const showEllipsis = prevPage && p - prevPage > 1;
+
+                    return (
+                      <React.Fragment key={p}>
+                        {showEllipsis && (
+                          <PaginationItem>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        )}
+                        <PaginationItem>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handlePageChange(p);
+                            }}
+                            isActive={p === page}
+                          >
+                            {p}
+                          </PaginationLink>
+                        </PaginationItem>
+                      </React.Fragment>
+                    );
+                  })}
+
+                {page < usersResponse.last_page && (
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handlePageChange(page + 1);
+                      }}
+                    />
+                  </PaginationItem>
+                )}
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
 
       {/* Modals */}
       <UserFormModal
@@ -402,19 +404,7 @@ const UsersListPage: React.FC = () => {
         onSaveSuccess={handleSaveSuccess}
         availableRoles={availableRoles}
       />
-
-      <ConfirmationDialog
-        open={isConfirmOpen}
-        onClose={closeConfirmDialog}
-        onConfirm={handleDeleteConfirm}
-        title="تأكيد حذف المستخدم"
-        message={`هل أنت متأكد تماماً من رغبتك في حذف هذا المستخدم؟
-هذا الإجراء نهائي ولا يمكن استرجاع البيانات المحذوفة.`}
-        confirmText="نعم، احذف"
-        cancelText="إلغاء الأمر"
-        isLoading={isDeleting}
-      />
-    </Container>
+    </div>
   );
 };
 

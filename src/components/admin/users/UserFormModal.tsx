@@ -1,43 +1,51 @@
 // src/components/admin/users/UserFormModal.tsx
 import React, { useEffect, useState } from "react";
-import { useForm, Controller, SubmitHandler } from "react-hook-form";
+import { useForm, SubmitHandler } from "react-hook-form";
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
-  Button,
-  TextField,
-  FormControl,
-  FormControlLabel,
-  Checkbox,
-  Typography,
-  IconButton,
-  InputAdornment,
-  Paper,
-  Box,
-  FormHelperText,
-  Alert,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
   Select,
-  MenuItem,
-  InputLabel,
-  Stack,
-  Stepper,
-  Step,
-  StepLabel,
-} from "@mui/material";
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import {
   Loader2,
   Eye,
   EyeOff,
-  X,
   CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 
 // Services and Types
 import userService, { Role } from "@/services/userService";
 import { User } from "@/services/authService";
 import { warehouseService, Warehouse } from "@/services/warehouseService";
+
+// Custom Components
+import NavigationPermissionsSection from "./NavigationPermissionsSection";
 
 // --- Props ---
 interface UserFormModalProps {
@@ -56,7 +64,6 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
   availableRoles,
 }) => {
   const isEditMode = Boolean(userToEdit);
-  const [activeStep, setActiveStep] = useState(0);
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -80,7 +87,6 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
     };
     if (isOpen) {
       fetchWarehouses();
-      setActiveStep(0);
     }
   }, [isOpen]);
 
@@ -92,6 +98,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
     password_confirmation: string;
     roles: string[];
     warehouse_id: number | null;
+    allowed_navs?: string[] | null;
   };
 
   type UpdateUserFormValues = {
@@ -99,18 +106,15 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
     username: string;
     roles: string[];
     warehouse_id: number | null;
+    allowed_navs?: string[] | null;
   };
 
   type CombinedUserFormValues = CreateUserFormValues | UpdateUserFormValues;
 
   // --- Form Setup ---
-  const {
-    control,
-    handleSubmit,
-    reset,
-    setError,
-    formState: { isSubmitting, errors },
-  } = useForm<CombinedUserFormValues>({
+  const [allowedNavs, setAllowedNavs] = useState<string[]>([]);
+
+  const form = useForm<CombinedUserFormValues>({
     defaultValues: {
       name: "",
       username: "",
@@ -119,8 +123,17 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
       password: "",
       password_confirmation: "",
       warehouse_id: null,
+      allowed_navs: [],
     },
   });
+
+  const {
+    handleSubmit,
+    reset,
+    setError,
+    control,
+    formState: { isSubmitting },
+  } = form;
 
   // --- Reset Form on Open ---
   useEffect(() => {
@@ -128,8 +141,9 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
       setServerError(null);
       setShowPassword(false);
       setShowConfirmPassword(false);
-      setActiveStep(0);
       if (isEditMode && userToEdit) {
+        const navs = userToEdit.allowed_navs || [];
+        setAllowedNavs(Array.isArray(navs) ? navs : []);
         reset({
           name: userToEdit.name || "",
           username: userToEdit.username || "",
@@ -138,8 +152,10 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
           password: "",
           password_confirmation: "",
           warehouse_id: userToEdit.warehouse_id || null,
+          allowed_navs: navs,
         });
       } else {
+        setAllowedNavs([]);
         reset({
           name: "",
           username: "",
@@ -148,6 +164,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
           password: "",
           password_confirmation: "",
           warehouse_id: null,
+          allowed_navs: [],
         });
       }
     }
@@ -156,7 +173,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
   // --- Submit Handler ---
   const onSubmit: SubmitHandler<CombinedUserFormValues> = async (data) => {
     setServerError(null);
-    
+
     // Basic validation
     if (!data.name || data.name.trim() === "") {
       setError("name", { type: "manual", message: "هذا الحقل مطلوب" });
@@ -169,16 +186,25 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
     if (!isEditMode) {
       const createData = data as CreateUserFormValues;
       if (!createData.password || createData.password.length < 8) {
-        setError("password" as any, { type: "manual", message: "كلمة المرور يجب أن تكون 8 أحرف على الأقل" });
+        setError("password" as any, {
+          type: "manual",
+          message: "كلمة المرور يجب أن تكون 8 أحرف على الأقل",
+        });
         return;
       }
       if (createData.password !== createData.password_confirmation) {
-        setError("password_confirmation" as any, { type: "manual", message: "كلمات المرور غير متطابقة" });
+        setError("password_confirmation" as any, {
+          type: "manual",
+          message: "كلمات المرور غير متطابقة",
+        });
         return;
       }
     }
     if (!data.roles || data.roles.length === 0) {
-      setError("roles", { type: "manual", message: "يجب اختيار دور واحد على الأقل" });
+      setError("roles", {
+        type: "manual",
+        message: "يجب اختيار دور واحد على الأقل",
+      });
       return;
     }
 
@@ -190,13 +216,18 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
           username: data.username,
           roles: data.roles,
           warehouse_id: data.warehouse_id,
+          allowed_navs: allowedNavs.length > 0 ? allowedNavs : null,
         };
         savedUser = await userService.updateUser(
           userToEdit.id,
           updateData as any
         );
       } else {
-        savedUser = await userService.createUser(data as any);
+        const createData = {
+          ...data,
+          allowed_navs: allowedNavs.length > 0 ? allowedNavs : null,
+        };
+        savedUser = await userService.createUser(createData as any);
       }
       onSaveSuccess(savedUser);
       onClose();
@@ -221,262 +252,242 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
     }
   };
 
-  const steps = isEditMode
-    ? ["البيانات الأساسية", "الأدوار والصلاحيات"]
-    : ["البيانات الأساسية", "الأمان", "الأدوار والصلاحيات"];
-
   return (
-    <Dialog
-      open={isOpen}
-      onClose={(_, reason) => {
-        if (reason !== "backdropClick" && !isSubmitting) onClose();
-      }}
-      maxWidth="md"
-      fullWidth
-    >
-      <form onSubmit={handleSubmit(onSubmit)}>
-        {/* Header */}
-        <DialogTitle>
-          <Stack direction="row" alignItems="center" spacing={2} justifyContent="space-between">
-            <Box>
-              <Typography variant="h6">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && !isSubmitting && onClose()}>
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto" dir="rtl">
+        <Form {...form}>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Header */}
+            <DialogHeader>
+              <DialogTitle className="text-xl font-semibold">
                 {isEditMode ? "تعديل مستخدم" : "إضافة مستخدم"}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
+              </DialogTitle>
+              <DialogDescription>
                 {isEditMode
                   ? "تعديل بيانات المستخدم"
                   : "إضافة مستخدم جديد للنظام"}
-              </Typography>
-            </Box>
-            <IconButton onClick={onClose} disabled={isSubmitting}>
-              <X size={20} />
-            </IconButton>
-          </Stack>
-        </DialogTitle>
+              </DialogDescription>
+            </DialogHeader>
 
-        {/* Stepper */}
-        {!isEditMode && (
-          <Box sx={{ px: 4, pt: 2, pb: 2 }}>
-            <Stepper activeStep={activeStep} alternativeLabel>
-              {steps.map((label) => (
-                <Step key={label}>
-                  <StepLabel>{label}</StepLabel>
-                </Step>
-              ))}
-            </Stepper>
-          </Box>
-        )}
+            {/* Content */}
+            <div className="space-y-6">
+              {serverError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{serverError}</AlertDescription>
+                </Alert>
+              )}
 
-        {/* Content */}
-        <DialogContent dir="rtl">
-          <Stack spacing={3}>
-            {serverError && (
-              <Alert severity="error">
-                {serverError}
-              </Alert>
-            )}
-
-            {/* Section 1: Basic Information */}
-            <Paper variant="outlined">
-              <Stack spacing={3} sx={{ p: 2 }}>
-                <Typography variant="subtitle1" fontWeight={600}>
-                  البيانات الأساسية
-                </Typography>
-
-                <Stack spacing={2}>
-                  <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                    <Controller
+              {/* Section 1: Basic Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>البيانات الأساسية</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={control}
                       name="name"
-                      control={control}
                       render={({ field }) => (
-                        <TextField
-                          {...field}
-                          label="الاسم"
-                          required
-                          fullWidth
-                          variant="outlined"
-                          error={!!errors.name}
-                          helperText={errors.name?.message}
-                          onFocus={() => setActiveStep(0)}
-                        />
+                        <FormItem>
+                          <FormLabel>الاسم</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="أدخل الاسم"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
                       )}
                     />
-                    <Controller
+
+                    <FormField
+                      control={control}
                       name="username"
-                      control={control}
                       render={({ field }) => (
-                        <TextField
-                          {...field}
-                          label="اسم المستخدم"
-                          required
-                          fullWidth
-                          variant="outlined"
-                          error={!!errors.username}
-                          helperText={errors.username?.message}
-                          onFocus={() => setActiveStep(0)}
-                          InputProps={{
-                            startAdornment: (
-                              <InputAdornment position="start">
+                        <FormItem>
+                          <FormLabel>اسم المستخدم</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                                 @
-                              </InputAdornment>
-                            ),
-                          }}
-                        />
+                              </span>
+                              <Input
+                                {...field}
+                                placeholder="اسم المستخدم"
+                                className="pr-8"
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
                       )}
                     />
-                  </Stack>
-                  <Controller
-                    name="warehouse_id"
+                  </div>
+
+                  <FormField
                     control={control}
+                    name="warehouse_id"
                     render={({ field }) => (
-                      <FormControl
-                        fullWidth
-                        error={!!errors.warehouse_id}
-                        onFocus={() => setActiveStep(0)}
-                      >
-                        <InputLabel id="warehouse-label">
-                          المستودع الرئيسي
-                        </InputLabel>
+                      <FormItem>
+                        <FormLabel>المستودع الرئيسي</FormLabel>
                         <Select
-                          {...field}
-                          labelId="warehouse-label"
-                          label="المستودع الرئيسي"
-                          value={field.value ?? ""}
-                          onChange={(e) =>
-                            field.onChange(
-                              String(e.target.value) === ""
-                                ? null
-                                : Number(e.target.value)
-                            )
+                          value={field.value?.toString() || ""}
+                          onValueChange={(value) =>
+                            field.onChange(value === "" ? null : Number(value))
                           }
                           disabled={loadingWarehouses}
                         >
-                          <MenuItem value="">
-                            <Typography variant="body2">
-                              غير محدد (مستودع افتراضي)
-                            </Typography>
-                          </MenuItem>
-                          {warehouses.map((warehouse) => (
-                            <MenuItem key={warehouse.id} value={warehouse.id}>
-                              {warehouse.name}
-                            </MenuItem>
-                          ))}
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="اختر المستودع" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value=" ">
+                              <span className="text-muted-foreground">
+                                غير محدد (مستودع افتراضي)
+                              </span>
+                            </SelectItem>
+                            {warehouses.map((warehouse) => (
+                              <SelectItem
+                                key={warehouse.id}
+                                value={warehouse.id.toString()}
+                              >
+                                {warehouse.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
                         </Select>
-                      </FormControl>
+                        <FormMessage />
+                      </FormItem>
                     )}
                   />
-                </Stack>
-              </Stack>
-            </Paper>
+                </CardContent>
+              </Card>
 
-            {/* Section 2: Security (Only for Create Mode) */}
-            {!isEditMode && (
-              <Paper variant="outlined">
-                <Stack spacing={2} sx={{ p: 2 }}>
-                  <Typography variant="subtitle1" fontWeight={600}>
-                    الأمان
-                  </Typography>
-                  <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                    <Controller
-                      name="password"
-                      control={control as any}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          label="كلمة المرور"
-                          type={showPassword ? "text" : "password"}
-                          fullWidth
-                          required
-                          variant="outlined"
-                          error={!!(errors as any).password}
-                          helperText={(errors as any).password?.message}
-                          onFocus={() => setActiveStep(1)}
-                          InputProps={{
-                            endAdornment: (
-                              <InputAdornment position="end">
-                                <IconButton
+              {/* Section 2: Security (Only for Create Mode) */}
+              {!isEditMode && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>الأمان</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>كلمة المرور</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <Input
+                                  {...field}
+                                  type={showPassword ? "text" : "password"}
+                                  placeholder="أدخل كلمة المرور"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="absolute left-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                                   onClick={() => setShowPassword(!showPassword)}
-                                  edge="end"
                                 >
-                                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                </IconButton>
-                              </InputAdornment>
-                            ),
-                          }}
-                        />
-                      )}
-                    />
-                    <Controller
-                      name="password_confirmation"
-                      control={control as any}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          label="تأكيد كلمة المرور"
-                          type={showConfirmPassword ? "text" : "password"}
-                          fullWidth
-                          required
-                          variant="outlined"
-                          error={!!(errors as any).password_confirmation}
-                          helperText={(errors as any).password_confirmation?.message}
-                          onFocus={() => setActiveStep(1)}
-                          InputProps={{
-                            endAdornment: (
-                              <InputAdornment position="end">
-                                <IconButton
+                                  {showPassword ? (
+                                    <EyeOff className="h-4 w-4" />
+                                  ) : (
+                                    <Eye className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                            <FormDescription>
+                              يجب أن تكون 8 أحرف على الأقل
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={control}
+                        name="password_confirmation"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>تأكيد كلمة المرور</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <Input
+                                  {...field}
+                                  type={showConfirmPassword ? "text" : "password"}
+                                  placeholder="أعد إدخال كلمة المرور"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="absolute left-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                                   onClick={() =>
                                     setShowConfirmPassword(!showConfirmPassword)
                                   }
-                                  edge="end"
                                 >
                                   {showConfirmPassword ? (
-                                    <EyeOff size={18} />
+                                    <EyeOff className="h-4 w-4" />
                                   ) : (
-                                    <Eye size={18} />
+                                    <Eye className="h-4 w-4" />
                                   )}
-                                </IconButton>
-                              </InputAdornment>
-                            ),
-                          }}
-                        />
-                      )}
-                    />
-                  </Stack>
-                </Stack>
-              </Paper>
-            )}
+                                </Button>
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
-            {/* Section 3: Roles */}
-            <Paper variant="outlined">
-              <Stack spacing={2} sx={{ p: 2 }}>
-                <Typography variant="subtitle1" fontWeight={600}>
-                  تعيين الأدوار
-                </Typography>
-
-                <FormControl error={!!errors.roles} component="fieldset" fullWidth>
-                  <Paper variant="outlined" sx={{ p: 2, maxHeight: 240, overflowY: "auto" }}>
-                    <Stack direction="row" flexWrap="wrap" gap={1}>
-                      <Controller
-                        name="roles"
-                        control={control}
-                        render={({ field }) => (
-                          <>
-                            {availableRoles.map((role) => {
-                              const isSelected = field.value?.includes(role.name);
-                              return (
-                                <FormControlLabel
-                                  key={role.id}
-                                  control={
+              {/* Section 3: Roles */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>تعيين الأدوار</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <FormField
+                    control={control}
+                    name="roles"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="space-y-3">
+                          <div className="rounded-lg border p-4 max-h-60 overflow-y-auto">
+                            <div className="flex flex-wrap gap-3">
+                              {availableRoles.map((role) => {
+                                const isSelected = field.value?.includes(
+                                  role.name
+                                );
+                                return (
+                                  <div
+                                    key={role.id}
+                                    className="flex items-center space-x-2 space-x-reverse"
+                                  >
                                     <Checkbox
+                                      id={`role-${role.id}`}
                                       checked={isSelected}
-                                      onChange={(e) => {
-                                        const checked = e.target.checked;
+                                      onCheckedChange={(checked) => {
                                         const currentRoles = field.value || [];
                                         if (checked) {
-                                          field.onChange([...currentRoles, role.name]);
+                                          field.onChange([
+                                            ...currentRoles,
+                                            role.name,
+                                          ]);
                                         } else {
                                           field.onChange(
-                                            currentRoles.filter((r) => r !== role.name)
+                                            currentRoles.filter(
+                                              (r) => r !== role.name
+                                            )
                                           );
                                         }
                                       }}
@@ -485,47 +496,67 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
                                         userToEdit?.username === "superadmin"
                                       }
                                     />
-                                  }
-                                  label={role.name}
-                                  onFocus={() => setActiveStep(isEditMode ? 1 : 2)}
-                                />
-                              );
-                            })}
-                          </>
-                        )}
-                      />
-                    </Stack>
-                  </Paper>
-                  {errors.roles && (
-                    <FormHelperText>{errors.roles.message}</FormHelperText>
-                  )}
-                </FormControl>
-              </Stack>
-            </Paper>
-          </Stack>
-        </DialogContent>
+                                    <Label
+                                      htmlFor={`role-${role.id}`}
+                                      className="cursor-pointer font-normal"
+                                    >
+                                      {role.name}
+                                    </Label>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                          <FormMessage />
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
 
-        {/* Footer */}
-        <DialogActions>
-          <Button onClick={onClose} disabled={isSubmitting} variant="outlined">
-            إلغاء
-          </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={isSubmitting}
-            startIcon={
-              isSubmitting ? (
-                <Loader2 className="animate-spin" size={18} />
-              ) : (
-                <CheckCircle2 size={18} />
-              )
-            }
-          >
-            {isEditMode ? "تحديث" : "إنشاء"}
-          </Button>
-        </DialogActions>
-      </form>
+              {/* Section 4: Navigation Permissions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>صلاحيات الوصول للصفحات</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <NavigationPermissionsSection
+                    value={allowedNavs}
+                    onChange={setAllowedNavs}
+                    isSuperadmin={userToEdit?.username === "superadmin"}
+                  />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Footer */}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={isSubmitting}
+              >
+                إلغاء
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    جاري الحفظ...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    {isEditMode ? "تحديث" : "إنشاء"}
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
     </Dialog>
   );
 };

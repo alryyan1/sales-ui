@@ -6,6 +6,7 @@ export interface NavItem {
     label: string;
     icon?: React.ElementType;
     permission: null;
+    category?: string;
     children?: NavItem[];
 }
 

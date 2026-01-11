@@ -24,21 +24,53 @@ const SidebarPro: React.FC<SidebarProProps> = ({
 }) => {
   const theme = useTheme();
   const location = useLocation();
-  const { handleLogout } = useAuth();
+  const { handleLogout, user } = useAuth();
 
   // Helper to check if a menu item is active
   const isActive = (path: string) => location.pathname === path;
 
-  // Helper to check if a submenu should be open (contains active route)
-  // react-pro-sidebar submenu 'defaultOpen' is only read on mount.
-  // We can let user control it, or force it open if we want.
-  // Generally, purely CSS controlled active state is easier visually.
+  // Helper to check if user has access to a navigation route
+  const hasNavAccess = (route: string): boolean => {
+    // Superadmin or null allowed_navs has access to all routes
+    if (!user) return false;
+    if (user.username === "superadmin" || user.allowed_navs === null) {
+      return true;
+    }
+    // Check if route is in allowed_navs array
+    return user.allowed_navs?.includes(route) ?? false;
+  };
+
+  // Recursively filter navigation items based on user permissions
+  const filterNavItems = (items: NavItem[]): NavItem[] => {
+    return items
+      .map((item) => {
+        // If item has children, filter them first
+        if (item.children && item.children.length > 0) {
+          const filteredChildren = filterNavItems(item.children);
+          // Only include parent if it has accessible children or if parent route is accessible
+          if (filteredChildren.length > 0 || hasNavAccess(item.to)) {
+            return {
+              ...item,
+              children: filteredChildren,
+            };
+          }
+          return null;
+        }
+        // For items without children, check if route is accessible
+        if (hasNavAccess(item.to)) {
+          return item;
+        }
+        return null;
+      })
+      .filter((item): item is NavItem => item !== null);
+  };
+
+  // Filter nav items based on user permissions
+  const filteredNavItems = user ? filterNavItems(navItems) : [];
 
   // Recursively render items
   const renderNavItems = (items: NavItem[]) => {
     return items.map((item) => {
-      // Logic for permission check can go here if needed
-
       if (item.children && item.children.length > 0) {
         return (
           <SubMenu
@@ -163,7 +195,7 @@ const SidebarPro: React.FC<SidebarProProps> = ({
             },
           }}
         >
-          {renderNavItems(navItems)}
+          {renderNavItems(filteredNavItems)}
         </Menu>
 
         {/* Footer / Logout */}

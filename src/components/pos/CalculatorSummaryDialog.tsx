@@ -30,6 +30,9 @@ import saleService, { Sale } from "../../services/saleService";
 import { formatNumber } from "@/constants";
 import { useQueryClient } from "@tanstack/react-query";
 import { TextField } from "@mui/material";
+import { useSettings } from "../../context/SettingsContext";
+import { useAuth } from "../../context/AuthContext";
+import { useMemo } from "react";
 
 interface CalculatorSummaryDialogProps {
   open: boolean;
@@ -44,37 +47,50 @@ export const CalculatorSummaryDialog: React.FC<
 > = ({ open, onClose, sales: initialSales, periodTitle, dateFrom }) => {
   const theme = useTheme();
   const queryClient = useQueryClient();
+  const { getSetting, isLoadingSettings } = useSettings();
+  const { user, isLoading: isLoadingUser } = useAuth();
   const [localSelectedDate, setLocalSelectedDate] = React.useState(dateFrom);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = React.useState(false);
+
+  // Wait for settings and user to load before filtering
+  const isReady = !isLoadingSettings && !isLoadingUser;
+  const filterByUser = isReady 
+    ? (getSetting("pos_filter_sales_by_user", false) as boolean)
+    : false;
+  
+  // Calculate userId for filtering and query keys
+  const userId = filterByUser && user?.id ? user.id : null;
 
   // Re-sync local date when dialog opens with a new prop date
   React.useEffect(() => {
     if (open) {
       setLocalSelectedDate(dateFrom);
       // Invalidate queries when dialog opens to force fresh data fetch
+      // Include user_id in query key to ensure proper cache invalidation
       queryClient.invalidateQueries({
-        queryKey: ["expenses-summary", dateFrom],
+        queryKey: ["expenses-summary", dateFrom, userId],
       });
       queryClient.invalidateQueries({
-        queryKey: ["synced-sales-summary", dateFrom],
+        queryKey: ["synced-sales-summary", dateFrom, userId],
       });
     }
-  }, [open, dateFrom, queryClient]);
+  }, [open, dateFrom, queryClient, userId]);
 
   // Fetch Expenses for localSelectedDate
+  // Include user_id in query key for proper caching when filtering by user
   const { 
     data: expensesData, 
     isLoading: isLoadingExpenses, 
     isFetching: isFetchingExpenses,
     refetch: refetchExpenses 
   } = useQuery({
-    queryKey: ["expenses-summary", localSelectedDate],
+    queryKey: ["expenses-summary", localSelectedDate, userId],
     queryFn: () =>
       expenseService.getExpenses(1, 1000, {
         date_from: localSelectedDate,
         date_to: localSelectedDate,
       }),
-    enabled: open,
+    enabled: open && isReady,
     refetchOnMount: true,
     refetchOnWindowFocus: false,
   });
@@ -82,7 +98,7 @@ export const CalculatorSummaryDialog: React.FC<
   const handleExpenseSaveSuccess = () => {
     // Re-fetch expenses to update the summary
     queryClient.invalidateQueries({
-      queryKey: ["expenses-summary", localSelectedDate],
+      queryKey: ["expenses-summary", localSelectedDate, userId],
     });
   };
 
@@ -92,7 +108,7 @@ export const CalculatorSummaryDialog: React.FC<
     isFetching: isFetchingSynced,
     refetch: refetchSales 
   } = useQuery({
-    queryKey: ["synced-sales-summary", localSelectedDate],
+    queryKey: ["synced-sales-summary", localSelectedDate, userId],
     queryFn: async () => {
       const res = await saleService.getSales(
         1,
@@ -100,11 +116,14 @@ export const CalculatorSummaryDialog: React.FC<
         "",
         localSelectedDate,
         localSelectedDate,
-        1000
+        1000,
+        null, // clientId
+        false, // todayOnly
+        filterByUser && user?.id ? user.id : null // forCurrentUser
       );
       return res.data;
     },
-    enabled: open,
+    enabled: open && isReady,
     refetchOnMount: true,
     refetchOnWindowFocus: false,
   });
@@ -122,16 +141,16 @@ export const CalculatorSummaryDialog: React.FC<
   React.useEffect(() => {
     if (open && localSelectedDate) {
       queryClient.invalidateQueries({
-        queryKey: ["expenses-summary", localSelectedDate],
+        queryKey: ["expenses-summary", localSelectedDate, userId],
       });
       queryClient.invalidateQueries({
-        queryKey: ["synced-sales-summary", localSelectedDate],
+        queryKey: ["synced-sales-summary", localSelectedDate, userId],
       });
     }
-  }, [localSelectedDate, open, queryClient]);
+  }, [localSelectedDate, open, queryClient, userId]);
 
-  // Show loading when initially loading OR when fetching/refetching data
-  const isLoading = isLoadingExpenses || isLoadingSynced || isFetchingExpenses || isFetchingSynced;
+  // Show loading when initially loading OR when fetching/refetching data OR waiting for settings/user
+  const isLoading = !isReady || isLoadingExpenses || isLoadingSynced || isFetchingExpenses || isFetchingSynced;
 
   // Determine which sales to use (strictly use synced/ID-carrying sales)
   const filterSynced = (arr: (OfflineSale | Sale)[] = []) =>
@@ -139,9 +158,17 @@ export const CalculatorSummaryDialog: React.FC<
 
   // Prefer fetched synced sales data when available (even if empty array means no sales),
   // otherwise fall back to filtered initial sales
-  const effectiveSales = syncedSalesData !== undefined
+  const rawSales = syncedSalesData !== undefined
     ? syncedSalesData
     : filterSynced(initialSales);
+
+  // Filter sales by user if setting is enabled
+  const effectiveSales = useMemo(() => {
+    if (!isReady || !filterByUser || !user?.id) {
+      return rawSales;
+    }
+    return rawSales.filter((sale: any) => sale.user_id === user.id);
+  }, [rawSales, filterByUser, user?.id, isReady]);
 
   const totalSalesAmount = (effectiveSales as any[]).reduce(
     (sum: number, sale: any) => sum + Number(sale.total_amount || 0),
@@ -153,7 +180,15 @@ export const CalculatorSummaryDialog: React.FC<
   );
   const totalSalesCount = effectiveSales.length;
 
-  const expenses = expensesData?.data || [];
+  // Filter expenses by user if setting is enabled
+  const rawExpenses = expensesData?.data || [];
+  const expenses = useMemo(() => {
+    if (!isReady || !filterByUser || !user?.id) {
+      return rawExpenses;
+    }
+    return rawExpenses.filter((exp: any) => exp.user_id === user.id);
+  }, [rawExpenses, filterByUser, user?.id, isReady]);
+
   const totalExpensesAmount = (expenses as any[]).reduce(
     (sum: number, exp: any) => sum + Number(exp.amount || 0),
     0

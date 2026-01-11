@@ -1,6 +1,7 @@
 import React from "react";
 import { FileText } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { useNavigate } from "react-router-dom";
 import { useSalesReport } from "@/hooks/useSalesReport";
 import { useSettings } from "@/context/SettingsContext";
 import { formatNumber } from "@/constants";
@@ -8,8 +9,6 @@ import { ReportFilterValues } from "./ReportFilters";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Table,
@@ -46,8 +45,16 @@ export const SalesTable: React.FC<SalesTableProps> = ({
   onPageChange,
   onRowClick,
 }) => {
+  const navigate = useNavigate();
   const { getSetting } = useSettings();
   const posMode = getSetting("pos_mode", "shift") as "shift" | "days";
+
+  const handleClientClick = (e: React.MouseEvent, clientId: number | null) => {
+    e.stopPropagation(); // Prevent row click
+    if (clientId) {
+      navigate(`/clients/${clientId}/ledger`);
+    }
+  };
 
   const {
     data: reportData,
@@ -168,10 +175,13 @@ export const SalesTable: React.FC<SalesTableProps> = ({
                         </span>
                       </TableCell>
                       <TableCell className="text-center">
-                        {sale.client_name ? (
-                          <span className="text-center text-sm font-medium">
+                        {sale.client_name && sale.client_id ? (
+                          <button
+                            onClick={(e) => handleClientClick(e, sale.client_id)}
+                            className="text-center text-sm font-medium text-primary hover:underline cursor-pointer transition-colors"
+                          >
                             {sale.client_name}
-                          </span>
+                          </button>
                         ) : (
                           <span className="text-center text-sm text-muted-foreground">
                             عميل غير محدد

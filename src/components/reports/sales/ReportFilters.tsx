@@ -211,7 +211,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
           </Box>
 
           {/* Filter Actions */}
-          <Stack direction="row" spacing={1} sx={{ minWidth: 200 }}>
+          <Stack direction="row" gap={1} spacing={1} sx={{ minWidth: 200 }}>
             <Button
               fullWidth
               variant="contained"

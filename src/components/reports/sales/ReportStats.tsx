@@ -11,15 +11,17 @@ import {
   TrendingUp,
   Percent,
   CheckCircle2,
-  RotateCcw,
   ShoppingCart,
   Wallet,
   Building2,
+  Receipt,
 } from "lucide-react";
 import { formatNumber } from "@/constants";
 import { useSalesReport } from "@/hooks/useSalesReport";
 import { useSettings } from "@/context/SettingsContext";
 import { ReportFilterValues } from "./ReportFilters";
+import { useQuery } from "@tanstack/react-query";
+import expenseService from "@/services/expenseService";
 
 interface ReportStatsProps {
   filterValues: ReportFilterValues;
@@ -39,6 +41,25 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
     productId: filterValues.productId ? Number(filterValues.productId) : null,
     limit: 500, // Fetch a larger set for stats calculation
     posMode,
+  });
+
+  // Fetch expenses with the same filters
+  const { data: expensesData, isLoading: isLoadingExpenses } = useQuery({
+    queryKey: [
+      "expenses-report",
+      filterValues.startDate,
+      filterValues.endDate,
+      filterValues.userId,
+    ],
+    queryFn: async () => {
+      return await expenseService.getExpenses(1, 1000, {
+        date_from: filterValues.startDate || undefined,
+        date_to: filterValues.endDate || undefined,
+      });
+    },
+    enabled: !!filterValues.startDate && !!filterValues.endDate,
+    refetchOnMount: true,
+    staleTime: 0,
   });
 
   const summaryStats = useMemo(() => {
@@ -74,6 +95,19 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
 
     const totalNet = totalAmount - totalRefund;
 
+    // Calculate expenses
+    const expenses = expensesData?.data || [];
+    const totalExpenses = expenses.reduce(
+      (sum, expense) => sum + Number(expense.amount),
+      0
+    );
+    const totalExpensesCash = expenses
+      .filter((expense) => expense.payment_method === "cash")
+      .reduce((sum, expense) => sum + Number(expense.amount), 0);
+    const totalExpensesBank = expenses
+      .filter((expense) => expense.payment_method === "bank")
+      .reduce((sum, expense) => sum + Number(expense.amount), 0);
+
     const totalCash = data.reduce((sum, sale) => {
       if (!sale.payments) return sum;
       return (
@@ -106,10 +140,13 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
       totalDiscount,
       totalRefund,
       totalNet,
+      totalExpenses,
+      totalExpensesCash,
+      totalExpensesBank,
     };
-  }, [reportData]);
+  }, [reportData, expensesData]);
 
-  if (isLoading) {
+  if (isLoading || isLoadingExpenses) {
     return (
       <Box
         sx={{
@@ -189,11 +226,33 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
       gradient: "linear-gradient(135deg, #ec4899 0%, #d946ef 100%)",
     },
     {
-      title: "المرتجع",
-      value: summaryStats.totalRefund,
-      icon: <RotateCcw size={24} />,
+      title: "إجمالي المصروفات",
+      value: summaryStats.totalExpenses,
+      icon: <Receipt size={24} />,
       color: "#ef4444",
       gradient: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)",
+      extra: (
+        <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+            <Wallet size={12} style={{ opacity: 0.7 }} />
+            <Typography
+              variant="caption"
+              sx={{ opacity: 0.9, fontWeight: 600 }}
+            >
+              {formatNumber(summaryStats.totalExpensesCash)}
+            </Typography>
+          </Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+            <Building2 size={12} style={{ opacity: 0.7 }} />
+            <Typography
+              variant="caption"
+              sx={{ opacity: 0.9, fontWeight: 600 }}
+            >
+              {formatNumber(summaryStats.totalExpensesBank)}
+            </Typography>
+          </Box>
+        </Stack>
+      ),
     },
   ];
 

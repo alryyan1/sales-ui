@@ -22,6 +22,7 @@ export interface UserFormData {
   password_confirmation?: string; // Optional for update
   roles: string[]; // Array of role names
   warehouse_id?: number | null;
+  allowed_navs?: string[] | null; // Array of allowed navigation routes
 }
 
 const userService = {

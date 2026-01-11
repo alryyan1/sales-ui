@@ -79,7 +79,7 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
       amount: "",
       expense_date: "",
       expense_category_id: "",
-      payment_method: "",
+      payment_method: "cash",
       reference: "",
       description: "",
     },
@@ -128,7 +128,7 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
         amount: "",
         expense_date: `${yyyy}-${mm}-${dd}`,
         expense_category_id: "",
-        payment_method: "",
+        payment_method: "cash",
         reference: "",
         description: "",
       });
@@ -237,13 +237,14 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
                   <Controller
                     name="title"
                     control={control}
-                    rules={{ required: "العنوان مطلوب" }}
+                    rules={{ required: "اسم المصروف مطلوب" }}
                     render={({ field, fieldState }) => (
                       <TextField
                         {...field}
-                        label="العنوان"
+                        label="اسم المصروف"
                         fullWidth
                         size="small"
+                        autoFocus
                         error={!!fieldState.error}
                         helperText={fieldState.error?.message}
                         disabled={isSubmitting}
