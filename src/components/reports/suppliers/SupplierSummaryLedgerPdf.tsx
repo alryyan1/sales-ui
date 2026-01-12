@@ -7,19 +7,15 @@ import {
   StyleSheet,
   Image as PdfImage,
 } from "@react-pdf/renderer";
-import { SupplierLedger } from "../../services/supplierPaymentService";
-import { AppSettings } from "../../services/settingService";
+import { SupplierSummary } from "@/services/supplierService";
+import { AppSettings } from "@/services/settingService";
 import { formatNumber } from "@/constants";
 import { format } from "date-fns";
-
 import { getPdfFont } from "@/utils/pdfFontRegistry";
-
-const currencySymbol = "SDG";
 
 const styles = StyleSheet.create({
   page: {
-    padding: 30, // Standard A4 margin
-    // fontFamily: "Amiri",
+    padding: 30,
     fontSize: 10,
     flexDirection: "column",
   },
@@ -33,7 +29,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   companyInfo: {
-    alignItems: "flex-end", // Right align for Arabic
+    alignItems: "flex-end",
     width: "60%",
   },
   logoContainer: {
@@ -72,10 +68,6 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 4,
   },
-  metaColumn: {
-    width: "48%",
-    alignItems: "flex-end",
-  },
   metaRow: {
     flexDirection: "row-reverse",
     marginBottom: 4,
@@ -84,7 +76,7 @@ const styles = StyleSheet.create({
   },
   metaLabel: {
     fontWeight: "bold",
-    width: 80,
+    width: 100,
     textAlign: "right",
     marginLeft: 10,
     fontSize: 9,
@@ -106,7 +98,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f3f4f6",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
-    padding: 6,
+    padding: 8,
     fontWeight: "bold",
     fontSize: 9,
   },
@@ -114,18 +106,13 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     borderBottomWidth: 1,
     borderBottomColor: "#f3f4f6",
-    padding: 6,
+    padding: 8,
     fontSize: 9,
   },
-  // Columns
-  colDate: { width: "15%", textAlign: "center" },
-  colType: { width: "10%", textAlign: "center" },
-  colDesc: { width: "25%", textAlign: "right" },
-  colDebit: { width: "12%", textAlign: "left" },
-  colCredit: { width: "12%", textAlign: "left" },
-  colBalance: { width: "14%", textAlign: "left" },
-  colRef: { width: "12%", textAlign: "center" },
-
+  colName: { width: "35%", textAlign: "right" },
+  colDebit: { width: "20%", textAlign: "left" },
+  colCredit: { width: "20%", textAlign: "left" },
+  colBalance: { width: "25%", textAlign: "left" },
   summarySection: {
     marginTop: 20,
     flexDirection: "row",
@@ -133,7 +120,7 @@ const styles = StyleSheet.create({
   },
   summaryBox: {
     width: "50%",
-    borderTopWidth: 1,
+    borderTopWidth: 2,
     borderTopColor: "#e5e7eb",
     paddingTop: 10,
   },
@@ -146,10 +133,12 @@ const styles = StyleSheet.create({
     textAlign: "right",
     fontWeight: "bold",
     color: "#4b5563",
+    fontSize: 10,
   },
   summaryValue: {
     textAlign: "left",
     fontWeight: "bold",
+    fontSize: 10,
   },
   footer: {
     position: "absolute",
@@ -165,25 +154,24 @@ const styles = StyleSheet.create({
   },
 });
 
-interface SupplierLedgerPdfProps {
-  ledger: SupplierLedger;
+interface SupplierSummaryLedgerPdfProps {
+  suppliers: SupplierSummary[];
   settings?: AppSettings | null;
 }
 
-export const SupplierLedgerPdf: React.FC<SupplierLedgerPdfProps> = ({
-  ledger,
-  settings,
-}) => {
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case "purchase":
-        return "شراء";
-      case "payment":
-        return "دفعة";
-      default:
-        return type;
-    }
-  };
+const currencySymbol = "SDG";
+
+export const SupplierSummaryLedgerPdf: React.FC<
+  SupplierSummaryLedgerPdfProps
+> = ({ suppliers, settings }) => {
+  const totals = suppliers.reduce(
+    (acc, supplier) => ({
+      totalDebit: acc.totalDebit + supplier.total_debit,
+      totalCredit: acc.totalCredit + supplier.total_credit,
+      totalBalance: acc.totalBalance + supplier.balance,
+    }),
+    { totalDebit: 0, totalCredit: 0, totalBalance: 0 }
+  );
 
   return (
     <Document>
@@ -249,79 +237,52 @@ export const SupplierLedgerPdf: React.FC<SupplierLedgerPdfProps> = ({
           </View>
         )}
 
-        <Text style={styles.title}>كشف حساب مورد / Supplier Statement</Text>
+        <Text style={styles.title}>
+          ملخص كشف حساب الموردين / Suppliers Summary Ledger
+        </Text>
 
-        {/* Supplier Meta */}
+        {/* Meta */}
         <View style={styles.metaSection}>
-          <View style={styles.metaColumn}>
-            <View style={styles.metaRow}>
-              <Text style={styles.metaValue}>{ledger.supplier.name}</Text>
-              <Text style={styles.metaLabel}>المورد:</Text>
-            </View>
-            {ledger.supplier.phone && (
-              <View style={styles.metaRow}>
-                <Text style={styles.metaValue}>{ledger.supplier.phone}</Text>
-                <Text style={styles.metaLabel}>الهاتف:</Text>
-              </View>
-            )}
-            {ledger.supplier.email && (
-              <View style={styles.metaRow}>
-                <Text style={styles.metaValue}>{ledger.supplier.email}</Text>
-                <Text style={styles.metaLabel}>البريد:</Text>
-              </View>
-            )}
-            {ledger.supplier.contact_person && (
-              <View style={styles.metaRow}>
-                <Text style={styles.metaValue}>
-                  {ledger.supplier.contact_person}
-                </Text>
-                <Text style={styles.metaLabel}>المسؤول:</Text>
-              </View>
-            )}
+          <View style={styles.metaRow}>
+            <Text style={styles.metaValue}>
+              {format(new Date(), "yyyy-MM-dd")}
+            </Text>
+            <Text style={styles.metaLabel}>تاريخ الطباعة:</Text>
           </View>
-          <View style={styles.metaColumn}>
-            <View style={styles.metaRow}>
-              <Text style={styles.metaValue}>
-                {format(new Date(), "yyyy-MM-dd")}
-              </Text>
-              <Text style={styles.metaLabel}>تاريخ الطباعة:</Text>
-            </View>
+          <View style={styles.metaRow}>
+            <Text style={styles.metaValue}>{suppliers.length}</Text>
+            <Text style={styles.metaLabel}>عدد الموردين:</Text>
           </View>
         </View>
 
         {/* Table */}
         <View style={styles.table}>
           <View style={styles.tableHeader}>
-            <Text style={styles.colDate}>التاريخ</Text>
-            <Text style={styles.colType}>النوع</Text>
-            <Text style={styles.colDesc}>الوصف</Text>
-            <Text style={styles.colDebit}>مدين</Text>
-            <Text style={styles.colCredit}>دائن</Text>
             <Text style={styles.colBalance}>الرصيد</Text>
-            <Text style={styles.colRef}>المرجع</Text>
+            <Text style={styles.colCredit}>إجمالي الدائن</Text>
+            <Text style={styles.colDebit}>إجمالي المدين</Text>
+            <Text style={styles.colName}>اسم المورد</Text>
           </View>
-          {ledger.ledger_entries.map((entry, index) => (
-            <View key={entry.id || index} style={styles.tableRow}>
-              <Text style={styles.colDate}>
-                {format(new Date(entry.date), "yyyy-MM-dd")}
-              </Text>
-              <Text style={styles.colType}>{getTypeLabel(entry.type)}</Text>
-              <Text style={styles.colDesc}>{entry.description}</Text>
-              <Text style={styles.colDebit}>
-                {entry.debit > 0 ? `${formatNumber(entry.debit)} ${currencySymbol}` : "-"}
-              </Text>
-              <Text style={styles.colCredit}>
-                {entry.credit > 0 ? `${formatNumber(entry.credit)} ${currencySymbol}` : "-"}
-              </Text>
+          {suppliers.map((supplier, index) => (
+            <View key={supplier.id || index} style={styles.tableRow}>
               <Text
                 style={[
                   styles.colBalance,
-                  { color: entry.balance > 0 ? "#dc2626" : "#16a34a" },
+                  {
+                    color: supplier.balance > 0 ? "#dc2626" : "#16a34a",
+                    fontWeight: supplier.balance !== 0 ? "bold" : "normal",
+                  },
                 ]}
               >
-                {formatNumber(entry.balance)} {currencySymbol}
+                {formatNumber(supplier.balance)} {currencySymbol}
               </Text>
-              <Text style={styles.colRef}>{entry.reference || "-"}</Text>
+              <Text style={styles.colCredit}>
+                {formatNumber(supplier.total_credit)} {currencySymbol}
+              </Text>
+              <Text style={styles.colDebit}>
+                {formatNumber(supplier.total_debit)} {currencySymbol}
+              </Text>
+              <Text style={styles.colName}>{supplier.name}</Text>
             </View>
           ))}
         </View>
@@ -332,15 +293,15 @@ export const SupplierLedgerPdf: React.FC<SupplierLedgerPdfProps> = ({
           <View style={styles.summaryBox}>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryValue}>
-                {formatNumber(ledger.summary.total_purchases)} {currencySymbol}
+                {formatNumber(totals.totalDebit)} {currencySymbol}
               </Text>
-              <Text style={styles.summaryLabel}>إجمالي المشتريات:</Text>
+              <Text style={styles.summaryLabel}>إجمالي المدين:</Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryValue}>
-                {formatNumber(ledger.summary.total_payments)} {currencySymbol}
+                {formatNumber(totals.totalCredit)} {currencySymbol}
               </Text>
-              <Text style={styles.summaryLabel}>إجمالي المدفوعات:</Text>
+              <Text style={styles.summaryLabel}>إجمالي الدائن:</Text>
             </View>
             <View
               style={[
@@ -358,13 +319,13 @@ export const SupplierLedgerPdf: React.FC<SupplierLedgerPdfProps> = ({
                   styles.summaryValue,
                   {
                     fontSize: 12,
-                    color: ledger.summary.balance > 0 ? "#dc2626" : "#16a34a",
+                    color: totals.totalBalance > 0 ? "#dc2626" : "#16a34a",
                   },
                 ]}
               >
-                {formatNumber(ledger.summary.balance)} {currencySymbol}
+                {formatNumber(totals.totalBalance)} {currencySymbol}
               </Text>
-              <Text style={styles.summaryLabel}>الرصيد الحالي:</Text>
+              <Text style={styles.summaryLabel}>إجمالي الرصيد:</Text>
             </View>
           </View>
         </View>
@@ -376,3 +337,4 @@ export const SupplierLedgerPdf: React.FC<SupplierLedgerPdfProps> = ({
     </Document>
   );
 };
+

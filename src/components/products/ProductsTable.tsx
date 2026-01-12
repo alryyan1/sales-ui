@@ -36,6 +36,8 @@ import productService, {
   Product as ProductType,
 } from "@/services/productService";
 import { formatNumber, formatCurrency } from "@/constants";
+import { useSettings } from "@/context/SettingsContext";
+import { ProductImage } from "./ProductImage";
 
 // Interface for Product with potentially loaded batches
 interface ProductWithOptionalBatches
@@ -77,6 +79,8 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
   paginationModel,
   onPaginationModelChange,
 }) => {
+  const { getSetting } = useSettings();
+  const showImagesInList = getSetting("product_images_show_in_list", true);
   const [copiedSku, setCopiedSku] = useState<string | null>(null);
   const [stockDialogProduct, setStockDialogProduct] =
     useState<ProductWithOptionalBatches | null>(null);

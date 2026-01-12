@@ -14,7 +14,7 @@ export const cacheRtl = createCache({
 // Create MUI theme (LTR)
 const theme = createTheme(
   {
-    direction: "ltr",
+    direction: "rtl",
     typography: {
       fontFamily: '"Tajawal", "Arial", sans-serif',
       h1: { fontWeight: 700 },
@@ -66,10 +66,10 @@ const theme = createTheme(
       MuiCssBaseline: {
         styleOverrides: {
           html: {
-            direction: "ltr",
+            direction: "rtl",
           },
           body: {
-            direction: "ltr",
+            direction: "rtl",
             fontFamily: '"Tajawal", "Arial", sans-serif',
           },
         },

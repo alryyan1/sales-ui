@@ -99,6 +99,7 @@ const SettingsPage: React.FC = () => {
       logo_width: 60,
       tax_number: "",
       pdf_font: "Amiri",
+      pos_mode: "shift",
     },
   });
 
@@ -134,6 +135,7 @@ const SettingsPage: React.FC = () => {
         logo_width: settings.logo_width || 60,
         tax_number: settings.tax_number || "",
         pdf_font: settings.pdf_font || "Amiri",
+        pos_mode: settings.pos_mode || "shift",
       });
 
       if (settings.company_logo_url) setLogoPreview(settings.company_logo_url);
@@ -168,6 +170,7 @@ const SettingsPage: React.FC = () => {
       logo_width: data.logo_width ? Number(data.logo_width) : 60,
       tax_number: data.tax_number || undefined,
       pdf_font: data.pdf_font || "Amiri",
+      pos_mode: data.pos_mode || "shift",
     };
 
     try {
@@ -459,6 +462,55 @@ const SettingsPage: React.FC = () => {
                       />
                     )}
                   />
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+
+          {/* POS Mode Configuration */}
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography
+                variant="h6"
+                gutterBottom
+                sx={{ display: "flex", alignItems: "center", gap: 1 }}
+              >
+                <ReceiptIcon color="primary" fontSize="small" />
+                إعدادات نظام نقاط البيع (POS)
+              </Typography>
+              <Divider sx={{ mb: 3 }} />
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <FormControl component="fieldset">
+                    <Typography
+                      variant="subtitle2"
+                      fontWeight="bold"
+                      gutterBottom
+                    >
+                      وضع التشغيل:
+                    </Typography>
+                    <Controller
+                      name="pos_mode"
+                      control={control}
+                      render={({ field }) => (
+                        <RadioGroup row {...field} value={field.value || "shift"}>
+                          <FormControlLabel
+                            value="shift"
+                            control={<Radio />}
+                            label="وضع الورديات (يتطلب فتح وإغلاق الورديات)"
+                          />
+                          <FormControlLabel
+                            value="days"
+                            control={<Radio />}
+                            label="وضع الأيام (لا يتطلب ورديات، المبيعات حسب تاريخ الإنشاء)"
+                          />
+                        </RadioGroup>
+                      )}
+                    />
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
+                      في وضع الأيام، لن تحتاج لفتح أو إغلاق ورديات. سيتم عرض المبيعات حسب تاريخ الإنشاء.
+                    </Typography>
+                  </FormControl>
                 </Grid>
               </Grid>
             </CardContent>

@@ -92,6 +92,7 @@ export const navItems: NavItem[] = [
     children: [
       { to: "/reports/sales", label: "تقرير المبيعات", permission: null },
       { to: "/reports/purchases", label: "تقرير المشتريات", permission: null },
+      { to: "/reports/suppliers-summary", label: "ملخص الموردين", permission: null },
       { to: "/reports/inventory-log", label: "سجل المخزون", permission: null },
       {
         to: "/reports/sales-discounts",

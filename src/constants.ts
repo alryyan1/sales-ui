@@ -1,6 +1,6 @@
 // export const host = 'sahara-pharma.com'
 export const schema = "http";
-export const host = "alroomy.a.pinggy.link";
+export const host = "127.0.0.1";
 export const projectFolder = "sales-api";
 // export const host = 'server1'مركز النعيم
 export function blurForNoramlUsers() {

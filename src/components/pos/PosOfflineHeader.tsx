@@ -50,6 +50,11 @@ interface PosOfflineHeaderProps {
   availableShiftIds: number[];
   onShiftSelect: (id: number | null) => void;
   onPrintShiftReport: () => void;
+  posMode?: "shift" | "days"; // POS operation mode
+  
+  // Date Management (for days mode)
+  selectedDate?: string;
+  onDateSelect?: (date: string) => void;
 
   // Search / Cart
   products: Product[];
@@ -82,6 +87,8 @@ export const PosOfflineHeader = React.forwardRef<
       selectedShiftId,
       availableShiftIds,
       onShiftSelect,
+      selectedDate,
+      onDateSelect,
       products,
       onAddToCart,
       onNewSale,
@@ -90,6 +97,7 @@ export const PosOfflineHeader = React.forwardRef<
       onDrawerToggle,
       onPrintShiftReport,
       isPageLoading = false,
+      posMode = "shift",
     },
     ref
   ) => {
@@ -197,7 +205,6 @@ export const PosOfflineHeader = React.forwardRef<
                   <Box
                     {...props}
                     sx={{
-                      ...props.sx,
                       bgcolor: "white",
                       boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
                       borderRadius: 2,
@@ -477,80 +484,118 @@ export const PosOfflineHeader = React.forwardRef<
                 </Typography>
               </Box>
             </Tooltip>
-            {/* Shift Navigation (Previous/Next) */}
-            <Box
-              sx={{
-                display: { xs: "none", lg: "flex" },
-                alignItems: "center",
-                bgcolor: "grey.50",
-                border: "1px solid",
-                borderColor: "grey.200",
-                borderRadius: 2.5,
-                p: 0.5,
-                transition: "all 0.2s ease-in-out",
-                "&:hover": {
-                  borderColor: "primary.light",
-                  bgcolor: "grey.100",
-                },
-              }}
-            >
-              <IconButton
-                size="small"
-                onClick={() =>
-                  onShiftSelect(selectedShiftId ? selectedShiftId + 1 : null)
-                }
-                disabled={
-                  !selectedShiftId ||
-                  (availableShiftIds.length > 0 &&
-                    selectedShiftId >= Math.max(...availableShiftIds))
-                }
+            {/* Shift Navigation (Previous/Next) - Only show in shift mode */}
+            {posMode === "shift" && (
+              <Box
                 sx={{
+                  display: { xs: "none", lg: "flex" },
+                  alignItems: "center",
+                  bgcolor: "grey.50",
+                  border: "1px solid",
+                  borderColor: "grey.200",
+                  borderRadius: 2.5,
+                  p: 0.5,
                   transition: "all 0.2s ease-in-out",
-                  "&:hover:not(:disabled)": {
-                    bgcolor: "primary.light",
-                    color: "primary.main",
-                    transform: "scale(1.1)",
+                  "&:hover": {
+                    borderColor: "primary.light",
+                    bgcolor: "grey.100",
                   },
                 }}
               >
-                <ChevronRight size={18} />
-              </IconButton>
-              <Typography
-                variant="body2"
-                fontWeight="600"
-                sx={{
-                  mx: 2,
-                  minWidth: 70,
-                  textAlign: "center",
-                  color: "text.primary",
-                  fontSize: "0.875rem",
-                }}
-              >
-                وردية #{selectedShiftId || "-"}
-              </Typography>
+                <IconButton
+                  size="small"
+                  onClick={() =>
+                    onShiftSelect(selectedShiftId ? selectedShiftId + 1 : null)
+                  }
+                  disabled={
+                    !selectedShiftId ||
+                    (availableShiftIds.length > 0 &&
+                      selectedShiftId >= Math.max(...availableShiftIds))
+                  }
+                  sx={{
+                    transition: "all 0.2s ease-in-out",
+                    "&:hover:not(:disabled)": {
+                      bgcolor: "primary.light",
+                      color: "primary.main",
+                      transform: "scale(1.1)",
+                    },
+                  }}
+                >
+                  <ChevronRight size={18} />
+                </IconButton>
+                <Typography
+                  variant="body2"
+                  fontWeight="600"
+                  sx={{
+                    mx: 2,
+                    minWidth: 70,
+                    textAlign: "center",
+                    color: "text.primary",
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  وردية #{selectedShiftId || "-"}
+                </Typography>
 
-              <IconButton
-                size="small"
-                onClick={() =>
-                  onShiftSelect(selectedShiftId ? selectedShiftId - 1 : null)
-                }
-                disabled={
-                  !selectedShiftId ||
-                  (availableShiftIds.length > 0 &&
-                    selectedShiftId <= Math.min(...availableShiftIds))
-                }
+                <IconButton
+                  size="small"
+                  onClick={() =>
+                    onShiftSelect(selectedShiftId ? selectedShiftId - 1 : null)
+                  }
+                  disabled={
+                    !selectedShiftId ||
+                    (availableShiftIds.length > 0 &&
+                      selectedShiftId <= Math.min(...availableShiftIds))
+                  }
+                  sx={{
+                    transition: "all 0.2s ease-in-out",
+                    "&:hover:not(:disabled)": {
+                      bgcolor: "primary.light",
+                      color: "primary.main",
+                      transform: "scale(1.1)",
+                    },
+                  }}
+                >
+                  <ChevronLeft size={18} />
+                </IconButton>
+              </Box>
+            )}
+            
+            {/* Date Picker - Only show in days mode */}
+            {posMode === "days" && (
+              <Box
                 sx={{
+                  display: { xs: "none", lg: "flex" },
+                  alignItems: "center",
+                  bgcolor: "grey.50",
+                  border: "1px solid",
+                  borderColor: "grey.200",
+                  borderRadius: 2.5,
+                  p: 0.5,
                   transition: "all 0.2s ease-in-out",
-                  "&:hover:not(:disabled)": {
-                    bgcolor: "primary.light",
-                    color: "primary.main",
-                    transform: "scale(1.1)",
+                  "&:hover": {
+                    borderColor: "primary.light",
+                    bgcolor: "grey.100",
                   },
                 }}
               >
-                <ChevronLeft size={18} />
-              </IconButton>
-            </Box>
+                <TextField
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => onDateSelect?.(e.target.value)}
+                  size="small"
+                  sx={{
+                    width: 150,
+                    "& .MuiOutlinedInput-root": {
+                      fontSize: "0.875rem",
+                      "& fieldset": {
+                        border: "none",
+                      },
+                    },
+                  }}
+                />
+              </Box>
+            )}
 
             {/* Sync Trigger */}
             <Tooltip title={isSyncing ? "جاري المزامنة..." : "مزامنة البيانات"}>
@@ -582,135 +627,141 @@ export const PosOfflineHeader = React.forwardRef<
               </IconButton>
             </Tooltip>
 
-            {/* Shift Report Button */}
-            <Tooltip title={isPageLoading ? "جاري تحميل البيانات..." : "تقرير الوردية"}>
-              <IconButton
-                onClick={onPrintShiftReport}
-                disabled={!selectedShiftId || shiftLoading || isSyncing || isPageLoading}
-                sx={{
-                  border: "2px solid",
-                  borderColor: "grey.300",
-                  color: "text.secondary",
-                  borderRadius: 2,
-                  width: 44,
-                  height: 44,
-                  transition: "all 0.2s ease-in-out",
-                  "&:hover:not(:disabled)": {
-                    borderColor: "primary.main",
-                    color: "primary.main",
-                    bgcolor: alpha(theme.palette.primary.main, 0.08),
-                    transform: "scale(1.05)",
-                  },
-                }}
-              >
-                <Printer size={22} />
-              </IconButton>
-            </Tooltip>
-
-            {/* Shift Status Button */}
-            {shift && shift.is_open ? (
-              <Tooltip title="إغلاق الوردية">
-                  <Button
-                  variant="outlined"
-                  color="success"
-                  startIcon={
-                    <Box
-                      sx={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: "50%",
-                        bgcolor: "success.main",
-                        boxShadow: `0 0 0 2px ${alpha(theme.palette.success.main, 0.2)}`,
-                        mr: 0.5,
-                      }}
-                    />
-                  }
-                  onClick={onCloseShift}
-                  sx={{
-                    borderWidth: 2,
-                    borderColor: "success.light",
-                    color: "success.dark",
-                    textTransform: "none",
-                    display: { xs: "none", md: "flex" },
-                    borderRadius: 2.5,
-                    px: 2,
-                    py: 0.75,
-                    minHeight: 32,
-                    fontWeight: 600,
-                    fontSize: "0.85rem",
-                    gap: 0.5,
-                    transition: "all 0.2s ease-in-out",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-                    "&:hover": {
-                      borderColor: "error.main",
-                      color: "error.main",
-                      bgcolor: alpha(theme.palette.error.main, 0.05),
-                      transform: "translateY(-1px)",
-                      boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-                    },
-                  }}
-                >
-                  وردية مفتوحة
-                </Button>
-              </Tooltip>
-            ) : (
-              <Button
-                variant="contained"
-                color="inherit"
-                onClick={onOpenShift}
-                disabled={shiftLoading}
-                sx={{
-                  bgcolor: "text.primary",
-                  color: "background.paper",
-                  textTransform: "none",
-                  borderRadius: 2.5,
-                  px: 2,
-                  py: 0.75,
-                  minHeight: 32,
-                  fontWeight: 600,
-                  fontSize: "0.85rem",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                  transition: "all 0.2s ease-in-out",
-                  "&:hover:not(:disabled)": {
-                    bgcolor: "text.secondary",
-                    transform: "translateY(-1px)",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-                  },
-                }}
-              >
-                {shiftLoading ? (
-                  <CircularProgress size={18} color="inherit" />
-                ) : (
-                  "فتح وردية"
-                )}
-              </Button>
-            )}
-
-            {shift && shift.is_open && (
-              <Tooltip title="إغلاق الوردية">
+            {/* Shift Report Button - Only show in shift mode */}
+            {posMode === "shift" && (
+              <Tooltip title={isPageLoading ? "جاري تحميل البيانات..." : "تقرير الوردية"}>
                 <IconButton
-                  onClick={onCloseShift}
-                  disabled={shiftLoading}
+                  onClick={onPrintShiftReport}
+                  disabled={!selectedShiftId || shiftLoading || isSyncing || isPageLoading}
                   sx={{
-                    bgcolor: alpha(theme.palette.error.main, 0.1),
-                    color: "error.main",
                     border: "2px solid",
-                    borderColor: "error.light",
+                    borderColor: "grey.300",
+                    color: "text.secondary",
                     borderRadius: 2,
                     width: 44,
                     height: 44,
                     transition: "all 0.2s ease-in-out",
                     "&:hover:not(:disabled)": {
-                      bgcolor: "error.main",
-                      color: "white",
+                      borderColor: "primary.main",
+                      color: "primary.main",
+                      bgcolor: alpha(theme.palette.primary.main, 0.08),
                       transform: "scale(1.05)",
-                      boxShadow: `0 2px 8px ${alpha(theme.palette.error.main, 0.3)}`,
                     },
                   }}
                 >
-                  <X size={22} />
+                  <Printer size={22} />
                 </IconButton>
               </Tooltip>
+            )}
+
+            {/* Shift Status Button - Only show in shift mode */}
+            {posMode === "shift" && (
+              <>
+                {shift && shift.is_open ? (
+                  <Tooltip title="إغلاق الوردية">
+                    <Button
+                      variant="outlined"
+                      color="success"
+                      startIcon={
+                        <Box
+                          sx={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: "50%",
+                            bgcolor: "success.main",
+                            boxShadow: `0 0 0 2px ${alpha(theme.palette.success.main, 0.2)}`,
+                            mr: 0.5,
+                          }}
+                        />
+                      }
+                      onClick={onCloseShift}
+                      sx={{
+                        borderWidth: 2,
+                        borderColor: "success.light",
+                        color: "success.dark",
+                        textTransform: "none",
+                        display: { xs: "none", md: "flex" },
+                        borderRadius: 2.5,
+                        px: 2,
+                        py: 0.75,
+                        minHeight: 32,
+                        fontWeight: 600,
+                        fontSize: "0.85rem",
+                        gap: 0.5,
+                        transition: "all 0.2s ease-in-out",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                        "&:hover": {
+                          borderColor: "error.main",
+                          color: "error.main",
+                          bgcolor: alpha(theme.palette.error.main, 0.05),
+                          transform: "translateY(-1px)",
+                          boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+                        },
+                      }}
+                    >
+                      وردية مفتوحة
+                    </Button>
+                  </Tooltip>
+                ) : (
+                  <Button
+                    variant="contained"
+                    color="inherit"
+                    onClick={onOpenShift}
+                    disabled={shiftLoading}
+                    sx={{
+                      bgcolor: "text.primary",
+                      color: "background.paper",
+                      textTransform: "none",
+                      borderRadius: 2.5,
+                      px: 2,
+                      py: 0.75,
+                      minHeight: 32,
+                      fontWeight: 600,
+                      fontSize: "0.85rem",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                      transition: "all 0.2s ease-in-out",
+                      "&:hover:not(:disabled)": {
+                        bgcolor: "text.secondary",
+                        transform: "translateY(-1px)",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+                      },
+                    }}
+                  >
+                    {shiftLoading ? (
+                      <CircularProgress size={18} color="inherit" />
+                    ) : (
+                      "فتح وردية"
+                    )}
+                  </Button>
+                )}
+
+                {shift && shift.is_open && (
+                  <Tooltip title="إغلاق الوردية">
+                    <IconButton
+                      onClick={onCloseShift}
+                      disabled={shiftLoading}
+                      sx={{
+                        bgcolor: alpha(theme.palette.error.main, 0.1),
+                        color: "error.main",
+                        border: "2px solid",
+                        borderColor: "error.light",
+                        borderRadius: 2,
+                        width: 44,
+                        height: 44,
+                        transition: "all 0.2s ease-in-out",
+                        "&:hover:not(:disabled)": {
+                          bgcolor: "error.main",
+                          color: "white",
+                          transform: "scale(1.05)",
+                          boxShadow: `0 2px 8px ${alpha(theme.palette.error.main, 0.3)}`,
+                        },
+                      }}
+                    >
+                      <X size={22} />
+                    </IconButton>
+                  </Tooltip>
+                )}
+              </>
             )}
           </Box>
         </Toolbar>

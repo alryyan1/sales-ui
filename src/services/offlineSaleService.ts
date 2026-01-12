@@ -116,7 +116,7 @@ export const offlineSaleService = {
             sale_date: offlineSale.sale_date,
             status: "completed", // POS sales are usually completed
             notes: offlineSale.notes,
-            shift_id: offlineSale.shift_id,
+            shift_id: offlineSale.shift_id ?? null, // Explicitly send null for days mode
             discount_amount: offlineSale.discount_amount ? Number(offlineSale.discount_amount) : undefined,
             discount_type: offlineSale.discount_type || undefined,
             items: offlineSale.items.map((item) => {

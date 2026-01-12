@@ -149,15 +149,27 @@ const styles = StyleSheet.create({
   col1: { width: "8%", textAlign: "right", fontSize: 8, color: "#6b7280" },
   col2: { width: "18%", textAlign: "right", fontSize: 8, color: "#374151" },
   col3: { width: "24%", textAlign: "right", fontSize: 8, color: "#374151" },
-  col4: { 
-    width: "12%", 
-    textAlign: "center", 
+  col4: {
+    width: "12%",
+    textAlign: "center",
     fontSize: 7,
     padding: 3,
     borderRadius: 3,
   },
-  col5: { width: "18%", textAlign: "left", fontSize: 9, color: "#059669", fontWeight: "bold" },
-  col6: { width: "20%", textAlign: "left", fontSize: 9, color: "#1e40af", fontWeight: "bold" },
+  col5: {
+    width: "18%",
+    textAlign: "left",
+    fontSize: 9,
+    color: "#059669",
+    fontWeight: "bold",
+  },
+  col6: {
+    width: "20%",
+    textAlign: "left",
+    fontSize: 9,
+    color: "#1e40af",
+    fontWeight: "bold",
+  },
   statusSynced: {
     backgroundColor: "#d1fae5",
     color: "#065f46",
@@ -244,7 +256,9 @@ export const PosShiftReportPdf: React.FC<PosShiftReportPdfProps> = ({
 
   // Helper function to check if sale is OfflineSale
   const isOfflineSale = (sale: OfflineSale | Sale): sale is OfflineSale => {
-    return 'tempId' in sale || 'offline_created_at' in sale || 'is_synced' in sale;
+    return (
+      "tempId" in sale || "offline_created_at" in sale || "is_synced" in sale
+    );
   };
 
   // Calculations
@@ -257,7 +271,22 @@ export const PosShiftReportPdf: React.FC<PosShiftReportPdfProps> = ({
     (sum, s) => sum + Number(s.paid_amount || 0),
     0
   );
-  const totalDue = Math.max(0, totalRevenue - totalPaid);
+  const totalDiscount = sales.reduce(
+    (sum, s) => sum + Number((s as any).discount_amount || 0),
+    0
+  );
+
+  const totalDue = Math.max(0, totalRevenue - totalDiscount - totalPaid);
+
+  const totalRefund = sales.reduce((sum, sale) => {
+    if (!sale.payments) return sum;
+    return (
+      sum +
+      sale.payments
+        .filter((p) => (p.method as string) === "refund")
+        .reduce((pSum, p) => pSum + Math.abs(Number(p.amount)), 0)
+    );
+  }, 0);
 
   // Payment Breakdown
   const paymentMethods: Record<string, number> = {};
@@ -279,30 +308,35 @@ export const PosShiftReportPdf: React.FC<PosShiftReportPdfProps> = ({
               Shift Report - {settings?.company_name || "Sales System"}
             </Text>
           </View>
-          
+
           <View style={styles.infoGrid}>
             <View style={styles.infoColumn}>
               <Text style={styles.subtitle}>
-                <Text style={{ fontWeight: "bold" }}>رقم الوردية:</Text> #{shift?.id || "غير محدد"}
+                <Text style={{ fontWeight: "bold" }}>رقم الوردية:</Text> #
+                {shift?.id || "غير محدد"}
               </Text>
-            
+
               <Text style={styles.subtitle}>
-                <Text style={{ fontWeight: "bold" }}>تاريخ الفتح:</Text> {formatDate(shift?.opened_at || null)}
+                <Text style={{ fontWeight: "bold" }}>تاريخ الفتح:</Text>{" "}
+                {formatDate(shift?.opened_at || null)}
               </Text>
             </View>
             <View style={styles.infoColumn}>
               {shift?.closed_at && (
                 <Text style={styles.subtitle}>
-                  <Text style={{ fontWeight: "bold" }}>تاريخ الإغلاق:</Text> {formatDate(shift.closed_at)}
+                  <Text style={{ fontWeight: "bold" }}>تاريخ الإغلاق:</Text>{" "}
+                  {formatDate(shift.closed_at)}
                 </Text>
               )}
               {userName && (
                 <Text style={styles.subtitle}>
-                  <Text style={{ fontWeight: "bold" }}>المستخدم:</Text> {userName}
+                  <Text style={{ fontWeight: "bold" }}>المستخدم:</Text>{" "}
+                  {userName}
                 </Text>
               )}
               <Text style={styles.subtitle}>
-                <Text style={{ fontWeight: "bold" }}>تاريخ التقرير:</Text> {new Date().toLocaleDateString("ar-EG")}
+                <Text style={{ fontWeight: "bold" }}>تاريخ التقرير:</Text>{" "}
+                {new Date().toLocaleDateString("ar-EG")}
               </Text>
             </View>
           </View>
@@ -317,10 +351,16 @@ export const PosShiftReportPdf: React.FC<PosShiftReportPdfProps> = ({
                 <Text style={styles.summaryLabel}>عدد الفواتير:</Text>
                 <Text style={styles.highlightValue}>{totalSalesCount}</Text>
               </View>
-              <View style={[styles.summaryRow, styles.summaryRowLast]}>
+              <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>إجمالي المبيعات:</Text>
                 <Text style={styles.highlightValue}>
                   {formatNumber(totalRevenue)} {currencySymbol}
+                </Text>
+              </View>
+              <View style={[styles.summaryRow, styles.summaryRowLast]}>
+                <Text style={styles.summaryLabel}>إجمالي الخصم:</Text>
+                <Text style={[styles.highlightValue, { color: "#ea580c" }]}>
+                  {formatNumber(totalDiscount)} {currencySymbol}
                 </Text>
               </View>
             </View>
@@ -331,9 +371,20 @@ export const PosShiftReportPdf: React.FC<PosShiftReportPdfProps> = ({
                   {formatNumber(totalPaid)} {currencySymbol}
                 </Text>
               </View>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>المرتجع:</Text>
+                <Text style={[styles.highlightValue, { color: "#dc2626" }]}>
+                  {formatNumber(totalRefund)} {currencySymbol}
+                </Text>
+              </View>
               <View style={[styles.summaryRow, styles.summaryRowLast]}>
                 <Text style={styles.summaryLabel}>المستحق (الآجل):</Text>
-                <Text style={[styles.highlightValue, { color: totalDue > 0 ? "#dc2626" : "#059669" }]}>
+                <Text
+                  style={[
+                    styles.highlightValue,
+                    { color: totalDue > 0 ? "#dc2626" : "#059669" },
+                  ]}
+                >
                   {formatNumber(totalDue)} {currencySymbol}
                 </Text>
               </View>
@@ -344,28 +395,34 @@ export const PosShiftReportPdf: React.FC<PosShiftReportPdfProps> = ({
         {/* Payments Section */}
         {Object.entries(paymentMethods).length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>تفاصيل المدفوعات - Payment Methods</Text>
+            <Text style={styles.sectionTitle}>
+              تفاصيل المدفوعات - Payment Methods
+            </Text>
             <View style={styles.summaryBox}>
-              {Object.entries(paymentMethods).map(([method, amount], index, array) => (
-                <View 
-                  key={method} 
-                  style={[
-                    styles.paymentMethodRow,
-                    index === array.length - 1 ? styles.paymentMethodRowLast : {}
-                  ]}
-                >
-                  <Text style={styles.summaryLabel}>
-                    {method === "cash"
-                      ? "نقدي - Cash"
-                      : method === "card"
-                      ? "شبكة - Card"
-                      : method}
-                  </Text>
-                  <Text style={styles.summaryValue}>
-                    {formatNumber(amount)} {currencySymbol}
-                  </Text>
-                </View>
-              ))}
+              {Object.entries(paymentMethods).map(
+                ([method, amount], index, array) => (
+                  <View
+                    key={method}
+                    style={[
+                      styles.paymentMethodRow,
+                      index === array.length - 1
+                        ? styles.paymentMethodRowLast
+                        : {},
+                    ]}
+                  >
+                    <Text style={styles.summaryLabel}>
+                      {method === "cash"
+                        ? "نقدي - Cash"
+                        : method === "card"
+                        ? "شبكة - Card"
+                        : method}
+                    </Text>
+                    <Text style={styles.summaryValue}>
+                      {formatNumber(amount)} {currencySymbol}
+                    </Text>
+                  </View>
+                )
+              )}
             </View>
           </View>
         )}
@@ -373,7 +430,7 @@ export const PosShiftReportPdf: React.FC<PosShiftReportPdfProps> = ({
         {/* Sales Table */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>قائمة الفواتير - Sales List</Text>
-          
+
           {sales.length > 0 ? (
             <View style={styles.tableContainer}>
               <View style={styles.headerRow}>
@@ -386,15 +443,19 @@ export const PosShiftReportPdf: React.FC<PosShiftReportPdfProps> = ({
               </View>
 
               {sales.map((sale, i) => {
-                const saleId = isOfflineSale(sale) ? (sale.id || sale.tempId) : sale.id;
-                const saleDate = isOfflineSale(sale) 
-                  ? sale.offline_created_at 
-                  : (sale.created_at ? new Date(sale.created_at).getTime() : Date.now());
+                const saleId = isOfflineSale(sale)
+                  ? sale.id || sale.tempId
+                  : sale.id;
+                const saleDate = isOfflineSale(sale)
+                  ? sale.offline_created_at
+                  : sale.created_at
+                  ? new Date(sale.created_at).getTime()
+                  : Date.now();
                 const isSynced = isOfflineSale(sale) ? sale.is_synced : true;
-                
+
                 return (
-                  <View 
-                    key={i} 
+                  <View
+                    key={i}
                     style={[styles.row, i % 2 === 1 ? styles.rowAlternate : {}]}
                   >
                     <Text style={styles.col1}>
@@ -406,8 +467,15 @@ export const PosShiftReportPdf: React.FC<PosShiftReportPdfProps> = ({
                         minute: "2-digit",
                       })}
                     </Text>
-                    <Text style={styles.col3}>{sale.client_name || "عميل عام"}</Text>
-                    <View style={[styles.col4, isSynced ? styles.statusSynced : styles.statusPending]}>
+                    <Text style={styles.col3}>
+                      {sale.client_name || "عميل عام"}
+                    </Text>
+                    <View
+                      style={[
+                        styles.col4,
+                        isSynced ? styles.statusSynced : styles.statusPending,
+                      ]}
+                    >
                       <Text style={{ fontSize: 7 }}>
                         {isSynced ? "✓ متزامن" : "⏳ معلق"}
                       </Text>
@@ -421,11 +489,13 @@ export const PosShiftReportPdf: React.FC<PosShiftReportPdfProps> = ({
                   </View>
                 );
               })}
-              
+
               {/* Total Row */}
-              <View >
+              <View>
                 {/* <Text style={[styles.col1, styles.totalLabel]}>{totalSalesCount}</Text> */}
-                <Text style={[styles.col5, styles.totalLabel]}>المجموع الكلي:</Text>
+                <Text style={[styles.col5, styles.totalLabel]}>
+                  المجموع الكلي:
+                </Text>
                 <Text style={[styles.col6, styles.totalValue]}>
                   {formatNumber(totalRevenue)} {currencySymbol}
                 </Text>
@@ -443,7 +513,7 @@ export const PosShiftReportPdf: React.FC<PosShiftReportPdfProps> = ({
         {/* Professional Footer */}
         <View style={styles.footer}>
           <Text>
-            تم استخراج التقرير بتاريخ {new Date().toLocaleString("en-US")} | 
+            تم استخراج التقرير بتاريخ {new Date().toLocaleString("en-US")} |
             Report Generated: {new Date().toLocaleString("en-US")}
           </Text>
           {settings?.company_name && (

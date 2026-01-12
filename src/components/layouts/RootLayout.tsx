@@ -73,7 +73,7 @@ const RootLayout: React.FC = () => {
             sm: isSidebarCollapsed ? COLLAPSED_DRAWER_WIDTH : DRAWER_WIDTH,
           },
           flexShrink: { sm: 0 },
-          order: { sm: 2 },
+          order: { sm: 1 },
         }}
       >
         {/* ... Drawer logic ... */}
@@ -137,7 +137,7 @@ const RootLayout: React.FC = () => {
           width: { sm: `calc(100% - ${DRAWER_WIDTH}px)` },
           bgcolor: "background.default",
           height: "100vh",
-          order: { sm: 1 },
+          order: { sm: 2 },
         }}
       >
         <Toolbar />

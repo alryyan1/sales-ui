@@ -18,6 +18,7 @@ export interface Product {
   scientific_name: string | null;
   sku: string | null;
   description: string | null;
+  image_url: string | null;
   // Prices/Stock come as defined by backend Resource (often string for decimals)
   stock_quantity: number; // Integer
   stock_alert_level: number | null; // Integer or null
@@ -74,6 +75,7 @@ export interface ProductFormData {
   scientific_name: string | null;
   sku: string | null;
   description: string | null;
+  image_url?: string | null;
   // NEW/UPDATED FIELDS
   stocking_unit_id?: number | null;
   sellable_unit_id?: number | null;

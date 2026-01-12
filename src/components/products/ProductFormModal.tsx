@@ -16,8 +16,9 @@ import {
   Typography,
   Autocomplete,
   Paper,
+  IconButton,
 } from "@mui/material";
-import { Loader2, AlertCircle, RefreshCw, Plus } from "lucide-react";
+import { Loader2, AlertCircle, RefreshCw, Plus, Upload, X, Image as ImageIcon } from "lucide-react";
 
 // Services and Types
 import productService, {
@@ -29,12 +30,15 @@ import unitService, { Unit } from "@/services/UnitService";
 import { generateRandomSKU } from "@/lib/utils";
 import CategoryFormModal from "@/components/admin/users/categories/CategoryFormModal";
 import UnitFormModal from "@/components/admin/users/units/UnitFormModal";
+import { ProductImage } from "./ProductImage";
+import apiClient from "@/lib/axios";
 
 // --- Component Props & Types ---
 type ProductFormValues = {
   name: string;
   scientific_name: string;
   sku: string;
+  image_url: string;
   stocking_unit_id: string;
   sellable_unit_id: string;
   units_per_stocking_unit: number;
@@ -84,6 +88,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       name: "",
       scientific_name: "",
       sku: "",
+      image_url: "",
       stocking_unit_id: "",
       sellable_unit_id: "",
       units_per_stocking_unit: 1,
@@ -185,6 +190,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           name: productToEdit.name || "",
           scientific_name: productToEdit.scientific_name || "",
           sku: productToEdit.sku || "",
+          image_url: productToEdit.image_url || "",
           stocking_unit_id: productToEdit.stocking_unit_id
             ? String(productToEdit.stocking_unit_id)
             : "",
@@ -203,6 +209,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           name: "",
           scientific_name: "",
           sku: "",
+          image_url: "",
           category_id: "",
           stocking_unit_id: "",
           sellable_unit_id: "",
@@ -231,6 +238,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       scientific_name: data.scientific_name || null,
       sku: data.sku || null,
       description: null,
+      image_url: data.image_url || null,
       stocking_unit_id: data.stocking_unit_id
         ? Number(data.stocking_unit_id)
         : null,
@@ -462,6 +470,117 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     >
                       <RefreshCw className="h-4 w-4" />
                     </Button>
+                  </Box>
+                )}
+              />
+
+              {/* Image URL Field */}
+              <Controller
+                control={control}
+                name="image_url"
+                render={({ field, fieldState }) => (
+                  <Box>
+                    <TextField
+                      {...field}
+                      value={field.value ?? ""}
+                      label="رابط الصورة (URL)"
+                      placeholder="(اختياري) رابط صورة المنتج أو ارفع ملف"
+                      fullWidth
+                      size="small"
+                      disabled={isSubmitting || uploadingImage}
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message || "يمكنك إدخال رابط URL أو رفع ملف صورة"}
+                      InputProps={{
+                        endAdornment: (
+                          <Box sx={{ display: "flex", gap: 0.5 }}>
+                            <input
+                              accept="image/*"
+                              style={{ display: "none" }}
+                              id={`image-upload-${productToEdit?.id || "new"}`}
+                              type="file"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                
+                                if (file.size > 2 * 1024 * 1024) {
+                                  toast.error("حجم الملف كبير جداً", {
+                                    description: "الحد الأقصى لحجم الصورة هو 2MB",
+                                  });
+                                  return;
+                                }
+
+                                setUploadingImage(true);
+                                try {
+                                  const formData = new FormData();
+                                  formData.append("image", file);
+
+                                  let productId = productToEdit?.id;
+                                  if (!productId) {
+                                    toast.error("يرجى حفظ المنتج أولاً ثم رفع الصورة");
+                                    setUploadingImage(false);
+                                    return;
+                                  }
+
+                                  const response = await apiClient.post(
+                                    `/products/${productId}/image`,
+                                    formData,
+                                    {
+                                      headers: {
+                                        "Content-Type": "multipart/form-data",
+                                      },
+                                    }
+                                  );
+
+                                  if (response.data?.product?.image_url) {
+                                    field.onChange(response.data.product.image_url);
+                                    toast.success("تم رفع الصورة بنجاح");
+                                  }
+                                } catch (error: any) {
+                                  console.error("Error uploading image:", error);
+                                  toast.error("فشل رفع الصورة", {
+                                    description: error?.response?.data?.message || "حدث خطأ غير متوقع",
+                                  });
+                                } finally {
+                                  setUploadingImage(false);
+                                }
+                              }}
+                            />
+                            <label htmlFor={`image-upload-${productToEdit?.id || "new"}`}>
+                              <Button
+                                component="span"
+                                variant="outlined"
+                                size="small"
+                                disabled={isSubmitting || uploadingImage || !productToEdit}
+                                startIcon={uploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                                sx={{ minWidth: "auto", px: 1.5 }}
+                              >
+                                {uploadingImage ? "جاري الرفع..." : "رفع"}
+                              </Button>
+                            </label>
+                            {field.value && (
+                              <IconButton
+                                size="small"
+                                onClick={() => field.onChange("")}
+                                disabled={isSubmitting}
+                                sx={{ ml: 0.5 }}
+                              >
+                                <X className="h-4 w-4" />
+                              </IconButton>
+                            )}
+                          </Box>
+                        ),
+                      }}
+                    />
+                    {field.value && (
+                      <Box sx={{ mt: 2, display: "flex", justifyContent: "center" }}>
+                        <ProductImage
+                          imageUrl={field.value}
+                          productName={form.watch("name") || "Product"}
+                          size={120}
+                          variant="rounded"
+                        />
+                      </Box>
+                    )}
                   </Box>
                 )}
               />

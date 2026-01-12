@@ -6,10 +6,7 @@ import * as z from "zod";
 
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import {
-  format,
-  parseISO,
-} from "date-fns";
+import { format, parseISO } from "date-fns";
 
 // MUI Components
 import {
@@ -111,7 +108,12 @@ const SalesReportPage: React.FC = () => {
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [loadingSaleDetails, setLoadingSaleDetails] = useState(false);
   const [shiftReportDialogOpen, setShiftReportDialogOpen] = useState(false);
-  const [selectedShift, setSelectedShift] = useState<{ id: number; opened_at: string | null; closed_at: string | null; is_open: boolean } | null>(null);
+  const [selectedShift, setSelectedShift] = useState<{
+    id: number;
+    opened_at: string | null;
+    closed_at: string | null;
+    is_open: boolean;
+  } | null>(null);
   const [settings, setSettings] = useState<AppSettings | null>(null);
 
   // --- Initialize Form with URL Search Params ---
@@ -119,32 +121,34 @@ const SalesReportPage: React.FC = () => {
     resolver: zodResolver(reportFilterSchema),
     defaultValues: {
       startDate:
-        searchParams.get("startDate") ||
-        format(new Date(), "yyyy-MM-dd"),
-      endDate:
-        searchParams.get("endDate") ||
-        format(new Date(), "yyyy-MM-dd"),
+        searchParams.get("startDate") || format(new Date(), "yyyy-MM-dd"),
+      endDate: searchParams.get("endDate") || format(new Date(), "yyyy-MM-dd"),
       clientId: searchParams.get("clientId") || null,
       userId: searchParams.get("userId") || null,
       shiftId: searchParams.get("shiftId") || null,
       productId: searchParams.get("productId") || null,
     },
   });
-  const { control, handleSubmit, reset } = form;
+  const { control, handleSubmit, reset, watch } = form;
 
   // --- Current Filters and Page ---
   const currentFilters = useMemo(
     () => ({
       startDate:
-        searchParams.get("startDate") ||
-        format(new Date(), "yyyy-MM-dd"),
-      endDate:
-        searchParams.get("endDate") ||
-        format(new Date(), "yyyy-MM-dd"),
-      clientId: searchParams.get("clientId") ? Number(searchParams.get("clientId")) : null,
-      userId: searchParams.get("userId") ? Number(searchParams.get("userId")) : null,
-      shiftId: searchParams.get("shiftId") ? Number(searchParams.get("shiftId")) : null,
-      productId: searchParams.get("productId") ? Number(searchParams.get("productId")) : null,
+        searchParams.get("startDate") || format(new Date(), "yyyy-MM-dd"),
+      endDate: searchParams.get("endDate") || format(new Date(), "yyyy-MM-dd"),
+      clientId: searchParams.get("clientId")
+        ? Number(searchParams.get("clientId"))
+        : null,
+      userId: searchParams.get("userId")
+        ? Number(searchParams.get("userId"))
+        : null,
+      shiftId: searchParams.get("shiftId")
+        ? Number(searchParams.get("shiftId"))
+        : null,
+      productId: searchParams.get("productId")
+        ? Number(searchParams.get("productId"))
+        : null,
     }),
     [searchParams]
   );
@@ -192,11 +196,14 @@ const SalesReportPage: React.FC = () => {
 
   // Fetch Settings (Keep as is for now or move to hook later)
   useEffect(() => {
-    settingService.getSettings().then((response) => {
-      setSettings(response);
-    }).catch(() => {
-      // Ignore errors
-    });
+    settingService
+      .getSettings()
+      .then((response) => {
+        setSettings(response);
+      })
+      .catch(() => {
+        // Ignore errors
+      });
   }, []);
 
   // Update form values when URL params change
@@ -204,10 +211,14 @@ const SalesReportPage: React.FC = () => {
     reset({
       startDate: currentFilters.startDate,
       endDate: currentFilters.endDate,
-      clientId: currentFilters.clientId ? String(currentFilters.clientId) : null,
+      clientId: currentFilters.clientId
+        ? String(currentFilters.clientId)
+        : null,
       userId: currentFilters.userId ? String(currentFilters.userId) : null,
       shiftId: currentFilters.shiftId ? String(currentFilters.shiftId) : null,
-      productId: currentFilters.productId ? String(currentFilters.productId) : null,
+      productId: currentFilters.productId
+        ? String(currentFilters.productId)
+        : null,
     });
   }, [currentFilters, reset]);
 
@@ -216,7 +227,9 @@ const SalesReportPage: React.FC = () => {
     // Only auto-select if shiftId is not in URL params and shifts are available
     if (!searchParams.get("shiftId") && shifts.length > 0) {
       // Find shift with max ID (last shift)
-      const lastShift = shifts.reduce((prev, current) => (prev.id > current.id) ? prev : current);
+      const lastShift = shifts.reduce((prev, current) =>
+        prev.id > current.id ? prev : current
+      );
       const newParams = new URLSearchParams(searchParams);
       newParams.set("shiftId", String(lastShift.id));
       setSearchParams(newParams, { replace: true });
@@ -259,7 +272,6 @@ const SalesReportPage: React.FC = () => {
     setSearchParams(newParams);
   };
 
-
   // --- Download PDF ---
   const handleDownloadPdf = async () => {
     const currentFilterValues = watch();
@@ -269,12 +281,15 @@ const SalesReportPage: React.FC = () => {
       try {
         // Find shift from shifts list or fetch current shift
         const shiftId = Number(currentFilterValues.shiftId);
-        const shiftFromList = shifts.find(s => s.id === shiftId);
+        const shiftFromList = shifts.find((s) => s.id === shiftId);
 
         if (shiftFromList) {
           // Try to get full shift details from current shift if it matches
-          const currentShiftResponse = await apiClient.get("/shifts/current").catch(() => ({ data: null }));
-          const currentShift = currentShiftResponse.data?.data || currentShiftResponse.data;
+          const currentShiftResponse = await apiClient
+            .get("/shifts/current")
+            .catch(() => ({ data: null }));
+          const currentShift =
+            currentShiftResponse.data?.data || currentShiftResponse.data;
 
           if (currentShift && currentShift.id === shiftId) {
             setSelectedShift({
@@ -287,7 +302,9 @@ const SalesReportPage: React.FC = () => {
             // Use shift from list with estimated dates
             setSelectedShift({
               id: shiftFromList.id,
-              opened_at: shiftFromList.shift_date ? `${shiftFromList.shift_date}T00:00:00` : null,
+              opened_at: shiftFromList.shift_date
+                ? `${shiftFromList.shift_date}T00:00:00`
+                : null,
               closed_at: null,
               is_open: true,
             });
@@ -334,8 +351,9 @@ const SalesReportPage: React.FC = () => {
       params.append("shift_id", String(currentFilterValues.shiftId));
     }
 
-    const pdfUrl = `${import.meta.env.VITE_API_BASE_URL
-      }/reports/sales/pdf?${params.toString()}`;
+    const pdfUrl = `${
+      import.meta.env.VITE_API_BASE_URL
+    }/reports/sales/pdf?${params.toString()}`;
     window.open(pdfUrl, "_blank");
     toast.info("جاري فتح PDF في تبويب جديد...");
   };
@@ -365,9 +383,12 @@ const SalesReportPage: React.FC = () => {
     // Calculate Refunds
     const totalRefund = reportData.data.reduce((sum, sale) => {
       if (!sale.payments) return sum;
-      return sum + sale.payments
-        .filter(p => p.method === "refund")
-        .reduce((pSum, p) => pSum + Math.abs(Number(p.amount)), 0);
+      return (
+        sum +
+        sale.payments
+          .filter((p) => p.method === "refund")
+          .reduce((pSum, p) => pSum + Math.abs(Number(p.amount)), 0)
+      );
     }, 0);
 
     const totalNet = totalAmount - totalDiscount - totalRefund;
@@ -375,16 +396,24 @@ const SalesReportPage: React.FC = () => {
     // Calculate Cash and Bank totals
     const totalCash = reportData.data.reduce((sum, sale) => {
       if (!sale.payments) return sum;
-      return sum + sale.payments
-        .filter((p) => p.method === "cash")
-        .reduce((pSum, p) => pSum + Number(p.amount), 0);
+      return (
+        sum +
+        sale.payments
+          .filter((p) => p.method === "cash")
+          .reduce((pSum, p) => pSum + Number(p.amount), 0)
+      );
     }, 0);
 
     const totalBank = reportData.data.reduce((sum, sale) => {
       if (!sale.payments) return sum;
-      return sum + sale.payments
-        .filter((p) => ["visa", "mastercard", "mada", "bank_transfer"].includes(p.method))
-        .reduce((pSum, p) => pSum + Number(p.amount), 0);
+      return (
+        sum +
+        sale.payments
+          .filter((p) =>
+            ["visa", "mastercard", "mada", "bank_transfer"].includes(p.method)
+          )
+          .reduce((pSum, p) => pSum + Number(p.amount), 0)
+      );
     }, 0);
 
     return {
@@ -413,7 +442,13 @@ const SalesReportPage: React.FC = () => {
         <Box sx={{ maxWidth: "100%", px: { xs: 2, sm: 3, lg: 4 }, py: 2.5 }}>
           <Stack direction="column" spacing={3}>
             {/* Top Bar: Title & Actions */}
-            <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+              flexWrap="wrap"
+              gap={2}
+            >
               <Stack direction="row" alignItems="center" spacing={2}>
                 <IconButton
                   onClick={() => navigate("/dashboard")}
@@ -438,39 +473,64 @@ const SalesReportPage: React.FC = () => {
                   >
                     تقرير المبيعات
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 0.25 }}
+                  >
                     عرض وتصدير تقارير المبيعات
                   </Typography>
                 </Box>
               </Stack>
 
               {!isLoading && reportData && reportData.data.length > 0 && (
-                <Button
-                  onClick={handleDownloadPdf}
-                  variant="contained"
-                  size="small"
-                  startIcon={<Download size={16} />}
-                  sx={{
-                    borderRadius: 2,
-                    textTransform: "none",
-                    px: 2.5,
-                    py: 1,
-                    fontWeight: 500,
-                    boxShadow: "none",
-                    "&:hover": {
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                    },
-                  }}
-                >
-                  تصدير PDF
-                </Button>
+                <Stack direction="row" spacing={2}>
+                  <Button
+                    onClick={handleBackendPdf}
+                    variant="outlined"
+                    size="small"
+                    startIcon={<FileText size={16} />}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: "none",
+                      px: 2.5,
+                      py: 1,
+                      fontWeight: 500,
+                    }}
+                  >
+                    تصدير تقرير مفصل
+                  </Button>
+                  <Button
+                    onClick={handleDownloadPdf}
+                    variant="contained"
+                    size="small"
+                    startIcon={<Download size={16} />}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: "none",
+                      px: 2.5,
+                      py: 1,
+                      fontWeight: 500,
+                      boxShadow: "none",
+                      "&:hover": {
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                      },
+                    }}
+                  >
+                    تصدير PDF
+                  </Button>
+                </Stack>
               )}
             </Stack>
 
             {/* Filters Bar - Single Row */}
             <Box component="form" onSubmit={handleSubmit(onFilterSubmit)}>
-              <Stack direction="row" flexWrap="wrap" gap={2} alignItems="center">
-
+              <Stack
+                direction="row"
+                flexWrap="wrap"
+                gap={2}
+                alignItems="center"
+              >
                 {/* Start Date */}
                 <Box sx={{ minWidth: 150 }}>
                   <Controller
@@ -519,7 +579,11 @@ const SalesReportPage: React.FC = () => {
                     control={control}
                     name="clientId"
                     render={({ field, fieldState }) => (
-                      <FormControl fullWidth size="small" error={!!fieldState.error}>
+                      <FormControl
+                        fullWidth
+                        size="small"
+                        error={!!fieldState.error}
+                      >
                         <InputLabel>العميل</InputLabel>
                         <Select
                           value={field.value ?? ""}
@@ -548,7 +612,11 @@ const SalesReportPage: React.FC = () => {
                     control={control}
                     name="shiftId"
                     render={({ field, fieldState }) => (
-                      <FormControl fullWidth size="small" error={!!fieldState.error}>
+                      <FormControl
+                        fullWidth
+                        size="small"
+                        error={!!fieldState.error}
+                      >
                         <InputLabel>الوردية</InputLabel>
                         <Select
                           value={field.value ?? ""}
@@ -559,7 +627,8 @@ const SalesReportPage: React.FC = () => {
                           <MenuItem value="">الكل</MenuItem>
                           {shifts.map((shift) => (
                             <MenuItem key={shift.id} value={String(shift.id)}>
-                              {shift.name || `الوردية #${shift.id}`} {shift.shift_date ? `(${shift.shift_date})` : ""}
+                              {shift.name || `الوردية #${shift.id}`}{" "}
+                              {shift.shift_date ? `(${shift.shift_date})` : ""}
                             </MenuItem>
                           ))}
                         </Select>
@@ -577,7 +646,10 @@ const SalesReportPage: React.FC = () => {
                       <Autocomplete
                         options={products}
                         getOptionLabel={(option) => option.name || ""}
-                        value={products.find((p) => String(p.id) === field.value) || null}
+                        value={
+                          products.find((p) => String(p.id) === field.value) ||
+                          null
+                        }
                         onChange={(_, newValue) => {
                           field.onChange(newValue ? String(newValue.id) : "");
                         }}
@@ -601,7 +673,13 @@ const SalesReportPage: React.FC = () => {
                     type="submit"
                     variant="contained"
                     disabled={isLoading}
-                    startIcon={isLoading ? <CircularProgress size={16} /> : <Filter size={16} />}
+                    startIcon={
+                      isLoading ? (
+                        <CircularProgress size={16} />
+                      ) : (
+                        <Filter size={16} />
+                      )
+                    }
                     sx={{
                       borderRadius: 2,
                       textTransform: "none",
@@ -627,19 +705,22 @@ const SalesReportPage: React.FC = () => {
                 </Stack>
               </Stack>
             </Box>
-
           </Stack>
         </Box>
       </Box>
 
-      <Box sx={{ maxWidth: "1400px", mx: "auto", px: { xs: 2, sm: 3, lg: 4 }, py: 3 }}>
-
+      <Box
+        sx={{
+          maxWidth: "1400px",
+          mx: "auto",
+          px: { xs: 2, sm: 3, lg: 4 },
+          py: 3,
+        }}
+      >
         <Box sx={{ width: "100%" }}>
-
           {/* Summary Stats */}
           {summaryStats && (
             <Stack spacing={3} sx={{ mb: 3 }}>
-
               {/* Row 1: Amount, Discount, Paid, Refund, Net, SalesCount */}
               <Box
                 sx={{
@@ -648,134 +729,267 @@ const SalesReportPage: React.FC = () => {
                     xs: "repeat(1, 1fr)",
                     sm: "repeat(2, 1fr)",
                     md: "repeat(3, 1fr)",
-                    lg: "repeat(6, 1fr)"
+                    lg: "repeat(6, 1fr)",
                   },
                   gap: 2.5,
                 }}
               >
                 {/* Total Amount */}
-                <Card sx={{ borderRadius: 3, boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}>
-                  <CardContent sx={{ p: 2 }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <Card
+                  sx={{
+                    borderRadius: 3,
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                  }}
+                >
+                  <CardContent sx={{ p: 3, textAlign: "center" }}>
+                    <Stack spacing={2} alignItems="center">
+                      <Box
+                        sx={{
+                          color: "primary.main",
+                          p: 1.5,
+                          bgcolor: "primary.lighter",
+                          borderRadius: "50%",
+                        }}
+                      >
+                        <TrendingUp size={24} />
+                      </Box>
                       <Box>
-                        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          fontWeight={500}
+                          gutterBottom
+                        >
                           إجمالي المبيعات
                         </Typography>
-                        <Typography variant="h5" fontWeight={700} sx={{ mt: 1 }}>
+                        <Typography variant="h3" fontWeight={700}>
                           {formatNumber(summaryStats.totalAmount)}
                         </Typography>
                       </Box>
-                      <Box sx={{ color: "primary.main", p: 1, bgcolor: "primary.lighter", borderRadius: "50%" }}>
-                        <TrendingUp size={20} />
-                      </Box>
-                    </Box>
+                    </Stack>
                   </CardContent>
                 </Card>
 
                 {/* Discount */}
-                <Card sx={{ borderRadius: 3, boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}>
-                  <CardContent sx={{ p: 2 }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <Card
+                  sx={{
+                    borderRadius: 3,
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                  }}
+                >
+                  <CardContent sx={{ p: 3, textAlign: "center" }}>
+                    <Stack spacing={2} alignItems="center">
+                      <Box
+                        sx={{
+                          color: "warning.main",
+                          p: 1.5,
+                          bgcolor: "warning.lighter",
+                          borderRadius: "50%",
+                        }}
+                      >
+                        <Percent size={24} />
+                      </Box>
                       <Box>
-                        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          fontWeight={500}
+                          gutterBottom
+                        >
                           الخصم
                         </Typography>
-                        <Typography variant="h5" fontWeight={700} color="warning.main" sx={{ mt: 1 }}>
+                        <Typography
+                          variant="h3"
+                          fontWeight={700}
+                          color="warning.main"
+                        >
                           {formatNumber(summaryStats.totalDiscount)}
                         </Typography>
                       </Box>
-                      <Box sx={{ color: "warning.main", p: 1, bgcolor: "warning.lighter", borderRadius: "50%" }}>
-                        <Percent size={20} />
-                      </Box>
-                    </Box>
+                    </Stack>
                   </CardContent>
                 </Card>
 
                 {/* Paid */}
-                <Card sx={{ borderRadius: 3, boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}>
-                  <CardContent sx={{ p: 2 }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <Card
+                  sx={{
+                    borderRadius: 3,
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                  }}
+                >
+                  <CardContent sx={{ p: 3, textAlign: "center" }}>
+                    <Stack spacing={2} alignItems="center">
+                      <Box
+                        sx={{
+                          color: "success.main",
+                          p: 1.5,
+                          bgcolor: "success.lighter",
+                          borderRadius: "50%",
+                        }}
+                      >
+                        <CheckCircle2 size={24} />
+                      </Box>
                       <Box>
-                        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          fontWeight={500}
+                          gutterBottom
+                        >
                           المدفوع
                         </Typography>
-                        <Typography variant="h5" fontWeight={700} color="success.main" sx={{ mt: 1 }}>
+                        <Typography
+                          variant="h3"
+                          fontWeight={700}
+                          color="success.main"
+                        >
                           {formatNumber(summaryStats.totalPaid)}
                         </Typography>
                       </Box>
-                      <Box sx={{ color: "success.main", p: 1, bgcolor: "success.lighter", borderRadius: "50%" }}>
-                        <CheckCircle2 size={20} />
-                      </Box>
-                    </Box>
+                    </Stack>
                   </CardContent>
                 </Card>
 
                 {/* Refund */}
-                <Card sx={{ borderRadius: 3, boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}>
-                  <CardContent sx={{ p: 2 }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <Card
+                  sx={{
+                    borderRadius: 3,
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                  }}
+                >
+                  <CardContent sx={{ p: 3, textAlign: "center" }}>
+                    <Stack spacing={2} alignItems="center">
+                      <Box
+                        sx={{
+                          color: "error.main",
+                          p: 1.5,
+                          bgcolor: "error.lighter",
+                          borderRadius: "50%",
+                        }}
+                      >
+                        <RotateCcw size={24} />
+                      </Box>
                       <Box>
-                        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          fontWeight={500}
+                          gutterBottom
+                        >
                           المرتجع
                         </Typography>
-                        <Typography variant="h5" fontWeight={700} color="error.main" sx={{ mt: 1 }}>
+                        <Typography
+                          variant="h3"
+                          fontWeight={700}
+                          color="error.main"
+                        >
                           {formatNumber(summaryStats.totalRefund)}
                         </Typography>
                       </Box>
-                      <Box sx={{ color: "error.main", p: 1, bgcolor: "error.lighter", borderRadius: "50%" }}>
-                        <RotateCcw size={20} />
-                      </Box>
-                    </Box>
+                    </Stack>
                   </CardContent>
                 </Card>
 
                 {/* Net */}
-                <Card sx={{ borderRadius: 3, boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}>
-                  <CardContent sx={{ p: 2 }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <Card
+                  sx={{
+                    borderRadius: 3,
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                  }}
+                >
+                  <CardContent sx={{ p: 3, textAlign: "center" }}>
+                    <Stack spacing={2} alignItems="center">
+                      <Box
+                        sx={{
+                          color: "info.main",
+                          p: 1.5,
+                          bgcolor: "info.lighter",
+                          borderRadius: "50%",
+                        }}
+                      >
+                        <PieChart size={24} />
+                      </Box>
                       <Box>
-                        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          fontWeight={500}
+                          gutterBottom
+                        >
                           الصافي
                         </Typography>
-                        <Typography variant="h5" fontWeight={700} color="primary.main" sx={{ mt: 1 }}>
+                        <Typography
+                          variant="h3"
+                          fontWeight={700}
+                          color="primary.main"
+                        >
                           {formatNumber(summaryStats.totalNet)}
                         </Typography>
                       </Box>
-                      <Box sx={{ color: "info.main", p: 1, bgcolor: "info.lighter", borderRadius: "50%" }}>
-                        <PieChart size={20} />
-                      </Box>
-                    </Box>
-                    <Stack direction="row" spacing={2} sx={{ mt: 1.5 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        نقد: <Box component="span" sx={{ fontWeight: 600, color: "success.main" }}>{formatNumber(summaryStats.totalCash)}</Box>
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        بنك: <Box component="span" sx={{ fontWeight: 600, color: "primary.main" }}>{formatNumber(summaryStats.totalBank)}</Box>
-                      </Typography>
+                      <Stack
+                        direction="row"
+                        spacing={2}
+                        justifyContent="center"
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          نقد:{" "}
+                          <Box
+                            component="span"
+                            sx={{ fontWeight: 600, color: "success.main" }}
+                          >
+                            {formatNumber(summaryStats.totalCash)}
+                          </Box>
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          بنك:{" "}
+                          <Box
+                            component="span"
+                            sx={{ fontWeight: 600, color: "primary.main" }}
+                          >
+                            {formatNumber(summaryStats.totalBank)}
+                          </Box>
+                        </Typography>
+                      </Stack>
                     </Stack>
                   </CardContent>
                 </Card>
 
                 {/* Sales Count */}
-                <Card sx={{ borderRadius: 3, boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}>
-                  <CardContent sx={{ p: 2 }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <Card
+                  sx={{
+                    borderRadius: 3,
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                  }}
+                >
+                  <CardContent sx={{ p: 3, textAlign: "center" }}>
+                    <Stack spacing={2} alignItems="center">
+                      <Box
+                        sx={{
+                          color: "text.secondary",
+                          p: 1.5,
+                          bgcolor: "action.hover",
+                          borderRadius: "50%",
+                        }}
+                      >
+                        <ShoppingCart size={24} />
+                      </Box>
                       <Box>
-                        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          fontWeight={500}
+                          gutterBottom
+                        >
                           عدد العمليات
                         </Typography>
-                        <Typography variant="h5" fontWeight={700} sx={{ mt: 1 }}>
+                        <Typography variant="h3" fontWeight={700}>
                           {summaryStats.totalSales}
                         </Typography>
                       </Box>
-                      <Box sx={{ color: "text.secondary", p: 1, bgcolor: "action.hover", borderRadius: "50%" }}>
-                        <ShoppingCart size={20} />
-                      </Box>
-                    </Box>
+                    </Stack>
                   </CardContent>
                 </Card>
               </Box>
-
             </Stack>
           )}
 
@@ -786,13 +1000,18 @@ const SalesReportPage: React.FC = () => {
                 border: "1px solid",
                 borderColor: "divider",
                 borderRadius: 3,
-                mb: 3
+                mb: 3,
               }}
             >
               <CardContent sx={{ p: 2.5 }}>
                 <Stack spacing={2}>
                   {[...Array(5)].map((_, i) => (
-                    <Stack key={i} direction="row" spacing={2} alignItems="center">
+                    <Stack
+                      key={i}
+                      direction="row"
+                      spacing={2}
+                      alignItems="center"
+                    >
                       <Skeleton variant="rounded" width={80} height={20} />
                       <Skeleton variant="rounded" width={100} height={20} />
                       <Box sx={{ flex: 1 }}>
@@ -841,8 +1060,18 @@ const SalesReportPage: React.FC = () => {
                   bgcolor: "grey.50",
                 }}
               >
-                <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
-                  <Typography variant="h6" component="h2" sx={{ fontWeight: 700, color: "primary.main" }}>
+                <Stack
+                  direction="row"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  flexWrap="wrap"
+                  gap={2}
+                >
+                  <Typography
+                    variant="h6"
+                    component="h2"
+                    sx={{ fontWeight: 700, color: "primary.main" }}
+                  >
                     النتائج
                   </Typography>
                   <Chip
@@ -877,7 +1106,10 @@ const SalesReportPage: React.FC = () => {
                     >
                       <FileText size={32} style={{ opacity: 0.4 }} />
                     </Box>
-                    <Typography variant="subtitle1" sx={{ mb: 0.5, fontWeight: 600 }}>
+                    <Typography
+                      variant="subtitle1"
+                      sx={{ mb: 0.5, fontWeight: 600 }}
+                    >
                       لا توجد مبيعات
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
@@ -902,15 +1134,56 @@ const SalesReportPage: React.FC = () => {
                               },
                             }}
                           >
-                            <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }}>رقم البيع</TableCell>
-                            <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }}>التاريخ</TableCell>
-                            <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }}>العميل</TableCell>
-                            <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }}>المستخدم</TableCell>
-                            <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }} align="center">المدفوعات</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.875rem" }}>الخصم</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.875rem" }}>المبلغ الإجمالي</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.875rem" }}>المدفوع</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.875rem" }}>المستحق</TableCell>
+                            <TableCell
+                              sx={{ fontWeight: 700, fontSize: "0.875rem" }}
+                            >
+                              رقم البيع
+                            </TableCell>
+                            <TableCell
+                              sx={{ fontWeight: 700, fontSize: "0.875rem" }}
+                            >
+                              التاريخ
+                            </TableCell>
+                            <TableCell
+                              sx={{ fontWeight: 700, fontSize: "0.875rem" }}
+                            >
+                              العميل
+                            </TableCell>
+                            <TableCell
+                              sx={{ fontWeight: 700, fontSize: "0.875rem" }}
+                            >
+                              المستخدم
+                            </TableCell>
+                            <TableCell
+                              sx={{ fontWeight: 700, fontSize: "0.875rem" }}
+                              align="center"
+                            >
+                              المدفوعات
+                            </TableCell>
+                            <TableCell
+                              align="right"
+                              sx={{ fontWeight: 700, fontSize: "0.875rem" }}
+                            >
+                              الخصم
+                            </TableCell>
+                            <TableCell
+                              align="right"
+                              sx={{ fontWeight: 700, fontSize: "0.875rem" }}
+                            >
+                              المبلغ الإجمالي
+                            </TableCell>
+                            <TableCell
+                              align="right"
+                              sx={{ fontWeight: 700, fontSize: "0.875rem" }}
+                            >
+                              المدفوع
+                            </TableCell>
+                            <TableCell
+                              align="right"
+                              sx={{ fontWeight: 700, fontSize: "0.875rem" }}
+                            >
+                              المستحق
+                            </TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -922,10 +1195,15 @@ const SalesReportPage: React.FC = () => {
                                 setLoadingSaleDetails(true);
                                 setSaleDetailsDialogOpen(true);
                                 try {
-                                  const fullSale = await saleService.getSale(sale.id);
+                                  const fullSale = await saleService.getSale(
+                                    sale.id
+                                  );
                                   setSelectedSale(fullSale);
                                 } catch (error) {
-                                  console.error("Failed to fetch sale details:", error);
+                                  console.error(
+                                    "Failed to fetch sale details:",
+                                    error
+                                  );
                                   toast.error("خطأ", {
                                     description: "فشل تحميل تفاصيل البيع",
                                   });
@@ -950,32 +1228,54 @@ const SalesReportPage: React.FC = () => {
                                 },
                               }}
                             >
-                              <TableCell sx={{ fontWeight: 600, color: "primary.main" }}>
+                              <TableCell
+                                sx={{ fontWeight: 600, color: "primary.main" }}
+                              >
                                 #{sale.id}
                               </TableCell>
                               <TableCell>
-                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                  {format(parseISO(sale.sale_date), "yyyy-MM-dd")}
+                                <Typography
+                                  variant="body2"
+                                  sx={{ fontWeight: 500 }}
+                                >
+                                  {format(
+                                    parseISO(sale.sale_date),
+                                    "yyyy-MM-dd"
+                                  )}
                                 </Typography>
                               </TableCell>
                               <TableCell>
                                 {sale.client_name ? (
-                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                  <Typography
+                                    variant="body2"
+                                    sx={{ fontWeight: 500 }}
+                                  >
                                     {sale.client_name}
                                   </Typography>
                                 ) : (
-                                  <Typography component="span" color="text.secondary" variant="body2">
+                                  <Typography
+                                    component="span"
+                                    color="text.secondary"
+                                    variant="body2"
+                                  >
                                     عميل غير محدد
                                   </Typography>
                                 )}
                               </TableCell>
                               <TableCell>
                                 {sale.user_name ? (
-                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                  <Typography
+                                    variant="body2"
+                                    sx={{ fontWeight: 500 }}
+                                  >
                                     {sale.user_name}
                                   </Typography>
                                 ) : (
-                                  <Typography component="span" color="text.secondary" variant="body2">
+                                  <Typography
+                                    component="span"
+                                    color="text.secondary"
+                                    variant="body2"
+                                  >
                                     —
                                   </Typography>
                                 )}
@@ -983,7 +1283,11 @@ const SalesReportPage: React.FC = () => {
                               <TableCell align="center">
                                 {sale.payments && sale.payments.length > 0 ? (
                                   <Chip
-                                    label={`${sale.payments.length} ${sale.payments.length === 1 ? "دفعة" : "دفعات"}`}
+                                    label={`${sale.payments.length} ${
+                                      sale.payments.length === 1
+                                        ? "دفعة"
+                                        : "دفعات"
+                                    }`}
                                     size="small"
                                     variant="outlined"
                                     sx={{
@@ -993,13 +1297,18 @@ const SalesReportPage: React.FC = () => {
                                     }}
                                   />
                                 ) : (
-                                  <Typography component="span" color="text.secondary" variant="body2">
+                                  <Typography
+                                    component="span"
+                                    color="text.secondary"
+                                    variant="body2"
+                                  >
                                     —
                                   </Typography>
                                 )}
                               </TableCell>
                               <TableCell align="right">
-                                {sale.discount_amount && Number(sale.discount_amount) > 0 ? (
+                                {sale.discount_amount &&
+                                Number(sale.discount_amount) > 0 ? (
                                   <Box>
                                     <Typography
                                       variant="body2"
@@ -1015,19 +1324,32 @@ const SalesReportPage: React.FC = () => {
                                       color="text.secondary"
                                       sx={{ display: "block", mt: 0.25 }}
                                     >
-                                      {(sale as any).discount_type === "percentage" ? "%" : "ثابت"}
+                                      {(sale as any).discount_type ===
+                                      "percentage"
+                                        ? "%"
+                                        : "ثابت"}
                                     </Typography>
                                   </Box>
                                 ) : (
-                                  <Typography component="span" color="text.secondary" variant="body2">
+                                  <Typography
+                                    component="span"
+                                    color="text.secondary"
+                                    variant="body2"
+                                  >
                                     —
                                   </Typography>
                                 )}
                               </TableCell>
-                              <TableCell align="right" sx={{ fontWeight: 600, fontSize: "0.9375rem" }}>
+                              <TableCell
+                                align="right"
+                                sx={{ fontWeight: 600, fontSize: "0.9375rem" }}
+                              >
                                 {formatNumber(sale.total_amount)}
                               </TableCell>
-                              <TableCell align="right" sx={{ fontWeight: 500, color: "success.main" }}>
+                              <TableCell
+                                align="right"
+                                sx={{ fontWeight: 500, color: "success.main" }}
+                              >
                                 {formatNumber(sale.paid_amount)}
                               </TableCell>
                               <TableCell align="right">
@@ -1035,7 +1357,10 @@ const SalesReportPage: React.FC = () => {
                                   variant="body2"
                                   sx={{
                                     fontWeight: 600,
-                                    color: Number(sale.due_amount) > 0 ? "error.main" : "success.main",
+                                    color:
+                                      Number(sale.due_amount) > 0
+                                        ? "error.main"
+                                        : "success.main",
                                   }}
                                 >
                                   {formatNumber(sale.due_amount || 0)}
@@ -1130,36 +1455,69 @@ const SalesReportPage: React.FC = () => {
             <Stack spacing={3}>
               {/* Sale Info */}
               <Box>
-                <Typography variant="subtitle2" fontWeight="bold" color="text.secondary" sx={{ mb: 1 }}>
+                <Typography
+                  variant="subtitle2"
+                  fontWeight="bold"
+                  color="text.secondary"
+                  sx={{ mb: 1 }}
+                >
                   معلومات البيع
                 </Typography>
-                <Paper elevation={0} sx={{ p: 2, bgcolor: "grey.50", borderRadius: 2 }}>
+                <Paper
+                  elevation={0}
+                  sx={{ p: 2, bgcolor: "grey.50", borderRadius: 2 }}
+                >
                   <Stack spacing={1}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                      <Typography variant="body2" color="text.secondary">التاريخ:</Typography>
+                    <Box
+                      sx={{ display: "flex", justifyContent: "space-between" }}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        التاريخ:
+                      </Typography>
                       <Typography variant="body2" fontWeight="medium">
                         {format(parseISO(selectedSale.sale_date), "yyyy-MM-dd")}
                       </Typography>
                     </Box>
                     {selectedSale.invoice_number && (
-                      <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                        <Typography variant="body2" color="text.secondary">رقم الفاتورة:</Typography>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <Typography variant="body2" color="text.secondary">
+                          رقم الفاتورة:
+                        </Typography>
                         <Typography variant="body2" fontWeight="medium">
                           {selectedSale.invoice_number}
                         </Typography>
                       </Box>
                     )}
                     {selectedSale.client_name && (
-                      <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                        <Typography variant="body2" color="text.secondary">العميل:</Typography>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <Typography variant="body2" color="text.secondary">
+                          العميل:
+                        </Typography>
                         <Typography variant="body2" fontWeight="medium">
                           {selectedSale.client_name}
                         </Typography>
                       </Box>
                     )}
                     {selectedSale.user_name && (
-                      <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                        <Typography variant="body2" color="text.secondary">المستخدم:</Typography>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <Typography variant="body2" color="text.secondary">
+                          المستخدم:
+                        </Typography>
                         <Typography variant="body2" fontWeight="medium">
                           {selectedSale.user_name}
                         </Typography>
@@ -1172,17 +1530,36 @@ const SalesReportPage: React.FC = () => {
               {/* Sale Items */}
               {selectedSale.items && selectedSale.items.length > 0 && (
                 <Box>
-                  <Typography variant="subtitle2" fontWeight="bold" color="text.secondary" sx={{ mb: 1 }}>
+                  <Typography
+                    variant="subtitle2"
+                    fontWeight="bold"
+                    color="text.secondary"
+                    sx={{ mb: 1 }}
+                  >
                     العناصر ({selectedSale.items.length})
                   </Typography>
-                  <Paper elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: 2,
+                      overflow: "hidden",
+                    }}
+                  >
                     <Table size="small">
                       <TableHead>
                         <TableRow sx={{ bgcolor: "action.hover" }}>
                           <TableCell sx={{ fontWeight: 600 }}>المنتج</TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 600 }}>الكمية</TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 600 }}>سعر الوحدة</TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 600 }}>الإجمالي</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 600 }}>
+                            الكمية
+                          </TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 600 }}>
+                            سعر الوحدة
+                          </TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 600 }}>
+                            الإجمالي
+                          </TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -1190,23 +1567,37 @@ const SalesReportPage: React.FC = () => {
                           <TableRow key={item.id}>
                             <TableCell>
                               <Typography variant="body2" fontWeight="medium">
-                                {item.product_name || item.product?.name || "غير معروف"}
+                                {item.product_name ||
+                                  item.product?.name ||
+                                  "غير معروف"}
                               </Typography>
                               {item.batch_number_sold && (
-                                <Typography variant="caption" color="text.secondary">
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
                                   دفعة: {item.batch_number_sold}
                                 </Typography>
                               )}
                             </TableCell>
                             <TableCell align="right">
-                              <Typography variant="body2">{item.quantity}</Typography>
+                              <Typography variant="body2">
+                                {item.quantity}
+                              </Typography>
                             </TableCell>
                             <TableCell align="right">
-                              <Typography variant="body2">{formatNumber(Number(item.unit_price))}</Typography>
+                              <Typography variant="body2">
+                                {formatNumber(Number(item.unit_price))}
+                              </Typography>
                             </TableCell>
                             <TableCell align="right">
                               <Typography variant="body2" fontWeight="medium">
-                                {formatNumber(Number(item.total_price || item.quantity * Number(item.unit_price)))}
+                                {formatNumber(
+                                  Number(
+                                    item.total_price ||
+                                      item.quantity * Number(item.unit_price)
+                                  )
+                                )}
                               </Typography>
                             </TableCell>
                           </TableRow>
@@ -1220,7 +1611,12 @@ const SalesReportPage: React.FC = () => {
               {/* Payments */}
               {selectedSale.payments && selectedSale.payments.length > 0 && (
                 <Box>
-                  <Typography variant="subtitle2" fontWeight="bold" color="text.secondary" sx={{ mb: 1.5 }}>
+                  <Typography
+                    variant="subtitle2"
+                    fontWeight="bold"
+                    color="text.secondary"
+                    sx={{ mb: 1.5 }}
+                  >
                     المدفوعات ({selectedSale.payments.length})
                   </Typography>
                   <Box
@@ -1244,26 +1640,34 @@ const SalesReportPage: React.FC = () => {
                           maxWidth: "100%",
                         }}
                       >
-                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, mb: 0.5 }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: 1,
+                            mb: 0.5,
+                          }}
+                        >
                           <Chip
                             label={
                               payment.method === "cash"
                                 ? "نقدي"
                                 : payment.method === "visa"
-                                  ? "فيزا"
-                                  : payment.method === "mastercard"
-                                    ? "ماستركارد"
-                                    : payment.method === "bank_transfer"
-                                      ? "تحويل بنكي"
-                                      : payment.method === "mada"
-                                        ? "مدى"
-                                        : payment.method === "store_credit"
-                                          ? "رصيد متجر"
-                                          : payment.method === "other"
-                                            ? "أخرى"
-                                            : payment.method === "refund"
-                                              ? "استرداد"
-                                              : payment.method
+                                ? "فيزا"
+                                : payment.method === "mastercard"
+                                ? "ماستركارد"
+                                : payment.method === "bank_transfer"
+                                ? "تحويل بنكي"
+                                : payment.method === "mada"
+                                ? "مدى"
+                                : payment.method === "store_credit"
+                                ? "رصيد متجر"
+                                : payment.method === "other"
+                                ? "أخرى"
+                                : payment.method === "refund"
+                                ? "استرداد"
+                                : payment.method
                             }
                             size="small"
                             variant="outlined"
@@ -1274,33 +1678,75 @@ const SalesReportPage: React.FC = () => {
                               height: 24,
                             }}
                           />
-                          <Typography variant="body1" fontWeight="bold" color="success.main">
+                          <Typography
+                            variant="body1"
+                            fontWeight="bold"
+                            color="success.main"
+                          >
                             {formatNumber(Number(payment.amount))}
                           </Typography>
                         </Box>
-                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, alignItems: "center" }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: 0.5,
+                            alignItems: "center",
+                          }}
+                        >
                           <Typography variant="caption" color="text.secondary">
-                            {payment.payment_date ? (payment.payment_date.includes("T") ? format(parseISO(payment.payment_date), "yyyy-MM-dd") : payment.payment_date) : "-"}
+                            {payment.payment_date
+                              ? payment.payment_date.includes("T")
+                                ? format(
+                                    parseISO(payment.payment_date),
+                                    "yyyy-MM-dd"
+                                  )
+                                : payment.payment_date
+                              : "-"}
                           </Typography>
                           {payment.reference_number && (
                             <>
-                              <Typography variant="caption" color="text.secondary">•</Typography>
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                •
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
                                 {payment.reference_number}
                               </Typography>
                             </>
                           )}
                           {payment.user_name && (
                             <>
-                              <Typography variant="caption" color="text.secondary">•</Typography>
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                •
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
                                 {payment.user_name}
                               </Typography>
                             </>
                           )}
                         </Box>
                         {payment.notes && (
-                          <Typography variant="caption" color="text.secondary" sx={{ fontStyle: "italic", mt: 0.5, display: "block" }}>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{
+                              fontStyle: "italic",
+                              mt: 0.5,
+                              display: "block",
+                            }}
+                          >
                             {payment.notes}
                           </Typography>
                         )}
@@ -1314,31 +1760,65 @@ const SalesReportPage: React.FC = () => {
               <Divider />
               <Box>
                 <Stack spacing={1}>
-                  {selectedSale.discount_amount && Number(selectedSale.discount_amount) > 0 && (
-                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                      <Typography variant="body1" fontWeight="bold">الخصم:</Typography>
-                      <Typography variant="body1" fontWeight="bold" color="warning.main">
-                        {formatNumber(selectedSale.discount_amount)}
-                        {selectedSale.discount_type === "percentage" ? " %" : ""}
-                      </Typography>
-                    </Box>
-                  )}
-                  <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                    <Typography variant="body1" fontWeight="bold">المبلغ الإجمالي:</Typography>
+                  {selectedSale.discount_amount &&
+                    Number(selectedSale.discount_amount) > 0 && (
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <Typography variant="body1" fontWeight="bold">
+                          الخصم:
+                        </Typography>
+                        <Typography
+                          variant="body1"
+                          fontWeight="bold"
+                          color="warning.main"
+                        >
+                          {formatNumber(selectedSale.discount_amount)}
+                          {selectedSale.discount_type === "percentage"
+                            ? " %"
+                            : ""}
+                        </Typography>
+                      </Box>
+                    )}
+                  <Box
+                    sx={{ display: "flex", justifyContent: "space-between" }}
+                  >
+                    <Typography variant="body1" fontWeight="bold">
+                      المبلغ الإجمالي:
+                    </Typography>
                     <Typography variant="body1" fontWeight="bold">
                       {formatNumber(selectedSale.total_amount)}
                     </Typography>
                   </Box>
-                  <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                    <Typography variant="body1" fontWeight="bold">المدفوع:</Typography>
-                    <Typography variant="body1" fontWeight="bold" color="success.main">
+                  <Box
+                    sx={{ display: "flex", justifyContent: "space-between" }}
+                  >
+                    <Typography variant="body1" fontWeight="bold">
+                      المدفوع:
+                    </Typography>
+                    <Typography
+                      variant="body1"
+                      fontWeight="bold"
+                      color="success.main"
+                    >
                       {formatNumber(selectedSale.paid_amount)}
                     </Typography>
                   </Box>
                   {Number(selectedSale.due_amount || 0) > 0 && (
-                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                      <Typography variant="body1" fontWeight="bold">المستحق:</Typography>
-                      <Typography variant="body1" fontWeight="bold" color="warning.main">
+                    <Box
+                      sx={{ display: "flex", justifyContent: "space-between" }}
+                    >
+                      <Typography variant="body1" fontWeight="bold">
+                        المستحق:
+                      </Typography>
+                      <Typography
+                        variant="body1"
+                        fontWeight="bold"
+                        color="warning.main"
+                      >
                         {formatNumber(selectedSale.due_amount || 0)}
                       </Typography>
                     </Box>
@@ -1391,7 +1871,9 @@ const SalesReportPage: React.FC = () => {
             <X size={18} />
           </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ p: 0, height: "calc(90vh - 64px)", overflow: "hidden" }}>
+        <DialogContent
+          sx={{ p: 0, height: "calc(90vh - 64px)", overflow: "hidden" }}
+        >
           {reportData && reportData.data.length > 0 && selectedShift && (
             <PDFViewer width="100%" height="100%" showToolbar={true}>
               <PosShiftReportPdf

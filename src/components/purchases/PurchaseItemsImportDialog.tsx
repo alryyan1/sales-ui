@@ -305,7 +305,7 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [file, columnMapping, skipHeader, purchaseId, onImportSuccess, t]);
+  }, [file, columnMapping, skipHeader, purchaseId, onImportSuccess]);
 
   const handleClose = useCallback(() => {
     setActiveStep(0);

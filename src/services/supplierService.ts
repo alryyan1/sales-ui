@@ -18,6 +18,15 @@ export interface Supplier {
     updated_at: string;
 }
 
+// Supplier summary with financial totals
+export interface SupplierSummary {
+    id: number;
+    name: string;
+    total_debit: number;  // Total purchases
+    total_credit: number; // Total payments
+    balance: number;      // debit - credit
+}
+
 // Data type for creating/updating (excluding system-generated fields)
 export type SupplierFormData = Omit<Supplier, 'id' | 'created_at' | 'updated_at'>;
 
@@ -104,6 +113,19 @@ const supplierService = {
         }
     },
 
+    /**
+     * Get summary of all suppliers with their debit, credit, and balance.
+     */
+    getSuppliersSummary: async (): Promise<SupplierSummary[]> => {
+        try {
+            const response = await apiClient.get<SupplierSummary[]>('/suppliers/summary');
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching suppliers summary:', error);
+            throw error;
+        }
+    },
+
     // --- Error Helpers (imported from axios.ts) ---
     getValidationErrors,
     getErrorMessage,
@@ -112,4 +134,4 @@ const supplierService = {
 export default supplierService;
 
 // Export types if needed elsewhere
-// export type { Supplier, SupplierFormData };
+export type { Supplier, SupplierFormData, SupplierSummary };

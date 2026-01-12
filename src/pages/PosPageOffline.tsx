@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+} from "react";
 import {
   Box,
   Paper,
@@ -7,12 +13,15 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  CircularProgress,
+  Typography,
 } from "@mui/material";
 import { Cloud, Clock, X } from "lucide-react";
 import apiClient from "@/lib/axios";
 import { PDFViewer } from "@react-pdf/renderer";
 import { useAuth } from "@/context/AuthContext";
 import { usePosFilters } from "@/context/PosFilterContext";
+import { useSettings } from "@/context/SettingsContext";
 import { useOfflineSync } from "../hooks/useOfflineSync";
 import { offlineSaleService } from "../services/offlineSaleService";
 import saleService from "../services/saleService";
@@ -30,9 +39,39 @@ export const PosPageOffline = () => {
   const { user } = useAuth();
   const { isOnline, isSyncing, triggerSync, lastSyncedProducts } =
     useOfflineSync();
+  const { getSetting, isLoadingSettings } = useSettings();
+  const posMode = getSetting("pos_mode", "shift") as "shift" | "days";
 
+  if (isLoadingSettings) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          height: "100vh",
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "column",
+          gap: 2,
+        }}
+      >
+        <CircularProgress />
+        <Typography>جاري تحميل الإعدادات...</Typography>
+      </Box>
+    );
+  }
 
-  // Shift state
+  // Date state for days mode (initialize early, before shift state)
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    // Use local time instead of UTC (which toISOString uses)
+    // This prevents date shifts when the user is in a timezone ahead of UTC (like +04:00) during late hours
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  });
+
+  // Shift state - initialize to null in days mode
   const [shift, setShift] = useState<{
     id: number;
     opened_at: string | null;
@@ -40,10 +79,18 @@ export const PosPageOffline = () => {
     is_open: boolean;
   } | null>(null);
   const [shiftLoading, setShiftLoading] = useState(false);
-  const [selectedShiftId, setSelectedShiftId] = useState<number | null>(null);
+  const [selectedShiftId, setSelectedShiftId] = useState<number | null>(() => {
+    // Initialize to null in days mode to prevent race conditions
+    return posMode === "days" ? null : null;
+  });
   const [availableShiftIds, setAvailableShiftIds] = useState<number[]>([]);
 
   useEffect(() => {
+    // Skip shift fetching in days mode
+    if (posMode === "days") {
+      return;
+    }
+
     const fetchShift = async () => {
       if (!isOnline) {
         // Try load from local storage
@@ -54,7 +101,10 @@ export const PosPageOffline = () => {
             // Ensure is_open is a boolean
             const normalizedShift = {
               ...parsed,
-              is_open: parsed.is_open === true || parsed.is_open === "true" || parsed.is_open === 1,
+              is_open:
+                parsed.is_open === true ||
+                parsed.is_open === "true" ||
+                parsed.is_open === 1,
             };
             setShift(normalizedShift);
             if (!selectedShiftId && normalizedShift?.id) {
@@ -74,10 +124,16 @@ export const PosPageOffline = () => {
           // Ensure is_open is a boolean
           const normalizedShift = {
             ...shiftData,
-            is_open: shiftData.is_open === true || shiftData.is_open === "true" || shiftData.is_open === 1,
+            is_open:
+              shiftData.is_open === true ||
+              shiftData.is_open === "true" ||
+              shiftData.is_open === 1,
           };
           setShift(normalizedShift);
-          localStorage.setItem("current_pos_shift", JSON.stringify(normalizedShift));
+          localStorage.setItem(
+            "current_pos_shift",
+            JSON.stringify(normalizedShift)
+          );
           // Initialize selected shift ID
           if (!selectedShiftId && normalizedShift?.id) {
             setSelectedShiftId(normalizedShift.id);
@@ -98,7 +154,19 @@ export const PosPageOffline = () => {
       }
     };
     fetchShift();
-  }, [isOnline, selectedShiftId]); // Run on mount and when isOnline or selectedShiftId changes
+  }, [isOnline, posMode]); // Run on mount and when isOnline or posMode changes
+
+  // Clear selectedShiftId when switching to days mode and reset tracking refs
+  useEffect(() => {
+    if (posMode === "days") {
+      setSelectedShiftId(null);
+      // Reset shift tracking ref to prevent reload triggers
+      lastShiftIdRef.current = null;
+    } else {
+      // Reset date tracking ref when switching to shift mode
+      lastSelectedDateRef.current = null;
+    }
+  }, [posMode]);
 
   const handleOpenShift = async () => {
     try {
@@ -111,7 +179,10 @@ export const PosPageOffline = () => {
         is_open: true, // Explicitly set to true when opening
       };
       setShift(normalizedShift);
-      localStorage.setItem("current_pos_shift", JSON.stringify(normalizedShift));
+      localStorage.setItem(
+        "current_pos_shift",
+        JSON.stringify(normalizedShift)
+      );
 
       // Automatically select the newly opened shift
       if (normalizedShift?.id) {
@@ -148,7 +219,10 @@ export const PosPageOffline = () => {
         is_open: false, // Explicitly set to false when closing
       };
       setShift(normalizedShift);
-      localStorage.setItem("current_pos_shift", JSON.stringify(normalizedShift));
+      localStorage.setItem(
+        "current_pos_shift",
+        JSON.stringify(normalizedShift)
+      );
       toast.success("تم إغلاق الوردية");
     } catch (error) {
       console.error("Failed to close shift:", error);
@@ -308,159 +382,175 @@ export const PosPageOffline = () => {
     }
   };
 
-  const addToCart = useCallback((
-    product: Product,
-    unitType: "stocking" | "sellable" = "sellable"
-  ) => {
-    if (currentSale.is_synced) {
-      toast.error("لا يمكن تعديل عملية بيع تمت مزامنتها");
-      return;
-    }
-
-    // More robust check for shift.is_open
-    const isShiftOpen = shift?.is_open === true || (typeof shift?.is_open === "string" && shift.is_open === "true") || (typeof shift?.is_open === "number" && shift.is_open === 1);
-    if (!shift || !isShiftOpen) {
-      toast.error("يجب فتح الوردية قبل إضافة منتجات");
-      return;
-    }
-
-    const unitsPerStocking = product.units_per_stocking_unit || 1;
-    const currentStock = Number(
-      product.current_stock_quantity ?? product.stock_quantity ?? 0
-    );
-
-    if (currentStock <= 0) {
-      toast.error("عذراً، هذا المنتج غير متوفر في المخزون (الكمية 0)");
-      return;
-    }
-
-    // Check if we have enough stock for the selected unit type
-    if (unitType === "stocking") {
-      const availableStockingUnits = Math.floor(
-        currentStock / unitsPerStocking
-      );
-      if (availableStockingUnits <= 0) {
-        toast.error(
-          `عذراً، لا يوجد مخزون كافٍ. المتاح: ${currentStock} ${product.sellable_unit_name || "قطعة"
-          }`
-        );
+  const addToCart = useCallback(
+    (product: Product, unitType: "stocking" | "sellable" = "sellable") => {
+      if (currentSale.is_synced) {
+        toast.error("لا يمكن تعديل عملية بيع تمت مزامنتها");
         return;
       }
-    }
 
-    updateCurrentSale((prev) => {
-      const existing = prev.items.find((i) => i.product_id === product.id);
-      const price = getPriceForUnitType(product, unitType);
+      // Skip shift validation in days mode
+      if (posMode === "shift") {
+        // More robust check for shift.is_open
+        const isShiftOpen =
+          shift?.is_open === true ||
+          (typeof shift?.is_open === "string" && shift.is_open === "true") ||
+          (typeof shift?.is_open === "number" && shift.is_open === 1);
+        if (!shift || !isShiftOpen) {
+          toast.error("يجب فتح الوردية قبل إضافة منتجات");
+          return;
+        }
+      }
+
+      const unitsPerStocking = product.units_per_stocking_unit || 1;
       const currentStock = Number(
-        product?.current_stock_quantity ?? product?.stock_quantity ?? 0
+        product.current_stock_quantity ?? product.stock_quantity ?? 0
       );
 
-      let newItems;
-      let quantityToDeduct = 0; // Quantity to deduct from stock in sellable units
+      if (currentStock <= 0) {
+        toast.error("عذراً، هذا المنتج غير متوفر في المخزون (الكمية 0)");
+        return;
+      }
 
-      if (existing) {
-        // If existing item has different unit type, convert quantity
-        const existingUnitType = (existing as any).unitType || "sellable";
-        if (existingUnitType === unitType) {
-          // Same unit type, just increment
-          const addedQty = unitType === "stocking" ? unitsPerStocking : 1;
-          quantityToDeduct = addedQty;
+      // Check if we have enough stock for the selected unit type
+      if (unitType === "stocking") {
+        const availableStockingUnits = Math.floor(
+          currentStock / unitsPerStocking
+        );
+        if (availableStockingUnits <= 0) {
+          toast.error(
+            `عذراً، لا يوجد مخزون كافٍ. المتاح: ${currentStock} ${
+              product.sellable_unit_name || "قطعة"
+            }`
+          );
+          return;
+        }
+      }
 
-          newItems = prev.items.map((i) => {
-            if (i.product_id === product.id) {
-              // Update product stock in the item
-              const updatedProduct: Product = {
-                ...(i.product as Product),
-                stock_quantity: Math.max(0, currentStock - addedQty),
-                current_stock_quantity: Math.max(0, currentStock - addedQty),
-              };
-              return {
-                ...i,
-                quantity: i.quantity + 1,
-                product: updatedProduct,
-              };
-            }
-            return i;
-          });
+      updateCurrentSale((prev) => {
+        const existing = prev.items.find((i) => i.product_id === product.id);
+        const price = getPriceForUnitType(product, unitType);
+        const currentStock = Number(
+          product?.current_stock_quantity ?? product?.stock_quantity ?? 0
+        );
+
+        let newItems;
+        let quantityToDeduct = 0; // Quantity to deduct from stock in sellable units
+
+        if (existing) {
+          // If existing item has different unit type, convert quantity
+          const existingUnitType = (existing as any).unitType || "sellable";
+          if (existingUnitType === unitType) {
+            // Same unit type, just increment
+            const addedQty = unitType === "stocking" ? unitsPerStocking : 1;
+            quantityToDeduct = addedQty;
+
+            newItems = prev.items.map((i) => {
+              if (i.product_id === product.id) {
+                // Update product stock in the item
+                const updatedProduct: Product = {
+                  ...(i.product as Product),
+                  stock_quantity: Math.max(0, currentStock - addedQty),
+                  current_stock_quantity: Math.max(0, currentStock - addedQty),
+                };
+                return {
+                  ...i,
+                  quantity: i.quantity + 1,
+                  product: updatedProduct,
+                };
+              }
+              return i;
+            });
+          } else {
+            // Different unit type, convert and add
+            const existingQtyInSellable =
+              existingUnitType === "stocking"
+                ? existing.quantity * unitsPerStocking
+                : existing.quantity;
+            const newQtyInSellable =
+              unitType === "stocking" ? unitsPerStocking : 1;
+            const totalSellableQty = existingQtyInSellable + newQtyInSellable;
+            quantityToDeduct = newQtyInSellable;
+
+            // Convert back to the new unit type
+            const newQty =
+              unitType === "stocking"
+                ? Math.floor(totalSellableQty / unitsPerStocking)
+                : totalSellableQty;
+
+            newItems = prev.items.map((i) => {
+              if (i.product_id === product.id) {
+                // Update product stock in the item
+                const updatedProduct: Product = {
+                  ...(i.product as Product),
+                  stock_quantity: Math.max(0, currentStock - newQtyInSellable),
+                  current_stock_quantity: Math.max(
+                    0,
+                    currentStock - newQtyInSellable
+                  ),
+                };
+                return {
+                  ...i,
+                  quantity: newQty,
+                  unit_price: price,
+                  unitType: unitType,
+                  product: updatedProduct,
+                };
+              }
+              return i;
+            });
+          }
         } else {
-          // Different unit type, convert and add
-          const existingQtyInSellable =
-            existingUnitType === "stocking"
-              ? existing.quantity * unitsPerStocking
-              : existing.quantity;
-          const newQtyInSellable =
-            unitType === "stocking" ? unitsPerStocking : 1;
-          const totalSellableQty = existingQtyInSellable + newQtyInSellable;
-          quantityToDeduct = newQtyInSellable;
+          // New item - deduct quantity from stock
+          quantityToDeduct = unitType === "stocking" ? unitsPerStocking : 1;
 
-          // Convert back to the new unit type
-          const newQty =
-            unitType === "stocking"
-              ? Math.floor(totalSellableQty / unitsPerStocking)
-              : totalSellableQty;
+          const updatedProduct: Product = {
+            ...product,
+            stock_quantity: Math.max(0, currentStock - quantityToDeduct),
+            current_stock_quantity: Math.max(
+              0,
+              currentStock - quantityToDeduct
+            ),
+          };
 
-          newItems = prev.items.map((i) => {
-            if (i.product_id === product.id) {
-              // Update product stock in the item
-              const updatedProduct: Product = {
-                ...(i.product as Product),
-                stock_quantity: Math.max(0, currentStock - newQtyInSellable),
-                current_stock_quantity: Math.max(0, currentStock - newQtyInSellable),
-              };
-              return {
-                ...i,
-                quantity: newQty,
-                unit_price: price,
-                unitType: unitType,
-                product: updatedProduct,
-              };
-            }
-            return i;
+          const newItem: OfflineSaleItem & {
+            unitType?: "stocking" | "sellable";
+          } = {
+            product_id: product.id,
+            product_name: product.name,
+            quantity: 1,
+            unit_price: price,
+            product: updatedProduct,
+            id: undefined, // New item
+            unitType: unitType,
+          };
+          newItems = [...prev.items, newItem];
+        }
+
+        // Update products state to reflect stock change
+        if (quantityToDeduct > 0) {
+          setProducts((prevProducts) => {
+            return prevProducts.map((p) => {
+              if (p.id === product.id) {
+                return {
+                  ...p,
+                  stock_quantity: Math.max(0, currentStock - quantityToDeduct),
+                  current_stock_quantity: Math.max(
+                    0,
+                    currentStock - quantityToDeduct
+                  ),
+                };
+              }
+              return p;
+            });
           });
         }
-      } else {
-        // New item - deduct quantity from stock
-        quantityToDeduct = unitType === "stocking" ? unitsPerStocking : 1;
 
-        const updatedProduct: Product = {
-          ...product,
-          stock_quantity: Math.max(0, currentStock - quantityToDeduct),
-          current_stock_quantity: Math.max(0, currentStock - quantityToDeduct),
-        };
-
-        const newItem: OfflineSaleItem & {
-          unitType?: "stocking" | "sellable";
-        } = {
-          product_id: product.id,
-          product_name: product.name,
-          quantity: 1,
-          unit_price: price,
-          product: updatedProduct,
-          id: undefined, // New item
-          unitType: unitType,
-        };
-        newItems = [...prev.items, newItem];
-      }
-
-      // Update products state to reflect stock change
-      if (quantityToDeduct > 0) {
-        setProducts((prevProducts) => {
-          return prevProducts.map((p) => {
-            if (p.id === product.id) {
-              return {
-                ...p,
-                stock_quantity: Math.max(0, currentStock - quantityToDeduct),
-                current_stock_quantity: Math.max(0, currentStock - quantityToDeduct),
-              };
-            }
-            return p;
-          });
-        });
-      }
-
-      return offlineSaleService.calculateTotals({ ...prev, items: newItems });
-    });
-  }, [currentSale.is_synced, shift]);
+        return offlineSaleService.calculateTotals({ ...prev, items: newItems });
+      });
+    },
+    [currentSale.is_synced, shift]
+  );
 
   const updateQuantity = (productId: number, qty: number) => {
     if (currentSale.is_synced) {
@@ -469,7 +559,9 @@ export const PosPageOffline = () => {
     }
 
     // Find the current item to get old quantity
-    const currentItem = currentSale.items.find((i) => i.product_id === productId);
+    const currentItem = currentSale.items.find(
+      (i) => i.product_id === productId
+    );
     if (!currentItem) return;
 
     const product = currentItem.product as Product;
@@ -481,12 +573,10 @@ export const PosPageOffline = () => {
 
     // Calculate quantity difference in sellable units
     const oldQuantity = currentItem.quantity;
-    const oldQuantityInSellable = unitType === "stocking"
-      ? oldQuantity * unitsPerStocking
-      : oldQuantity;
-    const newQuantityInSellable = unitType === "stocking"
-      ? qty * unitsPerStocking
-      : qty;
+    const oldQuantityInSellable =
+      unitType === "stocking" ? oldQuantity * unitsPerStocking : oldQuantity;
+    const newQuantityInSellable =
+      unitType === "stocking" ? qty * unitsPerStocking : qty;
     const quantityDiff = newQuantityInSellable - oldQuantityInSellable;
 
     // Validate stock availability
@@ -494,7 +584,8 @@ export const PosPageOffline = () => {
       const requiredSellableQty = qty * unitsPerStocking;
       if (requiredSellableQty > currentStock) {
         toast.error(
-          `المخزون غير كافٍ. المتاح: ${currentStock} ${product?.sellable_unit_name || "قطعة"
+          `المخزون غير كافٍ. المتاح: ${currentStock} ${
+            product?.sellable_unit_name || "قطعة"
           }`
         );
         return;
@@ -502,7 +593,8 @@ export const PosPageOffline = () => {
     } else {
       if (qty > currentStock) {
         toast.error(
-          `المخزون غير كافٍ. المتاح: ${currentStock} ${product?.sellable_unit_name || "قطعة"
+          `المخزون غير كافٍ. المتاح: ${currentStock} ${
+            product?.sellable_unit_name || "قطعة"
           }`
         );
         return;
@@ -599,8 +691,10 @@ export const PosPageOffline = () => {
             );
             if (newQuantity === 0) {
               toast.error(
-                `الكمية الحالية (${currentQuantityInSellable} ${product?.sellable_unit_name || "قطعة"
-                }) غير كافية للتحويل إلى وحدة التخزين (يحتاج ${unitsPerStocking} ${product?.sellable_unit_name || "قطعة"
+                `الكمية الحالية (${currentQuantityInSellable} ${
+                  product?.sellable_unit_name || "قطعة"
+                }) غير كافية للتحويل إلى وحدة التخزين (يحتاج ${unitsPerStocking} ${
+                  product?.sellable_unit_name || "قطعة"
                 } على الأقل)`
               );
               return i;
@@ -633,7 +727,9 @@ export const PosPageOffline = () => {
     }
 
     // Find the item to get its quantity for stock restoration
-    const itemToRemove = currentSale.items.find((i) => i.product_id === productId);
+    const itemToRemove = currentSale.items.find(
+      (i) => i.product_id === productId
+    );
     let quantityToRestore = 0;
 
     if (itemToRemove) {
@@ -642,9 +738,10 @@ export const PosPageOffline = () => {
       const unitsPerStocking = product?.units_per_stocking_unit || 1;
 
       // Calculate quantity to restore in sellable units
-      quantityToRestore = unitType === "stocking"
-        ? itemToRemove.quantity * unitsPerStocking
-        : itemToRemove.quantity;
+      quantityToRestore =
+        unitType === "stocking"
+          ? itemToRemove.quantity * unitsPerStocking
+          : itemToRemove.quantity;
     }
 
     let shouldDeleteSale = false;
@@ -652,7 +749,10 @@ export const PosPageOffline = () => {
 
     updateCurrentSale((prev) => {
       const newItems = prev.items.filter((i) => i.product_id !== productId);
-      const updatedSale = offlineSaleService.calculateTotals({ ...prev, items: newItems });
+      const updatedSale = offlineSaleService.calculateTotals({
+        ...prev,
+        items: newItems,
+      });
 
       // Check if all items are removed and sale is pending
       if (newItems.length === 0 && prev.tempId && !prev.is_synced) {
@@ -692,7 +792,11 @@ export const PosPageOffline = () => {
         toast.success("تم حذف عملية البيع المعلقة تلقائياً");
 
         // Create a new draft sale
-        if (shift && shift.is_open) {
+        if (posMode === "days") {
+          const newDraft = offlineSaleService.createDraftSale(null);
+          setCurrentSale(newDraft);
+          shouldAutoSave.current = false;
+        } else if (shift && shift.is_open) {
           const newDraft = offlineSaleService.createDraftSale(shift.id);
           setCurrentSale(newDraft);
           shouldAutoSave.current = false;
@@ -743,70 +847,81 @@ export const PosPageOffline = () => {
   const [isLoadingDate, setIsLoadingDate] = useState(false);
 
   // Filter state from context
-  const { filterDate, filterSaleId, setFilterSaleId, registerFetchFunctions } = usePosFilters();
+  const { filterDate, filterSaleId, setFilterSaleId, registerFetchFunctions } =
+    usePosFilters();
 
   // Helper function to map backend Sale to OfflineSale format
-  const mapSaleToOfflineSale = useCallback(async (s: any): Promise<OfflineSale> => {
-    // Get current product data from IndexedDB to enrich with live stock
-    const allLocalProducts = await offlineSaleService.searchProducts("");
-    const productMap = new Map(allLocalProducts.map(p => [p.id, p]));
+  const mapSaleToOfflineSale = useCallback(
+    async (s: any): Promise<OfflineSale> => {
+      // Get current product data from IndexedDB to enrich with live stock
+      const allLocalProducts = await offlineSaleService.searchProducts("");
+      const productMap = new Map(allLocalProducts.map((p) => [p.id, p]));
 
-    return {
-      tempId: `server_${s.id}`,
-      id: s.id,
-      offline_created_at: new Date(s.created_at).getTime(),
-      is_synced: true,
-      shift_id: s.shift_id ? Number(s.shift_id) : null,
-      sale_date: s.sale_date,
-      total_amount: Number(s.total_amount),
-      paid_amount: Number(s.paid_amount),
-      client_id: s.client_id,
-      client_name: s.client_name,
-      invoice_number: s.invoice_number,
-      sale_order_number: s.sale_order_number,
-      status: "completed",
-      is_returned: Boolean(s.is_returned),
-      discount_amount: s.discount_amount ? Number(s.discount_amount) : undefined,
-      discount_type: s.discount_type || undefined,
-      items:
-        s.items?.map((i: any) => {
-          // Try to get current product data from IndexedDB for live stock info
-          const currentProduct = productMap.get(i.product_id);
+      return {
+        tempId: `server_${s.id}`,
+        id: s.id,
+        offline_created_at: new Date(s.created_at).getTime(),
+        is_synced: true,
+        shift_id: s.shift_id ? Number(s.shift_id) : null,
+        sale_date: s.sale_date,
+        total_amount: Number(s.total_amount),
+        paid_amount: Number(s.paid_amount),
+        client_id: s.client_id,
+        client_name: s.client_name,
+        invoice_number: s.invoice_number,
+        sale_order_number: s.sale_order_number,
+        status: "completed",
+        is_returned: Boolean(s.is_returned),
+        discount_amount: s.discount_amount
+          ? Number(s.discount_amount)
+          : undefined,
+        discount_type: s.discount_type || undefined,
+        items:
+          s.items?.map((i: any) => {
+            // Try to get current product data from IndexedDB for live stock info
+            const currentProduct = productMap.get(i.product_id);
 
-          return {
-            product_id: i.product_id,
-            quantity: i.quantity,
-            unit_price: Number(i.unit_price),
-            product: currentProduct || i.product || {
-              id: i.product_id,
-              name: i.product_name || "Unknown Product",
-              sku: i.product_sku || "",
-              stock_quantity: 0,
-              available_batches: [],
-            },
-            product_name: currentProduct?.name || i.product?.name || i.product_name,
-            purchase_item_id: i.purchase_item_id,
-          };
-        }) || [],
-      payments: s.payments || [],
-      notes: s.notes,
-      created_at: s.created_at,
-      user_id: s.user_id,
-    };
-  }, []);
+            return {
+              product_id: i.product_id,
+              quantity: i.quantity,
+              unit_price: Number(i.unit_price),
+              product: currentProduct ||
+                i.product || {
+                  id: i.product_id,
+                  name: i.product_name || "Unknown Product",
+                  sku: i.product_sku || "",
+                  stock_quantity: 0,
+                  available_batches: [],
+                },
+              product_name:
+                currentProduct?.name || i.product?.name || i.product_name,
+              purchase_item_id: i.purchase_item_id,
+            };
+          }) || [],
+        payments: s.payments || [],
+        notes: s.notes,
+        created_at: s.created_at,
+        user_id: s.user_id,
+      };
+    },
+    []
+  );
 
   // Select sale from history (will be used in fetchSaleById)
   const handleSelectPendingSale = useCallback(async (sale: OfflineSale) => {
-    console.log("[Discount] handleSelectPendingSale: loading sale with discount:", {
-      discount_amount: sale.discount_amount,
-      discount_type: sale.discount_type,
-      tempId: sale.tempId,
-    });
+    console.log(
+      "[Discount] handleSelectPendingSale: loading sale with discount:",
+      {
+        discount_amount: sale.discount_amount,
+        discount_type: sale.discount_type,
+        tempId: sale.tempId,
+      }
+    );
     // Always refresh product data from IndexedDB to get current stock for all sales
     if (sale.items.length > 0) {
       try {
         const allLocalProducts = await offlineSaleService.searchProducts("");
-        const productMap = new Map(allLocalProducts.map(p => [p.id, p]));
+        const productMap = new Map(allLocalProducts.map((p) => [p.id, p]));
 
         // Update sale items with fresh product data
         const updatedItems = sale.items.map((item) => {
@@ -829,10 +944,13 @@ export const PosPageOffline = () => {
           discount_type: sale.discount_type,
         };
 
-        console.log("[Discount] handleSelectPendingSale: setting sale with discount:", {
-          discount_amount: updatedSale.discount_amount,
-          discount_type: updatedSale.discount_type,
-        });
+        console.log(
+          "[Discount] handleSelectPendingSale: setting sale with discount:",
+          {
+            discount_amount: updatedSale.discount_amount,
+            discount_type: updatedSale.discount_type,
+          }
+        );
 
         setCurrentSale(updatedSale);
       } catch (error) {
@@ -846,69 +964,85 @@ export const PosPageOffline = () => {
   }, []);
 
   // Fetch sale by ID from backend
-  const fetchSaleById = useCallback(async (id: number) => {
-    try {
-      const sale = await saleService.getSale(id);
-      const offlineSale = await mapSaleToOfflineSale(sale);
+  const fetchSaleById = useCallback(
+    async (id: number) => {
+      try {
+        const sale = await saleService.getSale(id);
+        const offlineSale = await mapSaleToOfflineSale(sale);
 
-      // Add to synced sales if not already there
-      setSyncedSales((prev) => {
-        const exists = prev.find((s) => s.id === offlineSale.id);
-        if (exists) {
-          return prev;
-        }
-        return [offlineSale, ...prev].sort((a, b) => b.offline_created_at - a.offline_created_at);
-      });
+        // Add to synced sales if not already there
+        setSyncedSales((prev) => {
+          const exists = prev.find((s) => s.id === offlineSale.id);
+          if (exists) {
+            return prev;
+          }
+          return [offlineSale, ...prev].sort(
+            (a, b) => b.offline_created_at - a.offline_created_at
+          );
+        });
 
-      // Select the fetched sale
-      await handleSelectPendingSale(offlineSale);
+        // Select the fetched sale
+        await handleSelectPendingSale(offlineSale);
 
-      // Clear the ID input
-      setFilterSaleId("");
+        // Clear the ID input
+        setFilterSaleId("");
 
-      toast.success(`تم العثور على عملية البيع #${id}`);
-    } catch (error: any) {
-      console.error("Error fetching sale by ID:", error);
-      const errorMsg = error?.response?.data?.message || error?.message || "فشل جلب عملية البيع";
-      toast.error(errorMsg);
-    }
-  }, [mapSaleToOfflineSale, setFilterSaleId, handleSelectPendingSale]);
+        toast.success(`تم العثور على عملية البيع #${id}`);
+      } catch (error: any) {
+        console.error("Error fetching sale by ID:", error);
+        const errorMsg =
+          error?.response?.data?.message ||
+          error?.message ||
+          "فشل جلب عملية البيع";
+        toast.error(errorMsg);
+      }
+    },
+    [mapSaleToOfflineSale, setFilterSaleId, handleSelectPendingSale]
+  );
 
   // Fetch sales by date from backend
-  const fetchSalesByDate = useCallback(async (date: string) => {
-    setIsLoadingDate(true);
-    try {
-      // Fetch sales for the selected date
-      const response = await saleService.getSales(
-        1,
-        `start_date=${date}&end_date=${date}`,
-        "",
-        date,
-        date,
-        1000 // Large limit to get all sales for the day
-      );
+  const fetchSalesByDate = useCallback(
+    async (date: string) => {
+      setIsLoadingDate(true);
+      try {
+        // Fetch sales for the selected date
+        const response = await saleService.getSales(
+          1,
+          `start_date=${date}&end_date=${date}`,
+          "",
+          date,
+          date,
+          1000 // Large limit to get all sales for the day
+        );
 
-      const serverSalesData = response.data || [];
+        const serverSalesData = response.data || [];
 
-      // Map all sales to OfflineSale format
-      const mappedSales = await Promise.all(
-        serverSalesData.map((s: any) => mapSaleToOfflineSale(s))
-      );
+        // Map all sales to OfflineSale format
+        const mappedSales = await Promise.all(
+          serverSalesData.map((s: any) => mapSaleToOfflineSale(s))
+        );
 
-      // Update synced sales with fetched data
-      setSyncedSales(
-        mappedSales.sort((a, b) => b.offline_created_at - a.offline_created_at)
-      );
+        // Update synced sales with fetched data
+        setSyncedSales(
+          mappedSales.sort(
+            (a, b) => b.offline_created_at - a.offline_created_at
+          )
+        );
 
-      toast.success(`تم جلب ${mappedSales.length} عملية بيع للتاريخ ${date}`);
-    } catch (error: any) {
-      console.error("Error fetching sales by date:", error);
-      const errorMsg = error?.response?.data?.message || error?.message || "فشل جلب المبيعات";
-      toast.error(errorMsg);
-    } finally {
-      setIsLoadingDate(false);
-    }
-  }, [mapSaleToOfflineSale]);
+        toast.success(`تم جلب ${mappedSales.length} عملية بيع للتاريخ ${date}`);
+      } catch (error: any) {
+        console.error("Error fetching sales by date:", error);
+        const errorMsg =
+          error?.response?.data?.message ||
+          error?.message ||
+          "فشل جلب المبيعات";
+        toast.error(errorMsg);
+      } finally {
+        setIsLoadingDate(false);
+      }
+    },
+    [mapSaleToOfflineSale]
+  );
 
   // Register fetch functions with context
   useEffect(() => {
@@ -918,15 +1052,21 @@ export const PosPageOffline = () => {
       isLoadingId,
       isLoadingDate
     );
-  }, [fetchSaleById, fetchSalesByDate, isLoadingId, isLoadingDate, registerFetchFunctions]);
+  }, [
+    fetchSaleById,
+    fetchSalesByDate,
+    isLoadingId,
+    isLoadingDate,
+    registerFetchFunctions,
+  ]);
 
-  // Reload normal sales when date filter is cleared
+  // Reload normal sales when date filter is cleared (shift mode only)
   useEffect(() => {
-    if (!filterDate && selectedShiftId) {
+    if (posMode === "shift" && !filterDate && selectedShiftId) {
       // Date filter was cleared, reload normal sales for the shift
       loadSyncedSales();
     }
-  }, [filterDate, selectedShiftId]); // Note: loadSyncedSales is intentionally not in deps to avoid loops
+  }, [filterDate, selectedShiftId, posMode]); // Note: loadSyncedSales is intentionally not in deps to avoid loops
 
   // Load local pending (unsynced) sales from IndexedDB
   const loadLocalPendingSales = useCallback(async () => {
@@ -935,19 +1075,33 @@ export const PosPageOffline = () => {
     // Filter only unsynced sales
     const unsyncedSales = sales.filter((s) => !s.is_synced);
 
-    // Filter by selected shift ID if set
+    // Filter by mode
     let filteredSales = unsyncedSales;
-    if (selectedShiftId) {
-      filteredSales = unsyncedSales.filter(
-        (s) => s.shift_id && Number(s.shift_id) === Number(selectedShiftId)
-      );
+    if (posMode === "days") {
+      // Filter by date in days mode
+      const selectedDateStart = new Date(selectedDate);
+      selectedDateStart.setHours(0, 0, 0, 0);
+      const selectedDateEnd = new Date(selectedDate);
+      selectedDateEnd.setHours(23, 59, 59, 999);
+
+      filteredSales = unsyncedSales.filter((s) => {
+        const saleDate = new Date(s.offline_created_at);
+        return saleDate >= selectedDateStart && saleDate <= selectedDateEnd;
+      });
+    } else {
+      // Filter by selected shift ID in shift mode
+      if (selectedShiftId) {
+        filteredSales = unsyncedSales.filter(
+          (s) => s.shift_id && Number(s.shift_id) === Number(selectedShiftId)
+        );
+      }
     }
 
     // Sort by date desc
     setLocalPendingSales(
       filteredSales.sort((a, b) => b.offline_created_at - a.offline_created_at)
     );
-  }, [selectedShiftId]);
+  }, [selectedShiftId, posMode, selectedDate]);
 
   // Track if loadSyncedSales is currently running to prevent concurrent calls
   const isLoadingSyncedSalesRef = useRef(false);
@@ -956,9 +1110,47 @@ export const PosPageOffline = () => {
 
   // Load synced sales from server API (always fetch fresh)
   const loadSyncedSales = useCallback(async () => {
-    if (!selectedShiftId) {
-      setSyncedSales([]);
-      return;
+    // In days mode, require selectedDate; in shift mode, require selectedShiftId
+    console.log("[loadSyncedSales] Called with:", {
+      posMode,
+      selectedDate,
+      selectedShiftId,
+      timestamp: new Date().toISOString(),
+    });
+
+    if (posMode === "days") {
+      // In days mode, ensure selectedShiftId is cleared and selectedDate is set
+      if (selectedShiftId !== null) {
+        // State is inconsistent - wait for cleanup to complete
+        console.warn(
+          "[loadSyncedSales] Days mode but selectedShiftId is not null, skipping"
+        );
+        return;
+      }
+      if (!selectedDate) {
+        console.warn(
+          "[loadSyncedSales] Days mode but no selectedDate, clearing sales"
+        );
+        setSyncedSales([]);
+        return;
+      }
+      console.log(
+        "[loadSyncedSales] Days mode: fetching sales for date",
+        selectedDate
+      );
+    } else {
+      // In shift mode, ensure selectedShiftId is set
+      if (!selectedShiftId) {
+        console.warn(
+          "[loadSyncedSales] Shift mode but no selectedShiftId, clearing sales"
+        );
+        setSyncedSales([]);
+        return;
+      }
+      console.log(
+        "[loadSyncedSales] Shift mode: fetching sales for shift",
+        selectedShiftId
+      );
     }
 
     // Prevent concurrent calls
@@ -979,14 +1171,21 @@ export const PosPageOffline = () => {
     // Try to fetch regardless of isOnline status
     // Don't clear existing synced sales if fetch fails - keep them visible
     try {
-      const res = await apiClient.get(
-        `/sales?shift_id=${selectedShiftId}&per_page=100`
-      );
+      let apiUrl = "";
+      if (posMode === "days") {
+        // Use date-based query in days mode
+        apiUrl = `/sales?start_date=${selectedDate}&end_date=${selectedDate}&per_page=100`;
+      } else {
+        // Use shift_id query in shift mode
+        apiUrl = `/sales?shift_id=${selectedShiftId}&per_page=100`;
+      }
+
+      const res = await apiClient.get(apiUrl);
       const serverSalesData = res.data.data || [];
 
       // Get current product data from IndexedDB to enrich with live stock
       const allLocalProducts = await offlineSaleService.searchProducts("");
-      const productMap = new Map(allLocalProducts.map(p => [p.id, p]));
+      const productMap = new Map(allLocalProducts.map((p) => [p.id, p]));
 
       const mapped: OfflineSale[] = serverSalesData.map((s: any) => ({
         tempId: `server_${s.id}`,
@@ -1003,7 +1202,9 @@ export const PosPageOffline = () => {
         sale_order_number: s.sale_order_number,
         status: "completed",
         is_returned: Boolean(s.is_returned),
-        discount_amount: s.discount_amount ? Number(s.discount_amount) : undefined,
+        discount_amount: s.discount_amount
+          ? Number(s.discount_amount)
+          : undefined,
         discount_type: s.discount_type || undefined,
         items:
           s.items?.map((i: any) => {
@@ -1014,14 +1215,16 @@ export const PosPageOffline = () => {
               product_id: i.product_id,
               quantity: i.quantity,
               unit_price: Number(i.unit_price),
-              product: currentProduct || i.product || {
-                id: i.product_id,
-                name: i.product_name || "Unknown Product",
-                sku: i.product_sku || "",
-                stock_quantity: 0,
-                available_batches: [],
-              },
-              product_name: currentProduct?.name || i.product?.name || i.product_name,
+              product: currentProduct ||
+                i.product || {
+                  id: i.product_id,
+                  name: i.product_name || "Unknown Product",
+                  sku: i.product_sku || "",
+                  stock_quantity: 0,
+                  available_batches: [],
+                },
+              product_name:
+                currentProduct?.name || i.product?.name || i.product_name,
               purchase_item_id: i.purchase_item_id,
             };
           }) || [],
@@ -1042,7 +1245,7 @@ export const PosPageOffline = () => {
     } finally {
       isLoadingSyncedSalesRef.current = false;
     }
-  }, [selectedShiftId]);
+  }, [selectedShiftId, posMode, selectedDate]);
 
   // Update available shift IDs from both sources
   const updateAvailableShiftIds = useCallback(async () => {
@@ -1067,20 +1270,42 @@ export const PosPageOffline = () => {
   const prevIsOnlineRef = useRef<boolean | null>(null);
   const lastLoadTimeRef = useRef<number>(0);
   const lastShiftIdRef = useRef<number | null>(null);
+  const lastSelectedDateRef = useRef<string | null>(null);
   const LOAD_DEBOUNCE_MS = 5000; // Don't reload more than once every 5 seconds
 
-  // Reload when shift or selectedShiftId changes (but not on every render)
+  // Reload when shift/selectedShiftId changes (shift mode) or selectedDate changes (days mode)
   useEffect(() => {
-    const currentShiftId = selectedShiftId || shift?.id || null;
+    // Wait a tick to ensure mode state is fully initialized
+    const timer = setTimeout(() => {
+      if (posMode === "days") {
+        // In days mode, reload when selectedDate changes
+        if (selectedDate !== lastSelectedDateRef.current) {
+          console.log("[Days Mode] Reloading sales for date:", selectedDate);
+          lastSelectedDateRef.current = selectedDate;
+          loadLocalPendingSales();
+          loadSyncedSales();
+          lastLoadTimeRef.current = Date.now();
+        }
+      } else {
+        // In shift mode, reload when shift changes
+        const currentShiftId = selectedShiftId || shift?.id || null;
 
-    // Only reload if shift actually changed
-    if (currentShiftId !== lastShiftIdRef.current) {
-      lastShiftIdRef.current = currentShiftId;
-      loadLocalPendingSales();
-      loadSyncedSales();
-      lastLoadTimeRef.current = Date.now();
-    }
-  }, [selectedShiftId, shift?.id]); // Removed function dependencies to prevent loops
+        // Only reload if shift actually changed
+        if (currentShiftId !== lastShiftIdRef.current) {
+          console.log(
+            "[Shift Mode] Reloading sales for shift:",
+            currentShiftId
+          );
+          lastShiftIdRef.current = currentShiftId;
+          loadLocalPendingSales();
+          loadSyncedSales();
+          lastLoadTimeRef.current = Date.now();
+        }
+      }
+    }, 100); // Small delay to ensure state is settled
+
+    return () => clearTimeout(timer);
+  }, [selectedShiftId, shift?.id, posMode, selectedDate]); // Removed function dependencies to prevent loops
 
   // Separate effect to handle coming back online (without causing loop)
   useEffect(() => {
@@ -1118,7 +1343,7 @@ export const PosPageOffline = () => {
     shouldAutoSave.current = true;
 
     // If action is a function, we need to get the current sale first
-    if (typeof action === 'function') {
+    if (typeof action === "function") {
       setCurrentSale((prev) => {
         const updated = action(prev);
         console.log("[Discount] updateCurrentSale (function):", {
@@ -1179,7 +1404,16 @@ export const PosPageOffline = () => {
     await loadSyncedSales();
 
     // Reset
-    if (shift && shift.is_open) {
+    if (posMode === "days") {
+      // In days mode, create new draft without shift
+      const newDraft = offlineSaleService.createDraftSale(null);
+      setCurrentSale(newDraft);
+      shouldAutoSave.current = false;
+      setTimeout(() => {
+        headerRef.current?.focusSearch();
+      }, 100);
+    } else if (shift && shift.is_open) {
+      // In shift mode, require shift
       const newDraft = offlineSaleService.createDraftSale(shift.id);
       // await offlineSaleService.saveDraft(newDraft); // DONT SAVE IMMEDIATELY
       setCurrentSale(newDraft);
@@ -1197,9 +1431,21 @@ export const PosPageOffline = () => {
     }
   };
 
-
   // Create new sale
   const handleNewSale = useCallback(async () => {
+    // In days mode, skip shift validation
+    if (posMode === "days") {
+      const newSale = offlineSaleService.createDraftSale(null);
+      await offlineSaleService.saveDraft(newSale);
+      setCurrentSale(newSale);
+      await loadLocalPendingSales();
+      setTimeout(() => {
+        headerRef.current?.focusSearch();
+      }, 100);
+      return;
+    }
+
+    // Shift mode: require shift
     let currentShift = shift;
 
     // Refresh shift state if online and shift is null/stale
@@ -1210,10 +1456,16 @@ export const PosPageOffline = () => {
           const shiftData = response.data.data || response.data;
           const normalizedShift = {
             ...shiftData,
-            is_open: shiftData.is_open === true || shiftData.is_open === "true" || shiftData.is_open === 1,
+            is_open:
+              shiftData.is_open === true ||
+              shiftData.is_open === "true" ||
+              shiftData.is_open === 1,
           };
           setShift(normalizedShift);
-          localStorage.setItem("current_pos_shift", JSON.stringify(normalizedShift));
+          localStorage.setItem(
+            "current_pos_shift",
+            JSON.stringify(normalizedShift)
+          );
           if (!selectedShiftId && normalizedShift?.id) {
             setSelectedShiftId(normalizedShift.id);
           }
@@ -1227,7 +1479,11 @@ export const PosPageOffline = () => {
     }
 
     // More robust check for shift.is_open (handle boolean, string, or undefined)
-    const isShiftOpen = currentShift?.is_open === true || (typeof currentShift?.is_open === "string" && currentShift.is_open === "true") || (typeof currentShift?.is_open === "number" && currentShift.is_open === 1);
+    const isShiftOpen =
+      currentShift?.is_open === true ||
+      (typeof currentShift?.is_open === "string" &&
+        currentShift.is_open === "true") ||
+      (typeof currentShift?.is_open === "number" && currentShift.is_open === 1);
 
     if (!currentShift || !isShiftOpen) {
       console.log("Cannot create sale - Shift state:", currentShift);
@@ -1251,7 +1507,7 @@ export const PosPageOffline = () => {
     setTimeout(() => {
       headerRef.current?.focusSearch();
     }, 100);
-  }, [shift, loadLocalPendingSales, isOnline, selectedShiftId]);
+  }, [shift, loadLocalPendingSales, isOnline, selectedShiftId, posMode]);
 
   // --- Adapters ---
 
@@ -1291,7 +1547,12 @@ export const PosPageOffline = () => {
 
     // If the deleted sale is the current one, switch to a new draft
     if (currentSale.tempId === sale.tempId) {
-      if (shift && shift.is_open) {
+      if (posMode === "days") {
+        // In days mode, create new draft without shift
+        const newDraft = offlineSaleService.createDraftSale(null);
+        setCurrentSale(newDraft);
+        await loadLocalPendingSales();
+      } else if (shift && shift.is_open) {
         handleNewSale();
       } else {
         // Fallback: clear to empty draft in memory without saving
@@ -1387,6 +1648,8 @@ export const PosPageOffline = () => {
         selectedShiftId={selectedShiftId}
         availableShiftIds={availableShiftIds}
         onShiftSelect={setSelectedShiftId}
+        selectedDate={selectedDate}
+        onDateSelect={setSelectedDate}
         products={products}
         onAddToCart={(product) => addToCart(product, "sellable")}
         onNewSale={handleNewSale}
@@ -1394,6 +1657,7 @@ export const PosPageOffline = () => {
         onPaymentShortcut={handlePlusAction}
         onPrintShiftReport={() => setIsShiftReportOpen(true)}
         isPageLoading={isPageLoading}
+        posMode={posMode}
       />
 
       <Box
@@ -1564,18 +1828,17 @@ export const PosPageOffline = () => {
                 shift && shift.id === selectedShiftId
                   ? shift
                   : {
-                    id: selectedShiftId || 0,
-                    opened_at: null,
-                    closed_at: null,
-                    is_open: false,
-                  }
+                      id: selectedShiftId || 0,
+                      opened_at: null,
+                      closed_at: null,
+                      is_open: false,
+                    }
               }
               userName="الكاشير"
             />
           </PDFViewer>
         </DialogContent>
       </Dialog>
-
     </Box>
   );
 };

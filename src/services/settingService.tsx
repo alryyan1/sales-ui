@@ -38,6 +38,11 @@ export interface AppSettings {
   logo_height?: number;
   logo_width?: number;
   pdf_font?: string;
+  pos_mode?: "shift" | "days"; // POS operation mode: shift-based or day-based
+  product_images_show_in_list?: boolean;
+  product_images_show_in_pos?: boolean;
+  product_images_show_in_invoices?: boolean;
+  product_images_show_in_reports?: boolean;
 }
 
 // Type for the update payload (can be partial)
