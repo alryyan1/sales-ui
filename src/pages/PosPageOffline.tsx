@@ -9,14 +9,14 @@ import {
   Box,
   Paper,
   IconButton,
-  Tooltip,
   Dialog,
   DialogContent,
   DialogTitle,
   CircularProgress,
   Typography,
+  Divider,
 } from "@mui/material";
-import { Cloud, Clock, X } from "lucide-react";
+import { X } from "lucide-react";
 import apiClient from "@/lib/axios";
 import { PDFViewer } from "@react-pdf/renderer";
 import { useAuth } from "@/context/AuthContext";
@@ -227,9 +227,11 @@ export const PosPageOffline = () => {
 
   // Dialog State
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [isSyncedView, setIsSyncedView] = useState(true);
   const [isShiftReportOpen, setIsShiftReportOpen] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(true);
+  
+  // Track sales that are currently being processed/completed
+  const [processingSales, setProcessingSales] = useState<Set<string>>(new Set());
 
   // Load Products and Clients on Mount & Auto-update
   useEffect(() => {
@@ -1530,6 +1532,13 @@ export const PosPageOffline = () => {
   const headerRef = useRef<{ focusSearch: () => void }>(null);
 
   const handleCompleteSale = async () => {
+    const saleTempId = currentSale.tempId;
+    
+    // Add sale to processing set
+    if (saleTempId) {
+      setProcessingSales((prev) => new Set(prev).add(saleTempId));
+    }
+    
     try {
       // Check if this is a synced sale (already exists on backend)
       const isSynced = currentSale.is_synced && currentSale.id;
@@ -1572,6 +1581,15 @@ export const PosPageOffline = () => {
       const msg =
         error?.response?.data?.message || error?.message || "Unknown error";
       toast.warning(`Saved offline. Sync failed: ${msg}`);
+    } finally {
+      // Remove sale from processing set
+      if (saleTempId) {
+        setProcessingSales((prev) => {
+          const next = new Set(prev);
+          next.delete(saleTempId);
+          return next;
+        });
+      }
     }
 
     // Reload sales lists
@@ -1796,6 +1814,12 @@ export const PosPageOffline = () => {
           toast.success("تم حفظ المسودة");
         }
       }
+
+      // Spacebar: New sale
+      if (e.key === " ") {
+        e.preventDefault();
+        handleNewSale();
+      }
     };
 
     window.addEventListener("keydown", handleGlobalKeyDown);
@@ -1863,7 +1887,7 @@ export const PosPageOffline = () => {
           gap: 2,
         }}
       >
-        {/* LEFT: PENDING SALES COLUMN */}
+        {/* LEFT: SALES COLUMNS (SYNCED + PENDING) */}
         <Paper
           elevation={0}
           sx={{
@@ -1876,52 +1900,55 @@ export const PosPageOffline = () => {
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
+            height: "100%",
           }}
         >
-          {/* Toggle Header */}
+          {/* Synced Sales Section */}
           <Box
             sx={{
-              p: 1,
-              borderBottom: "1px solid",
-              borderColor: "divider",
+              flex: 1,
+              overflow: "hidden",
               display: "flex",
-              justifyContent: "center",
+              flexDirection: "column",
+              minHeight: 0,
             }}
           >
-            <Tooltip
-              title={
-                isSyncedView ? "عرض المبيعات المعلقة" : "عرض المبيعات المتزامنة"
-              }
-            >
-              <IconButton
-                onClick={() => setIsSyncedView(!isSyncedView)}
-                size="small"
-                sx={{
-                  width: "100%",
-                  borderRadius: 1,
-                  bgcolor: isSyncedView ? "#ecfdf5" : "#fffbeb",
-                  color: isSyncedView ? "#059669" : "#d97706",
-                  border: "1px solid",
-                  borderColor: isSyncedView ? "#a7f3d0" : "#fde68a",
-                  "&:hover": {
-                    bgcolor: isSyncedView ? "#d1fae5" : "#fef3c7",
-                  },
-                }}
-              >
-                {isSyncedView ? <Cloud size={18} /> : <Clock size={18} />}
-              </IconButton>
-            </Tooltip>
+            <PendingSalesColumn
+              sales={syncedSales}
+              selectedSaleId={currentSale.tempId}
+              onSaleSelect={handleSelectPendingSale}
+              onDelete={handleDeletePendingSale}
+              title="SYNCED"
+              isOffline={!isOnline}
+              onRefresh={loadSyncedSales}
+              processingSaleIds={processingSales}
+            />
           </Box>
 
-          <PendingSalesColumn
-            sales={isSyncedView ? syncedSales : localPendingSales}
-            selectedSaleId={currentSale.tempId}
-            onSaleSelect={handleSelectPendingSale}
-            onDelete={handleDeletePendingSale}
-            title={isSyncedView ? "SYNCED" : "PENDING"}
-            isOffline={!isOnline && isSyncedView}
-            onRefresh={isSyncedView ? loadSyncedSales : undefined}
-          />
+          {/* Divider */}
+          <Divider />
+
+          {/* Pending Sales Section */}
+          <Box
+            sx={{
+              flex: 1,
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+              minHeight: 0,
+            }}
+          >
+            <PendingSalesColumn
+              sales={localPendingSales}
+              selectedSaleId={currentSale.tempId}
+              onSaleSelect={handleSelectPendingSale}
+              onDelete={handleDeletePendingSale}
+              title="PENDING"
+              isOffline={false}
+              onRefresh={undefined}
+              processingSaleIds={processingSales}
+            />
+          </Box>
         </Paper>
 
         {/* MIDDLE: MAIN TABLE AREA */}

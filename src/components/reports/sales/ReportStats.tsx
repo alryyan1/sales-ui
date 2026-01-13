@@ -179,7 +179,7 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
       icon: <TrendingUp size={24} />,
       color: "#6366f1",
       gradient: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
-      subtitle: `الصافي: ${formatNumber(summaryStats.totalNet)}`,
+      // subtitle: `الصافي: ${formatNumber(summaryStats.totalNet)}`,
     },
     {
       title: "المدفوع",
@@ -190,7 +190,7 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
       extra: (
         <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-            <Wallet size={12} style={{ opacity: 0.7 }} />
+            نقدي
             <Typography
               variant="caption"
               sx={{ opacity: 0.9, fontWeight: 600 }}
@@ -199,7 +199,7 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
             </Typography>
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-            <Building2 size={12} style={{ opacity: 0.7 }} />
+            بنكك
             <Typography
               variant="caption"
               sx={{ opacity: 0.9, fontWeight: 600 }}
@@ -234,7 +234,7 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
       extra: (
         <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-            <Wallet size={12} style={{ opacity: 0.7 }} />
+            نقدي
             <Typography
               variant="caption"
               sx={{ opacity: 0.9, fontWeight: 600 }}
@@ -243,7 +243,7 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
             </Typography>
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-            <Building2 size={12} style={{ opacity: 0.7 }} />
+            بنكك
             <Typography
               variant="caption"
               sx={{ opacity: 0.9, fontWeight: 600 }}

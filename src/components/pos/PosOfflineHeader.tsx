@@ -569,7 +569,7 @@ export const PosOfflineHeader = React.forwardRef<
             )}
 
             {/* Date Picker - Only show in days mode */}
-            {posMode === "days" && (
+            {/* {posMode === "days" && (
               <Box
                 sx={{
                   display: { xs: "none", lg: "flex" },
@@ -602,7 +602,7 @@ export const PosOfflineHeader = React.forwardRef<
                   }}
                 />
               </Box>
-            )}
+            )} */}
 
             {/* Sync Trigger */}
             <Tooltip title={isSyncing ? "جاري المزامنة..." : "مزامنة البيانات"}>

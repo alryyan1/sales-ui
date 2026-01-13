@@ -170,13 +170,38 @@ export const offlineSaleService = {
           });
 
           // If successful, update local pending sale to synced
+          // Merge payments: prefer backend payments but ensure method field is preserved
+          // Match payments by amount and date to preserve method from offline payments if backend is missing it
+          const backendPayments = createdSale.payments || [];
+          const offlinePayments = offlineSale.payments || [];
+          
+          const mergedPayments = backendPayments.map((backendPayment: any) => {
+            // Try to find matching offline payment by amount and date
+            const matchingOfflinePayment = offlinePayments.find(
+              (offlinePayment: any) =>
+                Number(offlinePayment.amount) === Number(backendPayment.amount) &&
+                offlinePayment.payment_date === backendPayment.payment_date
+            );
+            
+            return {
+              ...backendPayment,
+              method: backendPayment.method || matchingOfflinePayment?.method || 'cash', // Ensure method is always present
+            };
+          });
+          
+          // If backend didn't return payments but we have offline payments, use offline payments
+          const finalPayments = mergedPayments.length > 0 ? mergedPayments : offlinePayments.map((p: any) => ({
+            ...p,
+            method: p.method || 'cash', // Ensure method is always present
+          }));
+          
           const syncedSale: OfflineSale = {
             ...offlineSale,
             is_synced: true,
             id: createdSale.id,
             invoice_number: createdSale.invoice_number,
             sale_order_number: createdSale.sale_order_number ?? null,
-            payments: createdSale.payments || offlineSale.payments || [], // Preserve payments from server response
+            payments: finalPayments,
             paid_amount: createdSale.paid_amount || offlineSale.paid_amount || 0, // Update paid_amount from server
           };
           await dbService.savePendingSale(syncedSale);

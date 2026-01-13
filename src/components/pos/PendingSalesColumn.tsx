@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Box, Typography, CircularProgress } from "@mui/material";
+import { Box, Typography, CircularProgress, Skeleton } from "@mui/material";
 import { OfflineSale } from "../../services/db";
 import { PendingSaleBox } from "./PendingSaleBox";
 import { useSettings } from "../../context/SettingsContext";
@@ -13,6 +13,7 @@ interface PendingSalesColumnProps {
   title?: string;
   isOffline?: boolean;
   onRefresh?: () => void;
+  processingSaleIds?: Set<string>;
 }
 
 export const PendingSalesColumn: React.FC<PendingSalesColumnProps> = ({
@@ -23,6 +24,7 @@ export const PendingSalesColumn: React.FC<PendingSalesColumnProps> = ({
   title,
   isOffline = false,
   onRefresh,
+  processingSaleIds = new Set(),
 }) => {
   const { getSetting, isLoadingSettings } = useSettings();
   const { user, isLoading: isLoadingUser } = useAuth();
@@ -50,7 +52,7 @@ export const PendingSalesColumn: React.FC<PendingSalesColumnProps> = ({
   return (
     <Box
       sx={{
-        height: "100%",
+        flex: 1,
         display: "flex",
         flexDirection: "column",
         // borderRight removed from here, container handles border
@@ -62,6 +64,7 @@ export const PendingSalesColumn: React.FC<PendingSalesColumnProps> = ({
         pb: 2,
         bgcolor: "white",
         minWidth: 80,
+        minHeight: 0,
       }}
     >
       <Typography
@@ -86,17 +89,40 @@ export const PendingSalesColumn: React.FC<PendingSalesColumnProps> = ({
         </Box>
       )}
 
-      {isReady && filteredSales.map((sale, index) => (
-        <PendingSaleBox
-          key={sale.tempId}
-          sale={sale}
-          selectedSaleId={selectedSaleId}
-          onSaleSelect={onSaleSelect}
-          index={filteredSales.length - index}
-          onDelete={onDelete}
-          onRefresh={onRefresh}
-        />
-      ))}
+      {isReady && filteredSales.map((sale, index) => {
+        const isProcessing = processingSaleIds.has(sale.tempId);
+        
+        // Show skeleton loader while processing
+        if (isProcessing) {
+          return (
+            <Skeleton
+              key={sale.tempId}
+              variant="rectangular"
+              width={50}
+              height={50}
+              sx={{
+                borderRadius: 1,
+                mb: 0.2,
+              }}
+              animation="wave"
+            />
+          );
+        }
+        
+        // Show normal sale box when not processing
+        return (
+          <PendingSaleBox
+            key={sale.tempId}
+            sale={sale}
+            selectedSaleId={selectedSaleId}
+            onSaleSelect={onSaleSelect}
+            index={filteredSales.length - index}
+            onDelete={onDelete}
+            onRefresh={onRefresh}
+            isProcessing={false}
+          />
+        );
+      })}
 
       {isReady && filteredSales.length === 0 && (
         <Typography

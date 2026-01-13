@@ -161,15 +161,22 @@ export const OfflineSaleSummaryColumn: React.FC<
   const isDiscountApplied = actualDiscountValue > 0;
 
   // Paid amount
-  const payments = currentSale.payments || [];
+  // Ensure all payments have a method field, defaulting to 'cash' if missing
+  const payments = (currentSale.payments || []).map((p) => ({
+    ...p,
+    method: p.method || 'cash', // Ensure method is always present
+  }));
   const paidAmount = preciseSum(
     payments.map((p) => Number(p.amount)),
     2
   );
+  console.log("payments", payments);
 
   // Helper function to translate payment methods to Arabic
-  const getPaymentMethodLabel = (method: PaymentMethod): string => {
-    const methodMap: Record<PaymentMethod, string> = {
+  const getPaymentMethodLabel = (method: string | undefined | null): string => {
+    if (!method) return "أخرى";
+    
+    const methodMap: Record<string, string> = {
       cash: "نقدي",
       visa: "فيزا",
       mastercard: "ماستركارد",
@@ -179,7 +186,8 @@ export const OfflineSaleSummaryColumn: React.FC<
       other: "أخرى",
       refund: "استرداد",
     };
-    return methodMap[method] || method;
+    
+    return methodMap[method] || "أخرى";
   };
 
   // Sync totals back to sale object if they differ (e.g. if items changed)
@@ -283,10 +291,10 @@ export const OfflineSaleSummaryColumn: React.FC<
                 color: "white",
                 borderRadius: 1,
                 py: 1,
-              }}
+              }}  
             >
               {currentSale.is_synced
-                ? `#${currentSale.sale_order_number || currentSale.id}`
+                ? `#${currentSale.id}`
                 : `#${expectedSaleNumber}`}
             </Box>
           )}
@@ -821,156 +829,228 @@ export const OfflineSaleSummaryColumn: React.FC<
               </Typography>
             </Box>
           ) : (
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 2,
-                maxHeight: 500,
-                overflowY: "auto",
-                pr: 0.5,
-              }}
-            >
-              {payments.map((payment, index) => (
-                <Paper
-                  key={payment.id || index}
-                  elevation={0}
-                  sx={{
-                    p: 2,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 1,
-                    bgcolor: "grey.50",
-                    borderRadius: 2,
-                    border: "1px solid",
-                    borderColor: "grey.200",
-                  }}
-                >
-                  <Box
+            <>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 2,
+                  maxHeight: 400,
+                  overflowY: "auto",
+                  pr: 0.5,
+                  mb: 3,
+                }}
+              >
+                {payments.map((payment, index) => (
+                  <Paper
+                    key={payment.id || index}
+                    elevation={0}
                     sx={{
+                      p: 2.5,
                       display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Chip
-                      label={getPaymentMethodLabel(payment.method)}
-                      size="small"
-                      variant="outlined"
-                      sx={{
-                        fontSize: "0.75rem",
-                        height: 28,
+                      flexDirection: "column",
+                      gap: 1.5,
+                      bgcolor: "background.paper",
+                      borderRadius: 2,
+                      border: "1px solid",
+                      borderColor: "grey.300",
+                      "&:hover": {
                         borderColor: "primary.main",
-                        color: "primary.main",
-                        fontWeight: "bold",
-                      }}
-                    />
-                    <Typography
-                      variant="h6"
-                      fontWeight="bold"
-                      color="success.main"
-                    >
-                      {formatNumber(Number(payment.amount))}
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      mt: 0.5,
+                        boxShadow: 1,
+                      },
                     }}
                   >
-                    <Typography variant="body2" color="text.secondary">
-                      {payment.payment_date
-                        ? dayjs(payment.payment_date).format("YYYY-MM-DD")
-                        : "-"}
-                    </Typography>
-                    {payment.reference_number && (
-                      <Typography variant="body2" color="text.secondary">
-                        المرجع: {payment.reference_number}
-                      </Typography>
-                    )}
-                  </Box>
-                  {payment.user_name && (
-                    <Typography variant="body2" color="text.secondary">
-                      بواسطة: {payment.user_name}
-                    </Typography>
-                  )}
-                  {payment.notes && (
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ fontStyle: "italic", mt: 0.5 }}
+                    {/* Payment Method and Amount - Prominent */}
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        mb: 0.5,
+                      }}
                     >
-                      {payment.notes}
-                    </Typography>
-                  )}
-                </Paper>
-              ))}
-            </Box>
-          )}
-          {/* Summary */}
-          {payments.length > 0 && (
-            <Box
-              sx={{
-                mt: 3,
-                pt: 2,
-                borderTop: "2px solid",
-                borderColor: "divider",
-              }}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  mb: 1,
-                }}
-              >
-                <Typography variant="body1" color="text.secondary">
-                  الإجمالي
-                </Typography>
-                <Typography variant="h6" fontWeight="bold" color="success.main">
-                  {formatNumber(grandTotal)}
-                </Typography>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Chip
+                          label={getPaymentMethodLabel(payment.method || null)}
+                          size="medium"
+                          variant="filled"
+                          sx={{
+                            fontSize: "0.875rem",
+                            height: 32,
+                            bgcolor: "primary.main",
+                            color: "white",
+                            fontWeight: "bold",
+                          }}
+                        />
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ fontWeight: "medium" }}
+                        >
+                          طريقة الدفع
+                        </Typography>
+                      </Box>
+                      <Typography
+                        variant="h5"
+                        fontWeight="bold"
+                        color="success.main"
+                      >
+                        {formatNumber(Number(payment.amount))}
+                      </Typography>
+                    </Box>
+
+                    {/* Payment Details */}
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 0.75,
+                        mt: 1,
+                        pt: 1.5,
+                        borderTop: "1px solid",
+                        borderColor: "grey.200",
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Typography variant="body2" color="text.secondary">
+                          التاريخ
+                        </Typography>
+                        <Typography variant="body2" fontWeight="medium">
+                          {payment.payment_date
+                            ? dayjs(payment.payment_date).format("YYYY-MM-DD")
+                            : "-"}
+                        </Typography>
+                      </Box>
+                      {payment.reference_number && (
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
+                        >
+                          <Typography variant="body2" color="text.secondary">
+                            رقم المرجع
+                          </Typography>
+                          <Typography variant="body2" fontWeight="medium">
+                            {payment.reference_number}
+                          </Typography>
+                        </Box>
+                      )}
+                      {payment.user_name && (
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
+                        >
+                          <Typography variant="body2" color="text.secondary">
+                            بواسطة
+                          </Typography>
+                          <Typography variant="body2" fontWeight="medium">
+                            {payment.user_name}
+                          </Typography>
+                        </Box>
+                      )}
+                      {payment.notes && (
+                        <Box sx={{ mt: 0.5 }}>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ mb: 0.5 }}
+                          >
+                            ملاحظات:
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontStyle: "italic",
+                              color: "text.primary",
+                              bgcolor: "grey.50",
+                              p: 1,
+                              borderRadius: 1,
+                            }}
+                          >
+                            {payment.notes}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  </Paper>
+                ))}
               </Box>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <Typography variant="body1" color="text.secondary">
-                  المدفوع
-                </Typography>
-                <Typography variant="h6" fontWeight="bold" color="success.main">
-                  {formatNumber(paidAmount)}
-                </Typography>
-              </Box>
-              {grandTotal - paidAmount > 0 && (
+
+          
+              {/* Overall Summary */}
+              {payments.length > 0 && (
                 <Box
                   sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    mt: 1,
+                    mt: 3,
+                    pt: 2,
+                    borderTop: "2px solid",
+                    borderColor: "divider",
                   }}
                 >
-                  <Typography variant="body1" color="text.secondary">
-                    المستحق
-                  </Typography>
-                  <Typography
-                    variant="h6"
-                    fontWeight="bold"
-                    color="warning.main"
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 1,
+                    }}
                   >
-                    {formatNumber(grandTotal - paidAmount)}
-                  </Typography>
+                    <Typography variant="body1" fontWeight="bold">
+                      الإجمالي
+                    </Typography>
+                    <Typography variant="h6" fontWeight="bold" color="success.main">
+                      {formatNumber(grandTotal)}
+                    </Typography>
+                  </Box>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Typography variant="body1" fontWeight="bold">
+                      المدفوع
+                    </Typography>
+                    <Typography variant="h6" fontWeight="bold" color="success.main">
+                      {formatNumber(paidAmount)}
+                    </Typography>
+                  </Box>
+                  {grandTotal - paidAmount > 0 && (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        mt: 1,
+                      }}
+                    >
+                      <Typography variant="body1" fontWeight="bold">
+                        المستحق
+                      </Typography>
+                      <Typography
+                        variant="h6"
+                        fontWeight="bold"
+                        color="warning.main"
+                      >
+                        {formatNumber(grandTotal - paidAmount)}
+                      </Typography>
+                    </Box>
+                  )}
                 </Box>
               )}
-            </Box>
+            </>
           )}
         </DialogContent>
       </Dialog>

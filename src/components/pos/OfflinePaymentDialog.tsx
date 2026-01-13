@@ -198,12 +198,14 @@ export const OfflinePaymentDialog: React.FC<OfflinePaymentDialogProps> = ({
 
   const handleCompleteClick = async () => {
     setCompleting(true);
+    // Close dialog immediately, don't wait for completion
+    onClose();
+    // Fire and forget - let parent handle the async operation
     try {
       await onComplete();
-      onClose(); // Only close if successful
     } catch (err) {
       console.error("Complete sale failed", err);
-      setError("فشل إتمام البيع، يرجى المحاولة مرة أخرى");
+      // Error handling is done in parent component via toast
     } finally {
       setCompleting(false);
     }

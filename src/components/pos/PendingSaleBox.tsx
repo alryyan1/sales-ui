@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, Badge, Box, Typography } from "@mui/material";
+import { Card, Badge, Box, Typography, CircularProgress } from "@mui/material";
 import { CloudDone, PauseCircle } from "@mui/icons-material";
 import { RefreshCw, Eye, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -20,6 +20,7 @@ interface PendingSaleBoxProps {
   index: number;
   onDelete?: (sale: OfflineSale) => void;
   onRefresh?: () => void;
+  isProcessing?: boolean;
 }
 
 export const PendingSaleBox: React.FC<PendingSaleBoxProps> = ({
@@ -29,6 +30,7 @@ export const PendingSaleBox: React.FC<PendingSaleBoxProps> = ({
   index,
   onDelete,
   onRefresh,
+  isProcessing = false,
 }) => {
   const navigate = useNavigate();
   const isSelected = selectedSaleId === sale.tempId;
@@ -103,35 +105,74 @@ export const PendingSaleBox: React.FC<PendingSaleBoxProps> = ({
             }}
             onClick={() => onSaleSelect(sale)}
           >
+            {/* Processing Indicator (shown when sale is being completed) */}
+            {isProcessing && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: -5,
+                  left: -5,
+                  width: 18,
+                  height: 18,
+                  bgcolor: "primary.main",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 25,
+                  boxShadow: 2,
+                  animation: "pulse 1.5s ease-in-out infinite",
+                  "@keyframes pulse": {
+                    "0%, 100%": {
+                      opacity: 1,
+                    },
+                    "50%": {
+                      opacity: 0.7,
+                    },
+                  },
+                }}
+              >
+                <CircularProgress
+                  size={12}
+                  thickness={4}
+                  sx={{
+                    color: "white",
+                  }}
+                />
+              </Box>
+            )}
+
             {/* Sync Status Icon */}
             {/* Sync Status Icon or Pending/Held Indicator */}
-            <Box
-              sx={{
-                position: "absolute",
-                top: sale.is_synced ? -5 : -3,
-                left: sale.is_synced ? -5 : -3,
-                width: sale.is_synced ? 16 : 8,
-                height: sale.is_synced ? 16 : 8,
-                bgcolor: sale.is_synced
-                  ? "success.main"
-                  : sale.status === "held"
-                    ? "warning.main"
-                    : "error.main",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                zIndex: 20,
-                boxShadow: 1,
-              }}
-            >
-              {sale.is_synced && (
-                <CloudDone sx={{ fontSize: 10, color: "white" }} />
-              )}
-              {!sale.is_synced && sale.status === "held" && (
-                <PauseCircle sx={{ fontSize: 10, color: "white" }} />
-              )}
-            </Box>
+            {!isProcessing && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: sale.is_synced ? -5 : -3,
+                  left: sale.is_synced ? -5 : -3,
+                  width: sale.is_synced ? 16 : 8,
+                  height: sale.is_synced ? 16 : 8,
+                  bgcolor: sale.is_synced
+                    ? "success.main"
+                    : sale.status === "held"
+                      ? "warning.main"
+                      : "error.main",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 20,
+                  boxShadow: 1,
+                }}
+              >
+                {sale.is_synced && (
+                  <CloudDone sx={{ fontSize: 10, color: "white" }} />
+                )}
+                {!sale.is_synced && sale.status === "held" && (
+                  <PauseCircle sx={{ fontSize: 10, color: "white" }} />
+                )}
+              </Box>
+            )}
 
             {/* Delete Button (Top Right) */}
             {!sale.is_synced && onDelete && (
