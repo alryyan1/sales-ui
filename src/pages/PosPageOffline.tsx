@@ -830,6 +830,7 @@ export const PosPageOffline = () => {
   // List of local pending (unsynced) sales and synced sales (separate sources)
   const [localPendingSales, setLocalPendingSales] = useState<OfflineSale[]>([]);
   const [syncedSales, setSyncedSales] = useState<OfflineSale[]>([]);
+  const [isLoadingSyncedSales, setIsLoadingSyncedSales] = useState(false);
 
   // Loading states for filters
   const [isLoadingId, setIsLoadingId] = useState(false);
@@ -1170,6 +1171,7 @@ export const PosPageOffline = () => {
 
     isLoadingSyncedSalesRef.current = true;
     lastSyncedSalesLoadRef.current = now;
+    setIsLoadingSyncedSales(true);
 
     // Try to fetch regardless of isOnline status
     // Don't clear existing synced sales if fetch fails - keep them visible
@@ -1256,6 +1258,7 @@ export const PosPageOffline = () => {
       lastSyncedSalesLoadRef.current = Date.now();
     } finally {
       isLoadingSyncedSalesRef.current = false;
+      setIsLoadingSyncedSales(false);
     }
   }, [posMode, selectedDate, selectedShiftId, isLoadingSettings]);
 
@@ -1922,6 +1925,7 @@ export const PosPageOffline = () => {
               isOffline={!isOnline}
               onRefresh={loadSyncedSales}
               processingSaleIds={processingSales}
+              isLoading={isLoadingSyncedSales}
             />
           </Box>
 
@@ -2074,6 +2078,8 @@ export const PosPageOffline = () => {
             : `يوم ${selectedDate}`
         }
         dateFrom={selectedDate}
+        posMode={posMode}
+        selectedShiftId={selectedShiftId}
       />
     </Box>
   );

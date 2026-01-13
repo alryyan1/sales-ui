@@ -14,6 +14,7 @@ export interface Expense {
   expense_category_name?: string | null;
   user_id?: number | null;
   user_name?: string | null;
+  shift_id?: number | null;
   created_at: string;
   updated_at?: string;
 }
@@ -26,6 +27,7 @@ export interface ExpenseFormData {
   payment_method?: string | null;
   reference?: string | null;
   expense_category_id?: number | null;
+  shift_id?: number | null;
 }
 
 const expenseService = {
@@ -35,6 +37,7 @@ const expenseService = {
     filters: {
       search?: string;
       expense_category_id?: number | null;
+      shift_id?: number | null;
       date_from?: string;
       date_to?: string;
       min_amount?: number | string;

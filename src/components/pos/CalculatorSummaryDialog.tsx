@@ -40,11 +40,13 @@ interface CalculatorSummaryDialogProps {
   sales: (OfflineSale | Sale)[];
   periodTitle: string;
   dateFrom: string;
+  posMode?: "shift" | "days";
+  selectedShiftId?: number | null;
 }
 
 export const CalculatorSummaryDialog: React.FC<
   CalculatorSummaryDialogProps
-> = ({ open, onClose, sales: initialSales, periodTitle, dateFrom }) => {
+> = ({ open, onClose, sales: initialSales, periodTitle, dateFrom, posMode: propPosMode, selectedShiftId }) => {
   const theme = useTheme();
   const queryClient = useQueryClient();
   const { getSetting, isLoadingSettings } = useSettings();
@@ -58,6 +60,9 @@ export const CalculatorSummaryDialog: React.FC<
     ? (getSetting("pos_filter_sales_by_user", false) as boolean)
     : false;
   
+  // Get POS mode from prop or settings
+  const posMode = propPosMode ?? (isReady ? (getSetting("pos_mode", "shift") as "shift" | "days") : "shift");
+  
   // Calculate userId for filtering and query keys
   const userId = filterByUser && user?.id ? user.id : null;
 
@@ -66,41 +71,67 @@ export const CalculatorSummaryDialog: React.FC<
     if (open) {
       setLocalSelectedDate(dateFrom);
       // Invalidate queries when dialog opens to force fresh data fetch
-      // Include user_id in query key to ensure proper cache invalidation
+      // Include user_id and shift_id/date in query key to ensure proper cache invalidation
+      const expenseQueryKey = posMode === "shift" && selectedShiftId
+        ? ["expenses-summary", selectedShiftId, userId]
+        : ["expenses-summary", dateFrom, userId];
+      const salesQueryKey = posMode === "shift" && selectedShiftId
+        ? ["synced-sales-summary", selectedShiftId, userId]
+        : ["synced-sales-summary", dateFrom, userId];
       queryClient.invalidateQueries({
-        queryKey: ["expenses-summary", dateFrom, userId],
+        queryKey: expenseQueryKey,
       });
       queryClient.invalidateQueries({
-        queryKey: ["synced-sales-summary", dateFrom, userId],
+        queryKey: salesQueryKey,
       });
     }
-  }, [open, dateFrom, queryClient, userId]);
+  }, [open, dateFrom, queryClient, userId, posMode, selectedShiftId]);
 
-  // Fetch Expenses for localSelectedDate
-  // Include user_id in query key for proper caching when filtering by user
+  // Fetch Expenses - filter by shift_id in shift mode, by date in days mode
+  // Include user_id and shift_id/date in query key for proper caching
+  const expenseQueryKey = posMode === "shift" && selectedShiftId
+    ? ["expenses-summary", selectedShiftId, userId]
+    : ["expenses-summary", localSelectedDate, userId];
+  
   const { 
     data: expensesData, 
     isLoading: isLoadingExpenses, 
     isFetching: isFetchingExpenses,
     refetch: refetchExpenses 
   } = useQuery({
-    queryKey: ["expenses-summary", localSelectedDate, userId],
-    queryFn: () =>
-      expenseService.getExpenses(1, 1000, {
-        date_from: localSelectedDate,
-        date_to: localSelectedDate,
-      }),
-    enabled: open && isReady,
+    queryKey: expenseQueryKey,
+    queryFn: () => {
+      if (posMode === "shift" && selectedShiftId) {
+        return expenseService.getExpenses(1, 1000, {
+          shift_id: selectedShiftId,
+        });
+      } else {
+        return expenseService.getExpenses(1, 1000, {
+          date_from: localSelectedDate,
+          date_to: localSelectedDate,
+        });
+      }
+    },
+    enabled: open && isReady && (posMode === "days" || (posMode === "shift" && selectedShiftId !== null)),
     refetchOnMount: true,
     refetchOnWindowFocus: false,
   });
 
   const handleExpenseSaveSuccess = () => {
     // Re-fetch expenses to update the summary
+    const queryKey = posMode === "shift" && selectedShiftId
+      ? ["expenses-summary", selectedShiftId, userId]
+      : ["expenses-summary", localSelectedDate, userId];
     queryClient.invalidateQueries({
-      queryKey: ["expenses-summary", localSelectedDate, userId],
+      queryKey,
     });
   };
+
+  // Fetch Synced Sales - filter by shift_id in shift mode, by date in days mode
+  // Include user_id and shift_id/date in query key for proper caching
+  const syncedSalesQueryKey = posMode === "shift" && selectedShiftId
+    ? ["synced-sales-summary", selectedShiftId, userId]
+    : ["synced-sales-summary", localSelectedDate, userId];
 
   const { 
     data: syncedSalesData, 
@@ -108,22 +139,44 @@ export const CalculatorSummaryDialog: React.FC<
     isFetching: isFetchingSynced,
     refetch: refetchSales 
   } = useQuery({
-    queryKey: ["synced-sales-summary", localSelectedDate, userId],
+    queryKey: syncedSalesQueryKey,
     queryFn: async () => {
-      const res = await saleService.getSales(
-        1,
-        "",
-        "",
-        localSelectedDate,
-        localSelectedDate,
-        1000,
-        null, // clientId
-        false, // todayOnly
-        filterByUser && user?.id ? user.id : null // forCurrentUser
-      );
-      return res.data;
+      if (posMode === "shift" && selectedShiftId) {
+        // In shift mode: filter by shift_id using queryParams
+        const queryParams = new URLSearchParams();
+        queryParams.append("shift_id", selectedShiftId.toString());
+        if (filterByUser && user?.id) {
+          queryParams.append("user_id", user.id.toString());
+        }
+        const res = await saleService.getSales(
+          1,
+          queryParams.toString(),
+          "",
+          "",
+          "",
+          1000,
+          null, // clientId
+          false, // todayOnly
+          null // forCurrentUser (handled via queryParams)
+        );
+        return res.data;
+      } else {
+        // In days mode: filter by date range
+        const res = await saleService.getSales(
+          1,
+          "",
+          "",
+          localSelectedDate,
+          localSelectedDate,
+          1000,
+          null, // clientId
+          false, // todayOnly
+          filterByUser && user?.id ? user.id : null // forCurrentUser
+        );
+        return res.data;
+      }
     },
-    enabled: open && isReady,
+    enabled: open && isReady && (posMode === "days" || (posMode === "shift" && selectedShiftId !== null)),
     refetchOnMount: true,
     refetchOnWindowFocus: false,
   });
@@ -137,9 +190,9 @@ export const CalculatorSummaryDialog: React.FC<
     }
   }, [open, refetchExpenses, refetchSales]);
 
-  // Invalidate and refetch when date changes
+  // Invalidate and refetch when date changes (only in days mode)
   React.useEffect(() => {
-    if (open && localSelectedDate) {
+    if (open && localSelectedDate && posMode === "days") {
       queryClient.invalidateQueries({
         queryKey: ["expenses-summary", localSelectedDate, userId],
       });
@@ -147,7 +200,7 @@ export const CalculatorSummaryDialog: React.FC<
         queryKey: ["synced-sales-summary", localSelectedDate, userId],
       });
     }
-  }, [localSelectedDate, open, queryClient, userId]);
+  }, [localSelectedDate, open, queryClient, userId, posMode]);
 
   // Show loading when initially loading OR when fetching/refetching data OR waiting for settings/user
   const isLoading = !isReady || isLoadingExpenses || isLoadingSynced || isFetchingExpenses || isFetchingSynced;
@@ -327,9 +380,11 @@ export const CalculatorSummaryDialog: React.FC<
               ملخص الحسابات
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {localSelectedDate === dateFrom
+              {posMode === "shift" 
                 ? periodTitle
-                : `يوم ${localSelectedDate}`}
+                : localSelectedDate === dateFrom
+                  ? periodTitle
+                  : `يوم ${localSelectedDate}`}
             </Typography>
           </Box>
         </Box>
@@ -350,6 +405,7 @@ export const CalculatorSummaryDialog: React.FC<
             size="small"
             value={localSelectedDate}
             onChange={(e) => setLocalSelectedDate(e.target.value)}
+            disabled={posMode === "shift"}
             sx={{
               "& .MuiInputBase-root": {
                 fontSize: "0.85rem",
@@ -460,6 +516,7 @@ export const CalculatorSummaryDialog: React.FC<
         onClose={() => setIsExpenseModalOpen(false)}
         expenseToEdit={null}
         onSaveSuccess={handleExpenseSaveSuccess}
+        shiftId={posMode === "shift" ? selectedShiftId ?? null : null}
       />
     </Dialog>
   );

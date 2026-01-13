@@ -14,6 +14,7 @@ interface PendingSalesColumnProps {
   isOffline?: boolean;
   onRefresh?: () => void;
   processingSaleIds?: Set<string>;
+  isLoading?: boolean;
 }
 
 export const PendingSalesColumn: React.FC<PendingSalesColumnProps> = ({
@@ -25,6 +26,7 @@ export const PendingSalesColumn: React.FC<PendingSalesColumnProps> = ({
   isOffline = false,
   onRefresh,
   processingSaleIds = new Set(),
+  isLoading = false,
 }) => {
   const { getSetting, isLoadingSettings } = useSettings();
   const { user, isLoading: isLoadingUser } = useAuth();
@@ -89,7 +91,25 @@ export const PendingSalesColumn: React.FC<PendingSalesColumnProps> = ({
         </Box>
       )}
 
-      {isReady && filteredSales.map((sale, index) => {
+      {isReady && isLoading && (
+        <>
+          {[...Array(5)].map((_, index) => (
+            <Skeleton
+              key={`loading-${index}`}
+              variant="rectangular"
+              width={50}
+              height={50}
+              sx={{
+                borderRadius: 1,
+                mb: 0.2,
+              }}
+              animation="wave"
+            />
+          ))}
+        </>
+      )}
+
+      {isReady && !isLoading && filteredSales.map((sale, index) => {
         const isProcessing = processingSaleIds.has(sale.tempId);
         
         // Show skeleton loader while processing
@@ -124,7 +144,7 @@ export const PendingSalesColumn: React.FC<PendingSalesColumnProps> = ({
         );
       })}
 
-      {isReady && filteredSales.length === 0 && (
+      {isReady && !isLoading && filteredSales.length === 0 && (
         <Typography
           variant="caption"
           color="text.disabled"

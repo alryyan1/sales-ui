@@ -35,6 +35,7 @@ interface ExpenseFormModalProps {
   onClose: () => void;
   expenseToEdit: Expense | null;
   onSaveSuccess: (expense: Expense) => void;
+  shiftId?: number | null;
 }
 
 type ExpenseFormFields = {
@@ -52,6 +53,7 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
   onClose,
   expenseToEdit,
   onSaveSuccess,
+  shiftId,
 }) => {
   const isEditMode = Boolean(expenseToEdit);
 
@@ -147,6 +149,7 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
       payment_method: data.payment_method ? data.payment_method : null,
       reference: data.reference ? data.reference : null,
       description: data.description ? data.description : null,
+      shift_id: shiftId ?? null,
     };
     try {
       let saved: Expense;
