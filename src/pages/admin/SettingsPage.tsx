@@ -29,15 +29,25 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Settings, Building2, Package, Store, Image, FileText, Upload, Save } from "lucide-react";
-import { cn } from "@/lib/utils";
+import {
+  Loader2,
+  Settings,
+  Building2,
+  Package,
+  Store,
+  Image,
+  FileText,
+  Upload,
+  Save,
+} from "lucide-react";
 
 // Form values type
 type SettingsFormValues = Partial<AppSettings>;
 
 // --- Component ---
 const SettingsPage: React.FC = () => {
-  const { settings, isLoadingSettings, updateSettings, fetchSettings } = useSettings();
+  const { settings, isLoadingSettings, updateSettings, fetchSettings } =
+    useSettings();
   const [serverError, setServerError] = useState<string | null>(null);
 
   // Tab/Section State
@@ -336,7 +346,10 @@ const SettingsPage: React.FC = () => {
                             </div>
                             <div className="flex items-center space-x-2 space-x-reverse">
                               <RadioGroupItem value="header" id="header" />
-                              <Label htmlFor="header" className="cursor-pointer">
+                              <Label
+                                htmlFor="header"
+                                className="cursor-pointer"
+                              >
                                 صورة هيدر كاملة (Full Header Image)
                               </Label>
                             </div>
@@ -399,9 +412,15 @@ const SettingsPage: React.FC = () => {
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="right">يمين (Right)</SelectItem>
-                                  <SelectItem value="left">يسار (Left)</SelectItem>
-                                  <SelectItem value="center">وسط (Center)</SelectItem>
+                                  <SelectItem value="right">
+                                    يمين (Right)
+                                  </SelectItem>
+                                  <SelectItem value="left">
+                                    يسار (Left)
+                                  </SelectItem>
+                                  <SelectItem value="center">
+                                    وسط (Center)
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -525,7 +544,8 @@ const SettingsPage: React.FC = () => {
                             </SelectContent>
                           </Select>
                           <p className="text-sm text-muted-foreground">
-                            يؤثر على طريقة ظهور النصوص العربية في الفواتير المصدرة PDF
+                            يؤثر على طريقة ظهور النصوص العربية في الفواتير
+                            المصدرة PDF
                           </p>
                         </div>
                       )}

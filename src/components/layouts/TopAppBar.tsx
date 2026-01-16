@@ -15,7 +15,16 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { useAuth } from "@/context/AuthContext";
-import { Menu as MenuIcon, Warehouse, RefreshCcw, Keyboard, Calendar, Hash, Clock, CalendarDays } from "lucide-react";
+import {
+  Menu as MenuIcon,
+  Warehouse,
+  RefreshCcw,
+  Keyboard,
+  Calendar,
+  Hash,
+  Clock,
+  CalendarDays,
+} from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom"; // Import useNavigate and useLocation
 import { usePosFilters } from "@/context/PosFilterContext";
 import { useSettings } from "@/context/SettingsContext";
@@ -24,7 +33,6 @@ import { DRAWER_WIDTH } from "./types";
 import { dbService, STORES } from "../../services/db";
 import { offlineSaleService } from "../../services/offlineSaleService";
 import { toast } from "sonner";
-import { NotificationBell } from "../notifications/NotificationBell";
 import { KeyboardShortcutsDialog } from "../common/KeyboardShortcutsDialog";
 
 const COLLAPSED_DRAWER_WIDTH = 72;
@@ -165,13 +173,13 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
   const { user } = useAuth();
   const { getSetting } = useSettings();
   const [shortcutsDialogOpen, setShortcutsDialogOpen] = React.useState(false);
-  
+
   // Check if we're on the POS offline page
   const isPosOfflinePage = location.pathname === "/sales/pos-offline";
-  
+
   // Get POS mode setting
   const posMode = getSetting("pos_mode", "shift") as "shift" | "days";
-  
+
   // Get POS filters - use a safe wrapper to avoid hook errors when not on POS page
   // We'll create a wrapper component for the filters section
 
@@ -299,7 +307,6 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
             />
           )}
 
-          <NotificationBell />
           <ThemeToggle />
 
           {/* POS Mode Indicator - Icon only */}
@@ -307,12 +314,17 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
             color="inherit"
             title={posMode === "shift" ? "وضع الوردية" : "وضع الأيام"}
             sx={{
-              color: posMode === "shift" 
-                ? theme.palette.info.main 
-                : theme.palette.success.main,
+              color:
+                posMode === "shift"
+                  ? theme.palette.info.main
+                  : theme.palette.success.main,
             }}
           >
-            {posMode === "shift" ? <Clock size={20} /> : <CalendarDays size={20} />}
+            {posMode === "shift" ? (
+              <Clock size={20} />
+            ) : (
+              <CalendarDays size={20} />
+            )}
           </IconButton>
 
           {user && (

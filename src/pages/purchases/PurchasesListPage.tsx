@@ -120,7 +120,7 @@ const PurchasesListPage: React.FC = () => {
   const [loadingSuppliers, setLoadingSuppliers] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
 
   // Product history dialog states
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -314,19 +314,17 @@ const PurchasesListPage: React.FC = () => {
       >
         {/* Header */}
         <div className="mb-6">
-          <Card className="border-0 shadow-md bg-gradient-to-r from-sky-400 via-sky-500 to-blue-500">
-            <CardContent className="p-4">
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                {/* Title Section */}
-                <div className="flex items-center gap-4">
-                  <div className="p-2 bg-white/30 backdrop-blur-sm rounded-lg">
-                    <ShoppingCart className="h-6 w-6 text-white" />
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              {/* Title Section */}
+              <div className="flex items-center gap-4">
+                <div className="p-2 bg-white/30 backdrop-blur-sm rounded-lg">
+                  <ShoppingCart className="h-6 w-6 " />
                   </div>
                   <div>
-                    <h1 className="text-xl md:text-2xl font-bold text-white">
+                    <h1 className="text-xl md:text-2xl font-bold ">
                       المشتريات
                     </h1>
-                    <p className="text-sky-100 text-xs">
+                    <p className=" text-xs">
                       إدارة عمليات الشراء والمخزون
                     </p>
                   </div>
@@ -338,7 +336,7 @@ const PurchasesListPage: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => setShowFilters(!showFilters)}
-                    className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                    className="bg-white/10 border-white/20  hover:bg-white/20"
                   >
                     {showFilters ? (
                       <ChevronUp className="h-4 w-4 ml-2" />
@@ -347,7 +345,7 @@ const PurchasesListPage: React.FC = () => {
                     )}
                     الفلاتر
                     {activeFilterCount > 0 && (
-                      <Badge className="mr-2 bg-white text-blue-600 hover:bg-white">
+                      <Badge className="mr-2  text-blue-600 hover:">
                         {activeFilterCount}
                       </Badge>
                     )}
@@ -357,7 +355,7 @@ const PurchasesListPage: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={handleExportExcel}
-                    className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                    className="/10 border-white/20  hover:/20"
                   >
                     <FileSpreadsheet className="h-4 w-4 ml-2" />
                     تصدير
@@ -365,7 +363,7 @@ const PurchasesListPage: React.FC = () => {
 
                   <Button
                     size="sm"
-                    className="bg-white text-sky-600 hover:bg-sky-50 shadow-md"
+                    // className=" text-sky-600 hover:bg-sky-50 shadow-md"
                     asChild
                   >
                     <RouterLink to="/purchases/add">
@@ -377,57 +375,53 @@ const PurchasesListPage: React.FC = () => {
               </div>
 
               {/* Stats Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
+              {/* <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
                 <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
                   <div className="flex items-center justify-between">
-                    <Boxes className="h-4 w-4 text-white/80" />
+                    <Boxes className="h-4 w-4 /80" />
                     <ArrowUpRight className="h-3 w-3 text-emerald-200" />
                   </div>
-                  <p className="text-xl font-bold text-white mt-1">
+                  <p className="text-xl font-bold  mt-1">
                     {stats.total}
                   </p>
-                  <p className="text-sky-100 text-xs">إجمالي العمليات</p>
+                  <p className=" text-xs">إجمالي العمليات</p>
                 </div>
                 <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
                   <div className="flex items-center justify-between">
                     <CheckCircle className="h-4 w-4 text-emerald-200" />
                     <span className="text-xs text-emerald-200">✓</span>
                   </div>
-                  <p className="text-xl font-bold text-white mt-1">
+                  <p className="text-xl font-bold  mt-1">
                     {stats.received}
                   </p>
-                  <p className="text-sky-100 text-xs">تم الاستلام</p>
+                  <p className=" text-xs">تم الاستلام</p>
                 </div>
                 <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
                   <div className="flex items-center justify-between">
                     <Clock className="h-4 w-4 text-amber-200" />
                     <span className="text-xs text-amber-200">⏳</span>
                   </div>
-                  <p className="text-xl font-bold text-white mt-1">
+                  <p className="text-xl font-bold  mt-1">
                     {stats.pending}
                   </p>
-                  <p className="text-sky-100 text-xs">قيد الانتظار</p>
+                  <p className=" text-xs">قيد الانتظار</p>
                 </div>
                 <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
                   <div className="flex items-center justify-between">
-                    <DollarSign className="h-4 w-4 text-white/80" />
+                    <DollarSign className="h-4 w-4 /80" />
                     <TrendingUp className="h-3 w-3 text-emerald-200" />
                   </div>
-                  <p className="text-lg font-bold text-white mt-1">
+                  <p className="text-lg font-bold  mt-1">
                     {formatCurrency(stats.totalAmount)}
                   </p>
-                  <p className="text-sky-100 text-xs">إجمالي المبلغ</p>
+                  <p className=" text-xs">إجمالي المبلغ</p>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </div> */}
         </div>
 
         {/* Filters */}
         <Collapsible open={showFilters} onOpenChange={setShowFilters}>
           <CollapsibleContent>
-            <Card className="mb-6 border shadow-sm">
-              <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Search className="h-5 w-5 text-muted-foreground" />
@@ -445,8 +439,6 @@ const PurchasesListPage: React.FC = () => {
                     </Button>
                   )}
                 </div>
-              </CardHeader>
-              <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                   {/* Supplier Filter */}
                   <div className="space-y-2">
@@ -570,13 +562,10 @@ const PurchasesListPage: React.FC = () => {
                     />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
           </CollapsibleContent>
         </Collapsible>
 
         {/* Main Content */}
-        <Card className="border shadow-sm">
           {/* Loading State */}
           {isLoading && (
             <CardContent className="p-8">
@@ -632,9 +621,9 @@ const PurchasesListPage: React.FC = () => {
                       <TableHead className="text-center font-bold">
                         المخزن
                       </TableHead>
-                      <TableHead className="text-center font-bold">
+                      {/* <TableHead className="text-center font-bold">
                         رقم المرجع
-                      </TableHead>
+                      </TableHead> */}
                       <TableHead className="text-center font-bold">
                         العملة
                       </TableHead>
@@ -713,11 +702,11 @@ const PurchasesListPage: React.FC = () => {
                                 {purchase.warehouse_name || "—"}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-center">
+                            {/* <TableCell className="text-center">
                               <code className="text-sm text-muted-foreground">
                                 {purchase.reference_number || "—"}
                               </code>
-                            </TableCell>
+                            </TableCell> */}
                             <TableCell className="text-center">
                               <Badge variant="secondary" className="font-mono">
                                 {purchase.currency || "SDG"}
@@ -818,7 +807,6 @@ const PurchasesListPage: React.FC = () => {
               )}
             </>
           )}
-        </Card>
 
         {/* Product History Dialog */}
         <PurchaseItemDetailsDialog

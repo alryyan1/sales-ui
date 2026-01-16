@@ -698,53 +698,54 @@ export const PosOfflineHeader = React.forwardRef<
             {posMode === "shift" && (
               <>
                 {shift && shift.is_open ? (
-                  <Tooltip title="إغلاق الوردية">
-                    <Button
-                      variant="outlined"
-                      color="success"
-                      startIcon={
-                        <Box
-                          sx={{
-                            width: 6,
-                            height: 6,
-                            borderRadius: "50%",
-                            bgcolor: "success.main",
-                            boxShadow: `0 0 0 2px ${alpha(
-                              theme.palette.success.main,
-                              0.2
-                            )}`,
-                            mr: 0.5,
-                          }}
-                        />
-                      }
-                      onClick={onCloseShift}
-                      sx={{
-                        borderWidth: 2,
-                        borderColor: "success.light",
-                        color: "success.dark",
-                        textTransform: "none",
-                        display: { xs: "none", md: "flex" },
-                        borderRadius: 2.5,
-                        px: 2,
-                        py: 0.75,
-                        minHeight: 32,
-                        fontWeight: 600,
-                        fontSize: "0.85rem",
-                        gap: 0.5,
-                        transition: "all 0.2s ease-in-out",
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-                        "&:hover": {
-                          borderColor: "error.main",
-                          color: "error.main",
-                          bgcolor: alpha(theme.palette.error.main, 0.05),
-                          transform: "translateY(-1px)",
-                          boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-                        },
-                      }}
-                    >
-                      وردية مفتوحة
-                    </Button>
-                  </Tooltip>
+                  // <Tooltip title="إغلاق الوردية">
+                  //   <Button
+                  //     variant="outlined"
+                  //     color="success"
+                  //     startIcon={
+                  //       <Box
+                  //         sx={{
+                  //           width: 6,
+                  //           height: 6,
+                  //           borderRadius: "50%",
+                  //           bgcolor: "success.main",
+                  //           boxShadow: `0 0 0 2px ${alpha(
+                  //             theme.palette.success.main,
+                  //             0.2
+                  //           )}`,
+                  //           mr: 0.5,
+                  //         }}
+                  //       />
+                  //     }
+                  //     onClick={onCloseShift}
+                  //     sx={{
+                  //       borderWidth: 2,
+                  //       borderColor: "success.light",
+                  //       color: "success.dark",
+                  //       textTransform: "none",
+                  //       display: { xs: "none", md: "flex" },
+                  //       borderRadius: 2.5,
+                  //       px: 2,
+                  //       py: 0.75,
+                  //       minHeight: 32,
+                  //       fontWeight: 600,
+                  //       fontSize: "0.85rem",
+                  //       gap: 0.5,
+                  //       transition: "all 0.2s ease-in-out",
+                  //       boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                  //       "&:hover": {
+                  //         borderColor: "error.main",
+                  //         color: "error.main",
+                  //         bgcolor: alpha(theme.palette.error.main, 0.05),
+                  //         transform: "translateY(-1px)",
+                  //         boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+                  //       },
+                  //     }}
+                  //   >
+                  //     وردية مفتوحة
+                  //   </Button>
+                  // </Tooltip>
+                  ''
                 ) : (
                   <Button
                     variant="contained"

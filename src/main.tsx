@@ -50,7 +50,7 @@ if (!rootElement) {
 }
 
 ReactDOM.createRoot(rootElement).render(
-  <React.StrictMode>
+  // <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <SettingsProvider>
         <TailwindTheme defaultTheme="system" storageKey="app-ui-theme">
@@ -66,5 +66,5 @@ ReactDOM.createRoot(rootElement).render(
       </SettingsProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
-  </React.StrictMode>
+  // </React.StrictMode>
 );

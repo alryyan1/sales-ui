@@ -32,7 +32,7 @@ import { toast } from "sonner";
 
 import apiClient from "@/lib/axios";
 import purchaseService from "@/services/purchaseService";
-import { Product } from "@/services/productService";
+import productService, { Product } from "@/services/productService";
 import { useSettings } from "@/context/SettingsContext";
 import { AddPurchaseItemData } from "./types";
 
@@ -65,6 +65,8 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [productLoading, setProductLoading] = useState(false);
   const [quantity, setQuantity] = useState<number>(1);
+  const [unitsPerStockingUnit, setUnitsPerStockingUnit] = useState<number>(1);
+  const [profitRate, setProfitRate] = useState<number>(20);
   const [unitCost, setUnitCost] = useState<number>(0);
   const [salePrice, setSalePrice] = useState<number | undefined>(undefined);
   const [salePriceStockingUnit, setSalePriceStockingUnit] = useState<
@@ -78,6 +80,8 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
     setSelectedProduct(null);
     setProductInputValue("");
     setQuantity(1);
+    setUnitsPerStockingUnit(1);
+    setProfitRate(settings?.default_profit_rate ?? 20);
     setUnitCost(0);
     setSalePrice(undefined);
     setSalePriceStockingUnit(undefined);
@@ -128,17 +132,20 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
       setSelectedProduct(product);
       if (product) {
         setProductInputValue(product.name);
+        const unitsPerStocking =
+          product.units_per_stocking_unit && product.units_per_stocking_unit > 0
+            ? product.units_per_stocking_unit
+            : 1;
+        setUnitsPerStockingUnit(unitsPerStocking);
+
+        const currentProfitRate = settings?.default_profit_rate ?? 20;
+        setProfitRate(currentProfitRate);
+
         if (product.latest_cost_per_sellable_unit) {
           const costPerSellable = Number(product.latest_cost_per_sellable_unit);
-          const unitsPerStocking =
-            product.units_per_stocking_unit &&
-            product.units_per_stocking_unit > 0
-              ? product.units_per_stocking_unit
-              : 1;
           const costPerStocking = costPerSellable * unitsPerStocking;
           setUnitCost(costPerStocking);
-          const globalProfitRate = settings?.default_profit_rate ?? 20;
-          const profitFactor = globalProfitRate / 100;
+          const profitFactor = 1 + currentProfitRate / 100;
           const sellablePrice =
             (costPerStocking * profitFactor) / unitsPerStocking;
           setSalePrice(roundToThreeDecimals(sellablePrice));
@@ -147,6 +154,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
         }
       } else {
         setProductInputValue("");
+        setUnitsPerStockingUnit(1);
       }
     },
     [settings?.default_profit_rate]
@@ -156,22 +164,17 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
   const handleUnitCostChange = useCallback(
     (newCost: number) => {
       setUnitCost(newCost);
-      const globalProfitRate = settings?.default_profit_rate ?? 20;
-      const profitFactor = globalProfitRate / 100;
+      const profitFactor = 1 + profitRate / 100;
       const unitsPerStocking =
-        selectedProduct?.units_per_stocking_unit &&
-        selectedProduct.units_per_stocking_unit > 0
-          ? selectedProduct.units_per_stocking_unit
-          : 1;
+        unitsPerStockingUnit > 0 ? unitsPerStockingUnit : 1;
       const costPerSellable = newCost / unitsPerStocking;
-      const profitablePricePerSellable = costPerSellable * profitFactor;
-      const sellablePrice = costPerSellable + profitablePricePerSellable;
+      const sellablePrice = costPerSellable * profitFactor;
       setSalePrice(roundToThreeDecimals(sellablePrice));
       setSalePriceStockingUnit(
         roundToThreeDecimals(sellablePrice * unitsPerStocking)
       );
     },
-    [settings?.default_profit_rate, selectedProduct?.units_per_stocking_unit]
+    [profitRate, unitsPerStockingUnit]
   );
 
   // Handle autocomplete Enter key (Scanner support)
@@ -211,8 +214,43 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
     [productInputValue, allProducts, handleProductSelect]
   );
 
+  // Handle units per stocking unit change
+  const handleUnitsPerStockingChange = useCallback(
+    (newUnits: number) => {
+      setUnitsPerStockingUnit(newUnits);
+      if (newUnits > 0) {
+        // Recalculate based on current unitCost
+        const profitFactor = 1 + profitRate / 100;
+        const costPerSellable = unitCost / newUnits;
+        const sellablePrice = costPerSellable * profitFactor;
+        setSalePrice(roundToThreeDecimals(sellablePrice));
+        setSalePriceStockingUnit(
+          roundToThreeDecimals(sellablePrice * newUnits)
+        );
+      }
+    },
+    [profitRate, unitCost]
+  );
+
+  // Handle profit rate change
+  const handleProfitRateChange = useCallback(
+    (newRate: number) => {
+      setProfitRate(newRate);
+      const unitsPerStocking =
+        unitsPerStockingUnit > 0 ? unitsPerStockingUnit : 1;
+      const costPerSellable = unitCost / unitsPerStocking;
+      const profitFactor = 1 + newRate / 100;
+      const sellablePrice = costPerSellable * profitFactor;
+      setSalePrice(roundToThreeDecimals(sellablePrice));
+      setSalePriceStockingUnit(
+        roundToThreeDecimals(sellablePrice * unitsPerStocking)
+      );
+    },
+    [unitCost, unitsPerStockingUnit]
+  );
+
   // Handle add item
-  const handleAddItem = useCallback(() => {
+  const handleAddItem = useCallback(async () => {
     if (!selectedProduct) {
       toast.error("خطأ", { description: "يرجى اختيار منتج أولاً" });
       return;
@@ -222,20 +260,42 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
       return;
     }
 
-    const data: AddPurchaseItemData = {
-      product_id: selectedProduct.id,
-      quantity,
-      unit_cost: unitCost,
-      sale_price: salePrice !== undefined ? roundToThreeDecimals(salePrice) : 0,
-      sale_price_stocking_unit:
-        salePriceStockingUnit !== undefined
-          ? roundToThreeDecimals(salePriceStockingUnit)
-          : undefined,
-      batch_number: batchNumber || undefined,
-      expiry_date: expiryDate || undefined,
-    };
+    try {
+      // Check if units_per_stocking_unit changed
+      if (unitsPerStockingUnit !== selectedProduct.units_per_stocking_unit) {
+        await productService.updateProduct(selectedProduct.id, {
+          units_per_stocking_unit: unitsPerStockingUnit,
+        });
 
-    onAddItem(data);
+        // Update global cache
+        if (globalProductCache) {
+          globalProductCache = globalProductCache.map((p) =>
+            p.id === selectedProduct.id
+              ? { ...p, units_per_stocking_unit: unitsPerStockingUnit }
+              : p
+          );
+        }
+      }
+
+      const data: AddPurchaseItemData = {
+        product_id: selectedProduct.id,
+        quantity,
+        unit_cost: unitCost,
+        sale_price:
+          salePrice !== undefined ? roundToThreeDecimals(salePrice) : 0,
+        sale_price_stocking_unit:
+          salePriceStockingUnit !== undefined
+            ? roundToThreeDecimals(salePriceStockingUnit)
+            : undefined,
+        batch_number: batchNumber || undefined,
+        expiry_date: expiryDate || undefined,
+      };
+
+      onAddItem(data);
+    } catch (error) {
+      console.error("Error updating product units:", error);
+      toast.error("خطأ", { description: "فشل تحديث بيانات المنتج" });
+    }
   }, [
     selectedProduct,
     quantity,
@@ -244,6 +304,8 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
     salePriceStockingUnit,
     batchNumber,
     expiryDate,
+    unitsPerStockingUnit,
+    profitRate,
     onAddItem,
   ]);
 
@@ -491,7 +553,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                     icon={<Layers size={16} />}
                     label={`1 ${
                       selectedProduct.stocking_unit_name || "وحدة تخزين"
-                    } = ${selectedProduct.units_per_stocking_unit || 1} ${
+                    } = ${unitsPerStockingUnit} ${
                       selectedProduct.sellable_unit_name || "وحدة بيع"
                     }`}
                     sx={{
@@ -586,6 +648,97 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                       onKeyDown={handleFormInputKeyDown}
                       sx={{
                         "& .MuiOutlinedInput-root": { borderRadius: 2 },
+                      }}
+                    />
+                  </Box>
+                </Box>
+
+                {/* Conversion Info Row */}
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                    gap: 2,
+                    mb: 2,
+                  }}
+                >
+                  <Box>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                        color: "grey.700",
+                        mb: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                      }}
+                    >
+                      <Layers size={16} />
+                      عدد الوحدات داخل{" "}
+                      {selectedProduct?.stocking_unit_name || "وحدة التخزين"}
+                    </Typography>
+                    <TextField
+                      type="number"
+                      value={unitsPerStockingUnit}
+                      onChange={(e) =>
+                        handleUnitsPerStockingChange(Number(e.target.value))
+                      }
+                      inputProps={{ min: 1, step: 1 }}
+                      size="small"
+                      fullWidth
+                      onFocus={(e) => e.target.select()}
+                      onKeyDown={handleFormInputKeyDown}
+                      sx={{
+                        "& .MuiOutlinedInput-root": { borderRadius: 2 },
+                      }}
+                      placeholder={`عدد الـ ${
+                        selectedProduct?.sellable_unit_name || "وحدات بيع"
+                      } لكل ${
+                        selectedProduct?.stocking_unit_name || "وحدة تخزين"
+                      }`}
+                    />
+                  </Box>
+                  <Box>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                        color: "grey.700",
+                        mb: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                      }}
+                    >
+                      <Tag size={16} />
+                      نسبة الربح (%)
+                    </Typography>
+                    <TextField
+                      type="number"
+                      value={profitRate}
+                      onChange={(e) =>
+                        handleProfitRateChange(Number(e.target.value))
+                      }
+                      inputProps={{ min: 0, step: 0.1 }}
+                      size="small"
+                      fullWidth
+                      onFocus={(e) => e.target.select()}
+                      onKeyDown={handleFormInputKeyDown}
+                      sx={{
+                        "& .MuiOutlinedInput-root": { borderRadius: 2 },
+                      }}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <Typography
+                              variant="caption"
+                              sx={{ color: "grey.400" }}
+                            >
+                              %
+                            </Typography>
+                          </InputAdornment>
+                        ),
                       }}
                     />
                   </Box>

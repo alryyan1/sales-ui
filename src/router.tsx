@@ -54,7 +54,6 @@ import IndexedDBManagerPage from "./pages/admin/IndexedDBManagerPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
 import { AuthProvider } from "./context/AuthContext";
-import { NotificationProvider } from "./context/NotificationContext";
 
 const router = createHashRouter([
   // Auth routes (without navbar)
@@ -79,9 +78,7 @@ const router = createHashRouter([
     path: "/",
     element: (
       <AuthProvider>
-        <NotificationProvider>
-          <RootLayout />
-        </NotificationProvider>
+        <RootLayout />
       </AuthProvider>
     ),
     errorElement: <NotFoundPage />,
