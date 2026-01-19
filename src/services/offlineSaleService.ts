@@ -1,4 +1,4 @@
-import { dbService, OfflineSale, OfflineSaleItem } from "./db";
+import { dbService, OfflineSale, STORES } from "./db";
 import saleService, { CreateSaleData } from "./saleService";
 import productService, { Product } from "./productService";
 import clientService from "./clientService";
@@ -33,14 +33,17 @@ export const offlineSaleService = {
           undefined, // inStockOnly
           undefined, // lowStockOnly
           undefined, // outOfStockOnly
-          warehouseId
+          warehouseId,
         );
 
         if (response && response.data) {
           allProducts.push(...response.data);
 
           // Check if there are more pages
-          if (response.meta && response.meta.current_page < response.meta.last_page) {
+          if (
+            response.meta &&
+            response.meta.current_page < response.meta.last_page
+          ) {
             page++;
           } else {
             hasMore = false;
@@ -52,6 +55,8 @@ export const offlineSaleService = {
 
       // Save all products to IndexedDB
       if (allProducts.length > 0) {
+        // Clear existing products first to ensure exact sync (remove deleted/cached inputs)
+        await dbService.clearStore(STORES.PRODUCTS);
         await dbService.saveProducts(allProducts);
         console.log(`Successfully cached ${allProducts.length} products`);
       }
@@ -117,7 +122,9 @@ export const offlineSaleService = {
             status: "completed", // POS sales are usually completed
             notes: offlineSale.notes,
             shift_id: offlineSale.shift_id ?? null, // Explicitly send null for days mode
-            discount_amount: offlineSale.discount_amount ? Number(offlineSale.discount_amount) : undefined,
+            discount_amount: offlineSale.discount_amount
+              ? Number(offlineSale.discount_amount)
+              : undefined,
             discount_type: offlineSale.discount_type || undefined,
             items: offlineSale.items.map((item) => {
               const product = item.product as Product;
@@ -162,7 +169,7 @@ export const offlineSaleService = {
           });
 
           const createdSale = await saleService.createSale(saleData);
-          
+
           console.log("[Discount] Sale synced successfully, response:", {
             id: createdSale.id,
             discount_amount: createdSale.discount_amount,
@@ -174,27 +181,34 @@ export const offlineSaleService = {
           // Match payments by amount and date to preserve method from offline payments if backend is missing it
           const backendPayments = createdSale.payments || [];
           const offlinePayments = offlineSale.payments || [];
-          
+
           const mergedPayments = backendPayments.map((backendPayment: any) => {
             // Try to find matching offline payment by amount and date
             const matchingOfflinePayment = offlinePayments.find(
               (offlinePayment: any) =>
-                Number(offlinePayment.amount) === Number(backendPayment.amount) &&
-                offlinePayment.payment_date === backendPayment.payment_date
+                Number(offlinePayment.amount) ===
+                  Number(backendPayment.amount) &&
+                offlinePayment.payment_date === backendPayment.payment_date,
             );
-            
+
             return {
               ...backendPayment,
-              method: backendPayment.method || matchingOfflinePayment?.method || 'cash', // Ensure method is always present
+              method:
+                backendPayment.method ||
+                matchingOfflinePayment?.method ||
+                "cash", // Ensure method is always present
             };
           });
-          
+
           // If backend didn't return payments but we have offline payments, use offline payments
-          const finalPayments = mergedPayments.length > 0 ? mergedPayments : offlinePayments.map((p: any) => ({
-            ...p,
-            method: p.method || 'cash', // Ensure method is always present
-          }));
-          
+          const finalPayments =
+            mergedPayments.length > 0
+              ? mergedPayments
+              : offlinePayments.map((p: any) => ({
+                  ...p,
+                  method: p.method || "cash", // Ensure method is always present
+                }));
+
           const syncedSale: OfflineSale = {
             ...offlineSale,
             is_synced: true,
@@ -202,7 +216,8 @@ export const offlineSaleService = {
             invoice_number: createdSale.invoice_number,
             sale_order_number: createdSale.sale_order_number ?? null,
             payments: finalPayments,
-            paid_amount: createdSale.paid_amount || offlineSale.paid_amount || 0, // Update paid_amount from server
+            paid_amount:
+              createdSale.paid_amount || offlineSale.paid_amount || 0, // Update paid_amount from server
           };
           await dbService.savePendingSale(syncedSale);
 
@@ -212,7 +227,7 @@ export const offlineSaleService = {
           // Collect product IDs to update cache
           if (offlineSale.items && offlineSale.items.length > 0) {
             offlineSale.items.forEach((item) =>
-              productsToUpdate.add(item.product_id)
+              productsToUpdate.add(item.product_id),
             );
           }
         }
@@ -231,21 +246,20 @@ export const offlineSaleService = {
         const idsToFetch = Array.from(productsToUpdate);
         console.log("Updating local cache for synced products:", idsToFetch);
         // Fetch fresh data for these products
-        const updatedProducts = await productService.getProductsByIds(
-          idsToFetch
-        );
+        const updatedProducts =
+          await productService.getProductsByIds(idsToFetch);
 
         if (updatedProducts && updatedProducts.length > 0) {
           await dbService.saveProducts(updatedProducts);
           console.log(
-            `Successfully updated ${updatedProducts.length} products in local cache.`
+            `Successfully updated ${updatedProducts.length} products in local cache.`,
           );
           updatedProductsList = updatedProducts;
         }
       } catch (updateError) {
         console.error(
           "Failed to update product cache after sync:",
-          updateError
+          updateError,
         );
         // Don't fail the sync result just because cache update failed, but log it
       }
@@ -278,7 +292,10 @@ export const offlineSaleService = {
   /**
    * Create a new temporary sale object
    */
-  createDraftSale: (shiftId: number | null = null, userId: number | null = null): OfflineSale => {
+  createDraftSale: (
+    shiftId: number | null = null,
+    userId: number | null = null,
+  ): OfflineSale => {
     return {
       tempId: generateId(),
       offline_created_at: Date.now(),
@@ -328,13 +345,13 @@ export const offlineSaleService = {
       discount_amount: sale.discount_amount,
       discount_type: sale.discount_type,
     };
-    
+
     console.log("[Discount] calculateTotals result:", {
       discount_amount: result.discount_amount,
       discount_type: result.discount_type,
       total_amount: result.total_amount,
     });
-    
+
     return result;
   },
 
@@ -355,8 +372,9 @@ export const offlineSaleService = {
     // 3. Trigger sync immediately if backend is accessible
     // Import backendHealthService dynamically to avoid circular dependency
     const { backendHealthService } = await import("./backendHealthService");
-    const backendAccessible = await backendHealthService.checkBackendAccessible();
-    
+    const backendAccessible =
+      await backendHealthService.checkBackendAccessible();
+
     if (backendAccessible) {
       const { results } = await offlineSaleService.processSyncQueue();
       const myResult = results.find((r) => r.id === queueId);
@@ -393,7 +411,8 @@ export const offlineSaleService = {
     const allActions = await dbService.getPendingSyncActions();
     const actionToRemove = allActions.find(
       (a) =>
-        a.type === "CREATE_SALE" && (a.payload as OfflineSale).tempId === tempId
+        a.type === "CREATE_SALE" &&
+        (a.payload as OfflineSale).tempId === tempId,
     );
 
     if (actionToRemove && actionToRemove.id) {
@@ -423,7 +442,9 @@ export const offlineSaleService = {
         }
       }
 
-      console.log(`Successfully deleted ${unsyncedSales.length} unsynced sales`);
+      console.log(
+        `Successfully deleted ${unsyncedSales.length} unsynced sales`,
+      );
       return unsyncedSales.length;
     } catch (error) {
       console.error("Failed to delete all pending sales:", error);

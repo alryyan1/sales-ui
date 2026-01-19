@@ -87,12 +87,7 @@ export const navItems: NavItem[] = [
         permission: null,
         category: "المخزون",
       },
-      {
-        to: "/suppliers",
-        label: "الموردون",
-        permission: null,
-        category: "المخزون",
-      },
+    
     ],
   },
 
@@ -104,6 +99,12 @@ export const navItems: NavItem[] = [
     permission: null,
     category: "المشتريات",
     children: [
+        {
+        to: "/suppliers",
+        label: "الموردون",
+        permission: null,
+        category: "المخزون",
+      },
       {
         to: "/purchases",
         label: "قائمة المشتريات",

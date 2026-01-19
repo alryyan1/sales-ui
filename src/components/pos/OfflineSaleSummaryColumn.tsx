@@ -29,14 +29,14 @@ import {
 } from "@mui/icons-material";
 
 // Types
-import { CartItem, PaymentMethod } from "./types";
+import { CartItem } from "./types";
 import { OfflineSale } from "../../services/db";
 import { formatNumber, preciseSum, preciseCalculation } from "@/constants";
 import dayjs from "dayjs";
 import { Plus } from "lucide-react";
 import { PDFViewer } from "@react-pdf/renderer";
 import { PosInvoicePdf } from "./PosInvoicePdf";
-import { OfflineInvoiceA4Pdf } from "./OfflineInvoiceA4Pdf";
+// Outputting nothing to remove the duplicate line
 
 // Import the dialogs
 import { OfflinePaymentDialog } from "./OfflinePaymentDialog";
@@ -79,18 +79,28 @@ export const OfflineSaleSummaryColumn: React.FC<
   const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState(false);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
-  const [isA4PdfDialogOpen, setIsA4PdfDialogOpen] = useState(false);
+  const [isA4PdfDialogOpen, setIsA4PdfDialogOpen] = useState(false); // Restored state
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isLoadingPdf, setIsLoadingPdf] = useState(false);
   const [isPaymentsViewDialogOpen, setIsPaymentsViewDialogOpen] =
     useState(false);
   const [settings, setSettings] = useState<AppSettings | null>(null);
+
+  // Clean up Object URL when dialog closes or component unmounts
+  useEffect(() => {
+    return () => {
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl);
+      }
+    };
+  }, [pdfUrl]);
 
   // Load settings on mount
   useEffect(() => {
     const loadSettings = async () => {
       // 1. Try to fetch fresh settings from API if backend is accessible
-      const { backendHealthService } = await import(
-        "../../services/backendHealthService"
-      );
+      const { backendHealthService } =
+        await import("../../services/backendHealthService");
       const backendAccessible =
         await backendHealthService.checkBackendAccessible();
 
@@ -124,7 +134,7 @@ export const OfflineSaleSummaryColumn: React.FC<
       } catch (dbErr) {
         console.warn(
           "Local DB settings load failed (store might be missing):",
-          dbErr
+          dbErr,
         );
       }
     };
@@ -138,7 +148,7 @@ export const OfflineSaleSummaryColumn: React.FC<
   // Calculate totals
   const subtotal = preciseSum(
     currentSaleItems.map((item) => item.total),
-    2
+    2,
   );
 
   // Discount
@@ -156,7 +166,7 @@ export const OfflineSaleSummaryColumn: React.FC<
     subtotal,
     actualDiscountValue,
     "subtract",
-    2
+    2,
   );
   const isDiscountApplied = actualDiscountValue > 0;
 
@@ -164,18 +174,18 @@ export const OfflineSaleSummaryColumn: React.FC<
   // Ensure all payments have a method field, defaulting to 'cash' if missing
   const payments = (currentSale.payments || []).map((p) => ({
     ...p,
-    method: p.method || 'cash', // Ensure method is always present
+    method: p.method || "cash", // Ensure method is always present
   }));
   const paidAmount = preciseSum(
     payments.map((p) => Number(p.amount)),
-    2
+    2,
   );
   console.log("payments", payments);
 
   // Helper function to translate payment methods to Arabic
   const getPaymentMethodLabel = (method: string | undefined | null): string => {
     if (!method) return "أخرى";
-    
+
     const methodMap: Record<string, string> = {
       cash: "نقدي",
       visa: "فيزا",
@@ -186,7 +196,7 @@ export const OfflineSaleSummaryColumn: React.FC<
       other: "أخرى",
       refund: "استرداد",
     };
-    
+
     return methodMap[method] || "أخرى";
   };
 
@@ -198,7 +208,7 @@ export const OfflineSaleSummaryColumn: React.FC<
   // Handle discount update
   const handleDiscountUpdate = (
     amount: number,
-    type: "percentage" | "fixed"
+    type: "percentage" | "fixed",
   ) => {
     console.log("[Discount] handleDiscountUpdate called:", { amount, type });
     // Ensure amount is a number
@@ -259,8 +269,37 @@ export const OfflineSaleSummaryColumn: React.FC<
     setIsPdfDialogOpen(true);
   };
 
-  const handlePrintA4Pdf = () => {
-    setIsA4PdfDialogOpen(true);
+  const handlePrintA4Pdf = async () => {
+    if (currentSale.is_synced && currentSale.id) {
+      setIsLoadingPdf(true);
+      setIsA4PdfDialogOpen(true);
+      setPdfUrl(null); // Clear previous URL
+
+      try {
+        // Dynamically import apiClient to prevent circular dependencies
+        const { default: apiClient } = await import("../../lib/axios");
+
+        const response = await apiClient.get(
+          `/sales/${currentSale.id}/a4-invoice-pdf/view`,
+          {
+            responseType: "blob",
+          },
+        );
+
+        const url = URL.createObjectURL(
+          new Blob([response.data], { type: "application/pdf" }),
+        );
+        setPdfUrl(url);
+      } catch (error) {
+        console.error("Failed to fetch PDF:", error);
+        alert("فشل تحميل ملف PDF. يرجى التحقق من الاتصال والمحاولة مرة أخرى.");
+        setIsA4PdfDialogOpen(false); // Close on error
+      } finally {
+        setIsLoadingPdf(false);
+      }
+    } else {
+      alert("يجب مزامنة الفاتورة أولاً لطباعتها (A4)");
+    }
   };
 
   return (
@@ -291,7 +330,7 @@ export const OfflineSaleSummaryColumn: React.FC<
                 color: "white",
                 borderRadius: 1,
                 py: 1,
-              }}  
+              }}
             >
               {currentSale.is_synced
                 ? `#${currentSale.id}`
@@ -382,7 +421,7 @@ export const OfflineSaleSummaryColumn: React.FC<
               </Typography>
               <Typography variant="body2" fontWeight="semibold">
                 {dayjs(currentSale.offline_created_at || Date.now()).format(
-                  "HH:mm A"
+                  "HH:mm A",
                 )}
               </Typography>
             </Box>
@@ -646,8 +685,8 @@ export const OfflineSaleSummaryColumn: React.FC<
             {currentSale.status === "completed"
               ? "عرض المدفوعات"
               : paidAmount > 0
-              ? "إدارة الدفع / إكمال"
-              : "الدفع"}
+                ? "إدارة الدفع / إكمال"
+                : "الدفع"}
           </Button>
         </CardContent>
       </Card>
@@ -690,7 +729,7 @@ export const OfflineSaleSummaryColumn: React.FC<
         }}
       />
 
-      {/* PDF Viewer Dialog - Thermal */}
+      {/* PDF Viewer Dialog - Thermal only */}
       <Dialog
         open={isPdfDialogOpen}
         onClose={() => setIsPdfDialogOpen(false)}
@@ -714,39 +753,6 @@ export const OfflineSaleSummaryColumn: React.FC<
         <DialogContent sx={{ height: "80vh", p: 0 }}>
           <PDFViewer width="100%" height="100%" showToolbar={true}>
             <PosInvoicePdf
-              sale={currentSale}
-              items={currentSale.items}
-              userName="الكاشير"
-              settings={settings}
-            />
-          </PDFViewer>
-        </DialogContent>
-      </Dialog>
-
-      {/* PDF Viewer Dialog - A4 */}
-      <Dialog
-        open={isA4PdfDialogOpen}
-        onClose={() => setIsA4PdfDialogOpen(false)}
-        maxWidth={false}
-        PaperProps={{
-          sx: { width: "800px", maxWidth: "90vw", height: "90vh", m: 2 },
-        }}
-      >
-        <DialogTitle
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          معاينة الفاتورة (A4)
-          <IconButton onClick={() => setIsA4PdfDialogOpen(false)}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ height: "80vh", p: 0 }}>
-          <PDFViewer width="100%" height="100%" showToolbar={true}>
-            <OfflineInvoiceA4Pdf
               sale={currentSale}
               items={currentSale.items}
               userName="الكاشير"
@@ -869,7 +875,9 @@ export const OfflineSaleSummaryColumn: React.FC<
                         mb: 0.5,
                       }}
                     >
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
                         <Chip
                           label={getPaymentMethodLabel(payment.method || null)}
                           size="medium"
@@ -987,7 +995,6 @@ export const OfflineSaleSummaryColumn: React.FC<
                 ))}
               </Box>
 
-          
               {/* Overall Summary */}
               {payments.length > 0 && (
                 <Box
@@ -1009,7 +1016,11 @@ export const OfflineSaleSummaryColumn: React.FC<
                     <Typography variant="body1" fontWeight="bold">
                       الإجمالي
                     </Typography>
-                    <Typography variant="h6" fontWeight="bold" color="success.main">
+                    <Typography
+                      variant="h6"
+                      fontWeight="bold"
+                      color="success.main"
+                    >
                       {formatNumber(grandTotal)}
                     </Typography>
                   </Box>
@@ -1023,7 +1034,11 @@ export const OfflineSaleSummaryColumn: React.FC<
                     <Typography variant="body1" fontWeight="bold">
                       المدفوع
                     </Typography>
-                    <Typography variant="h6" fontWeight="bold" color="success.main">
+                    <Typography
+                      variant="h6"
+                      fontWeight="bold"
+                      color="success.main"
+                    >
                       {formatNumber(paidAmount)}
                     </Typography>
                   </Box>
@@ -1051,6 +1066,86 @@ export const OfflineSaleSummaryColumn: React.FC<
                 </Box>
               )}
             </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* PDF Viewer Dialog - A4 (Backend URL) */}
+      <Dialog
+        open={isA4PdfDialogOpen} // Use the new state
+        onClose={() => {
+          setIsA4PdfDialogOpen(false);
+          if (pdfUrl) {
+            URL.revokeObjectURL(pdfUrl);
+            setPdfUrl(null);
+          }
+        }}
+        maxWidth={false}
+        PaperProps={{
+          sx: { width: "800px", maxWidth: "90vw", height: "90vh", m: 2 },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          معاينة الفاتورة (A4)
+          <IconButton onClick={() => setIsA4PdfDialogOpen(false)}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent
+          sx={{
+            height: "80vh",
+            p: 0,
+            overflow: "hidden",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          {isLoadingPdf ? (
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 2,
+              }}
+            >
+              <Typography>جاري تحميل الفاتورة...</Typography>
+              {/* Simple loading indicator */}
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  border: "4px solid #f3f3f3",
+                  borderTop: "4px solid #3498db",
+                  borderRadius: "50%",
+                  animation: "spin 2s linear infinite",
+                }}
+              />
+              <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+            </Box>
+          ) : pdfUrl ? (
+            <iframe
+              src={pdfUrl}
+              width="100%"
+              height="100%"
+              style={{ border: "none" }}
+              title="A4 Invoice PDF"
+            />
+          ) : (
+            <Box sx={{ p: 3, textAlign: "center" }}>
+              <Typography color="error">
+                {currentSale.is_synced
+                  ? "حدث خطأ أثناء تحميل الفاتورة."
+                  : "يجب مزامنة الفاتورة أولاً لعرضها."}
+              </Typography>
+            </Box>
           )}
         </DialogContent>
       </Dialog>

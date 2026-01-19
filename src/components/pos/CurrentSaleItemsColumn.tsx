@@ -49,7 +49,7 @@ interface CurrentSaleItemsColumnProps {
   onUpdateQuantity: (productId: number, newQuantity: number) => Promise<void>;
   onUpdateUnitPrice?: (
     productId: number,
-    newUnitPrice: number
+    newUnitPrice: number,
   ) => Promise<void>;
   onRemoveItem: (productId: number) => Promise<void>;
   onUpdateBatch?: (
@@ -57,11 +57,11 @@ interface CurrentSaleItemsColumnProps {
     batchId: number | null,
     batchNumber: string | null,
     expiryDate: string | null,
-    unitPrice: number
+    unitPrice: number,
   ) => Promise<void>;
   onSwitchUnitType?: (
     productId: number,
-    unitType: "stocking" | "sellable"
+    unitType: "stocking" | "sellable",
   ) => Promise<void>;
   isSalePaid?: boolean;
   readOnly?: boolean;
@@ -197,7 +197,7 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
           batch.id,
           batch.batch_number,
           batch.expiry_date,
-          batch.sale_price
+          batch.sale_price,
         );
       } catch (error) {
         console.error("Error updating batch:", error);
@@ -219,13 +219,13 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
     useState<HTMLElement | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [currentStockProduct, setCurrentStockProduct] = useState<any | null>(
-    null
+    null,
   );
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleStockClick = (
     event: React.MouseEvent<HTMLElement>,
-    product: any
+    product: any,
   ) => {
     setStockPopoverAnchor(event.currentTarget);
     setCurrentStockProduct(product);
@@ -313,9 +313,7 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                 </TableHead>
                 <TableBody>
                   {currentSaleItems.map((item, index) => (
-                    <TableRow key={item.product.id} hover>
-                      {/* Row Number */}
-                      {console.log(item)}
+                    <TableRow key={`${item.product.id}-${index}`} hover>
                       <TableCell align="center">
                         <Box
                           sx={{
@@ -336,7 +334,7 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                           title={
                             getExpiryDate(item)
                               ? `انتهاء الصلاحية: ${formatExpiryDate(
-                                  getExpiryDate(item)!
+                                  getExpiryDate(item)!,
                                 )}`
                               : undefined
                           }
@@ -409,7 +407,7 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                               onClick={() =>
                                 onUpdateQuantity(
                                   item.product.id,
-                                  Math.max(1, item.quantity - 1)
+                                  Math.max(1, item.quantity - 1),
                                 )
                               }
                               disabled={
@@ -490,8 +488,8 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                                   isSalePaid
                                     ? "تم الدفع"
                                     : readOnly
-                                    ? "للقراءة فقط"
-                                    : "انقر لتعديل الكمية"
+                                      ? "للقراءة فقط"
+                                      : "انقر لتعديل الكمية"
                                 }
                               >
                                 {item.quantity}
@@ -503,7 +501,7 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                               onClick={() =>
                                 onUpdateQuantity(
                                   item.product.id,
-                                  item.quantity + 1
+                                  item.quantity + 1,
                                 )
                               }
                               disabled={
@@ -655,8 +653,8 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                               isSalePaid
                                 ? "تم الدفع"
                                 : readOnly
-                                ? "للقراءة فقط"
-                                : "انقر لتعديل السعر"
+                                  ? "للقراءة فقط"
+                                  : "انقر لتعديل السعر"
                             }
                           >
                             {formatNumber(item.unitPrice)}
@@ -683,10 +681,15 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                           selectedBatchNumber={item.selectedBatchNumber}
                           isLowStock={isLowStock(
                             item.product.stock_quantity,
-                            item.product.stock_alert_level
+                            item.product.stock_alert_level,
                           )}
                           onStockClick={handleStockClick}
-                          currentSaleQuantity={item.quantity}
+                          currentSaleQuantity={
+                            item.unitType === "stocking"
+                              ? item.quantity *
+                                (item.product.units_per_stocking_unit || 1)
+                              : item.quantity
+                          }
                         />
                       </TableCell>
 
@@ -705,8 +708,8 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                             isSalePaid
                               ? "تم الدفع"
                               : readOnly
-                              ? "للقراءة فقط"
-                              : "حذف"
+                                ? "للقراءة فقط"
+                                : "حذف"
                           }
                         >
                           {deletingItems.has(item.product.id) ? (
@@ -781,7 +784,7 @@ export const CurrentSaleItemsColumn: React.FC<CurrentSaleItemsColumnProps> = ({
                       }
                     />
                   </ListItem>
-                )
+                ),
             )}
             {(!currentStockProduct?.warehouses ||
               currentStockProduct.warehouses.length === 0) && (

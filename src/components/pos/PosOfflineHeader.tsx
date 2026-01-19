@@ -659,7 +659,7 @@ export const PosOfflineHeader = React.forwardRef<
             </Tooltip>
 
             {/* Shift Report Button - Only show in shift mode */}
-            {posMode === "shift" && (
+            {/* {posMode === "shift" && (
               <Tooltip
                 title={
                   isPageLoading ? "جاري تحميل البيانات..." : "تقرير الوردية"
@@ -692,7 +692,7 @@ export const PosOfflineHeader = React.forwardRef<
                   <Printer size={22} />
                 </IconButton>
               </Tooltip>
-            )}
+            )} */}
 
             {/* Shift Status Button - Only show in shift mode */}
             {posMode === "shift" && (

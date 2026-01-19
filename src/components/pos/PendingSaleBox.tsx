@@ -1,7 +1,7 @@
 import React from "react";
 import { Card, Badge, Box, Typography, CircularProgress } from "@mui/material";
-import { CloudDone, PauseCircle } from "@mui/icons-material";
-import { RefreshCw, Eye, Trash2 } from "lucide-react";
+import { PauseCircle, Person } from "@mui/icons-material";
+import { RefreshCw, Eye, Trash2, CreditCard } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   ContextMenu,
@@ -60,6 +60,14 @@ export const PendingSaleBox: React.FC<PendingSaleBoxProps> = ({
 
   // Check if sale is synced and has an ID
   const isSyncedWithId = sale.is_synced && sale.id;
+
+  // Detect if any payment is non-cash (Bank)
+  const isBankPayment = React.useMemo(() => {
+    if (!sale.payments || !Array.isArray(sale.payments)) return false;
+    return sale.payments.some(
+      (p) => p.method !== "cash" && Number(p.amount) > 0,
+    );
+  }, [sale.payments]);
 
   return (
     <Box sx={{ position: "relative", mb: 0.2 }}>
@@ -143,20 +151,16 @@ export const PendingSaleBox: React.FC<PendingSaleBoxProps> = ({
             )}
 
             {/* Sync Status Icon */}
-            {/* Sync Status Icon or Pending/Held Indicator */}
-            {!isProcessing && (
+            {/* Sync Status Icon or Pending/Held Indicator - Only show if client exists */}
+            {!isProcessing && sale.client_id && (
               <Box
                 sx={{
                   position: "absolute",
-                  top: sale.is_synced ? -5 : -3,
-                  left: sale.is_synced ? -5 : -3,
-                  width: sale.is_synced ? 16 : 8,
-                  height: sale.is_synced ? 16 : 8,
-                  bgcolor: sale.is_synced
-                    ? "success.main"
-                    : sale.status === "held"
-                      ? "warning.main"
-                      : "error.main",
+                  top: -5,
+                  left: -5,
+                  width: 16,
+                  height: 16,
+                  bgcolor: sale.is_synced ? "success.main" : "error.main",
                   borderRadius: "50%",
                   display: "flex",
                   alignItems: "center",
@@ -165,12 +169,7 @@ export const PendingSaleBox: React.FC<PendingSaleBoxProps> = ({
                   boxShadow: 1,
                 }}
               >
-                {sale.is_synced && (
-                  <CloudDone sx={{ fontSize: 10, color: "white" }} />
-                )}
-                {!sale.is_synced && sale.status === "held" && (
-                  <PauseCircle sx={{ fontSize: 10, color: "white" }} />
-                )}
+                <Person sx={{ fontSize: 13, color: "white" }} />
               </Box>
             )}
 
@@ -257,27 +256,46 @@ export const PendingSaleBox: React.FC<PendingSaleBoxProps> = ({
               <Box
                 sx={{
                   position: "absolute",
-                  bottom: 2,
-                  left: 2,
+                  bottom: -2,
+                  left: -2,
                   zIndex: 5,
-                  height: 16, // Slightly larger for better visibility
+                  height: 16,
                   width: 16,
-                  // Use 'warning.main' if 'orange.main' is not in your theme
                   bgcolor: "warning.main",
                   borderRadius: "50%",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  border: "1px solid white", // White border helps it pop
-                  boxShadow: 1
+                  border: "1px solid white",
+                  boxShadow: 1,
                 }}
                 title="تم إرجاع هذه الفاتورة"
               >
-                <RefreshCw
-                  size={10}
-                  strokeWidth={3} // Make the lines thicker for small sizes
-                  color="white"
-                />
+                <RefreshCw size={10} strokeWidth={3} color="white" />
+              </Box>
+            )}
+
+            {/* Bank Payment Indicator */}
+            {isBankPayment && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  bottom: -2,
+                  right: -2,
+                  zIndex: 5,
+                  height: 16,
+                  width: 16,
+                  bgcolor: "info.main",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "1px solid white",
+                  boxShadow: 1,
+                }}
+                title="دفع بنكي / شبكة"
+              >
+                <CreditCard size={10} strokeWidth={3} color="white" />
               </Box>
             )}
           </Card>

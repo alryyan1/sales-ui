@@ -46,7 +46,15 @@ interface CalculatorSummaryDialogProps {
 
 export const CalculatorSummaryDialog: React.FC<
   CalculatorSummaryDialogProps
-> = ({ open, onClose, sales: initialSales, periodTitle, dateFrom, posMode: propPosMode, selectedShiftId }) => {
+> = ({
+  open,
+  onClose,
+  sales: initialSales,
+  periodTitle,
+  dateFrom,
+  posMode: propPosMode,
+  selectedShiftId,
+}) => {
   const theme = useTheme();
   const queryClient = useQueryClient();
   const { getSetting, isLoadingSettings } = useSettings();
@@ -56,13 +64,15 @@ export const CalculatorSummaryDialog: React.FC<
 
   // Wait for settings and user to load before filtering
   const isReady = !isLoadingSettings && !isLoadingUser;
-  const filterByUser = isReady 
+  const filterByUser = isReady
     ? (getSetting("pos_filter_sales_by_user", false) as boolean)
     : false;
-  
+
   // Get POS mode from prop or settings
-  const posMode = propPosMode ?? (isReady ? (getSetting("pos_mode", "shift") as "shift" | "days") : "shift");
-  
+  const posMode =
+    propPosMode ??
+    (isReady ? (getSetting("pos_mode", "shift") as "shift" | "days") : "shift");
+
   // Calculate userId for filtering and query keys
   const userId = filterByUser && user?.id ? user.id : null;
 
@@ -72,12 +82,14 @@ export const CalculatorSummaryDialog: React.FC<
       setLocalSelectedDate(dateFrom);
       // Invalidate queries when dialog opens to force fresh data fetch
       // Include user_id and shift_id/date in query key to ensure proper cache invalidation
-      const expenseQueryKey = posMode === "shift" && selectedShiftId
-        ? ["expenses-summary", selectedShiftId, userId]
-        : ["expenses-summary", dateFrom, userId];
-      const salesQueryKey = posMode === "shift" && selectedShiftId
-        ? ["synced-sales-summary", selectedShiftId, userId]
-        : ["synced-sales-summary", dateFrom, userId];
+      const expenseQueryKey =
+        posMode === "shift" && selectedShiftId
+          ? ["expenses-summary", selectedShiftId, userId]
+          : ["expenses-summary", dateFrom, userId];
+      const salesQueryKey =
+        posMode === "shift" && selectedShiftId
+          ? ["synced-sales-summary", selectedShiftId, userId]
+          : ["synced-sales-summary", dateFrom, userId];
       queryClient.invalidateQueries({
         queryKey: expenseQueryKey,
       });
@@ -89,15 +101,16 @@ export const CalculatorSummaryDialog: React.FC<
 
   // Fetch Expenses - filter by shift_id in shift mode, by date in days mode
   // Include user_id and shift_id/date in query key for proper caching
-  const expenseQueryKey = posMode === "shift" && selectedShiftId
-    ? ["expenses-summary", selectedShiftId, userId]
-    : ["expenses-summary", localSelectedDate, userId];
-  
-  const { 
-    data: expensesData, 
-    isLoading: isLoadingExpenses, 
+  const expenseQueryKey =
+    posMode === "shift" && selectedShiftId
+      ? ["expenses-summary", selectedShiftId, userId]
+      : ["expenses-summary", localSelectedDate, userId];
+
+  const {
+    data: expensesData,
+    isLoading: isLoadingExpenses,
     isFetching: isFetchingExpenses,
-    refetch: refetchExpenses 
+    refetch: refetchExpenses,
   } = useQuery({
     queryKey: expenseQueryKey,
     queryFn: () => {
@@ -112,16 +125,20 @@ export const CalculatorSummaryDialog: React.FC<
         });
       }
     },
-    enabled: open && isReady && (posMode === "days" || (posMode === "shift" && selectedShiftId !== null)),
+    enabled:
+      open &&
+      isReady &&
+      (posMode === "days" || (posMode === "shift" && selectedShiftId !== null)),
     refetchOnMount: true,
     refetchOnWindowFocus: false,
   });
 
   const handleExpenseSaveSuccess = () => {
     // Re-fetch expenses to update the summary
-    const queryKey = posMode === "shift" && selectedShiftId
-      ? ["expenses-summary", selectedShiftId, userId]
-      : ["expenses-summary", localSelectedDate, userId];
+    const queryKey =
+      posMode === "shift" && selectedShiftId
+        ? ["expenses-summary", selectedShiftId, userId]
+        : ["expenses-summary", localSelectedDate, userId];
     queryClient.invalidateQueries({
       queryKey,
     });
@@ -129,15 +146,16 @@ export const CalculatorSummaryDialog: React.FC<
 
   // Fetch Synced Sales - filter by shift_id in shift mode, by date in days mode
   // Include user_id and shift_id/date in query key for proper caching
-  const syncedSalesQueryKey = posMode === "shift" && selectedShiftId
-    ? ["synced-sales-summary", selectedShiftId, userId]
-    : ["synced-sales-summary", localSelectedDate, userId];
+  const syncedSalesQueryKey =
+    posMode === "shift" && selectedShiftId
+      ? ["synced-sales-summary", selectedShiftId, userId]
+      : ["synced-sales-summary", localSelectedDate, userId];
 
-  const { 
-    data: syncedSalesData, 
-    isLoading: isLoadingSynced, 
+  const {
+    data: syncedSalesData,
+    isLoading: isLoadingSynced,
     isFetching: isFetchingSynced,
-    refetch: refetchSales 
+    refetch: refetchSales,
   } = useQuery({
     queryKey: syncedSalesQueryKey,
     queryFn: async () => {
@@ -157,7 +175,7 @@ export const CalculatorSummaryDialog: React.FC<
           1000,
           null, // clientId
           false, // todayOnly
-          null // forCurrentUser (handled via queryParams)
+          null, // forCurrentUser (handled via queryParams)
         );
         return res.data;
       } else {
@@ -171,12 +189,15 @@ export const CalculatorSummaryDialog: React.FC<
           1000,
           null, // clientId
           false, // todayOnly
-          filterByUser && user?.id ? user.id : null // forCurrentUser
+          filterByUser && user?.id ? user.id : null, // forCurrentUser
         );
         return res.data;
       }
     },
-    enabled: open && isReady && (posMode === "days" || (posMode === "shift" && selectedShiftId !== null)),
+    enabled:
+      open &&
+      isReady &&
+      (posMode === "days" || (posMode === "shift" && selectedShiftId !== null)),
     refetchOnMount: true,
     refetchOnWindowFocus: false,
   });
@@ -203,7 +224,12 @@ export const CalculatorSummaryDialog: React.FC<
   }, [localSelectedDate, open, queryClient, userId, posMode]);
 
   // Show loading when initially loading OR when fetching/refetching data OR waiting for settings/user
-  const isLoading = !isReady || isLoadingExpenses || isLoadingSynced || isFetchingExpenses || isFetchingSynced;
+  const isLoading =
+    !isReady ||
+    isLoadingExpenses ||
+    isLoadingSynced ||
+    isFetchingExpenses ||
+    isFetchingSynced;
 
   // Determine which sales to use (strictly use synced/ID-carrying sales)
   const filterSynced = (arr: (OfflineSale | Sale)[] = []) =>
@@ -211,9 +237,10 @@ export const CalculatorSummaryDialog: React.FC<
 
   // Prefer fetched synced sales data when available (even if empty array means no sales),
   // otherwise fall back to filtered initial sales
-  const rawSales = syncedSalesData !== undefined
-    ? syncedSalesData
-    : filterSynced(initialSales);
+  const rawSales =
+    syncedSalesData !== undefined
+      ? syncedSalesData
+      : filterSynced(initialSales);
 
   // Filter sales by user if setting is enabled
   const effectiveSales = useMemo(() => {
@@ -225,12 +252,38 @@ export const CalculatorSummaryDialog: React.FC<
 
   const totalSalesAmount = (effectiveSales as any[]).reduce(
     (sum: number, sale: any) => sum + Number(sale.total_amount || 0),
-    0
+    0,
   );
   const totalPaidAmount = (effectiveSales as any[]).reduce(
     (sum: number, sale: any) => sum + Number(sale.paid_amount || 0),
-    0
+    0,
   );
+
+  const { totalCash, totalBank } = useMemo(() => {
+    let cash = 0;
+    let bank = 0;
+    (effectiveSales as any[]).forEach((sale: any) => {
+      if (
+        sale.payments &&
+        Array.isArray(sale.payments) &&
+        sale.payments.length > 0
+      ) {
+        sale.payments.forEach((p: any) => {
+          const amt = Number(p.amount || 0);
+          if (p.method === "cash") {
+            cash += amt;
+          } else {
+            bank += amt;
+          }
+        });
+      } else {
+        // Fallback: Use paid_amount as cash if payments detail is missing
+        cash += Number(sale.paid_amount || 0);
+      }
+    });
+    return { totalCash: cash, totalBank: bank };
+  }, [effectiveSales]);
+
   const totalSalesCount = effectiveSales.length;
 
   // Filter expenses by user if setting is enabled
@@ -244,7 +297,7 @@ export const CalculatorSummaryDialog: React.FC<
 
   const totalExpensesAmount = (expenses as any[]).reduce(
     (sum: number, exp: any) => sum + Number(exp.amount || 0),
-    0
+    0,
   );
   const totalExpensesCount = expenses.length;
 
@@ -380,7 +433,7 @@ export const CalculatorSummaryDialog: React.FC<
               ملخص الحسابات
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {posMode === "shift" 
+              {posMode === "shift"
                 ? periodTitle
                 : localSelectedDate === dateFrom
                   ? periodTitle
@@ -395,7 +448,6 @@ export const CalculatorSummaryDialog: React.FC<
             color="secondary"
             size="small"
             onClick={() => setIsExpenseModalOpen(true)}
-           
           >
             إضافه مصروف
           </Button>
@@ -483,10 +535,39 @@ export const CalculatorSummaryDialog: React.FC<
                   subtitle="المقبوضات - المنصرفات"
                 />
               </Grid>
+
+              <Grid size={{ xs: 12 }}>
+                <Divider sx={{ my: 0.5 }}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    fontWeight="bold"
+                  >
+                    تفاصيل المقبوضات
+                  </Typography>
+                </Divider>
+              </Grid>
+
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <SummaryCard
+                  title="نقدًا (Cash)"
+                  value={totalCash}
+                  icon={Wallet}
+                  color={theme.palette.success.main}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <SummaryCard
+                  title="شبكة / تحويل (Bank)"
+                  value={totalBank}
+                  icon={Receipt}
+                  color={theme.palette.info.main}
+                />
+              </Grid>
             </Grid>
 
             <Divider sx={{ my: 1 }} />
-
+            {/* 
             <Box
               sx={{
                 p: 3,
@@ -505,7 +586,7 @@ export const CalculatorSummaryDialog: React.FC<
                 * جميع الحسابات محسوبة بناءً على البيانات المتوفرة في هذه الفترة
                 فقط.
               </Typography>
-            </Box>
+            </Box> */}
           </Box>
         )}
       </DialogContent>
@@ -516,7 +597,7 @@ export const CalculatorSummaryDialog: React.FC<
         onClose={() => setIsExpenseModalOpen(false)}
         expenseToEdit={null}
         onSaveSuccess={handleExpenseSaveSuccess}
-        shiftId={posMode === "shift" ? selectedShiftId ?? null : null}
+        shiftId={posMode === "shift" ? (selectedShiftId ?? null) : null}
       />
     </Dialog>
   );
