@@ -206,7 +206,7 @@ const saleService = {
    */
   getSaleReturns: async (
     page = 1,
-    queryParams = ""
+    queryParams = "",
   ): Promise<{ data: SaleReturn[]; meta?: any }> => {
     try {
       const url = `/sale-returns?page=${page}&${queryParams}`;
@@ -227,7 +227,7 @@ const saleService = {
   getTodaySalesByCreatedAt: async (): Promise<Sale[]> => {
     try {
       const response = await apiClient.get<{ data: Sale[] }>(
-        "/sales/today-by-created-at"
+        "/sales/today-by-created-at",
       );
 
       return response.data.data || response.data;
@@ -242,12 +242,12 @@ const saleService = {
    */
   updateSaleDiscount: async (
     saleId: number,
-    data: { discount_amount: number; discount_type: "percentage" | "fixed" }
+    data: { discount_amount: number; discount_type: "percentage" | "fixed" },
   ): Promise<Sale> => {
     try {
       const response = await apiClient.put<{ message: string; sale: Sale }>(
         `/sales/${saleId}/discount`,
-        data
+        data,
       );
       return response.data.sale;
     } catch (error) {
@@ -271,7 +271,7 @@ const saleService = {
     limit: number = 15,
     clientId?: number | null, // Optional client filter
     todayOnly?: boolean, // For SalesTerminalPage
-    forCurrentUser?: number | null // For SalesTerminalPage (user_id)
+    forCurrentUser?: number | null, // For SalesTerminalPage (user_id)
   ): Promise<PaginatedResponse<Sale>> => {
     try {
       const params = new URLSearchParams();
@@ -295,7 +295,7 @@ const saleService = {
       }
 
       const response = await apiClient.get<PaginatedResponse<Sale>>(
-        `/sales?${params.toString()}`
+        `/sales?${params.toString()}`,
       );
       console.log("getSales response:", response.data);
       return response.data;
@@ -317,7 +317,7 @@ const saleService = {
     shiftId?: number | null,
     productId?: number | null,
     limit: number = 25,
-    posMode?: "shift" | "days"
+    posMode?: "shift" | "days",
   ): Promise<PaginatedResponse<Sale>> => {
     try {
       const params = new URLSearchParams();
@@ -332,7 +332,7 @@ const saleService = {
       if (posMode) params.append("pos_mode", posMode);
 
       const response = await apiClient.get<PaginatedResponse<Sale>>(
-        `/reports/sales?${params.toString()}`
+        `/reports/sales?${params.toString()}`,
       );
       return response.data;
     } catch (error) {
@@ -348,7 +348,7 @@ const saleService = {
   getSale: async (id: number): Promise<Sale> => {
     try {
       const response = await apiClient.get<{ sale: Sale } | Sale>(
-        `/sales/${id}`
+        `/sales/${id}`,
       );
       // Check if 'sale' key exists (common pattern) or if data is the sale object directly
       if ("sale" in response.data) {
@@ -368,7 +368,7 @@ const saleService = {
     try {
       const response = await apiClient.post<{ sale: Sale } | Sale>(
         "/sales",
-        saleData
+        saleData,
       );
       if ("sale" in response.data) {
         return response.data.sale;
@@ -394,7 +394,7 @@ const saleService = {
     try {
       const response = await apiClient.post<{ sale: Sale }>(
         "/sales/create-empty",
-        data
+        data,
       );
       return response.data.sale;
     } catch (error) {
@@ -412,7 +412,7 @@ const saleService = {
     try {
       const response = await apiClient.put<{ sale: Sale } | Sale>(
         `/sales/${id}`,
-        saleData
+        saleData,
       );
       if ("sale" in response.data) {
         return response.data.sale;
@@ -423,7 +423,7 @@ const saleService = {
       if (isAxiosError(error) && error.response?.status === 422) {
         console.warn(
           "Validation error during sale update (check stock?):",
-          error.response.data
+          error.response.data,
         );
       }
       throw error;
@@ -439,14 +439,14 @@ const saleService = {
       payments: Array<
         Omit<Payment, "id" | "sale_id" | "user_name" | "created_at">
       >;
-    }
+    },
   ): Promise<Sale> => {
     try {
       console.log("addPaymentToSale called with:", { saleId, paymentData }); // Debug log
       // Assumes backend returns the updated Sale object with all its payments
       const response = await apiClient.post<{ sale: Sale } | Sale>(
         `/sales/${saleId}/payments`,
-        paymentData
+        paymentData,
       );
       if ("sale" in response.data) {
         return response.data.sale;
@@ -465,7 +465,7 @@ const saleService = {
     try {
       console.log("deletePaymentsFromSale called for sale ID:", saleId);
       const response = await apiClient.delete<{ sale: Sale } | Sale>(
-        `/sales/${saleId}/payments`
+        `/sales/${saleId}/payments`,
       );
       if ("sale" in response.data) {
         return response.data.sale;
@@ -487,7 +487,7 @@ const saleService = {
       amount: number;
       reference_number?: string | null;
       notes?: string | null;
-    }
+    },
   ): Promise<void> => {
     try {
       await apiClient.post(`/sales/${saleId}/payments/single`, paymentData);
@@ -506,7 +506,7 @@ const saleService = {
     } catch (error) {
       console.error(
         `Error deleting payment ${paymentId} from sale ${saleId}:`,
-        error
+        error,
       );
       throw error;
     }
@@ -522,12 +522,12 @@ const saleService = {
       quantity: number;
       unit_price: number;
       purchase_item_id?: number | null; // Optional batch selection
-    }
+    },
   ): Promise<{ sale: Sale; message: string }> => {
     try {
       const response = await apiClient.post<{ sale: Sale; message: string }>(
         `/sales/${saleId}/items`,
-        itemData
+        itemData,
       );
       return response.data;
     } catch (error) {
@@ -545,7 +545,7 @@ const saleService = {
       product_id: number;
       quantity: number;
       unit_price: number;
-    }>
+    }>,
   ): Promise<{
     sale: Sale;
     message: string;
@@ -563,7 +563,7 @@ const saleService = {
     } catch (error) {
       console.error(
         `Error adding multiple sale items to sale ${saleId}:`,
-        error
+        error,
       );
       throw error;
     }
@@ -579,18 +579,18 @@ const saleService = {
       quantity: number;
       unit_price: number;
       purchase_item_id?: number | null; // Optional batch selection
-    }
+    },
   ): Promise<Sale> => {
     try {
       const response = await apiClient.put<{ sale: Sale }>(
         `/sales/${saleId}/items/${saleItemId}`,
-        itemData
+        itemData,
       );
       return response.data.sale;
     } catch (error) {
       console.error(
         `Error updating sale item ${saleItemId} in sale ${saleId}:`,
-        error
+        error,
       );
       throw error;
     }
@@ -601,7 +601,7 @@ const saleService = {
    */
   deleteSaleItem: async (
     saleId: number,
-    saleItemId: number
+    saleItemId: number,
   ): Promise<{
     message: string;
     deleted_quantity: number;
@@ -613,13 +613,13 @@ const saleService = {
   }> => {
     try {
       const response = await apiClient.delete(
-        `/sales/${saleId}/items/${saleItemId}`
+        `/sales/${saleId}/items/${saleItemId}`,
       );
       return response.data;
     } catch (error) {
       console.error(
         `Error deleting sale item ${saleItemId} from sale ${saleId}:`,
-        error
+        error,
       );
       throw error;
     }
@@ -635,7 +635,7 @@ const saleService = {
       console.error(`Error deleting sale ${id}:`, error);
       if (isAxiosError(error) && error.response?.status === 403) {
         throw new Error(
-          getErrorMessage(error, "Deleting sales records is not allowed.")
+          getErrorMessage(error, "Deleting sales records is not allowed."),
         );
       }
       throw error;
@@ -646,7 +646,7 @@ const saleService = {
    * Get items from an original sale that are eligible for return.
    */
   getReturnableItems: async (
-    originalSaleId: number
+    originalSaleId: number,
   ): Promise<ReturnableSaleItem[]> => {
     try {
       const response = await apiClient.get<
@@ -660,7 +660,7 @@ const saleService = {
     } catch (error) {
       console.error(
         `Error fetching returnable items for sale ${originalSaleId}:`,
-        error
+        error,
       );
       throw error;
     }
@@ -678,7 +678,7 @@ const saleService = {
   getSaleForPOS: async (id: number): Promise<Sale> => {
     try {
       const response = await apiClient.get<{ sale: Sale } | Sale>(
-        `/sales/${id}/pos-format`
+        `/sales/${id}/pos-format`,
       );
       if ("sale" in response.data) {
         return response.data.sale;
@@ -700,7 +700,7 @@ const saleService = {
       product_id: number;
       quantity?: number;
       purchase_item_id?: number | null;
-    }
+    },
   ): Promise<{ sale: Sale; message: string }> => {
     try {
       const url = saleId ? `/sales/${saleId}/items` : "/sales/create-with-item";
@@ -714,7 +714,7 @@ const saleService = {
           }
         : {
             client_id: null,
-            sale_date: new Date().toISOString().split("T")[0],
+            sale_date: new Date().toLocaleDateString("en-CA"),
             notes: null,
             item: {
               product_id: productData.product_id,
@@ -725,7 +725,7 @@ const saleService = {
 
       const response = await apiClient.post<{ sale: Sale; message: string }>(
         url,
-        payload
+        payload,
       );
       return response.data;
     } catch (error) {
@@ -740,12 +740,12 @@ const saleService = {
   updateQuantityPOS: async (
     saleId: number,
     itemId: number,
-    quantity: number
+    quantity: number,
   ): Promise<Sale> => {
     try {
       const response = await apiClient.put<{ sale: Sale }>(
         `/sales/${saleId}/items/${itemId}`,
-        { quantity }
+        { quantity },
       );
       return response.data.sale;
     } catch (error) {
@@ -764,7 +764,7 @@ const saleService = {
       await apiClient.delete(`/sales/${saleId}/items/${itemId}`);
       // Fetch the updated sale - use the getSale method defined above
       const response = await apiClient.get<{ sale: Sale } | Sale>(
-        `/sales/${saleId}`
+        `/sales/${saleId}`,
       );
       if ("sale" in response.data) {
         return response.data.sale;
@@ -785,7 +785,7 @@ const saleService = {
     batchData: {
       purchase_item_id: number | null;
       unit_price: number;
-    }
+    },
   ): Promise<Sale> => {
     try {
       const response = await apiClient.put<{ sale: Sale }>(
@@ -794,7 +794,7 @@ const saleService = {
           quantity: undefined, // Keep existing quantity
           unit_price: batchData.unit_price,
           purchase_item_id: batchData.purchase_item_id,
-        }
+        },
       );
       return response.data.sale;
     } catch (error) {
@@ -813,12 +813,12 @@ const saleService = {
       amount: number;
       reference_number?: string | null;
       notes?: string | null;
-    }
+    },
   ): Promise<Sale> => {
     try {
       const response = await apiClient.post<{ sale: Sale }>(
         `/sales/${saleId}/payments`,
-        { payments: [paymentData] }
+        { payments: [paymentData] },
       );
       return response.data.sale;
     } catch (error) {

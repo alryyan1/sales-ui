@@ -20,6 +20,8 @@ import PurchaseDetailsPage from "./pages/purchases/PurchaseDetailsPage";
 import ManagePurchaseItemsPage from "./pages/purchases/ManagePurchaseItemsPage";
 import StockAdjustmentsListPage from "./components/inventory/StockAdjustmentsListPage";
 import StockTransfersPage from "./pages/inventory/StockTransfersPage";
+import InventoryCountPage from "./pages/inventory/InventoryCountPage";
+import ManageInventoryCountPage from "./pages/inventory/ManageInventoryCountPage";
 import RequestStockPage from "./pages/inventory/RequestStockPage";
 import ManageStockRequisitionsListPage from "./pages/inventory/ManageStockRequisitionsListPage";
 import ProcessRequisitionPage from "./components/admin/inventory/ProcessRequisitionPage";
@@ -145,7 +147,10 @@ const router = createHashRouter([
             children: [
               { index: true, element: <PurchasesListPage /> },
               { path: "add", element: <PurchaseFormPage /> },
-              { path: ":id/edit", element: <PurchaseFormPage /> },
+              {
+                path: ":id/edit",
+                element: <Navigate to="../manage-items" replace />,
+              },
               { path: ":id", element: <PurchaseDetailsPage /> },
               {
                 path: ":id/manage-items",
@@ -226,6 +231,19 @@ const router = createHashRouter([
                     <StockTransfersPage />
                   </PermissionGuard>
                 ),
+              },
+              {
+                path: "counts",
+                children: [
+                  {
+                    index: true,
+                    element: <InventoryCountPage />,
+                  },
+                  {
+                    path: ":id",
+                    element: <ManageInventoryCountPage />,
+                  },
+                ],
               },
             ],
           },

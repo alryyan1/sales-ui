@@ -51,7 +51,6 @@ type ProductFormValues = {
   sellable_unit_id: string;
   units_per_stocking_unit: number;
   category_id: string;
-  stock_quantity: number;
   stock_alert_level: number | null;
 };
 
@@ -102,7 +101,6 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       sellable_unit_id: "",
       units_per_stocking_unit: 1,
       category_id: "",
-      stock_quantity: 0,
       stock_alert_level: 10,
     },
   });
@@ -125,7 +123,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
         9999,
         "",
         false,
-        true
+        true,
       );
       setCategories(data as Category[]);
     } catch (error) {
@@ -165,7 +163,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       form.setValue("category_id", String(newCategory.id));
       setIsCategoryModalOpen(false);
     },
-    [form]
+    [form],
   );
 
   // --- Handle Unit Creation Success ---
@@ -175,7 +173,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       form.setValue("stocking_unit_id", String(newUnit.id));
       setIsStockingUnitModalOpen(false);
     },
-    [form]
+    [form],
   );
 
   const handleSellableUnitCreated = useCallback(
@@ -184,7 +182,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       form.setValue("sellable_unit_id", String(newUnit.id));
       setIsSellableUnitModalOpen(false);
     },
-    [form]
+    [form],
   );
 
   // --- Effect to Populate/Reset Form and Fetch Categories ---
@@ -210,7 +208,6 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           category_id: productToEdit.category_id
             ? String(productToEdit.category_id)
             : "",
-          stock_quantity: Number(productToEdit.stock_quantity) || 0,
           stock_alert_level: productToEdit.stock_alert_level || 10,
         });
       } else {
@@ -223,7 +220,6 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           stocking_unit_id: "",
           sellable_unit_id: "",
           units_per_stocking_unit: 1,
-          stock_quantity: 0,
           stock_alert_level: 10,
         });
       }
@@ -256,7 +252,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
         : null,
       units_per_stocking_unit: Number(data.units_per_stocking_unit) || 1,
       category_id: data.category_id ? Number(data.category_id) : null,
-      stock_quantity: Number(data.stock_quantity),
+      stock_quantity: 0, // Always set to 0, stock is managed through purchases
       stock_alert_level: data.stock_alert_level
         ? Number(data.stock_alert_level)
         : null,
@@ -267,7 +263,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       if (isEditMode && productToEdit) {
         savedProduct = await productService.updateProduct(
           productToEdit.id,
-          dataToSend
+          dataToSend,
         );
       } else {
         savedProduct = await productService.createProduct(dataToSend);
@@ -276,7 +272,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
       toast.success(
         isEditMode ? "تم تحديث المنتج بنجاح" : "تم إنشاء المنتج بنجاح",
-        { duration: 3000 }
+        { duration: 3000 },
       );
 
       onSaveSuccess(savedProduct);
@@ -530,7 +526,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                                   let productId = productToEdit?.id;
                                   if (!productId) {
                                     toast.error(
-                                      "يرجى حفظ المنتج أولاً ثم رفع الصورة"
+                                      "يرجى حفظ المنتج أولاً ثم رفع الصورة",
                                     );
                                     setUploadingImage(false);
                                     return;
@@ -543,19 +539,19 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                                       headers: {
                                         "Content-Type": "multipart/form-data",
                                       },
-                                    }
+                                    },
                                   );
 
                                   if (response.data?.product?.image_url) {
                                     field.onChange(
-                                      response.data.product.image_url
+                                      response.data.product.image_url,
                                     );
                                     toast.success("تم رفع الصورة بنجاح");
                                   }
                                 } catch (error: any) {
                                   console.error(
                                     "Error uploading image:",
-                                    error
+                                    error,
                                   );
                                   toast.error("فشل رفع الصورة", {
                                     description:
@@ -646,7 +642,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       }
                       value={
                         categories.find(
-                          (cat) => String(cat.id) === field.value
+                          (cat) => String(cat.id) === field.value,
                         ) || null
                       }
                       onChange={(_, newValue) =>
@@ -734,7 +730,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       }
                       value={
                         stockingUnits.find(
-                          (unit) => String(unit.id) === field.value
+                          (unit) => String(unit.id) === field.value,
                         ) || null
                       }
                       onChange={(_, newValue) =>
@@ -792,7 +788,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       }
                       value={
                         sellableUnits.find(
-                          (unit) => String(unit.id) === field.value
+                          (unit) => String(unit.id) === field.value,
                         ) || null
                       }
                       onChange={(_, newValue) =>
@@ -869,37 +865,6 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 )}
               />
 
-              {/* Initial Stock Quantity */}
-              <Controller
-                control={control}
-                name="stock_quantity"
-                rules={{
-                  required: "الكمية الابتدائية مطلوبة",
-                  min: {
-                    value: 0,
-                    message: "لا يمكن أن تكون الكمية أقل من 0",
-                  },
-                }}
-                render={({ field, fieldState }) => (
-                  <TextField
-                    {...field}
-                    label="الكمية الابتدائية في المخزون"
-                    type="number"
-                    fullWidth
-                    size="small"
-                    inputProps={{ min: 0, step: 1 }}
-                    disabled={isSubmitting}
-                    onFocus={(e) => e.target.select()}
-                    onChange={(e) => field.onChange(Number(e.target.value))}
-                    helperText={
-                      fieldState.error?.message ||
-                      "الكمية الحالية من المنتج في المخزون (بوحدة البيع)"
-                    }
-                    error={!!fieldState.error}
-                  />
-                )}
-              />
-
               {/* Stock Alert Level Field */}
               <Controller
                 control={control}
@@ -923,7 +888,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     value={field.value ?? ""}
                     onChange={(e) =>
                       field.onChange(
-                        e.target.value ? Number(e.target.value) : null
+                        e.target.value ? Number(e.target.value) : null,
                       )
                     }
                     helperText={

@@ -71,7 +71,7 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
   onExportPdf,
 }) => {
   const formatCurrency = useFormatCurrency();
-  
+
   return (
     <div className="bg-white border rounded-xl shadow-sm p-4 mb-6">
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
@@ -130,7 +130,7 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
               onValueChange={(value) =>
                 onStatusChange(value as "received" | "pending" | "ordered")
               }
-              disabled={isStatusPending || purchase.status === "received"}
+              disabled={isStatusPending}
             >
               <SelectTrigger
                 className={cn(
@@ -140,7 +140,7 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
                   purchase.status === "pending" &&
                     "bg-amber-50 text-amber-700 border-amber-200",
                   purchase.status === "ordered" &&
-                    "bg-blue-50 text-blue-700 border-blue-200"
+                    "bg-blue-50 text-blue-700 border-blue-200",
                 )}
               >
                 <SelectValue placeholder="الحالة" />

@@ -1,5 +1,5 @@
 // src/components/purchases/manage-items/PurchaseItemsList.tsx
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -37,6 +37,7 @@ interface PurchaseItemsListProps {
   isDeleting: boolean;
   onUpdate: (itemId: number, field: string, value: unknown) => void;
   onDelete: (itemId: number) => void;
+  updatingField: string | null; // Track which field is being updated
   // Pagination props - using Laravel pagination structure
   pagination: PaginatedResponse<PurchaseItem> | null;
   searchQuery: string;
@@ -53,6 +54,7 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
   isDeleting,
   onUpdate,
   onDelete,
+  updatingField,
   pagination,
   searchQuery,
   isLoading = false,
@@ -60,23 +62,40 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
   onPerPageChange,
   onSearchChange,
 }) => {
-  // Handle Laravel pagination structure: data, links (object), meta (object with pagination info)
-  const meta = (pagination as any)?.meta || pagination;
-  const linksObject = (pagination as any)?.links || {};
-  
-  const total = meta?.total || items.length;
-  const currentPage = meta?.current_page || 1;
-  const perPage = meta?.per_page || 20;
-  const from = meta?.from || 0;
-  const to = meta?.to || items.length;
-  const lastPage = meta?.last_page || 1;
-  const links = Array.isArray(meta?.links) ? meta.links : [];
-  
-  // Extract first/last/prev/next from links object (not the array)
-  const firstPageUrl = linksObject?.first || null;
-  const lastPageUrl = linksObject?.last || null;
-  const prevPageUrl = linksObject?.prev || null;
-  const nextPageUrl = linksObject?.next || null;
+  // Memoize pagination calculations to prevent recalculation on every render
+  const paginationData = useMemo(() => {
+    // Handle Laravel pagination structure: data, links (object), meta (object with pagination info)
+    const meta = (pagination as any)?.meta || pagination;
+    const linksObject = (pagination as any)?.links || {};
+
+    const total = meta?.total || items.length;
+    const currentPage = meta?.current_page || 1;
+    const perPage = meta?.per_page || 20;
+    const from = meta?.from || 0;
+    const to = meta?.to || items.length;
+    const lastPage = meta?.last_page || 1;
+    const links = Array.isArray(meta?.links) ? meta.links : [];
+
+    // Extract first/last/prev/next from links object (not the array)
+    const firstPageUrl = linksObject?.first || null;
+    const lastPageUrl = linksObject?.last || null;
+    const prevPageUrl = linksObject?.prev || null;
+    const nextPageUrl = linksObject?.next || null;
+
+    return {
+      total,
+      currentPage,
+      perPage,
+      from,
+      to,
+      lastPage,
+      links,
+      firstPageUrl,
+      lastPageUrl,
+      prevPageUrl,
+      nextPageUrl,
+    };
+  }, [pagination, items.length]);
 
   // Extract page number from Laravel pagination URL
   const getPageFromUrl = (url: string | null): number | null => {
@@ -114,7 +133,7 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
           mb={2}
         >
           <Typography variant="h6">
-            أصناف المشتريات ({total})
+            أصناف المشتريات ({paginationData.total})
           </Typography>
           <TextField
             size="small"
@@ -146,7 +165,7 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
           <FormControl size="small" sx={{ minWidth: 150 }}>
             <InputLabel>صفوف لكل صفحة</InputLabel>
             <Select
-              value={perPage}
+              value={paginationData.perPage}
               label="صفوف لكل صفحة"
               disabled={isLoading}
               onChange={(e) => onPerPageChange(Number(e.target.value))}
@@ -160,17 +179,23 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
 
           {/* Pagination Info */}
           <Typography variant="body2" color="text.secondary">
-            عرض {from} إلى {to} من {total} نتائج
+            عرض {paginationData.from} إلى {paginationData.to} من{" "}
+            {paginationData.total} نتائج
           </Typography>
 
           {/* Laravel Pagination Links */}
-          <Stack direction="row" spacing={0.5} alignItems="center" flexWrap="wrap">
+          <Stack
+            direction="row"
+            spacing={0.5}
+            alignItems="center"
+            flexWrap="wrap"
+          >
             {/* First Page */}
-            {firstPageUrl && (
+            {paginationData.firstPageUrl && (
               <IconButton
                 size="small"
-                disabled={currentPage === 1 || isLoading}
-                onClick={() => handlePageClick(firstPageUrl)}
+                disabled={paginationData.currentPage === 1 || isLoading}
+                onClick={() => handlePageClick(paginationData.firstPageUrl)}
                 aria-label="الصفحة الأولى"
               >
                 <FirstPage />
@@ -178,11 +203,11 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
             )}
 
             {/* Previous Page */}
-            {prevPageUrl && (
+            {paginationData.prevPageUrl && (
               <IconButton
                 size="small"
-                disabled={!prevPageUrl || isLoading}
-                onClick={() => handlePageClick(prevPageUrl)}
+                disabled={!paginationData.prevPageUrl || isLoading}
+                onClick={() => handlePageClick(paginationData.prevPageUrl)}
                 aria-label="الصفحة السابقة"
               >
                 <ChevronRight />
@@ -190,8 +215,9 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
             )}
 
             {/* Page Numbers from Laravel links */}
-            {Array.isArray(links) && links.length > 0
-              ? links
+            {Array.isArray(paginationData.links) &&
+            paginationData.links.length > 0
+              ? paginationData.links
                   .filter((link) => {
                     if (!link || typeof link !== "object") return false;
                     // Filter out Previous/Next links (we handle them separately)
@@ -207,7 +233,7 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                   .map((link, index) => {
                     if (!link || typeof link !== "object") return null;
                     const label = String(link.label || "").trim();
-                    
+
                     // Handle ellipsis
                     if (label === "..." || label === "&hellip;") {
                       return (
@@ -254,11 +280,11 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
               : null}
 
             {/* Next Page */}
-            {nextPageUrl && (
+            {paginationData.nextPageUrl && (
               <IconButton
                 size="small"
-                disabled={!nextPageUrl || isLoading}
-                onClick={() => handlePageClick(nextPageUrl)}
+                disabled={!paginationData.nextPageUrl || isLoading}
+                onClick={() => handlePageClick(paginationData.nextPageUrl)}
                 aria-label="الصفحة التالية"
               >
                 <ChevronLeft />
@@ -266,11 +292,14 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
             )}
 
             {/* Last Page */}
-            {lastPageUrl && (
+            {paginationData.lastPageUrl && (
               <IconButton
                 size="small"
-                disabled={currentPage === lastPage || isLoading}
-                onClick={() => handlePageClick(lastPageUrl)}
+                disabled={
+                  paginationData.currentPage === paginationData.lastPage ||
+                  isLoading
+                }
+                onClick={() => handlePageClick(paginationData.lastPageUrl)}
                 aria-label="الصفحة الأخيرة"
               >
                 <LastPage />
@@ -285,18 +314,21 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
               // Calculate the actual item number considering pagination
               // Laravel 'from' is 1-indexed, so item number = from + index
               // But PurchaseItemCard displays index + 1, so we pass (from + index - 1)
-              const itemNumber = from > 0 ? from + index - 1 : index;
+              const itemNumber =
+                paginationData.from > 0
+                  ? paginationData.from + index - 1
+                  : index;
               return (
                 <PurchaseItemCard
                   key={item.id}
                   item={item}
                   index={itemNumber}
-                  totalItems={total}
                   productUnits={productUnits}
                   isReadOnly={isReadOnly}
                   isDeleting={isDeleting}
                   onUpdate={onUpdate}
                   onDelete={onDelete}
+                  updatingField={updatingField}
                 />
               );
             })}
@@ -315,4 +347,4 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
   );
 };
 
-export default PurchaseItemsList;
+export default React.memo(PurchaseItemsList);

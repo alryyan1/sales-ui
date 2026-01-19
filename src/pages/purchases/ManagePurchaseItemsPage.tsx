@@ -8,7 +8,7 @@ import React, {
   useRef,
 } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 // MUI Components
@@ -29,17 +29,23 @@ import {
   AddPurchaseItemData,
   ProductUnitsMap,
 } from "@/components/purchases/manage-items";
-import { PurchasePdfDialog } from "@/components/purchases/PurchasePdfDialog";
+import InventoryImpactDialog from "@/components/purchases/InventoryImpactDialog";
 
 const ManagePurchaseItemsPage: React.FC = () => {
   const { id: purchaseIdParam } = useParams<{ id: string }>();
   const purchaseId = purchaseIdParam ? Number(purchaseIdParam) : null;
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // Dialog states
   const [addItemDialogOpen, setAddItemDialogOpen] = useState(false);
   const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
-  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
+  const [inventoryImpactDialogOpen, setInventoryImpactDialogOpen] =
+    useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState<{
+    newStatus: "received" | "pending" | "ordered";
+    previousStatus: string;
+  } | null>(null);
 
   // Product units mapping
   const [productUnits, setProductUnits] = useState<ProductUnitsMap>({});
@@ -47,13 +53,15 @@ const ManagePurchaseItemsPage: React.FC = () => {
   // Debounce refs for item updates
   const updateTimeoutRefs = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
+  // Track which field is currently being updated (for loading state)
+  const [updatingField, setUpdatingField] = useState<string | null>(null);
+
   // ==================== QUERIES ====================
 
   const {
     data: purchase,
     isLoading: loadingPurchase,
     error: purchaseError,
-    refetch: refetchPurchase,
   } = useQuery({
     queryKey: ["purchase", purchaseId],
     queryFn: () => purchaseService.getPurchase(purchaseId!),
@@ -66,11 +74,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
   const [perPage, setPerPage] = useState(20);
   const [search, setSearch] = useState("");
 
-  const { 
-    data: purchaseItemsData, 
-    refetch: refetchItems,
-    isFetching: isLoadingItems 
-  } = useQuery({
+  const { data: purchaseItemsData, isFetching: isLoadingItems } = useQuery({
     queryKey: ["purchaseItems", purchaseId, page, perPage, search],
     queryFn: () =>
       purchaseService.getPurchaseItems(purchaseId!, page, perPage, search),
@@ -86,8 +90,11 @@ const ManagePurchaseItemsPage: React.FC = () => {
     },
     onSuccess: () => {
       toast.success("تم بنجاح", { description: "تمت إضافة الصنف بنجاح" });
-      refetchPurchase();
-      refetchItems();
+      // Invalidate queries instead of manual refetch for better performance
+      queryClient.invalidateQueries({ queryKey: ["purchase", purchaseId] });
+      queryClient.invalidateQueries({
+        queryKey: ["purchaseItems", purchaseId],
+      });
       setAddItemDialogOpen(false);
     },
     onError: (error: unknown) => {
@@ -125,16 +132,16 @@ const ManagePurchaseItemsPage: React.FC = () => {
               ? Number(value)
               : 0
             : currentItem.sale_price
-            ? Number(currentItem.sale_price)
-            : 0,
+              ? Number(currentItem.sale_price)
+              : 0,
         sale_price_stocking_unit:
           field === "sale_price_stocking_unit"
             ? value !== null && value !== undefined
               ? Number(value)
               : null
             : currentItem.sale_price_stocking_unit !== undefined
-            ? (currentItem.sale_price_stocking_unit as number | null)
-            : null,
+              ? (currentItem.sale_price_stocking_unit as number | null)
+              : null,
         expiry_date:
           field === "expiry_date"
             ? (value as string) || null
@@ -144,18 +151,49 @@ const ManagePurchaseItemsPage: React.FC = () => {
       return await purchaseService.updatePurchaseItem(
         purchaseId!,
         itemId,
-        updatedItemData
+        updatedItemData,
       );
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       toast.success("تم بنجاح", { description: "تم تحديث الصنف بنجاح" });
-      refetchPurchase();
-      refetchItems();
+
+      // Optimistically update the cache instead of refetching
+      // Update the main purchase query cache
+      queryClient.setQueryData(["purchase", purchaseId], (oldData: any) => {
+        if (!oldData?.items) return oldData;
+        return {
+          ...oldData,
+          items: oldData.items.map((item: any) =>
+            item.id === variables.itemId
+              ? { ...item, [variables.field]: variables.value }
+              : item,
+          ),
+        };
+      });
+
+      // Update the paginated items query cache
+      queryClient.setQueryData(
+        ["purchaseItems", purchaseId, page, perPage, search],
+        (oldData: any) => {
+          if (!oldData?.data) return oldData;
+          return {
+            ...oldData,
+            data: oldData.data.map((item: any) =>
+              item.id === variables.itemId
+                ? { ...item, [variables.field]: variables.value }
+                : item,
+            ),
+          };
+        },
+      );
+
+      setUpdatingField(null); // Clear loading state
     },
     onError: (error: unknown) => {
       toast.error("خطأ", {
         description: purchaseService.getErrorMessage(error),
       });
+      setUpdatingField(null); // Clear loading state on error
     },
   });
 
@@ -165,8 +203,10 @@ const ManagePurchaseItemsPage: React.FC = () => {
     },
     onSuccess: () => {
       toast.success("تم بنجاح", { description: "تم حذف الصنف بنجاح" });
-      refetchPurchase();
-      refetchItems();
+      queryClient.invalidateQueries({ queryKey: ["purchase", purchaseId] });
+      queryClient.invalidateQueries({
+        queryKey: ["purchaseItems", purchaseId],
+      });
     },
     onError: (error: unknown) => {
       toast.error("خطأ", {
@@ -182,8 +222,10 @@ const ManagePurchaseItemsPage: React.FC = () => {
     },
     onSuccess: (count) => {
       toast.success("تم بنجاح", { description: `تمت إضافة ${count} منتج` });
-      refetchPurchase();
-      refetchItems();
+      queryClient.invalidateQueries({ queryKey: ["purchase", purchaseId] });
+      queryClient.invalidateQueries({
+        queryKey: ["purchaseItems", purchaseId],
+      });
     },
     onError: (error: unknown) => {
       toast.error("خطأ", {
@@ -195,7 +237,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
   const deleteZeroQuantityItemsMutation = useMutation({
     mutationFn: async () => {
       const response = await purchaseService.deleteZeroQuantityItems(
-        purchaseId!
+        purchaseId!,
       );
       return response.deleted_count;
     },
@@ -203,8 +245,10 @@ const ManagePurchaseItemsPage: React.FC = () => {
       toast.success("تم بنجاح", {
         description: `تم حذف ${count} صنف بكمية صفر`,
       });
-      refetchPurchase();
-      refetchItems();
+      queryClient.invalidateQueries({ queryKey: ["purchase", purchaseId] });
+      queryClient.invalidateQueries({
+        queryKey: ["purchaseItems", purchaseId],
+      });
     },
     onError: (error: unknown) => {
       toast.error("خطأ", {
@@ -214,7 +258,10 @@ const ManagePurchaseItemsPage: React.FC = () => {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: async (status: "received" | "pending" | "ordered") => {
+    mutationFn: async (data: {
+      newStatus: "received" | "pending" | "ordered";
+      previousStatus: string;
+    }) => {
       const currentItems =
         purchase?.items?.map((item) => ({
           id: item.id,
@@ -227,19 +274,52 @@ const ManagePurchaseItemsPage: React.FC = () => {
         })) || [];
 
       return await purchaseService.updatePurchase(purchaseId!, {
-        status,
+        status: data.newStatus,
         items: currentItems,
       });
     },
-    onSuccess: () => {
-      toast.success("تم بنجاح", { description: "تم تحديث حالة المشتريات" });
-      refetchPurchase();
-      refetchItems();
+    onSuccess: (_response, variables) => {
+      const { newStatus, previousStatus } = variables;
+
+      // Determine inventory impact message
+      let inventoryMessage = "";
+
+      if (previousStatus !== "received" && newStatus === "received") {
+        // Changing TO received - stock will be ADDED
+        const totalQuantity =
+          purchase?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+        inventoryMessage = `تم إضافة ${totalQuantity} وحدة إلى المخزون`;
+      } else if (previousStatus === "received" && newStatus !== "received") {
+        // Changing FROM received - stock will be REMOVED
+        const totalQuantity =
+          purchase?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+        inventoryMessage = `تم خصم ${totalQuantity} وحدة من المخزون`;
+      } else {
+        // No inventory impact (changing between pending/ordered)
+        inventoryMessage = "لم يتأثر المخزون";
+      }
+
+      toast.success("تم تحديث حالة المشتريات", {
+        description: inventoryMessage,
+        duration: 5000,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["purchase", purchaseId] });
+      queryClient.invalidateQueries({
+        queryKey: ["purchaseItems", purchaseId],
+      });
+
+      // Close the dialog
+      setInventoryImpactDialogOpen(false);
+      setPendingStatusChange(null);
     },
     onError: (error: unknown) => {
       toast.error("خطأ", {
         description: purchaseService.getErrorMessage(error),
       });
+      // Close the dialog on error
+      setInventoryImpactDialogOpen(false);
+      setPendingStatusChange(null);
     },
   });
 
@@ -256,13 +336,13 @@ const ManagePurchaseItemsPage: React.FC = () => {
         totalItems: acc.totalItems + 1,
         totalQuantity: acc.totalQuantity + item.quantity,
       }),
-      { totalCost: 0, totalSell: 0, totalItems: 0, totalQuantity: 0 }
+      { totalCost: 0, totalSell: 0, totalItems: 0, totalQuantity: 0 },
     );
   }, [purchase?.items]);
 
   const isReadOnly = useMemo(
     () => purchase?.status === "received",
-    [purchase?.status]
+    [purchase?.status],
   );
 
   // ==================== HANDLERS ====================
@@ -273,6 +353,9 @@ const ManagePurchaseItemsPage: React.FC = () => {
       const existingTimeout = updateTimeoutRefs.current.get(updateKey);
       if (existingTimeout) clearTimeout(existingTimeout);
 
+      // Set loading state for this specific field
+      setUpdatingField(updateKey);
+
       const newTimeout = setTimeout(() => {
         updateItemMutation.mutate({ itemId, field, value });
         updateTimeoutRefs.current.delete(updateKey);
@@ -280,7 +363,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
 
       updateTimeoutRefs.current.set(updateKey, newTimeout);
     },
-    [updateItemMutation]
+    [updateItemMutation],
   );
 
   const handleItemDelete = useCallback(
@@ -289,15 +372,34 @@ const ManagePurchaseItemsPage: React.FC = () => {
         deleteItemMutation.mutate(itemId);
       }
     },
-    [deleteItemMutation]
+    [deleteItemMutation],
   );
 
   const handleAddItem = useCallback(
     (data: AddPurchaseItemData) => {
       addItemMutation.mutate(data);
     },
-    [addItemMutation]
+    [addItemMutation],
   );
+
+  // Handle status change - show dialog first
+  const handleStatusChange = useCallback(
+    (newStatus: "received" | "pending" | "ordered") => {
+      setPendingStatusChange({
+        newStatus,
+        previousStatus: purchase?.status || "pending",
+      });
+      setInventoryImpactDialogOpen(true);
+    },
+    [purchase?.status],
+  );
+
+  // Confirm status change from dialog
+  const handleConfirmStatusChange = useCallback(() => {
+    if (pendingStatusChange) {
+      updateStatusMutation.mutate(pendingStatusChange);
+    }
+  }, [pendingStatusChange, updateStatusMutation]);
 
   // ==================== EFFECTS ====================
 
@@ -326,17 +428,40 @@ const ManagePurchaseItemsPage: React.FC = () => {
     };
   }, []);
 
-  // Load unit names for items' products
-  useEffect(() => {
+  // Memoize unique product IDs to prevent unnecessary refetches
+  const uniqueProductIds = useMemo(() => {
     const ids = purchase?.items?.map((i) => i.product_id) || [];
-    const uniqueIds = Array.from(new Set(ids));
-    if (uniqueIds.length === 0) {
+    return Array.from(new Set(ids));
+  }, [purchase?.items]);
+
+  // Track previous product IDs to prevent unnecessary refetches
+  const prevProductIdsRef = useRef<string>("");
+
+  // Load unit names for items' products only when product IDs actually change
+  useEffect(() => {
+    if (uniqueProductIds.length === 0) {
       setProductUnits({});
+      prevProductIdsRef.current = "";
       return;
     }
+
+    // Create a stable string representation of the IDs for comparison
+    const currentIdsString = uniqueProductIds.sort().join(",");
+
+    // Only fetch if the IDs have actually changed
+    if (currentIdsString === prevProductIdsRef.current) {
+      return;
+    }
+
+    prevProductIdsRef.current = currentIdsString;
+    let cancelled = false;
+
     (async () => {
       try {
-        const products = await productService.getProductsByIds(uniqueIds);
+        const products =
+          await productService.getProductsByIds(uniqueProductIds);
+        if (cancelled) return;
+
         const map: ProductUnitsMap = {};
         products.forEach((p: ProductType) => {
           map[p.id] = {
@@ -349,7 +474,11 @@ const ManagePurchaseItemsPage: React.FC = () => {
         /* Silent fail */
       }
     })();
-  }, [purchase?.items]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [uniqueProductIds]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -428,42 +557,18 @@ const ManagePurchaseItemsPage: React.FC = () => {
         onOpenAddDialog={() => setAddItemDialogOpen(true)}
         onAddAllProducts={() => addAllProductsMutation.mutate()}
         onDeleteZeroQuantity={() => deleteZeroQuantityItemsMutation.mutate()}
-        onStatusChange={(status) => updateStatusMutation.mutate(status)}
+        onStatusChange={handleStatusChange}
         isAddAllPending={addAllProductsMutation.isPending}
         isDeleteZeroPending={deleteZeroQuantityItemsMutation.isPending}
         isStatusPending={updateStatusMutation.isPending}
         summaryDialogOpen={summaryDialogOpen}
         onOpenSummaryDialog={() => setSummaryDialogOpen(true)}
         onCloseSummaryDialog={() => setSummaryDialogOpen(false)}
-        onExportPdf={() => setPdfDialogOpen(true)}
-      />
-
-      {/* PDF Dialog */}
-      <PurchasePdfDialog
-        open={pdfDialogOpen}
-        onClose={() => setPdfDialogOpen(false)}
-        purchase={purchase}
-        // If searching or paginating, we might only show visible items,
-        // OR we might want to refetch ALL items for the PDF.
-        // For now, let's pass likely the currently loaded items,
-        // or we could allow fetching all items logic similar to "add all products" but for view.
-        // Ideally, Purchase Orders are usually small enough to just load all items for print,
-        // or simply pass the current view.
-        // Given 'purchase.items' might be stale if using 'purchaseItemsData' from react-query pagination,
-        // we should probably use 'purchaseItemsData.data' if available, otherwise purchase.items.
-        // However, purchaseItemsData is paginated. PDF usually needs ALL items.
-        // For simple MVP: Passing `purchaseItemsData?.data` shows current page.
-        // Better: Pass `purchase.items` if it was eager loaded fully, OR show warning if paginated.
-        // Re-reading `ManagePurchaseItemsPage`: `refetchPurchase` is called on mutations.
-        // `purchase` from `useQuery(['purchase', ...])` usually returns the purchase object.
-        // Does `purchaseService.getPurchase` include ALL items?
-        // Checking `purchaseService.ts`: `getPurchase` returns `response.data.purchase`.
-        // If the backend returns all items there, we are good.
-        // Let's assume `purchase.items` (if present) contains what we need or we pass `purchaseItemsData?.data`.
-        // If `purchase.items` is not fully loaded due to performance refactors (pagination),
-        // we might only print partial.
-        // For now, let's pass `purchaseItemsData?.data` as that is what user sees (filtered/searched).
-        items={purchase?.items || []}
+        onExportPdf={() => {
+          // Open the backend-generated PDF in a new tab
+          const pdfUrl = `${import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1/sales-api/public"}/purchases/${purchaseId}/export/pdf`;
+          window.open(pdfUrl, "_blank");
+        }}
       />
 
       {/* Add Item Dialog */}
@@ -482,6 +587,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
         isDeleting={deleteItemMutation.isPending}
         onUpdate={handleItemUpdate}
         onDelete={handleItemDelete}
+        updatingField={updatingField}
         // Laravel Pagination
         pagination={purchaseItemsData || null}
         searchQuery={search}
@@ -495,6 +601,20 @@ const ManagePurchaseItemsPage: React.FC = () => {
           setSearch(val);
           setPage(1); // Reset to page 1 on search
         }}
+      />
+
+      {/* Inventory Impact Dialog */}
+      <InventoryImpactDialog
+        isOpen={inventoryImpactDialogOpen}
+        onClose={() => {
+          setInventoryImpactDialogOpen(false);
+          setPendingStatusChange(null);
+        }}
+        onConfirm={handleConfirmStatusChange}
+        items={purchase?.items || []}
+        previousStatus={pendingStatusChange?.previousStatus || ""}
+        newStatus={pendingStatusChange?.newStatus || "pending"}
+        isLoading={updateStatusMutation.isPending}
       />
     </Box>
   );
