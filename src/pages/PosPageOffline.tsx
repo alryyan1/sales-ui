@@ -1965,7 +1965,7 @@ export const PosPageOffline = () => {
           {/* Synced Sales Section */}
           <Box
             sx={{
-              flex: 1,
+              flex: 3,
               overflow: "hidden",
               display: "flex",
               flexDirection: "column",
