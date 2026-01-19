@@ -28,6 +28,7 @@ import {
   FormControl,
   InputLabel,
   SelectChangeEvent,
+  Skeleton,
 } from "@mui/material";
 import { Edit, AlertTriangle, Copy, Check, Info, History } from "lucide-react";
 
@@ -38,12 +39,10 @@ import productService, {
 import { formatNumber, formatCurrency } from "@/constants";
 
 // Interface for Product with potentially loaded batches
-interface ProductWithOptionalBatches
-  extends Omit<
-    ProductType,
-    | "latest_cost_per_sellable_unit"
-    | "suggested_sale_price_per_sellable_unit"
-  > {
+interface ProductWithOptionalBatches extends Omit<
+  ProductType,
+  "latest_cost_per_sellable_unit" | "suggested_sale_price_per_sellable_unit"
+> {
   category_name?: string | null;
   latest_cost_per_sellable_unit?: string | number | null;
   suggested_sale_price_per_sellable_unit?: string | number | null;
@@ -76,6 +75,247 @@ interface ProductsTableProps {
   onPageChange: (event: React.ChangeEvent<unknown>, page: number) => void;
   onRowsPerPageChange: (event: SelectChangeEvent<number>) => void;
 }
+
+interface ProductRowProps {
+  product: ProductWithOptionalBatches;
+  onEdit: (product: ProductWithOptionalBatches) => void;
+  onOpenStockDialog: (product: ProductWithOptionalBatches) => void;
+  onOpenHistoryDialog: (product: ProductWithOptionalBatches) => void;
+  copyToClipboard: (sku: string) => void;
+  copiedSku: string | null;
+  isLoading: boolean;
+}
+
+const ProductRow: React.FC<ProductRowProps> = ({
+  product,
+  onEdit,
+  onOpenStockDialog,
+  onOpenHistoryDialog,
+  copyToClipboard,
+  copiedSku,
+  isLoading,
+}) => {
+  const stockQty = Number(
+    product.current_stock_quantity ?? product.stock_quantity ?? 0,
+  );
+  const isLow =
+    product.stock_alert_level !== null &&
+    stockQty <= (product.stock_alert_level as number);
+  const isOutOfStock = stockQty <= 0;
+
+  const prevStockRef = React.useRef<number>(stockQty);
+  const [animationClass, setAnimationClass] = React.useState("");
+
+  React.useEffect(() => {
+    // Only animate if the previous stock is different from current stock
+    // AND it's not the initial mount (where prevStockRef.current is initialized to stockQty)
+    // Actually, useRef initializes once. We need to capture the *change*.
+    // On mount, prevStockRef.current === stockQty. No animation.
+    // When stockQty changes, we compare against ref.
+
+    if (stockQty > prevStockRef.current) {
+      setAnimationClass("animate-flash-green");
+    } else if (stockQty < prevStockRef.current) {
+      setAnimationClass("animate-flash-red");
+    }
+
+    if (stockQty !== prevStockRef.current) {
+      prevStockRef.current = stockQty;
+      // Remove animation class after 2 seconds
+      const timer = setTimeout(() => {
+        setAnimationClass("");
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [stockQty]);
+
+  return (
+    <TableRow
+      hover
+      sx={{ cursor: "pointer" }}
+      className={animationClass}
+      onClick={() => onEdit(product)}
+    >
+      <TableCell align="center">{product.id}</TableCell>
+      <TableCell align="center">
+        <Stack
+          direction="row"
+          spacing={0.5}
+          alignItems="center"
+          justifyContent="center"
+        >
+          <Typography variant="body2" component="span">
+            {product.sku || "---"}
+          </Typography>
+          {product.sku && (
+            <Tooltip title={copiedSku === product.sku ? "تم النسخ" : "نسخ SKU"}>
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  copyToClipboard(product.sku!);
+                }}
+                disabled={isLoading}
+                sx={{ width: 24, height: 24, p: 0 }}
+              >
+                {copiedSku === product.sku ? (
+                  <Check
+                    style={{
+                      width: 14,
+                      height: 14,
+                      color: "var(--mui-palette-success-main)",
+                    }}
+                  />
+                ) : (
+                  <Copy style={{ width: 14, height: 14 }} />
+                )}
+              </IconButton>
+            </Tooltip>
+          )}
+        </Stack>
+      </TableCell>
+      <TableCell align="left">
+        <Typography variant="body2" fontWeight={600}>
+          {product.name}
+        </Typography>
+      </TableCell>
+      <TableCell align="center">{product.scientific_name || "---"}</TableCell>
+      <TableCell align="center">
+        {product.category_name ? (
+          <Chip
+            label={product.category_name}
+            size="small"
+            variant="outlined"
+            sx={{ fontSize: "0.75rem", height: 24 }}
+          />
+        ) : (
+          "---"
+        )}
+      </TableCell>
+      <TableCell align="center">
+        {product.sellable_unit_name || "---"}
+      </TableCell>
+      <TableCell align="center">
+        {product.stocking_unit_name || "---"}
+      </TableCell>
+      <TableCell align="center">
+        {product.units_per_stocking_unit || "---"}
+      </TableCell>
+      <TableCell align="center">
+        {product.created_at
+          ? new Date(product.created_at).toLocaleDateString("en-GB")
+          : "---"}
+      </TableCell>
+      <TableCell align="center">
+        {product.stock_alert_level !== null
+          ? formatNumber(product.stock_alert_level)
+          : "---"}
+      </TableCell>
+      <TableCell align="center">
+        <Stack
+          direction="row"
+          spacing={0.5}
+          alignItems="center"
+          justifyContent="center"
+        >
+          <Typography variant="body1" fontWeight={600}>
+            {formatNumber(stockQty)}
+          </Typography>
+          {(isLow || isOutOfStock) && (
+            <Tooltip
+              title={isOutOfStock ? "نفاد المخزون" : "تنبيه: المخزون منخفض"}
+            >
+              <AlertTriangle
+                style={{
+                  width: 16,
+                  height: 16,
+                  color: isOutOfStock
+                    ? "var(--mui-palette-error-main)"
+                    : "var(--mui-palette-warning-main)",
+                }}
+              />
+            </Tooltip>
+          )}
+        </Stack>
+      </TableCell>
+      <TableCell align="center">
+        {product.warehouses?.length ? (
+          <Tooltip title="تفاصيل المخزون">
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenStockDialog(product);
+              }}
+              sx={{ p: 0.5 }}
+            >
+              <Info
+                style={{
+                  width: 18,
+                  height: 18,
+                  color: "var(--mui-palette-info-main)",
+                }}
+              />
+            </IconButton>
+          </Tooltip>
+        ) : null}
+      </TableCell>
+      <TableCell align="center">
+        {product.latest_cost_per_sellable_unit
+          ? formatCurrency(Number(product.latest_cost_per_sellable_unit))
+          : "---"}
+      </TableCell>
+      <TableCell align="center">
+        {product.last_sale_price_per_sellable_unit
+          ? formatCurrency(Number(product.last_sale_price_per_sellable_unit))
+          : "---"}
+      </TableCell>
+
+      <TableCell align="center">
+        <Stack direction="row" spacing={1} justifyContent="center">
+          <Tooltip title="السجل">
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenHistoryDialog(product);
+              }}
+              disabled={isLoading}
+              sx={{
+                color: "text.secondary",
+                "&:hover": {
+                  bgcolor: "action.hover",
+                  color: "text.primary",
+                },
+              }}
+            >
+              <History style={{ width: 18, height: 18 }} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="تعديل">
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(product);
+              }}
+              disabled={isLoading}
+              sx={{
+                color: "primary.main",
+                "&:hover": {
+                  bgcolor: "primary.light",
+                  color: "primary.contrastText",
+                },
+              }}
+            >
+              <Edit style={{ width: 18, height: 18 }} />
+            </IconButton>
+          </Tooltip>
+        </Stack>
+      </TableCell>
+    </TableRow>
+  );
+};
 
 export const ProductsTable: React.FC<ProductsTableProps> = ({
   products,
@@ -115,7 +355,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
   const fetchHistory = async (
     productId: number,
     type: "purchases" | "sales",
-    page: number
+    page: number,
   ) => {
     setHistoryLoading(true);
     try {
@@ -142,7 +382,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
 
   const handleHistoryTabChange = (
     _event: React.SyntheticEvent,
-    newValue: number
+    newValue: number,
   ) => {
     setHistoryTab(newValue);
     setHistoryPage(1);
@@ -150,21 +390,21 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
       fetchHistory(
         historyDialogProduct.id,
         newValue === 0 ? "purchases" : "sales",
-        1
+        1,
       );
     }
   };
 
   const handleHistoryPageChange = (
     _event: React.ChangeEvent<unknown>,
-    value: number
+    value: number,
   ) => {
     setHistoryPage(value);
     if (historyDialogProduct) {
       fetchHistory(
         historyDialogProduct.id,
         historyTab === 0 ? "purchases" : "sales",
-        value
+        value,
       );
     }
   };
@@ -202,6 +442,64 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
     );
   }
 
+  const renderSkeletonRow = (index: number) => (
+    <TableRow key={`skeleton-${index}`}>
+      <TableCell align="center">
+        <Skeleton variant="text" width={20} />
+      </TableCell>
+      <TableCell align="center">
+        <Skeleton variant="text" width={80} />
+      </TableCell>
+      <TableCell align="left">
+        <Skeleton variant="text" width="80%" />
+      </TableCell>
+      <TableCell align="center">
+        <Skeleton variant="text" width={100} />
+      </TableCell>
+      <TableCell align="center">
+        <Skeleton
+          variant="rectangular"
+          width={60}
+          height={24}
+          sx={{ borderRadius: 1 }}
+        />
+      </TableCell>
+      <TableCell align="center">
+        <Skeleton variant="text" width={60} />
+      </TableCell>
+      <TableCell align="center">
+        <Skeleton variant="text" width={60} />
+      </TableCell>
+      <TableCell align="center">
+        <Skeleton variant="text" width={30} />
+      </TableCell>
+      <TableCell align="center">
+        <Skeleton variant="text" width={80} />
+      </TableCell>
+      <TableCell align="center">
+        <Skeleton variant="text" width={40} />
+      </TableCell>
+      <TableCell align="center">
+        <Skeleton variant="text" width={40} />
+      </TableCell>
+      <TableCell align="center">
+        <Skeleton variant="circular" width={18} height={18} />
+      </TableCell>
+      <TableCell align="center">
+        <Skeleton variant="text" width={60} />
+      </TableCell>
+      <TableCell align="center">
+        <Skeleton variant="text" width={60} />
+      </TableCell>
+      <TableCell align="center">
+        <Stack direction="row" spacing={1} justifyContent="center">
+          <Skeleton variant="circular" width={24} height={24} />
+          <Skeleton variant="circular" width={24} height={24} />
+        </Stack>
+      </TableCell>
+    </TableRow>
+  );
+
   return (
     <>
       <Paper
@@ -232,222 +530,22 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
               </TableRow>
             </TableHead>
             <TableBody>
-              {products.map((product) => {
-                const stockQty = Number(
-                  product.current_stock_quantity ?? product.stock_quantity ?? 0
-                );
-                const isLow =
-                  product.stock_alert_level !== null &&
-                  stockQty <= (product.stock_alert_level as number);
-                const isOutOfStock = stockQty <= 0;
-
-                return (
-                  <TableRow
-                    key={product.id}
-                    hover
-                    sx={{ cursor: "pointer" }}
-                    onClick={() => onEdit(product)}
-                  >
-                    <TableCell align="center">{product.id}</TableCell>
-                    <TableCell align="center">
-                      <Stack
-                        direction="row"
-                        spacing={0.5}
-                        alignItems="center"
-                        justifyContent="center"
-                      >
-                        <Typography variant="body2" component="span">
-                          {product.sku || "---"}
-                        </Typography>
-                        {product.sku && (
-                          <Tooltip
-                            title={
-                              copiedSku === product.sku ? "تم النسخ" : "نسخ SKU"
-                            }
-                          >
-                            <IconButton
-                              size="small"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                copyToClipboard(product.sku!);
-                              }}
-                              disabled={isLoading}
-                              sx={{ width: 24, height: 24, p: 0 }}
-                            >
-                              {copiedSku === product.sku ? (
-                                <Check
-                                  style={{
-                                    width: 14,
-                                    height: 14,
-                                    color: "var(--mui-palette-success-main)",
-                                  }}
-                                />
-                              ) : (
-                                <Copy style={{ width: 14, height: 14 }} />
-                              )}
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                      </Stack>
-                    </TableCell>
-                    <TableCell align="left">
-                      <Typography variant="body2" fontWeight={600}>
-                        {product.name}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="center">
-                      {product.scientific_name || "---"}
-                    </TableCell>
-                    <TableCell align="center">
-                      {product.category_name ? (
-                        <Chip
-                          label={product.category_name}
-                          size="small"
-                          variant="outlined"
-                          sx={{ fontSize: "0.75rem", height: 24 }}
-                        />
-                      ) : (
-                        "---"
-                      )}
-                    </TableCell>
-                    <TableCell align="center">
-                      {product.sellable_unit_name || "---"}
-                    </TableCell>
-                    <TableCell align="center">
-                      {product.stocking_unit_name || "---"}
-                    </TableCell>
-                    <TableCell align="center">
-                      {product.units_per_stocking_unit || "---"}
-                    </TableCell>
-                    <TableCell align="center">
-                      {product.created_at
-                        ? new Date(product.created_at).toLocaleDateString(
-                            "en-GB"
-                          )
-                        : "---"}
-                    </TableCell>
-                    <TableCell align="center">
-                      {product.stock_alert_level !== null
-                        ? formatNumber(product.stock_alert_level)
-                        : "---"}
-                    </TableCell>
-                    <TableCell align="center">
-                      <Stack
-                        direction="row"
-                        spacing={0.5}
-                        alignItems="center"
-                        justifyContent="center"
-                      >
-                        <Typography variant="body1" fontWeight={600}>
-                          {formatNumber(stockQty)}
-                        </Typography>
-                        {(isLow || isOutOfStock) && (
-                          <Tooltip
-                            title={
-                              isOutOfStock
-                                ? "نفاد المخزون"
-                                : "تنبيه: المخزون منخفض"
-                            }
-                          >
-                            <AlertTriangle
-                              style={{
-                                width: 16,
-                                height: 16,
-                                color: isOutOfStock
-                                  ? "var(--mui-palette-error-main)"
-                                  : "var(--mui-palette-warning-main)",
-                              }}
-                            />
-                          </Tooltip>
-                        )}
-                      </Stack>
-                    </TableCell>
-                    <TableCell align="center">
-                      {product.warehouses?.length ? (
-                        <Tooltip title="تفاصيل المخزون">
-                          <IconButton
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenStockDialog(product);
-                            }}
-                            sx={{ p: 0.5 }}
-                          >
-                            <Info
-                              style={{
-                                width: 18,
-                                height: 18,
-                                color: "var(--mui-palette-info-main)",
-                              }}
-                            />
-                          </IconButton>
-                        </Tooltip>
-                      ) : null}
-                    </TableCell>
-                    <TableCell align="center">
-                      {product.latest_cost_per_sellable_unit
-                        ? formatCurrency(
-                            Number(product.latest_cost_per_sellable_unit)
-                          )
-                        : "---"}
-                    </TableCell>
-                    <TableCell align="center">
-                      {product.last_sale_price_per_sellable_unit
-                        ? formatCurrency(
-                            Number(product.last_sale_price_per_sellable_unit)
-                          )
-                        : "---"}
-                    </TableCell>
-            
-                    <TableCell align="center">
-                      <Stack
-                        direction="row"
-                        spacing={1}
-                        justifyContent="center"
-                      >
-                        <Tooltip title="السجل">
-                          <IconButton
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenHistoryDialog(product);
-                            }}
-                            disabled={isLoading}
-                            sx={{
-                              color: "text.secondary",
-                              "&:hover": {
-                                bgcolor: "action.hover",
-                                color: "text.primary",
-                              },
-                            }}
-                          >
-                            <History style={{ width: 18, height: 18 }} />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="تعديل">
-                          <IconButton
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onEdit(product);
-                            }}
-                            disabled={isLoading}
-                            sx={{
-                              color: "primary.main",
-                              "&:hover": {
-                                bgcolor: "primary.light",
-                                color: "primary.contrastText",
-                              },
-                            }}
-                          >
-                            <Edit style={{ width: 18, height: 18 }} />
-                          </IconButton>
-                        </Tooltip>
-                      </Stack>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {isLoading && products.length === 0
+                ? Array.from(new Array(10)).map((_, index) =>
+                    renderSkeletonRow(index),
+                  )
+                : products.map((product) => (
+                    <ProductRow
+                      key={product.id}
+                      product={product}
+                      onEdit={onEdit}
+                      onOpenStockDialog={handleOpenStockDialog}
+                      onOpenHistoryDialog={handleOpenHistoryDialog}
+                      copyToClipboard={copyToClipboard}
+                      copiedSku={copiedSku}
+                      isLoading={isLoading}
+                    />
+                  ))}
             </TableBody>
           </Table>
         </TableContainer>
@@ -594,7 +692,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                         <TableCell>
                           {item.created_at
                             ? new Date(item.created_at).toLocaleDateString(
-                                "en-GB"
+                                "en-GB",
                               )
                             : "---"}
                         </TableCell>
@@ -606,14 +704,14 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                         <TableCell>{formatNumber(item.quantity)}</TableCell>
                         <TableCell>
                           {formatCurrency(
-                            historyTab === 0 ? item.unit_cost : item.unit_price
+                            historyTab === 0 ? item.unit_cost : item.unit_price,
                           )}
                         </TableCell>
                         <TableCell>
                           {formatCurrency(
                             historyTab === 0
                               ? item.total_cost
-                              : item.total_price
+                              : item.total_price,
                           )}
                         </TableCell>
                       </TableRow>

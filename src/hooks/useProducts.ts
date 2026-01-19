@@ -54,9 +54,10 @@ export function useProducts({
         inStockOnly,
         lowStockOnly,
         outOfStockOnly,
-        warehouseId
+        warehouseId,
       ),
     placeholderData: keepPreviousData,
-    staleTime: 60 * 1000, // 1 minute stale time
+    staleTime: 0, // Always consider data stale to trigger refetch on focus/mount
+    refetchOnWindowFocus: true, // Auto-update when user switches back to the tab
   });
 }

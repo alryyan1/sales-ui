@@ -135,7 +135,6 @@
   }
 }
 
-
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -151,4 +150,30 @@
   animation-name: fadeInUp;
   animation-fill-mode: both; /* Keeps the element in its final state after animation */
   /* animation-duration: 0.6s; Set default duration or use Tailwind duration classes with animation-delay */
+}
+
+@keyframes flash-green {
+  0% {
+    background-color: rgba(34, 197, 94, 0.2); /* green-500 with opacity */
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes flash-red {
+  0% {
+    background-color: rgba(239, 68, 68, 0.2); /* red-500 with opacity */
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.animate-flash-green {
+  animation: flash-green 2s ease-out;
+}
+
+.animate-flash-red {
+  animation: flash-red 2s ease-out;
 }

@@ -9,7 +9,6 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
-import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
 import Snackbar from "@mui/material/Snackbar";
 import TextField from "@mui/material/TextField";
@@ -40,41 +39,7 @@ import { ProductsTable } from "../components/products/ProductsTable"; // Use Pro
 import ProductFormModal from "../components/products/ProductFormModal"; // Use ProductFormModal
 import ProductImportDialog from "../components/products/ProductImportDialog"; // Import dialog
 
-// Type that matches the actual API response structure
-type ProductTableItem = {
-  id: number;
-  name: string;
-  sku: string | null;
-  description: string | null;
-  image_url: string | null;
-  category_id: number | null;
-  stocking_unit_name: string | null;
-  sellable_unit_name: string | null;
-  units_per_stocking_unit: number;
-  stock_quantity: number;
-  stock_alert_level: number | null;
-  created_at: string;
-  updated_at: string;
-  scientific_name?: string | null;
-  // Optional fields that ProductsTable expects but aren't in API response
-  available_batches?: {
-    batch_id: number;
-    quantity: number;
-    expiry_date?: string;
-  }[];
-  category_name?: string | null;
-  latest_cost_per_sellable_unit?: string | number | null;
-  suggested_sale_price_per_sellable_unit?: string | number | null;
-  current_stock_quantity?: number;
-  warehouses?: {
-    id: number;
-    name: string;
-    pivot: {
-      quantity: number;
-      min_stock_level: number | null;
-    };
-  }[];
-};
+// Product type is now used directly from productService
 
 const ProductsPage: React.FC = () => {
   // --- State ---
@@ -97,9 +62,7 @@ const ProductsPage: React.FC = () => {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<ProductTableItem | null>(
-    null
-  ); // Use ProductTableItem type
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null); // Use Product type directly
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   // Snackbar State
@@ -175,7 +138,7 @@ const ProductsPage: React.FC = () => {
         9999,
         "",
         false,
-        true
+        true,
       );
       setCategories(data as Category[]);
     } catch (err) {
@@ -202,7 +165,7 @@ const ProductsPage: React.FC = () => {
   };
   const handleSnackbarClose = (
     _event?: React.SyntheticEvent | Event,
-    reason?: string
+    reason?: string,
   ) => {
     if (reason === "clickaway") {
       return;
@@ -211,7 +174,7 @@ const ProductsPage: React.FC = () => {
   };
 
   // --- Modal Handlers ---
-  const openModal = (product: ProductTableItem | null = null) => {
+  const openModal = (product: Product | null = null) => {
     setEditingProduct(product);
     setIsModalOpen(true);
   };
@@ -232,7 +195,7 @@ const ProductsPage: React.FC = () => {
   // --- Pagination & Search Handlers ---
   const handlePageChange = (
     _event: React.ChangeEvent<unknown>,
-    value: number
+    value: number,
   ) => {
     setIsPaginationLoading(true);
     setCurrentPage(value);
@@ -285,7 +248,7 @@ const ProductsPage: React.FC = () => {
     } catch (err) {
       showSnackbar(
         err instanceof Error ? err.message : "Failed to export PDF",
-        "error"
+        "error",
       );
     }
   };
@@ -305,7 +268,7 @@ const ProductsPage: React.FC = () => {
     } catch (err) {
       showSnackbar(
         err instanceof Error ? err.message : "Failed to export Excel",
-        "error"
+        "error",
       );
     }
   };
@@ -699,47 +662,54 @@ const ProductsPage: React.FC = () => {
             </Box>
           </Box>
         </Box>
-        {/* Loading / Error States */}
-        {isLoadingData && (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 5, px: 2 }}>
-            <CircularProgress />
-            <Typography
-              sx={{ ml: 2 }}
-              className="text-gray-600 dark:text-gray-400"
-            >
-              جاري التحميل...
-            </Typography>
-          </Box>
-        )}
+        {/* Loading / Error States - Only show error here as loading is handled by skeleton table */}
         {!isLoadingData && error && (
           <Alert severity="error" sx={{ my: 2, mx: 2 }}>
             {error}
           </Alert>
         )}
         {/* Content Area */}
-        {!isLoadingData && !error && productsResponse && (
+        {!error && (
           <Box sx={{ mt: 2, width: "100%", px: 2 }}>
             <ProductsTable
-              products={productsResponse.data as ProductTableItem[]}
-              onEdit={(product) => openModal(product as ProductTableItem)}
+              products={(productsResponse?.data as Product[]) || []}
+              onEdit={(product) => openModal(product as Product)}
               isLoading={isLoadingData}
               // Laravel Pagination Props
-              paginationMeta={productsResponse.meta}
-              paginationLinks={productsResponse.links}
+              paginationMeta={
+                productsResponse?.meta || {
+                  current_page: 1,
+                  last_page: 1,
+                  per_page: rowsPerPage,
+                  total: 0,
+                  from: 0,
+                  to: 0,
+                }
+              }
+              paginationLinks={
+                productsResponse?.links || {
+                  first: "",
+                  last: "",
+                  prev: null,
+                  next: null,
+                }
+              }
               currentPage={currentPage}
               rowsPerPage={rowsPerPage}
               onPageChange={handlePageChange}
               onRowsPerPageChange={handleRowsPerPageChange}
             />
             {/* No Products Message */}
-            {productsResponse.data.length === 0 && (
-              <Typography
-                sx={{ textAlign: "center", py: 5 }}
-                className="text-gray-500 dark:text-gray-400"
-              >
-                لا توجد منتجات لعرضها.
-              </Typography>
-            )}
+            {!isLoadingData &&
+              productsResponse &&
+              productsResponse.data.length === 0 && (
+                <Typography
+                  sx={{ textAlign: "center", py: 5 }}
+                  className="text-gray-500 dark:text-gray-400"
+                >
+                  لا توجد منتجات لعرضها.
+                </Typography>
+              )}
           </Box>
         )}
         {/* Modals and Snackbar */}

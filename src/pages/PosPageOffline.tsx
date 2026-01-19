@@ -1205,8 +1205,8 @@ export const PosPageOffline = () => {
     try {
       let apiUrl = "";
       if (posMode === "days") {
-        // Use date-based query in days mode
-        apiUrl = `/sales?start_date=${selectedDate}&end_date=${selectedDate}&per_page=100`;
+        // Use backend date logic (today only)
+        apiUrl = `/sales?today_only=true&per_page=100`;
       } else {
         // Use shift_id query in shift mode
         apiUrl = `/sales?shift_id=${selectedShiftId}&per_page=100`;
