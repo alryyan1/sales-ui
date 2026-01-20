@@ -76,7 +76,7 @@ export interface Sale {
   client?: Client; // Full client object if loaded
 
   user_id: number | null;
-  user_name?: string;
+  user_name?: string | null;
   user?: User; // Full user object if loaded
 
   shift_id?: number | null; // Shift ID for the sale

@@ -221,7 +221,11 @@ export const PosPageOffline = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [clients, setClients] = useState<any[]>([]); // Using any for client type for now as we didn't import strict type
   const [currentSale, setCurrentSale] = useState<OfflineSale>(
-    offlineSaleService.createDraftSale(null, user?.id ?? null),
+    offlineSaleService.createDraftSale(
+      null,
+      user?.id ?? null,
+      user?.name ?? null,
+    ),
   );
   // MOVED TO HEADER: inputValue, autocompleteOpen, inputRef
 
@@ -803,6 +807,7 @@ export const PosPageOffline = () => {
           const newDraft = offlineSaleService.createDraftSale(
             null,
             user?.id ?? null,
+            user?.name ?? null,
           );
           setCurrentSale(newDraft);
           shouldAutoSave.current = false;
@@ -810,6 +815,7 @@ export const PosPageOffline = () => {
           const newDraft = offlineSaleService.createDraftSale(
             shift.id,
             user?.id ?? null,
+            user?.name ?? null,
           );
           setCurrentSale(newDraft);
           shouldAutoSave.current = false;
@@ -817,6 +823,7 @@ export const PosPageOffline = () => {
           const newDraft = offlineSaleService.createDraftSale(
             null,
             user?.id ?? null,
+            user?.name ?? null,
           );
           setCurrentSale(newDraft);
           shouldAutoSave.current = false;
@@ -919,6 +926,7 @@ export const PosPageOffline = () => {
         notes: s.notes,
         created_at: s.created_at,
         user_id: s.user_id,
+        user_name: s.user_name || s.user?.name, // Map user_name
       };
     },
     [],
@@ -1640,6 +1648,7 @@ export const PosPageOffline = () => {
       const newDraft = offlineSaleService.createDraftSale(
         null,
         user?.id ?? null,
+        user?.name ?? null,
       );
       setCurrentSale(newDraft);
       shouldAutoSave.current = false;
@@ -1651,6 +1660,7 @@ export const PosPageOffline = () => {
       const newDraft = offlineSaleService.createDraftSale(
         shift.id,
         user?.id ?? null,
+        user?.name ?? null,
       );
       // await offlineSaleService.saveDraft(newDraft); // DONT SAVE IMMEDIATELY
       setCurrentSale(newDraft);
@@ -1665,6 +1675,7 @@ export const PosPageOffline = () => {
       const newDraft = offlineSaleService.createDraftSale(
         null,
         user?.id ?? null,
+        user?.name ?? null,
       );
       setCurrentSale(newDraft);
       shouldAutoSave.current = false;
@@ -1678,6 +1689,7 @@ export const PosPageOffline = () => {
       const newSale = offlineSaleService.createDraftSale(
         null,
         user?.id ?? null,
+        user?.name ?? null,
       );
       await offlineSaleService.saveDraft(newSale);
       setCurrentSale(newSale);
@@ -1743,6 +1755,7 @@ export const PosPageOffline = () => {
     const newSale = offlineSaleService.createDraftSale(
       currentShift.id,
       user?.id ?? null,
+      user?.name ?? null,
     );
     await offlineSaleService.saveDraft(newSale);
     setCurrentSale(newSale);
@@ -1798,6 +1811,7 @@ export const PosPageOffline = () => {
         const newDraft = offlineSaleService.createDraftSale(
           null,
           user?.id ?? null,
+          user?.name ?? null,
         );
         setCurrentSale(newDraft);
         await loadLocalPendingSales();
@@ -1808,6 +1822,7 @@ export const PosPageOffline = () => {
         const newDraft = offlineSaleService.createDraftSale(
           null,
           user?.id ?? null,
+          user?.name ?? null,
         );
         setCurrentSale(newDraft);
         await loadLocalPendingSales();
@@ -1895,6 +1910,7 @@ export const PosPageOffline = () => {
           justifyContent: "center",
           flexDirection: "column",
           gap: 2,
+          userSelect: "none",
         }}
       >
         <CircularProgress />
@@ -1909,6 +1925,7 @@ export const PosPageOffline = () => {
         display: "flex",
         flexDirection: "column",
         height: "calc(100vh - 80px)",
+        userSelect: "none",
       }}
     >
       {/* TOP HEADER */}

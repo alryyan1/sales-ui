@@ -46,6 +46,7 @@ import { offlineSaleService } from "../../services/offlineSaleService";
 import { Client } from "../../services/clientService";
 import { dbService } from "../../services/db";
 import settingService, { AppSettings } from "../../services/settingService";
+import { Badge } from "../ui/badge";
 
 interface OfflineSaleSummaryColumnProps {
   currentSale: OfflineSale;
@@ -493,6 +494,33 @@ export const OfflineSaleSummaryColumn: React.FC<
             </Box>
           </Box>
 
+          {/* Created By (Username) */}
+          {currentSale.user_name && (
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                bgcolor: "grey.50",
+                p: 1,
+                borderRadius: 1,
+                border: "1px dashed",
+                borderColor: "grey.300",
+              }}
+            >
+              <Typography variant="caption" color="text.secondary">
+                البائع
+              </Typography>
+              <Typography
+                variant="body2"
+                fontWeight="bold"
+                color="text.primary"
+              >
+                {currentSale.user_name}
+              </Typography>
+            </Box>
+          )}
+
           <Divider />
 
           {/* Row 3: Monetary Info */}
@@ -645,49 +673,88 @@ export const OfflineSaleSummaryColumn: React.FC<
             )}
           </Stack>
 
+          {/* Payments List (Displayed Directly) */}
+          {payments.length > 0 && (
+            <Box
+              sx={{
+                mt: 1,
+                mb: 1,
+                display: "flex",
+                flexDirection: "column",
+                gap: 1,
+              }}
+            >
+              <Typography
+                variant="body2"
+                fontWeight="bold"
+                color="text.secondary"
+              >
+                طرق الدفع المستخدمة:
+              </Typography>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "row",
+                  flexWrap: "wrap",
+                  gap: 1,
+                }}
+              >
+                {payments.map((p, idx) => {
+                  const isRefund = p.method === "refund";
+                  return (
+                    <Badge
+                      key={idx}
+                      variant={isRefund ? "destructive" : "success"}
+                      className="px-3 py-1 text-sm flex justify-between gap-2 min-w-[120px]"
+                    >
+                      <span className="font-medium">
+                        {getPaymentMethodLabel(p.method)}
+                      </span>
+                      <span className="font-bold">
+                        {formatNumber(Number(p.amount))}
+                      </span>
+                    </Badge>
+                  );
+                })}
+              </Box>
+            </Box>
+          )}
+
           {/* Add Payment Button */}
-          <Button
-            onClick={() => {
-              if (currentSale.status === "completed") {
-                setIsPaymentsViewDialogOpen(true);
-              } else {
+          {(currentSale.status !== "completed" ||
+            grandTotal - paidAmount > 0.01) && (
+            <Button
+              onClick={() => {
                 onPaymentDialogOpenChange(true);
-              }
-            }}
-            variant="contained"
-            fullWidth
-            size="large"
-            disabled={grandTotal <= 0}
-            sx={{
-              // py: 2,
-              // minHeight: 56,
-              // fontSize: "1.3rem",
-              fontWeight: 700,
-              borderRadius: 2,
-              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-              transition: "all 0.2s ease-in-out",
-              ...(paidAmount > 0 && {
-                bgcolor: "success.main",
-                "&:hover": {
-                  bgcolor: "success.dark",
-                  transform: "translateY(-2px)",
-                  boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
-                },
-              }),
-              ...(!paidAmount && {
-                "&:hover": {
-                  transform: "translateY(-2px)",
-                  boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
-                },
-              }),
-            }}
-          >
-            {currentSale.status === "completed"
-              ? "عرض المدفوعات"
-              : paidAmount > 0
-                ? "إدارة الدفع / إكمال"
-                : "الدفع"}
-          </Button>
+              }}
+              variant="contained"
+              fullWidth
+              size="large"
+              disabled={grandTotal <= 0}
+              sx={{
+                fontWeight: 700,
+                borderRadius: 2,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                transition: "all 0.2s ease-in-out",
+                ...(paidAmount > 0 && {
+                  bgcolor: "success.main",
+                  "&:hover": {
+                    bgcolor: "success.dark",
+                    transform: "translateY(-2px)",
+                    boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
+                  },
+                }),
+                ...(!paidAmount && {
+                  "&:hover": {
+                    transform: "translateY(-2px)",
+                    boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
+                  },
+                }),
+              }}
+            >
+              {paidAmount > 0 ? "إضافة دفعة أخرى / إكمال" : "الدفع"}
+            </Button>
+          )}
         </CardContent>
       </Card>
 
@@ -854,7 +921,7 @@ export const OfflineSaleSummaryColumn: React.FC<
                     sx={{
                       p: 2.5,
                       display: "flex",
-                      flexDirection: "column",
+                      flexDirection: "row",
                       gap: 1.5,
                       bgcolor: "background.paper",
                       borderRadius: 2,

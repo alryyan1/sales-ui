@@ -24,8 +24,10 @@ export interface SyncAction {
   retryCount: number;
 }
 
-export interface OfflineSale
-  extends Omit<Sale, "id" | "sale_order_number" | "client_name" | "status"> {
+export interface OfflineSale extends Omit<
+  Sale,
+  "id" | "sale_order_number" | "client_name" | "status"
+> {
   id?: number; // ID from backend when synced
   tempId: string; // Temporary ID for offline reference
   offline_created_at: number;
@@ -36,6 +38,7 @@ export interface OfflineSale
   items: OfflineSaleItem[];
   sale_order_number?: number | null;
   status: "draft" | "held" | "completed" | "pending" | "cancelled";
+  user_name?: string | null; // Add user_name field
 }
 
 export interface OfflineSaleItem extends SaleItem {
@@ -61,7 +64,8 @@ class IndexedDBService {
       request.onerror = (event) => {
         console.error("IndexedDB error:", event);
         reject(
-          "Database error: " + (event.target as IDBOpenDBRequest).error?.message
+          "Database error: " +
+            (event.target as IDBOpenDBRequest).error?.message,
         );
       };
 
@@ -121,7 +125,7 @@ class IndexedDBService {
   // Generic helper for transactions
   private async getStore(
     storeName: string,
-    mode: IDBTransactionMode
+    mode: IDBTransactionMode,
   ): Promise<IDBObjectStore> {
     const db = await this.open();
     const transaction = db.transaction(storeName, mode);
@@ -163,7 +167,7 @@ class IndexedDBService {
     return allProducts.filter(
       (p) =>
         p.name.toLowerCase().includes(lowerQuery) ||
-        (p.sku && p.sku.toLowerCase().includes(lowerQuery))
+        (p.sku && p.sku.toLowerCase().includes(lowerQuery)),
     );
   }
 
@@ -199,7 +203,7 @@ class IndexedDBService {
     return allClients.filter(
       (c) =>
         c.name.toLowerCase().includes(lowerQuery) ||
-        (c.phone && c.phone.includes(lowerQuery))
+        (c.phone && c.phone.includes(lowerQuery)),
     );
   }
 
@@ -244,7 +248,7 @@ class IndexedDBService {
   // --- SYNC QUEUE ---
 
   async addToSyncQueue(
-    action: Omit<SyncAction, "id" | "timestamp" | "status" | "retryCount">
+    action: Omit<SyncAction, "id" | "timestamp" | "status" | "retryCount">,
   ): Promise<number> {
     const store = await this.getStore(STORES.SYNC_QUEUE, "readwrite");
     return new Promise((resolve, reject) => {
@@ -272,7 +276,7 @@ class IndexedDBService {
         resolve(
           actions
             .filter((a) => a.status === "pending" || a.status === "failed")
-            .sort((a, b) => a.timestamp - b.timestamp)
+            .sort((a, b) => a.timestamp - b.timestamp),
         );
       };
       request.onerror = () => reject(request.error);

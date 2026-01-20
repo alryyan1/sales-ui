@@ -295,6 +295,7 @@ export const offlineSaleService = {
   createDraftSale: (
     shiftId: number | null = null,
     userId: number | null = null,
+    userName: string | null = null,
   ): OfflineSale => {
     return {
       tempId: generateId(),
@@ -313,6 +314,7 @@ export const offlineSaleService = {
       items: [],
       payments: [],
       user_id: userId ?? null,
+      user_name: userName,
     };
   },
 
