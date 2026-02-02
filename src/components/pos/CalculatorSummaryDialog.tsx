@@ -250,19 +250,48 @@ export const CalculatorSummaryDialog: React.FC<
       return rawSales.filter((sale: any) => sale.user_id === user.id);
     }, [rawSales, filterByUser, user?.id, isReady]);
 
+    // Separate Gross Sales (Normal) and Returns
+    const { grossSales, returnedSales } = useMemo(() => {
+      const gross: any[] = [];
+      const returns: any[] = [];
+      (effectiveSales as any[]).forEach((sale) => {
+        if (sale.is_returned || sale.status === "returned") {
+          returns.push(sale);
+        } else {
+          gross.push(sale);
+        }
+      });
+      return { grossSales: gross, returnedSales: returns };
+    }, [effectiveSales]);
+
+    // 1. Total Sales: Include ALL operations (Sales + Returns) as positive values
+    // User Request: "Do not deduct the amount from total sales... total sales should be inclusive of all operations"
     const totalSalesAmount = (effectiveSales as any[]).reduce(
-      (sum: number, sale: any) => sum + Number(sale.total_amount || 0),
+      (sum: number, sale: any) => sum + Math.abs(Number(sale.total_amount || 0)),
       0,
     );
-    const totalPaidAmount = (effectiveSales as any[]).reduce(
+
+    // 2. Total Paid: Money actually received from Gross Sales (Money In)
+    // We only count payments from normal sales as "Inflow".
+    // Return payments are "Outflow" (Expenses).
+    const totalPaidAmount = grossSales.reduce(
       (sum: number, sale: any) => sum + Number(sale.paid_amount || 0),
+      0,
+    );
+
+    // 3. Return Amount: Money returned to customers (Treat as Expense)
+    // We assume the return amount is the 'paid_amount' of the return record (money given back)
+    // or 'total_amount'. Usually they match for completed returns.
+    const totalReturnsAmount = returnedSales.reduce(
+      (sum: number, sale: any) => sum + Math.abs(Number(sale.total_amount || 0)),
       0,
     );
 
     const { totalCash, totalBank } = useMemo(() => {
       let cash = 0;
       let bank = 0;
-      (effectiveSales as any[]).forEach((sale: any) => {
+      // Calculate cash/bank only from Gross Sales (Money In)
+      grossSales.forEach((sale: any) => {
         if (
           sale.payments &&
           Array.isArray(sale.payments) &&
@@ -277,14 +306,14 @@ export const CalculatorSummaryDialog: React.FC<
             }
           });
         } else {
-          // Fallback: Use paid_amount as cash if payments detail is missing
+          // Fallback: Use paid_amount if payments detail is missing
           cash += Number(sale.paid_amount || 0);
         }
       });
       return { totalCash: cash, totalBank: bank };
-    }, [effectiveSales]);
+    }, [grossSales]);
 
-    const totalSalesCount = effectiveSales.length;
+    const totalSalesCount = grossSales.length;
 
     // Filter expenses by user if setting is enabled
     const rawExpenses = expensesData?.data || [];
@@ -295,12 +324,17 @@ export const CalculatorSummaryDialog: React.FC<
       return rawExpenses.filter((exp: any) => exp.user_id === user.id);
     }, [rawExpenses, filterByUser, user?.id, isReady]);
 
-    const totalExpensesAmount = (expenses as any[]).reduce(
+    // 4. Total Expenses: Direct Expenses + Returns
+    const directExpensesAmount = (expenses as any[]).reduce(
       (sum: number, exp: any) => sum + Number(exp.amount || 0),
       0,
     );
-    const totalExpensesCount = expenses.length;
+    const totalExpensesAmount = directExpensesAmount + totalReturnsAmount;
 
+    // Count includes expense items + return transactions
+    const totalExpensesCount = expenses.length + returnedSales.length;
+
+    // 5. Net Amount: Gross Received - (Direct Expenses + Returns)
     const netAmount = totalPaidAmount - totalExpensesAmount;
 
     const SummaryCard = ({
