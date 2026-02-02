@@ -35,6 +35,7 @@ import { OfflineSaleSummaryColumn } from "../components/pos/OfflineSaleSummaryCo
 import { PosOfflineHeader } from "../components/pos/PosOfflineHeader";
 import { PosShiftReportPdf } from "../components/pos/PosShiftReportPdf";
 import { CalculatorSummaryDialog } from "../components/pos/CalculatorSummaryDialog";
+import { OfflineThermalInvoiceDialog } from "../components/pos/OfflineThermalInvoiceDialog";
 import settingService from "@/services/settingService";
 
 export const PosPageOffline = () => {
@@ -233,6 +234,10 @@ export const PosPageOffline = () => {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isShiftReportOpen, setIsShiftReportOpen] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(true);
+
+  // Invoice Dialog State
+  const [showInvoice, setShowInvoice] = useState(false);
+  const [invoiceSale, setInvoiceSale] = useState<OfflineSale | null>(null);
 
   // Track sales that are currently being processed/completed
   const [processingSales, setProcessingSales] = useState<Set<string>>(
@@ -442,8 +447,7 @@ export const PosPageOffline = () => {
         );
         if (availableStockingUnits <= 0) {
           toast.error(
-            `عذراً، لا يوجد مخزون كافٍ. المتاح: ${currentStock} ${
-              product.sellable_unit_name || "قطعة"
+            `عذراً، لا يوجد مخزون كافٍ. المتاح: ${currentStock} ${product.sellable_unit_name || "قطعة"
             }`,
           );
           return;
@@ -605,8 +609,7 @@ export const PosPageOffline = () => {
     // Validate stock availability
     if (quantityDiff > currentStock) {
       toast.error(
-        `المخزون غير كافٍ. المتاح: ${currentStock} ${
-          product?.sellable_unit_name || "قطعة"
+        `المخزون غير كافٍ. المتاح: ${currentStock} ${product?.sellable_unit_name || "قطعة"
         }`,
       );
       return;
@@ -702,10 +705,8 @@ export const PosPageOffline = () => {
             );
             if (newQuantity === 0) {
               toast.error(
-                `الكمية الحالية (${currentQuantityInSellable} ${
-                  product?.sellable_unit_name || "قطعة"
-                }) غير كافية للتحويل إلى وحدة التخزين (يحتاج ${unitsPerStocking} ${
-                  product?.sellable_unit_name || "قطعة"
+                `الكمية الحالية (${currentQuantityInSellable} ${product?.sellable_unit_name || "قطعة"
+                }) غير كافية للتحويل إلى وحدة التخزين (يحتاج ${unitsPerStocking} ${product?.sellable_unit_name || "قطعة"
                 } على الأقل)`,
               );
               return i;
@@ -911,12 +912,12 @@ export const PosPageOffline = () => {
               unit_price: Number(i.unit_price),
               product: currentProduct ||
                 i.product || {
-                  id: i.product_id,
-                  name: i.product_name || "Unknown Product",
-                  sku: i.product_sku || "",
-                  stock_quantity: 0,
-                  available_batches: [],
-                },
+                id: i.product_id,
+                name: i.product_name || "Unknown Product",
+                sku: i.product_sku || "",
+                stock_quantity: 0,
+                available_batches: [],
+              },
               product_name:
                 currentProduct?.name || i.product?.name || i.product_name,
               purchase_item_id: i.purchase_item_id,
@@ -1266,12 +1267,12 @@ export const PosPageOffline = () => {
               unit_price: Number(i.unit_price),
               product: currentProduct ||
                 i.product || {
-                  id: i.product_id,
-                  name: i.product_name || "Unknown Product",
-                  sku: i.product_sku || "",
-                  stock_quantity: 0,
-                  available_batches: [],
-                },
+                id: i.product_id,
+                name: i.product_name || "Unknown Product",
+                sku: i.product_sku || "",
+                stock_quantity: 0,
+                available_batches: [],
+              },
               product_name:
                 currentProduct?.name || i.product?.name || i.product_name,
               purchase_item_id: i.purchase_item_id,
@@ -1621,7 +1622,11 @@ export const PosPageOffline = () => {
         toast.success("تم إتمام عملية البيع بنجاح");
       }
 
-      // Removed Thermal Invoice Dialog logic as per user request
+
+      // Show Thermal Invoice (Auto)
+      setInvoiceSale(currentSale);
+      setShowInvoice(true);
+
     } catch (error: any) {
       console.error("Payment sync error:", error);
       const msg =
@@ -2128,11 +2133,11 @@ export const PosPageOffline = () => {
                 shift && shift.id === selectedShiftId
                   ? shift
                   : {
-                      id: selectedShiftId || 0,
-                      opened_at: null,
-                      closed_at: null,
-                      is_open: false,
-                    }
+                    id: selectedShiftId || 0,
+                    opened_at: null,
+                    closed_at: null,
+                    is_open: false,
+                  }
               }
               userName="الكاشير"
             />
@@ -2153,6 +2158,13 @@ export const PosPageOffline = () => {
         dateFrom={selectedDate}
         posMode={posMode}
         selectedShiftId={selectedShiftId}
+      />
+
+      {/* Offline Thermal Invoice Dialog */}
+      <OfflineThermalInvoiceDialog
+        open={showInvoice}
+        onClose={() => setShowInvoice(false)}
+        sale={invoiceSale}
       />
     </Box>
   );

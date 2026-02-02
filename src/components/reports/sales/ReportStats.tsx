@@ -75,7 +75,11 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
       0
     );
     const totalDue = data.reduce(
-      (sum, sale) => sum + Number(sale.due_amount || 0),
+      (sum, sale) => {
+        // Exclude returns from due amount calculation
+        if (sale.is_returned) return sum;
+        return sum + Number(sale.due_amount || 0);
+      },
       0
     );
     const totalDiscount = data.reduce(
@@ -95,17 +99,49 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
 
     const totalNet = totalAmount - totalRefund;
 
-    // Calculate expenses
+    // Calculate refund breakdown
+    let totalRefundCash = 0;
+    let totalRefundBank = 0;
+
+    data.forEach((sale) => {
+      if (!sale.payments) return;
+
+      const refundPayments = sale.payments.filter(p => (p.method as string) === "refund");
+      if (refundPayments.length === 0) return;
+
+      const refundAmount = refundPayments.reduce((sum, p) => sum + Math.abs(Number(p.amount)), 0);
+
+      // Determine original payment method for this sale
+      // Prioritize finding any bank payment, otherwise assume cash if cash exists
+      const hasBankPayment = sale.payments.some(p =>
+        ["visa", "mastercard", "mada", "bank_transfer"].includes(p.method as string)
+      );
+
+      if (hasBankPayment) {
+        totalRefundBank += refundAmount;
+      } else {
+        // Default to cash if no bank payment found (or if it was purely cash)
+        totalRefundCash += refundAmount;
+      }
+    });
+
+    // Calculate expenses (Original Expenses + Refunds)
     const expenses = expensesData?.data || [];
-    const totalExpenses = expenses.reduce(
+    const totalExpensesRaw = expenses.reduce(
       (sum, expense) => sum + Number(expense.amount),
       0
     );
+    const totalExpenses = totalExpensesRaw;
+
+    // Detailed expenses breakdown
     const totalExpensesCash = expenses
       .filter((expense) => expense.payment_method === "cash")
       .reduce((sum, expense) => sum + Number(expense.amount), 0);
+
     const totalExpensesBank = expenses
-      .filter((expense) => expense.payment_method === "bank")
+      .filter((expense) =>
+        ["bank", "visa", "mastercard", "mada", "bank_transfer"].includes(expense.payment_method || "")
+      )
       .reduce((sum, expense) => sum + Number(expense.amount), 0);
 
     const totalCash = data.reduce((sum, sale) => {

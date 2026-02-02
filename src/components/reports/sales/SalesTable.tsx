@@ -112,221 +112,219 @@ export const SalesTable: React.FC<SalesTableProps> = ({
 
   return (
     <Card className="mb-6 overflow-hidden shadow-sm">
-   
-      {/* <CardContent className="p-0"> */}
-        {reportData.data.length === 0 ? (
-          <div className="text-center py-12 px-4">
-            <div className="inline-flex p-4 bg-muted rounded-xl mb-4">
-              <FileText size={32} className="opacity-40" />
-            </div>
-            <h3 className="text-lg font-semibold mb-1">لا توجد مبيعات</h3>
-            <p className="text-sm text-muted-foreground">
-              جرب تعديل الفلاتر
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="text-center  ">
-                    <TableHead className="text-center">
-                      رقم العمليه
-                    </TableHead>
-                    <TableHead className="text-center">
-                      التاريخ
-                    </TableHead>
-                    <TableHead className="text-center">
-                      العميل
-                    </TableHead>
-                    <TableHead className="text-center">
-                      المستخدم
-                    </TableHead>
-                    <TableHead className="text-center">
-                      المدفوعات
-                    </TableHead>
-                    <TableHead className=" text-center">
-                      الخصم
-                    </TableHead>
-                    <TableHead className=" text-center">
-                      المبلغ الإجمالي
-                    </TableHead>
-                    <TableHead className=" text-center">
-                      المدفوع
-                    </TableHead>
-                    <TableHead className=" text-center">
-                      المستحق
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {reportData.data.map((sale) => (
-                    <TableRow
-                      key={sale.id}
-                      onClick={() => onRowClick(sale.id)}
-                      className="cursor-pointer text-center transition-all hover:bg-muted/50 "
-                    >
-                      <TableCell className="text-center">
-                        #{sale.id}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <span className="text-center text-sm font-medium">
-                          {format(parseISO(sale.sale_date), "yyyy-MM-dd")}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {sale.client_name && sale.client_id ? (
-                          <button
-                            onClick={(e) => handleClientClick(e, sale.client_id)}
-                            className="text-center text-sm font-medium text-primary hover:underline cursor-pointer transition-colors"
-                          >
-                            {sale.client_name}
-                          </button>
-                        ) : (
-                          <span className="text-center text-sm text-muted-foreground">
-                            عميل غير محدد
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {sale.user_name ? (
-                          <span className="text-center text-sm font-medium">
-                            {sale.user_name}
-                          </span>
-                        ) : (
-                          <span className="text-center text-sm text-muted-foreground">
-                            —
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {sale.payments && sale.payments.length > 0 ? (
-                          <Badge
-                            variant="outline"
-                            className="border-primary text-primary font-semibold"
-                          >
-                            {`${sale.payments.length} ${
-                              sale.payments.length === 1 ? "دفعة" : "دفعات"
-                            }`}
-                          </Badge>
-                        ) : (
-                          <span className="text-center text-sm text-muted-foreground">
-                            —
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {sale.discount_amount &&
-                        Number(sale.discount_amount) > 0 ? (
-                          <div>
-                            <span className="text-center text-sm font-semibold text-yellow-600 dark:text-yellow-500">
-                              {formatNumber(sale.discount_amount)}
-                            </span>
-                            <span className="block text-center text-xs text-muted-foreground mt-1">
-                              {(sale as any).discount_type === "percentage"
-                                ? "%"
-                                : "ثابت"}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-center text-sm text-muted-foreground">
-                            —
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center font-semibold text-base">
-                        {formatNumber(sale.total_amount)}
-                      </TableCell>
-                      <TableCell className="text-center font-medium text-green-600 dark:text-green-500">
-                        {formatNumber(sale.paid_amount)}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <span
-                          className={`text-sm font-semibold ${
-                            Number(sale.due_amount || 0) > 0
-                              ? "text-red-600 dark:text-red-500"
-                              : "text-green-600 dark:text-green-500"
-                          }`}
-                        >
-                          {formatNumber(sale.due_amount || 0)}
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
 
-            {/* Pagination */}
-            {reportData.last_page > 1 && (
-              <div className="flex justify-center py-6 border-t">
-                <Pagination>
-                  <PaginationContent>
-                    {currentPage > 1 && (
-                      <PaginationItem>
-                        <PaginationPrevious
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            onPageChange(currentPage - 1);
-                          }}
-                          className={isLoading ? "pointer-events-none opacity-50" : ""}
-                        />
-                      </PaginationItem>
-                    )}
-                    {Array.from({ length: reportData.last_page }, (_, i) => i + 1)
-                      .filter((page) => {
-                        // Show first page, last page, current page, and pages around current
-                        if (page === 1 || page === reportData.last_page) return true;
-                        if (Math.abs(page - currentPage) <= 1) return true;
-                        return false;
-                      })
-                      .map((page, index, array) => {
-                        // Add ellipsis
-                        const prevPage = array[index - 1];
-                        const showEllipsisBefore = prevPage && page - prevPage > 1;
-                        
-                        return (
-                          <React.Fragment key={page}>
-                            {showEllipsisBefore && (
-                              <PaginationItem>
-                                <PaginationEllipsis />
-                              </PaginationItem>
-                            )}
+      {/* <CardContent className="p-0"> */}
+      {reportData.data.length === 0 ? (
+        <div className="text-center py-12 px-4">
+          <div className="inline-flex p-4 bg-muted rounded-xl mb-4">
+            <FileText size={32} className="opacity-40" />
+          </div>
+          <h3 className="text-lg font-semibold mb-1">لا توجد مبيعات</h3>
+          <p className="text-sm text-muted-foreground">
+            جرب تعديل الفلاتر
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="text-center  ">
+                  <TableHead className="text-center">
+                    رقم العمليه
+                  </TableHead>
+                  <TableHead className="text-center">
+                    التاريخ
+                  </TableHead>
+                  <TableHead className="text-center">
+                    العميل
+                  </TableHead>
+                  <TableHead className="text-center">
+                    المستخدم
+                  </TableHead>
+                  <TableHead className="text-center">
+                    المدفوعات
+                  </TableHead>
+                  <TableHead className=" text-center">
+                    الخصم
+                  </TableHead>
+                  <TableHead className=" text-center">
+                    المبلغ الإجمالي
+                  </TableHead>
+                  <TableHead className=" text-center">
+                    المدفوع
+                  </TableHead>
+                  <TableHead className=" text-center">
+                    المستحق
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {reportData.data.map((sale) => (
+                  <TableRow
+                    key={sale.id}
+                    onClick={() => onRowClick(sale.id)}
+                    className="cursor-pointer text-center transition-all hover:bg-muted/50 "
+                  >
+                    <TableCell className="text-center">
+                      #{sale.id}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className="text-center text-sm font-medium">
+                        {format(parseISO(sale.sale_date), "yyyy-MM-dd")}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {sale.client_name && sale.client_id ? (
+                        <button
+                          onClick={(e) => handleClientClick(e, sale.client_id)}
+                          className="text-center text-sm font-medium text-primary hover:underline cursor-pointer transition-colors"
+                        >
+                          {sale.client_name}
+                        </button>
+                      ) : (
+                        <span className="text-center text-sm text-muted-foreground">
+                          عميل غير محدد
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {sale.user_name ? (
+                        <span className="text-center text-sm font-medium">
+                          {sale.user_name}
+                        </span>
+                      ) : (
+                        <span className="text-center text-sm text-muted-foreground">
+                          —
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {sale.payments && sale.payments.length > 0 ? (
+                        <Badge
+                          variant="outline"
+                          className="border-primary text-primary font-semibold"
+                        >
+                          {`${sale.payments.length} ${sale.payments.length === 1 ? "دفعة" : "دفعات"
+                            }`}
+                        </Badge>
+                      ) : (
+                        <span className="text-center text-sm text-muted-foreground">
+                          —
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {sale.discount_amount &&
+                        Number(sale.discount_amount) > 0 ? (
+                        <div>
+                          <span className="text-center text-sm font-semibold text-yellow-600 dark:text-yellow-500">
+                            {formatNumber(sale.discount_amount)}
+                          </span>
+                          <span className="block text-center text-xs text-muted-foreground mt-1">
+                            {(sale as any).discount_type === "percentage"
+                              ? "%"
+                              : "ثابت"}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-center text-sm text-muted-foreground">
+                          —
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center font-semibold text-base">
+                      {formatNumber(sale.total_amount)}
+                    </TableCell>
+                    <TableCell className="text-center font-medium text-green-600 dark:text-green-500">
+                      {formatNumber(sale.paid_amount)}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span
+                        className={`text-sm font-semibold ${!sale.is_returned && Number(sale.due_amount || 0) > 0
+                            ? "text-red-600 dark:text-red-500"
+                            : "text-green-600 dark:text-green-500"
+                          }`}
+                      >
+                        {formatNumber(sale.is_returned ? 0 : sale.due_amount || 0)}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Pagination */}
+          {reportData.last_page > 1 && (
+            <div className="flex justify-center py-6 border-t">
+              <Pagination>
+                <PaginationContent>
+                  {currentPage > 1 && (
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onPageChange(currentPage - 1);
+                        }}
+                        className={isLoading ? "pointer-events-none opacity-50" : ""}
+                      />
+                    </PaginationItem>
+                  )}
+                  {Array.from({ length: reportData.last_page }, (_, i) => i + 1)
+                    .filter((page) => {
+                      // Show first page, last page, current page, and pages around current
+                      if (page === 1 || page === reportData.last_page) return true;
+                      if (Math.abs(page - currentPage) <= 1) return true;
+                      return false;
+                    })
+                    .map((page, index, array) => {
+                      // Add ellipsis
+                      const prevPage = array[index - 1];
+                      const showEllipsisBefore = prevPage && page - prevPage > 1;
+
+                      return (
+                        <React.Fragment key={page}>
+                          {showEllipsisBefore && (
                             <PaginationItem>
-                              <PaginationLink
-                                href="#"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  if (!isLoading) onPageChange(page);
-                                }}
-                                isActive={page === currentPage}
-                                className={isLoading ? "pointer-events-none opacity-50" : ""}
-                              >
-                                {page}
-                              </PaginationLink>
+                              <PaginationEllipsis />
                             </PaginationItem>
-                          </React.Fragment>
-                        );
-                      })}
-                    {currentPage < reportData.last_page && (
-                      <PaginationItem>
-                        <PaginationNext
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            onPageChange(currentPage + 1);
-                          }}
-                          className={isLoading ? "pointer-events-none opacity-50" : ""}
-                        />
-                      </PaginationItem>
-                    )}
-                  </PaginationContent>
-                </Pagination>
-              </div>
-            )}
-          </>
-        )}
+                          )}
+                          <PaginationItem>
+                            <PaginationLink
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                if (!isLoading) onPageChange(page);
+                              }}
+                              isActive={page === currentPage}
+                              className={isLoading ? "pointer-events-none opacity-50" : ""}
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        </React.Fragment>
+                      );
+                    })}
+                  {currentPage < reportData.last_page && (
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onPageChange(currentPage + 1);
+                        }}
+                        className={isLoading ? "pointer-events-none opacity-50" : ""}
+                      />
+                    </PaginationItem>
+                  )}
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
+        </>
+      )}
       {/* </CardContent> */}
     </Card>
   );
