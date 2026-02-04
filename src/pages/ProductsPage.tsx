@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 
 // Services and Types
-import { Product } from "../services/productService"; // Use product service
+import productService, { Product } from "../services/productService"; // Use product service
 import categoryService, { Category } from "../services/CategoryService"; // Import category service
 import exportService from "../services/exportService"; // Import export service
 
@@ -38,6 +38,7 @@ import exportService from "../services/exportService"; // Import export service
 import { ProductsTable } from "../components/products/ProductsTable"; // Use ProductsTable named export
 import ProductFormModal from "../components/products/ProductFormModal"; // Use ProductFormModal
 import ProductImportDialog from "../components/products/ProductImportDialog"; // Import dialog
+import ConfirmationDialog from "../components/common/ConfirmationDialog";
 
 // Product type is now used directly from productService
 
@@ -278,6 +279,61 @@ const ProductsPage: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ["products"] });
     showSnackbar("تم استيراد المنتجات بنجاح", "success");
   };
+
+  // --- Delete Handlers ---
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [isForceDelete, setIsForceDelete] = useState(false);
+  const [deleteMessage, setDeleteMessage] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteClick = (product: Product) => {
+    setProductToDelete(product);
+    setIsForceDelete(false); // Reset force delete flag
+    setDeleteMessage(`هل أنت متأكد من حذف المنتج "${product.name}"؟`);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!productToDelete) return;
+    setIsDeleting(true);
+    try {
+      await productService.deleteProduct(productToDelete.id, isForceDelete);
+      showSnackbar("تم حذف المنتج بنجاح", "success");
+      setDeleteDialogOpen(false);
+      setProductToDelete(null);
+      setIsForceDelete(false);
+      // Refresh products
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      if (productsResponse?.data.length === 1 && currentPage > 1) {
+        setCurrentPage((prev) => prev - 1);
+      }
+    } catch (error: any) {
+      console.log("Delete error", error);
+      // Check if it's a 409 error with force delete capability
+      // Axios error structure: error.response.data
+      const errorData = error.response?.data;
+      if (error.response?.status === 409 && errorData?.can_force_delete) {
+        setIsForceDelete(true);
+        setDeleteMessage(errorData.confirmation_message || "هذا المنتج مرتبط بسجلات أخرى. هل تريد حذفه وحذف كل السجلات المرتبطة به؟");
+        // Keep dialog open with new message and force flag
+      } else {
+        showSnackbar(error.message || "فشل حذف المنتج", "error");
+        setDeleteDialogOpen(false);
+        setProductToDelete(null);
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleCloseDeleteDialog = () => {
+    if (isDeleting) return;
+    setDeleteDialogOpen(false);
+    setProductToDelete(null);
+    setIsForceDelete(false);
+  };
+
 
   // --- Render ---
   return (
@@ -674,6 +730,7 @@ const ProductsPage: React.FC = () => {
             <ProductsTable
               products={(productsResponse?.data as Product[]) || []}
               onEdit={(product) => openModal(product as Product)}
+              onDelete={(product) => handleDeleteClick(product as Product)}
               isLoading={isLoadingData}
               // Laravel Pagination Props
               paginationMeta={
@@ -724,7 +781,18 @@ const ProductsPage: React.FC = () => {
           onClose={() => setIsImportDialogOpen(false)}
           onImportSuccess={handleImportSuccess}
         />
-        {/* Removed ConfirmationDialog */}
+
+        <ConfirmationDialog
+          open={deleteDialogOpen}
+          onClose={handleCloseDeleteDialog}
+          onConfirm={handleConfirmDelete}
+          title={isForceDelete ? "حذف المنتج والبيانات المرتبطة" : "تأكيد الحذف"}
+          message={deleteMessage}
+          isLoading={isDeleting}
+          confirmVariant="destructive"
+          confirmText={isForceDelete ? "نعم، احذف كل شيء" : "حذف"}
+        />
+
         {/* Snackbar for notifications */}
         <Snackbar
           open={snackbar.open}

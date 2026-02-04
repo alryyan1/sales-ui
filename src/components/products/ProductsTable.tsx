@@ -30,7 +30,7 @@ import {
   SelectChangeEvent,
   Skeleton,
 } from "@mui/material";
-import { Edit, AlertTriangle, Copy, Check, Info, History } from "lucide-react";
+import { Edit, AlertTriangle, Copy, Check, Info, History, Trash } from "lucide-react";
 
 // Types
 import productService, {
@@ -55,6 +55,7 @@ interface ProductsTableProps {
   products: ProductWithOptionalBatches[];
   isLoading?: boolean;
   onEdit: (product: ProductWithOptionalBatches) => void;
+  onDelete: (product: ProductWithOptionalBatches) => void;
   // Laravel pagination props
   paginationMeta: {
     current_page: number;
@@ -79,6 +80,7 @@ interface ProductsTableProps {
 interface ProductRowProps {
   product: ProductWithOptionalBatches;
   onEdit: (product: ProductWithOptionalBatches) => void;
+  onDelete: (product: ProductWithOptionalBatches) => void;
   onOpenStockDialog: (product: ProductWithOptionalBatches) => void;
   onOpenHistoryDialog: (product: ProductWithOptionalBatches) => void;
   copyToClipboard: (sku: string) => void;
@@ -89,6 +91,7 @@ interface ProductRowProps {
 const ProductRow: React.FC<ProductRowProps> = ({
   product,
   onEdit,
+  onDelete,
   onOpenStockDialog,
   onOpenHistoryDialog,
   copyToClipboard,
@@ -311,6 +314,25 @@ const ProductRow: React.FC<ProductRowProps> = ({
               <Edit style={{ width: 18, height: 18 }} />
             </IconButton>
           </Tooltip>
+          <Tooltip title="حذف">
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(product);
+              }}
+              disabled={isLoading}
+              sx={{
+                color: "error.main",
+                "&:hover": {
+                  bgcolor: "error.light",
+                  color: "error.contrastText",
+                },
+              }}
+            >
+              <Trash style={{ width: 18, height: 18 }} />
+            </IconButton>
+          </Tooltip>
         </Stack>
       </TableCell>
     </TableRow>
@@ -321,6 +343,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
   products,
   isLoading = false,
   onEdit,
+  onDelete,
   paginationMeta,
   currentPage,
   rowsPerPage,
@@ -532,20 +555,21 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
             <TableBody>
               {isLoading && products.length === 0
                 ? Array.from(new Array(10)).map((_, index) =>
-                    renderSkeletonRow(index),
-                  )
+                  renderSkeletonRow(index),
+                )
                 : products.map((product) => (
-                    <ProductRow
-                      key={product.id}
-                      product={product}
-                      onEdit={onEdit}
-                      onOpenStockDialog={handleOpenStockDialog}
-                      onOpenHistoryDialog={handleOpenHistoryDialog}
-                      copyToClipboard={copyToClipboard}
-                      copiedSku={copiedSku}
-                      isLoading={isLoading}
-                    />
-                  ))}
+                  <ProductRow
+                    key={product.id}
+                    product={product}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    onOpenStockDialog={handleOpenStockDialog}
+                    onOpenHistoryDialog={handleOpenHistoryDialog}
+                    copyToClipboard={copyToClipboard}
+                    copiedSku={copiedSku}
+                    isLoading={isLoading}
+                  />
+                ))}
             </TableBody>
           </Table>
         </TableContainer>
@@ -692,8 +716,8 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                         <TableCell>
                           {item.created_at
                             ? new Date(item.created_at).toLocaleDateString(
-                                "en-GB",
-                              )
+                              "en-GB",
+                            )
                             : "---"}
                         </TableCell>
                         <TableCell>

@@ -206,7 +206,7 @@ const productService = {
         `/product/by-ids`,
         { ids: ids }
       );
-    
+
       console.log("getProductsByIds response:", response.data);
 
       // Handle Laravel Resource Collection response
@@ -299,18 +299,17 @@ const productService = {
 
   /**
    * Delete a product.
+   * @param id Product ID
+   * @param force Force delete related records (cascade)
    */
-  deleteProduct: async (id: number): Promise<void> => {
+  deleteProduct: async (id: number, force: boolean = false): Promise<void> => {
     try {
-      await apiClient.delete(`/products/${id}`);
+      await apiClient.delete(`/products/${id}${force ? '?force=true' : ''}`);
     } catch (error) {
       console.error(`Error deleting product ${id}:`, error);
       if (isAxiosError(error) && error.response?.status === 409) {
-        // Handle conflict error (e.g., product used in sales/purchases)
-        console.warn(`Cannot delete product ${id} due to existing records.`);
-        throw new Error(
-          getErrorMessage(error, "Cannot delete product with existing records.")
-        );
+        // Pass the error response data up so the UI can use the confirmation message and flag
+        throw error;
       }
       throw error;
     }
