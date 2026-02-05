@@ -23,14 +23,14 @@ export interface Payment {
   user_id?: number | null;
   user_name?: string;
   method:
-    | "cash"
-    | "visa"
-    | "mastercard"
-    | "bank_transfer"
-    | "mada"
-    | "other"
-    | "store_credit"
-    | "refund";
+  | "cash"
+  | "visa"
+  | "mastercard"
+  | "bank_transfer"
+  | "mada"
+  | "other"
+  | "store_credit"
+  | "refund";
   amount: string | number; // String from form, number for API
   payment_date: string; // YYYY-MM-DD
   reference_number?: string | null;
@@ -707,21 +707,21 @@ const saleService = {
 
       const payload = saleId
         ? {
+          product_id: productData.product_id,
+          quantity: productData.quantity || 1,
+          unit_price: 0, // Backend should use product's last_sale_price
+          purchase_item_id: productData.purchase_item_id || null,
+        }
+        : {
+          client_id: null,
+          sale_date: new Date().toLocaleDateString("en-CA"),
+          notes: null,
+          item: {
             product_id: productData.product_id,
             quantity: productData.quantity || 1,
-            unit_price: 0, // Backend should use product's last_sale_price
             purchase_item_id: productData.purchase_item_id || null,
-          }
-        : {
-            client_id: null,
-            sale_date: new Date().toLocaleDateString("en-CA"),
-            notes: null,
-            item: {
-              product_id: productData.product_id,
-              quantity: productData.quantity || 1,
-              purchase_item_id: productData.purchase_item_id || null,
-            },
-          };
+          },
+        };
 
       const response = await apiClient.post<{ sale: Sale; message: string }>(
         url,
@@ -837,9 +837,8 @@ const saleService = {
         params.append("user_id", userId.toString());
       }
 
-      const url = `/sales/today-by-created-at${
-        params.toString() ? "?" + params.toString() : ""
-      }`;
+      const url = `/sales/today-by-created-at${params.toString() ? "?" + params.toString() : ""
+        }`;
       const response = await apiClient.get<{ data: Sale[] } | Sale[]>(url);
 
       if ("data" in response.data) {

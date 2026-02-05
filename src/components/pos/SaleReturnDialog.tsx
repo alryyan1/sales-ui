@@ -189,17 +189,14 @@ export const SaleReturnDialog: React.FC<SaleReturnDialogProps> = ({
       if (creditAction === "refund" && refundBreakdown.netRefund > 0) {
         try {
           await expenseService.createExpense({
-            title: `إرجاع مبيعات - فاتورة #${
-              saleDetails?.invoice_number || saleId
-            }`,
+            title: `إرجاع مبيعات - فاتورة #${saleDetails?.invoice_number || saleId
+              }`,
             amount: refundBreakdown.netRefund,
             expense_date: new Date().toISOString().split("T")[0],
             payment_method: paymentMethod,
-            description: `إرجاع أصناف من الفاتورة رقم ${
-              saleDetails?.invoice_number
-            }. سبب الإرجاع: ${returnReason || "غير محدد"}. رقم عملية الإرجاع: ${
-              returnedSale.id
-            }`,
+            description: `إرجاع أصناف من الفاتورة رقم ${saleDetails?.invoice_number
+              }. سبب الإرجاع: ${returnReason || "غير محدد"}. رقم عملية الإرجاع: ${returnedSale.id
+              }`,
             reference: `SALE-RETURN-${returnedSale.id}`,
           });
           toast.info("تم تسجيل مصروف الإرجاع بنجاح");
@@ -393,8 +390,8 @@ export const SaleReturnDialog: React.FC<SaleReturnDialogProps> = ({
                           <TableCell align="right" sx={{ fontWeight: "bold" }}>
                             {isSelected
                               ? formatNumber(
-                                  selection.quantity * Number(item.unit_price)
-                                )
+                                selection.quantity * Number(item.unit_price)
+                              )
                               : "-"}
                           </TableCell>
                         </TableRow>
