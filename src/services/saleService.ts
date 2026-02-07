@@ -102,6 +102,7 @@ export interface Sale {
 
 // Data for creating a new sale
 export interface CreateSaleData {
+  offline_id?: string | null;
   client_id: number | null; // Allow null if client is optional for POS
   sale_date: string; // YYYY-MM-DD
   invoice_number?: string | null;

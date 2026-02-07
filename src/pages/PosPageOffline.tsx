@@ -415,18 +415,17 @@ export const PosPageOffline = () => {
 
   const addToCart = useCallback(
     async (product: Product, unitType: "stocking" | "sellable" = "sellable") => {
-      // Handle Synced Sale Addition (Auto-enable Edit Mode)
-      if (currentSale.is_synced) {
+      if (currentSale.is_synced && !isEditingSale) {
+        toast.error("لا يمكن تعديل عملية بيع تمت مزامنتها");
+        return;
+      }
+
+      // Handle Synced Sale Addition
+      if (currentSale.is_synced && isEditingSale) {
         if (!isOnline) {
           toast.error("لا يمكن تعديل عملية بيع متزامنة في وضع عدم الاتصال");
           return;
         }
-
-        // Auto-enable edit mode if not active
-        if (!isEditingSale) {
-          setIsEditingSale(true);
-        }
-
         setIsPageLoading(true);
         try {
           await saleService.addSaleItem(currentSale.id!, {
@@ -608,20 +607,20 @@ export const PosPageOffline = () => {
   );
 
   const updateQuantity = async (productId: number, qty: number) => {
-    // Handle Synced Sale Quantity Update (Auto-enable Edit Mode)
-    if (currentSale.is_synced) {
+    if (currentSale.is_synced && !isEditingSale) {
+      toast.error("لا يمكن تعديل عملية بيع تمت مزامنتها");
+      return;
+    }
+
+    // Handle Synced Sale Quantity Update
+    if (currentSale.is_synced && isEditingSale) {
+      const item = currentSale.items.find(i => i.product_id === productId);
+      if (!item || !item.id) return;
+
       if (!isOnline) {
         toast.error("لا يمكن التعديل في وضع عدم الاتصال");
         return;
       }
-
-      // Auto-enable edit mode if not active
-      if (!isEditingSale) {
-        setIsEditingSale(true);
-      }
-
-      const item = currentSale.items.find(i => i.product_id === productId);
-      if (!item || !item.id) return;
 
       // Calculate actual quantity based on unit type
       const product = item.product as Product;
@@ -713,17 +712,17 @@ export const PosPageOffline = () => {
   };
 
   const updateUnitPrice = async (productId: number, newPrice: number) => {
-    // Handle Synced Sale Price Update (Auto-enable Edit Mode)
-    if (currentSale.is_synced) {
-      if (!isOnline) return;
+    if (currentSale.is_synced && !isEditingSale) {
+      toast.error("لا يمكن تعديل عملية بيع تمت مزامنتها");
+      return;
+    }
 
-      // Auto-enable edit mode if not active
-      if (!isEditingSale) {
-        setIsEditingSale(true);
-      }
-
+    // Handle Synced Sale Price Update
+    if (currentSale.is_synced && isEditingSale) {
       const item = currentSale.items.find(i => i.product_id === productId);
       if (!item || !item.id) return;
+
+      if (!isOnline) return;
 
       setIsPageLoading(true);
       try {
@@ -753,120 +752,12 @@ export const PosPageOffline = () => {
   };
 
   // Function to switch unit type for an item
-  const switchUnitType = async (
+  const switchUnitType = (
     productId: number,
     newUnitType: "stocking" | "sellable",
   ) => {
-    // Handle Synced Sale Unit Switch (Auto-enable Edit Mode)
     if (currentSale.is_synced) {
-      if (!isOnline) {
-        toast.error("لا يمكن تعديل عملية بيع متزامنة في وضع عدم الاتصال");
-        return;
-      }
-
-      // Auto-enable edit mode if not active
-      if (!isEditingSale) {
-        setIsEditingSale(true);
-      }
-
-      // For now, allow local switch and rely on subsequent updateQuantity/updateUnitPrice to sync?
-      // actually, switchUnitType usually just changes local state in `OfflineSaleItem`. 
-      // But for synced sales, we might need to be careful. 
-      // The current implementation of switchUnitType just updates local state:
-      // updateCurrentSale(...)
-      // 
-      // If we just allow it to proceed, it will update `currentSale` state. 
-      // BUT `currentSale` for synced sale is just a local representation.
-      // If we change unit type, we need to ensure the backend knows? 
-      // The backend `updateSaleItem` takes `quantity` and `unit_price`.
-      // `switchUnitType` calculates new quantity and price.
-      // So effectively, it IS a quantity/price update.
-      // 
-      // So we should probably CALL `updateSaleItem` immediately if it is synced?
-      // Or just let it update local state, and then the user has to click "Save"? 
-      // But we are in "Auto Save" / "Immediate Sync" mode for synced sales edit?
-      // 
-      // `addToCart` calls API. `updateQuantity` calls API.
-      // `switchUnitType` currently ONLY updates local state.
-      // 
-      // If I just remove the block:
-      // It updates local state. 
-      // Does it trigger sync? 
-      // `handleSaleUpdate` handles payment/client changes.
-      // It does NOT handle item changes for synced sales automatically (except payments).
-      //
-      // So if I just allow this, the UI will change, but backend won't.
-      // 
-      // I should implement API call here similar to updateQuantity.
-
-      const item = currentSale.items.find(i => i.product_id === productId);
-      if (!item || !item.id) return;
-
-      const product = item.product as Product;
-      const currentUnitType = (item as any).unitType || "sellable";
-
-      if (currentUnitType === newUnitType) return;
-
-      const unitsPerStocking = product?.units_per_stocking_unit || 1;
-
-      // Calculate new values locally first to get numbers
-      let newQuantity = item.quantity;
-      let newPrice = getPriceForUnitType(product, newUnitType);
-
-      // Conversion logic (same as below)
-      let currentQuantityInSellable = currentUnitType === "stocking" ? item.quantity * unitsPerStocking : item.quantity;
-
-      if (newUnitType === "stocking") {
-        newQuantity = Math.floor(currentQuantityInSellable / unitsPerStocking);
-        if (newQuantity === 0) {
-          toast.error(`الكمية غير كافية للتحويل لوحدة كرتونة`);
-          return;
-        }
-      } else {
-        newQuantity = currentQuantityInSellable;
-      }
-
-      // Now call API
-      setIsPageLoading(true);
-      try {
-        // Backend expects quantity in... which unit? 
-        // Usually backend handles "units" if we pass unit_id? 
-        // The `updateSaleItem` in `SaleController` usually takes `quantity` (in sellable units? or just number?).
-        // 
-        // Wait, `updateQuantity` implementation:
-        // const actualQty = unitType === "stocking" ? qty * unitsPerStocking : qty;
-        // It sends TOTAL SELLABLE UNITS to backend.
-        // 
-        // So here:
-        // If we switch to Stocking, `newQuantity` is number of boxes.
-        // But backend expects total sellable units?
-        // 
-        // If `updateQuantity` sends `actualQty` (sellable units), then backend stores sellable units.
-        // 
-        // So if I switch to "Stocking" (Box), and I have 10 items (1 box).
-        // I display 1 Box.
-        // API expects 10 items.
-        // 
-        // So the API data doesn't change! Only the UI representation (price/unit).
-        // BUT price changes!
-        // 
-        // API `updateSaleItem` takes `unit_price`.
-        // So we just need to update `unit_price`.
-        // The `quantity` sent to backend should be `currentQuantityInSellable`.
-
-        await saleService.updateSaleItem(currentSale.id!, item.id, {
-          quantity: currentQuantityInSellable,
-          unit_price: newPrice
-        });
-
-        await adjustSyncedPayments(currentSale.id!);
-        await fetchSaleById(currentSale.id!, true);
-        toast.success("تم تغيير الوحدة بنجاح");
-      } catch (err: any) {
-        toast.error(err?.response?.data?.message || "فشل تغيير الوحدة");
-      } finally {
-        setIsPageLoading(false);
-      }
+      toast.error("لا يمكن تعديل عملية بيع تمت مزامنتها");
       return;
     }
     updateCurrentSale((prev) => {
@@ -971,16 +862,15 @@ export const PosPageOffline = () => {
   };
 
   const removeItem = async (productId: number) => {
-    // Handle Synced Sale Item Removal (Auto-enable Edit Mode)
-    if (currentSale.is_synced) {
+    if (currentSale.is_synced && !isEditingSale) {
+      toast.error("لا يمكن تعديل عملية بيع تمت مزامنتها");
+      return;
+    }
+
+    if (currentSale.is_synced && isEditingSale) {
       if (!isOnline) {
         toast.error("لا يمكن تعديل عملية بيع متزامنة في وضع عدم الاتصال");
         return;
-      }
-
-      // Auto-enable edit mode if not active
-      if (!isEditingSale) {
-        setIsEditingSale(true);
       }
 
       const itemToDelete = currentSale.items.find(
@@ -1002,12 +892,13 @@ export const PosPageOffline = () => {
         setIsPageLoading(true);
         await saleService.removeItemPOS(currentSale.id!, itemToDelete.id);
         toast.success("تم حذف المنتج بنجاح");
+        toast.success("تم حذف المنتج بنجاح");
 
         // Auto-adjust payments using helper
         await adjustSyncedPayments(currentSale.id!);
 
         // Final reload to reflect all changes
-        await fetchSaleById(currentSale.id!, true);
+        await fetchSaleById(currentSale.id!);
       } catch (error: any) {
         console.error("Failed to delete synced item or adjust payments:", error);
         toast.error(error?.response?.data?.message || "فشل معالجة الطلب");

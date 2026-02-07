@@ -117,6 +117,7 @@ export const offlineSaleService = {
           // Convert OfflineSale to CreateSaleData for backend
           // Backend expects quantities in sellable units, so convert if needed
           const saleData: CreateSaleData = {
+            offline_id: offlineSale.tempId,
             client_id: offlineSale.client_id,
             sale_date: offlineSale.sale_date,
             status: "completed", // POS sales are usually completed
@@ -187,7 +188,7 @@ export const offlineSaleService = {
             const matchingOfflinePayment = offlinePayments.find(
               (offlinePayment: any) =>
                 Number(offlinePayment.amount) ===
-                  Number(backendPayment.amount) &&
+                Number(backendPayment.amount) &&
                 offlinePayment.payment_date === backendPayment.payment_date,
             );
 
@@ -205,9 +206,9 @@ export const offlineSaleService = {
             mergedPayments.length > 0
               ? mergedPayments
               : offlinePayments.map((p: any) => ({
-                  ...p,
-                  method: p.method || "cash", // Ensure method is always present
-                }));
+                ...p,
+                method: p.method || "cash", // Ensure method is always present
+              }));
 
           const syncedSale: OfflineSale = {
             ...offlineSale,
