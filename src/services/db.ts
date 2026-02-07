@@ -3,7 +3,7 @@ import { AppSettings } from "./settingService";
 import { Sale, SaleItem } from "./saleService";
 
 // Database version
-const DB_VERSION = 3;
+const DB_VERSION = 5;
 const DB_NAME = "SalesPosOfflineDB";
 
 // Store names
@@ -65,7 +65,7 @@ class IndexedDBService {
         console.error("IndexedDB error:", event);
         reject(
           "Database error: " +
-            (event.target as IDBOpenDBRequest).error?.message,
+          (event.target as IDBOpenDBRequest).error?.message,
         );
       };
 
