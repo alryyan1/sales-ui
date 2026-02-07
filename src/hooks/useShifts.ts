@@ -8,6 +8,7 @@ export interface Shift {
     start_time?: string;
     end_time?: string;
     status?: string;
+    user_name?: string;
 }
 
 export function useShifts() {

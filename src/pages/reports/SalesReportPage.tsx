@@ -55,6 +55,7 @@ const SalesReportPage: React.FC = () => {
     opened_at: string | null;
     closed_at: string | null;
     is_open: boolean;
+    user_name?: string;
   } | null>(null);
 
   const { getSetting, settings } = useSettings();
@@ -168,6 +169,7 @@ const SalesReportPage: React.FC = () => {
               opened_at: currentShift.opened_at,
               closed_at: currentShift.closed_at,
               is_open: currentShift.is_open || !currentShift.closed_at,
+              user_name: currentShift.user_name || currentShift.user?.name,
             });
           } else {
             setSelectedShift({
@@ -177,6 +179,7 @@ const SalesReportPage: React.FC = () => {
                 : null,
               closed_at: null,
               is_open: true,
+              user_name: shiftFromList.user_name,
             });
           }
           setShiftReportDialogOpen(true);
@@ -383,7 +386,7 @@ const SalesReportPage: React.FC = () => {
               <PosShiftReportPdf
                 sales={reportData.data}
                 shift={selectedShift}
-                userName={reportData.data[0]?.user_name || undefined}
+                userName={selectedShift.user_name || reportData.data[0]?.user_name}
                 settings={settings}
               />
             </PDFViewer>
