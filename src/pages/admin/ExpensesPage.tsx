@@ -102,7 +102,7 @@ const ExpensesPage: React.FC = () => {
         expense_category_id: selectedCategory ?? undefined,
         date_from: dateFrom || undefined,
         date_to: dateTo || undefined,
-        sort_by: "expense_date",
+        sort_by: "created_at",
         sort_direction: "desc",
       });
       setResponse(data);

@@ -239,6 +239,9 @@ export const PosPageOffline = () => {
   const [showInvoice, setShowInvoice] = useState(false);
   const [invoiceSale, setInvoiceSale] = useState<OfflineSale | null>(null);
 
+  // Edit Mode State for Synced Sales
+  const [isEditingSale, setIsEditingSale] = useState(false);
+
   // Track sales that are currently being processed/completed
   const [processingSales, setProcessingSales] = useState<Set<string>>(
     new Set(),
@@ -733,8 +736,81 @@ export const PosPageOffline = () => {
   };
 
   const removeItem = async (productId: number) => {
-    if (currentSale.is_synced) {
+    if (currentSale.is_synced && !isEditingSale) {
       toast.error("لا يمكن تعديل عملية بيع تمت مزامنتها");
+      return;
+    }
+
+    if (currentSale.is_synced && isEditingSale) {
+      if (!isOnline) {
+        toast.error("لا يمكن تعديل عملية بيع متزامنة في وضع عدم الاتصال");
+        return;
+      }
+
+      const itemToDelete = currentSale.items.find(
+        (i) => i.product_id === productId,
+      );
+
+      if (!itemToDelete || !itemToDelete.id) {
+        // Fallback or error if ID is missing (shouldn't happen with updated map)
+        console.error("Missing item ID for deletion", itemToDelete);
+        toast.error("تعذر العثور على معرف العنصر");
+        return;
+      }
+
+      if (!window.confirm("هل أنت متأكد من حذف هذا المنتج من الفاتورة؟ سيتم إرجاع الكمية للمخزون.")) {
+        return;
+      }
+
+      try {
+        setIsPageLoading(true);
+        await saleService.removeItemPOS(currentSale.id!, itemToDelete.id);
+        toast.success("تم حذف المنتج بنجاح");
+        // Reload sale to obtain new totals
+        const updatedSale = await saleService.getSale(currentSale.id!);
+
+        // Auto-adjust payments if paid amount > total amount
+        const newTotal = Number(updatedSale.total_amount);
+        const currentPaid = Number(updatedSale.paid_amount);
+
+        if (currentPaid > newTotal) {
+          let excessAmount = currentPaid - newTotal;
+          const payments = [...(updatedSale.payments || [])].sort((a: any, b: any) => b.id - a.id); // Newest first
+
+          for (const payment of payments) {
+            if (excessAmount <= 0) break;
+
+            const paymentAmount = Number(payment.amount);
+            const paymentId = (payment as any).id;
+
+            if (paymentAmount <= excessAmount) {
+              // Full deletion of this payment
+              await saleService.deletePayment(currentSale.id!, paymentId);
+              excessAmount -= paymentAmount;
+            } else {
+              // Partial reduction: Delete and re-add remaining amount
+              await saleService.deletePayment(currentSale.id!, paymentId);
+              const newAmount = paymentAmount - excessAmount;
+              await saleService.addPayment(currentSale.id!, {
+                method: payment.method,
+                amount: newAmount,
+                reference_number: payment.reference_number,
+                notes: payment.notes
+              });
+              excessAmount = 0;
+            }
+          }
+          toast.success("تم تعديل المدفوعات تلقائياً لتطابق الإجمالي الجديد");
+        }
+
+        // Final reload to reflect all changes
+        await fetchSaleById(currentSale.id!);
+      } catch (error: any) {
+        console.error("Failed to delete synced item or adjust payments:", error);
+        toast.error(error?.response?.data?.message || "فشل معالجة الطلب");
+      } finally {
+        setIsPageLoading(false);
+      }
       return;
     }
 
@@ -908,6 +984,7 @@ export const PosPageOffline = () => {
 
             return {
               product_id: i.product_id,
+              id: i.id, // Synced sale item ID
               quantity: i.quantity,
               unit_price: Number(i.unit_price),
               product: currentProduct ||
@@ -987,6 +1064,7 @@ export const PosPageOffline = () => {
     } else {
       setCurrentSale(sale);
     }
+    setIsEditingSale(false);
   }, []);
 
   // Fetch sale by ID from backend
@@ -1263,6 +1341,7 @@ export const PosPageOffline = () => {
 
             return {
               product_id: i.product_id,
+              id: i.id, // Synced sale item ID
               quantity: i.quantity,
               unit_price: Number(i.unit_price),
               product: currentProduct ||
@@ -1685,6 +1764,7 @@ export const PosPageOffline = () => {
       setCurrentSale(newDraft);
       shouldAutoSave.current = false;
     }
+    setIsEditingSale(false);
   };
 
   // Create new sale
@@ -1771,6 +1851,7 @@ export const PosPageOffline = () => {
     setTimeout(() => {
       headerRef.current?.focusSearch();
     }, 100);
+    setIsEditingSale(false);
   }, [shift, loadLocalPendingSales, isOnline, selectedShiftId, posMode]);
 
   // --- Adapters ---
@@ -1998,6 +2079,7 @@ export const PosPageOffline = () => {
               sales={syncedSales}
               selectedSaleId={currentSale.tempId}
               onSaleSelect={handleSelectPendingSale}
+              shiftId={selectedShiftId}
               onDelete={handleDeletePendingSale}
               title="SYNCED"
               isOffline={!isOnline}
@@ -2029,6 +2111,7 @@ export const PosPageOffline = () => {
               isOffline={false}
               onRefresh={undefined}
               processingSaleIds={processingSales}
+              shiftId={selectedShiftId}
             />
           </Box>
         </Paper>
@@ -2059,7 +2142,7 @@ export const PosPageOffline = () => {
             onSwitchUnitType={async (id, unitType) =>
               switchUnitType(id, unitType)
             }
-            readOnly={!!currentSale.is_synced}
+            readOnly={!!currentSale.is_synced && !isEditingSale}
           />
         </Paper>
 
@@ -2089,6 +2172,8 @@ export const PosPageOffline = () => {
               onPaymentDialogOpenChange={setIsPaymentDialogOpen}
               clients={clients}
               isUpdatingClient={isUpdatingClient}
+              isEditing={isEditingSale}
+              onToggleEdit={() => setIsEditingSale(!isEditingSale)}
               onClientAdded={async (client) => {
                 // Optimistic/Local update for speed
                 await dbService.saveClients([client]);

@@ -414,8 +414,8 @@ export const PosShiftReportPdf: React.FC<PosShiftReportPdfProps> = ({
                       {method === "cash"
                         ? "نقدي - Cash"
                         : method === "card"
-                        ? "شبكة - Card"
-                        : method}
+                          ? "شبكة - Card"
+                          : method}
                     </Text>
                     <Text style={styles.summaryValue}>
                       {formatNumber(amount)} {currencySymbol}
@@ -449,8 +449,8 @@ export const PosShiftReportPdf: React.FC<PosShiftReportPdfProps> = ({
                 const saleDate = isOfflineSale(sale)
                   ? sale.offline_created_at
                   : sale.created_at
-                  ? new Date(sale.created_at).getTime()
-                  : Date.now();
+                    ? new Date(sale.created_at).getTime()
+                    : Date.now();
                 const isSynced = isOfflineSale(sale) ? sale.is_synced : true;
 
                 return (

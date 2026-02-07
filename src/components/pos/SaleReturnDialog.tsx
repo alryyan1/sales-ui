@@ -45,6 +45,7 @@ interface SaleReturnDialogProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  shiftId?: number | null;
 }
 
 export const SaleReturnDialog: React.FC<SaleReturnDialogProps> = ({
@@ -52,6 +53,7 @@ export const SaleReturnDialog: React.FC<SaleReturnDialogProps> = ({
   open,
   onClose,
   onSuccess,
+  shiftId,
 }) => {
   const queryClient = useQueryClient();
 
@@ -190,7 +192,7 @@ export const SaleReturnDialog: React.FC<SaleReturnDialogProps> = ({
         try {
           await expenseService.createExpense({
             title: `إرجاع مبيعات - فاتورة #${saleDetails?.invoice_number || saleId
-              }`,
+              } (${paymentMethod === "cash" ? "نقدي" : "بنكي"})`,
             amount: refundBreakdown.netRefund,
             expense_date: new Date().toISOString().split("T")[0],
             payment_method: paymentMethod,
@@ -198,6 +200,7 @@ export const SaleReturnDialog: React.FC<SaleReturnDialogProps> = ({
               }. سبب الإرجاع: ${returnReason || "غير محدد"}. رقم عملية الإرجاع: ${returnedSale.id
               }`,
             reference: `SALE-RETURN-${returnedSale.id}`,
+            shift_id: shiftId,
           });
           toast.info("تم تسجيل مصروف الإرجاع بنجاح");
         } catch (expenseError) {
@@ -211,6 +214,7 @@ export const SaleReturnDialog: React.FC<SaleReturnDialogProps> = ({
 
       queryClient.invalidateQueries({ queryKey: ["sale-returns"] }); // Invalidate returns list
       queryClient.invalidateQueries({ queryKey: ["sales"] }); // Invalidate sales list (for POS/Reports)
+      queryClient.invalidateQueries({ queryKey: ["expenses-summary"] }); // Invalidate expenses summary
       if (onSuccess) onSuccess();
       onClose();
     },

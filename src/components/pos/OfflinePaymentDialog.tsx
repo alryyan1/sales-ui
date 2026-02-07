@@ -46,14 +46,14 @@ const PAYMENT_METHODS: {
   icon: React.ReactNode;
   color: string;
 }[] = [
-  { value: "cash", label: "نقدي", icon: <CashIcon />, color: "#10B981" }, // Emerald
-  {
-    value: "bank_transfer",
-    label: "تحويل بنكي",
-    icon: <BankIcon />,
-    color: "#6366F1",
-  }, // Indigo
-];
+    { value: "cash", label: "نقدي", icon: <CashIcon />, color: "#10B981" }, // Emerald
+    {
+      value: "bank_transfer",
+      label: "تحويل بنكي",
+      icon: <BankIcon />,
+      color: "#6366F1",
+    }, // Indigo
+  ];
 
 interface OfflinePaymentDialogProps {
   open: boolean;

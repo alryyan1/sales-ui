@@ -251,17 +251,14 @@ export const CalculatorSummaryDialog: React.FC<
     }, [rawSales, filterByUser, user?.id, isReady]);
 
     // Separate Gross Sales (Normal) and Returns
+    // FIX: We no longer separate "returned" sales because "is_returned" flag on a Sale
+    // just means "this invoice has some returns". It does NOT mean "this record IS a return transaction".
+    // The Sale record remains a valid "Money In" transaction.
+    // The "Money Out" (Refund) is handled via Expense records created by SaleReturnDialog.
     const { grossSales, returnedSales } = useMemo(() => {
-      const gross: any[] = [];
-      const returns: any[] = [];
-      (effectiveSales as any[]).forEach((sale) => {
-        if (sale.is_returned || sale.status === "returned") {
-          returns.push(sale);
-        } else {
-          gross.push(sale);
-        }
-      });
-      return { grossSales: gross, returnedSales: returns };
+      // Treat ALL sales as gross sales. 
+      // Returns are separate Expense entities, not Sale entities in this list.
+      return { grossSales: effectiveSales as any[], returnedSales: [] };
     }, [effectiveSales]);
 
     // 1. Total Sales: Include ALL operations (Sales + Returns) as positive values
@@ -272,48 +269,21 @@ export const CalculatorSummaryDialog: React.FC<
     );
 
     // 2. Total Paid: Money actually received from Gross Sales (Money In)
-    // We only count payments from normal sales as "Inflow".
-    // Return payments are "Outflow" (Expenses).
-    const totalPaidAmount = grossSales.reduce(
+    // Filter out return records (negative amounts) because we handle returns via Expenses now.
+    const positiveSales = grossSales.filter((s: any) => Number(s.total_amount || 0) >= 0);
+
+    const totalPaidAmount = positiveSales.reduce(
       (sum: number, sale: any) => sum + Number(sale.paid_amount || 0),
       0,
     );
 
-    // 3. Return Amount: Money returned to customers (Treat as Expense)
-    // We assume the return amount is the 'paid_amount' of the return record (money given back)
-    // or 'total_amount'. Usually they match for completed returns.
-    const totalReturnsAmount = returnedSales.reduce(
-      (sum: number, sale: any) => sum + Math.abs(Number(sale.total_amount || 0)),
-      0,
-    );
-
-    const { totalCash, totalBank } = useMemo(() => {
-      let cash = 0;
-      let bank = 0;
-      // Calculate cash/bank only from Gross Sales (Money In)
-      grossSales.forEach((sale: any) => {
-        if (
-          sale.payments &&
-          Array.isArray(sale.payments) &&
-          sale.payments.length > 0
-        ) {
-          sale.payments.forEach((p: any) => {
-            const amt = Number(p.amount || 0);
-            if (p.method === "cash") {
-              cash += amt;
-            } else {
-              bank += amt;
-            }
-          });
-        } else {
-          // Fallback: Use paid_amount if payments detail is missing
-          cash += Number(sale.paid_amount || 0);
-        }
-      });
-      return { totalCash: cash, totalBank: bank };
-    }, [grossSales]);
-
-    const totalSalesCount = grossSales.length;
+    // 3. Return Amount: NO LONGER CALCULATED FROM SALES
+    // We used to sum up total_amount of sales marked as returned, which was wrong (summed whole invoice).
+    // Now we rely on Expense records for refunds.
+    // NOTE: The SaleReturnDialog creates an Expense record for the *exact partial refunded amount*.
+    // By relying on the expenses list (directExpensesAmount), we satisfy the requirement to
+    // "record as expense but only the partial amount".
+    const totalReturnsAmount = 0;
 
     // Filter expenses by user if setting is enabled
     const rawExpenses = expensesData?.data || [];
@@ -323,6 +293,64 @@ export const CalculatorSummaryDialog: React.FC<
       }
       return rawExpenses.filter((exp: any) => exp.user_id === user.id);
     }, [rawExpenses, filterByUser, user?.id, isReady]);
+
+    const { totalCash, totalBank } = useMemo(() => {
+      let cash = 0;
+      let bank = 0;
+
+      // 1. Add Income from Sales
+      positiveSales.forEach((sale: any) => {
+        if (
+          sale.payments &&
+          Array.isArray(sale.payments) &&
+          sale.payments.length > 0
+        ) {
+          sale.payments.forEach((p: any) => {
+            const amt = Number(p.amount || 0);
+            // ONLY count positive payments as Money In.
+            // Negative payments (refunds) are handled via Expenses.
+            if (amt > 0) {
+              if (p.method === "cash") {
+                cash += amt;
+              } else {
+                bank += amt;
+              }
+            }
+          });
+        } else {
+          // Fallback: Use paid_amount if payments detail is missing
+          // Default to cash if unknown, or maybe we shouldn't guess?
+          // For safety, let's assume cash for offline simple sales if not specified
+          const paid = Number(sale.paid_amount || 0);
+          if (paid > 0) {
+            cash += paid;
+          }
+        }
+      });
+
+      // 2. Subtract Expenses (Direct + Returns)
+      expenses.forEach((exp: any) => {
+        const amt = Number(exp.amount || 0);
+        const method = exp.payment_method?.toLowerCase();
+
+        if (
+          method === "bank" ||
+          method === "card" ||
+          method === "transfer" ||
+          method?.includes("bank") ||
+          method?.includes("card")
+        ) {
+          bank -= amt;
+        } else {
+          // Default to cash for "cash" or null/undefined
+          cash -= amt;
+        }
+      });
+
+      return { totalCash: cash, totalBank: bank };
+    }, [positiveSales, expenses]);
+
+    const totalSalesCount = grossSales.length;
 
     // 4. Total Expenses: Direct Expenses + Returns
     const directExpensesAmount = (expenses as any[]).reduce(

@@ -205,9 +205,8 @@ const SalesReportPage: React.FC = () => {
     if (currentFilters.shiftId)
       params.append("shift_id", String(currentFilters.shiftId));
 
-    const pdfUrl = `${
-      import.meta.env.VITE_API_BASE_URL
-    }/reports/sales/pdf?${params.toString()}`;
+    const pdfUrl = `${import.meta.env.VITE_API_BASE_URL
+      }/reports/sales/pdf?${params.toString()}`;
     window.open(pdfUrl, "_blank");
     toast.info("جاري فتح PDF في تبويب جديد...");
   };

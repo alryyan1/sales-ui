@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Box, Typography, CircularProgress, Skeleton } from "@mui/material";
+import { Box, Typography, Skeleton, CircularProgress } from "@mui/material";
 import { OfflineSale } from "../../services/db";
 import { PendingSaleBox } from "./PendingSaleBox";
 import { useSettings } from "../../context/SettingsContext";
@@ -15,6 +15,7 @@ interface PendingSalesColumnProps {
   onRefresh?: () => void;
   processingSaleIds?: Set<string>;
   isLoading?: boolean;
+  shiftId?: number | null;
 }
 
 export const PendingSalesColumn: React.FC<PendingSalesColumnProps> = ({
@@ -27,14 +28,15 @@ export const PendingSalesColumn: React.FC<PendingSalesColumnProps> = ({
   onRefresh,
   processingSaleIds = new Set(),
   isLoading = false,
+  shiftId,
 }) => {
   const { getSetting, isLoadingSettings } = useSettings();
   const { user, isLoading: isLoadingUser } = useAuth();
-  
+
   // Wait for settings and user to load before filtering
   const isReady = !isLoadingSettings && !isLoadingUser;
-  
-  const filterByUser = isReady 
+
+  const filterByUser = isReady
     ? (getSetting("pos_filter_sales_by_user", false) as boolean)
     : false;
 
@@ -44,7 +46,7 @@ export const PendingSalesColumn: React.FC<PendingSalesColumnProps> = ({
     if (!isReady) {
       return [];
     }
-    
+
     if (!filterByUser || !user?.id) {
       return sales;
     }
@@ -111,7 +113,7 @@ export const PendingSalesColumn: React.FC<PendingSalesColumnProps> = ({
 
       {isReady && !isLoading && filteredSales.map((sale, index) => {
         const isProcessing = processingSaleIds.has(sale.tempId);
-        
+
         // Show skeleton loader while processing
         if (isProcessing) {
           return (
@@ -128,7 +130,7 @@ export const PendingSalesColumn: React.FC<PendingSalesColumnProps> = ({
             />
           );
         }
-        
+
         // Show normal sale box when not processing
         return (
           <PendingSaleBox
@@ -140,22 +142,14 @@ export const PendingSalesColumn: React.FC<PendingSalesColumnProps> = ({
             onDelete={onDelete}
             onRefresh={onRefresh}
             isProcessing={false}
+            shiftId={shiftId}
           />
         );
       })}
 
       {isReady && !isLoading && filteredSales.length === 0 && (
-        <Typography
-          variant="caption"
-          color="text.disabled"
-          align="center"
-          sx={{ px: 1 }}
-        >
-          {isOffline
-            ? "يتطلب اتصال بالإنترنت"
-            : title === "SYNCED"
-              ? "لا توجد مبيعات متزامنة"
-              : "لا توجد مبيعات معلقة"}
+        <Typography variant="caption" color="text.disabled" sx={{ mt: 2 }}>
+          Empty
         </Typography>
       )}
     </Box>

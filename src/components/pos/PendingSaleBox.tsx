@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, Badge, Box, Typography, CircularProgress } from "@mui/material";
-import { PauseCircle, Person } from "@mui/icons-material";
+import { Person } from "@mui/icons-material";
 import { RefreshCw, Eye, Trash2, CreditCard } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -21,6 +21,7 @@ interface PendingSaleBoxProps {
   onDelete?: (sale: OfflineSale) => void;
   onRefresh?: () => void;
   isProcessing?: boolean;
+  shiftId?: number | null;
 }
 
 export const PendingSaleBox: React.FC<PendingSaleBoxProps> = ({
@@ -31,6 +32,7 @@ export const PendingSaleBox: React.FC<PendingSaleBoxProps> = ({
   onDelete,
   onRefresh,
   isProcessing = false,
+  shiftId,
 }) => {
   const navigate = useNavigate();
   const isSelected = selectedSaleId === sale.tempId;
@@ -330,6 +332,7 @@ export const PendingSaleBox: React.FC<PendingSaleBoxProps> = ({
           onClose={() => setReturnDialogOpen(false)}
           saleId={sale.id!}
           onSuccess={onRefresh}
+          shiftId={shiftId}
         />
       )}
     </Box>
