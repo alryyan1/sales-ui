@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import saleService, { Sale } from "@/services/saleService";
 import productService, { Product } from "@/services/productService";
 import { formatNumber } from "@/constants";
+import { PosSaleItemsTable } from "@/components/pos/PosSaleItemsTable";
 
 interface Shift {
   id: number;
@@ -208,7 +209,7 @@ const PosBlankPage: React.FC = () => {
           boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
         }}
       >
-        <Toolbar sx={{ height: 64, px: { xs: 2, sm: 3 }, gap: 2 }}>
+        <Toolbar sx={{ height: 64, px: { xs: 2, sm: 3 }, gap: 2, flexWrap: "wrap" }}>
           <Typography
             variant="h6"
             fontWeight="700"
@@ -227,6 +228,63 @@ const PosBlankPage: React.FC = () => {
               وردية #{shift.id}
             </Typography>
           )}
+
+          {/* Product search – in header */}
+          <Box sx={{ flex: 1, minWidth: 160, maxWidth: 380 }}>
+            <Autocomplete
+              value={selectedProduct}
+              inputValue={productInputValue}
+              onInputChange={(_, value) => setProductInputValue(value)}
+              onChange={(_, newValue: Product | null) => {
+                if (newValue) {
+                  handleAddProductToSale(newValue);
+                }
+                setSelectedProduct(null);
+              }}
+              options={productOptions}
+              getOptionLabel={(option) =>
+                typeof option === "object" && option?.name
+                  ? `${option.name}${option.sku ? ` (${option.sku})` : ""}`
+                  : ""
+              }
+              loading={productSearchLoading}
+              disabled={!selectedSale || addProductLoading}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder="ابحث عن منتج..."
+                  size="small"
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {addProductLoading ? (
+                          <CircularProgress size={20} sx={{ mr: 1 }} />
+                        ) : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              )}
+              renderOption={(props, option) => (
+                <li {...props} key={option.id}>
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
+                    <Typography variant="body2">{option.name}</Typography>
+                    {(option.sku || option.suggested_sale_price != null) && (
+                      <Typography variant="caption" color="text.secondary">
+                        {[option.sku, option.suggested_sale_price != null && `السعر: ${formatNumber(Number(option.suggested_sale_price))}`]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </Typography>
+                    )}
+                  </Box>
+                </li>
+              )}
+              noOptionsText={productInputValue.trim() ? "لا توجد نتائج" : "اكتب للبحث"}
+              sx={{ width: "100%" }}
+            />
+          </Box>
 
           {/* Create new sale */}
           <Button
@@ -389,7 +447,7 @@ const PosBlankPage: React.FC = () => {
 
        
 
-          {/* Center column – product search & add to sale */}
+          {/* Center column – sale items table */}
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Paper
               sx={{
@@ -399,65 +457,16 @@ const PosBlankPage: React.FC = () => {
                 borderRadius: 2,
               }}
             >
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
-                إضافة منتج للبيع
-              </Typography>
-              <Autocomplete
-                value={selectedProduct}
-                inputValue={productInputValue}
-                onInputChange={(_, value) => setProductInputValue(value)}
-                onChange={(_, newValue: Product | null) => {
-                  if (newValue) {
-                    handleAddProductToSale(newValue);
-                  }
-                  setSelectedProduct(null);
-                }}
-                options={productOptions}
-                getOptionLabel={(option) =>
-                  typeof option === "object" && option?.name
-                    ? `${option.name}${option.sku ? ` (${option.sku})` : ""}`
-                    : ""
-                }
-                loading={productSearchLoading}
-                disabled={!selectedSale || addProductLoading}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    placeholder="ابحث عن منتج..."
-                    size="small"
-                    InputProps={{
-                      ...params.InputProps,
-                      endAdornment: (
-                        <>
-                          {addProductLoading ? (
-                            <CircularProgress size={20} sx={{ mr: 1 }} />
-                          ) : null}
-                          {params.InputProps.endAdornment}
-                        </>
-                      ),
-                    }}
-                  />
-                )}
-                renderOption={(props, option) => (
-                  <li {...props} key={option.id}>
-                    <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
-                      <Typography variant="body2">{option.name}</Typography>
-                      {(option.sku || option.suggested_sale_price != null) && (
-                        <Typography variant="caption" color="text.secondary">
-                          {[option.sku, option.suggested_sale_price != null && `السعر: ${formatNumber(Number(option.suggested_sale_price))}`]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </Typography>
-                      )}
-                    </Box>
-                  </li>
-                )}
-                noOptionsText={productInputValue.trim() ? "لا توجد نتائج" : "اكتب للبحث"}
-                sx={{ maxWidth: 400 }}
-              />
-              {!selectedSale && (
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
-                  اختر عملية بيع من القائمة لتفعيل إضافة المنتجات
+              {selectedSale ? (
+                <>
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5, fontWeight: 600 }}>
+                    عناصر البيع #{selectedSale.number ?? selectedSale.id}
+                  </Typography>
+                  <PosSaleItemsTable items={selectedSale.items} maxHeight={360} />
+                </>
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ py: 2, display: "block" }}>
+                  اختر عملية بيع من القائمة لتفعيل إضافة المنتجات (استخدم البحث في الأعلى)
                 </Typography>
               )}
             </Paper>
@@ -489,6 +498,7 @@ const PosBlankPage: React.FC = () => {
                       <> · {selectedSale.client_name}</>
                     )}
                   </Typography>
+
                   <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                     <Box sx={{ display: "flex", justifyContent: "space-between" }}>
                       <Typography variant="body2" color="text.secondary">عدد العناصر</Typography>

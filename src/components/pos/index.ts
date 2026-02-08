@@ -1,5 +1,6 @@
 // src/components/pos/index.ts
 export { PosHeader } from './PosHeader';
+export { PosSaleItemsTable } from './PosSaleItemsTable';
 export { SaleItemsTable } from './SaleItemsTable';
 export { SaleSummary } from './SaleSummary';
 export { TodaySales } from './TodaySales';
