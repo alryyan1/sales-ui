@@ -114,7 +114,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
       // Transform the backend sale data to match our Sale interface
       const transformedSale: Sale = {
         id: saleData.id,
-        sale_order_number: saleData.sale_order_number,
+        number: saleData.number,
         client_id: saleData.client_id,
         client_name: saleData.client_name,
         user_id: saleData.user_id,
@@ -204,7 +204,7 @@ export const SaleSummaryColumn: React.FC<SaleSummaryColumnProps> = ({
         setSaleInfo(prev => ({
           ...(prev || ({} as any)),
           id: updatedSale.id,
-          sale_order_number: (updatedSale as any).sale_order_number,
+          number: (updatedSale as any).number,
           client_id: updatedSale.client_id,
           client_name: (updatedSale as any).client_name,
           user_id: updatedSale.user_id,

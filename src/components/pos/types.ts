@@ -30,7 +30,7 @@ export interface SalePayment {
 // Sale Type (updated to include payments)
 export interface Sale {
   id: number;
-  sale_order_number?: number;
+  number?: number;
   client_id?: number | null;
   client_name?: string;
   user_id?: number | null;

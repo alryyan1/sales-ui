@@ -893,7 +893,7 @@ export const PosPageOffline = () => {
         client_id: s.client_id,
         client_name: s.client_name,
         invoice_number: s.invoice_number,
-        sale_order_number: s.sale_order_number,
+        number: s.number,
         status: "completed",
         is_returned: Boolean(s.is_returned),
         discount_amount: s.discount_amount
@@ -1029,7 +1029,7 @@ export const PosPageOffline = () => {
   const expectedSaleNumber = useMemo(() => {
     if (syncedSales.length === 0) return 1;
     const maxOrderNum = Math.max(
-      ...syncedSales.map((s) => s.sale_order_number || 0),
+      ...syncedSales.map((s) => s.number || 0),
     );
     return maxOrderNum + 1;
   }, [syncedSales]);
@@ -1248,7 +1248,7 @@ export const PosPageOffline = () => {
         client_id: s.client_id,
         client_name: s.client_name,
         invoice_number: s.invoice_number,
-        sale_order_number: s.sale_order_number,
+        number: s.number,
         status: "completed",
         is_returned: Boolean(s.is_returned),
         discount_amount: s.discount_amount

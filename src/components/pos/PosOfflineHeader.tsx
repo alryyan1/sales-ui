@@ -64,6 +64,7 @@ interface PosOfflineHeaderProps {
   onPaymentShortcut: () => void; // Trigger for '+' key (opens payment dialog)
   isSaleSelected: boolean;
   isPageLoading?: boolean; // Page loading state to disable PDF button
+  showSyncButton?: boolean; // Show sync button (hide for online-only POS)
   // Drawer
   onDrawerToggle?: () => void;
   onShowSummary?: () => void;
@@ -101,6 +102,7 @@ export const PosOfflineHeader = React.forwardRef<
       onShowSummary,
       isPageLoading = false,
       posMode = "shift",
+      showSyncButton = true,
     },
     ref
   ) => {
@@ -604,7 +606,8 @@ export const PosOfflineHeader = React.forwardRef<
               </Box>
             )} */}
 
-            {/* Sync Trigger */}
+            {/* Sync Trigger - hidden when showSyncButton is false (online-only mode) */}
+            {showSyncButton && (
             <Tooltip title={isSyncing ? "جاري المزامنة..." : "مزامنة البيانات"}>
               <IconButton
                 onClick={onTriggerSync}
@@ -633,6 +636,7 @@ export const PosOfflineHeader = React.forwardRef<
                 />
               </IconButton>
             </Tooltip>
+            )}
 
             {/* Calculator Summary Trigger */}
             <Tooltip title="ملخص الحسابات">

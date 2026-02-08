@@ -30,6 +30,8 @@ import WarehouseProductsPage from "./pages/warehouses/WarehouseProductsPage";
 // Sales & POS
 import PosPage from "./pages/PosPage";
 import PosPageOffline from "./pages/PosPageOffline"; // Ensure this exists
+import PosSalesPage from "./pages/PosSalesPage";
+import PosBlankPage from "./pages/PosBlankPage";
 import SalesReturnsPage from "./pages/sales/SalesReturnsPage";
 import SalesReturnsListPage from "./pages/sales/SalesReturnsListPage";
 import SaleDetailsPage from "./pages/sales/SaleDetailsPage";
@@ -177,6 +179,22 @@ const router = createHashRouter([
                 element: (
                   <PermissionGuard requiredPermission="view-pos-offline">
                     <PosPageOffline />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "pos-new",
+                element: (
+                  <PermissionGuard requiredPermission="view-pos">
+                    <PosSalesPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "pos-blank",
+                element: (
+                  <PermissionGuard requiredPermission="view-pos">
+                    <PosBlankPage />
                   </PermissionGuard>
                 ),
               },

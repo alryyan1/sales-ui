@@ -46,6 +46,7 @@ const ManageInventoryCountPage: React.FC = () => {
   // State
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [productInputValue, setProductInputValue] = useState("");
   const [actualQuantity, setActualQuantity] = useState<string>("");
   const [localQuantities, setLocalQuantities] = useState<
     Record<number, string>
@@ -73,6 +74,7 @@ const ManageInventoryCountPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ["inventory-count", id] });
       setAddDialogOpen(false);
       setSelectedProduct(null);
+      setProductInputValue("");
       setActualQuantity("");
     },
     onError: (error) => {
@@ -285,7 +287,11 @@ const ManageInventoryCountPage: React.FC = () => {
                 <Button
                   variant="outlined"
                   startIcon={<Add />}
-                  onClick={() => setAddDialogOpen(true)}
+                  onClick={() => {
+                    setAddDialogOpen(true);
+                    setProductInputValue("");
+                    setSelectedProduct(null);
+                  }}
                 >
                   إضافة منتج
                 </Button>
@@ -529,7 +535,11 @@ const ManageInventoryCountPage: React.FC = () => {
       {/* Add Item Dialog */}
       <Dialog
         open={addDialogOpen}
-        onClose={() => setAddDialogOpen(false)}
+        onClose={() => {
+          setAddDialogOpen(false);
+          setProductInputValue("");
+          setSelectedProduct(null);
+        }}
         maxWidth="sm"
         fullWidth
         dir="rtl"
@@ -538,11 +548,56 @@ const ManageInventoryCountPage: React.FC = () => {
         <DialogContent>
           <Autocomplete
             options={availableProducts}
-            getOptionLabel={(option: any) => option.name}
+            getOptionLabel={(option: any) =>
+              option.sku
+                ? `${option.name} (${option.sku})`
+                : option.name ?? ""
+            }
+            inputValue={
+              selectedProduct
+                ? selectedProduct.sku
+                  ? `${selectedProduct.name} (${selectedProduct.sku})`
+                  : selectedProduct.name ?? ""
+                : productInputValue
+            }
+            onInputChange={(_, value) => setProductInputValue(value)}
+            filterOptions={(options, { inputValue }) => {
+              const q = (inputValue || "").trim().toLowerCase();
+              if (!q) return options;
+              return options.filter(
+                (option: any) =>
+                  (option.name && option.name.toLowerCase().includes(q)) ||
+                  (option.sku && option.sku.toLowerCase().includes(q)) ||
+                  (option.barcode && String(option.barcode).toLowerCase().includes(q))
+              );
+            }}
             value={selectedProduct}
-            onChange={(_, newValue) => setSelectedProduct(newValue)}
+            onChange={(_, newValue) => {
+              setSelectedProduct(newValue);
+              setProductInputValue("");
+            }}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter") return;
+              const q = productInputValue.trim().toLowerCase();
+              if (!q) return;
+              const match = availableProducts.find(
+                (option: any) =>
+                  (option.name && option.name.toLowerCase().includes(q)) ||
+                  (option.sku && option.sku.toLowerCase().includes(q)) ||
+                  (option.barcode && String(option.barcode).toLowerCase().includes(q))
+              );
+              if (match) {
+                e.preventDefault();
+                setSelectedProduct(match);
+                setProductInputValue("");
+              }
+            }}
             renderInput={(params) => (
-              <TextField {...params} label="المنتج" margin="normal" />
+              <TextField
+                {...params}
+                label="المنتج (الاسم أو الباركود)"
+                margin="normal"
+              />
             )}
           />
           <TextField

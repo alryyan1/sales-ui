@@ -132,7 +132,7 @@ export const SaleBox: React.FC<SaleBoxProps> = ({
                   width: "100%",
                 }}
               >
-                {sale.sale_order_number || sale.id}
+                {sale.number || sale.id}
               </Typography>
             </Box>
           )}

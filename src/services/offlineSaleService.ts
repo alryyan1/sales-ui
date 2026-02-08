@@ -214,7 +214,7 @@ export const offlineSaleService = {
             is_synced: true,
             id: createdSale.id,
             invoice_number: createdSale.invoice_number,
-            sale_order_number: createdSale.sale_order_number ?? null,
+            number: createdSale.number ?? null,
             payments: finalPayments,
             paid_amount:
               createdSale.paid_amount || offlineSale.paid_amount || 0, // Update paid_amount from server

@@ -71,7 +71,7 @@ const SaleDetailsDialog: React.FC<SaleDetailsDialogProps> = ({
       client_id: sale.client_id,
       client_name: sale.client_name || sale.client?.name || null,
       invoice_number: sale.invoice_number,
-      sale_order_number: sale.sale_order_number,
+      number: sale.number,
       status: sale.status || "completed",
       is_returned: false,
       discount_amount: sale.discount_amount ? Number(sale.discount_amount) : undefined,

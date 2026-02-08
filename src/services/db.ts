@@ -26,7 +26,7 @@ export interface SyncAction {
 
 export interface OfflineSale extends Omit<
   Sale,
-  "id" | "sale_order_number" | "client_name" | "status"
+  "id" | "number" | "client_name" | "status"
 > {
   id?: number; // ID from backend when synced
   tempId: string; // Temporary ID for offline reference
@@ -36,7 +36,7 @@ export interface OfflineSale extends Omit<
   client_id: number | null;
   client_name?: string | null;
   items: OfflineSaleItem[];
-  sale_order_number?: number | null;
+  number?: number | null;
   status: "draft" | "held" | "completed" | "pending" | "cancelled";
   user_name?: string | null; // Add user_name field
 }

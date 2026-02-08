@@ -178,9 +178,9 @@ const SaleDetailsPage: React.FC = () => {
           >
             تفاصيل البيع #{sale.id}
           </Typography>
-          {sale.sale_order_number && (
+          {sale.number && (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              رقم الطلب: {sale.sale_order_number}
+              رقم الطلب: {sale.number}
             </Typography>
           )}
         </Box>
@@ -269,14 +269,14 @@ const SaleDetailsPage: React.FC = () => {
               {sale.invoice_number || "---"}
             </Typography>
           </Grid>
-          {sale.sale_order_number && (
+          {sale.number && (
             <Grid xs={12} sm={6} md={4}>
               <Typography variant="overline" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <ShoppingCart size={14} />
                 رقم الطلب
               </Typography>
               <Typography variant="body1" fontWeight="medium" sx={{ mt: 0.5 }}>
-                {sale.sale_order_number}
+                {sale.number}
               </Typography>
             </Grid>
           )}

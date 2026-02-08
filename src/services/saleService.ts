@@ -70,7 +70,7 @@ export interface SaleItem {
 
 export interface Sale {
   id: number;
-  sale_order_number?: number; // Order number for the day (1, 2, 3, etc.)
+  number?: number; // Order number for the day (1, 2, 3, etc.)
   client_id: number | null;
   client_name?: string;
   client?: Client; // Full client object if loaded
@@ -388,13 +388,15 @@ const saleService = {
    */
   createEmptySale: async (data: {
     client_id?: number | null;
-    sale_date: string;
+    sale_date?: string; // Optional; backend uses server date when omitted
     notes?: string | null;
   }): Promise<Sale> => {
     try {
+      const payload = { ...data };
+      if (payload.sale_date === undefined) delete payload.sale_date;
       const response = await apiClient.post<{ sale: Sale }>(
         "/sales/create-empty",
-        data,
+        payload,
       );
       return response.data.sale;
     } catch (error) {

@@ -86,7 +86,7 @@ export const ThermalInvoiceDialog: React.FC<ThermalInvoiceDialogProps> = ({
     if (pdfUrl && sale) {
       const link = document.createElement('a');
       link.href = pdfUrl;
-      link.download = `thermal-invoice-${sale.sale_order_number || sale.id}.pdf`;
+      link.download = `thermal-invoice-${sale.number || sale.id}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -119,7 +119,7 @@ export const ThermalInvoiceDialog: React.FC<ThermalInvoiceDialogProps> = ({
       <DialogTitle>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6">
-            معاينة الفاتورة الحرارية - {sale?.sale_order_number || sale?.id}
+            معاينة الفاتورة الحرارية - {sale?.number || sale?.id}
           </Typography>
           <IconButton onClick={handleClose}>
             <CloseIcon />

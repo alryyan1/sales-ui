@@ -39,7 +39,7 @@ export const transformSaleItemToCartItem = (item: SaleItem): CartItem => {
 export const transformBackendSaleToPOS = (dbSale: BackendSale): POSSale => {
   return {
     id: dbSale.id,
-    sale_order_number: dbSale.sale_order_number,
+    number: dbSale.number,
     client_id: dbSale.client_id ?? null,
     client_name: dbSale.client_name,
     user_id: dbSale.user_id ?? null,

@@ -41,6 +41,12 @@ export const navItems: NavItem[] = [
         category: "المبيعات",
       },
       {
+        to: "/sales/pos-new",
+        label: "نقطة البيع الموحدة",
+        permission: null,
+        category: "المبيعات",
+      },
+      {
         to: "/sales/returns",
         label: "مردودات المبيعات",
         permission: null, // or "view-sales-returns" if permissions are strict

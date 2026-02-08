@@ -98,7 +98,7 @@ export const SalePaymentCard: React.FC<SalePaymentCardProps> = ({
       // Transform the backend sale data to match our Sale interface
       const transformedSale: Sale = {
         id: saleData.id,
-        sale_order_number: saleData.sale_order_number,
+        number: saleData.number,
         client_id: saleData.client_id,
         client_name: saleData.client_name,
         user_id: saleData.user_id,

@@ -230,14 +230,14 @@ export const PendingSaleBox: React.FC<PendingSaleBoxProps> = ({
                 variant="caption"
                 fontWeight={700}
                 color={
-                  sale.is_synced && sale.sale_order_number
+                  sale.is_synced && sale.number
                     ? "primary.main"
                     : "text.secondary"
                 }
                 sx={{ fontSize: "0.85rem" }}
               >
-                {sale.is_synced && sale.sale_order_number
-                  ? `#${sale.sale_order_number}`
+                {sale.is_synced && sale.number
+                  ? `#${sale.number}`
                   : `#${index}`}
               </Typography>
               <Typography

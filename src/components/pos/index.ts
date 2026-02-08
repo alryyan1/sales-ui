@@ -17,4 +17,6 @@ export { PosPdfDialog } from './PosPdfDialog';
 export { InvoicePdfDialog } from './InvoicePdfDialog';
 export { ThermalInvoiceDialog } from './ThermalInvoiceDialog';
 export { BatchSelectionDialog } from './BatchSelectionDialog';
+export { PosOfflineHeader } from './PosOfflineHeader';
+export { CalculatorSummaryDialog } from './CalculatorSummaryDialog';
 export * from './types'; 

@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import tailWindcss from "@tailwindcss/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
+import { reactClickToComponent } from "vite-plugin-react-click-to-component";
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -11,7 +12,7 @@ export default defineConfig({
   plugins: [
     react(),
     tailWindcss(),
-
-    tsconfigPaths(), // 👈 Add this
+    tsconfigPaths(),
+    reactClickToComponent(), // Click-to-component plugin for development
   ],
 });

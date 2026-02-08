@@ -228,7 +228,7 @@ export const SalePaymentSection: React.FC<SalePaymentSectionProps> = ({
             <CreditCard className="h-5 w-5" />
             <span>إضافة دفعات</span>
             <span className="text-sm text-gray-500">
-              #{sale.sale_order_number || sale.id}
+              #{sale.number || sale.id}
             </span>
           </div>
           <Button
