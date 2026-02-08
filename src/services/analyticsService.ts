@@ -53,7 +53,9 @@ export interface ExpiringItem {
   product_name: string;
   batch_number?: string;
   expiry_date: string;
-  remaining_quantity: number;
+  /** Stock is at product/warehouse level; may be omitted */
+  remaining_quantity?: number;
+  quantity_in_stock?: number;
   days_until_expiry: number;
 }
 
@@ -569,7 +571,7 @@ class AnalyticsService {
           product_name: item.product?.name || 'Unknown Product',
           batch_number: item.batch_number,
           expiry_date: item.expiry_date,
-          remaining_quantity: item.remaining_quantity,
+          remaining_quantity: item.remaining_quantity ?? item.quantity_in_stock,
           days_until_expiry: daysUntilExpiry
         };
       });

@@ -167,14 +167,8 @@ type ProcessRequisitionFormValues = z.infer<typeof processRequisitionSchema>;
               issued_quantity: item.issued_quantity || 0, // Default issued to 0 or existing
               issued_from_purchase_item_id:
                 item.issued_from_purchase_item_id || null,
-              selected_batch_info: item.issued_batch_number // Pre-fill if already processed
-                ? `${item.issued_batch_number} (Avail: ${
-                    item.issuedFromPurchaseItemBatch?.remaining_quantity ??
-                    "N/A"
-                  })`
-                : null,
-              available_batch_stock:
-                item.issuedFromPurchaseItemBatch?.remaining_quantity, // If already processed
+              selected_batch_info: item.issued_batch_number ?? null,
+              available_batch_stock: null, // Stock is at product/warehouse level
               status: item.status || "pending",
               item_notes: item.item_notes || "",
             })) || [],

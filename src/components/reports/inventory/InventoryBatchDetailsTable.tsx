@@ -69,7 +69,7 @@ export const InventoryBatchDetailsTable: React.FC<
               {batch.batch_number || "-"}
             </TableCell>
             <TableCell align="center" sx={{ fontSize: "0.75rem" }}>
-              {formatNumber(batch.remaining_quantity)}
+              {batch.remaining_quantity != null ? formatNumber(batch.remaining_quantity) : "—"}
             </TableCell>
             <TableCell sx={{ fontSize: "0.75rem" }}>
               {batch.expiry_date ? formatDate(batch.expiry_date) : "-"}

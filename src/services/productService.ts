@@ -51,11 +51,12 @@ export interface Product {
     id: number;
     product_id: number;
     batch_number: string | null;
-    remaining_quantity: number;
+    /** @deprecated Stock is in product_warehouse only; kept for backward compatibility, may be 0 or omitted */
+    remaining_quantity?: number;
     unit_cost: number;
     sale_price: number;
     expiry_date: string | null;
-  }[]; // Matches PurchaseItemResource structure
+  }[]; // Batches for cost/expiry reference; quantity from product/warehouse
   // Multi-warehouse stock
   warehouses?: {
     id: number;

@@ -100,9 +100,8 @@ export const LiveStockDisplay: React.FC<LiveStockDisplayProps> = ({
   const displayedStock = useMemo(() => {
     if (selectedBatchId) {
         console.log("selectedBatchId", selectedBatchId,product,'product',product.available_batches ,'available_batches');
-      // For batch selection, show batch remaining quantity
-      const batch = product.available_batches?.find((b) => b.id === selectedBatchId);
-      return batch?.remaining_quantity ?? currentStock;
+      // Stock is at product/warehouse level; batch is for cost/expiry only
+      return currentStock;
     }
     // For general stock, show available stock (after deducting current sale quantity)
     return availableStock;
@@ -111,9 +110,8 @@ export const LiveStockDisplay: React.FC<LiveStockDisplayProps> = ({
   // Calculate if stock is low based on current stock and alert level
   const isActuallyLowStock = useMemo(() => {
     if (selectedBatchId) {
-      // For batch selection, check batch remaining quantity
-      const batch = product.available_batches?.find((b) => b.id === selectedBatchId);
-      return batch ? batch.remaining_quantity <= (product.stock_alert_level || 0) : false;
+      // Stock is at product level; use currentStock
+      return availableStock <= (product.stock_alert_level || 0);
     }
     // Use calculated value, fallback to prop if calculation not possible
     const calculated = availableStock <= (product.stock_alert_level || 0);

@@ -32,7 +32,8 @@ import apiClient from "../../lib/axios";
 interface Batch {
   id: number;
   batch_number: string | null;
-  remaining_quantity: number;
+  /** Stock is at product/warehouse level; optional for display */
+  remaining_quantity?: number;
   expiry_date: string | null;
   sale_price: number;
   unit_cost: number;
@@ -84,7 +85,7 @@ export const BatchSelectionDialog: React.FC<BatchSelectionDialogProps> = ({
       const localBatches = product.available_batches.map(b => ({
         id: b.id,
         batch_number: b.batch_number,
-        remaining_quantity: b.remaining_quantity,
+        remaining_quantity: b.remaining_quantity ?? 0,
         expiry_date: b.expiry_date,
         sale_price: b.sale_price,
         unit_cost: b.unit_cost
@@ -203,7 +204,7 @@ export const BatchSelectionDialog: React.FC<BatchSelectionDialogProps> = ({
                       <TableCell align="center">
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
                           <InventoryIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                          <Typography variant="body2" fontWeight="medium">{batch.remaining_quantity}</Typography>
+                          <Typography variant="body2" fontWeight="medium">{batch.remaining_quantity ?? "—"}</Typography>
                         </Box>
                       </TableCell>
                       <TableCell align="center">

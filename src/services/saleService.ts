@@ -50,7 +50,7 @@ export interface SaleItem {
   batch_number_sold?: string | null; // Copied from batch for display
   purchaseItemBatch?: Pick<
     BatchType,
-    "id" | "batch_number" | "unit_cost" | "expiry_date" | "remaining_quantity"
+    "id" | "batch_number" | "unit_cost" | "expiry_date"
   >; // For COGS and display
 
   // Current stock information from the product
@@ -301,6 +301,32 @@ const saleService = {
       return response.data;
     } catch (error) {
       console.error("Error fetching sales:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Fetch all sales without pagination: by shift (if shiftId passed) or by current date.
+   * Uses backend endpoint that returns data without pagination and server date only.
+   */
+  fetchSalesByShiftOrDate: async (
+    shiftId?: number | null,
+  ): Promise<Sale[]> => {
+    try {
+      const params = new URLSearchParams();
+      if (shiftId != null && shiftId > 0) {
+        params.append("shift_id", String(shiftId));
+      } else {
+        params.append("today_only", "true");
+      }
+      const response = await apiClient.get<{ data: Sale[] } | Sale[]>(
+        `/sales/list-all?${params.toString()}`,
+      );
+      const body = response.data;
+      const data = Array.isArray(body) ? body : (body?.data ?? []);
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      console.error("Error in fetchSalesByShiftOrDate:", error);
       throw error;
     }
   },

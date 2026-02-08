@@ -16,7 +16,8 @@ export interface PurchaseItem {
   product_sku?: string;
   batch_number: string | null;
   quantity: number; // Original quantity in STOCKING units
-  remaining_quantity: number; // Quantity remaining in SELLABLE units
+  /** @deprecated Stock is in product_warehouse only; may be 0 or omitted */
+  remaining_quantity?: number;
   unit_cost: string | number; // Cost per STOCKING unit
   cost_per_sellable_unit: string | number; // New: Cost per SELLABLE unit (calculated by backend)
   total_cost: string | number; // Original total cost (quantity_stocking * unit_cost_stocking)

@@ -458,7 +458,7 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
                       id: batch.id,
                       label: `${
                         batch.batch_number || `ID: ${batch.id}`
-                      } (متوفر: ${batch.remaining_quantity}, انتهاء: ${
+                      } (انتهاء: ${
                         batch.expiry_date
                           ? dayjs(batch.expiry_date).format("YYYY-MM-DD")
                           : "N/A"
@@ -506,7 +506,7 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
                             );
                             return `${
                               batch?.batch_number || `ID: ${batch?.id}`
-                            } (متوفر: ${batch?.remaining_quantity}, انتهاء: ${
+                            } (انتهاء: ${
                               batch?.expiry_date
                                 ? dayjs(batch.expiry_date).format("YYYY-MM-DD")
                                 : "N/A"

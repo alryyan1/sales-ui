@@ -216,17 +216,16 @@ export const RequisitionItemProcessingRow: React.FC<
                                 value={String(batch.id)}
                                 onSelect={() => {
                                   field.onChange(batch.id);
+                                  const avail = batch.remaining_quantity ?? 0;
                                   setValue(
                                     `items.${index}.available_batch_stock`,
-                                    batch.remaining_quantity
+                                    avail
                                   );
                                   setValue(
                                     `items.${index}.selected_batch_info`,
                                     `${
                                       batch.batch_number || `ID:${batch.id}`
-                                    } (Avail: ${
-                                      batch.remaining_quantity
-                                    }, Exp: ${
+                                    } (Exp: ${
                                       batch.expiry_date
                                         ? formatDate(batch.expiry_date)
                                         : "N/A"
@@ -243,8 +242,7 @@ export const RequisitionItemProcessingRow: React.FC<
                                       : "opacity-0"
                                   )}
                                 />
-                                {batch.batch_number || `ID:${batch.id}`} (Avail:{" "}
-                                {batch.remaining_quantity}, Exp:{" "}
+                                {batch.batch_number || `ID:${batch.id}`} (Exp:{" "}
                                 {batch.expiry_date
                                   ? formatDate(batch.expiry_date)
                                   : "N/A"}

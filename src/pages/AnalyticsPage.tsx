@@ -170,7 +170,7 @@ const ExpiryAlert: React.FC<{ item: any }> = ({ item }) => {
         <div className="font-medium">{item.product_name}</div>
         <div className="text-sm text-gray-600 dark:text-gray-400">
           Batch: {item.batch_number || "N/A"} • Qty:{" "}
-          {formatNumber(item.remaining_quantity)}
+          {item.remaining_quantity != null ? formatNumber(item.remaining_quantity) : "—"}
         </div>
         <div className="text-xs text-gray-500">
           Expires: {dayjs(item.expiry_date).format("MMM DD, YYYY")}
