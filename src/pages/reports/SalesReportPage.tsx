@@ -197,16 +197,19 @@ const SalesReportPage: React.FC = () => {
 
   const handleBackendPdf = () => {
     const params = new URLSearchParams();
-    if (currentFilters.startDate)
-      params.append("start_date", currentFilters.startDate);
-    if (currentFilters.endDate)
-      params.append("end_date", currentFilters.endDate);
+    if (currentFilters.shiftId) {
+      params.append("shift_id", String(currentFilters.shiftId));
+    } else {
+      if (currentFilters.startDate)
+        params.append("start_date", currentFilters.startDate);
+      if (currentFilters.endDate)
+        params.append("end_date", currentFilters.endDate);
+    }
+
     if (currentFilters.clientId)
       params.append("client_id", String(currentFilters.clientId));
     if (currentFilters.userId)
       params.append("user_id", String(currentFilters.userId));
-    if (currentFilters.shiftId)
-      params.append("shift_id", String(currentFilters.shiftId));
 
     const pdfUrl = `${import.meta.env.VITE_API_BASE_URL
       }/reports/sales/pdf?${params.toString()}`;

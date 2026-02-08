@@ -52,12 +52,15 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
       filterValues.userId,
     ],
     queryFn: async () => {
+      const shiftId = filterValues.shiftId ? Number(filterValues.shiftId) : null;
       return await expenseService.getExpenses(1, 1000, {
-        date_from: filterValues.startDate || undefined,
-        date_to: filterValues.endDate || undefined,
+        shift_id: shiftId,
+        date_from: shiftId ? undefined : (filterValues.startDate || undefined),
+        date_to: shiftId ? undefined : (filterValues.endDate || undefined),
+        user_id: filterValues.userId ? Number(filterValues.userId) : undefined,
       });
     },
-    enabled: !!filterValues.startDate && !!filterValues.endDate,
+    enabled: !!filterValues.shiftId || (!!filterValues.startDate && !!filterValues.endDate),
     refetchOnMount: true,
     staleTime: 0,
   });

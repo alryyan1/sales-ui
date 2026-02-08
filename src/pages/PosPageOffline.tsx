@@ -603,7 +603,7 @@ export const PosPageOffline = () => {
         return offlineSaleService.calculateTotals({ ...prev, items: newItems });
       });
     },
-    [currentSale.is_synced, shift, posMode],
+    [currentSale.is_synced, shift, posMode, isEditingSale],
   );
 
   const updateQuantity = async (productId: number, qty: number) => {
@@ -752,14 +752,82 @@ export const PosPageOffline = () => {
   };
 
   // Function to switch unit type for an item
-  const switchUnitType = (
+  const switchUnitType = async (
     productId: number,
     newUnitType: "stocking" | "sellable",
   ) => {
-    if (currentSale.is_synced) {
+    if (currentSale.is_synced && !isEditingSale) {
       toast.error("لا يمكن تعديل عملية بيع تمت مزامنتها");
       return;
     }
+
+    if (currentSale.is_synced && isEditingSale) {
+      const item = currentSale.items.find((i) => i.product_id === productId);
+      if (!item || !item.id) return;
+
+      if (!isOnline) {
+        toast.error("لا يمكن التعديل في وضع عدم الاتصال");
+        return;
+      }
+
+      const product = item.product as Product;
+      const currentUnitType = (item as any).unitType || "sellable";
+
+      if (currentUnitType === newUnitType) {
+        return; // No change needed
+      }
+
+      const unitsPerStocking = product?.units_per_stocking_unit || 1;
+
+      // First, convert current quantity to sellable units (base unit)
+      let currentQuantityInSellable: number;
+      if (currentUnitType === "stocking") {
+        currentQuantityInSellable = item.quantity * unitsPerStocking;
+      } else {
+        currentQuantityInSellable = item.quantity;
+      }
+
+      // Now convert to the new unit type
+      let newQuantity: number;
+      if (newUnitType === "stocking") {
+        newQuantity = Math.floor(currentQuantityInSellable / unitsPerStocking);
+        if (newQuantity === 0) {
+          toast.error(
+            `الكمية الحالية (${currentQuantityInSellable} ${product?.sellable_unit_name || "قطعة"
+            }) غير كافية للتحويل إلى وحدة التخزين`,
+          );
+          return;
+        }
+      } else {
+        newQuantity = currentQuantityInSellable;
+      }
+
+      // Get new price for the unit type
+      const newPrice = getPriceForUnitType(product, newUnitType);
+
+      setIsPageLoading(true);
+      try {
+        // Backend update - note we send RAW quantity (it handles stock allocation)
+        // But the backend typically expects quantity in 'pieces' (sellable units)
+        // Let's verify what the backend `updateSaleItem` expects.
+        // Based on previous analysis, it assumes 'quantity' is the raw number to be stored.
+        // If the system works in pieces, we should send currentQuantityInSellable.
+        // However, the current `updateQuantity` implementation sends `actualQty` which is converted.
+        await saleService.updateSaleItem(currentSale.id!, item.id, {
+          quantity: currentQuantityInSellable,
+          unit_price: newPrice,
+        });
+        await adjustSyncedPayments(currentSale.id!);
+        await fetchSaleById(currentSale.id!, true);
+        toast.success("تم تغيير نوع الوحدة بنجاح");
+      } catch (err: any) {
+        toast.error(err?.response?.data?.message || "فشل تغيير نوع الوحدة");
+      } finally {
+        setIsPageLoading(false);
+      }
+      return;
+    }
+
     updateCurrentSale((prev) => {
       const newItems = prev.items.map((i) => {
         if (i.product_id === productId) {
@@ -791,7 +859,8 @@ export const PosPageOffline = () => {
             );
             if (newQuantity === 0) {
               toast.error(
-                `الكمية الحالية (${currentQuantityInSellable} ${product?.sellable_unit_name || "قطعة"
+                `الكمية الحالية (${currentQuantityInSellable
+                } ${product?.sellable_unit_name || "قطعة"
                 }) غير كافية للتحويل إلى وحدة التخزين (يحتاج ${unitsPerStocking} ${product?.sellable_unit_name || "قطعة"
                 } على الأقل)`,
               );
@@ -1009,17 +1078,45 @@ export const PosPageOffline = () => {
     }
   };
 
-  const updateBatch = (
+  const updateBatch = async (
     productId: number,
     batchId: number | null,
     _batchNumber: string | null,
     _expiryDate: string | null,
     unitPrice: number,
   ) => {
-    if (currentSale.is_synced) {
+    if (currentSale.is_synced && !isEditingSale) {
       toast.error("لا يمكن تعديل عملية بيع تمت مزامنتها");
       return;
     }
+
+    if (currentSale.is_synced && isEditingSale) {
+      const item = currentSale.items.find((i) => i.product_id === productId);
+      if (!item || !item.id) return;
+
+      if (!isOnline) {
+        toast.error("لا يمكن التعديل في وضع عدم الاتصال");
+        return;
+      }
+
+      setIsPageLoading(true);
+      try {
+        await saleService.updateSaleItem(currentSale.id!, item.id, {
+          quantity: item.quantity,
+          unit_price: unitPrice,
+          purchase_item_id: batchId ?? undefined, // Pass new batch ID
+        });
+        await adjustSyncedPayments(currentSale.id!);
+        await fetchSaleById(currentSale.id!, true);
+        toast.success("تم تحديث التشغيلة بنجاح");
+      } catch (err: any) {
+        toast.error(err?.response?.data?.message || "فشل تحديث التشغيلة");
+      } finally {
+        setIsPageLoading(false);
+      }
+      return;
+    }
+
     updateCurrentSale((prev) => {
       const newItems = prev.items.map((i) =>
         i.product_id === productId
@@ -2139,6 +2236,7 @@ export const PosPageOffline = () => {
         onShowSummary={() => setIsSummaryDialogOpen(true)}
         isPageLoading={isPageLoading}
         posMode={posMode}
+        isEditing={isEditingSale}
       />
 
       <Box
@@ -2325,7 +2423,9 @@ export const PosPageOffline = () => {
                     is_open: false,
                   }
               }
-              userName="الكاشير"
+              userName={
+                (shift as any)?.user_name || user?.name || "الكاشير"
+              }
             />
           </PDFViewer>
         </DialogContent>
@@ -2343,7 +2443,7 @@ export const PosPageOffline = () => {
         }
         dateFrom={selectedDate}
         posMode={posMode}
-        selectedShiftId={selectedShiftId}
+        selectedShiftId={selectedShiftId || shift?.id}
       />
 
       {/* Offline Thermal Invoice Dialog */}

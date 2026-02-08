@@ -41,6 +41,7 @@ import expenseCategoryService, {
   ExpenseCategory,
 } from "@/services/ExpenseCategoryService";
 import ExpenseFormModal from "@/components/admin/expenses/ExpenseFormModal";
+import { useShifts } from "@/hooks/useShifts";
 
 type PaginatedResponse<T> =
   import("@/services/clientService").PaginatedResponse<T>;
@@ -56,6 +57,10 @@ const ExpensesPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
+
+  const { data: shifts = [] } = useShifts();
+  const currentShift = shifts.find((s) => s.is_open && !s.closed_at);
+  const currentShiftId = currentShift?.id;
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -344,6 +349,7 @@ const ExpensesPage: React.FC = () => {
         onClose={closeModal}
         expenseToEdit={editingExpense}
         onSaveSuccess={() => handleSaveSuccess()}
+        shiftId={currentShiftId}
       />
     </Box>
   );
