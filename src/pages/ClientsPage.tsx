@@ -244,7 +244,7 @@ const ClientsPage: React.FC = () => {
         onEdit={openModal}
         onDelete={openConfirmDialog}
         onViewLedger={(id) => (window.location.hash = `#/clients/${id}/ledger`)}
-        onNewSale={(_) => (window.location.hash = `/pos/offline`)} // Redirect to POS
+        onNewSale={(_) => (window.location.hash = `#/sales/pos-blank`)}
         companyName={companyName}
       />
     </Box>

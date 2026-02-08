@@ -1,5 +1,5 @@
-// src/components/pos/types.ts
-import { Product } from "../../services/productService";
+// Sale/cart types (moved from components/pos)
+import { Product } from "../services/productService";
 
 // Cart Item Type
 export interface CartItem {
@@ -51,11 +51,11 @@ export interface Sale {
 }
 
 // Payment Method Type
-export type PaymentMethod = 'cash' | 'visa' | 'mastercard' | 'bank_transfer' | 'mada' | 'store_credit' | 'other' | 'refund';
+export type PaymentMethod = 'cash' | 'bankak' | 'fawry' | 'ocash';
 
 // Payment Method Data Type (for payment objects with amount and reference)
 export interface PaymentMethodData {
   method: PaymentMethod;
   amount: number;
   reference?: string;
-} 
+}

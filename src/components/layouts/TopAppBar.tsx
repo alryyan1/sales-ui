@@ -11,8 +11,6 @@ import {
   Avatar,
   ButtonBase,
   Chip,
-  TextField,
-  CircularProgress,
 } from "@mui/material";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -20,13 +18,10 @@ import {
   Warehouse,
   RefreshCcw,
   Keyboard,
-  Calendar,
-  Hash,
   Clock,
   CalendarDays,
 } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom"; // Import useNavigate and useLocation
-import { usePosFilters } from "@/context/PosFilterContext";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useSettings } from "@/context/SettingsContext";
 import { ThemeToggle } from "../layout/ThemeToggle";
 import { DRAWER_WIDTH } from "./types";
@@ -43,139 +38,16 @@ interface TopAppBarProps {
   onMenuOpen: (event: React.MouseEvent<HTMLElement>) => void;
 }
 
-// Separate component for POS filters to safely use the hook
-const PosFiltersSection: React.FC = () => {
-  const theme = useTheme();
-  const posFilters = usePosFilters();
-
-  const handleDateChange = async (date: string | null) => {
-    posFilters.setFilterDate(date);
-    if (date) {
-      await posFilters.onFetchSalesByDate(date);
-    } else {
-      // If date is cleared, we should reload normal sales
-      // This will be handled by PosPageOffline when it detects date change
-      // For now, just clear the filter
-    }
-  };
-
-  const handleIdKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && posFilters.filterSaleId.trim() !== "") {
-      const searchId = Number(posFilters.filterSaleId.trim());
-      if (!isNaN(searchId) && searchId > 0) {
-        await posFilters.onFetchSaleById(searchId);
-      }
-    }
-  };
-
-  return (
-    <Box
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        gap: 1,
-        mr: 2,
-      }}
-    >
-      {/* Date Filter */}
-      <TextField
-        type="date"
-        size="small"
-        value={posFilters.filterDate || ""}
-        onChange={(e) => handleDateChange(e.target.value || null)}
-        placeholder="التاريخ"
-        disabled={posFilters.isLoadingDate}
-        sx={{
-          width: 160,
-          "& .MuiOutlinedInput-root": {
-            borderRadius: 2,
-            fontSize: "0.85rem",
-            bgcolor: alpha(theme.palette.background.paper, 0.6),
-            "& fieldset": {
-              borderColor: alpha(theme.palette.divider, 0.2),
-            },
-            "&:hover fieldset": {
-              borderColor: theme.palette.primary.light,
-            },
-            "&.Mui-focused fieldset": {
-              borderColor: theme.palette.primary.main,
-            },
-          },
-        }}
-        InputProps={{
-          startAdornment: posFilters.isLoadingDate ? (
-            <CircularProgress size={14} sx={{ mr: 1 }} />
-          ) : (
-            <Calendar
-              size={16}
-              color={theme.palette.text.secondary}
-              style={{ marginRight: 8 }}
-            />
-          ),
-        }}
-      />
-
-      {/* ID Filter */}
-      <TextField
-        type="number"
-        size="small"
-        value={posFilters.filterSaleId}
-        onChange={(e) => {
-          const value = e.target.value;
-          // Only allow numeric input
-          if (value === "" || /^\d+$/.test(value)) {
-            posFilters.setFilterSaleId(value);
-          }
-        }}
-        onKeyDown={handleIdKeyDown}
-        placeholder="رقم العملية (Enter للبحث)"
-        disabled={posFilters.isLoadingId}
-        sx={{
-          width: 180,
-          "& .MuiOutlinedInput-root": {
-            borderRadius: 2,
-            fontSize: "0.85rem",
-            bgcolor: alpha(theme.palette.background.paper, 0.6),
-            "& fieldset": {
-              borderColor: alpha(theme.palette.divider, 0.2),
-            },
-            "&:hover fieldset": {
-              borderColor: theme.palette.primary.light,
-            },
-            "&.Mui-focused fieldset": {
-              borderColor: theme.palette.primary.main,
-            },
-          },
-        }}
-        InputProps={{
-          startAdornment: posFilters.isLoadingId ? (
-            <CircularProgress size={14} sx={{ mr: 1 }} />
-          ) : (
-            <Hash
-              size={16}
-              color={theme.palette.text.secondary}
-              style={{ marginRight: 8 }}
-            />
-          ),
-        }}
-      />
-    </Box>
-  );
-};
-
 const TopAppBar: React.FC<TopAppBarProps> = ({
   onDrawerToggle,
   isSidebarCollapsed,
   onMenuOpen,
 }) => {
   const navigate = useNavigate(); // Initialize useNavigate
-  const location = useLocation(); // Get current location
+  const location = useLocation();
   const { user } = useAuth();
   const { getSetting } = useSettings();
   const [shortcutsDialogOpen, setShortcutsDialogOpen] = React.useState(false);
-
-  // Check if we're on the POS offline page
-  const isPosOfflinePage = location.pathname === "/sales/pos-offline";
 
   // Get POS mode setting
   const posMode = getSetting("pos_mode", "shift") as "shift" | "days";
@@ -260,9 +132,6 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
         >
           {/* Dynamic title could go here */}
         </Typography>
-
-        {/* POS Filters - Only visible on POS Offline page */}
-        {isPosOfflinePage && <PosFiltersSection />}
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <IconButton

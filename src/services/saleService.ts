@@ -22,15 +22,7 @@ export interface Payment {
   sale_id?: number; // Backend usually sets this
   user_id?: number | null;
   user_name?: string;
-  method:
-    | "cash"
-    | "visa"
-    | "mastercard"
-    | "bank_transfer"
-    | "mada"
-    | "other"
-    | "store_credit"
-    | "refund";
+  method: "cash" | "bankak" | "fawry" | "ocash";
   amount: string | number; // String from form, number for API
   payment_date: string; // YYYY-MM-DD
   reference_number?: string | null;
@@ -222,7 +214,7 @@ const saleService = {
   },
 
   /**
-   * Get today's sales by created_at (for POS TodaySalesColumn)
+   * Get today's sales by created_at (for POS)
    */
   getTodaySalesByCreatedAt: async (): Promise<Sale[]> => {
     try {

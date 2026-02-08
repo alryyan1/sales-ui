@@ -22,9 +22,7 @@ import { ArrowLeft, Download, FileText, X } from "lucide-react";
 import apiClient from "@/lib/axios";
 // Services and Types
 import saleService, { Sale } from "@/services/saleService";
-import { PosShiftReportPdf } from "@/components/pos/PosShiftReportPdf";
 import { useSettings } from "@/context/SettingsContext";
-import { PDFViewer } from "@react-pdf/renderer";
 
 // React Query Hooks
 import { useClients } from "@/hooks/useClients";
@@ -378,16 +376,9 @@ const SalesReportPage: React.FC = () => {
             <X size={18} />
           </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ height: "80vh", p: 0 }}>
+        <DialogContent sx={{ height: "80vh", p: 2 }}>
           {selectedShift && reportData && (
-            <PDFViewer width="100%" height="100%" style={{ border: "none" }}>
-              <PosShiftReportPdf
-                sales={reportData.data}
-                shift={selectedShift}
-                userName={reportData.data[0]?.user_name || undefined}
-                settings={settings}
-              />
-            </PDFViewer>
+            <Typography color="text.secondary">تقرير الوردية PDF غير متاح حالياً</Typography>
           )}
         </DialogContent>
       </Dialog>

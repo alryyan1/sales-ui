@@ -129,7 +129,7 @@ const SaleDetailsPage: React.FC = () => {
         </Alert>
         <Button
           startIcon={<ArrowLeft size={20} />}
-          onClick={() => navigate("/sales/pos")}
+          onClick={() => navigate("/sales/pos-blank")}
         >
           العودة للقائمة
         </Button>
@@ -143,7 +143,7 @@ const SaleDetailsPage: React.FC = () => {
         <Typography>لم يتم العثور على البيع</Typography>
         <Button
           startIcon={<ArrowLeft size={20} />}
-          onClick={() => navigate("/sales/pos")}
+          onClick={() => navigate("/sales/pos-blank")}
         >
           العودة للقائمة
         </Button>
@@ -164,7 +164,7 @@ const SaleDetailsPage: React.FC = () => {
       {/* Back Button & Title */}
       <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
         <IconButton
-          onClick={() => navigate("/sales/pos")}
+          onClick={() => navigate("/sales/pos-blank")}
           sx={{ mr: 1 }}
           aria-label="رجوع"
         >

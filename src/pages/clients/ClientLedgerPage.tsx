@@ -48,10 +48,9 @@ import clientLedgerService, {
   ClientLedgerEntry,
 } from "@/services/clientLedgerService";
 import { ClientLedgerPdf } from "@/components/clients/ClientLedgerPdf";
-import { OfflineInvoiceA4Pdf } from "@/components/pos/OfflineInvoiceA4Pdf";
 import saleService from "@/services/saleService";
-import { OfflineSale, OfflineSaleItem } from "@/services/db";
 import { useSettings } from "@/context/SettingsContext";
+import { toast } from "sonner";
 
 const ClientLedgerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -83,50 +82,11 @@ const ClientLedgerPage: React.FC = () => {
     setError(null);
 
     try {
-      // Fetch full sale details including items
-      const sale = await saleService.getSale(entry.sale_id);
-
-      if (!sale) {
-        throw new Error("لم يتم العثور على بيانات العملية");
-      }
-
-      // Map Sale to OfflineSale format for the PDF component
-      const offlineSale: OfflineSale = {
-        ...sale,
-        tempId: String(sale.id),
-        offline_created_at: new Date(sale.created_at).getTime(),
-        is_synced: true,
-        items: (sale.items || []).map((item) => ({
-          ...item,
-          product_name: item.product_name || item.product?.name,
-          unit_price: Number(item.unit_price),
-        })) as OfflineSaleItem[],
-        status: (sale.status as any) || "completed",
-        client_id: sale.client_id,
-        client_name: sale.client_name || sale.client?.name,
-      };
-
-      // Create the PDF document
-      const doc = (
-        <OfflineInvoiceA4Pdf
-          sale={offlineSale}
-          items={offlineSale.items}
-          settings={settings}
-          userName={sale.user_name || ""}
-        />
-      );
-
-      // Generate blob
-      const asPdf = pdf(doc);
-      const blob = await asPdf.toBlob();
-
-      // Create blob URL
-      const url = URL.createObjectURL(blob);
-      setPdfUrl(url);
-      setPdfDialogOpen(true);
+      await saleService.getSale(entry.sale_id);
+      toast.info("فاتورة PDF غير متاحة حالياً");
     } catch (err: any) {
-      console.error("Error generating invoice PDF:", err);
-      setError(err.message || "فشل في إنشاء فاتورة PDF");
+      console.error("Error loading sale:", err);
+      setError(err.message || "فشل في تحميل بيانات العملية");
     } finally {
       setFetchingSaleId(null);
     }

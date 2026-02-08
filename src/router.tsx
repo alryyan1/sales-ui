@@ -28,9 +28,6 @@ import ProcessRequisitionPage from "./components/admin/inventory/ProcessRequisit
 import WarehousesListPage from "./pages/warehouses/WarehousesListPage";
 import WarehouseProductsPage from "./pages/warehouses/WarehouseProductsPage";
 // Sales & POS
-import PosPage from "./pages/PosPage";
-import PosPageOffline from "./pages/PosPageOffline"; // Ensure this exists
-import PosSalesPage from "./pages/PosSalesPage";
 import PosBlankPage from "./pages/PosBlankPage";
 import SalesReturnsPage from "./pages/sales/SalesReturnsPage";
 import SalesReturnsListPage from "./pages/sales/SalesReturnsListPage";
@@ -165,31 +162,7 @@ const router = createHashRouter([
           {
             path: "sales",
             children: [
-              { index: true, element: <Navigate to="pos" replace /> },
-              {
-                path: "pos",
-                element: (
-                  <PermissionGuard requiredPermission="view-pos">
-                    <PosPage />
-                  </PermissionGuard>
-                ),
-              },
-              {
-                path: "pos-offline",
-                element: (
-                  <PermissionGuard requiredPermission="view-pos-offline">
-                    <PosPageOffline />
-                  </PermissionGuard>
-                ),
-              },
-              {
-                path: "pos-new",
-                element: (
-                  <PermissionGuard requiredPermission="view-pos">
-                    <PosSalesPage />
-                  </PermissionGuard>
-                ),
-              },
+              { index: true, element: <Navigate to="pos-blank" replace /> },
               {
                 path: "pos-blank",
                 element: (

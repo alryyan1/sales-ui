@@ -7,8 +7,6 @@ import {
   IconButton,
 } from "@mui/material";
 import { X } from "lucide-react";
-import { PDFViewer } from "@react-pdf/renderer";
-import { PosShiftReportPdf } from "@/components/pos/PosShiftReportPdf";
 import { Sale } from "@/services/saleService";
 import { AppSettings } from "@/services/settingService";
 
@@ -69,17 +67,10 @@ export const ShiftReportDialog: React.FC<ShiftReportDialogProps> = ({
         </IconButton>
       </DialogTitle>
       <DialogContent
-        sx={{ p: 0, height: "calc(90vh - 64px)", overflow: "hidden" }}
+        sx={{ p: 2, height: "calc(90vh - 64px)", overflow: "auto" }}
       >
         {reportData && reportData.data.length > 0 && shift && (
-          <PDFViewer width="100%" height="100%" showToolbar={true}>
-            <PosShiftReportPdf
-              sales={reportData.data}
-              shift={shift}
-              userName={reportData.data[0]?.user_name || undefined}
-              settings={settings}
-            />
-          </PDFViewer>
+          <Typography color="text.secondary">تقرير الوردية PDF غير متاح حالياً</Typography>
         )}
       </DialogContent>
     </Dialog>

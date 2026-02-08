@@ -29,19 +29,7 @@ export const navItems: NavItem[] = [
     category: "المبيعات",
     children: [
       {
-        to: "/sales/pos-offline",
-        label: "نقطة البيع (Offline)",
-        permission: null,
-        category: "المبيعات",
-      },
-      {
-        to: "/sales/pos",
-        label: "نقطة البيع (Online)",
-        permission: null,
-        category: "المبيعات",
-      },
-      {
-        to: "/sales/pos-new",
+        to: "/sales/pos-blank",
         label: "نقطة البيع الموحدة",
         permission: null,
         category: "المبيعات",

@@ -23,9 +23,6 @@ import { X, ShoppingCart, Percent, TrendingUp, FileText, Printer } from "lucide-
 import { format, parseISO } from "date-fns";
 import { Sale } from "@/services/saleService";
 import { formatNumber } from "@/constants";
-import { PDFViewer } from "@react-pdf/renderer";
-import { OfflineInvoiceA4Pdf } from "@/components/pos/OfflineInvoiceA4Pdf";
-import { OfflineSale, OfflineSaleItem } from "@/services/db";
 import { useSettings } from "@/context/SettingsContext";
 import apiClient from "@/lib/axios";
 
@@ -45,44 +42,6 @@ const SaleDetailsDialog: React.FC<SaleDetailsDialogProps> = ({
   const { settings } = useSettings();
   const [a4PdfOpen, setA4PdfOpen] = useState(false);
   const [loadingThermal, setLoadingThermal] = useState(false);
-
-  // Convert Sale to OfflineSale format for A4 PDF
-  const convertToOfflineSale = (sale: Sale): OfflineSale => {
-    const items: OfflineSaleItem[] = (sale.items || []).map((item: any) => ({
-      product_id: item.product_id,
-      product_name: item.product_name || "",
-      quantity: item.quantity,
-      unit_price: Number(item.unit_price),
-      purchase_item_id: item.purchase_item_id || null,
-      product: item.product || null,
-    }));
-
-    return {
-      tempId: `sale_${sale.id}`,
-      id: sale.id,
-      offline_created_at: sale.sale_date
-        ? new Date(sale.sale_date).getTime()
-        : Date.now(),
-      is_synced: true,
-      shift_id: sale.shift_id || null,
-      sale_date: sale.sale_date,
-      total_amount: Number(sale.total_amount),
-      paid_amount: Number(sale.paid_amount),
-      client_id: sale.client_id,
-      client_name: sale.client_name || sale.client?.name || null,
-      invoice_number: sale.invoice_number,
-      number: sale.number,
-      status: sale.status || "completed",
-      is_returned: false,
-      discount_amount: sale.discount_amount ? Number(sale.discount_amount) : undefined,
-      discount_type: (sale as any).discount_type || undefined,
-      items,
-      payments: sale.payments || [],
-      notes: (sale as any).notes,
-      created_at: sale.sale_date,
-      user_id: sale.user_id,
-    };
-  };
 
   const handleA4Pdf = () => {
     if (sale) {
@@ -487,15 +446,8 @@ const SaleDetailsDialog: React.FC<SaleDetailsDialogProps> = ({
             <X size={18} />
           </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ p: 0, height: "100%" }}>
-          <PDFViewer width="100%" height="100%" style={{ border: "none" }}>
-            <OfflineInvoiceA4Pdf
-              sale={convertToOfflineSale(sale)}
-              items={convertToOfflineSale(sale).items}
-              userName={sale.user?.name || sale.user_name}
-              settings={settings}
-            />
-          </PDFViewer>
+        <DialogContent sx={{ p: 2 }}>
+          <Typography color="text.secondary">فاتورة A4 غير متاحة حالياً</Typography>
         </DialogContent>
       </Dialog>
     )}
