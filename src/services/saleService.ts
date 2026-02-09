@@ -77,11 +77,12 @@ export interface Sale {
   invoice_number: string | null;
   // Status column was removed from the backend; keep optional for backward compatibility
   status?: "completed" | "pending" | "draft" | "cancelled";
-  total_amount: string | number;
+  total_amount: string | number; // Subtotal minus discount (amount)
+  subtotal?: string | number; // Sum of items before discount
   paid_amount: string | number; // Sum of payments
   due_amount?: string | number; // Calculated (total_amount - paid_amount)
-  discount_amount?: string | number; // Discount amount
-  discount_type?: "percentage" | "fixed"; // Discount type
+  discount_amount?: string | number; // Discount stored as amount
+  discount_type?: "percentage" | "fixed"; // UI-only; backend stores amount
   is_returned?: boolean; // Whether this sale has been returned
 
   notes: string | null;

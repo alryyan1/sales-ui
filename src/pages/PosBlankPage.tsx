@@ -80,6 +80,9 @@ const PosBlankPage: React.FC = () => {
   const [shiftPdfDialogOpen, setShiftPdfDialogOpen] = useState(false);
   const [shiftPdfUrl, setShiftPdfUrl] = useState<string | null>(null);
   const [shiftPdfLoading, setShiftPdfLoading] = useState(false);
+  const [discountType, setDiscountType] = useState<"percentage" | "fixed">("fixed");
+  const [discountValue, setDiscountValue] = useState("");
+  const [discountLoading, setDiscountLoading] = useState(false);
 
   // Pre-fill add-payment amount with the sale's due (remainder) when selection changes
   useEffect(() => {
@@ -613,6 +616,53 @@ const PosBlankPage: React.FC = () => {
     [selectedSale]
   );
 
+  const handleApplyDiscount = useCallback(async () => {
+    if (!selectedSale?.id) return;
+    const num = Number(discountValue);
+    if (!Number.isFinite(num) || num < 0) {
+      toast.error("أدخل قيمة خصم صحيحة");
+      return;
+    }
+    if (discountType === "percentage" && (num > 100 || num < 0)) {
+      toast.error("النسبة المئوية بين 0 و 100");
+      return;
+    }
+    try {
+      setDiscountLoading(true);
+      const updated = await saleService.updateSaleDiscount(selectedSale.id, {
+        discount_type: discountType,
+        discount_amount: num,
+      });
+      setSelectedSale(updated);
+      setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+      setDiscountValue("");
+      toast.success("تم تطبيق الخصم");
+    } catch (err) {
+      toast.error(saleService.getErrorMessage(err));
+    } finally {
+      setDiscountLoading(false);
+    }
+  }, [selectedSale?.id, discountType, discountValue]);
+
+  const handleRemoveDiscount = useCallback(async () => {
+    if (!selectedSale?.id) return;
+    try {
+      setDiscountLoading(true);
+      const updated = await saleService.updateSaleDiscount(selectedSale.id, {
+        discount_type: "fixed",
+        discount_amount: 0,
+      });
+      setSelectedSale(updated);
+      setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+      setDiscountValue("");
+      toast.success("تم إلغاء الخصم");
+    } catch (err) {
+      toast.error(saleService.getErrorMessage(err));
+    } finally {
+      setDiscountLoading(false);
+    }
+  }, [selectedSale?.id]);
+
   return (
     <Box
       sx={{
@@ -990,6 +1040,76 @@ const PosBlankPage: React.FC = () => {
                         {selectedSale.items?.length ?? 0}
                       </Typography>
                     </Box>
+                    {(() => {
+                      const subtotal =
+                        selectedSale.subtotal != null
+                          ? Number(selectedSale.subtotal)
+                          : (selectedSale.items ?? []).reduce(
+                              (sum, i) => sum + Number(i.total_price ?? 0),
+                              0
+                            );
+                      const discountAmt = Number(selectedSale.discount_amount ?? 0);
+                      return (
+                        <>
+                          <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                            <Typography variant="body2" color="text.secondary">المجموع الفرعي</Typography>
+                            <Typography variant="body2" fontWeight={600}>
+                              {formatNumber(subtotal)}
+                            </Typography>
+                          </Box>
+                          {discountAmt > 0 && (
+                            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                              <Typography variant="body2" color="text.secondary">الخصم</Typography>
+                              <Typography variant="body2" fontWeight={600} color="error.main">
+                                - {formatNumber(discountAmt)}
+                              </Typography>
+                            </Box>
+                          )}
+                          <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 0.75, mt: 0.5 }}>
+                            <FormControl size="small" sx={{ minWidth: 90 }}>
+                              <InputLabel id="discount-type-label">نوع الخصم</InputLabel>
+                              <Select
+                                labelId="discount-type-label"
+                                value={discountType}
+                                label="نوع الخصم"
+                                onChange={(e) => setDiscountType(e.target.value as "percentage" | "fixed")}
+                              >
+                                <MenuItem value="fixed">مبلغ ثابت</MenuItem>
+                                <MenuItem value="percentage">نسبة مئوية</MenuItem>
+                              </Select>
+                            </FormControl>
+                            <TextField
+                              size="small"
+                              type="number"
+                              placeholder={discountType === "percentage" ? "٪" : "المبلغ"}
+                              value={discountValue}
+                              onChange={(e) => setDiscountValue(e.target.value)}
+                              inputProps={{ min: 0, max: discountType === "percentage" ? 100 : undefined, step: discountType === "percentage" ? 1 : 0.01 }}
+                              sx={{ width: 80 }}
+                            />
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              onClick={handleApplyDiscount}
+                              disabled={discountLoading || !discountValue.trim() || (selectedSale.items?.length ?? 0) === 0}
+                            >
+                              {discountLoading ? "..." : "تطبيق"}
+                            </Button>
+                            {discountAmt > 0 && (
+                              <Button
+                                size="small"
+                                variant="text"
+                                color="error"
+                                onClick={handleRemoveDiscount}
+                                disabled={discountLoading}
+                              >
+                                إلغاء الخصم
+                              </Button>
+                            )}
+                          </Box>
+                        </>
+                      );
+                    })()}
                     <Box sx={{ display: "flex", justifyContent: "space-between" }}>
                       <Typography variant="body2" color="text.secondary">الإجمالي</Typography>
                       <Typography variant="body2" fontWeight={600} color="success.main">
