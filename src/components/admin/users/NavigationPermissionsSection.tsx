@@ -94,13 +94,41 @@ const NavigationPermissionsSection: React.FC<NavigationPermissionsSectionProps> 
     }));
   };
 
-  // Use API data if available, otherwise use local structure
-  const navigationStructure = useMemo(() => {
+  // Local navigation structure built once from static navItems (source of truth)
+  const localNavigationStructure = useMemo<NavigationCategory[]>(
+    () => buildNavStructure(),
+    []
+  );
+
+  // Set of valid routes based on current frontend navItems/router
+  const allowedRoutes = useMemo<Set<string>>(
+    () =>
+      new Set(
+        localNavigationStructure.flatMap((cat) =>
+          cat.items.map((item) => item.route)
+        )
+      ),
+    [localNavigationStructure]
+  );
+
+  // Use API data if available, but only for routes that still exist locally.
+  // Fallback entirely to local structure when API is missing or has only stale routes.
+  const navigationStructure = useMemo<NavigationCategory[]>(() => {
     if (apiNavItems?.data && apiNavItems.data.length > 0) {
-      return apiNavItems.data;
+      const filteredFromApi: NavigationCategory[] = apiNavItems.data
+        .map((cat) => ({
+          category: cat.category,
+          items: cat.items.filter((item) => allowedRoutes.has(item.route)),
+        }))
+        .filter((cat) => cat.items.length > 0);
+
+      if (filteredFromApi.length > 0) {
+        return filteredFromApi;
+      }
     }
-    return buildNavStructure();
-  }, [apiNavItems]);
+    // Fallback / source of truth
+    return localNavigationStructure;
+  }, [apiNavItems, allowedRoutes, localNavigationStructure]);
 
   // Toggle category expansion
   const toggleCategory = (category: string) => {

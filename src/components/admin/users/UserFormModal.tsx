@@ -56,6 +56,16 @@ interface UserFormModalProps {
   availableRoles: Role[];
 }
 
+type UserFormValues = {
+  name: string;
+  username: string;
+  password: string;
+  password_confirmation: string;
+  roles: string[];
+  warehouse_id: number | null;
+  allowed_navs: string[];
+};
+
 const UserFormModal: React.FC<UserFormModalProps> = ({
   isOpen,
   onClose,
@@ -90,38 +100,16 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
     }
   }, [isOpen]);
 
-  // --- Form Types ---
-  type CreateUserFormValues = {
-    name: string;
-    username: string;
-    password: string;
-    password_confirmation: string;
-    roles: string[];
-    warehouse_id: number | null;
-    allowed_navs?: string[] | null;
-  };
-
-  type UpdateUserFormValues = {
-    name: string;
-    username: string;
-    roles: string[];
-    warehouse_id: number | null;
-    allowed_navs?: string[] | null;
-  };
-
-  type CombinedUserFormValues = CreateUserFormValues | UpdateUserFormValues;
-
   // --- Form Setup ---
   const [allowedNavs, setAllowedNavs] = useState<string[]>([]);
 
-  const form = useForm<CombinedUserFormValues>({
+  const form = useForm<UserFormValues>({
     defaultValues: {
       name: "",
       username: "",
-      roles: [],
-      // @ts-ignore
       password: "",
       password_confirmation: "",
+      roles: [],
       warehouse_id: null,
       allowed_navs: [],
     },
@@ -137,41 +125,42 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
 
   // --- Reset Form on Open ---
   useEffect(() => {
-    if (isOpen) {
-      setServerError(null);
-      setShowPassword(false);
-      setShowConfirmPassword(false);
-      if (isEditMode && userToEdit) {
-        const navs = userToEdit.allowed_navs || [];
-        setAllowedNavs(Array.isArray(navs) ? navs : []);
-        reset({
-          name: userToEdit.name || "",
-          username: userToEdit.username || "",
-          roles: userToEdit.roles || [],
-          // @ts-ignore
-          password: "",
-          password_confirmation: "",
-          warehouse_id: userToEdit.warehouse_id || null,
-          allowed_navs: navs,
-        });
-      } else {
-        setAllowedNavs([]);
-        reset({
-          name: "",
-          username: "",
-          roles: [],
-          // @ts-ignore
-          password: "",
-          password_confirmation: "",
-          warehouse_id: null,
-          allowed_navs: [],
-        });
-      }
+    if (!isOpen) return;
+
+    setServerError(null);
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+
+    if (isEditMode && userToEdit) {
+      const navs = userToEdit.allowed_navs || [];
+      const normalizedNavs = Array.isArray(navs) ? navs : [];
+
+      setAllowedNavs(normalizedNavs);
+      reset({
+        name: userToEdit.name || "",
+        username: userToEdit.username || "",
+        password: "",
+        password_confirmation: "",
+        roles: userToEdit.roles || [],
+        warehouse_id: userToEdit.warehouse_id || null,
+        allowed_navs: normalizedNavs,
+      });
+    } else {
+      setAllowedNavs([]);
+      reset({
+        name: "",
+        username: "",
+        password: "",
+        password_confirmation: "",
+        roles: [],
+        warehouse_id: null,
+        allowed_navs: [],
+      });
     }
   }, [isOpen, isEditMode, userToEdit, reset]);
 
   // --- Submit Handler ---
-  const onSubmit: SubmitHandler<CombinedUserFormValues> = async (data) => {
+  const onSubmit: SubmitHandler<UserFormValues> = async (data) => {
     setServerError(null);
 
     // Basic validation
@@ -184,15 +173,14 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
       return;
     }
     if (!isEditMode) {
-      const createData = data as CreateUserFormValues;
-      if (!createData.password || createData.password.length < 8) {
+      if (!data.password || data.password.length < 8) {
         setError("password" as any, {
           type: "manual",
           message: "كلمة المرور يجب أن تكون 8 أحرف على الأقل",
         });
         return;
       }
-      if (createData.password !== createData.password_confirmation) {
+      if (data.password !== data.password_confirmation) {
         setError("password_confirmation" as any, {
           type: "manual",
           message: "كلمات المرور غير متطابقة",
