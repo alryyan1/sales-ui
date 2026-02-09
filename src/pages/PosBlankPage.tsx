@@ -303,6 +303,25 @@ const PosBlankPage: React.FC = () => {
     [selectedSale]
   );
 
+  const handlePriceChange = useCallback(
+    async (item: SaleItem, newPrice: number) => {
+      if (!selectedSale || item.id == null) return;
+      try {
+        const updated = await saleService.updateSaleItem(selectedSale.id, item.id, {
+          quantity: Number(item.quantity),
+          unit_price: newPrice,
+          purchase_item_id: item.purchase_item_id ?? null,
+        });
+        setSelectedSale(updated);
+        setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+        toast.success("تم تحديث السعر");
+      } catch (err) {
+        toast.error(saleService.getErrorMessage(err));
+      }
+    },
+    [selectedSale]
+  );
+
   const handleAddProductToSale = useCallback(
     async (product: Product) => {
       if (!selectedSale) {
@@ -923,6 +942,7 @@ const PosBlankPage: React.FC = () => {
                     items={selectedSale.items}
                     maxHeight={window.innerHeight - 140}
                     onQuantityChange={handleQuantityChange}
+                    onPriceChange={handlePriceChange}
                     deletingItemId={deletingSaleItemId}
                     onDeleteItem={handleDeleteSaleItem}
                     canDeleteItems={(selectedSale.payments?.length ?? 0) === 0}

@@ -28,6 +28,8 @@ export interface SaleItemsTableProps {
   maxHeight?: number;
   /** When provided, quantity becomes editable and this is called on change (blur or Enter). */
   onQuantityChange?: (item: SaleItem, newQuantity: number) => void | Promise<void>;
+  /** When provided, price becomes editable and this is called on change (blur or Enter). */
+  onPriceChange?: (item: SaleItem, newPrice: number) => void | Promise<void>;
   /** ID of the sale item currently being deleted (e.g. during "remove all"); that row shows a loading spinner. */
   deletingItemId?: number | null;
   /** When provided, each row shows a delete button; called when user clicks it. Typically disabled when sale has payments. */
@@ -65,12 +67,14 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
   items = [],
   maxHeight = 360,
   onQuantityChange,
+  onPriceChange,
   deletingItemId = null,
   onDeleteItem,
   canDeleteItems = true,
 }) => {
   const list = items ?? [];
   const [editingKey, setEditingKey] = useState<number | string | null>(null);
+  const [editingField, setEditingField] = useState<"quantity" | "price" | null>(null);
   const [editValue, setEditValue] = useState("");
   const [selectedRowKey, setSelectedRowKey] = useState<number | string | null>(null);
   const [quantityInputBuffer, setQuantityInputBuffer] = useState("");
@@ -107,6 +111,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
           setSelectedRowKey(getItemKey(list[nextIndex]));
           setQuantityInputBuffer("");
           setEditingKey(null);
+          setEditingField(null);
         }
         return;
       }
@@ -127,6 +132,8 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
       if (e.key === "Escape") {
         setSelectedRowKey(null);
         setQuantityInputBuffer("");
+        setEditingKey(null);
+        setEditingField(null);
         return;
       }
       if (e.key === "Backspace") {
@@ -150,23 +157,51 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
   const handleQuantityBlur = useCallback(
     (item: SaleItem) => {
       const key = getItemKey(item);
-      if (editingKey !== key) return;
+      if (editingKey !== key || editingField !== "quantity") return;
       const raw = editValue.trim();
       const num = raw === "" ? NaN : Number(raw);
       if (!Number.isFinite(num) || num <= 0) {
         setEditValue(String(item.quantity));
         setEditingKey(null);
+        setEditingField(null);
         return;
       }
       const current = Number(item.quantity);
       if (Math.abs(num - current) < 1e-6) {
         setEditingKey(null);
+        setEditingField(null);
         return;
       }
       onQuantityChange?.(item, num);
       setEditingKey(null);
+      setEditingField(null);
     },
-    [editingKey, editValue, onQuantityChange]
+    [editingKey, editingField, editValue, onQuantityChange]
+  );
+
+  const handlePriceBlur = useCallback(
+    (item: SaleItem) => {
+      const key = getItemKey(item);
+      if (editingKey !== key || editingField !== "price") return;
+      const raw = editValue.trim();
+      const num = raw === "" ? NaN : Number(raw);
+      if (!Number.isFinite(num) || num < 0) {
+        setEditValue(String(item.unit_price ?? 0));
+        setEditingKey(null);
+        setEditingField(null);
+        return;
+      }
+      const current = Number(item.unit_price ?? 0);
+      if (Math.abs(num - current) < 1e-6) {
+        setEditingKey(null);
+        setEditingField(null);
+        return;
+      }
+      onPriceChange?.(item, num);
+      setEditingKey(null);
+      setEditingField(null);
+    },
+    [editingKey, editingField, editValue, onPriceChange]
   );
 
   const handleQuantityKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -175,18 +210,39 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
     }
   }, []);
 
-  const startEditing = useCallback(
+  const handlePriceKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      (e.target as HTMLInputElement).blur();
+    }
+  }, []);
+
+  const startEditingQuantity = useCallback(
     (item: SaleItem) => {
       if (!onQuantityChange || item.id == null) return;
       setEditingKey(getItemKey(item));
+      setEditingField("quantity");
       setEditValue(String(item.quantity));
     },
     [onQuantityChange]
   );
 
+  const startEditingPrice = useCallback(
+    (item: SaleItem) => {
+      if (!onPriceChange || item.id == null) return;
+      setEditingKey(getItemKey(item));
+      setEditingField("price");
+      setEditValue(String(item.unit_price ?? 0));
+    },
+    [onPriceChange]
+  );
+
   const isEditing = useCallback(
-    (item: SaleItem) => editingKey === getItemKey(item),
-    [editingKey]
+    (item: SaleItem, field?: "quantity" | "price") => {
+      if (editingKey !== getItemKey(item)) return false;
+      if (field) return editingField === field;
+      return editingField !== null;
+    },
+    [editingKey, editingField]
   );
 
   const isSelected = useCallback(
@@ -197,6 +253,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
   const handleRowClick = useCallback((item: SaleItem) => {
     setSelectedRowKey(getItemKey(item));
     setEditingKey(null);
+    setEditingField(null);
   }, []);
 
   const columns = useMemo(() => [
@@ -240,7 +297,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
       cell: ({ row }) => {
         const item = row.original;
         const canEdit = Boolean(onQuantityChange && item.id != null);
-        const editing = isEditing(item);
+        const editing = isEditing(item, "quantity");
         const selected = isSelected(item);
         const showBuffer = selected && quantityInputBuffer !== "";
         if (!canEdit) return formatNumber(item.quantity);
@@ -252,12 +309,12 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
               tabIndex={0}
               onClick={(e) => {
                 e.stopPropagation();
-                startEditing(item);
+                startEditingQuantity(item);
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  startEditing(item);
+                  startEditingQuantity(item);
                 }
               }}
               aria-label="تعديل الكمية أو Enter للحفظ"
@@ -318,12 +375,12 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
             tabIndex={0}
             onClick={(e) => {
               e.stopPropagation();
-              startEditing(item);
+              startEditingQuantity(item);
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
-                startEditing(item);
+                startEditingQuantity(item);
               }
             }}
             aria-label="تعديل الكمية"
@@ -377,8 +434,97 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
     columnHelper.accessor((row) => Number(row.unit_price ?? 0), {
       id: "price",
       header: "السعر",
-      cell: ({ getValue }) => formatNumber(getValue()),
       meta: { align: "right" },
+      cell: ({ row }) => {
+        const item = row.original;
+        const canEdit = Boolean(onPriceChange && item.id != null);
+        const editing = isEditing(item, "price");
+        if (!canEdit) return formatNumber(Number(item.unit_price ?? 0));
+        if (editing) {
+          return (
+            <Box
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              sx={{ display: "inline-block" }}
+            >
+              <TextField
+                size="small"
+                type="number"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onBlur={() => handlePriceBlur(item)}
+                onKeyDown={handlePriceKeyDown}
+                onFocus={
+                  (e)=>e.target.select()
+                }
+                inputProps={{
+                  min: 0,
+                  step: 0.01,
+                  "aria-label": "السعر",
+                }}
+                sx={{
+                  width: 100,
+                  "& .MuiOutlinedInput-root": {
+                    backgroundColor: "background.paper",
+                    fontSize: "0.8125rem",
+                    "& fieldset": {
+                      borderColor: "primary.main",
+                      borderWidth: 1.5,
+                    },
+                    "&:hover fieldset": { borderColor: "primary.main" },
+                    "&.Mui-focused fieldset": { borderWidth: 2 },
+                  },
+                  "& .MuiInputBase-input": { py: 0.5, textAlign: "right" },
+                }}
+                autoFocus
+              />
+            </Box>
+          );
+        }
+        return (
+          <Box
+            component="span"
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
+              e.stopPropagation();
+              startEditingPrice(item);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                startEditingPrice(item);
+              }
+            }}
+            aria-label="تعديل السعر"
+            sx={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 0.5,
+              px: 1,
+              py: 0.5,
+              borderRadius: 1,
+              cursor: "pointer",
+              border: "1px solid",
+              borderColor: "transparent",
+              color: "text.primary",
+              transition: "background-color 0.15s, border-color 0.15s",
+              "&:hover": {
+                backgroundColor: "action.hover",
+                borderColor: "divider",
+              },
+              "&:focus-visible": {
+                outline: "2px solid",
+                outlineOffset: 2,
+                outlineColor: "primary.main",
+              },
+            }}
+          >
+            {formatNumber(Number(item.unit_price ?? 0))}
+            <EditOutlinedIcon sx={{ fontSize: 14, opacity: 0.6 }} />
+          </Box>
+        );
+      },
     }),
     columnHelper.accessor(
       (row) =>
@@ -428,16 +574,21 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
       : []),
   ], [
     onQuantityChange,
+    onPriceChange,
     onDeleteItem,
     canDeleteItems,
     editingKey,
+    editingField,
     editValue,
     isEditing,
     isSelected,
     quantityInputBuffer,
     handleQuantityBlur,
+    handlePriceBlur,
     handleQuantityKeyDown,
-    startEditing,
+    handlePriceKeyDown,
+    startEditingQuantity,
+    startEditingPrice,
     deletingItemId,
   ]);
 
