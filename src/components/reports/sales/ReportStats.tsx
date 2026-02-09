@@ -43,21 +43,32 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
     posMode,
   });
 
-  // Fetch expenses with the same filters
+  // Fetch expenses: by shift_id when posMode is shift, else by date range
+  const expensesQueryEnabled =
+    posMode === "shift"
+      ? !!filterValues.shiftId
+      : !!filterValues.startDate && !!filterValues.endDate;
+
   const { data: expensesData, isLoading: isLoadingExpenses } = useQuery({
     queryKey: [
       "expenses-report",
+      posMode,
+      filterValues.shiftId,
       filterValues.startDate,
       filterValues.endDate,
-      filterValues.userId,
     ],
     queryFn: async () => {
+      if (posMode === "shift" && filterValues.shiftId) {
+        return await expenseService.getExpenses(1, 1000, {
+          shift_id: Number(filterValues.shiftId),
+        });
+      }
       return await expenseService.getExpenses(1, 1000, {
         date_from: filterValues.startDate || undefined,
         date_to: filterValues.endDate || undefined,
       });
     },
-    enabled: !!filterValues.startDate && !!filterValues.endDate,
+    enabled: expensesQueryEnabled,
     refetchOnMount: true,
     staleTime: 0,
   });

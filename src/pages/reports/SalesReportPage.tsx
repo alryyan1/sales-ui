@@ -55,21 +55,24 @@ const SalesReportPage: React.FC = () => {
     is_open: boolean;
   } | null>(null);
 
-  const { getSetting, settings } = useSettings();
+  const { getSetting } = useSettings();
   const posMode = getSetting("pos_mode", "shift") as "shift" | "days";
 
-  // --- Current Filters and Page ---
+  // --- Current Filters and Page (respect posMode: shift only when posMode === "shift") ---
   const currentFilters = useMemo(
-    () => ({
-      startDate:
-        searchParams.get("startDate") || format(new Date(), "yyyy-MM-dd"),
-      endDate: searchParams.get("endDate") || format(new Date(), "yyyy-MM-dd"),
-      clientId: searchParams.get("clientId") || null,
-      userId: searchParams.get("userId") || null,
-      shiftId: searchParams.get("shiftId") || null,
-      productId: searchParams.get("productId") || null,
-    }),
-    [searchParams]
+    () => {
+      const today = format(new Date(), "yyyy-MM-dd");
+      return {
+        startDate: searchParams.get("startDate") || today,
+        endDate: searchParams.get("endDate") || today,
+        clientId: searchParams.get("clientId") || null,
+        userId: searchParams.get("userId") || null,
+        shiftId:
+          posMode === "shift" ? (searchParams.get("shiftId") || null) : null,
+        productId: searchParams.get("productId") || null,
+      };
+    },
+    [searchParams, posMode]
   );
 
   const initialFilterValues: ReportFilterValues = currentFilters;
@@ -123,21 +126,40 @@ const SalesReportPage: React.FC = () => {
     }
   }, [shifts, searchParams, setSearchParams, posMode]);
 
-  // --- Filter Handlers ---
+  // --- Filter Handlers (respect posMode) ---
   const onFilterSubmit = (data: ReportFilterValues) => {
     const newParams = new URLSearchParams();
     if (data.startDate) newParams.set("startDate", data.startDate);
     if (data.endDate) newParams.set("endDate", data.endDate);
     if (data.clientId) newParams.set("clientId", data.clientId);
     if (data.userId) newParams.set("userId", data.userId);
-    if (data.shiftId) newParams.set("shiftId", data.shiftId);
+    if (posMode === "shift" && data.shiftId) {
+      newParams.set("shiftId", data.shiftId);
+    }
     if (data.productId) newParams.set("productId", data.productId);
     newParams.set("page", "1");
     setSearchParams(newParams);
   };
 
   const clearFilters = () => {
-    setSearchParams({ page: "1" });
+    const today = format(new Date(), "yyyy-MM-dd");
+    if (posMode === "shift" && shifts.length > 0) {
+      const lastShift = shifts.reduce((prev, current) =>
+        prev.id > current.id ? prev : current
+      );
+      setSearchParams({
+        page: "1",
+        shiftId: String(lastShift.id),
+        startDate: today,
+        endDate: today,
+      });
+    } else {
+      setSearchParams({
+        page: "1",
+        startDate: today,
+        endDate: today,
+      });
+    }
   };
 
   const handlePageChange = (newPage: number) => {

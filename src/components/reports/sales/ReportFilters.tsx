@@ -67,10 +67,18 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
     reset(initialValues);
   }, [initialValues, reset]);
 
+  const handleSubmitFilters = (data: ReportFilterValues) => {
+    const toSubmit = { ...data };
+    if (posMode === "days") {
+      toSubmit.shiftId = null;
+    }
+    onFilterSubmit(toSubmit);
+  };
+
   return (
     <Box
       component="form"
-      onSubmit={handleSubmit(onFilterSubmit)}
+      onSubmit={handleSubmit(handleSubmitFilters)}
       sx={{
         p: 3,
         bgcolor: "background.paper",
