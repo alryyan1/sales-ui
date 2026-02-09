@@ -10,7 +10,6 @@ import {
   Typography,
   Button,
   CircularProgress,
-  Stack,
   Autocomplete,
   TextField,
   IconButton,
@@ -18,23 +17,37 @@ import {
   MenuItem,
   InputLabel,
   FormControl,
+  Popover,
+  Divider,
+  Stack,
 } from "@mui/material";
-import PersonIcon from "@mui/icons-material/Person";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import AddIcon from "@mui/icons-material/Add";
+import SummarizeIcon from "@mui/icons-material/Summarize";
+import ScheduleIcon from "@mui/icons-material/Schedule";
+import PaymentsIcon from "@mui/icons-material/Payments";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import PersonIcon from "@mui/icons-material/Person";
 import apiClient from "@/lib/axios";
 import { toast } from "sonner";
 import saleService, { Sale, SaleItem, type Payment } from "@/services/saleService";
 import productService, { Product } from "@/services/productService";
 import { formatNumber } from "@/constants";
 import { SaleItemsTable } from "@/components/sales/SaleItemsTable";
+import { PosSalesColumn } from "@/components/sales/PosSalesColumn";
 import ExpenseFormModal from "@/components/admin/expenses/ExpenseFormModal";
+import expenseService from "@/services/expenseService";
+import { PdfViewerDialog } from "@/components/common/PdfViewerDialog";
 
 interface Shift {
   id: number;
   opened_at: string | null;
   closed_at: string | null;
   is_open: boolean;
+  user_name?: string | null;
 }
 
 const PosBlankPage: React.FC = () => {
@@ -58,6 +71,15 @@ const PosBlankPage: React.FC = () => {
   const [removeAllItemsLoading, setRemoveAllItemsLoading] = useState(false);
   const [deletingSaleItemId, setDeletingSaleItemId] = useState<number | null>(null);
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
+  const [shiftExpenseTotals, setShiftExpenseTotals] = useState({ cash: 0, bank: 0 });
+  const [summaryAnchorEl, setSummaryAnchorEl] = useState<HTMLElement | null>(null);
+  const summaryOpen = Boolean(summaryAnchorEl);
+  const [thermalPdfLoading, setThermalPdfLoading] = useState(false);
+  const [thermalPdfDialogOpen, setThermalPdfDialogOpen] = useState(false);
+  const [thermalPdfUrl, setThermalPdfUrl] = useState<string | null>(null);
+  const [shiftPdfDialogOpen, setShiftPdfDialogOpen] = useState(false);
+  const [shiftPdfUrl, setShiftPdfUrl] = useState<string | null>(null);
+  const [shiftPdfLoading, setShiftPdfLoading] = useState(false);
 
   // Pre-fill add-payment amount with the sale's due (remainder) when selection changes
   useEffect(() => {
@@ -400,6 +422,31 @@ const PosBlankPage: React.FC = () => {
     return { cash, bankak };
   }, [sales]);
 
+  const fetchShiftExpenseTotals = useCallback(async () => {
+    if (!shift?.id) {
+      setShiftExpenseTotals({ cash: 0, bank: 0 });
+      return;
+    }
+    try {
+      const res = await expenseService.getExpenses(1, 500, { shift_id: shift.id });
+      const list = res.data ?? [];
+      let cash = 0;
+      let bank = 0;
+      for (const e of list) {
+        const amt = Number(e.amount) || 0;
+        if (e.payment_method === "cash") cash += amt;
+        else if (e.payment_method === "bank") bank += amt;
+      }
+      setShiftExpenseTotals({ cash, bank });
+    } catch {
+      setShiftExpenseTotals({ cash: 0, bank: 0 });
+    }
+  }, [shift?.id]);
+
+  useEffect(() => {
+    fetchShiftExpenseTotals();
+  }, [fetchShiftExpenseTotals]);
+
   const handleCreateNewSale = useCallback(async () => {
     try {
       setCreateSaleLoading(true);
@@ -469,6 +516,61 @@ const PosBlankPage: React.FC = () => {
     }
   }, [selectedSale]);
 
+  const handlePrintThermalInvoice = useCallback(async () => {
+    if (!selectedSale?.id) return;
+    setThermalPdfLoading(true);
+    try {
+      const response = await apiClient.get(`/sales/${selectedSale.id}/thermal-invoice-pdf`, {
+        responseType: "blob",
+      });
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      setThermalPdfUrl(url);
+      setThermalPdfDialogOpen(true);
+    } catch (err) {
+      console.error("Failed to load thermal invoice:", err);
+      toast.error("فشل تحميل فاتورة الحراري");
+    } finally {
+      setThermalPdfLoading(false);
+    }
+  }, [selectedSale?.id]);
+
+  const handleCloseThermalPdfDialog = useCallback(() => {
+    setThermalPdfDialogOpen(false);
+    if (thermalPdfUrl) {
+      window.URL.revokeObjectURL(thermalPdfUrl);
+      setThermalPdfUrl(null);
+    }
+  }, [thermalPdfUrl]);
+
+  const handleCreateShiftPdfReport = useCallback(async () => {
+    if (!shift?.id) return;
+    setShiftPdfLoading(true);
+    try {
+      const response = await apiClient.get("/reports/sales-pdf", {
+        params: { shift_id: shift.id },
+        responseType: "blob",
+      });
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      setShiftPdfUrl(url);
+      setShiftPdfDialogOpen(true);
+    } catch (err) {
+      console.error("Failed to load shift report PDF:", err);
+      toast.error("فشل تحميل تقرير الوردية PDF");
+    } finally {
+      setShiftPdfLoading(false);
+    }
+  }, [shift?.id]);
+
+  const handleCloseShiftPdfDialog = useCallback(() => {
+    setShiftPdfDialogOpen(false);
+    if (shiftPdfUrl) {
+      window.URL.revokeObjectURL(shiftPdfUrl);
+      setShiftPdfUrl(null);
+    }
+  }, [shiftPdfUrl]);
+
   const handleDeleteSaleItem = useCallback(
     async (item: SaleItem) => {
       if (!selectedSale || item.id == null) return;
@@ -526,19 +628,115 @@ const PosBlankPage: React.FC = () => {
             POS
           </Typography>
 
-          {/* Shift ID + payment totals for shift */}
+          {/* Shift summary – click to open popover with details */}
           {shift?.id != null && (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                وردية #{shift.id}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                نقدي: {formatNumber(shiftPaymentTotals.cash)}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                بنكك: {formatNumber(shiftPaymentTotals.bankak)}
-              </Typography>
-            </Box>
+            <>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={(e) => setSummaryAnchorEl(e.currentTarget)}
+                startIcon={<SummarizeIcon />}
+                sx={{
+                  textTransform: "none",
+                  fontWeight: 600,
+                  borderRadius: 2,
+                  borderColor: "divider",
+                  color: "text.secondary",
+                }}
+              >
+                ملخص وردية #{shift.id}
+              </Button>
+              <Popover
+                open={summaryOpen}
+                anchorEl={summaryAnchorEl}
+                onClose={() => setSummaryAnchorEl(null)}
+                anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+                transformOrigin={{ vertical: "top", horizontal: "left" }}
+                PaperProps={{
+                  sx: { minWidth: 260, borderRadius: 2, mt: 1.5 },
+                }}
+              >
+                <Stack divider={<Divider />} sx={{ py: 1 }}>
+                  <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: 2, py: 1 }}>
+                    <ScheduleIcon sx={{ color: "text.secondary", fontSize: 20 }} />
+                    <Typography variant="body2" fontWeight={600}>
+                      وردية #{shift.id}
+                    </Typography>
+                  </Stack>
+                  {shift.opened_at && (
+                    <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: 2, py: 1 }}>
+                      <AccessTimeIcon sx={{ color: "text.secondary", fontSize: 20 }} />
+                      <Typography variant="body2" color="text.secondary">
+                        وقت الفتح:{" "}
+                        {new Date(shift.opened_at).toLocaleString("ar-EG", {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })}
+                      </Typography>
+                    </Stack>
+                  )}
+                  {(shift.user_name != null && shift.user_name !== "") && (
+                    <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: 2, py: 1 }}>
+                      <PersonIcon sx={{ color: "text.secondary", fontSize: 20 }} />
+                      <Typography variant="body2" color="text.secondary">
+                        فتح بواسطة: {shift.user_name}
+                      </Typography>
+                    </Stack>
+                  )}
+                  <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: 2, py: 1 }}>
+                    <PaymentsIcon sx={{ color: "primary.main", fontSize: 20 }} />
+                    <Typography variant="body2">نقدي: {formatNumber(shiftPaymentTotals.cash)}</Typography>
+                  </Stack>
+                  <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: 2, py: 1 }}>
+                    <AccountBalanceIcon sx={{ color: "primary.main", fontSize: 20 }} />
+                    <Typography variant="body2">بنكك: {formatNumber(shiftPaymentTotals.bankak)}</Typography>
+                  </Stack>
+                  <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: 2, py: 1 }}>
+                    <ReceiptLongIcon sx={{ color: "error.main", fontSize: 20 }} />
+                    <Typography variant="body2" color="error.main">
+                      مصروف نقدي: {formatNumber(shiftExpenseTotals.cash)}
+                    </Typography>
+                  </Stack>
+                  <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: 2, py: 1 }}>
+                    <ReceiptLongIcon sx={{ color: "error.main", fontSize: 20 }} />
+                    <Typography variant="body2" color="error.main">
+                      مصروف بنك: {formatNumber(shiftExpenseTotals.bank)}
+                    </Typography>
+                  </Stack>
+                  <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: 2, py: 1 }}>
+                    <TrendingUpIcon sx={{ color: "success.main", fontSize: 20 }} />
+                    <Typography variant="body2" color="success.main" fontWeight={700}>
+                      صافي نقدي: {formatNumber(shiftPaymentTotals.cash - shiftExpenseTotals.cash)}
+                    </Typography>
+                  </Stack>
+                  <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: 2, py: 1 }}>
+                    <TrendingUpIcon sx={{ color: "success.main", fontSize: 20 }} />
+                    <Typography variant="body2" color="success.main" fontWeight={700}>
+                      صافي بنك: {formatNumber(shiftPaymentTotals.bankak - shiftExpenseTotals.bank)}
+                    </Typography>
+                  </Stack>
+                  <Box sx={{ px: 2, py: 1.5 }}>
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      size="small"
+                      disabled={shiftPdfLoading}
+                      startIcon={
+                        shiftPdfLoading ? (
+                          <CircularProgress size={18} color="inherit" />
+                        ) : (
+                          <SummarizeIcon />
+                        )
+                      }
+                      onClick={handleCreateShiftPdfReport}
+                      sx={{ textTransform: "none", fontWeight: 600 }}
+                    >
+                      {shiftPdfLoading ? "جاري التحميل..." : "تقرير الوردية PDF"}
+                    </Button>
+                  </Box>
+                </Stack>
+              </Popover>
+            </>
           )}
 
           {/* Product search – in header */}
@@ -561,15 +759,14 @@ const PosBlankPage: React.FC = () => {
               }
               loading={productSearchLoading}
               disabled={!selectedSale || addProductLoading}
-              renderInput={(params) => {
-                const { inputRef: autocompleteInputRef, ...restParams } = params;
-                return (
+              renderInput={(params) => (
                 <TextField
-                  {...restParams}
+                  {...params}
                   inputRef={(el) => {
                     (productInputRef as React.MutableRefObject<HTMLInputElement | null>).current = el;
-                    if (typeof autocompleteInputRef === "function") autocompleteInputRef(el);
-                    else if (autocompleteInputRef) (autocompleteInputRef as React.MutableRefObject<HTMLInputElement | null>).current = el;
+                    const prev = (params as { inputRef?: React.Ref<HTMLInputElement> }).inputRef;
+                    if (typeof prev === "function") prev(el);
+                    else if (prev && typeof prev === "object") (prev as React.MutableRefObject<HTMLInputElement | null>).current = el;
                   }}
                   placeholder="ابحث عن منتج أو الباركود..."
                   size="small"
@@ -592,8 +789,7 @@ const PosBlankPage: React.FC = () => {
                     ),
                   }}
                 />
-                );
-              }}
+              )}
               renderOption={(props, option) => (
                 <li {...props} key={option.id}>
                   <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
@@ -687,92 +883,12 @@ const PosBlankPage: React.FC = () => {
           }}
         >
           {/* Sales column – each sale as a square */}
-          <Box
-            sx={{
-              display: { xs: "none", lg: "flex" },
-              flexDirection: "column",
-              width: 67,
-              flexShrink: 0,
-            }}
-          >
-        
-             
-              {salesLoading ? (
-                <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
-                  <CircularProgress size={28} />
-                </Box>
-              ) : (
-                <Stack justifyContent="center" alignItems="center" direction="column" gap={1} >
-                  {sales.map((sale) => {
-                    const isActive = selectedSale?.id === sale.id;
-                    const itemsCount = sale.items?.length ?? 0;
-                    const hasClient = sale.client_id != null && sale.client_id > 0;
-                    return (
-                      <Stack direction="row" gap={1} key={sale.id}>
-                        <Paper
-                          elevation={0}
-                          sx={{
-                            width: 70,
-                            height: 70,
-                            borderRadius: 1.5,
-                            border: "2px solid",
-                            borderColor: isActive ? "primary.main" : "divider",
-                            bgcolor: isActive ? "primary.main" : "transparent",
-                            color: isActive ? "primary.contrastText" : "text.primary",
-                            p: 1,
-                            cursor: "pointer",
-                            transition: "all 0.2s ease",
-                            position: "relative",
-                            display: "flex",
-                            justifyContent: "center",
-                            alignItems: "center",
-                          }}
-                        onClick={() => setSelectedSale(sale)}
-                      >
-                        <Box
-                          sx={{
-                            position: "absolute",
-                            top: 4,
-                            right: 4,
-                            minWidth: 18,
-                            height: 18,
-                            borderRadius: 9,
-                            bgcolor: isActive ? "secondary.main" : "primary.main",
-                            color: "primary.contrastText",
-                            fontSize: 10,
-                            fontWeight: 700,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                        >
-                          {itemsCount}
-                        </Box>
-                        {hasClient && (
-                          <Box
-                            sx={{
-                              position: "absolute",
-                              top: 4,
-                              left: 4,
-                              color: isActive ? "primary.contrastText" : "text.secondary",
-                            }}
-                          >
-                            <PersonIcon sx={{ fontSize: 14 }} />
-                          </Box>
-                        )}
-                     
-
-                        <div>{sale.number}</div>
-                     
-                      </Paper>
-                      </Stack>
-                    );
-                  })}
-                </Stack>
-              )}
-          </Box>
-
-       
+          <PosSalesColumn
+            sales={sales}
+            salesLoading={salesLoading}
+            selectedSale={selectedSale}
+            onSelectSale={setSelectedSale}
+          />
 
           {/* Center column – sale items table */}
           <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -970,7 +1086,11 @@ const PosBlankPage: React.FC = () => {
                             disabled={addPaymentLoading || !newPaymentAmount.trim()}
                             aria-label="إضافة دفعة"
                           >
-                            <AddIcon />
+                            {addPaymentLoading ? (
+                              <CircularProgress size={20} color="inherit" />
+                            ) : (
+                              <AddIcon />
+                            )}
                           </IconButton>
                         </Box>
                         <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
@@ -986,6 +1106,23 @@ const PosBlankPage: React.FC = () => {
                   )}
                   <Button
                     fullWidth
+                    variant="outlined"
+                    size="small"
+                    disabled={thermalPdfLoading}
+                    startIcon={
+                      thermalPdfLoading ? (
+                        <CircularProgress size={18} color="inherit" />
+                      ) : (
+                        <ReceiptLongIcon />
+                      )
+                    }
+                    sx={{ mt: 2, textTransform: "none" }}
+                    onClick={handlePrintThermalInvoice}
+                  >
+                    {thermalPdfLoading ? "جاري التحميل..." : "طباعة فاتورة حراري PDF"}
+                  </Button>
+                  <Button
+                    fullWidth
                     variant="contained"
                     size="small"
                     disabled={
@@ -994,7 +1131,7 @@ const PosBlankPage: React.FC = () => {
                         ? Number(selectedSale.due_amount) <= 0
                         : Number(selectedSale.total_amount ?? 0) - Number(selectedSale.paid_amount ?? 0) <= 0)
                     }
-                    sx={{ mt: 2, textTransform: "none" }}
+                    sx={{ mt: 1, textTransform: "none" }}
                     onClick={handleFullPayment}
                   >
                     {fullPaymentLoading ? "جاري التسديد..." : "تسديد كامل"}
@@ -1010,6 +1147,22 @@ const PosBlankPage: React.FC = () => {
         </Box>
       </Box>
 
+      {/* Thermal invoice PDF dialog */}
+      <PdfViewerDialog
+        isOpen={thermalPdfDialogOpen && !!thermalPdfUrl}
+        onClose={handleCloseThermalPdfDialog}
+        pdfUrl={thermalPdfUrl ?? ""}
+        title={selectedSale ? `فاتورة حراري #${selectedSale.number ?? selectedSale.id}` : "فاتورة حراري"}
+      />
+
+      {/* Shift report PDF dialog */}
+      <PdfViewerDialog
+        isOpen={shiftPdfDialogOpen && !!shiftPdfUrl}
+        onClose={handleCloseShiftPdfDialog}
+        pdfUrl={shiftPdfUrl ?? ""}
+        title={shift ? `تقرير الوردية #${shift.id}` : "تقرير الوردية"}
+      />
+
       {/* Add expense dialog */}
       <ExpenseFormModal
         isOpen={expenseDialogOpen}
@@ -1018,6 +1171,7 @@ const PosBlankPage: React.FC = () => {
         onSaveSuccess={() => {
           toast.success("تمت إضافة المصروف");
           setExpenseDialogOpen(false);
+          fetchShiftExpenseTotals();
         }}
         shiftId={shift?.id ?? null}
       />
