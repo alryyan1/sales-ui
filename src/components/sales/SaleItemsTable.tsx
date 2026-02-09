@@ -454,9 +454,6 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                 onChange={(e) => setEditValue(e.target.value)}
                 onBlur={() => handlePriceBlur(item)}
                 onKeyDown={handlePriceKeyDown}
-                onFocus={
-                  (e)=>e.target.select()
-                }
                 inputProps={{
                   min: 0,
                   step: 0.01,
