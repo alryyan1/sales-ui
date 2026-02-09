@@ -269,7 +269,7 @@ const PosBlankPage: React.FC = () => {
           payment_date: typeof p.payment_date === "string" ? p.payment_date.slice(0, 10) : today,
         }));
         await saleService.addPaymentToSale(selectedSale.id, {
-          payments: [...existingPayments, { method: "cash", amount: due, payment_date: today }],
+          payments: [...existingPayments, { method: newPaymentMethod, amount: due, payment_date: today }],
         });
         const updated = await saleService.getSale(selectedSale.id);
         setSelectedSale(updated);
@@ -281,7 +281,7 @@ const PosBlankPage: React.FC = () => {
         setFullPaymentLoading(false);
       }
     },
-    [selectedSale]
+    [selectedSale, newPaymentMethod]
   );
 
   const handleQuantityChange = useCallback(
@@ -923,7 +923,7 @@ const PosBlankPage: React.FC = () => {
                 <>
                   <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.5, flexWrap: "wrap", gap: 1 }}>
                     <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                      عناصر البيع #{selectedSale.number ?? selectedSale.id}
+                      عناصر البيع #{ selectedSale.id}
                     </Typography>
                     {selectedSale.items && selectedSale.items.length > 0 && (
                       <Button
@@ -974,7 +974,7 @@ const PosBlankPage: React.FC = () => {
               {selectedSale ? (
                 <Box>
                   <Typography variant="subtitle1" fontWeight={700} gutterBottom>
-                    تفاصيل البيع #{selectedSale.number ?? selectedSale.id}
+                    تفاصيل البيع #{ selectedSale.id}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                     {selectedSale.sale_date}
