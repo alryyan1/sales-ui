@@ -38,11 +38,13 @@ export const PosSalesColumn: React.FC<PosSalesColumnProps> = ({
             const isActive = selectedSale?.id === sale.id;
             const itemsCount = sale.items?.length ?? 0;
             const hasClient = sale.client_id != null && sale.client_id > 0;
+            const hasNoPayments = (sale.payments?.length ?? 0) === 0;
+            const badgeColor = hasNoPayments ? "error" : isActive ? "secondary" : "primary";
             return (
               <Stack direction="row" gap={1} key={sale.id}>
                 <Badge
                   badgeContent={itemsCount}
-                  color={isActive ? "secondary" : "primary"}
+                  color={badgeColor}
                   anchorOrigin={{
                     vertical: "top",
                     horizontal: "right",

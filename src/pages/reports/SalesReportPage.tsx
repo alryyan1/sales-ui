@@ -25,6 +25,7 @@ import saleService, { Sale } from "@/services/saleService";
 import { useSettings } from "@/context/SettingsContext";
 
 // React Query Hooks
+import { useQuery } from "@tanstack/react-query";
 import { useClients } from "@/hooks/useClients";
 import { useProducts } from "@/hooks/useProducts";
 import { useShifts } from "@/hooks/useShifts";
@@ -94,6 +95,17 @@ const SalesReportPage: React.FC = () => {
 
   const { data: shifts = [], isLoading: loadingShifts } = useShifts();
 
+  const { data: usersData, isLoading: loadingUsers } = useQuery({
+    queryKey: ["users-list-filters"],
+    queryFn: async () => {
+      const res = await apiClient.get<{ data: { id: number; name: string }[] }>(
+        "/users/list"
+      );
+      return res.data?.data ?? [];
+    },
+  });
+  const users = usersData ?? [];
+
   const { data: reportData } = useSalesReport({
     page: currentPage,
     startDate: currentFilters.startDate,
@@ -108,7 +120,8 @@ const SalesReportPage: React.FC = () => {
     posMode,
   });
 
-  const loadingFilters = loadingClients || loadingProducts || loadingShifts;
+  const loadingFilters =
+    loadingClients || loadingProducts || loadingShifts || loadingUsers;
 
   // --- Auto-select last shift on first load ---
   useEffect(() => {
@@ -326,6 +339,7 @@ const SalesReportPage: React.FC = () => {
               onFilterSubmit={onFilterSubmit}
               onClearFilters={clearFilters}
               clients={clients}
+              users={users}
               products={products}
               shifts={shifts}
               loadingFilters={loadingFilters}

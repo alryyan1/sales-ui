@@ -129,13 +129,14 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
       );
     }, 0);
 
+    // Sales payment methods: cash, bankak, fawry, ocash (per API)
     const totalBank = data.reduce((sum, sale) => {
       if (!sale.payments) return sum;
       return (
         sum +
         sale.payments
           .filter((p) =>
-            ["visa", "mastercard", "mada", "bank_transfer"].includes(p.method)
+            ["bankak", "fawry", "ocash"].includes(p.method as string)
           )
           .reduce((pSum, p) => pSum + Number(p.amount), 0)
       );

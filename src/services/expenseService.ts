@@ -38,6 +38,7 @@ const expenseService = {
       search?: string;
       expense_category_id?: number | null;
       shift_id?: number | null;
+      user_id?: number | null;
       date_from?: string;
       date_to?: string;
       min_amount?: number | string;

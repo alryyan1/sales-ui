@@ -29,6 +29,7 @@ import PaymentsIcon from "@mui/icons-material/Payments";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import LocalOfferIcon from "@mui/icons-material/LocalOffer";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import PersonIcon from "@mui/icons-material/Person";
 import apiClient from "@/lib/axios";
@@ -41,6 +42,7 @@ import { PosSalesColumn } from "@/components/sales/PosSalesColumn";
 import ExpenseFormModal from "@/components/admin/expenses/ExpenseFormModal";
 import expenseService from "@/services/expenseService";
 import { PdfViewerDialog } from "@/components/common/PdfViewerDialog";
+import { useAuth } from "@/context/AuthContext";
 
 interface Shift {
   id: number;
@@ -51,6 +53,7 @@ interface Shift {
 }
 
 const PosBlankPage: React.FC = () => {
+  const { user } = useAuth();
   const [shift, setShift] = useState<Shift | null>(null);
   const [shiftLoading, setShiftLoading] = useState(false);
   const [createSaleLoading, setCreateSaleLoading] = useState(false);
@@ -311,7 +314,7 @@ const PosBlankPage: React.FC = () => {
       if (!selectedSale || item.id == null) return;
       try {
         const updated = await saleService.updateSaleItem(selectedSale.id, item.id, {
-          quantity: Number(item.quantity),
+          quantity: Number(item.quantity ?? 0),
           unit_price: newPrice,
           purchase_item_id: item.purchase_item_id ?? null,
         });
@@ -444,13 +447,19 @@ const PosBlankPage: React.FC = () => {
     return { cash, bankak };
   }, [sales]);
 
+  const shiftDiscountTotal = useMemo(() => {
+    return sales.reduce((sum, sale) => sum + Number(sale.discount_amount ?? 0), 0);
+  }, [sales]);
+
   const fetchShiftExpenseTotals = useCallback(async () => {
     if (!shift?.id) {
       setShiftExpenseTotals({ cash: 0, bank: 0 });
       return;
     }
     try {
-      const res = await expenseService.getExpenses(1, 500, { shift_id: shift.id });
+      const filters: { shift_id: number; user_id?: number } = { shift_id: shift.id };
+      if (user?.id) filters.user_id = user.id;
+      const res = await expenseService.getExpenses(1, 500, filters);
       const list = res.data ?? [];
       let cash = 0;
       let bank = 0;
@@ -463,7 +472,7 @@ const PosBlankPage: React.FC = () => {
     } catch {
       setShiftExpenseTotals({ cash: 0, bank: 0 });
     }
-  }, [shift?.id]);
+  }, [shift?.id, user?.id]);
 
   useEffect(() => {
     fetchShiftExpenseTotals();
@@ -569,8 +578,10 @@ const PosBlankPage: React.FC = () => {
     if (!shift?.id) return;
     setShiftPdfLoading(true);
     try {
+      const params: { shift_id: number; user_id?: number } = { shift_id: shift.id };
+      if (user?.id) params.user_id = user.id;
       const response = await apiClient.get("/reports/sales-pdf", {
-        params: { shift_id: shift.id },
+        params,
         responseType: "blob",
       });
       const blob = new Blob([response.data], { type: "application/pdf" });
@@ -583,7 +594,7 @@ const PosBlankPage: React.FC = () => {
     } finally {
       setShiftPdfLoading(false);
     }
-  }, [shift?.id]);
+  }, [shift?.id, user?.id]);
 
   const handleCloseShiftPdfDialog = useCallback(() => {
     setShiftPdfDialogOpen(false);
@@ -759,6 +770,12 @@ const PosBlankPage: React.FC = () => {
                   <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: 2, py: 1 }}>
                     <AccountBalanceIcon sx={{ color: "primary.main", fontSize: 20 }} />
                     <Typography variant="body2">بنكك: {formatNumber(shiftPaymentTotals.bankak)}</Typography>
+                  </Stack>
+                  <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: 2, py: 1 }}>
+                    <LocalOfferIcon sx={{ color: "text.secondary", fontSize: 20 }} />
+                    <Typography variant="body2" color="text.secondary">
+                      إجمالي الخصومات: {formatNumber(shiftDiscountTotal)}
+                    </Typography>
                   </Stack>
                   <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: 2, py: 1 }}>
                     <ReceiptLongIcon sx={{ color: "error.main", fontSize: 20 }} />

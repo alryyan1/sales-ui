@@ -40,6 +40,7 @@ interface ReportFiltersProps {
   onFilterSubmit: (data: ReportFilterValues) => void;
   onClearFilters: () => void;
   clients: any[];
+  users: any[];
   products: any[];
   shifts: any[];
   loadingFilters: boolean;
@@ -51,6 +52,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
   onFilterSubmit,
   onClearFilters,
   clients,
+  users,
   products,
   shifts,
   loadingFilters,
@@ -154,6 +156,30 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
                   }}
                   renderInput={(params) => (
                     <TextField {...params} label="العميل" size="small" />
+                  )}
+                  loading={loadingFilters}
+                />
+              )}
+            />
+          </Box>
+
+          {/* User Select */}
+          <Box sx={{ minWidth: 200 }}>
+            <Controller
+              control={control}
+              name="userId"
+              render={({ field }) => (
+                <Autocomplete
+                  options={users}
+                  getOptionLabel={(option) => option.name || ""}
+                  value={
+                    users.find((u) => String(u.id) === field.value) || null
+                  }
+                  onChange={(_, newValue) => {
+                    field.onChange(newValue ? String(newValue.id) : null);
+                  }}
+                  renderInput={(params) => (
+                    <TextField {...params} label="المستخدم" size="small" />
                   )}
                   loading={loadingFilters}
                 />

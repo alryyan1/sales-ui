@@ -67,8 +67,8 @@ export const PdfViewerDialog: React.FC<PdfViewerDialogProps> = ({
       fullWidth
       PaperProps={{
         sx: {
-          width: "300px",
-          maxWidth: "300px",
+          width: "400px",
+          maxWidth: "400px",
           height: "90vh",
           maxHeight: "90vh",
           borderRadius: 3,
