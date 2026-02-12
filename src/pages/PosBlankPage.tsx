@@ -42,6 +42,7 @@ import { PosSalesColumn } from "@/components/sales/PosSalesColumn";
 import ExpenseFormModal from "@/components/admin/expenses/ExpenseFormModal";
 import expenseService from "@/services/expenseService";
 import { PdfViewerDialog } from "@/components/common/PdfViewerDialog";
+import SalesReturnDialog from "@/components/sales/SalesReturnDialog";
 import { useAuth } from "@/context/AuthContext";
 
 interface Shift {
@@ -83,6 +84,7 @@ const PosBlankPage: React.FC = () => {
   const [shiftPdfDialogOpen, setShiftPdfDialogOpen] = useState(false);
   const [shiftPdfUrl, setShiftPdfUrl] = useState<string | null>(null);
   const [shiftPdfLoading, setShiftPdfLoading] = useState(false);
+  const [salesReturnDialogOpen, setSalesReturnDialogOpen] = useState(false);
   const [discountType, setDiscountType] = useState<"percentage" | "fixed">("fixed");
   const [discountValue, setDiscountValue] = useState("");
   const [discountLoading, setDiscountLoading] = useState(false);
@@ -825,6 +827,15 @@ const PosBlankPage: React.FC = () => {
             </>
           )}
 
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => setSalesReturnDialogOpen(true)}
+            sx={{ textTransform: "none", fontWeight: 600 }}
+          >
+            إرجاع مبيعات
+          </Button>
+
           {/* Product search – in header */}
           <Box sx={{ flex: 1, minWidth: 160, maxWidth: 380 }}>
             <Autocomplete
@@ -1303,6 +1314,13 @@ const PosBlankPage: React.FC = () => {
           </Box>
         </Box>
       </Box>
+
+      {/* Sales return dialog */}
+      <SalesReturnDialog
+        open={salesReturnDialogOpen}
+        onClose={() => setSalesReturnDialogOpen(false)}
+        shiftId={shift?.id ?? null}
+      />
 
       {/* Thermal invoice PDF dialog */}
       <PdfViewerDialog

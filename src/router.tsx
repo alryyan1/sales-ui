@@ -34,6 +34,7 @@ import SalesReturnsListPage from "./pages/sales/SalesReturnsListPage";
 import SaleDetailsPage from "./pages/sales/SaleDetailsPage";
 // Reports
 import SalesReportPage from "./pages/reports/SalesReportPage";
+import SaleReturnsReportPage from "./pages/reports/SaleReturnsReportPage";
 import PurchaseReportPage from "./pages/reports/PurchaseReportPage";
 import SalesWithDiscountsPage from "./pages/reports/SalesWithDiscountsPage";
 import DailyIncomeReportPage from "./pages/reports/DailyIncomeReportPage";
@@ -182,6 +183,7 @@ const router = createHashRouter([
                       </PermissionGuard>
                     ),
                   },
+                  // New simple POS-based sales return creation page
                   {
                     path: "new",
                     element: (
@@ -248,6 +250,14 @@ const router = createHashRouter([
                 element: (
                   <PermissionGuard requiredPermission="view-reports-sales">
                     <SalesReportPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "sale-returns",
+                element: (
+                  <PermissionGuard requiredPermission="view-reports-sales">
+                    <SaleReturnsReportPage />
                   </PermissionGuard>
                 ),
               },

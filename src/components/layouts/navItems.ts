@@ -37,7 +37,7 @@ export const navItems: NavItem[] = [
       {
         to: "/sales/returns",
         label: "مردودات المبيعات",
-        permission: null, // or "view-sales-returns" if permissions are strict
+        permission: null,
         category: "المبيعات",
       },
       {
@@ -119,6 +119,12 @@ export const navItems: NavItem[] = [
       {
         to: "/reports/sales",
         label: "تقرير المبيعات",
+        permission: null,
+        category: "التقارير",
+      },
+      {
+        to: "/reports/sale-returns",
+        label: "تقرير مردودات المبيعات",
         permission: null,
         category: "التقارير",
       },
