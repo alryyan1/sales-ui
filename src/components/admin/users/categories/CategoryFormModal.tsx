@@ -19,6 +19,8 @@ import {
   Select,
   MenuItem,
   Typography,
+  FormControlLabel,
+  Checkbox,
 } from "@mui/material";
 import { Loader2, AlertCircle } from "lucide-react";
 import categoryService, { Category } from "@/services/CategoryService";
@@ -28,6 +30,7 @@ type CategoryFormValues = {
   name: string;
   description?: string | null;
   parent_id?: number | null;
+  is_default?: boolean;
 };
 
 // --- Component Props ---
@@ -52,7 +55,12 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
   const [serverError, setServerError] = useState<string | null>(null);
 
   const form = useForm<CategoryFormValues>({
-    defaultValues: { name: "", description: "", parent_id: null },
+    defaultValues: {
+      name: "",
+      description: "",
+      parent_id: null,
+      is_default: false,
+    },
   });
   const {
     handleSubmit,
@@ -70,6 +78,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
           name: categoryToEdit.name || "",
           description: categoryToEdit.description || "",
           parent_id: categoryToEdit.parent_id || null,
+          is_default: categoryToEdit.is_default || false,
         });
       } else {
         reset();
@@ -79,26 +88,32 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
 
   const onSubmit = async (data: CategoryFormValues) => {
     setServerError(null);
-    
+
     // Basic validation
     if (!data.name || data.name.trim() === "") {
       setError("name", { type: "manual", message: "هذا الحقل مطلوب" });
       return;
     }
-    
-    const apiData = { ...data, parent_id: data.parent_id || null }; // Ensure null if empty
+
+    const apiData = {
+      ...data,
+      parent_id: data.parent_id || null,
+      is_default: data.is_default || false, // Explicitly include is_default
+    };
     try {
       let savedCategory: Category;
       if (isEditMode && categoryToEdit) {
         savedCategory = await categoryService.updateCategory(
           categoryToEdit.id,
-          apiData
+          apiData,
         );
       } else {
         savedCategory = await categoryService.createCategory(apiData);
       }
       toast.success("نجح", {
-        description: isEditMode ? "تم تحديث الفئة بنجاح" : "تم إنشاء الفئة بنجاح",
+        description: isEditMode
+          ? "تم تحديث الفئة بنجاح"
+          : "تم إنشاء الفئة بنجاح",
       });
       onSaveSuccess(savedCategory);
       onClose();
@@ -130,12 +145,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
   };
 
   return (
-    <Dialog
-      open={isOpen}
-      onClose={handleClose}
-      fullWidth
-      maxWidth="sm"
-    >
+    <Dialog open={isOpen} onClose={handleClose} fullWidth maxWidth="sm">
       <DialogTitle
         sx={{
           pb: 1.5,
@@ -149,11 +159,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
           {isEditMode ? "تعديل فئة" : "إضافة فئة"}
         </Typography>
       </DialogTitle>
-      <Box
-        component="form"
-        onSubmit={handleSubmit(onSubmit)}
-        noValidate
-      >
+      <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
         <DialogContent
           sx={{
             pt: 3,
@@ -219,7 +225,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
                       field.onChange(
                         e.target.value && e.target.value !== " "
                           ? Number(e.target.value)
-                          : null
+                          : null,
                       )
                     }
                   >
@@ -229,7 +235,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
                     {allCategories
                       .filter(
                         (cat) =>
-                          !categoryToEdit || cat.id !== categoryToEdit.id
+                          !categoryToEdit || cat.id !== categoryToEdit.id,
                       )
                       .map((cat) => (
                         <MenuItem key={cat.id} value={String(cat.id)}>
@@ -238,7 +244,11 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
                       ))}
                   </Select>
                   {fieldState.error && (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                    <Typography
+                      variant="caption"
+                      color="error"
+                      sx={{ mt: 0.5, ml: 1.75 }}
+                    >
                       {fieldState.error.message}
                     </Typography>
                   )}
@@ -262,6 +272,24 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
                   value={field.value ?? ""}
                   error={!!fieldState.error}
                   helperText={fieldState.error?.message}
+                />
+              )}
+            />
+
+            {/* Is Default Checkbox */}
+            <Controller
+              control={control}
+              name="is_default"
+              render={({ field }) => (
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      {...field}
+                      checked={field.value || false}
+                      disabled={isSubmitting}
+                    />
+                  }
+                  label="تعيين كفئة افتراضية"
                 />
               )}
             />

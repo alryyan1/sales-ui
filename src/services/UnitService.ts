@@ -3,18 +3,20 @@ import apiClient, { getValidationErrors, getErrorMessage } from "@/lib/axios";
 export interface Unit {
   id: number;
   name: string;
-  type: 'stocking' | 'sellable';
+  type: "stocking" | "sellable";
   description?: string;
   is_active: boolean;
+  is_default: boolean;
   created_at: string;
   updated_at: string;
 }
 
 export interface UnitFormData {
   name: string;
-  type: 'stocking' | 'sellable';
+  type: "stocking" | "sellable";
   description?: string;
   is_active?: boolean;
+  is_default?: boolean;
 }
 
 class UnitService {
@@ -24,7 +26,7 @@ class UnitService {
     page: number = 1,
     perPage: number = 15,
     search: string = "",
-    includeInactive: boolean = false
+    includeInactive: boolean = false,
   ): Promise<{ data: Unit[]; meta: any }> {
     try {
       const response = await apiClient.get(this.baseUrl, {
@@ -101,7 +103,10 @@ class UnitService {
     return new Error("An error occurred while processing the request.");
   }
 
-  getErrorMessage(error: any, fallbackMessage: string = "An error occurred"): string {
+  getErrorMessage(
+    error: any,
+    fallbackMessage: string = "An error occurred",
+  ): string {
     return getErrorMessage(error, fallbackMessage);
   }
 
@@ -110,4 +115,4 @@ class UnitService {
   }
 }
 
-export default new UnitService(); 
+export default new UnitService();

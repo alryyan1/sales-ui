@@ -104,6 +104,14 @@ const ManagePurchaseItemsPage: React.FC = () => {
     },
   });
 
+  // Inline creation handler
+  const handleInlineCreate = useCallback(
+    async (data: AddPurchaseItemData) => {
+      await addItemMutation.mutateAsync(data);
+    },
+    [addItemMutation],
+  );
+
   const updateItemMutation = useMutation({
     mutationFn: async ({
       itemId,
@@ -601,6 +609,9 @@ const ManagePurchaseItemsPage: React.FC = () => {
           setSearch(val);
           setPage(1); // Reset to page 1 on search
         }}
+        // Inline creation
+        onInlineCreate={handleInlineCreate}
+        isCreating={addItemMutation.isPending}
       />
 
       {/* Inventory Impact Dialog */}

@@ -63,18 +63,18 @@ export const navItems: NavItem[] = [
         permission: null,
         category: "المخزون",
       },
-      {
-        to: "/inventory/adjustments",
-        label: "تعديلات المخزون",
-        permission: null,
-        category: "المخزون",
-      },
-      {
-        to: "/inventory/transfers",
-        label: "تحويل المخزون",
-        permission: null,
-        category: "المخزون",
-      },
+      // {
+      //   to: "/inventory/adjustments",
+      //   label: "تعديلات المخزون",
+      //   permission: null,
+      //   category: "المخزون",
+      // },
+      // {
+      //   to: "/inventory/transfers",
+      //   label: "تحويل المخزون",
+      //   permission: null,
+      //   category: "المخزون",
+      // },
       {
         to: "/inventory/counts",
         label: "جرد المخزون",

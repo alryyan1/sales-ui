@@ -53,6 +53,7 @@ import SystemPage from "./pages/admin/SystemPage";
 import BackupPage from "./pages/admin/BackupPage";
 import WhatsAppSchedulersPage from "./pages/admin/WhatsAppSchedulersPage";
 import IndexedDBManagerPage from "./pages/admin/IndexedDBManagerPage";
+import UnitsPage from "./pages/UnitsPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
 import { AuthProvider } from "./context/AuthContext";
@@ -345,6 +346,14 @@ const router = createHashRouter([
                 element: (
                   <PermissionGuard requiredPermission="manage-categories">
                     <CategoriesListPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "units",
+                element: (
+                  <PermissionGuard requiredPermission="manage-categories">
+                    <UnitsPage />
                   </PermissionGuard>
                 ),
               },

@@ -17,6 +17,9 @@ import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import Select, { SelectChangeEvent } from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
+import Dialog from "@mui/material/Dialog";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
 
 // Lucide Icons (shadcn)
 import {
@@ -42,6 +45,7 @@ import exportService from "../services/exportService"; // Import export service
 import { ProductsTable } from "../components/products/ProductsTable"; // Use ProductsTable named export
 import ProductFormModal from "../components/products/ProductFormModal"; // Use ProductFormModal
 import ProductImportDialog from "../components/products/ProductImportDialog"; // Import dialog
+import UnitsPage from "../pages/UnitsPage"; // Import UnitsPage
 
 // Product type is now used directly from productService
 
@@ -64,6 +68,7 @@ const ProductsPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null); // Use Product type directly
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isUnitsDialogOpen, setIsUnitsDialogOpen] = useState(false);
 
   // Snackbar State
   const [snackbar, setSnackbar] = useState<{
@@ -503,6 +508,25 @@ const ProductsPage: React.FC = () => {
               </Tooltip>
               <Typography variant="caption">الفئات</Typography>
             </Box>
+
+            {/* Manage Units */}
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+              }}
+            >
+              <Tooltip title="إدارة الوحدات">
+                <IconButton
+                  onClick={() => setIsUnitsDialogOpen(true)}
+                  color="default"
+                >
+                  <Layers className="h-5 w-5" />
+                </IconButton>
+              </Tooltip>
+              <Typography variant="caption">الوحدات</Typography>
+            </Box>
           </Box>
         </Box>
         {/* Search and Filters */}
@@ -607,6 +631,18 @@ const ProductsPage: React.FC = () => {
           onClose={handleSnackbarClose}
           message={snackbar.message}
         />
+        {/* Units Management Dialog */}
+        <Dialog
+          open={isUnitsDialogOpen}
+          onClose={() => setIsUnitsDialogOpen(false)}
+          maxWidth="lg"
+          fullWidth
+        >
+          <DialogTitle>إدارة الوحدات</DialogTitle>
+          <DialogContent>
+            <UnitsPage />
+          </DialogContent>
+        </Dialog>
         {/* Add deleteConfirm key */}
       </Box>
     </>

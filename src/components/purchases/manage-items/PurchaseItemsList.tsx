@@ -1,5 +1,5 @@
 // src/components/purchases/manage-items/PurchaseItemsList.tsx
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useCallback, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -16,6 +16,7 @@ import {
   IconButton,
   CircularProgress,
   Backdrop,
+  Tooltip,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import {
@@ -24,10 +25,11 @@ import {
   FirstPage,
   LastPage,
 } from "@mui/icons-material";
+import { Plus } from "lucide-react";
 
 import PurchaseItemCard from "./PurchaseItemCard";
 import { PurchaseItem } from "@/services/purchaseService";
-import { ProductUnitsMap } from "./types";
+import { ProductUnitsMap, AddPurchaseItemData } from "./types";
 import { PaginatedResponse } from "@/services/clientService";
 
 interface PurchaseItemsListProps {
@@ -45,7 +47,12 @@ interface PurchaseItemsListProps {
   onPageChange: (newPage: number) => void;
   onPerPageChange: (newPerPage: number) => void;
   onSearchChange: (query: string) => void;
+  // Inline creation props
+  onInlineCreate?: (data: AddPurchaseItemData) => Promise<void>;
+  isCreating?: boolean;
 }
+
+import InlineCreatePurchaseItem from "./InlineCreatePurchaseItem";
 
 const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
   items,
@@ -61,7 +68,10 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
   onPageChange,
   onPerPageChange,
   onSearchChange,
+  onInlineCreate,
+  isCreating = false,
 }) => {
+  const [showInlineCreate, setShowInlineCreate] = useState(false);
   // Memoize pagination calculations to prevent recalculation on every render
   const paginationData = useMemo(() => {
     // Handle Laravel pagination structure: data, links (object), meta (object with pagination info)
@@ -132,9 +142,42 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
           alignItems="center"
           mb={2}
         >
-          <Typography variant="h6">
-            أصناف المشتريات ({paginationData.total})
-          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Typography variant="h6">
+              أصناف المشتريات ({paginationData.total})
+            </Typography>
+            {onInlineCreate && !isReadOnly && (
+              <Tooltip title="إضافة صنف سريع">
+                <IconButton
+                  size="small"
+                  onClick={() => setShowInlineCreate(!showInlineCreate)}
+                  color="primary"
+                  sx={{
+                    animation: "heartbeat 1.5s ease-in-out infinite",
+                    "@keyframes heartbeat": {
+                      "0%": {
+                        transform: "scale(1)",
+                      },
+                      "14%": {
+                        transform: "scale(1.2)",
+                      },
+                      "28%": {
+                        transform: "scale(1)",
+                      },
+                      "42%": {
+                        transform: "scale(1.2)",
+                      },
+                      "70%": {
+                        transform: "scale(1)",
+                      },
+                    },
+                  }}
+                >
+                  <Plus size={20} />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Box>
           <TextField
             size="small"
             placeholder="بحث باسم المنتج، الرمز، أو رقم الباتش..."
@@ -307,6 +350,18 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
             )}
           </Stack>
         </Stack>
+
+        {/* Inline Creation Row */}
+        {showInlineCreate && onInlineCreate && !isReadOnly && (
+          <InlineCreatePurchaseItem
+            onSave={async (data) => {
+              await onInlineCreate(data);
+              setShowInlineCreate(false);
+            }}
+            onCancel={() => setShowInlineCreate(false)}
+            isLoading={isCreating}
+          />
+        )}
 
         {items.length > 0 ? (
           <Stack spacing={2}>

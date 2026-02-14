@@ -21,7 +21,15 @@ import {
   MenuItem,
   FormControl,
 } from "@mui/material";
-import { AlertTriangle, Copy, Check, Plus, X, Save } from "lucide-react";
+import {
+  AlertTriangle,
+  Copy,
+  Check,
+  Plus,
+  X,
+  Save,
+  Sparkles,
+} from "lucide-react";
 
 // Types
 import { Category } from "@/services/CategoryService";
@@ -262,10 +270,37 @@ const InlineCreateRow: React.FC<{
     });
   };
 
+  // Set default units and category on mount
+  useEffect(() => {
+    const defaultStockingUnit = stockingUnits.find((u) => u.is_default);
+    const defaultSellableUnit = sellableUnits.find((u) => u.is_default);
+    const defaultCategory = categories.find((c) => c.is_default);
+
+    setFormData((prev) => ({
+      ...prev,
+      stocking_unit_id: defaultStockingUnit?.id || ("" as any),
+      sellable_unit_id: defaultSellableUnit?.id || ("" as any),
+      category_id: defaultCategory?.id || ("" as any),
+    }));
+  }, [stockingUnits, sellableUnits, categories]);
+
   const handleSave = () => {
     // Basic validation
     if (!formData.name) return; // Add better validation if needed
     onSave(formData);
+  };
+
+  const generateSKU = () => {
+    // Generate a random SKU: PRD-XXXXXX (6 random alphanumeric characters)
+    const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
+    handleChange("sku", `PRD-${randomStr}`);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSave();
+    }
   };
 
   return (
@@ -281,13 +316,21 @@ const InlineCreateRow: React.FC<{
         </IconButton>
       </TableCell>
       <TableCell align="center">
-        <TextField
-          size="small"
-          placeholder="SKU"
-          value={formData.sku || ""}
-          onChange={(e) => handleChange("sku", e.target.value)}
-          sx={{ minWidth: 80 }}
-        />
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+          <TextField
+            size="small"
+            placeholder="SKU"
+            value={formData.sku || ""}
+            onChange={(e) => handleChange("sku", e.target.value)}
+            onKeyDown={handleKeyDown}
+            sx={{ minWidth: 80 }}
+          />
+          <Tooltip title="Generate SKU">
+            <IconButton size="small" onClick={generateSKU} color="secondary">
+              <Sparkles size={16} />
+            </IconButton>
+          </Tooltip>
+        </Box>
       </TableCell>
       <TableCell align="center">
         <TextField
@@ -295,6 +338,7 @@ const InlineCreateRow: React.FC<{
           placeholder="Product Name"
           value={formData.name}
           onChange={(e) => handleChange("name", e.target.value)}
+          onKeyDown={handleKeyDown}
           required
           sx={{
             minWidth: 120,
@@ -309,6 +353,7 @@ const InlineCreateRow: React.FC<{
           placeholder="Scientific Name"
           value={formData.scientific_name || ""}
           onChange={(e) => handleChange("scientific_name", e.target.value)}
+          onKeyDown={handleKeyDown}
           sx={{
             minWidth: 100,
             width: `${Math.max(10, (formData.scientific_name || "").length + 2)}ch`,
@@ -537,6 +582,26 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                       size="small"
                       onClick={() => setIsCreating(true)}
                       color="primary"
+                      sx={{
+                        animation: "heartbeat 1.5s ease-in-out infinite",
+                        "@keyframes heartbeat": {
+                          "0%": {
+                            transform: "scale(1)",
+                          },
+                          "14%": {
+                            transform: "scale(1.2)",
+                          },
+                          "28%": {
+                            transform: "scale(1)",
+                          },
+                          "42%": {
+                            transform: "scale(1.2)",
+                          },
+                          "70%": {
+                            transform: "scale(1)",
+                          },
+                        },
+                      }}
                     >
                       <Plus size={16} />
                     </IconButton>

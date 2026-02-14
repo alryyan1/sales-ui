@@ -30,6 +30,7 @@ import {
   Edit,
   Trash2,
   Search,
+  Star,
 } from "lucide-react"; // AlertTriangle for delete conflict
 
 // Services and Types
@@ -56,14 +57,14 @@ const CategoriesListPage: React.FC = () => {
   // const [currentPage, setCurrentPage] = useState(1); // For pagination
   // Filters & Pagination
   const [searchTerm, setSearchTerm] = useState(
-    () => searchParams.get("search") || ""
+    () => searchParams.get("search") || "",
   );
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(
-    () => searchParams.get("search") || ""
+    () => searchParams.get("search") || "",
   );
   const currentPage = useMemo(
     () => Number(searchParams.get("page") || "1"),
-    [searchParams]
+    [searchParams],
   );
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   // Modal State
@@ -72,7 +73,7 @@ const CategoriesListPage: React.FC = () => {
   // Deletion State
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [categoryToDeleteId, setCategoryToDeleteId] = useState<number | null>(
-    null
+    null,
   );
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -104,7 +105,7 @@ const CategoriesListPage: React.FC = () => {
         9999,
         "",
         false,
-        true
+        true,
       ); // allFlat=true
       setAllCategoriesFlat(data as Category[]); // Cast
     } catch (err) {
@@ -206,6 +207,7 @@ const CategoriesListPage: React.FC = () => {
                   <TableRow>
                     <TableHead className="text-center">اسم القسم</TableHead>
                     <TableHead className="text-center">القسم الرئيسي</TableHead>
+                    <TableHead className="text-center">افتراضي</TableHead>
                     <TableHead className="text-center">
                       عدد المنتجات
                     </TableHead>{" "}
@@ -217,7 +219,7 @@ const CategoriesListPage: React.FC = () => {
                   {categoriesResponse.data.length === 0 && (
                     <TableRow>
                       <TableCell
-                        colSpan={4}
+                        colSpan={5}
                         className="text-center text-muted-foreground"
                       >
                         لا توجد نتائج
@@ -231,8 +233,17 @@ const CategoriesListPage: React.FC = () => {
                       </TableCell>
                       <TableCell className="text-center">
                         {allCategoriesFlat.find(
-                          (c) => c.id === category.parent_id
+                          (c) => c.id === category.parent_id,
                         )?.name || "---"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {category.is_default && (
+                          <Star
+                            className="h-4 w-4 inline"
+                            fill="gold"
+                            color="gold"
+                          />
+                        )}
                       </TableCell>
                       <TableCell className="text-center">
                         {category.products_count ?? 0}
@@ -247,7 +258,6 @@ const CategoriesListPage: React.FC = () => {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                      
                         </div>
                       </TableCell>
                     </TableRow>
