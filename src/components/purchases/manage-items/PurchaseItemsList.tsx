@@ -72,6 +72,37 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
   isCreating = false,
 }) => {
   const [showInlineCreate, setShowInlineCreate] = useState(false);
+
+  // Add keyboard shortcut for "+" key to toggle inline create
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Check if "+" key is pressed (handles both numpad and regular +)
+      if (
+        (e.key === "+" || e.key === "=") &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !e.metaKey
+      ) {
+        // Don't trigger if user is typing in an input field
+        const target = e.target as HTMLElement;
+        if (
+          target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable
+        ) {
+          return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation(); // Stop the event from bubbling up to prevent dialog from opening
+        setShowInlineCreate((prev) => !prev);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress, true); // Use capture phase
+    return () => window.removeEventListener("keydown", handleKeyPress, true);
+  }, []);
+
   // Memoize pagination calculations to prevent recalculation on every render
   const paginationData = useMemo(() => {
     // Handle Laravel pagination structure: data, links (object), meta (object with pagination info)

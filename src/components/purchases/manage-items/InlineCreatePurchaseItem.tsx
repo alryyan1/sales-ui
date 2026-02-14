@@ -1,5 +1,5 @@
 // src/components/purchases/manage-items/InlineCreatePurchaseItem.tsx
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   Box,
   TextField,
@@ -10,6 +10,9 @@ import {
   CircularProgress,
   Typography,
 } from "@mui/material";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { Save, X, Search } from "lucide-react";
 import { toast } from "sonner";
 
@@ -32,11 +35,25 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
   const [productInputValue, setProductInputValue] = useState("");
   const [productOptions, setProductOptions] = useState<Product[]>([]);
   const [productLoading, setProductLoading] = useState(false);
-  const [quantity, setQuantity] = useState<number>(1);
-  const [unitCost, setUnitCost] = useState<number>(0);
-  const [salePrice, setSalePrice] = useState<number>(0);
+  const [quantity, setQuantity] = useState<number>();
+  const [unitCost, setUnitCost] = useState<number>();
+  const [salePrice, setSalePrice] = useState<number>();
   const [batchNumber, setBatchNumber] = useState("");
-  const [expiryDate, setExpiryDate] = useState("");
+  // Default expiry date: 3 years from current date
+  const [expiryDate, setExpiryDate] = useState(() => {
+    const threeYearsFromNow = new Date();
+    threeYearsFromNow.setFullYear(threeYearsFromNow.getFullYear() + 3);
+    return threeYearsFromNow.toISOString().split("T")[0];
+  });
+
+  // Ref for quantity input to auto-focus after product selection
+  const quantityInputRef = useRef<HTMLInputElement>(null);
+  const unitCostInputRef = useRef<HTMLInputElement>(null);
+  const salePriceInputRef = useRef<HTMLInputElement>(null);
+  const batchNumberInputRef = useRef<HTMLInputElement>(null);
+  const expiryDateInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-adjust expiry date to last day of month whenever it changes
 
   // Fetch products based on search query (debounced)
   useEffect(() => {
@@ -72,28 +89,31 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
     setSelectedProduct(product);
     if (product) {
       setProductInputValue(product.name);
-      // Auto-populate cost and price from latest purchase
-      if (product.latest_cost_per_sellable_unit) {
-        const unitsPerStocking = product.units_per_stocking_unit || 1;
-        const costPerStocking =
-          Number(product.latest_cost_per_sellable_unit) * unitsPerStocking;
-        setUnitCost(costPerStocking);
-        setSalePrice(costPerStocking * 1.2); // 20% profit margin
-      }
+      // Auto-focus quantity field after product selection
+      setTimeout(() => {
+        quantityInputRef.current?.focus();
+        quantityInputRef.current?.select();
+      }, 100);
     } else {
       setProductInputValue("");
     }
   }, []);
 
-  // Handle save
-  const handleSave = useCallback(async () => {
+  // Handle save with return value to indicate success
+  const handleSave = useCallback(async (): Promise<boolean> => {
     if (!selectedProduct) {
       toast.error("خطأ", { description: "يرجى اختيار منتج أولاً" });
-      return;
+      return false;
     }
-    if (quantity <= 0 || unitCost < 0) {
-      toast.error("خطأ", { description: "الكمية أو التكلفة غير صالحة" });
-      return;
+    if (!quantity || quantity <= 0) {
+      toast.error("خطأ", { description: "يرجى إدخال كمية صحيحة" });
+      quantityInputRef.current?.focus();
+      return false;
+    }
+    if (!unitCost || unitCost < 0) {
+      toast.error("خطأ", { description: "يرجى إدخال تكلفة صحيحة" });
+      unitCostInputRef.current?.focus();
+      return false;
     }
 
     const data: AddPurchaseItemData = {
@@ -106,6 +126,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
     };
 
     await onSave(data);
+    return true;
   }, [
     selectedProduct,
     quantity,
@@ -116,12 +137,13 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
     onSave,
   ]);
 
-  // Handle Enter key
+  // Handle Enter key - try to save, or focus next field if validation fails
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
+    async (e: React.KeyboardEvent) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        handleSave();
+        const success = await handleSave();
+        // If save failed due to validation, focus is already handled in handleSave
       }
     },
     [handleSave],
@@ -185,16 +207,16 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
               placeholder="ابحث عن منتج أو الباركود..."
               autoFocus
               onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  // Try to find exact SKU match
+                if (e.key === "Enter" && !productLoading) {
+                  // If there's a selected option in the dropdown, let autocomplete handle it
+                  // Otherwise, try to find exact SKU match
                   const barcode = productInputValue.trim();
-                  if (barcode) {
+                  if (barcode && productOptions.length > 0) {
                     const match = productOptions.find(
                       (p) => p.sku != null && String(p.sku).trim() === barcode,
                     );
                     if (match) {
+                      e.preventDefault();
                       handleProductSelect(match);
                     }
                   }
@@ -250,9 +272,19 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
         size="small"
         type="number"
         placeholder="الكمية"
+        inputRef={quantityInputRef}
+        onFocus={(e) => {
+          e.target.select();
+        }}
         value={quantity}
         onChange={(e) => setQuantity(Number(e.target.value))}
-        onKeyDown={handleKeyDown}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            unitCostInputRef.current?.focus();
+            unitCostInputRef.current?.select();
+          }
+        }}
         inputProps={{ min: 1, step: 1 }}
         sx={{ width: 80 }}
       />
@@ -262,9 +294,19 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
         size="small"
         type="number"
         placeholder="التكلفة"
+        inputRef={unitCostInputRef}
+        onFocus={(e) => {
+          e.target.select();
+        }}
         value={unitCost}
         onChange={(e) => setUnitCost(Number(e.target.value))}
-        onKeyDown={handleKeyDown}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            salePriceInputRef.current?.focus();
+            salePriceInputRef.current?.select();
+          }
+        }}
         inputProps={{ min: 0, step: 0.01 }}
         sx={{ width: 100 }}
       />
@@ -274,6 +316,10 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
         size="small"
         type="number"
         placeholder="سعر البيع"
+        inputRef={salePriceInputRef}
+        onFocus={(e) => {
+          e.target.select();
+        }}
         value={salePrice}
         onChange={(e) => setSalePrice(Number(e.target.value))}
         onKeyDown={handleKeyDown}
@@ -285,23 +331,48 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
       <TextField
         size="small"
         placeholder="رقم الباتش"
+        inputRef={batchNumberInputRef}
         value={batchNumber}
         onChange={(e) => setBatchNumber(e.target.value)}
-        onKeyDown={handleKeyDown}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            // Focus expiry date picker - need to find the input inside DatePicker
+            const expiryInput = document.querySelector(
+              '[placeholder="تاريخ الانتهاء"]',
+            ) as HTMLInputElement;
+            expiryInput?.focus();
+          }
+        }}
         sx={{ width: 100 }}
       />
 
       {/* Expiry Date */}
-      <TextField
-        size="small"
-        type="date"
-        placeholder="تاريخ الانتهاء"
-        value={expiryDate}
-        onChange={(e) => setExpiryDate(e.target.value)}
-        onKeyDown={handleKeyDown}
-        sx={{ width: 140 }}
-        InputLabelProps={{ shrink: true }}
-      />
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <DatePicker
+          label="تاريخ الانتهاء"
+          value={expiryDate ? new Date(expiryDate) : null}
+          onChange={(newValue) => {
+            if (newValue) {
+              const formattedDate = newValue.toISOString().split("T")[0];
+              setExpiryDate(formattedDate);
+            } else {
+              setExpiryDate("");
+            }
+          }}
+          format="yyyy/MM/dd"
+          slots={{
+            openPickerButton: () => null,
+          }}
+          slotProps={{
+            textField: {
+              size: "small",
+              sx: { width: 140 },
+              onKeyDown: handleKeyDown,
+            },
+          }}
+        />
+      </LocalizationProvider>
     </Box>
   );
 };

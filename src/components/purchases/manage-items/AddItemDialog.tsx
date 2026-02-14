@@ -102,13 +102,13 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
       // Fetch a large number of products to act as a cache
       // 2000 limit should cover most small-medium inventories; adjust if needed
       const response = await apiClient.get<{ data: Product[] }>(
-        `/products/autocomplete?limit=2000&show_all_for_empty_search=true`
+        `/products/autocomplete?limit=2000&show_all_for_empty_search=true`,
       );
       const products = response.data.data ?? response.data;
 
       // Deduplicate products by ID to prevent key collisions
       const uniqueProducts = Array.from(
-        new Map(products.map((p) => [p.id, p])).values() // Ensure unique IDs
+        new Map(products.map((p) => [p.id, p])).values(), // Ensure unique IDs
       ) as Product[];
 
       // Update global cache
@@ -157,7 +157,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
         setUnitsPerStockingUnit(1);
       }
     },
-    [settings?.default_profit_rate]
+    [settings?.default_profit_rate],
   );
 
   // Handle unit cost change
@@ -171,10 +171,10 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
       const sellablePrice = costPerSellable * profitFactor;
       setSalePrice(roundToThreeDecimals(sellablePrice));
       setSalePriceStockingUnit(
-        roundToThreeDecimals(sellablePrice * unitsPerStocking)
+        roundToThreeDecimals(sellablePrice * unitsPerStocking),
       );
     },
-    [profitRate, unitsPerStockingUnit]
+    [profitRate, unitsPerStockingUnit],
   );
 
   // Handle autocomplete Enter key (Scanner support)
@@ -186,7 +186,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
         if (val) {
           // Prioritize SKU match
           const exactSkuMatch = allProducts.find(
-            (p) => p.sku && p.sku.toLowerCase() === val
+            (p) => p.sku && p.sku.toLowerCase() === val,
           );
 
           if (exactSkuMatch) {
@@ -199,7 +199,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
 
           // Then Name match
           const exactNameMatch = allProducts.find(
-            (p) => p.name.toLowerCase() === val
+            (p) => p.name.toLowerCase() === val,
           );
 
           if (exactNameMatch) {
@@ -211,7 +211,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
         }
       }
     },
-    [productInputValue, allProducts, handleProductSelect]
+    [productInputValue, allProducts, handleProductSelect],
   );
 
   // Handle units per stocking unit change
@@ -225,11 +225,11 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
         const sellablePrice = costPerSellable * profitFactor;
         setSalePrice(roundToThreeDecimals(sellablePrice));
         setSalePriceStockingUnit(
-          roundToThreeDecimals(sellablePrice * newUnits)
+          roundToThreeDecimals(sellablePrice * newUnits),
         );
       }
     },
-    [profitRate, unitCost]
+    [profitRate, unitCost],
   );
 
   // Handle profit rate change
@@ -243,10 +243,10 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
       const sellablePrice = costPerSellable * profitFactor;
       setSalePrice(roundToThreeDecimals(sellablePrice));
       setSalePriceStockingUnit(
-        roundToThreeDecimals(sellablePrice * unitsPerStocking)
+        roundToThreeDecimals(sellablePrice * unitsPerStocking),
       );
     },
-    [unitCost, unitsPerStockingUnit]
+    [unitCost, unitsPerStockingUnit],
   );
 
   // Handle add item
@@ -272,7 +272,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
           globalProductCache = globalProductCache.map((p) =>
             p.id === selectedProduct.id
               ? { ...p, units_per_stocking_unit: unitsPerStockingUnit }
-              : p
+              : p,
           );
         }
       }
@@ -317,7 +317,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
         handleAddItem();
       }
     },
-    [handleAddItem]
+    [handleAddItem],
   );
 
   // Fetch products once when dialog opens
@@ -442,7 +442,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
               value={selectedProduct}
               onChange={(_, newValue) =>
                 handleProductSelect(
-                  typeof newValue === "string" ? null : newValue
+                  typeof newValue === "string" ? null : newValue,
                 )
               }
               inputValue={productInputValue}
@@ -459,7 +459,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                 return options.filter(
                   (opt) =>
                     opt.name.toLowerCase().includes(input) ||
-                    (opt.sku && opt.sku.toLowerCase().includes(input))
+                    (opt.sku && opt.sku.toLowerCase().includes(input)),
                 );
               }}
               freeSolo
@@ -775,7 +775,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                       value={salePrice || ""}
                       onChange={(e) =>
                         setSalePrice(
-                          e.target.value ? Number(e.target.value) : undefined
+                          e.target.value ? Number(e.target.value) : undefined,
                         )
                       }
                       inputProps={{ min: 0, step: 0.001 }}
@@ -816,7 +816,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                       value={salePriceStockingUnit || ""}
                       onChange={(e) =>
                         setSalePriceStockingUnit(
-                          e.target.value ? Number(e.target.value) : undefined
+                          e.target.value ? Number(e.target.value) : undefined,
                         )
                       }
                       inputProps={{ min: 0, step: 0.001 }}
@@ -884,7 +884,26 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                     <TextField
                       type="date"
                       value={expiryDate}
-                      onChange={(e) => setExpiryDate(e.target.value)}
+                      onChange={(e) => {
+                        const newValue = e.target.value;
+                        if (newValue) {
+                          // Parse the selected date
+                          const date = new Date(newValue);
+                          // Get the last day of the selected month
+                          const lastDay = new Date(
+                            date.getFullYear(),
+                            date.getMonth() + 1,
+                            0,
+                          );
+                          // Format as YYYY-MM-DD
+                          const formattedDate = lastDay
+                            .toISOString()
+                            .split("T")[0];
+                          setExpiryDate(formattedDate);
+                        } else {
+                          setExpiryDate(newValue);
+                        }
+                      }}
                       size="small"
                       fullWidth
                       InputLabelProps={{ shrink: true }}

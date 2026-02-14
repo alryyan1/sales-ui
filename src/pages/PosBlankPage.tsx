@@ -26,6 +26,7 @@ import {
   Popover,
   Divider,
   Stack,
+  Badge,
 } from "@mui/material";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import AddIcon from "@mui/icons-material/Add";
@@ -39,6 +40,8 @@ import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import LocalOfferIcon from "@mui/icons-material/LocalOffer";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import PersonIcon from "@mui/icons-material/Person";
+import WarningIcon from "@mui/icons-material/Warning";
+import ErrorIcon from "@mui/icons-material/Error";
 import apiClient from "@/lib/axios";
 import { toast } from "sonner";
 import saleService, {
@@ -55,6 +58,7 @@ import expenseService from "@/services/expenseService";
 import { PdfViewerDialog } from "@/components/common/PdfViewerDialog";
 import SalesReturnDialog from "@/components/sales/SalesReturnDialog";
 import { useAuth } from "@/context/AuthContext";
+import ExpiryProductsDialog from "@/components/pos/ExpiryProductsDialog";
 
 interface Shift {
   id: number;
@@ -111,6 +115,16 @@ const PosBlankPage: React.FC = () => {
   );
   const [discountValue, setDiscountValue] = useState("");
   const [discountLoading, setDiscountLoading] = useState(false);
+
+  // Expiry alerts state
+  const [nearExpiringCount, setNearExpiringCount] = useState(0);
+  const [expiredCount, setExpiredCount] = useState(0);
+  const [expiryDialogOpen, setExpiryDialogOpen] = useState(false);
+  const [expiryDialogType, setExpiryDialogType] = useState<
+    "near_expiring" | "expired" | null
+  >(null);
+  const [expiryItems, setExpiryItems] = useState<any[]>([]);
+  const [expiryItemsLoading, setExpiryItemsLoading] = useState(false);
 
   // Pre-fill add-payment amount with the sale's due (remainder) when selection changes
   useEffect(() => {
@@ -615,6 +629,82 @@ const PosBlankPage: React.FC = () => {
     fetchShiftExpenseTotals();
   }, [fetchShiftExpenseTotals]);
 
+  // Fetch expiry counts for badges
+  const fetchExpiryCounts = useCallback(async () => {
+    try {
+      const res = await apiClient.get("/reports/expiry-counts");
+      setNearExpiringCount(res.data.near_expiring_count || 0);
+      setExpiredCount(res.data.expired_count || 0);
+    } catch (err) {
+      console.error("Failed to fetch expiry counts:", err);
+    }
+  }, []);
+
+  // Fetch expiry products for dialog
+  const fetchExpiryProducts = useCallback(
+    async (type: "near_expiring" | "expired") => {
+      try {
+        setExpiryItemsLoading(true);
+        const endpoint =
+          type === "near_expiring"
+            ? "/reports/near-expiry"
+            : "/reports/expired-products";
+        const res = await apiClient.get(endpoint, {
+          params: { per_page: 100 },
+        });
+        setExpiryItems(res.data.data || []);
+      } catch (err) {
+        console.error("Failed to fetch expiry products:", err);
+        toast.error("فشل تحميل المنتجات");
+        setExpiryItems([]);
+      } finally {
+        setExpiryItemsLoading(false);
+      }
+    },
+    [],
+  );
+
+  // Load expiry counts on mount and after sales change
+  useEffect(() => {
+    fetchExpiryCounts();
+  }, [fetchExpiryCounts, sales.length]);
+
+  // Handle opening expiry dialog
+  const handleOpenExpiryDialog = useCallback(
+    (type: "near_expiring" | "expired") => {
+      setExpiryDialogType(type);
+      setExpiryDialogOpen(true);
+      fetchExpiryProducts(type);
+    },
+    [fetchExpiryProducts],
+  );
+
+  // Handle closing expiry dialog
+  const handleCloseExpiryDialog = useCallback(() => {
+    setExpiryDialogOpen(false);
+    setExpiryDialogType(null);
+    setExpiryItems([]);
+  }, []);
+
+  // Handle adding product from expiry dialog to cart
+  const handleAddExpiryProductToCart = useCallback(
+    async (productId: number, productName: string) => {
+      if (!selectedSale) {
+        toast.error("الرجاء اختيار عملية بيع أولاً");
+        return;
+      }
+      try {
+        const product = await productService.getProduct(productId);
+        await handleAddProductToSale(product);
+        toast.success(`تمت إضافة ${productName} إلى السلة`);
+      } catch (err) {
+        console.error("Failed to add product:", err);
+        toast.error("فشل إضافة المنتج");
+      }
+    },
+    [selectedSale, handleAddProductToSale],
+  );
+
   const handleCreateNewSale = useCallback(async () => {
     try {
       setCreateSaleLoading(true);
@@ -1076,6 +1166,36 @@ const PosBlankPage: React.FC = () => {
           >
             إرجاع مبيعات
           </Button>
+
+          {/* Near Expiring Products Button */}
+          <IconButton
+            color="warning"
+            size="small"
+            onClick={() => handleOpenExpiryDialog("near_expiring")}
+            sx={{
+              bgcolor: "warning.lighter",
+              "&:hover": { bgcolor: "warning.light" },
+            }}
+          >
+            <Badge badgeContent={nearExpiringCount} color="warning">
+              <WarningIcon />
+            </Badge>
+          </IconButton>
+
+          {/* Expired Products Button */}
+          <IconButton
+            color="error"
+            size="small"
+            onClick={() => handleOpenExpiryDialog("expired")}
+            sx={{
+              bgcolor: "error.lighter",
+              "&:hover": { bgcolor: "error.light" },
+            }}
+          >
+            <Badge badgeContent={expiredCount} color="error">
+              <ErrorIcon />
+            </Badge>
+          </IconButton>
 
           {/* Product search – in header */}
           <Box sx={{ flex: 1, minWidth: 160, maxWidth: 380 }}>
@@ -1788,6 +1908,16 @@ const PosBlankPage: React.FC = () => {
           fetchShiftExpenseTotals();
         }}
         shiftId={shift?.id ?? null}
+      />
+
+      {/* Expiry Products Dialog */}
+      <ExpiryProductsDialog
+        open={expiryDialogOpen}
+        onClose={handleCloseExpiryDialog}
+        type={expiryDialogType}
+        items={expiryItems}
+        loading={expiryItemsLoading}
+        onAddToCart={handleAddExpiryProductToCart}
       />
     </Box>
   );

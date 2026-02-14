@@ -1,8 +1,8 @@
 // src/components/purchases/InstantTextField.tsx
-import React, { useEffect, useState } from 'react';
-import { TextField } from '@mui/material';
+import React, { useEffect, useState } from "react";
+import { TextField } from "@mui/material";
 
-type InputType = 'text' | 'number' | 'date';
+type InputType = "text" | "number" | "date";
 
 interface InstantTextFieldProps {
   value: string | number;
@@ -14,7 +14,7 @@ interface InstantTextFieldProps {
   min?: number | string;
   max?: number | string;
   step?: number;
-  size?: 'small' | 'medium';
+  size?: "small" | "medium";
   error?: boolean;
   helperText?: string;
 }
@@ -22,52 +22,65 @@ interface InstantTextFieldProps {
 const InstantTextField: React.FC<InstantTextFieldProps> = ({
   value,
   onChangeValue,
-  type = 'text',
+  type = "text",
   disabled = false,
   placeholder,
   label,
   min,
   max,
   step,
-  size = 'small',
+  size = "small",
   error,
   helperText,
 }) => {
   // Format number to remove unnecessary decimal places for integers
-  const formatNumberValue = React.useCallback((val: string | number): string => {
-    if (type === 'number' && val !== '' && val !== null && val !== undefined) {
-      // Handle string values that might have trailing zeros (e.g., "5.00", "5.0")
-      if (typeof val === 'string' && val.includes('.')) {
-        // Remove trailing zeros and decimal point if all zeros
-        const cleaned = val.replace(/\.?0+$/, '');
-        const num = Number(cleaned);
-        if (!isNaN(num)) {
-          // If it's an integer, return without decimal point
-          if (Number.isInteger(num)) {
-            return num.toString();
+  const formatNumberValue = React.useCallback(
+    (val: string | number): string => {
+      if (
+        type === "number" &&
+        val !== "" &&
+        val !== null &&
+        val !== undefined
+      ) {
+        // Handle string values that might have trailing zeros (e.g., "5.00", "5.0")
+        if (typeof val === "string" && val.includes(".")) {
+          // Remove trailing zeros and decimal point if all zeros
+          const cleaned = val.replace(/\.?0+$/, "");
+          const num = Number(cleaned);
+          if (!isNaN(num)) {
+            // If it's an integer, return without decimal point
+            if (Number.isInteger(num)) {
+              return num.toString();
+            }
+            return cleaned;
           }
-          return cleaned;
         }
-      }
-      
-      const num = Number(val);
-      if (!isNaN(num)) {
-        // If it's an integer (no meaningful decimal part), return without decimals
-        // Check if the number is effectively an integer (e.g., 5.0, 5.00, etc.)
-        if (Number.isInteger(num) || Math.abs(num - Math.round(num)) < Number.EPSILON) {
-          return Math.round(num).toString();
-        }
-        // Otherwise, return the number as string and remove trailing zeros
-        // This handles cases like 5.50 -> 5.5, but keeps 5.5 as 5.5
-        const str = num.toString();
-        // Remove trailing zeros after decimal point
-        return str.includes('.') ? str.replace(/\.?0+$/, '') : str;
-      }
-    }
-    return val?.toString?.() ?? '';
-  }, [type]);
 
-  const [inputValue, setInputValue] = useState<string>(() => formatNumberValue(value));
+        const num = Number(val);
+        if (!isNaN(num)) {
+          // If it's an integer (no meaningful decimal part), return without decimals
+          // Check if the number is effectively an integer (e.g., 5.0, 5.00, etc.)
+          if (
+            Number.isInteger(num) ||
+            Math.abs(num - Math.round(num)) < Number.EPSILON
+          ) {
+            return Math.round(num).toString();
+          }
+          // Otherwise, return the number as string and remove trailing zeros
+          // This handles cases like 5.50 -> 5.5, but keeps 5.5 as 5.5
+          const str = num.toString();
+          // Remove trailing zeros after decimal point
+          return str.includes(".") ? str.replace(/\.?0+$/, "") : str;
+        }
+      }
+      return val?.toString?.() ?? "";
+    },
+    [type],
+  );
+
+  const [inputValue, setInputValue] = useState<string>(() =>
+    formatNumberValue(value),
+  );
 
   useEffect(() => {
     setInputValue(formatNumberValue(value));
@@ -75,10 +88,21 @@ const InstantTextField: React.FC<InstantTextFieldProps> = ({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
+
+    // For date type, automatically set to last day of month
+    if (type === "date" && raw) {
+      const date = new Date(raw);
+      const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+      const formattedDate = lastDay.toISOString().split("T")[0];
+      setInputValue(formattedDate);
+      onChangeValue(formattedDate);
+      return;
+    }
+
     setInputValue(raw);
-    if (type === 'number') {
-      const parsed = raw === '' ? '' : Number(raw);
-      onChangeValue(parsed as number | '');
+    if (type === "number") {
+      const parsed = raw === "" ? "" : Number(raw);
+      onChangeValue(parsed as number | "");
     } else {
       onChangeValue(raw);
     }
@@ -105,9 +129,9 @@ const InstantTextField: React.FC<InstantTextFieldProps> = ({
         inputProps: { min, max, step },
       }}
       sx={{
-        '& .MuiInputBase-input': {
-          padding: '8px 12px',
-          fontSize: '0.875rem',
+        "& .MuiInputBase-input": {
+          padding: "8px 12px",
+          fontSize: "0.875rem",
         },
       }}
     />
