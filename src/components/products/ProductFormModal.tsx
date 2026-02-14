@@ -17,6 +17,14 @@ import {
   Autocomplete,
   Paper,
   IconButton,
+  Tabs,
+  Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from "@mui/material";
 import {
   Loader2,
@@ -39,7 +47,9 @@ import { generateRandomSKU } from "@/lib/utils";
 import CategoryFormModal from "@/components/admin/users/categories/CategoryFormModal";
 import UnitFormModal from "@/components/admin/users/units/UnitFormModal";
 import { ProductImage } from "./ProductImage";
+
 import apiClient from "@/lib/axios";
+import { formatNumber, formatCurrency } from "@/constants";
 
 // --- Component Props & Types ---
 type ProductFormValues = {
@@ -87,6 +97,12 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [isStockingUnitModalOpen, setIsStockingUnitModalOpen] = useState(false);
   const [isSellableUnitModalOpen, setIsSellableUnitModalOpen] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+
+  // --- History Tab State ---
+  const [activeTab, setActiveTab] = useState(0);
+  const [historyTab, setHistoryTab] = useState(0);
+  const [historyData, setHistoryData] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // --- React Hook Form Setup ---
   const form = useForm<ProductFormValues>({
@@ -185,6 +201,48 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     [form],
   );
 
+  // --- Fetch Product History ---
+  const fetchHistory = useCallback(
+    async (productId: number, type: "purchases" | "sales", page: number) => {
+      setHistoryLoading(true);
+      try {
+        const res =
+          type === "purchases"
+            ? await productService.getPurchaseHistory(productId, page)
+            : await productService.getSalesHistory(productId, page);
+        setHistoryData(res.data);
+      } catch (err) {
+        console.error(err);
+        toast.error("فشل تحميل السجل");
+      } finally {
+        setHistoryLoading(false);
+      }
+    },
+    [],
+  );
+
+  // Load history when tab becomes active
+  useEffect(() => {
+    if (isEditMode && productToEdit && activeTab === 1) {
+      fetchHistory(
+        productToEdit.id,
+        historyTab === 0 ? "purchases" : "sales",
+        1,
+      );
+    }
+  }, [activeTab, historyTab, isEditMode, productToEdit, fetchHistory]);
+
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
+  };
+
+  const handleHistoryTypeChange = (
+    _event: React.SyntheticEvent,
+    newValue: number,
+  ) => {
+    setHistoryTab(newValue);
+  };
+
   // --- Effect to Populate/Reset Form and Fetch Categories ---
   useEffect(() => {
     if (isOpen) {
@@ -223,6 +281,10 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           stock_alert_level: 10,
         });
       }
+      // Reset tabs when opening
+      setActiveTab(0);
+      setHistoryTab(0);
+      setHistoryData([]);
     }
   }, [
     isOpen,
@@ -343,608 +405,744 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           overflowY: "auto",
         }}
       >
-        <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
-          {/* General Server Error Alert */}
-          {serverError && !isSubmitting && (
-            <Alert
-              severity="error"
+        {isEditMode && (
+          <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+            <Tabs
+              value={activeTab}
+              onChange={handleTabChange}
+              textColor="primary"
+              indicatorColor="primary"
+            >
+              <Tab label="تفاصيل المنتج" />
+              <Tab label="سجل الحركات" />
+            </Tabs>
+          </Box>
+        )}
+
+        {/* Product Details Tab (Always visible in create mode, or active in edit mode) */}
+        {(!isEditMode || activeTab === 0) && (
+          <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
+            {/* General Server Error Alert */}
+            {serverError && !isSubmitting && (
+              <Alert
+                severity="error"
+                sx={{
+                  mb: 3,
+                  borderRadius: 2,
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle sx={{ fontWeight: 600 }}>خطأ</AlertTitle>
+                </Box>
+                {serverError}
+              </Alert>
+            )}
+
+            {/* --- Basic Product Information Section --- */}
+            <Paper
+              elevation={0}
               sx={{
+                p: 3,
                 mb: 3,
+                bgcolor: "background.paper",
+                border: 1,
+                borderColor: "divider",
                 borderRadius: 2,
               }}
             >
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle sx={{ fontWeight: 600 }}>خطأ</AlertTitle>
-              </Box>
-              {serverError}
-            </Alert>
-          )}
+              <Typography
+                variant="subtitle1"
+                fontWeight={600}
+                sx={{ mb: 2.5, color: "text.primary" }}
+              >
+                معلومات المنتج الأساسية
+              </Typography>
 
-          {/* --- Basic Product Information Section --- */}
-          <Paper
-            elevation={0}
-            sx={{
-              p: 3,
-              mb: 3,
-              bgcolor: "background.paper",
-              border: 1,
-              borderColor: "divider",
-              borderRadius: 2,
-            }}
-          >
-            <Typography
-              variant="subtitle1"
-              fontWeight={600}
-              sx={{ mb: 2.5, color: "text.primary" }}
-            >
-              معلومات المنتج الأساسية
-            </Typography>
-
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-                gap: 2.5,
-              }}
-            >
-              {/* Name Field */}
-              <Controller
-                control={control}
-                name="name"
-                rules={{
-                  required: "اسم المنتج مطلوب",
-                  minLength: {
-                    value: 2,
-                    message: "اسم المنتج يجب أن يكون على الأقل حرفين",
-                  },
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                  gap: 2.5,
                 }}
-                render={({ field, fieldState }) => (
-                  <TextField
-                    {...field}
-                    label="اسم المنتج"
-                    placeholder="اكتب اسم المنتج"
-                    fullWidth
-                    size="small"
-                    disabled={isSubmitting}
-                    error={!!fieldState.error}
-                    helperText={fieldState.error?.message}
-                    onChange={(e) => {
-                      field.onChange(e);
-                      // Real-time copy to scientific_name
-                      setValue("scientific_name", e.target.value, {
-                        shouldValidate: true,
-                        shouldDirty: true,
-                      });
-                    }}
-                  />
-                )}
-              />
-
-              {/* Scientific Name Field */}
-              <Controller
-                control={control}
-                name="scientific_name"
-                render={({ field, fieldState }) => (
-                  <TextField
-                    {...field}
-                    label="الاسم العلمي"
-                    placeholder="(اختياري) الاسم العلمي للمنتج"
-                    fullWidth
-                    size="small"
-                    disabled={isSubmitting}
-                    error={!!fieldState.error}
-                    helperText={fieldState.error?.message}
-                  />
-                )}
-              />
-
-              {/* SKU Field (locked when editing) */}
-              <Controller
-                control={control}
-                name="sku"
-                render={({ field, fieldState }) => (
-                  <Box
-                    sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}
-                  >
+              >
+                {/* Name Field */}
+                <Controller
+                  control={control}
+                  name="name"
+                  rules={{
+                    required: "اسم المنتج مطلوب",
+                    minLength: {
+                      value: 2,
+                      message: "اسم المنتج يجب أن يكون على الأقل حرفين",
+                    },
+                  }}
+                  render={({ field, fieldState }) => (
                     <TextField
                       {...field}
-                      value={field.value ?? ""}
-                      label="الرمز (SKU)"
-                      placeholder="(اختياري) رمز المنتج في النظام"
+                      label="اسم المنتج"
+                      placeholder="اكتب اسم المنتج"
                       fullWidth
                       size="small"
-                      disabled={isSubmitting} // Enabled editing in edit mode
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                        }
+                      disabled={isSubmitting}
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        // Real-time copy to scientific_name
+                        setValue("scientific_name", e.target.value, {
+                          shouldValidate: true,
+                          shouldDirty: true,
+                        });
                       }}
+                    />
+                  )}
+                />
+
+                {/* Scientific Name Field */}
+                <Controller
+                  control={control}
+                  name="scientific_name"
+                  render={({ field, fieldState }) => (
+                    <TextField
+                      {...field}
+                      label="الاسم العلمي"
+                      placeholder="(اختياري) الاسم العلمي للمنتج"
+                      fullWidth
+                      size="small"
+                      disabled={isSubmitting}
                       error={!!fieldState.error}
                       helperText={fieldState.error?.message}
                     />
-                    <Button
-                      type="button"
-                      variant="outlined"
-                      onClick={() => {
-                        const randomSKU = generateRandomSKU("PROD", 6);
-                        field.onChange(randomSKU);
-                      }}
-                      disabled={isSubmitting} // Enabled generating new SKU in edit mode
-                      sx={{ minWidth: 0, px: 1.5 }}
+                  )}
+                />
+
+                {/* SKU Field (locked when editing) */}
+                <Controller
+                  control={control}
+                  name="sku"
+                  render={({ field, fieldState }) => (
+                    <Box
+                      sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}
                     >
-                      <RefreshCw className="h-4 w-4" />
-                    </Button>
-                  </Box>
-                )}
-              />
+                      <TextField
+                        {...field}
+                        value={field.value ?? ""}
+                        label="الرمز (SKU)"
+                        placeholder="(اختياري) رمز المنتج في النظام"
+                        fullWidth
+                        size="small"
+                        disabled={isSubmitting} // Enabled editing in edit mode
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                          }
+                        }}
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                      />
+                      <Button
+                        type="button"
+                        variant="outlined"
+                        onClick={() => {
+                          const randomSKU = generateRandomSKU("PROD", 6);
+                          field.onChange(randomSKU);
+                        }}
+                        disabled={isSubmitting} // Enabled generating new SKU in edit mode
+                        sx={{ minWidth: 0, px: 1.5 }}
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                      </Button>
+                    </Box>
+                  )}
+                />
 
-              {/* Image URL Field */}
-              <Controller
-                control={control}
-                name="image_url"
-                render={({ field, fieldState }) => (
-                  <Box>
-                    <TextField
-                      {...field}
-                      value={field.value ?? ""}
-                      label="رابط الصورة (URL)"
-                      placeholder="(اختياري) رابط صورة المنتج أو ارفع ملف"
-                      fullWidth
-                      size="small"
-                      disabled={isSubmitting || uploadingImage}
-                      error={!!fieldState.error}
-                      helperText={
-                        fieldState.error?.message ||
-                        "يمكنك إدخال رابط URL أو رفع ملف صورة"
-                      }
-                      InputProps={{
-                        endAdornment: (
-                          <Box sx={{ display: "flex", gap: 0.5 }}>
-                            <input
-                              accept="image/*"
-                              style={{ display: "none" }}
-                              id={`image-upload-${productToEdit?.id || "new"}`}
-                              type="file"
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0];
-                                if (!file) return;
+                {/* Image URL Field */}
+                <Controller
+                  control={control}
+                  name="image_url"
+                  render={({ field, fieldState }) => (
+                    <Box>
+                      <TextField
+                        {...field}
+                        value={field.value ?? ""}
+                        label="رابط الصورة (URL)"
+                        placeholder="(اختياري) رابط صورة المنتج أو ارفع ملف"
+                        fullWidth
+                        size="small"
+                        disabled={isSubmitting || uploadingImage}
+                        error={!!fieldState.error}
+                        helperText={
+                          fieldState.error?.message ||
+                          "يمكنك إدخال رابط URL أو رفع ملف صورة"
+                        }
+                        InputProps={{
+                          endAdornment: (
+                            <Box sx={{ display: "flex", gap: 0.5 }}>
+                              <input
+                                accept="image/*"
+                                style={{ display: "none" }}
+                                id={`image-upload-${productToEdit?.id || "new"}`}
+                                type="file"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
 
-                                if (file.size > 2 * 1024 * 1024) {
-                                  toast.error("حجم الملف كبير جداً", {
-                                    description:
-                                      "الحد الأقصى لحجم الصورة هو 2MB",
-                                  });
-                                  return;
-                                }
-
-                                setUploadingImage(true);
-                                try {
-                                  const formData = new FormData();
-                                  formData.append("image", file);
-
-                                  let productId = productToEdit?.id;
-                                  if (!productId) {
-                                    toast.error(
-                                      "يرجى حفظ المنتج أولاً ثم رفع الصورة",
-                                    );
-                                    setUploadingImage(false);
+                                  if (file.size > 2 * 1024 * 1024) {
+                                    toast.error("حجم الملف كبير جداً", {
+                                      description:
+                                        "الحد الأقصى لحجم الصورة هو 2MB",
+                                    });
                                     return;
                                   }
 
-                                  const response = await apiClient.post(
-                                    `/products/${productId}/image`,
-                                    formData,
-                                    {
-                                      headers: {
-                                        "Content-Type": "multipart/form-data",
+                                  setUploadingImage(true);
+                                  try {
+                                    const formData = new FormData();
+                                    formData.append("image", file);
+
+                                    let productId = productToEdit?.id;
+                                    if (!productId) {
+                                      toast.error(
+                                        "يرجى حفظ المنتج أولاً ثم رفع الصورة",
+                                      );
+                                      setUploadingImage(false);
+                                      return;
+                                    }
+
+                                    const response = await apiClient.post(
+                                      `/products/${productId}/image`,
+                                      formData,
+                                      {
+                                        headers: {
+                                          "Content-Type": "multipart/form-data",
+                                        },
                                       },
-                                    },
-                                  );
-
-                                  if (response.data?.product?.image_url) {
-                                    field.onChange(
-                                      response.data.product.image_url,
                                     );
-                                    toast.success("تم رفع الصورة بنجاح");
+
+                                    if (response.data?.product?.image_url) {
+                                      field.onChange(
+                                        response.data.product.image_url,
+                                      );
+                                      toast.success("تم رفع الصورة بنجاح");
+                                    }
+                                  } catch (error: any) {
+                                    console.error(
+                                      "Error uploading image:",
+                                      error,
+                                    );
+                                    toast.error("فشل رفع الصورة", {
+                                      description:
+                                        error?.response?.data?.message ||
+                                        "حدث خطأ غير متوقع",
+                                    });
+                                  } finally {
+                                    setUploadingImage(false);
                                   }
-                                } catch (error: any) {
-                                  console.error(
-                                    "Error uploading image:",
-                                    error,
-                                  );
-                                  toast.error("فشل رفع الصورة", {
-                                    description:
-                                      error?.response?.data?.message ||
-                                      "حدث خطأ غير متوقع",
-                                  });
-                                } finally {
-                                  setUploadingImage(false);
-                                }
-                              }}
-                            />
-                            <label
-                              htmlFor={`image-upload-${
-                                productToEdit?.id || "new"
-                              }`}
-                            >
-                              <Button
-                                component="span"
-                                variant="outlined"
-                                size="small"
-                                disabled={
-                                  isSubmitting ||
-                                  uploadingImage ||
-                                  !productToEdit
-                                }
-                                startIcon={
-                                  uploadingImage ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Upload className="h-4 w-4" />
-                                  )
-                                }
-                                sx={{ minWidth: "auto", px: 1.5 }}
+                                }}
+                              />
+                              <label
+                                htmlFor={`image-upload-${
+                                  productToEdit?.id || "new"
+                                }`}
                               >
-                                {uploadingImage ? "جاري الرفع..." : "رفع"}
-                              </Button>
-                            </label>
-                            {field.value && (
-                              <IconButton
-                                size="small"
-                                onClick={() => field.onChange("")}
-                                disabled={isSubmitting}
-                                sx={{ ml: 0.5 }}
-                              >
-                                <X className="h-4 w-4" />
-                              </IconButton>
-                            )}
-                          </Box>
-                        ),
-                      }}
-                    />
-                    {field.value && (
-                      <Box
-                        sx={{
-                          mt: 2,
-                          display: "flex",
-                          justifyContent: "center",
+                                <Button
+                                  component="span"
+                                  variant="outlined"
+                                  size="small"
+                                  disabled={
+                                    isSubmitting ||
+                                    uploadingImage ||
+                                    !productToEdit
+                                  }
+                                  startIcon={
+                                    uploadingImage ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Upload className="h-4 w-4" />
+                                    )
+                                  }
+                                  sx={{ minWidth: "auto", px: 1.5 }}
+                                >
+                                  {uploadingImage ? "جاري الرفع..." : "رفع"}
+                                </Button>
+                              </label>
+                              {field.value && (
+                                <IconButton
+                                  size="small"
+                                  onClick={() => field.onChange("")}
+                                  disabled={isSubmitting}
+                                  sx={{ ml: 0.5 }}
+                                >
+                                  <X className="h-4 w-4" />
+                                </IconButton>
+                              )}
+                            </Box>
+                          ),
                         }}
+                      />
+                      {field.value && (
+                        <Box
+                          sx={{
+                            mt: 2,
+                            display: "flex",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <ProductImage
+                            imageUrl={field.value}
+                            productName={form.watch("name") || "Product"}
+                            size={120}
+                            variant="rounded"
+                          />
+                        </Box>
+                      )}
+                    </Box>
+                  )}
+                />
+
+                {/* Category Autocomplete */}
+                <Controller
+                  control={control}
+                  name="category_id"
+                  render={({ field, fieldState }) => (
+                    <Box
+                      sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}
+                    >
+                      <Autocomplete
+                        fullWidth
+                        size="small"
+                        options={categories}
+                        loading={loadingCategories}
+                        getOptionLabel={(option) => option.name || ""}
+                        isOptionEqualToValue={(option, value) =>
+                          option.id === value.id
+                        }
+                        value={
+                          categories.find(
+                            (cat) => String(cat.id) === field.value,
+                          ) || null
+                        }
+                        onChange={(_, newValue) =>
+                          field.onChange(newValue ? String(newValue.id) : "")
+                        }
+                        disabled={isSubmitting || loadingCategories}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="الفئة"
+                            placeholder={
+                              loadingCategories
+                                ? "جاري تحميل الفئات..."
+                                : "اختر الفئة"
+                            }
+                            error={!!fieldState.error}
+                            helperText={fieldState.error?.message}
+                          />
+                        )}
+                        noOptionsText={
+                          loadingCategories
+                            ? "جاري تحميل الفئات..."
+                            : "لا توجد فئات متاحة"
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="outlined"
+                        onClick={() => setIsCategoryModalOpen(true)}
+                        disabled={isSubmitting}
+                        sx={{ minWidth: 40, height: 40 }}
                       >
-                        <ProductImage
-                          imageUrl={field.value}
-                          productName={form.watch("name") || "Product"}
-                          size={120}
-                          variant="rounded"
-                        />
-                      </Box>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </Box>
+                  )}
+                />
+              </Box>
+            </Paper>
+
+            {/* --- Units & Inventory Section --- */}
+            <Paper
+              elevation={0}
+              sx={{
+                p: 3,
+                mb: 3,
+                bgcolor: "background.paper",
+                border: 1,
+                borderColor: "divider",
+                borderRadius: 2,
+              }}
+            >
+              <Typography
+                variant="subtitle1"
+                fontWeight={600}
+                sx={{ mb: 2.5, color: "text.primary" }}
+              >
+                الوحدات والمخزون
+              </Typography>
+
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                  gap: 2.5,
+                  mb: 2,
+                }}
+              >
+                {/* Stocking Unit Autocomplete */}
+                <Controller
+                  control={control}
+                  name="stocking_unit_id"
+                  render={({ field, fieldState }) => (
+                    <Box
+                      sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}
+                    >
+                      <Autocomplete
+                        fullWidth
+                        size="small"
+                        options={stockingUnits}
+                        loading={loadingUnits}
+                        getOptionLabel={(option) => option.name || ""}
+                        isOptionEqualToValue={(option, value) =>
+                          option.id === value.id
+                        }
+                        value={
+                          stockingUnits.find(
+                            (unit) => String(unit.id) === field.value,
+                          ) || null
+                        }
+                        onChange={(_, newValue) =>
+                          field.onChange(newValue ? String(newValue.id) : "")
+                        }
+                        disabled={isSubmitting || loadingUnits}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="وحدة التخزين"
+                            placeholder={
+                              loadingUnits
+                                ? "جاري تحميل الوحدات..."
+                                : "اختر وحدة التخزين"
+                            }
+                            error={!!fieldState.error}
+                            helperText={fieldState.error?.message}
+                          />
+                        )}
+                        noOptionsText={
+                          loadingUnits
+                            ? "جاري تحميل الوحدات..."
+                            : "لا توجد وحدات تخزين متاحة"
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="outlined"
+                        onClick={() => setIsStockingUnitModalOpen(true)}
+                        disabled={isSubmitting}
+                        sx={{ minWidth: 40, height: 40 }}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </Box>
+                  )}
+                />
+
+                {/* Sellable Unit Autocomplete */}
+                <Controller
+                  control={control}
+                  name="sellable_unit_id"
+                  render={({ field, fieldState }) => (
+                    <Box
+                      sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}
+                    >
+                      <Autocomplete
+                        fullWidth
+                        size="small"
+                        options={sellableUnits}
+                        loading={loadingUnits}
+                        getOptionLabel={(option) => option.name || ""}
+                        isOptionEqualToValue={(option, value) =>
+                          option.id === value.id
+                        }
+                        value={
+                          sellableUnits.find(
+                            (unit) => String(unit.id) === field.value,
+                          ) || null
+                        }
+                        onChange={(_, newValue) =>
+                          field.onChange(newValue ? String(newValue.id) : "")
+                        }
+                        disabled={isSubmitting || loadingUnits}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="وحدة البيع"
+                            placeholder={
+                              loadingUnits
+                                ? "جاري تحميل الوحدات..."
+                                : "اختر وحدة البيع"
+                            }
+                            error={!!fieldState.error}
+                            helperText={fieldState.error?.message}
+                          />
+                        )}
+                        noOptionsText={
+                          loadingUnits
+                            ? "جاري تحميل الوحدات..."
+                            : "لا توجد وحدات بيع متاحة"
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="outlined"
+                        onClick={() => setIsSellableUnitModalOpen(true)}
+                        disabled={isSubmitting}
+                        sx={{ minWidth: 40, height: 40 }}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </Box>
+                  )}
+                />
+              </Box>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr 1fr", mt: 2 },
+                  gap: 2.5,
+                }}
+              >
+                {/* Units Per Stocking Unit */}
+                <Controller
+                  control={control}
+                  name="units_per_stocking_unit"
+                  rules={{
+                    required: "عدد الوحدات لكل وحدة تخزين مطلوب",
+                    min: {
+                      value: 1,
+                      message: "يجب أن يكون العدد 1 على الأقل",
+                    },
+                  }}
+                  render={({ field, fieldState }) => (
+                    <TextField
+                      {...field}
+                      label="عدد الوحدات في وحدة التخزين"
+                      type="number"
+                      fullWidth
+                      size="small"
+                      inputProps={{ min: 1, step: 1 }}
+                      disabled={isSubmitting}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                      helperText={
+                        fieldState.error?.message ||
+                        "عدد الوحدات البيعية داخل وحدة التخزين (مثال: 12 حبة في كرتونة)"
+                      }
+                      error={!!fieldState.error}
+                    />
+                  )}
+                />
+
+                {/* Stock Alert Level Field */}
+                <Controller
+                  control={control}
+                  name="stock_alert_level"
+                  rules={{
+                    min: {
+                      value: 0,
+                      message: "لا يمكن أن يكون حد التنبيه أقل من 0",
+                    },
+                  }}
+                  render={({ field, fieldState }) => (
+                    <TextField
+                      {...field}
+                      label="حد تنبيه انخفاض المخزون"
+                      type="number"
+                      fullWidth
+                      size="small"
+                      inputProps={{ min: 0, step: 1 }}
+                      disabled={isSubmitting}
+                      onFocus={(e) => e.target.select()}
+                      value={field.value ?? ""}
+                      onChange={(e) =>
+                        field.onChange(
+                          e.target.value ? Number(e.target.value) : null,
+                        )
+                      }
+                      helperText={
+                        fieldState.error?.message ||
+                        "عند الوصول لهذه الكمية سيتم إظهار تنبيه بانخفاض المخزون (اختياري)"
+                      }
+                      error={!!fieldState.error}
+                    />
+                  )}
+                />
+              </Box>
+            </Paper>
+
+            <DialogActions
+              sx={{
+                mt: 1,
+                px: 1,
+                pb: 1,
+                pt: 1,
+                borderTop: 1,
+                borderColor: "divider",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Typography variant="caption" color="text.secondary">
+                الحقول المميزة بـ <span style={{ color: "red" }}>*</span>{" "}
+                إلزامية
+              </Typography>
+              <Box sx={{ display: "flex", gap: 1.5 }}>
+                <Button
+                  type="button"
+                  onClick={handleClose}
+                  color="inherit"
+                  variant="outlined"
+                  disabled={isSubmitting}
+                  sx={{ minWidth: 100 }}
+                >
+                  إلغاء
+                </Button>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={isSubmitting}
+                  sx={{ minWidth: 100 }}
+                  startIcon={
+                    isSubmitting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : undefined
+                  }
+                >
+                  {isEditMode ? "تحديث" : "حفظ"}
+                </Button>
+              </Box>
+            </DialogActions>
+          </Box>
+        )}
+
+        {/* Product History Tab */}
+        {isEditMode && activeTab === 1 && (
+          <Box className="animate-in fade-in zoom-in duration-300">
+            <Tabs
+              value={historyTab}
+              onChange={handleHistoryTypeChange}
+              variant="fullWidth"
+              textColor="primary"
+              indicatorColor="primary"
+              sx={{ mb: 2, borderBottom: 1, borderColor: "divider" }}
+            >
+              <Tab label="المشتروات" />
+              <Tab label="المبيعات" />
+            </Tabs>
+
+            <Paper
+              elevation={0}
+              sx={{
+                p: 0,
+                border: 1,
+                borderColor: "divider",
+                borderRadius: 2,
+                overflow: "hidden",
+              }}
+            >
+              <TableContainer sx={{ maxHeight: 400 }}>
+                <Table stickyHeader size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell align="center">التاريخ</TableCell>
+                      <TableCell align="center">
+                        {historyTab === 0 ? "المورد" : "العميل"}
+                      </TableCell>
+                      <TableCell align="center">
+                        {historyTab === 0
+                          ? "الكمية (وحدة تخزين)"
+                          : "الكمية (وحدة بيع)"}
+                      </TableCell>
+                      <TableCell align="center">
+                        {historyTab === 0 ? "التكلفة" : "السعر"}
+                      </TableCell>
+                      <TableCell align="center">الإجمالي</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {historyLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
+                          <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
+                          <Typography variant="body2" sx={{ mt: 1 }}>
+                            جاري التحميل...
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : historyData.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            لا توجد سجلات
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      historyData.map((item: any) => (
+                        <TableRow key={item.id} hover>
+                          <TableCell align="center">
+                            {item.created_at
+                              ? new Date(item.created_at).toLocaleDateString(
+                                  "en-GB",
+                                )
+                              : "---"}
+                          </TableCell>
+                          <TableCell align="center">
+                            {historyTab === 0
+                              ? item.purchase?.supplier?.name || "N/A"
+                              : item.sale?.client?.name || "N/A"}
+                          </TableCell>
+                          <TableCell align="center">
+                            {formatNumber(item.quantity)}
+                          </TableCell>
+                          <TableCell align="center">
+                            {formatCurrency(
+                              historyTab === 0
+                                ? item.unit_cost
+                                : item.unit_price,
+                            )}
+                          </TableCell>
+                          <TableCell align="center">
+                            {formatCurrency(
+                              historyTab === 0
+                                ? item.total_cost
+                                : item.total_price,
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
                     )}
-                  </Box>
-                )}
-              />
+                  </TableBody>
+                </Table>
+              </TableContainer>
 
-              {/* Category Autocomplete */}
-              <Controller
-                control={control}
-                name="category_id"
-                render={({ field, fieldState }) => (
-                  <Box
-                    sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}
-                  >
-                    <Autocomplete
-                      fullWidth
-                      size="small"
-                      options={categories}
-                      loading={loadingCategories}
-                      getOptionLabel={(option) => option.name || ""}
-                      isOptionEqualToValue={(option, value) =>
-                        option.id === value.id
-                      }
-                      value={
-                        categories.find(
-                          (cat) => String(cat.id) === field.value,
-                        ) || null
-                      }
-                      onChange={(_, newValue) =>
-                        field.onChange(newValue ? String(newValue.id) : "")
-                      }
-                      disabled={isSubmitting || loadingCategories}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="الفئة"
-                          placeholder={
-                            loadingCategories
-                              ? "جاري تحميل الفئات..."
-                              : "اختر الفئة"
-                          }
-                          error={!!fieldState.error}
-                          helperText={fieldState.error?.message}
-                        />
-                      )}
-                      noOptionsText={
-                        loadingCategories
-                          ? "جاري تحميل الفئات..."
-                          : "لا توجد فئات متاحة"
-                      }
-                    />
-                    <Button
-                      type="button"
-                      variant="outlined"
-                      onClick={() => setIsCategoryModalOpen(true)}
-                      disabled={isSubmitting}
-                      sx={{ minWidth: 40, height: 40 }}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </Box>
-                )}
-              />
-            </Box>
-          </Paper>
-
-          {/* --- Units & Inventory Section --- */}
-          <Paper
-            elevation={0}
-            sx={{
-              p: 3,
-              mb: 3,
-              bgcolor: "background.paper",
-              border: 1,
-              borderColor: "divider",
-              borderRadius: 2,
-            }}
-          >
-            <Typography
-              variant="subtitle1"
-              fontWeight={600}
-              sx={{ mb: 2.5, color: "text.primary" }}
-            >
-              الوحدات والمخزون
-            </Typography>
-
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-                gap: 2.5,
-                mb: 2,
-              }}
-            >
-              {/* Stocking Unit Autocomplete */}
-              <Controller
-                control={control}
-                name="stocking_unit_id"
-                render={({ field, fieldState }) => (
-                  <Box
-                    sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}
-                  >
-                    <Autocomplete
-                      fullWidth
-                      size="small"
-                      options={stockingUnits}
-                      loading={loadingUnits}
-                      getOptionLabel={(option) => option.name || ""}
-                      isOptionEqualToValue={(option, value) =>
-                        option.id === value.id
-                      }
-                      value={
-                        stockingUnits.find(
-                          (unit) => String(unit.id) === field.value,
-                        ) || null
-                      }
-                      onChange={(_, newValue) =>
-                        field.onChange(newValue ? String(newValue.id) : "")
-                      }
-                      disabled={isSubmitting || loadingUnits}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="وحدة التخزين"
-                          placeholder={
-                            loadingUnits
-                              ? "جاري تحميل الوحدات..."
-                              : "اختر وحدة التخزين"
-                          }
-                          error={!!fieldState.error}
-                          helperText={fieldState.error?.message}
-                        />
-                      )}
-                      noOptionsText={
-                        loadingUnits
-                          ? "جاري تحميل الوحدات..."
-                          : "لا توجد وحدات تخزين متاحة"
-                      }
-                    />
-                    <Button
-                      type="button"
-                      variant="outlined"
-                      onClick={() => setIsStockingUnitModalOpen(true)}
-                      disabled={isSubmitting}
-                      sx={{ minWidth: 40, height: 40 }}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </Box>
-                )}
-              />
-
-              {/* Sellable Unit Autocomplete */}
-              <Controller
-                control={control}
-                name="sellable_unit_id"
-                render={({ field, fieldState }) => (
-                  <Box
-                    sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}
-                  >
-                    <Autocomplete
-                      fullWidth
-                      size="small"
-                      options={sellableUnits}
-                      loading={loadingUnits}
-                      getOptionLabel={(option) => option.name || ""}
-                      isOptionEqualToValue={(option, value) =>
-                        option.id === value.id
-                      }
-                      value={
-                        sellableUnits.find(
-                          (unit) => String(unit.id) === field.value,
-                        ) || null
-                      }
-                      onChange={(_, newValue) =>
-                        field.onChange(newValue ? String(newValue.id) : "")
-                      }
-                      disabled={isSubmitting || loadingUnits}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="وحدة البيع"
-                          placeholder={
-                            loadingUnits
-                              ? "جاري تحميل الوحدات..."
-                              : "اختر وحدة البيع"
-                          }
-                          error={!!fieldState.error}
-                          helperText={fieldState.error?.message}
-                        />
-                      )}
-                      noOptionsText={
-                        loadingUnits
-                          ? "جاري تحميل الوحدات..."
-                          : "لا توجد وحدات بيع متاحة"
-                      }
-                    />
-                    <Button
-                      type="button"
-                      variant="outlined"
-                      onClick={() => setIsSellableUnitModalOpen(true)}
-                      disabled={isSubmitting}
-                      sx={{ minWidth: 40, height: 40 }}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </Box>
-                )}
-              />
-            </Box>
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr 1fr", mt: 2 },
-                gap: 2.5,
-              }}
-            >
-              {/* Units Per Stocking Unit */}
-              <Controller
-                control={control}
-                name="units_per_stocking_unit"
-                rules={{
-                  required: "عدد الوحدات لكل وحدة تخزين مطلوب",
-                  min: {
-                    value: 1,
-                    message: "يجب أن يكون العدد 1 على الأقل",
-                  },
+              <Box
+                sx={{
+                  p: 2,
+                  borderTop: 1,
+                  borderColor: "divider",
+                  display: "flex",
+                  justifyContent: "flex-end",
                 }}
-                render={({ field, fieldState }) => (
-                  <TextField
-                    {...field}
-                    label="عدد الوحدات في وحدة التخزين"
-                    type="number"
-                    fullWidth
-                    size="small"
-                    inputProps={{ min: 1, step: 1 }}
-                    disabled={isSubmitting}
-                    onFocus={(e) => e.target.select()}
-                    onChange={(e) => field.onChange(Number(e.target.value))}
-                    helperText={
-                      fieldState.error?.message ||
-                      "عدد الوحدات البيعية داخل وحدة التخزين (مثال: 12 حبة في كرتونة)"
-                    }
-                    error={!!fieldState.error}
-                  />
-                )}
-              />
-
-              {/* Stock Alert Level Field */}
-              <Controller
-                control={control}
-                name="stock_alert_level"
-                rules={{
-                  min: {
-                    value: 0,
-                    message: "لا يمكن أن يكون حد التنبيه أقل من 0",
-                  },
-                }}
-                render={({ field, fieldState }) => (
-                  <TextField
-                    {...field}
-                    label="حد تنبيه انخفاض المخزون"
-                    type="number"
-                    fullWidth
-                    size="small"
-                    inputProps={{ min: 0, step: 1 }}
-                    disabled={isSubmitting}
-                    onFocus={(e) => e.target.select()}
-                    value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(
-                        e.target.value ? Number(e.target.value) : null,
-                      )
-                    }
-                    helperText={
-                      fieldState.error?.message ||
-                      "عند الوصول لهذه الكمية سيتم إظهار تنبيه بانخفاض المخزون (اختياري)"
-                    }
-                    error={!!fieldState.error}
-                  />
-                )}
-              />
-            </Box>
-          </Paper>
-
-          <DialogActions
-            sx={{
-              mt: 1,
-              px: 1,
-              pb: 1,
-              pt: 1,
-              borderTop: 1,
-              borderColor: "divider",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <Typography variant="caption" color="text.secondary">
-              الحقول المميزة بـ <span style={{ color: "red" }}>*</span> إلزامية
-            </Typography>
-            <Box sx={{ display: "flex", gap: 1.5 }}>
-              <Button
-                type="button"
-                onClick={handleClose}
-                color="inherit"
-                variant="outlined"
-                disabled={isSubmitting}
-                sx={{ minWidth: 100 }}
               >
-                إلغاء
-              </Button>
-              <Button
-                type="submit"
-                variant="contained"
-                disabled={isSubmitting}
-                sx={{ minWidth: 100 }}
-                startIcon={
-                  isSubmitting ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : undefined
-                }
-              >
-                {isEditMode ? "تحديث" : "حفظ"}
-              </Button>
-            </Box>
-          </DialogActions>
-        </Box>
+                <Button onClick={onClose} variant="outlined">
+                  إغلاق
+                </Button>
+              </Box>
+            </Paper>
+          </Box>
+        )}
       </DialogContent>
 
       {/* Category Creation Modal */}

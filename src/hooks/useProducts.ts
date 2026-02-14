@@ -1,11 +1,11 @@
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useInfiniteQuery, keepPreviousData } from "@tanstack/react-query";
 import productService, {
   Product,
   ApiPaginatedResponse,
 } from "../services/productService";
 
 interface UseProductsParams {
-  page?: number;
+  page?: number; // Kept for compatibility but ignored for infinite scroll key
   perPage?: number;
   search?: string;
   sortBy?: string;
@@ -19,7 +19,7 @@ interface UseProductsParams {
 
 export function useProducts({
   page = 1,
-  perPage = 15,
+  perPage = 50, // Increased default for infinite scroll
   search = "",
   sortBy = "created_at",
   sortDirection = "desc",
@@ -29,10 +29,10 @@ export function useProducts({
   outOfStockOnly,
   warehouseId,
 }: UseProductsParams = {}) {
-  return useQuery<ApiPaginatedResponse<Product>>({
+  return useInfiniteQuery<ApiPaginatedResponse<Product>>({
     queryKey: [
       "products",
-      page,
+      "infinite",
       perPage,
       search,
       sortBy,
@@ -43,9 +43,9 @@ export function useProducts({
       outOfStockOnly,
       warehouseId,
     ],
-    queryFn: () =>
+    queryFn: ({ pageParam }) =>
       productService.getProducts(
-        page,
+        pageParam as number,
         search,
         sortBy,
         sortDirection,
@@ -56,8 +56,16 @@ export function useProducts({
         outOfStockOnly,
         warehouseId,
       ),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      // Laravel pagination meta
+      if (lastPage.meta.current_page < lastPage.meta.last_page) {
+        return lastPage.meta.current_page + 1;
+      }
+      return undefined;
+    },
     placeholderData: keepPreviousData,
-    staleTime: 0, // Always consider data stale to trigger refetch on focus/mount
-    refetchOnWindowFocus: true, // Auto-update when user switches back to the tab
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: true,
   });
 }

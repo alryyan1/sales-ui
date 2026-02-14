@@ -7,21 +7,19 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  IconButton,
   Typography,
-  Autocomplete,
-  CircularProgress,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
+  CircularProgress,
+  Checkbox,
 } from "@mui/material";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import saleReturnService, {
   CreateSaleReturnData,
   SimpleSaleReturnItemInput,
 } from "@/services/saleReturnService";
-import productService, { Product } from "@/services/productService";
+import saleService, { Sale, SaleItem } from "@/services/saleService";
 import { toast } from "sonner";
 
 interface SalesReturnDialogProps {
@@ -30,9 +28,11 @@ interface SalesReturnDialogProps {
   shiftId: number | null;
 }
 
-interface ReturnRow extends SimpleSaleReturnItemInput {
-  id: number;
-  product?: Product;
+interface SelectedReturn {
+  product_id: number;
+  quantity: number;
+  price: number;
+  returnQuantity: number;
 }
 
 export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
@@ -40,109 +40,114 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
   onClose,
   shiftId,
 }) => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [productQuery, setProductQuery] = useState("");
-  const [productLoading, setProductLoading] = useState(false);
-  const [items, setItems] = useState<ReturnRow[]>([]);
+  const [saleIdInput, setSaleIdInput] = useState("");
+  const [fetchedSale, setFetchedSale] = useState<Sale | null>(null);
+  const [saleLoadError, setSaleLoadError] = useState<string | null>(null);
+  const [saleLoading, setSaleLoading] = useState(false);
+  const [selectedReturns, setSelectedReturns] = useState<
+    Record<number, SelectedReturn>
+  >({});
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [reason, setReason] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<
     "cash" | "bankak" | "fawry" | "ocash"
   >("cash");
   const [submitting, setSubmitting] = useState(false);
 
-  // Load products lazily for autocomplete
-  React.useEffect(() => {
-    if (!productQuery.trim()) {
-      setProducts([]);
+  const handleSearchSale = async () => {
+    const id = Number(saleIdInput.trim());
+    if (!id || !Number.isFinite(id)) {
+      setSaleLoadError("أدخل رقم فاتورة صحيح");
       return;
     }
-    const t = setTimeout(() => {
-      setProductLoading(true);
-      productService
-        .getProductsForAutocomplete(productQuery.trim(), 25)
-        .then((list) => setProducts(Array.isArray(list) ? list : []))
-        .catch(() => setProducts([]))
-        .finally(() => setProductLoading(false));
-    }, 300);
-    return () => clearTimeout(t);
-  }, [productQuery]);
+    setSaleLoadError(null);
+    setSaleLoading(true);
+    try {
+      const sale = await saleService.getSale(id);
+      setFetchedSale(sale);
+      setSelectedReturns({});
+    } catch {
+      setFetchedSale(null);
+      setSaleLoadError("لا توجد فاتورة بهذا الرقم");
+    } finally {
+      setSaleLoading(false);
+    }
+  };
 
-  const handleAddProduct = (product: Product | null) => {
-    if (!product) return;
-    const existing = items.find((i) => i.product_id === product.id);
-    if (existing) {
-      // Increase quantity by 1 if already selected
-      setItems((prev) =>
-        prev.map((row) =>
-          row.product_id === product.id
-            ? { ...row, quantity: row.quantity + 1 }
-            : row,
-        ),
-      );
-      return;
-    }
-    const defaultPrice =
-      Number(product.last_sale_price_per_sellable_unit) ||
-      Number(product.suggested_sale_price_per_sellable_unit) ||
-      0;
-    setItems((prev) => [
+  const toggleItemSelected = (item: SaleItem) => {
+    const pid = item.product_id;
+    const price = Number(item.unit_price) || 0;
+    const qty = item.quantity ?? 0;
+    setSelectedReturns((prev) => {
+      const next = { ...prev };
+      if (next[pid]) {
+        delete next[pid];
+        return next;
+      }
+      next[pid] = {
+        product_id: pid,
+        quantity: qty,
+        price,
+        returnQuantity: 1,
+      };
+      return next;
+    });
+  };
+
+  const setReturnQuantity = (productId: number, value: number) => {
+    const entry = selectedReturns[productId];
+    if (!entry) return;
+    const clamped = Math.max(1, Math.min(entry.quantity, value));
+    setSelectedReturns((prev) => ({
       ...prev,
-      {
-        id: Date.now(),
-        product_id: product.id,
-        quantity: 1,
-        price: defaultPrice,
-        product,
-      },
-    ]);
+      [productId]: { ...prev[productId], returnQuantity: clamped },
+    }));
   };
 
-  const handleQuantityChange = (id: number, value: string) => {
-    const qty = Number(value);
-    if (!Number.isFinite(qty) || qty <= 0) return;
-    setItems((prev) =>
-      prev.map((row) => (row.id === id ? { ...row, quantity: qty } : row)),
-    );
-  };
-
-  const handlePriceChange = (id: number, value: string) => {
-    const price = Number(value);
-    if (!Number.isFinite(price) || price < 0) return;
-    setItems((prev) =>
-      prev.map((row) => (row.id === id ? { ...row, price } : row)),
-    );
-  };
-
-  const handleRemoveRow = (id: number) => {
-    setItems((prev) => prev.filter((row) => row.id !== id));
-  };
+  const selectedList = useMemo(
+    () => Object.values(selectedReturns).filter((r) => r.returnQuantity >= 1),
+    [selectedReturns],
+  );
 
   const totalReturnedAmount = useMemo(
-    () => items.reduce((sum, row) => sum + row.quantity * row.price, 0),
-    [items],
+    () =>
+      selectedList.reduce(
+        (sum, r) => sum + r.returnQuantity * r.price,
+        0,
+      ),
+    [selectedList],
   );
 
   const handleSubmit = async () => {
-    if (items.length === 0) {
-      toast.error("أضف منتجاً واحداً على الأقل للمردود");
+    if (!fetchedSale) {
+      toast.error("ابحث عن الفاتورة أولاً");
       return;
     }
+    if (selectedList.length === 0) {
+      toast.error("اختر صنفاً واحداً على الأقل للإرجاع");
+      return;
+    }
+    const items: SimpleSaleReturnItemInput[] = selectedList.map((r) => ({
+      product_id: r.product_id,
+      quantity: r.returnQuantity,
+      price: r.price,
+    }));
     const payload: CreateSaleReturnData = {
+      sale_id: fetchedSale.id,
+      phone_number: phoneNumber.trim() || null,
       reason: reason.trim() || null,
       shift_id: shiftId ?? undefined,
       returned_payment_method: paymentMethod,
-      items: items.map<SimpleSaleReturnItemInput>((row) => ({
-        product_id: row.product_id,
-        quantity: row.quantity,
-        price: row.price,
-      })),
+      items,
     };
     try {
       setSubmitting(true);
       await saleReturnService.createSaleReturn(payload);
       toast.success("تم إنشاء مردود المبيعات بنجاح");
-      // Reset local state and close
-      setItems([]);
+      setFetchedSale(null);
+      setSaleIdInput("");
+      setSelectedReturns({});
+      setPhoneNumber("");
       setReason("");
       onClose();
     } catch (err: any) {
@@ -159,11 +164,138 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
     onClose();
   };
 
+  const resetSaleSection = () => {
+    setFetchedSale(null);
+    setSaleIdInput("");
+    setSaleLoadError(null);
+    setSelectedReturns({});
+  };
+
   return (
     <Dialog open={open} onClose={handleDialogClose} maxWidth="md" fullWidth>
       <DialogTitle>مردود مبيعات</DialogTitle>
       <DialogContent dividers>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+          {/* Sale ID search */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+            <TextField
+              size="small"
+              label="رقم الفاتورة"
+              value={saleIdInput}
+              onChange={(e) => {
+                setSaleIdInput(e.target.value);
+                setSaleLoadError(null);
+              }}
+              onKeyDown={(e) => e.key === "Enter" && handleSearchSale()}
+              sx={{ minWidth: 140 }}
+              placeholder="مثال: 123"
+            />
+            <Button
+              variant="contained"
+              onClick={handleSearchSale}
+              disabled={saleLoading}
+              sx={{ textTransform: "none" }}
+            >
+              {saleLoading ? (
+                <CircularProgress size={20} color="inherit" />
+              ) : (
+                "بحث"
+              )}
+            </Button>
+            {fetchedSale && (
+              <Button
+                size="small"
+                variant="text"
+                onClick={resetSaleSection}
+                sx={{ textTransform: "none" }}
+              >
+                تغيير الفاتورة
+              </Button>
+            )}
+          </Box>
+          {saleLoadError && (
+            <Typography variant="body2" color="error">
+              {saleLoadError}
+            </Typography>
+          )}
+
+          {/* Sale summary and items */}
+          {fetchedSale && (
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                فاتورة #{fetchedSale.id}
+                {fetchedSale.client_name && ` — ${fetchedSale.client_name}`}
+                {" — إجمالي: "}
+                {Number(fetchedSale.total_amount ?? 0).toFixed(2)}
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                اختر الأصناف المراد إرجاعها وحدد كمية الإرجاع:
+              </Typography>
+              {(fetchedSale.items ?? []).map((item) => {
+                const pid = item.product_id;
+                const selected = selectedReturns[pid];
+                const price = Number(item.unit_price) || 0;
+                const maxQty = item.quantity ?? 0;
+                return (
+                  <Box
+                    key={item.id ?? pid}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      flexWrap: "wrap",
+                      py: 0.5,
+                      borderBottom: "1px solid",
+                      borderColor: "divider",
+                    }}
+                  >
+                    <Checkbox
+                      size="small"
+                      checked={!!selected}
+                      onChange={() => toggleItemSelected(item)}
+                    />
+                    <Typography variant="body2" sx={{ minWidth: 120 }}>
+                      {item.product?.name ?? item.product_name ?? `#${pid}`}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      مباع: {maxQty} × {price.toFixed(2)}
+                    </Typography>
+                    {selected && (
+                      <TextField
+                        size="small"
+                        type="number"
+                        label="كمية الإرجاع"
+                        value={selected.returnQuantity}
+                        onChange={(e) =>
+                          setReturnQuantity(pid, Number(e.target.value) || 0)
+                        }
+                        inputProps={{ min: 1, max: maxQty, step: 1 }}
+                        sx={{ width: 100 }}
+                      />
+                    )}
+                  </Box>
+                );
+              })}
+              {selectedList.length > 0 && (
+                <Box sx={{ mt: 1, textAlign: "right" }}>
+                  <Typography variant="body2" fontWeight={600}>
+                    إجمالي قيمة الإرجاع: {totalReturnedAmount.toFixed(2)}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          )}
+
+          {/* Phone number */}
+          <TextField
+            size="small"
+            label="رقم الهاتف"
+            value={phoneNumber}
+            onChange={(e) => setPhoneNumber(e.target.value)}
+            placeholder="مثال: 249991961111"
+            fullWidth
+          />
+
           <FormControl size="small" sx={{ maxWidth: 200 }}>
             <InputLabel id="returned-payment-method-label">
               طريقة المردود
@@ -185,84 +317,6 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
             </Select>
           </FormControl>
 
-          <Autocomplete
-            options={products}
-            getOptionLabel={(option) => option.name || ""}
-            loading={productLoading}
-            onInputChange={(_, value) => setProductQuery(value)}
-            onChange={(_, value) => handleAddProduct(value)}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="اختر منتجاً للإرجاع"
-                size="small"
-                InputProps={{
-                  ...params.InputProps,
-                  endAdornment: (
-                    <>
-                      {productLoading ? (
-                        <CircularProgress color="inherit" size={18} />
-                      ) : null}
-                      {params.InputProps.endAdornment}
-                    </>
-                  ),
-                }}
-              />
-            )}
-          />
-
-          {items.length > 0 && (
-            <Box sx={{ mt: 1 }}>
-              {items.map((row) => (
-                <Box
-                  key={row.id}
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: "2fr 1fr 1fr auto",
-                    gap: 1,
-                    alignItems: "center",
-                    mb: 1,
-                  }}
-                >
-                  <Typography variant="body2">
-                    {row.product?.name ?? `#${row.product_id}`}
-                  </Typography>
-                  <TextField
-                    size="small"
-                    type="number"
-                    label="الكمية"
-                    value={row.quantity}
-                    onChange={(e) =>
-                      handleQuantityChange(row.id, e.target.value)
-                    }
-                    inputProps={{ min: 1, step: 1 }}
-                  />
-                  <TextField
-                    size="small"
-                    type="number"
-                    label="السعر"
-                    value={row.price}
-                    onChange={(e) => handlePriceChange(row.id, e.target.value)}
-                    inputProps={{ min: 0, step: 0.01 }}
-                  />
-                  <IconButton
-                    size="small"
-                    color="error"
-                    onClick={() => handleRemoveRow(row.id)}
-                  >
-                    <DeleteOutlineIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-              ))}
-
-              <Box sx={{ mt: 1, textAlign: "right" }}>
-                <Typography variant="body2" fontWeight={600}>
-                  إجمالي القيمة: {totalReturnedAmount.toFixed(2)}
-                </Typography>
-              </Box>
-            </Box>
-          )}
-
           <TextField
             label="سبب المردود (اختياري)"
             size="small"
@@ -280,7 +334,9 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
         <Button
           onClick={handleSubmit}
           variant="contained"
-          disabled={submitting || items.length === 0}
+          disabled={
+            submitting || !fetchedSale || selectedList.length === 0
+          }
         >
           {submitting ? "جاري الحفظ..." : "إنشاء مردود"}
         </Button>
@@ -290,4 +346,3 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
 };
 
 export default SalesReturnDialog;
-

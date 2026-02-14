@@ -30,8 +30,12 @@ import {
 } from "lucide-react";
 
 // Services and Types
-import { Product } from "../services/productService"; // Use product service
+import productService, {
+  Product,
+  ProductFormData,
+} from "../services/productService"; // Use product service
 import categoryService, { Category } from "../services/CategoryService"; // Import category service
+import unitService, { Unit } from "../services/UnitService"; // Import unit service
 import exportService from "../services/exportService"; // Import export service
 
 // Custom Components
@@ -43,17 +47,13 @@ import ProductImportDialog from "../components/products/ProductImportDialog"; //
 
 const ProductsPage: React.FC = () => {
   // --- State ---
-  // --- State ---
-  // const [productsResponse, setProductsResponse] = useState<ProductPaginatedResponse | null>(null); // Replaced by useProducts
-  // const [isLoading, setIsLoading] = useState(true); // Replaced by useProducts
-  // const [error, setError] = useState<string | null>(null); // Replaced by useProducts
-  const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const [rowsPerPage, setRowsPerPage] = useState(100);
-  const [isPaginationLoading, setIsPaginationLoading] = useState(false);
+  const rowsPerPage = 50;
   const [categories, setCategories] = useState<Category[]>([]);
+  const [stockingUnits, setStockingUnits] = useState<Unit[]>([]);
+  const [sellableUnits, setSellableUnits] = useState<Unit[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [showOnlyInStock, setShowOnlyInStock] = useState(false);
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
@@ -88,7 +88,6 @@ const ProductsPage: React.FC = () => {
     debounceTimeoutRef.current = setTimeout(() => {
       console.log(`Debouncing search for products: "${searchTerm}"`);
       setDebouncedSearchTerm(searchTerm); // Update the debounced value
-      setCurrentPage(1); // Reset to page 1 when search term changes
     }, 500); // 500ms delay
 
     // Cleanup timeout on unmount or if searchTerm changes again
@@ -99,15 +98,17 @@ const ProductsPage: React.FC = () => {
     };
   }, [searchTerm]); // Runs whenever the raw searchTerm changes
 
-  // --- React Query Hook ---
+  // --- React Query Hook (Infinite) ---
   const {
-    data: productsResponse,
+    data,
     isLoading,
-    isFetching,
     isError,
     error: queryError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
   } = useProducts({
-    page: currentPage,
+    // page: currentPage, // Handled internally by infinite query
     perPage: rowsPerPage,
     search: debouncedSearchTerm,
     categoryId: selectedCategory,
@@ -116,8 +117,11 @@ const ProductsPage: React.FC = () => {
     outOfStockOnly: showOutOfStockOnly,
   });
 
-  // Show loading when fetching (pagination/rows change) or when explicitly set
-  const isLoadingData = isLoading || isFetching || isPaginationLoading;
+  // Flatten pages into a single array of products
+  const products = data?.pages.flatMap((page) => page.data) || [];
+
+  // Show loading when fetching initial data
+  const isLoadingData = isLoading;
 
   // Extract error message if query fails
   const error = isError
@@ -153,7 +157,22 @@ const ProductsPage: React.FC = () => {
     fetchCategories();
   }, [fetchCategories]);
 
-  // Removed manual fetchProducts useEffect as useQuery handles it automatically
+  // --- Fetch Units ---
+  useEffect(() => {
+    const fetchUnits = async () => {
+      try {
+        const [stocking, sellable] = await Promise.all([
+          unitService.getStockingUnits(),
+          unitService.getSellableUnits(),
+        ]);
+        setStockingUnits(stocking);
+        setSellableUnits(sellable);
+      } catch (err) {
+        console.error("Error fetching units:", err);
+      }
+    };
+    fetchUnits();
+  }, []);
 
   // --- Notification Handlers ---
   const showSnackbar = (message: string, type: "success" | "error") => {
@@ -187,50 +206,27 @@ const ProductsPage: React.FC = () => {
     closeModal();
     showSnackbar("تم حفظ المنتج بنجاح", "success");
     queryClient.invalidateQueries({ queryKey: ["products"] });
-    if (!editingProduct) setCurrentPage(1);
   };
 
-  // ... (inside render or other handlers)
-
-  // --- Pagination & Search Handlers ---
-  const handlePageChange = (
-    _event: React.ChangeEvent<unknown>,
-    value: number,
-  ) => {
-    setIsPaginationLoading(true);
-    setCurrentPage(value);
-    // Reset loading after a short delay to allow query to start
-    setTimeout(() => setIsPaginationLoading(false), 100);
-  };
+  // --- Search Handlers ---
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
   };
   const handleCategoryChange = (event: SelectChangeEvent<number | null>) => {
     const categoryId = event.target.value as number | null;
     setSelectedCategory(categoryId);
-    setCurrentPage(1); // Reset to page 1 when filter changes
   };
-  const handleRowsPerPageChange = (event: SelectChangeEvent<number>) => {
-    setIsPaginationLoading(true);
-    const newRowsPerPage = event.target.value as number;
-    setRowsPerPage(newRowsPerPage);
-    setCurrentPage(1); // Reset to page 1 when rows per page changes
-    // Reset loading after a short delay to allow query to start
-    setTimeout(() => setIsPaginationLoading(false), 100);
-  };
+
   const handleStockFilterToggle = () => {
     setShowOnlyInStock(!showOnlyInStock);
-    setCurrentPage(1); // Reset to page 1 when filter changes
   };
 
   const handleLowStockFilterToggle = () => {
     setShowLowStockOnly(!showLowStockOnly);
-    setCurrentPage(1); // Reset to page 1 when filter changes
   };
 
   const handleOutOfStockFilterToggle = () => {
     setShowOutOfStockOnly(!showOutOfStockOnly);
-    setCurrentPage(1);
   };
 
   const handlePrintProducts = async () => {
@@ -279,34 +275,24 @@ const ProductsPage: React.FC = () => {
     showSnackbar("تم استيراد المنتجات بنجاح", "success");
   };
 
+  const handleProductCreate = async (data: ProductFormData) => {
+    try {
+      await productService.createProduct(data);
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      showSnackbar("تم إضافة المنتج بنجاح", "success");
+    } catch (err) {
+      showSnackbar(
+        err instanceof Error ? err.message : "فشل إضافة المنتج",
+        "error",
+      );
+      throw err; // Re-throw to let the table know it failed
+    }
+  };
+
   // --- Render ---
   return (
     <>
-      <style>
-        {`
-          .products-page-full-width {
-            max-width: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            width: 100% !important;
-          }
-        `}
-      </style>
-      <Box
-        className="dark:bg-gray-900 h-[calc(100vh-100px)] w-full max-w-none products-page-full-width"
-        sx={{
-          direction: "",
-          width: "100%",
-          maxWidth: "none",
-          margin: 0,
-          padding: 0,
-          // Override any container constraints from parent layout
-          "&": {
-            maxWidth: "none !important",
-            margin: "0 !important",
-          },
-        }}
-      >
+      <Box>
         {/* Header & Add Button */}
         <Box
           sx={{
@@ -546,28 +532,6 @@ const ProductsPage: React.FC = () => {
                       />
                     </InputAdornment>
                   ),
-                  sx: {
-                    backgroundColor: (theme) =>
-                      theme.palette.mode === "dark"
-                        ? theme.palette.background.paper
-                        : "#fff",
-                    color: (theme) =>
-                      theme.palette.mode === "dark"
-                        ? theme.palette.text.primary
-                        : "inherit",
-                    "& input": {
-                      color: (theme) =>
-                        theme.palette.mode === "dark"
-                          ? theme.palette.text.primary
-                          : "inherit",
-                    },
-                    "& fieldset": {
-                      borderColor: (theme) =>
-                        theme.palette.mode === "dark"
-                          ? theme.palette.grey[700]
-                          : theme.palette.grey[300],
-                    },
-                  },
                 }}
                 className="dark:bg-gray-800 [&>div>input]:text-gray-300 dark:[&>div>input]:text-gray-100 [&>div>fieldset]:border-gray-300 dark:[&>div>fieldset]:border-gray-600"
               />
@@ -584,28 +548,6 @@ const ProductsPage: React.FC = () => {
                   onChange={handleCategoryChange}
                   label="تصفية حسب الفئة"
                   disabled={loadingCategories}
-                  sx={{
-                    backgroundColor: (theme) =>
-                      theme.palette.mode === "dark"
-                        ? theme.palette.background.paper
-                        : "#fff",
-                    color: (theme) =>
-                      theme.palette.mode === "dark"
-                        ? theme.palette.text.primary
-                        : "inherit",
-                    "& .MuiSelect-icon": {
-                      color: (theme) =>
-                        theme.palette.mode === "dark"
-                          ? theme.palette.text.primary
-                          : "inherit",
-                    },
-                    "& fieldset": {
-                      borderColor: (theme) =>
-                        theme.palette.mode === "dark"
-                          ? theme.palette.grey[700]
-                          : theme.palette.grey[300],
-                    },
-                  }}
                 >
                   <MenuItem value="">
                     <em>كل الفئات</em>
@@ -615,48 +557,6 @@ const ProductsPage: React.FC = () => {
                       {category.name}
                     </MenuItem>
                   ))}
-                </Select>
-              </FormControl>
-            </Box>
-
-            {/* Rows Per Page Filter */}
-            <Box sx={{ flex: { md: 1 } }}>
-              <FormControl fullWidth size="small">
-                <InputLabel className="dark:text-gray-300">
-                  عدد الصفوف في الصفحة
-                </InputLabel>
-                <Select
-                  value={rowsPerPage}
-                  onChange={handleRowsPerPageChange}
-                  label="عدد الصفوف في الصفحة"
-                  sx={{
-                    backgroundColor: (theme) =>
-                      theme.palette.mode === "dark"
-                        ? theme.palette.background.paper
-                        : "#fff",
-                    color: (theme) =>
-                      theme.palette.mode === "dark"
-                        ? theme.palette.text.primary
-                        : "inherit",
-                    "& .MuiSelect-icon": {
-                      color: (theme) =>
-                        theme.palette.mode === "dark"
-                          ? theme.palette.text.primary
-                          : "inherit",
-                    },
-                    "& fieldset": {
-                      borderColor: (theme) =>
-                        theme.palette.mode === "dark"
-                          ? theme.palette.grey[700]
-                          : theme.palette.grey[300],
-                    },
-                  }}
-                >
-                  <MenuItem value={50}>50</MenuItem>
-                  <MenuItem value={100}>100</MenuItem>
-                  <MenuItem value={200}>200</MenuItem>
-                  <MenuItem value={500}>500</MenuItem>
-                  <MenuItem value={1000}>1000</MenuItem>
                 </Select>
               </FormControl>
             </Box>
@@ -672,44 +572,19 @@ const ProductsPage: React.FC = () => {
         {!error && (
           <Box sx={{ mt: 2, width: "100%", px: 2 }}>
             <ProductsTable
-              products={(productsResponse?.data as Product[]) || []}
+              products={(products as Product[]) || []}
               onEdit={(product) => openModal(product as Product)}
               isLoading={isLoadingData}
-              // Laravel Pagination Props
-              paginationMeta={
-                productsResponse?.meta || {
-                  current_page: 1,
-                  last_page: 1,
-                  per_page: rowsPerPage,
-                  total: 0,
-                  from: 0,
-                  to: 0,
-                }
-              }
-              paginationLinks={
-                productsResponse?.links || {
-                  first: "",
-                  last: "",
-                  prev: null,
-                  next: null,
-                }
-              }
-              currentPage={currentPage}
-              rowsPerPage={rowsPerPage}
-              onPageChange={handlePageChange}
-              onRowsPerPageChange={handleRowsPerPageChange}
+              // Infinite Scroll
+              onLoadMore={fetchNextPage}
+              hasNextPage={!!hasNextPage}
+              isFetchingNextPage={isFetchingNextPage}
+              // Inline Creation Props
+              categories={categories}
+              stockingUnits={stockingUnits}
+              sellableUnits={sellableUnits}
+              onProductCreate={handleProductCreate}
             />
-            {/* No Products Message */}
-            {!isLoadingData &&
-              productsResponse &&
-              productsResponse.data.length === 0 && (
-                <Typography
-                  sx={{ textAlign: "center", py: 5 }}
-                  className="text-gray-500 dark:text-gray-400"
-                >
-                  لا توجد منتجات لعرضها.
-                </Typography>
-              )}
           </Box>
         )}
         {/* Modals and Snackbar */}

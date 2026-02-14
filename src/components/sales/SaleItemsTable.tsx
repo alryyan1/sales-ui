@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import {
   flexRender,
   getCoreRowModel,
@@ -36,6 +36,8 @@ export interface SaleItemsTableProps {
   onDeleteItem?: (item: SaleItem) => void | Promise<void>;
   /** When false, delete button is disabled (e.g. sale has payments). */
   canDeleteItems?: boolean;
+  /** When true, quantity and price are read-only (e.g. when amount paid equals total after discount). */
+  disableQuantityAndPriceEdit?: boolean;
 }
 
 function getItemKey(item: SaleItem): number | string {
@@ -71,35 +73,16 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
   deletingItemId = null,
   onDeleteItem,
   canDeleteItems = true,
+  disableQuantityAndPriceEdit = false,
 }) => {
   const list = items ?? [];
   const [editingKey, setEditingKey] = useState<number | string | null>(null);
   const [editingField, setEditingField] = useState<"quantity" | "price" | null>(null);
   const [editValue, setEditValue] = useState("");
   const [selectedRowKey, setSelectedRowKey] = useState<number | string | null>(null);
-  const [quantityInputBuffer, setQuantityInputBuffer] = useState("");
-  const quantityBufferRef = useRef("");
-  quantityBufferRef.current = quantityInputBuffer;
-
-  const selectedItem = useMemo(
-    () => (selectedRowKey == null ? null : list.find((item) => getItemKey(item) === selectedRowKey) ?? null),
-    [list, selectedRowKey]
-  );
-
-  useEffect(() => {
-    if (selectedRowKey == null) setQuantityInputBuffer("");
-  }, [selectedRowKey]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as Node;
-      const isInput = target && (
-        (target as HTMLElement).tagName === "INPUT" ||
-        (target as HTMLElement).tagName === "TEXTAREA" ||
-        (target as HTMLElement).tagName === "SELECT" ||
-        (target as HTMLElement).isContentEditable
-      );
-
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         if (list.length === 0) return;
         const currentIndex = selectedRowKey == null
@@ -109,50 +92,21 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
         if (nextIndex >= 0 && nextIndex < list.length) {
           e.preventDefault();
           setSelectedRowKey(getItemKey(list[nextIndex]));
-          setQuantityInputBuffer("");
           setEditingKey(null);
           setEditingField(null);
         }
         return;
       }
-
-      if (selectedRowKey == null || selectedItem == null || !onQuantityChange || selectedItem.id == null) return;
-      if (isInput) return;
-
-      if (e.key === "Enter") {
-        e.preventDefault();
-        const raw = quantityBufferRef.current.trim();
-        const num = raw === "" ? NaN : Number(raw);
-        if (Number.isFinite(num) && num > 0) {
-          onQuantityChange(selectedItem, num);
-          setQuantityInputBuffer("");
-        }
-        return;
-      }
       if (e.key === "Escape") {
         setSelectedRowKey(null);
-        setQuantityInputBuffer("");
         setEditingKey(null);
         setEditingField(null);
         return;
       }
-      if (e.key === "Backspace") {
-        e.preventDefault();
-        setQuantityInputBuffer((prev) => prev.slice(0, -1));
-        return;
-      }
-      if (e.key.length === 1 && (/\d/.test(e.key) || e.key === ".")) {
-        e.preventDefault();
-        setQuantityInputBuffer((prev) => {
-          if (e.key === "." && prev.includes(".")) return prev;
-          if (prev === "0" && e.key !== ".") return e.key;
-          return prev + e.key;
-        });
-      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedRowKey, selectedItem, onQuantityChange, list]);
+  }, [selectedRowKey, list]);
 
   const handleQuantityBlur = useCallback(
     (item: SaleItem) => {
@@ -296,40 +250,9 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
       meta: { align: "center" },
       cell: ({ row }) => {
         const item = row.original;
-        const canEdit = Boolean(onQuantityChange && item.id != null);
+        const canEdit = Boolean(onQuantityChange && item.id != null && !disableQuantityAndPriceEdit);
         const editing = isEditing(item, "quantity");
-        const selected = isSelected(item);
-        const showBuffer = selected && quantityInputBuffer !== "";
         if (!canEdit) return formatNumber(item.quantity);
-        if (showBuffer) {
-          return (
-            <Box
-              component="span"
-              role="button"
-              tabIndex={0}
-              onClick={(e) => {
-                e.stopPropagation();
-                startEditingQuantity(item);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  startEditingQuantity(item);
-                }
-              }}
-              aria-label="تعديل الكمية أو Enter للحفظ"
-              sx={{
-                fontWeight: 500,
-                cursor: "pointer",
-                textDecoration: "underline",
-                textUnderlineOffset: 2,
-                "&:hover": { opacity: 0.85 },
-              }}
-            >
-              {quantityInputBuffer || "0"}
-            </Box>
-          );
-        }
         if (editing) {
           return (
             <Box
@@ -437,7 +360,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
       meta: { align: "right" },
       cell: ({ row }) => {
         const item = row.original;
-        const canEdit = Boolean(onPriceChange && item.id != null);
+        const canEdit = Boolean(onPriceChange && item.id != null && !disableQuantityAndPriceEdit);
         const editing = isEditing(item, "price");
         if (!canEdit) return formatNumber(Number(item.unit_price ?? 0));
         if (editing) {
@@ -574,12 +497,12 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
     onPriceChange,
     onDeleteItem,
     canDeleteItems,
+    disableQuantityAndPriceEdit,
     editingKey,
     editingField,
     editValue,
     isEditing,
     isSelected,
-    quantityInputBuffer,
     handleQuantityBlur,
     handlePriceBlur,
     handleQuantityKeyDown,

@@ -1,7 +1,13 @@
 // src/pages/PosBlankPage.tsx
 // Blank POS page: header + layout with sales column (squares) + three columns
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import {
   Box,
   Paper,
@@ -28,13 +34,18 @@ import ScheduleIcon from "@mui/icons-material/Schedule";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import CloseIcon from "@mui/icons-material/Close";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import LocalOfferIcon from "@mui/icons-material/LocalOffer";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import PersonIcon from "@mui/icons-material/Person";
 import apiClient from "@/lib/axios";
 import { toast } from "sonner";
-import saleService, { Sale, SaleItem, type Payment } from "@/services/saleService";
+import saleService, {
+  Sale,
+  SaleItem,
+  type Payment,
+} from "@/services/saleService";
 import productService, { Product } from "@/services/productService";
 import { formatNumber } from "@/constants";
 import { SaleItemsTable } from "@/components/sales/SaleItemsTable";
@@ -68,15 +79,25 @@ const PosBlankPage: React.FC = () => {
   const [addProductLoading, setAddProductLoading] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [fullPaymentLoading, setFullPaymentLoading] = useState(false);
-  const [deletingPaymentId, setDeletingPaymentId] = useState<number | null>(null);
-  const [newPaymentMethod, setNewPaymentMethod] = useState<Payment["method"]>("cash");
+  const [deletingPaymentId, setDeletingPaymentId] = useState<number | null>(
+    null,
+  );
+  const [newPaymentMethod, setNewPaymentMethod] =
+    useState<Payment["method"]>("cash");
   const [newPaymentAmount, setNewPaymentAmount] = useState("");
   const [addPaymentLoading, setAddPaymentLoading] = useState(false);
   const [removeAllItemsLoading, setRemoveAllItemsLoading] = useState(false);
-  const [deletingSaleItemId, setDeletingSaleItemId] = useState<number | null>(null);
+  const [deletingSaleItemId, setDeletingSaleItemId] = useState<number | null>(
+    null,
+  );
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
-  const [shiftExpenseTotals, setShiftExpenseTotals] = useState({ cash: 0, bank: 0 });
-  const [summaryAnchorEl, setSummaryAnchorEl] = useState<HTMLElement | null>(null);
+  const [shiftExpenseTotals, setShiftExpenseTotals] = useState({
+    cash: 0,
+    bank: 0,
+  });
+  const [summaryAnchorEl, setSummaryAnchorEl] = useState<HTMLElement | null>(
+    null,
+  );
   const summaryOpen = Boolean(summaryAnchorEl);
   const [thermalPdfLoading, setThermalPdfLoading] = useState(false);
   const [thermalPdfDialogOpen, setThermalPdfDialogOpen] = useState(false);
@@ -85,7 +106,9 @@ const PosBlankPage: React.FC = () => {
   const [shiftPdfUrl, setShiftPdfUrl] = useState<string | null>(null);
   const [shiftPdfLoading, setShiftPdfLoading] = useState(false);
   const [salesReturnDialogOpen, setSalesReturnDialogOpen] = useState(false);
-  const [discountType, setDiscountType] = useState<"percentage" | "fixed">("fixed");
+  const [discountType, setDiscountType] = useState<"percentage" | "fixed">(
+    "fixed",
+  );
   const [discountValue, setDiscountValue] = useState("");
   const [discountLoading, setDiscountLoading] = useState(false);
 
@@ -98,7 +121,11 @@ const PosBlankPage: React.FC = () => {
     const due =
       selectedSale.due_amount != null
         ? Number(selectedSale.due_amount)
-        : Math.max(0, Number(selectedSale.total_amount ?? 0) - Number(selectedSale.paid_amount ?? 0));
+        : Math.max(
+            0,
+            Number(selectedSale.total_amount ?? 0) -
+              Number(selectedSale.paid_amount ?? 0),
+          );
     setNewPaymentAmount(due > 0 ? String(due) : "");
   }, [selectedSale]);
 
@@ -110,7 +137,8 @@ const PosBlankPage: React.FC = () => {
         const d = res.data.data ?? res.data;
         setShift({
           ...d,
-          is_open: d.is_open === true || d.is_open === "true" || d.is_open === 1,
+          is_open:
+            d.is_open === true || d.is_open === "true" || d.is_open === 1,
         });
       } else {
         setShift(null);
@@ -136,7 +164,7 @@ const PosBlankPage: React.FC = () => {
       if (!shift) return [];
       setSalesLoading(true);
       const list = await saleService.fetchSalesByShiftOrDate(
-        shift?.is_open ? shift.id ?? undefined : undefined,
+        shift?.is_open ? (shift.id ?? undefined) : undefined,
       );
       const arr = Array.isArray(list) ? list : [];
       setSales(arr);
@@ -170,47 +198,51 @@ const PosBlankPage: React.FC = () => {
     return () => clearTimeout(t);
   }, [productInputValue]);
 
-  const handleAddPayment = useCallback(
-    async () => {
-      if (!selectedSale) return;
-      const due =
-        selectedSale.due_amount != null
-          ? Number(selectedSale.due_amount)
-          : Math.max(0, Number(selectedSale.total_amount ?? 0) - Number(selectedSale.paid_amount ?? 0));
-      if (due <= 0) return;
-      const amount = Number(newPaymentAmount);
-      if (!Number.isFinite(amount) || amount <= 0) {
-        toast.error("أدخل مبلغاً صحيحاً");
-        return;
-      }
-      if (amount > due) {
-        toast.error("المبلغ أكبر من المتبقي");
-        return;
-      }
-      try {
-        setAddPaymentLoading(true);
-        const today = new Date().toISOString().slice(0, 10);
-        const existingPayments = (selectedSale.payments ?? []).map((p) => ({
-          method: p.method,
-          amount: Number(p.amount),
-          payment_date: p.payment_date || today,
-        }));
-        await saleService.addPaymentToSale(selectedSale.id, {
-          payments: [...existingPayments, { method: newPaymentMethod, amount, payment_date: today }],
-        });
-        const updated = await saleService.getSale(selectedSale.id);
-        setSelectedSale(updated);
-        setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
-        setNewPaymentAmount("");
-        toast.success("تمت إضافة الدفعة");
-      } catch (err) {
-        toast.error(saleService.getErrorMessage(err));
-      } finally {
-        setAddPaymentLoading(false);
-      }
-    },
-    [selectedSale, newPaymentMethod, newPaymentAmount]
-  );
+  const handleAddPayment = useCallback(async () => {
+    if (!selectedSale) return;
+    const due =
+      selectedSale.due_amount != null
+        ? Number(selectedSale.due_amount)
+        : Math.max(
+            0,
+            Number(selectedSale.total_amount ?? 0) -
+              Number(selectedSale.paid_amount ?? 0),
+          );
+    if (due <= 0) return;
+    const amount = Number(newPaymentAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error("أدخل مبلغاً صحيحاً");
+      return;
+    }
+    if (amount > due) {
+      toast.error("المبلغ أكبر من المتبقي");
+      return;
+    }
+    try {
+      setAddPaymentLoading(true);
+      const today = new Date().toISOString().slice(0, 10);
+      const existingPayments = (selectedSale.payments ?? []).map((p) => ({
+        method: p.method,
+        amount: Number(p.amount),
+        payment_date: p.payment_date || today,
+      }));
+      await saleService.addPaymentToSale(selectedSale.id, {
+        payments: [
+          ...existingPayments,
+          { method: newPaymentMethod, amount, payment_date: today },
+        ],
+      });
+      const updated = await saleService.getSale(selectedSale.id);
+      setSelectedSale(updated);
+      setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+      setNewPaymentAmount("");
+      toast.success("تمت إضافة الدفعة");
+    } catch (err) {
+      toast.error(saleService.getErrorMessage(err));
+    } finally {
+      setAddPaymentLoading(false);
+    }
+  }, [selectedSale, newPaymentMethod, newPaymentAmount]);
 
   // Page-level: plus key adds payment when add-payment is available (skip when focus is in input/textarea/select)
   useEffect(() => {
@@ -229,7 +261,11 @@ const PosBlankPage: React.FC = () => {
       const due =
         selectedSale.due_amount != null
           ? Number(selectedSale.due_amount)
-          : Math.max(0, Number(selectedSale.total_amount ?? 0) - Number(selectedSale.paid_amount ?? 0));
+          : Math.max(
+              0,
+              Number(selectedSale.total_amount ?? 0) -
+                Number(selectedSale.paid_amount ?? 0),
+            );
       if (due <= 0 || !newPaymentAmount.trim() || addPaymentLoading) return;
       e.preventDefault();
       handleAddPayment();
@@ -246,7 +282,9 @@ const PosBlankPage: React.FC = () => {
         await saleService.deletePayment(selectedSale.id, paymentId);
         const updated = await saleService.getSale(selectedSale.id);
         setSelectedSale(updated);
-        setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+        setSales((prev) =>
+          prev.map((s) => (s.id === updated.id ? updated : s)),
+        );
         toast.success("تم حذف الدفعة");
       } catch (err) {
         toast.error(saleService.getErrorMessage(err));
@@ -254,80 +292,99 @@ const PosBlankPage: React.FC = () => {
         setDeletingPaymentId(null);
       }
     },
-    [selectedSale]
+    [selectedSale],
   );
 
-  const handleFullPayment = useCallback(
-    async () => {
-      if (!selectedSale) return;
-      const due =
-        selectedSale.due_amount != null
-          ? Number(selectedSale.due_amount)
-          : Math.max(0, Number(selectedSale.total_amount ?? 0) - Number(selectedSale.paid_amount ?? 0));
-      if (due <= 0) {
-        toast.info("البيع مدفوع بالكامل");
-        return;
-      }
-      try {
-        setFullPaymentLoading(true);
-        const today = new Date().toISOString().slice(0, 10);
-        const existingPayments = (selectedSale.payments ?? []).map((p) => ({
-          method: p.method,
-          amount: Number(p.amount),
-          payment_date: typeof p.payment_date === "string" ? p.payment_date.slice(0, 10) : today,
-        }));
-        await saleService.addPaymentToSale(selectedSale.id, {
-          payments: [...existingPayments, { method: newPaymentMethod, amount: due, payment_date: today }],
-        });
-        const updated = await saleService.getSale(selectedSale.id);
-        setSelectedSale(updated);
-        setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
-        toast.success("تم التسديد بالكامل");
-      } catch (err) {
-        toast.error(saleService.getErrorMessage(err));
-      } finally {
-        setFullPaymentLoading(false);
-      }
-    },
-    [selectedSale, newPaymentMethod]
-  );
+  const handleFullPayment = useCallback(async () => {
+    if (!selectedSale) return;
+    const due =
+      selectedSale.due_amount != null
+        ? Number(selectedSale.due_amount)
+        : Math.max(
+            0,
+            Number(selectedSale.total_amount ?? 0) -
+              Number(selectedSale.paid_amount ?? 0),
+          );
+    if (due <= 0) {
+      toast.info("البيع مدفوع بالكامل");
+      return;
+    }
+    try {
+      setFullPaymentLoading(true);
+      const today = new Date().toISOString().slice(0, 10);
+      const existingPayments = (selectedSale.payments ?? []).map((p) => ({
+        method: p.method,
+        amount: Number(p.amount),
+        payment_date:
+          typeof p.payment_date === "string"
+            ? p.payment_date.slice(0, 10)
+            : today,
+      }));
+      await saleService.addPaymentToSale(selectedSale.id, {
+        payments: [
+          ...existingPayments,
+          { method: newPaymentMethod, amount: due, payment_date: today },
+        ],
+      });
+      const updated = await saleService.getSale(selectedSale.id);
+      setSelectedSale(updated);
+      setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+      toast.success("تم التسديد بالكامل");
+    } catch (err) {
+      toast.error(saleService.getErrorMessage(err));
+    } finally {
+      setFullPaymentLoading(false);
+    }
+  }, [selectedSale, newPaymentMethod]);
 
   const handleQuantityChange = useCallback(
     async (item: SaleItem, newQuantity: number) => {
       if (!selectedSale || item.id == null) return;
       try {
-        const updated = await saleService.updateSaleItem(selectedSale.id, item.id, {
-          quantity: newQuantity,
-          unit_price: Number(item.unit_price ?? 0),
-          purchase_item_id: item.purchase_item_id ?? null,
-        });
+        const updated = await saleService.updateSaleItem(
+          selectedSale.id,
+          item.id,
+          {
+            quantity: newQuantity,
+            unit_price: Number(item.unit_price ?? 0),
+            purchase_item_id: item.purchase_item_id ?? null,
+          },
+        );
         setSelectedSale(updated);
-        setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+        setSales((prev) =>
+          prev.map((s) => (s.id === updated.id ? updated : s)),
+        );
         toast.success("تم تحديث الكمية");
       } catch (err) {
         toast.error(saleService.getErrorMessage(err));
       }
     },
-    [selectedSale]
+    [selectedSale],
   );
 
   const handlePriceChange = useCallback(
     async (item: SaleItem, newPrice: number) => {
       if (!selectedSale || item.id == null) return;
       try {
-        const updated = await saleService.updateSaleItem(selectedSale.id, item.id, {
-          quantity: Number(item.quantity ?? 0),
-          unit_price: newPrice,
-          purchase_item_id: item.purchase_item_id ?? null,
-        });
+        const updated = await saleService.updateSaleItem(
+          selectedSale.id,
+          item.id,
+          {
+            quantity: Number(item.quantity ?? 0),
+            unit_price: newPrice,
+            purchase_item_id: item.purchase_item_id ?? null,
+          },
+        );
         setSelectedSale(updated);
-        setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+        setSales((prev) =>
+          prev.map((s) => (s.id === updated.id ? updated : s)),
+        );
         toast.success("تم تحديث السعر");
       } catch (err) {
         toast.error(saleService.getErrorMessage(err));
       }
     },
-    [selectedSale]
+    [selectedSale],
   );
 
   const handleAddProductToSale = useCallback(
@@ -347,7 +404,7 @@ const PosBlankPage: React.FC = () => {
         if (res.sale) {
           setSelectedSale(res.sale);
           setSales((prev) =>
-            prev.map((s) => (s.id === res.sale.id ? res.sale : s))
+            prev.map((s) => (s.id === res.sale.id ? res.sale : s)),
           );
         }
         toast.success("تمت إضافة المنتج");
@@ -359,14 +416,14 @@ const PosBlankPage: React.FC = () => {
         setAddProductLoading(false);
       }
     },
-    [selectedSale]
+    [selectedSale],
   );
 
   const handleAddProductByBarcode = useCallback(async () => {
     const barcode = productInputValue.trim();
     if (!barcode || !selectedSale) return;
     const fromOptions = productOptions.find(
-      (p) => p.sku != null && String(p.sku).trim() === barcode
+      (p) => p.sku != null && String(p.sku).trim() === barcode,
     );
     if (fromOptions) {
       handleAddProductToSale(fromOptions);
@@ -376,7 +433,7 @@ const PosBlankPage: React.FC = () => {
       setAddProductLoading(true);
       const list = await productService.getProductsForAutocomplete(barcode, 20);
       const match = list.find(
-        (p) => p.sku != null && String(p.sku).trim() === barcode
+        (p) => p.sku != null && String(p.sku).trim() === barcode,
       );
       if (match) {
         await handleAddProductToSale(match);
@@ -390,16 +447,12 @@ const PosBlankPage: React.FC = () => {
     } finally {
       setAddProductLoading(false);
     }
-  }, [
-    productInputValue,
-    productOptions,
-    selectedSale,
-    handleAddProductToSale,
-  ]);
+  }, [productInputValue, productOptions, selectedSale, handleAddProductToSale]);
 
   const handleOpenShift = useCallback(async () => {
     try {
       setShiftLoading(true);
+      setSelectedSale(null);
       const res = await apiClient.post("/shifts/open");
       const d = res.data.data ?? res.data;
       setShift({ ...d, is_open: true });
@@ -414,9 +467,86 @@ const PosBlankPage: React.FC = () => {
 
   const handleCloseShift = useCallback(async () => {
     try {
+      const latestSales = await fetchSales();
+      const unpaidSales = latestSales.filter(
+        (s) => Number(s.total_amount ?? 0) - Number(s.paid_amount ?? 0) > 1e-6,
+      );
+      if (unpaidSales.length > 0) {
+        const saleIds = unpaidSales
+          .map((s) => s.id)
+          .filter((id): id is number => id != null);
+        toast.custom(
+          (t) => (
+            <Paper
+              elevation={3}
+              sx={{
+                p: 1.5,
+                minWidth: 280,
+                borderRadius: 2,
+                border: "1px solid",
+                borderColor: "error.light",
+              }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  mb: 1,
+                }}
+              >
+                <Typography fontWeight={600} sx={{ color: "black", flex: 1 }}>
+                  لا يمكن إغلاق الوردية
+                  <br />
+                  <Typography
+                    component="span"
+                    variant="caption"
+                    sx={{ color: "error.main" }}
+                  >
+                    توجد مبيعات غير مسددة
+                  </Typography>
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => toast.dismiss(t)}
+                  sx={{ mt: -0.5, mr: -0.5 }}
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </Box>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mb: 1.5 }}
+              >
+                ({unpaidSales.length}) عملية: #{saleIds.join(", #")}
+              </Typography>
+              <Stack direction="row" flexWrap="wrap" gap={0.75}>
+                {unpaidSales.map((sale) => (
+                  <Button
+                    key={sale.id}
+                    size="small"
+                    variant="outlined"
+                    onClick={() => {
+                      setSelectedSale(sale);
+                      toast.dismiss(t);
+                    }}
+                  >
+                    بيع #{sale.id}
+                  </Button>
+                ))}
+              </Stack>
+            </Paper>
+          ),
+          { duration: Infinity },
+        );
+        return;
+      }
       setShiftLoading(true);
       await apiClient.post("/shifts/close");
       setShift(null);
+      setSelectedSale(null);
+      setSales([]);
       toast.success("تم إغلاق الوردية");
     } catch (err) {
       console.error("Failed to close shift:", err);
@@ -424,7 +554,7 @@ const PosBlankPage: React.FC = () => {
     } finally {
       setShiftLoading(false);
     }
-  }, []);
+  }, [fetchSales]);
 
   const isShiftOpen = shift?.is_open === true;
 
@@ -450,7 +580,10 @@ const PosBlankPage: React.FC = () => {
   }, [sales]);
 
   const shiftDiscountTotal = useMemo(() => {
-    return sales.reduce((sum, sale) => sum + Number(sale.discount_amount ?? 0), 0);
+    return sales.reduce(
+      (sum, sale) => sum + Number(sale.discount_amount ?? 0),
+      0,
+    );
   }, [sales]);
 
   const fetchShiftExpenseTotals = useCallback(async () => {
@@ -459,7 +592,9 @@ const PosBlankPage: React.FC = () => {
       return;
     }
     try {
-      const filters: { shift_id: number; user_id?: number } = { shift_id: shift.id };
+      const filters: { shift_id: number; user_id?: number } = {
+        shift_id: shift.id,
+      };
       if (user?.id) filters.user_id = user.id;
       const res = await expenseService.getExpenses(1, 500, filters);
       const list = res.data ?? [];
@@ -529,10 +664,17 @@ const PosBlankPage: React.FC = () => {
       toast.error("لا يمكن إزالة الأصناف عند وجود مدفوعات");
       return;
     }
-    if (!window.confirm("إزالة كل الأصناف من عملية البيع؟ سيتم إرجاع الكميات للمخزون.")) return;
+    if (
+      !window.confirm(
+        "إزالة كل الأصناف من عملية البيع؟ سيتم إرجاع الكميات للمخزون.",
+      )
+    )
+      return;
     try {
       setRemoveAllItemsLoading(true);
-      const itemIds = selectedSale.items.map((item) => item.id).filter((id): id is number => id != null);
+      const itemIds = selectedSale.items
+        .map((item) => item.id)
+        .filter((id): id is number => id != null);
       for (const id of itemIds) {
         setDeletingSaleItemId(id);
         await saleService.deleteSaleItem(selectedSale.id, id);
@@ -553,9 +695,12 @@ const PosBlankPage: React.FC = () => {
     if (!selectedSale?.id) return;
     setThermalPdfLoading(true);
     try {
-      const response = await apiClient.get(`/sales/${selectedSale.id}/thermal-invoice-pdf`, {
-        responseType: "blob",
-      });
+      const response = await apiClient.get(
+        `/sales/${selectedSale.id}/thermal-invoice-pdf`,
+        {
+          responseType: "blob",
+        },
+      );
       const blob = new Blob([response.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       setThermalPdfUrl(url);
@@ -580,7 +725,9 @@ const PosBlankPage: React.FC = () => {
     if (!shift?.id) return;
     setShiftPdfLoading(true);
     try {
-      const params: { shift_id: number; user_id?: number } = { shift_id: shift.id };
+      const params: { shift_id: number; user_id?: number } = {
+        shift_id: shift.id,
+      };
       if (user?.id) params.user_id = user.id;
       const response = await apiClient.get("/reports/sales-pdf", {
         params,
@@ -618,7 +765,9 @@ const PosBlankPage: React.FC = () => {
         await saleService.deleteSaleItem(selectedSale.id, item.id);
         const updated = await saleService.getSale(selectedSale.id);
         setSelectedSale(updated);
-        setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+        setSales((prev) =>
+          prev.map((s) => (s.id === updated.id ? updated : s)),
+        );
         toast.success("تم حذف الصنف");
       } catch (err) {
         toast.error(saleService.getErrorMessage(err));
@@ -626,7 +775,7 @@ const PosBlankPage: React.FC = () => {
         setDeletingSaleItemId(null);
       }
     },
-    [selectedSale]
+    [selectedSale],
   );
 
   const handleApplyDiscount = useCallback(async () => {
@@ -697,7 +846,9 @@ const PosBlankPage: React.FC = () => {
           boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
         }}
       >
-        <Toolbar sx={{ height: 64, px: { xs: 2, sm: 3 }, gap: 2, flexWrap: "wrap" }}>
+        <Toolbar
+          sx={{ height: 64, px: { xs: 2, sm: 3 }, gap: 2, flexWrap: "wrap" }}
+        >
           <Typography
             variant="h6"
             fontWeight="700"
@@ -739,15 +890,29 @@ const PosBlankPage: React.FC = () => {
                 }}
               >
                 <Stack divider={<Divider />} sx={{ py: 1 }}>
-                  <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: 2, py: 1 }}>
-                    <ScheduleIcon sx={{ color: "text.secondary", fontSize: 20 }} />
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    gap={1.5}
+                    sx={{ px: 2, py: 1 }}
+                  >
+                    <ScheduleIcon
+                      sx={{ color: "text.secondary", fontSize: 20 }}
+                    />
                     <Typography variant="body2" fontWeight={600}>
                       وردية #{shift.id}
                     </Typography>
                   </Stack>
                   {shift.opened_at && (
-                    <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: 2, py: 1 }}>
-                      <AccessTimeIcon sx={{ color: "text.secondary", fontSize: 20 }} />
+                    <Stack
+                      direction="row"
+                      alignItems="center"
+                      gap={1.5}
+                      sx={{ px: 2, py: 1 }}
+                    >
+                      <AccessTimeIcon
+                        sx={{ color: "text.secondary", fontSize: 20 }}
+                      />
                       <Typography variant="body2" color="text.secondary">
                         وقت الفتح:{" "}
                         {new Date(shift.opened_at).toLocaleString("ar-EG", {
@@ -757,50 +922,124 @@ const PosBlankPage: React.FC = () => {
                       </Typography>
                     </Stack>
                   )}
-                  {(shift.user_name != null && shift.user_name !== "") && (
-                    <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: 2, py: 1 }}>
-                      <PersonIcon sx={{ color: "text.secondary", fontSize: 20 }} />
+                  {shift.user_name != null && shift.user_name !== "" && (
+                    <Stack
+                      direction="row"
+                      alignItems="center"
+                      gap={1.5}
+                      sx={{ px: 2, py: 1 }}
+                    >
+                      <PersonIcon
+                        sx={{ color: "text.secondary", fontSize: 20 }}
+                      />
                       <Typography variant="body2" color="text.secondary">
                         فتح بواسطة: {shift.user_name}
                       </Typography>
                     </Stack>
                   )}
-                  <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: 2, py: 1 }}>
-                    <PaymentsIcon sx={{ color: "primary.main", fontSize: 20 }} />
-                    <Typography variant="body2">نقدي: {formatNumber(shiftPaymentTotals.cash)}</Typography>
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    gap={1.5}
+                    sx={{ px: 2, py: 1 }}
+                  >
+                    <PaymentsIcon
+                      sx={{ color: "primary.main", fontSize: 20 }}
+                    />
+                    <Typography variant="body2">
+                      نقدي: {formatNumber(shiftPaymentTotals.cash)}
+                    </Typography>
                   </Stack>
-                  <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: 2, py: 1 }}>
-                    <AccountBalanceIcon sx={{ color: "primary.main", fontSize: 20 }} />
-                    <Typography variant="body2">بنكك: {formatNumber(shiftPaymentTotals.bankak)}</Typography>
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    gap={1.5}
+                    sx={{ px: 2, py: 1 }}
+                  >
+                    <AccountBalanceIcon
+                      sx={{ color: "primary.main", fontSize: 20 }}
+                    />
+                    <Typography variant="body2">
+                      بنكك: {formatNumber(shiftPaymentTotals.bankak)}
+                    </Typography>
                   </Stack>
-                  <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: 2, py: 1 }}>
-                    <LocalOfferIcon sx={{ color: "text.secondary", fontSize: 20 }} />
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    gap={1.5}
+                    sx={{ px: 2, py: 1 }}
+                  >
+                    <LocalOfferIcon
+                      sx={{ color: "text.secondary", fontSize: 20 }}
+                    />
                     <Typography variant="body2" color="text.secondary">
                       إجمالي الخصومات: {formatNumber(shiftDiscountTotal)}
                     </Typography>
                   </Stack>
-                  <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: 2, py: 1 }}>
-                    <ReceiptLongIcon sx={{ color: "error.main", fontSize: 20 }} />
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    gap={1.5}
+                    sx={{ px: 2, py: 1 }}
+                  >
+                    <ReceiptLongIcon
+                      sx={{ color: "error.main", fontSize: 20 }}
+                    />
                     <Typography variant="body2" color="error.main">
                       مصروف نقدي: {formatNumber(shiftExpenseTotals.cash)}
                     </Typography>
                   </Stack>
-                  <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: 2, py: 1 }}>
-                    <ReceiptLongIcon sx={{ color: "error.main", fontSize: 20 }} />
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    gap={1.5}
+                    sx={{ px: 2, py: 1 }}
+                  >
+                    <ReceiptLongIcon
+                      sx={{ color: "error.main", fontSize: 20 }}
+                    />
                     <Typography variant="body2" color="error.main">
                       مصروف بنك: {formatNumber(shiftExpenseTotals.bank)}
                     </Typography>
                   </Stack>
-                  <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: 2, py: 1 }}>
-                    <TrendingUpIcon sx={{ color: "success.main", fontSize: 20 }} />
-                    <Typography variant="body2" color="success.main" fontWeight={700}>
-                      صافي نقدي: {formatNumber(shiftPaymentTotals.cash - shiftExpenseTotals.cash)}
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    gap={1.5}
+                    sx={{ px: 2, py: 1 }}
+                  >
+                    <TrendingUpIcon
+                      sx={{ color: "success.main", fontSize: 20 }}
+                    />
+                    <Typography
+                      variant="body2"
+                      color="success.main"
+                      fontWeight={700}
+                    >
+                      صافي نقدي:{" "}
+                      {formatNumber(
+                        shiftPaymentTotals.cash - shiftExpenseTotals.cash,
+                      )}
                     </Typography>
                   </Stack>
-                  <Stack direction="row" alignItems="center" gap={1.5} sx={{ px: 2, py: 1 }}>
-                    <TrendingUpIcon sx={{ color: "success.main", fontSize: 20 }} />
-                    <Typography variant="body2" color="success.main" fontWeight={700}>
-                      صافي بنك: {formatNumber(shiftPaymentTotals.bankak - shiftExpenseTotals.bank)}
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    gap={1.5}
+                    sx={{ px: 2, py: 1 }}
+                  >
+                    <TrendingUpIcon
+                      sx={{ color: "success.main", fontSize: 20 }}
+                    />
+                    <Typography
+                      variant="body2"
+                      color="success.main"
+                      fontWeight={700}
+                    >
+                      صافي بنك:{" "}
+                      {formatNumber(
+                        shiftPaymentTotals.bankak - shiftExpenseTotals.bank,
+                      )}
                     </Typography>
                   </Stack>
                   <Box sx={{ px: 2, py: 1.5 }}>
@@ -819,7 +1058,9 @@ const PosBlankPage: React.FC = () => {
                       onClick={handleCreateShiftPdfReport}
                       sx={{ textTransform: "none", fontWeight: 600 }}
                     >
-                      {shiftPdfLoading ? "جاري التحميل..." : "تقرير الوردية PDF"}
+                      {shiftPdfLoading
+                        ? "جاري التحميل..."
+                        : "تقرير الوردية PDF"}
                     </Button>
                   </Box>
                 </Stack>
@@ -860,10 +1101,17 @@ const PosBlankPage: React.FC = () => {
                 <TextField
                   {...params}
                   inputRef={(el) => {
-                    (productInputRef as React.MutableRefObject<HTMLInputElement | null>).current = el;
-                    const prev = (params as { inputRef?: React.Ref<HTMLInputElement> }).inputRef;
+                    (
+                      productInputRef as React.MutableRefObject<HTMLInputElement | null>
+                    ).current = el;
+                    const prev = (
+                      params as { inputRef?: React.Ref<HTMLInputElement> }
+                    ).inputRef;
                     if (typeof prev === "function") prev(el);
-                    else if (prev && typeof prev === "object") (prev as React.MutableRefObject<HTMLInputElement | null>).current = el;
+                    else if (prev && typeof prev === "object")
+                      (
+                        prev as React.MutableRefObject<HTMLInputElement | null>
+                      ).current = el;
                   }}
                   placeholder="ابحث عن منتج أو الباركود..."
                   size="small"
@@ -889,11 +1137,17 @@ const PosBlankPage: React.FC = () => {
               )}
               renderOption={(props, option) => (
                 <li {...props} key={option.id}>
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}
+                  >
                     <Typography variant="body2">{option.name}</Typography>
                     {(option.sku || option.suggested_sale_price != null) && (
                       <Typography variant="caption" color="text.secondary">
-                        {[option.sku, option.suggested_sale_price != null && `السعر: ${formatNumber(Number(option.suggested_sale_price))}`]
+                        {[
+                          option.sku,
+                          option.suggested_sale_price != null &&
+                            `السعر: ${formatNumber(Number(option.suggested_sale_price))}`,
+                        ]
                           .filter(Boolean)
                           .join(" · ")}
                       </Typography>
@@ -901,7 +1155,9 @@ const PosBlankPage: React.FC = () => {
                   </Box>
                 </li>
               )}
-              noOptionsText={productInputValue.trim() ? "لا توجد نتائج" : "اكتب للبحث"}
+              noOptionsText={
+                productInputValue.trim() ? "لا توجد نتائج" : "اكتب للبحث"
+              }
               sx={{ width: "100%" }}
             />
           </Box>
@@ -999,9 +1255,22 @@ const PosBlankPage: React.FC = () => {
             >
               {selectedSale ? (
                 <>
-                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.5, flexWrap: "wrap", gap: 1 }}>
-                    <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                      عناصر البيع #{ selectedSale.id}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      mb: 1.5,
+                      flexWrap: "wrap",
+                      gap: 1,
+                    }}
+                  >
+                    <Typography
+                      variant="subtitle2"
+                      color="text.secondary"
+                      sx={{ fontWeight: 600 }}
+                    >
+                      عناصر البيع #{selectedSale.id}
                     </Typography>
                     {selectedSale.items && selectedSale.items.length > 0 && (
                       <Button
@@ -1009,7 +1278,10 @@ const PosBlankPage: React.FC = () => {
                         color="error"
                         variant="outlined"
                         onClick={handleRemoveAllSaleItems}
-                        disabled={removeAllItemsLoading || (selectedSale.payments?.length ?? 0) > 0}
+                        disabled={
+                          removeAllItemsLoading ||
+                          (selectedSale.payments?.length ?? 0) > 0
+                        }
                         aria-label="إزالة كل الأصناف"
                       >
                         {removeAllItemsLoading ? "جاري..." : "إزالة كل الأصناف"}
@@ -1024,11 +1296,22 @@ const PosBlankPage: React.FC = () => {
                     deletingItemId={deletingSaleItemId}
                     onDeleteItem={handleDeleteSaleItem}
                     canDeleteItems={(selectedSale.payments?.length ?? 0) === 0}
+                    disableQuantityAndPriceEdit={
+                      Math.abs(
+                        Number(selectedSale.paid_amount ?? 0) -
+                          Number(selectedSale.total_amount ?? 0),
+                      ) < 1e-6
+                    }
                   />
                 </>
               ) : (
-                <Typography variant="body2" color="text.secondary" sx={{ py: 2, display: "block" }}>
-                  اختر عملية بيع من القائمة لتفعيل إضافة المنتجات (استخدم البحث في الأعلى)
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ py: 2, display: "block" }}
+                >
+                  اختر عملية بيع من القائمة لتفعيل إضافة المنتجات (استخدم البحث
+                  في الأعلى)
                 </Typography>
               )}
             </Paper>
@@ -1052,18 +1335,28 @@ const PosBlankPage: React.FC = () => {
               {selectedSale ? (
                 <Box>
                   <Typography variant="subtitle1" fontWeight={700} gutterBottom>
-                    تفاصيل البيع #{ selectedSale.id}
+                    تفاصيل البيع #{selectedSale.id}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mb: 1.5 }}
+                  >
                     {selectedSale.sale_date}
                     {selectedSale.client_name && (
                       <> · {selectedSale.client_name}</>
                     )}
                   </Typography>
 
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                      <Typography variant="body2" color="text.secondary">عدد العناصر</Typography>
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 1 }}
+                  >
+                    <Box
+                      sx={{ display: "flex", justifyContent: "space-between" }}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        عدد العناصر
+                      </Typography>
                       <Typography variant="body2" fontWeight={600}>
                         {selectedSale.items?.length ?? 0}
                       </Typography>
@@ -1074,52 +1367,104 @@ const PosBlankPage: React.FC = () => {
                           ? Number(selectedSale.subtotal)
                           : (selectedSale.items ?? []).reduce(
                               (sum, i) => sum + Number(i.total_price ?? 0),
-                              0
+                              0,
                             );
-                      const discountAmt = Number(selectedSale.discount_amount ?? 0);
+                      const discountAmt = Number(
+                        selectedSale.discount_amount ?? 0,
+                      );
                       return (
                         <>
-                          <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                            <Typography variant="body2" color="text.secondary">المجموع الفرعي</Typography>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                            }}
+                          >
+                            <Typography variant="body2" color="text.secondary">
+                              المجموع الفرعي
+                            </Typography>
                             <Typography variant="body2" fontWeight={600}>
                               {formatNumber(subtotal)}
                             </Typography>
                           </Box>
                           {discountAmt > 0 && (
-                            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                              <Typography variant="body2" color="text.secondary">الخصم</Typography>
-                              <Typography variant="body2" fontWeight={600} color="error.main">
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                              }}
+                            >
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                الخصم
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                fontWeight={600}
+                                color="error.main"
+                              >
                                 - {formatNumber(discountAmt)}
                               </Typography>
                             </Box>
                           )}
-                          <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 0.75, mt: 0.5 }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              flexWrap: "wrap",
+                              alignItems: "center",
+                              gap: 0.75,
+                              mt: 0.5,
+                            }}
+                          >
                             <FormControl size="small" sx={{ minWidth: 90 }}>
-                              <InputLabel id="discount-type-label">نوع الخصم</InputLabel>
+                              <InputLabel id="discount-type-label">
+                                نوع الخصم
+                              </InputLabel>
                               <Select
                                 labelId="discount-type-label"
                                 value={discountType}
                                 label="نوع الخصم"
-                                onChange={(e) => setDiscountType(e.target.value as "percentage" | "fixed")}
+                                onChange={(e) =>
+                                  setDiscountType(
+                                    e.target.value as "percentage" | "fixed",
+                                  )
+                                }
                               >
                                 <MenuItem value="fixed">مبلغ ثابت</MenuItem>
-                                <MenuItem value="percentage">نسبة مئوية</MenuItem>
+                                <MenuItem value="percentage">
+                                  نسبة مئوية
+                                </MenuItem>
                               </Select>
                             </FormControl>
                             <TextField
                               size="small"
                               type="number"
-                              placeholder={discountType === "percentage" ? "٪" : "المبلغ"}
+                              placeholder={
+                                discountType === "percentage" ? "٪" : "المبلغ"
+                              }
                               value={discountValue}
                               onChange={(e) => setDiscountValue(e.target.value)}
-                              inputProps={{ min: 0, max: discountType === "percentage" ? 100 : undefined, step: discountType === "percentage" ? 1 : 0.01 }}
+                              inputProps={{
+                                min: 0,
+                                max:
+                                  discountType === "percentage"
+                                    ? 100
+                                    : undefined,
+                                step: discountType === "percentage" ? 1 : 0.01,
+                              }}
                               sx={{ width: 80 }}
                             />
                             <Button
                               size="small"
                               variant="outlined"
                               onClick={handleApplyDiscount}
-                              disabled={discountLoading || !discountValue.trim() || (selectedSale.items?.length ?? 0) === 0}
+                              disabled={
+                                discountLoading ||
+                                !discountValue.trim() ||
+                                (selectedSale.items?.length ?? 0) === 0
+                              }
                             >
                               {discountLoading ? "..." : "تطبيق"}
                             </Button>
@@ -1138,92 +1483,166 @@ const PosBlankPage: React.FC = () => {
                         </>
                       );
                     })()}
-                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                      <Typography variant="body2" color="text.secondary">الإجمالي</Typography>
-                      <Typography variant="body2" fontWeight={600} color="success.main">
+                    <Box
+                      sx={{ display: "flex", justifyContent: "space-between" }}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        الإجمالي
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        fontWeight={600}
+                        color="success.main"
+                      >
                         {formatNumber(Number(selectedSale.total_amount ?? 0))}
                       </Typography>
                     </Box>
-                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                      <Typography variant="body2" color="text.secondary">المدفوع</Typography>
+                    <Box
+                      sx={{ display: "flex", justifyContent: "space-between" }}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        المدفوع
+                      </Typography>
                       <Typography variant="body2" fontWeight={600}>
                         {formatNumber(Number(selectedSale.paid_amount ?? 0))}
                       </Typography>
                     </Box>
-                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                      <Typography variant="body2" color="text.secondary">المتبقي</Typography>
+                    <Box
+                      sx={{ display: "flex", justifyContent: "space-between" }}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        المتبقي
+                      </Typography>
                       <Typography variant="body2" fontWeight={600}>
                         {formatNumber(
                           selectedSale.due_amount != null
                             ? Number(selectedSale.due_amount)
-                            : Math.max(0, Number(selectedSale.total_amount ?? 0) - Number(selectedSale.paid_amount ?? 0))
+                            : Math.max(
+                                0,
+                                Number(selectedSale.total_amount ?? 0) -
+                                  Number(selectedSale.paid_amount ?? 0),
+                              ),
                         )}
                       </Typography>
                     </Box>
                   </Box>
-                  {selectedSale.payments && selectedSale.payments.length > 0 && (
-                    <Box sx={{ mt: 1.5 }}>
-                      <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: "block", mb: 0.75 }}>
-                        المدفوعات
-                      </Typography>
-                      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-                        {selectedSale.payments.map((p) => (
-                          <Box
-                            key={p.id ?? `${p.method}-${p.amount}-${p.payment_date}`}
-                            sx={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                              py: 0.5,
-                              px: 1,
-                              borderRadius: 1,
-                              bgcolor: "action.hover",
-                            }}
-                          >
-                            <Typography variant="caption" color="text.secondary">
-                              {p.method === "cash" ? "نقدي" : p.method === "bankak" ? "بنكك" : p.method === "fawry" ? "فوري" : p.method === "ocash" ? "أوكاش" : p.method}
-                            </Typography>
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                              <Typography variant="caption" fontWeight={600}>
-                                {formatNumber(Number(p.amount))}
+                  {selectedSale.payments &&
+                    selectedSale.payments.length > 0 && (
+                      <Box sx={{ mt: 1.5 }}>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          fontWeight={600}
+                          sx={{ display: "block", mb: 0.75 }}
+                        >
+                          المدفوعات
+                        </Typography>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 0.5,
+                          }}
+                        >
+                          {selectedSale.payments.map((p) => (
+                            <Box
+                              key={
+                                p.id ??
+                                `${p.method}-${p.amount}-${p.payment_date}`
+                              }
+                              sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                py: 0.5,
+                                px: 1,
+                                borderRadius: 1,
+                                bgcolor: "action.hover",
+                              }}
+                            >
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                {p.method === "cash"
+                                  ? "نقدي"
+                                  : p.method === "bankak"
+                                    ? "بنكك"
+                                    : p.method === "fawry"
+                                      ? "فوري"
+                                      : p.method === "ocash"
+                                        ? "أوكاش"
+                                        : p.method}
                               </Typography>
-                              {p.id != null && (
-                                <IconButton
-                                  size="small"
-                                  color="error"
-                                  onClick={() => handleDeletePayment(p.id!)}
-                                  disabled={deletingPaymentId === p.id}
-                                  sx={{ p: 0.25 }}
-                                  aria-label="حذف الدفعة"
-                                >
-                                  <DeleteOutlineIcon sx={{ fontSize: 18 }} />
-                                </IconButton>
-                              )}
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 0.5,
+                                }}
+                              >
+                                <Typography variant="caption" fontWeight={600}>
+                                  {formatNumber(Number(p.amount))}
+                                </Typography>
+                                {p.id != null && (
+                                  <IconButton
+                                    size="small"
+                                    color="error"
+                                    onClick={() => handleDeletePayment(p.id!)}
+                                    disabled={deletingPaymentId === p.id}
+                                    sx={{ p: 0.25 }}
+                                    aria-label="حذف الدفعة"
+                                  >
+                                    <DeleteOutlineIcon sx={{ fontSize: 18 }} />
+                                  </IconButton>
+                                )}
+                              </Box>
                             </Box>
-                          </Box>
-                        ))}
+                          ))}
+                        </Box>
                       </Box>
-                    </Box>
-                  )}
+                    )}
                   {(() => {
                     const due =
                       selectedSale.due_amount != null
                         ? Number(selectedSale.due_amount)
-                        : Math.max(0, Number(selectedSale.total_amount ?? 0) - Number(selectedSale.paid_amount ?? 0));
+                        : Math.max(
+                            0,
+                            Number(selectedSale.total_amount ?? 0) -
+                              Number(selectedSale.paid_amount ?? 0),
+                          );
                     const notFullyPaid = due > 0;
                     return notFullyPaid ? (
                       <Box sx={{ mt: 1.5 }}>
-                        <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: "block", mb: 0.75 }}>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          fontWeight={600}
+                          sx={{ display: "block", mb: 0.75 }}
+                        >
                           إضافة دفعة
                         </Typography>
-                        <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 0.75 }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            alignItems: "center",
+                            gap: 0.75,
+                          }}
+                        >
                           <FormControl size="small" sx={{ minWidth: 100 }}>
-                            <InputLabel id="new-payment-method-label">طريقة</InputLabel>
+                            <InputLabel id="new-payment-method-label">
+                              طريقة
+                            </InputLabel>
                             <Select
                               labelId="new-payment-method-label"
                               value={newPaymentMethod}
                               label="طريقة"
-                              onChange={(e) => setNewPaymentMethod(e.target.value as Payment["method"])}
+                              onChange={(e) =>
+                                setNewPaymentMethod(
+                                  e.target.value as Payment["method"],
+                                )
+                              }
                             >
                               <MenuItem value="cash">نقدي</MenuItem>
                               <MenuItem value="bankak">بنكك</MenuItem>
@@ -1236,7 +1655,9 @@ const PosBlankPage: React.FC = () => {
                             type="number"
                             placeholder="المبلغ"
                             value={newPaymentAmount}
-                            onChange={(e) => setNewPaymentAmount(e.target.value)}
+                            onChange={(e) =>
+                              setNewPaymentAmount(e.target.value)
+                            }
                             inputProps={{ min: 0.01, step: 0.01 }}
                             sx={{ width: 90 }}
                             onKeyDown={(e) => {
@@ -1251,7 +1672,9 @@ const PosBlankPage: React.FC = () => {
                             color="primary"
                             size="small"
                             onClick={handleAddPayment}
-                            disabled={addPaymentLoading || !newPaymentAmount.trim()}
+                            disabled={
+                              addPaymentLoading || !newPaymentAmount.trim()
+                            }
                             aria-label="إضافة دفعة"
                           >
                             {addPaymentLoading ? (
@@ -1261,14 +1684,22 @@ const PosBlankPage: React.FC = () => {
                             )}
                           </IconButton>
                         </Box>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ display: "block", mt: 0.5 }}
+                        >
                           المتبقي: {formatNumber(due)}
                         </Typography>
                       </Box>
                     ) : null;
                   })()}
                   {selectedSale.notes && (
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, display: "block" }}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ mt: 1.5, display: "block" }}
+                    >
                       {selectedSale.notes}
                     </Typography>
                   )}
@@ -1287,7 +1718,9 @@ const PosBlankPage: React.FC = () => {
                     sx={{ mt: 2, textTransform: "none" }}
                     onClick={handlePrintThermalInvoice}
                   >
-                    {thermalPdfLoading ? "جاري التحميل..." : "طباعة فاتورة حراري PDF"}
+                    {thermalPdfLoading
+                      ? "جاري التحميل..."
+                      : "طباعة فاتورة حراري PDF"}
                   </Button>
                   <Button
                     fullWidth
@@ -1297,7 +1730,9 @@ const PosBlankPage: React.FC = () => {
                       fullPaymentLoading ||
                       (selectedSale.due_amount != null
                         ? Number(selectedSale.due_amount) <= 0
-                        : Number(selectedSale.total_amount ?? 0) - Number(selectedSale.paid_amount ?? 0) <= 0)
+                        : Number(selectedSale.total_amount ?? 0) -
+                            Number(selectedSale.paid_amount ?? 0) <=
+                          0)
                     }
                     sx={{ mt: 1, textTransform: "none" }}
                     onClick={handleFullPayment}
@@ -1327,7 +1762,11 @@ const PosBlankPage: React.FC = () => {
         isOpen={thermalPdfDialogOpen && !!thermalPdfUrl}
         onClose={handleCloseThermalPdfDialog}
         pdfUrl={thermalPdfUrl ?? ""}
-        title={selectedSale ? `فاتورة حراري #${selectedSale.number ?? selectedSale.id}` : "فاتورة حراري"}
+        title={
+          selectedSale
+            ? `فاتورة حراري #${selectedSale.number ?? selectedSale.id}`
+            : "فاتورة حراري"
+        }
       />
 
       {/* Shift report PDF dialog */}

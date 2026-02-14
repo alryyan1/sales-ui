@@ -273,6 +273,8 @@ const SalesReturnsListPage: React.FC = () => {
                       <TableRow>
                         <TableCell>#</TableCell>
                         <TableCell>التاريخ</TableCell>
+                        <TableCell>الفاتورة</TableCell>
+                        <TableCell>رقم الهاتف</TableCell>
                         <TableCell>المستخدم</TableCell>
                         <TableCell>الوردية</TableCell>
                         <TableCell>السبب</TableCell>
@@ -311,6 +313,10 @@ const SalesReturnsListPage: React.FC = () => {
                           <TableRow key={r.id}>
                             <TableCell>{r.id}</TableCell>
                             <TableCell>{createdAt}</TableCell>
+                            <TableCell>
+                              {r.sale_id != null ? `#${r.sale_id}` : "-"}
+                            </TableCell>
+                            <TableCell>{r.phone_number ?? "-"}</TableCell>
                             <TableCell>{r.user?.name ?? "-"}</TableCell>
                             <TableCell>
                               {r.shift_id ? `#${r.shift_id}` : "-"}

@@ -17,6 +17,8 @@ export interface SimpleSaleReturnItemInput {
 }
 
 export interface CreateSaleReturnData {
+  sale_id: number;
+  phone_number?: string | null;
   reason?: string | null;
   shift_id?: number | null;
   returned_payment_method: "cash" | "bankak" | "fawry" | "ocash";
@@ -34,12 +36,15 @@ export interface SaleReturnItem {
 export interface SaleReturn {
   id: number;
   user_id: number;
+  sale_id: number | null;
+  phone_number: string | null;
   shift_id: number | null;
   reason: string | null;
   returned_payment_method: string;
   created_at: string;
   updated_at?: string;
   user?: Pick<User, "id" | "name">;
+  sale?: { id: number; number?: number; sale_date?: string };
   items?: SaleReturnItem[];
 }
 

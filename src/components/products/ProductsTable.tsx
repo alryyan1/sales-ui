@@ -1,5 +1,5 @@
 // src/components/products/ProductsTable.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Paper,
   IconButton,
@@ -7,40 +7,32 @@ import {
   Typography,
   Chip,
   Stack,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  List,
-  ListItem,
-  ListItemText,
-  Tabs,
-  Tab,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Pagination,
   Box,
+  Skeleton,
+  CircularProgress,
+  TextField,
   Select,
   MenuItem,
   FormControl,
-  InputLabel,
-  SelectChangeEvent,
-  Skeleton,
 } from "@mui/material";
-import { Edit, AlertTriangle, Copy, Check, Info, History } from "lucide-react";
+import { AlertTriangle, Copy, Check, Plus, X, Save } from "lucide-react";
 
 // Types
-import productService, {
-  Product as ProductType,
-} from "@/services/productService";
+import { Category } from "@/services/CategoryService";
+import { Unit } from "@/services/UnitService";
+import { ProductFormData } from "@/services/productService";
+
 import { formatNumber, formatCurrency } from "@/constants";
 
 // Interface for Product with potentially loaded batches
 interface ProductWithOptionalBatches extends Omit<
-  ProductType,
+  import("@/services/productService").Product,
   "latest_cost_per_sellable_unit" | "suggested_sale_price_per_sellable_unit"
 > {
   category_name?: string | null;
@@ -55,32 +47,21 @@ interface ProductsTableProps {
   products: ProductWithOptionalBatches[];
   isLoading?: boolean;
   onEdit: (product: ProductWithOptionalBatches) => void;
-  // Laravel pagination props
-  paginationMeta: {
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-    from: number;
-    to: number;
-  };
-  paginationLinks: {
-    first: string;
-    last: string;
-    prev: string | null;
-    next: string | null;
-  };
-  currentPage: number;
-  rowsPerPage: number;
-  onPageChange: (event: React.ChangeEvent<unknown>, page: number) => void;
-  onRowsPerPageChange: (event: SelectChangeEvent<number>) => void;
+  // Inline Creation Props
+  categories: Category[];
+  stockingUnits: Unit[];
+  sellableUnits: Unit[];
+  onProductCreate: (data: ProductFormData) => Promise<void>;
+  // Infinite Scroll Props
+  onLoadMore: () => void;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
 }
 
 interface ProductRowProps {
   product: ProductWithOptionalBatches;
   onEdit: (product: ProductWithOptionalBatches) => void;
-  onOpenStockDialog: (product: ProductWithOptionalBatches) => void;
-  onOpenHistoryDialog: (product: ProductWithOptionalBatches) => void;
+
   copyToClipboard: (sku: string) => void;
   copiedSku: string | null;
   isLoading: boolean;
@@ -89,8 +70,7 @@ interface ProductRowProps {
 const ProductRow: React.FC<ProductRowProps> = ({
   product,
   onEdit,
-  onOpenStockDialog,
-  onOpenHistoryDialog,
+
   copyToClipboard,
   copiedSku,
   isLoading,
@@ -103,16 +83,10 @@ const ProductRow: React.FC<ProductRowProps> = ({
     stockQty <= (product.stock_alert_level as number);
   const isOutOfStock = stockQty <= 0;
 
-  const prevStockRef = React.useRef<number>(stockQty);
-  const [animationClass, setAnimationClass] = React.useState("");
+  const prevStockRef = useRef<number>(stockQty);
+  const [animationClass, setAnimationClass] = useState("");
 
-  React.useEffect(() => {
-    // Only animate if the previous stock is different from current stock
-    // AND it's not the initial mount (where prevStockRef.current is initialized to stockQty)
-    // Actually, useRef initializes once. We need to capture the *change*.
-    // On mount, prevStockRef.current === stockQty. No animation.
-    // When stockQty changes, we compare against ref.
-
+  useEffect(() => {
     if (stockQty > prevStockRef.current) {
       setAnimationClass("animate-flash-green");
     } else if (stockQty < prevStockRef.current) {
@@ -121,7 +95,6 @@ const ProductRow: React.FC<ProductRowProps> = ({
 
     if (stockQty !== prevStockRef.current) {
       prevStockRef.current = stockQty;
-      // Remove animation class after 2 seconds
       const timer = setTimeout(() => {
         setAnimationClass("");
       }, 2000);
@@ -201,11 +174,7 @@ const ProductRow: React.FC<ProductRowProps> = ({
       <TableCell align="center">
         {product.units_per_stocking_unit || "---"}
       </TableCell>
-      <TableCell align="center">
-        {product.created_at
-          ? new Date(product.created_at).toLocaleDateString("en-GB")
-          : "---"}
-      </TableCell>
+
       <TableCell align="center">
         {product.stock_alert_level !== null
           ? formatNumber(product.stock_alert_level)
@@ -238,28 +207,7 @@ const ProductRow: React.FC<ProductRowProps> = ({
           )}
         </Stack>
       </TableCell>
-      <TableCell align="center">
-        {product.warehouses?.length ? (
-          <Tooltip title="تفاصيل المخزون">
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenStockDialog(product);
-              }}
-              sx={{ p: 0.5 }}
-            >
-              <Info
-                style={{
-                  width: 18,
-                  height: 18,
-                  color: "var(--mui-palette-info-main)",
-                }}
-              />
-            </IconButton>
-          </Tooltip>
-        ) : null}
-      </TableCell>
+
       <TableCell align="center">
         {product.latest_cost_per_sellable_unit
           ? formatCurrency(Number(product.latest_cost_per_sellable_unit))
@@ -270,48 +218,206 @@ const ProductRow: React.FC<ProductRowProps> = ({
           ? formatCurrency(Number(product.last_sale_price_per_sellable_unit))
           : "---"}
       </TableCell>
+    </TableRow>
+  );
+};
+
+// --- Inline Create Row Component ---
+const InlineCreateRow: React.FC<{
+  categories: Category[];
+  stockingUnits: Unit[];
+  sellableUnits: Unit[];
+  onSave: (data: ProductFormData) => void;
+  onCancel: () => void;
+  isLoading?: boolean;
+}> = ({
+  categories,
+  stockingUnits,
+  sellableUnits,
+  onSave,
+  onCancel,
+  isLoading,
+}) => {
+  const [formData, setFormData] = useState<ProductFormData>({
+    name: "",
+    sku: "",
+    scientific_name: "",
+    category_id: "" as any,
+    stocking_unit_id: "" as any,
+    sellable_unit_id: "" as any,
+    units_per_stocking_unit: 1,
+    stock_alert_level: 10,
+    stock_quantity: 0,
+    description: "",
+  });
+
+  const handleChange = (field: keyof ProductFormData, value: any) => {
+    setFormData((prev) => {
+      const updates: any = { [field]: value };
+      // Sync scientific name with name if scientific name is empty or was same as name
+      if (field === "name") {
+        updates.scientific_name = value;
+      }
+      return { ...prev, ...updates };
+    });
+  };
+
+  const handleSave = () => {
+    // Basic validation
+    if (!formData.name) return; // Add better validation if needed
+    onSave(formData);
+  };
+
+  return (
+    <TableRow sx={{ bgcolor: "action.hover" }}>
+      <TableCell align="center">
+        <IconButton
+          size="small"
+          onClick={handleSave}
+          disabled={isLoading || !formData.name}
+          color="primary"
+        >
+          <Save size={18} />
+        </IconButton>
+      </TableCell>
+      <TableCell align="center">
+        <TextField
+          size="small"
+          placeholder="SKU"
+          value={formData.sku || ""}
+          onChange={(e) => handleChange("sku", e.target.value)}
+          sx={{ minWidth: 80 }}
+        />
+      </TableCell>
+      <TableCell align="center">
+        <TextField
+          size="small"
+          placeholder="Product Name"
+          value={formData.name}
+          onChange={(e) => handleChange("name", e.target.value)}
+          required
+          sx={{
+            minWidth: 120,
+            width: `${Math.max(12, formData.name.length + 2)}ch`,
+            transition: "width 0.2s ease",
+          }}
+        />
+      </TableCell>
+      <TableCell align="center">
+        <TextField
+          size="small"
+          placeholder="Scientific Name"
+          value={formData.scientific_name || ""}
+          onChange={(e) => handleChange("scientific_name", e.target.value)}
+          sx={{
+            minWidth: 100,
+            width: `${Math.max(10, (formData.scientific_name || "").length + 2)}ch`,
+            transition: "width 0.2s ease",
+          }}
+        />
+      </TableCell>
 
       <TableCell align="center">
-        <Stack direction="row" spacing={1} justifyContent="center">
-          <Tooltip title="السجل">
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenHistoryDialog(product);
-              }}
-              disabled={isLoading}
-              sx={{
-                color: "text.secondary",
-                "&:hover": {
-                  bgcolor: "action.hover",
-                  color: "text.primary",
-                },
-              }}
-            >
-              <History style={{ width: 18, height: 18 }} />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="تعديل">
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(product);
-              }}
-              disabled={isLoading}
-              sx={{
-                color: "primary.main",
-                "&:hover": {
-                  bgcolor: "primary.light",
-                  color: "primary.contrastText",
-                },
-              }}
-            >
-              <Edit style={{ width: 18, height: 18 }} />
-            </IconButton>
-          </Tooltip>
-        </Stack>
+        <FormControl size="small" fullWidth sx={{ minWidth: 100 }}>
+          <Select
+            value={formData.category_id || ""}
+            displayEmpty
+            onChange={(e) => handleChange("category_id", e.target.value)}
+            renderValue={(selected) => {
+              if (!selected) return <em style={{ color: "#aaa" }}>Category</em>;
+              return categories.find((c) => c.id === selected)?.name;
+            }}
+          >
+            <MenuItem value="" disabled>
+              <em>Select Category</em>
+            </MenuItem>
+            {categories.map((c) => (
+              <MenuItem key={c.id} value={c.id}>
+                {c.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </TableCell>
+      <TableCell align="center">
+        <FormControl size="small" fullWidth sx={{ minWidth: 80 }}>
+          <Select
+            value={formData.sellable_unit_id || ""}
+            displayEmpty
+            onChange={(e) => handleChange("sellable_unit_id", e.target.value)}
+            renderValue={(selected) => {
+              if (!selected) return <em style={{ color: "#aaa" }}>Unit</em>;
+              return sellableUnits.find((u) => u.id === selected)?.name;
+            }}
+          >
+            <MenuItem value="" disabled>
+              <em>Unit</em>
+            </MenuItem>
+            {sellableUnits.map((u) => (
+              <MenuItem key={u.id} value={u.id}>
+                {u.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </TableCell>
+      <TableCell align="center">
+        <FormControl size="small" fullWidth sx={{ minWidth: 80 }}>
+          <Select
+            value={formData.stocking_unit_id || ""}
+            displayEmpty
+            onChange={(e) => handleChange("stocking_unit_id", e.target.value)}
+            renderValue={(selected) => {
+              if (!selected) return <em style={{ color: "#aaa" }}>Pkg</em>;
+              return stockingUnits.find((u) => u.id === selected)?.name;
+            }}
+          >
+            <MenuItem value="" disabled>
+              <em>Package</em>
+            </MenuItem>
+            {stockingUnits.map((u) => (
+              <MenuItem key={u.id} value={u.id}>
+                {u.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </TableCell>
+      <TableCell align="center">
+        <TextField
+          type="number"
+          size="small"
+          placeholder="Qty"
+          value={formData.units_per_stocking_unit || ""}
+          onChange={(e) =>
+            handleChange("units_per_stocking_unit", e.target.value)
+          }
+          sx={{ width: 60 }}
+        />
+      </TableCell>
+      <TableCell align="center">
+        <TextField
+          type="number"
+          size="small"
+          placeholder="Alert"
+          value={formData.stock_alert_level || ""}
+          onChange={(e) => handleChange("stock_alert_level", e.target.value)}
+          sx={{ width: 60 }}
+        />
+      </TableCell>
+      <TableCell align="center">
+        <Typography variant="body2" color="text.secondary">
+          0
+        </Typography>
+      </TableCell>
+      {/* Latest Cost - empty for new */}
+      <TableCell align="center">---</TableCell>
+      {/* Last Sale Price - empty for new */}
+      <TableCell align="center">---</TableCell>
+      <TableCell align="center">
+        <IconButton size="small" onClick={onCancel} disabled={isLoading}>
+          <X size={18} color="red" />
+        </IconButton>
       </TableCell>
     </TableRow>
   );
@@ -321,93 +427,45 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
   products,
   isLoading = false,
   onEdit,
-  paginationMeta,
-  currentPage,
-  rowsPerPage,
-  onPageChange,
-  onRowsPerPageChange,
+  categories,
+  stockingUnits,
+  sellableUnits,
+  onProductCreate,
+  onLoadMore,
+  hasNextPage,
+  isFetchingNextPage,
 }) => {
   const [copiedSku, setCopiedSku] = useState<string | null>(null);
-  const [stockDialogProduct, setStockDialogProduct] =
-    useState<ProductWithOptionalBatches | null>(null);
-  const [isStockDialogOpen, setIsStockDialogOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isCreatingLoading, setIsCreatingLoading] = useState(false);
 
-  const handleOpenStockDialog = (product: ProductWithOptionalBatches) => {
-    setStockDialogProduct(product);
-    setIsStockDialogOpen(true);
-  };
-
-  const handleCloseStockDialog = () => {
-    setIsStockDialogOpen(false);
-    setStockDialogProduct(null);
-  };
-
-  // History Dialog State
-  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
-  const [historyDialogProduct, setHistoryDialogProduct] =
-    useState<ProductWithOptionalBatches | null>(null);
-  const [historyTab, setHistoryTab] = useState(0);
-  const [historyData, setHistoryData] = useState<any[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [historyPage, setHistoryPage] = useState(1);
-  const [historyTotalPages, setHistoryTotalPages] = useState(1);
-
-  const fetchHistory = async (
-    productId: number,
-    type: "purchases" | "sales",
-    page: number,
-  ) => {
-    setHistoryLoading(true);
+  const handleCreateSave = async (data: ProductFormData) => {
+    setIsCreatingLoading(true);
     try {
-      const res =
-        type === "purchases"
-          ? await productService.getPurchaseHistory(productId, page)
-          : await productService.getSalesHistory(productId, page);
-      setHistoryData(res.data);
-      setHistoryTotalPages(res.last_page);
-    } catch (err) {
-      console.error(err);
+      await onProductCreate(data);
+      setIsCreating(false);
+    } catch (error) {
+      console.error(error);
     } finally {
-      setHistoryLoading(false);
+      setIsCreatingLoading(false);
     }
   };
 
-  const handleOpenHistoryDialog = (product: ProductWithOptionalBatches) => {
-    setHistoryDialogProduct(product);
-    setHistoryDialogOpen(true);
-    setHistoryTab(0);
-    setHistoryPage(1);
-    fetchHistory(product.id, "purchases", 1);
-  };
-
-  const handleHistoryTabChange = (
-    _event: React.SyntheticEvent,
-    newValue: number,
-  ) => {
-    setHistoryTab(newValue);
-    setHistoryPage(1);
-    if (historyDialogProduct) {
-      fetchHistory(
-        historyDialogProduct.id,
-        newValue === 0 ? "purchases" : "sales",
-        1,
-      );
-    }
-  };
-
-  const handleHistoryPageChange = (
-    _event: React.ChangeEvent<unknown>,
-    value: number,
-  ) => {
-    setHistoryPage(value);
-    if (historyDialogProduct) {
-      fetchHistory(
-        historyDialogProduct.id,
-        historyTab === 0 ? "purchases" : "sales",
-        value,
-      );
-    }
-  };
+  // Intersection Observer for Infinite Scroll
+  const observer = useRef<IntersectionObserver>();
+  const lastElementRef = useCallback(
+    (node: HTMLTableRowElement) => {
+      if (isLoading || isFetchingNextPage) return;
+      if (observer.current) observer.current.disconnect();
+      observer.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasNextPage) {
+          onLoadMore();
+        }
+      });
+      if (node) observer.current.observe(node);
+    },
+    [isLoading, isFetchingNextPage, hasNextPage, onLoadMore],
+  );
 
   const copyToClipboard = async (sku: string) => {
     try {
@@ -418,29 +476,6 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
       console.error("Failed to copy SKU:", err);
     }
   };
-
-  if (products.length === 0 && !isLoading) {
-    return (
-      <Paper
-        elevation={0}
-        sx={{
-          p: 6,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: 300,
-          border: 1,
-          borderColor: "divider",
-          borderRadius: 2,
-        }}
-      >
-        <Typography variant="body1" color="text.secondary">
-          لا توجد منتجات لعرضها
-        </Typography>
-      </Paper>
-    );
-  }
 
   const renderSkeletonRow = (index: number) => (
     <TableRow key={`skeleton-${index}`}>
@@ -480,22 +515,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
         <Skeleton variant="text" width={40} />
       </TableCell>
       <TableCell align="center">
-        <Skeleton variant="text" width={40} />
-      </TableCell>
-      <TableCell align="center">
         <Skeleton variant="circular" width={18} height={18} />
-      </TableCell>
-      <TableCell align="center">
-        <Skeleton variant="text" width={60} />
-      </TableCell>
-      <TableCell align="center">
-        <Skeleton variant="text" width={60} />
-      </TableCell>
-      <TableCell align="center">
-        <Stack direction="row" spacing={1} justifyContent="center">
-          <Skeleton variant="circular" width={24} height={24} />
-          <Skeleton variant="circular" width={24} height={24} />
-        </Stack>
       </TableCell>
     </TableRow>
   );
@@ -507,11 +527,21 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
         elevation={0}
         dir="ltr"
       >
-        <TableContainer sx={{ maxHeight: "calc(100vh - 100px)" }}>
+        <TableContainer>
           <Table stickyHeader size="small" sx={{ minWidth: 650 }}>
             <TableHead>
               <TableRow>
-                <TableCell align="center">#</TableCell>
+                <TableCell align="center">
+                  <Tooltip title="Add Product Inline">
+                    <IconButton
+                      size="small"
+                      onClick={() => setIsCreating(true)}
+                      color="primary"
+                    >
+                      <Plus size={16} />
+                    </IconButton>
+                  </Tooltip>
+                </TableCell>
                 <TableCell align="center"> (SKU)</TableCell>
                 <TableCell align="right">اسم المنتج</TableCell>
                 <TableCell align="center">الاسم العلمي</TableCell>
@@ -519,220 +549,76 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                 <TableCell align="center">وحدة البيع</TableCell>
                 <TableCell align="center">وحدة التخزين</TableCell>
                 <TableCell align="center">عدد الوحدات </TableCell>
-                <TableCell align="center">تم إنشاؤه في</TableCell>
                 <TableCell align="center">تنبيه المخزون</TableCell>
                 <TableCell align="center">إجمالي المخزون</TableCell>
-                <TableCell align="center">المخازن</TableCell>
                 <TableCell align="center">أحدث تكلفة</TableCell>
                 <TableCell align="center">آخر سعر بيع</TableCell>
-                {/* <TableCell align="center">السعر المقترح</TableCell> */}
-                <TableCell align="center">إجراءات</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {isLoading && products.length === 0
-                ? Array.from(new Array(10)).map((_, index) =>
-                    renderSkeletonRow(index),
-                  )
-                : products.map((product) => (
-                    <ProductRow
-                      key={product.id}
-                      product={product}
-                      onEdit={onEdit}
-                      onOpenStockDialog={handleOpenStockDialog}
-                      onOpenHistoryDialog={handleOpenHistoryDialog}
-                      copyToClipboard={copyToClipboard}
-                      copiedSku={copiedSku}
-                      isLoading={isLoading}
-                    />
-                  ))}
+              {isCreating && (
+                <InlineCreateRow
+                  categories={categories}
+                  stockingUnits={stockingUnits}
+                  sellableUnits={sellableUnits}
+                  onSave={handleCreateSave}
+                  onCancel={() => setIsCreating(false)}
+                  isLoading={isCreatingLoading}
+                />
+              )}
+
+              {products.length === 0 && !isCreating && !isLoading && (
+                <TableRow>
+                  <TableCell colSpan={12} align="center" sx={{ py: 3 }}>
+                    <Typography variant="body1" color="text.secondary">
+                      لا توجد منتجات لعرضها
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+
+              {products.map((product) => (
+                <ProductRow
+                  key={product.id}
+                  product={product}
+                  onEdit={onEdit}
+                  copyToClipboard={copyToClipboard}
+                  copiedSku={copiedSku}
+                  isLoading={isLoading}
+                />
+              ))}
+
+              {/* Skeletons for initial loading only */}
+              {isLoading &&
+                Array.from(new Array(10)).map((_, index) =>
+                  renderSkeletonRow(index),
+                )}
+
+              {/* Sentinel for infinite scroll */}
+              {!isLoading && !isFetchingNextPage && hasNextPage && (
+                <TableRow ref={lastElementRef}>
+                  <TableCell colSpan={12} sx={{ borderBottom: "none" }} />
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </TableContainer>
+      </Paper>
 
-        {/* Laravel Pagination Control */}
+      {/* Centered Loading Indicator for Infinite Scroll */}
+      {isFetchingNextPage && (
         <Box
           sx={{
-            p: 2,
-            display: "flex",
-            flexDirection: { xs: "column", sm: "row" },
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 2,
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            zIndex: 9999,
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Typography variant="body2" color="text.secondary">
-              عرض {paginationMeta.from} إلى {paginationMeta.to} من أصل{" "}
-              {paginationMeta.total} منتج
-            </Typography>
-            <FormControl size="small" sx={{ minWidth: 120 }}>
-              <InputLabel>عدد الصفوف</InputLabel>
-              <Select
-                value={rowsPerPage}
-                onChange={onRowsPerPageChange}
-                label="عدد الصفوف"
-                disabled={isLoading}
-              >
-                <MenuItem value={50}>50</MenuItem>
-                <MenuItem value={100}>100</MenuItem>
-                <MenuItem value={200}>200</MenuItem>
-                <MenuItem value={500}>500</MenuItem>
-                <MenuItem value={1000}>1000</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-          <Pagination
-            count={paginationMeta.last_page}
-            page={currentPage}
-            onChange={onPageChange}
-            color="primary"
-            shape="rounded"
-            showFirstButton
-            showLastButton
-            disabled={isLoading}
-          />
+          <CircularProgress size={50} />
         </Box>
-      </Paper>
-      {/* Warehouse Stock Breakdown Dialog */}
-      <Dialog
-        open={isStockDialogOpen}
-        onClose={handleCloseStockDialog}
-        maxWidth="xs"
-        fullWidth
-        onClick={(e) => e.stopPropagation()} // Prevent row click from firing underneath
-        dir="ltr"
-      >
-        <DialogTitle sx={{ fontWeight: 600, pb: 1 }} dir="ltr">
-          تفاصيل المخزون: {stockDialogProduct?.name}
-        </DialogTitle>
-        <DialogContent dividers sx={{ p: 0 }} dir="ltr">
-          <List disablePadding>
-            {stockDialogProduct?.warehouses?.map((w) => (
-              <ListItem key={w.id} divider>
-                <ListItemText
-                  primary={w.name}
-                  primaryTypographyProps={{ variant: "subtitle2" }}
-                />
-                <Typography variant="body1" fontWeight={600}>
-                  {formatNumber(w.pivot.quantity)}
-                </Typography>
-              </ListItem>
-            ))}
-            {!stockDialogProduct?.warehouses?.length && (
-              <ListItem>
-                <ListItemText primary="No warehouse data available." />
-              </ListItem>
-            )}
-          </List>
-        </DialogContent>
-      </Dialog>
-      {/* Product History Dialog */}
-      <Dialog
-        open={historyDialogOpen}
-        onClose={() => setHistoryDialogOpen(false)}
-        maxWidth="md"
-        fullWidth
-        onClick={(e) => e.stopPropagation()}
-        dir="ltr"
-      >
-        <DialogTitle sx={{ fontWeight: 600 }} dir="ltr">
-          سجل المنتج: {historyDialogProduct?.name}
-        </DialogTitle>
-        <DialogContent dividers sx={{ p: 0 }} dir="ltr">
-          <Tabs
-            value={historyTab}
-            onChange={handleHistoryTabChange}
-            variant="fullWidth"
-            textColor="primary"
-            indicatorColor="primary"
-          >
-            <Tab label="المشتروات" />
-            <Tab label="المبيعات" />
-          </Tabs>
-
-          <Paper elevation={0} sx={{ p: 2 }}>
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>
-                      {historyTab === 0 ? "التاريخ" : "التاريخ"}
-                    </TableCell>
-                    <TableCell>
-                      {historyTab === 0 ? "المورد" : "العميل"}
-                    </TableCell>
-                    <TableCell>
-                      {historyTab === 0
-                        ? "الكمية (وحدة تخزين)"
-                        : "الكمية (وحدة بيع)"}
-                    </TableCell>
-                    <TableCell>
-                      {historyTab === 0 ? "التكلفة" : "السعر"}
-                    </TableCell>
-                    <TableCell>الإجمالي</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {historyLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={5} align="center">
-                        جاري التحميل...
-                      </TableCell>
-                    </TableRow>
-                  ) : historyData.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} align="center">
-                        لا توجد سجلات
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    historyData.map((item: any) => (
-                      <TableRow key={item.id}>
-                        <TableCell>
-                          {item.created_at
-                            ? new Date(item.created_at).toLocaleDateString(
-                                "en-GB",
-                              )
-                            : "---"}
-                        </TableCell>
-                        <TableCell>
-                          {historyTab === 0
-                            ? item.purchase?.supplier?.name || "N/A"
-                            : item.sale?.client?.name || "N/A"}
-                        </TableCell>
-                        <TableCell>{formatNumber(item.quantity)}</TableCell>
-                        <TableCell>
-                          {formatCurrency(
-                            historyTab === 0 ? item.unit_cost : item.unit_price,
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {formatCurrency(
-                            historyTab === 0
-                              ? item.total_cost
-                              : item.total_price,
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-            {historyTotalPages > 1 && (
-              <Stack direction="row" justifyContent="center" sx={{ mt: 2 }}>
-                <Pagination
-                  count={historyTotalPages}
-                  page={historyPage}
-                  onChange={handleHistoryPageChange}
-                  color="primary"
-                />
-              </Stack>
-            )}
-          </Paper>
-        </DialogContent>
-      </Dialog>
+      )}
     </>
   );
 };
