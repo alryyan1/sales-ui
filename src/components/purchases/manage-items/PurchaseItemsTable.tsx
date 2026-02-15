@@ -1,5 +1,5 @@
 // src/components/purchases/manage-items/PurchaseItemsTable.tsx
-import React, { useMemo } from "react";
+import React, { useMemo, useCallback } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -59,13 +59,16 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
   totalCount,
 }) => {
   // Helper to check if a specific field is being updated
-  const isFieldUpdating = (itemId: number, fieldName: string) => {
-    return updatingField === `${itemId}-${fieldName}`;
-  };
+  const isFieldUpdating = useCallback(
+    (itemId: number, fieldName: string) => {
+      return updatingField === `${itemId}-${fieldName}`;
+    },
+    [updatingField],
+  );
 
   const columns = useMemo(
     () => [
-      // Index column - For DESC sorted data (newest first), reverse the numbering
+      // 1. Index column (ID)
       columnHelper.display({
         id: "index",
         header: "#",
@@ -84,9 +87,9 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
         size: 50,
       }),
 
-      // Product column
+      // 2. Product Name column
       columnHelper.accessor("product_name", {
-        header: "المنتج",
+        header: "Product",
         cell: ({ row }) => {
           const item = row.original;
           return (
@@ -94,7 +97,7 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
               <Typography variant="body2" fontWeight="600" noWrap>
                 {item.product_name ||
                   item.product?.name ||
-                  `منتج #${item.product_id}`}
+                  `Product #${item.product_id}`}
               </Typography>
               {(item.product_sku || item.product?.sku) && (
                 <Typography
@@ -107,7 +110,7 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
               )}
               {item.quantity === 0 && (
                 <Chip
-                  label="كمية صفر"
+                  label="Zero Qty"
                   color="error"
                   size="small"
                   sx={{ height: 20, fontSize: "0.65rem", mt: 0.5 }}
@@ -119,9 +122,9 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
         size: 200,
       }),
 
-      // Batch column
+      // 3. Batch Number column
       columnHelper.accessor("batch_number", {
-        header: "رقم الدفعة",
+        header: "Batch Number",
         cell: ({ row }) => {
           const item = row.original;
           return (
@@ -150,38 +153,22 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
         size: 120,
       }),
 
-      // Quantity column
-      columnHelper.accessor("quantity", {
-        header: ({ table }) => {
-          const firstItem = table.getRowModel().rows[0]?.original;
-          const unitInfo = firstItem
-            ? productUnits[firstItem.product_id]
-            : null;
-          return (
-            <>
-              الكمية{" "}
-              {unitInfo?.stocking_unit_name
-                ? `(${unitInfo.stocking_unit_name})`
-                : ""}
-            </>
-          );
-        },
+      // 4. Expiry Date column
+      columnHelper.accessor("expiry_date", {
+        header: "Expiry Date",
         cell: ({ row }) => {
           const item = row.original;
           return (
-            <Box sx={{ position: "relative", minWidth: 80 }}>
+            <Box sx={{ position: "relative", minWidth: 120 }}>
               <InstantTextField
-                value={item.quantity}
-                onChangeValue={(v) => {
-                  if (v === "") return;
-                  onUpdate(item.id, "quantity", Number(v));
-                }}
-                type="number"
-                min={0}
-                step={1}
+                value={item.expiry_date || ""}
+                onChangeValue={(v) =>
+                  onUpdate(item.id, "expiry_date", String(v) || null)
+                }
+                type="date"
                 disabled={isReadOnly}
               />
-              {isFieldUpdating(item.id, "quantity") && (
+              {isFieldUpdating(item.id, "expiry_date") && (
                 <CircularProgress
                   size={16}
                   sx={{
@@ -195,10 +182,10 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
             </Box>
           );
         },
-        size: 100,
+        size: 140,
       }),
 
-      // Unit Cost column
+      // 5. Unit Cost column
       columnHelper.accessor("unit_cost", {
         header: ({ table }) => {
           const firstItem = table.getRowModel().rows[0]?.original;
@@ -207,7 +194,7 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
             : null;
           return (
             <>
-              التكلفة{" "}
+              Cost{" "}
               {unitInfo?.stocking_unit_name
                 ? `(${unitInfo.stocking_unit_name})`
                 : ""}
@@ -246,14 +233,14 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
         size: 110,
       }),
 
-      // Sale Price (Sellable) column
+      // 6. Retail (Sale Price) column
       columnHelper.accessor("sale_price", {
         header: ({ table }) => {
           const firstItem = table.getRowModel().rows[0]?.original;
           const unitInfo = firstItem
             ? productUnits[firstItem.product_id]
             : null;
-          return <>البيع ({unitInfo?.sellable_unit_name || "وحدة"})</>;
+          return <>Retail ({unitInfo?.sellable_unit_name || "unit"})</>;
         },
         cell: ({ row }) => {
           const item = row.original;
@@ -291,35 +278,38 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
         size: 110,
       }),
 
-      // Sale Price (Stocking) column
-      columnHelper.accessor("sale_price_stocking_unit", {
+      // 7. Quantity column
+      columnHelper.accessor("quantity", {
         header: ({ table }) => {
           const firstItem = table.getRowModel().rows[0]?.original;
           const unitInfo = firstItem
             ? productUnits[firstItem.product_id]
             : null;
-          return <>البيع ({unitInfo?.stocking_unit_name || "تخزين"})</>;
+          return (
+            <>
+              Quantity{" "}
+              {unitInfo?.stocking_unit_name
+                ? `(${unitInfo.stocking_unit_name})`
+                : ""}
+            </>
+          );
         },
         cell: ({ row }) => {
           const item = row.original;
           return (
-            <Box sx={{ position: "relative", minWidth: 90 }}>
+            <Box sx={{ position: "relative", minWidth: 80 }}>
               <InstantTextField
-                value={item.sale_price_stocking_unit ?? ""}
+                value={item.quantity}
                 onChangeValue={(v) => {
                   if (v === "") return;
-                  onUpdate(
-                    item.id,
-                    "sale_price_stocking_unit",
-                    roundToThreeDecimals(Number(v)),
-                  );
+                  onUpdate(item.id, "quantity", Number(v));
                 }}
                 type="number"
                 min={0}
-                step={0.001}
+                step={1}
                 disabled={isReadOnly}
               />
-              {isFieldUpdating(item.id, "sale_price_stocking_unit") && (
+              {isFieldUpdating(item.id, "quantity") && (
                 <CircularProgress
                   size={16}
                   sx={{
@@ -333,45 +323,13 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
             </Box>
           );
         },
-        size: 110,
+        size: 100,
       }),
 
-      // Expiry Date column
-      columnHelper.accessor("expiry_date", {
-        header: "تاريخ الانتهاء",
-        cell: ({ row }) => {
-          const item = row.original;
-          return (
-            <Box sx={{ position: "relative", minWidth: 120 }}>
-              <InstantTextField
-                value={item.expiry_date || ""}
-                onChangeValue={(v) =>
-                  onUpdate(item.id, "expiry_date", String(v) || null)
-                }
-                type="date"
-                disabled={isReadOnly}
-              />
-              {isFieldUpdating(item.id, "expiry_date") && (
-                <CircularProgress
-                  size={16}
-                  sx={{
-                    position: "absolute",
-                    right: 8,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                  }}
-                />
-              )}
-            </Box>
-          );
-        },
-        size: 140,
-      }),
-
-      // Total Cost column
+      // 8. Total Cost column
       columnHelper.display({
         id: "total_cost",
-        header: "إجمالي التكلفة",
+        header: "Total Cost",
         cell: ({ row }) => {
           const item = row.original;
           return (
@@ -383,16 +341,32 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
         size: 120,
       }),
 
-      // Actions column
+      // 9. Total Retail column (NEW)
+      columnHelper.display({
+        id: "total_retail",
+        header: "Total Retail",
+        cell: ({ row }) => {
+          const item = row.original;
+          const totalRetail = item.quantity * Number(item.sale_price || 0);
+          return (
+            <Typography variant="body2" fontWeight="700" color="success.main">
+              {formatCurrency(totalRetail)}
+            </Typography>
+          );
+        },
+        size: 120,
+      }),
+
+      // 10. Actions column
       columnHelper.display({
         id: "actions",
-        header: "إجراءات",
+        header: "Actions",
         cell: ({ row }) => {
           const item = row.original;
           return (
             <Box sx={{ display: "flex", justifyContent: "center" }}>
               {!isReadOnly && (
-                <Tooltip title="حذف">
+                <Tooltip title="Delete">
                   <IconButton
                     size="small"
                     color="error"
@@ -416,8 +390,9 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
       isDeleting,
       onUpdate,
       onDelete,
-      updatingField,
       startIndex,
+      totalCount,
+      isFieldUpdating,
     ],
   );
 
@@ -428,7 +403,7 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
   });
 
   return (
-    <TableContainer component={Paper}>
+    <TableContainer dir="ltr" component={Paper}>
       <Table size="small" sx={{ minWidth: 1200 }}>
         <TableHead>
           {table.getHeaderGroups().map((headerGroup) => (

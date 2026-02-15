@@ -50,9 +50,6 @@ const ManagePurchaseItemsPage: React.FC = () => {
   // Product units mapping
   const [productUnits, setProductUnits] = useState<ProductUnitsMap>({});
 
-  // Debounce refs for item updates
-  const updateTimeoutRefs = useRef<Map<string, NodeJS.Timeout>>(new Map());
-
   // Track which field is currently being updated (for loading state)
   const [updatingField, setUpdatingField] = useState<string | null>(null);
 
@@ -68,6 +65,17 @@ const ManagePurchaseItemsPage: React.FC = () => {
     enabled: !!purchaseId,
     staleTime: 0,
   });
+
+  // Percentage Markup State (persisted in localStorage)
+  const [markupPercentage, setMarkupPercentage] = useState<number>(() => {
+    const saved = localStorage.getItem("purchase_markup_percentage");
+    return saved ? Number(saved) : 20; // Default to 20%
+  });
+
+  const handleMarkupChange = (newValue: number) => {
+    setMarkupPercentage(newValue);
+    localStorage.setItem("purchase_markup_percentage", String(newValue));
+  };
 
   // ==================== PAGINATION & SEARCH ====================
   const [page, setPage] = useState(1);
@@ -358,18 +366,12 @@ const ManagePurchaseItemsPage: React.FC = () => {
   const handleItemUpdate = useCallback(
     (itemId: number, field: string, value: unknown) => {
       const updateKey = `${itemId}-${field}`;
-      const existingTimeout = updateTimeoutRefs.current.get(updateKey);
-      if (existingTimeout) clearTimeout(existingTimeout);
 
       // Set loading state for this specific field
       setUpdatingField(updateKey);
 
-      const newTimeout = setTimeout(() => {
-        updateItemMutation.mutate({ itemId, field, value });
-        updateTimeoutRefs.current.delete(updateKey);
-      }, 1000);
-
-      updateTimeoutRefs.current.set(updateKey, newTimeout);
+      // Trigger update immediately (on blur from InstantTextField)
+      updateItemMutation.mutate({ itemId, field, value });
     },
     [updateItemMutation],
   );
@@ -488,15 +490,6 @@ const ManagePurchaseItemsPage: React.FC = () => {
     };
   }, [uniqueProductIds]);
 
-  // Cleanup timeouts on unmount
-  useEffect(() => {
-    const timeoutRefs = updateTimeoutRefs.current;
-    return () => {
-      timeoutRefs.forEach((timeout) => clearTimeout(timeout));
-      timeoutRefs.clear();
-    };
-  }, []);
-
   // ==================== RENDER ====================
 
   if (!purchaseId) {
@@ -577,6 +570,8 @@ const ManagePurchaseItemsPage: React.FC = () => {
           const pdfUrl = `${import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1/sales-api/public"}/purchases/${purchaseId}/export/pdf`;
           window.open(pdfUrl, "_blank");
         }}
+        markupPercentage={markupPercentage}
+        onMarkupChange={handleMarkupChange}
       />
 
       {/* Add Item Dialog */}
@@ -612,6 +607,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
         // Inline creation
         onInlineCreate={handleInlineCreate}
         isCreating={addItemMutation.isPending}
+        markupPercentage={markupPercentage}
       />
 
       {/* Inventory Impact Dialog */}

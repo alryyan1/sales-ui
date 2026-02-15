@@ -91,6 +91,11 @@ const ProductRow: React.FC<ProductRowProps> = ({
     stockQty <= (product.stock_alert_level as number);
   const isOutOfStock = stockQty <= 0;
 
+  // Check if product is expired
+  const isExpired = product.earliest_expiry_date
+    ? new Date(product.earliest_expiry_date) < new Date()
+    : false;
+
   const prevStockRef = useRef<number>(stockQty);
   const [animationClass, setAnimationClass] = useState("");
 
@@ -110,10 +115,31 @@ const ProductRow: React.FC<ProductRowProps> = ({
     }
   }, [stockQty]);
 
+  // Format expiry date
+  const formatExpiryDate = (dateString: string | null) => {
+    if (!dateString) return "---";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-CA"); // YYYY-MM-DD format
+  };
+
   return (
     <TableRow
       hover
-      sx={{ cursor: "pointer" }}
+      sx={{
+        cursor: "pointer",
+        bgcolor: isExpired
+          ? "rgba(211, 47, 47, 0.08)"
+          : isOutOfStock
+            ? "rgba(237, 108, 2, 0.08)"
+            : "transparent",
+        "&:hover": {
+          bgcolor: isExpired
+            ? "rgba(211, 47, 47, 0.12) !important"
+            : isOutOfStock
+              ? "rgba(237, 108, 2, 0.12) !important"
+              : undefined,
+        },
+      }}
       className={animationClass}
       onClick={() => onEdit(product)}
     >
@@ -225,6 +251,17 @@ const ProductRow: React.FC<ProductRowProps> = ({
         {product.last_sale_price_per_sellable_unit
           ? formatCurrency(Number(product.last_sale_price_per_sellable_unit))
           : "---"}
+      </TableCell>
+      <TableCell align="center">
+        <Typography
+          variant="body2"
+          sx={{
+            color: isExpired ? "error.main" : "text.primary",
+            fontWeight: isExpired ? 600 : 400,
+          }}
+        >
+          {formatExpiryDate(product.earliest_expiry_date)}
+        </Typography>
       </TableCell>
     </TableRow>
   );
@@ -459,6 +496,8 @@ const InlineCreateRow: React.FC<{
       <TableCell align="center">---</TableCell>
       {/* Last Sale Price - empty for new */}
       <TableCell align="center">---</TableCell>
+      {/* Expiry Date - empty for new */}
+      <TableCell align="center">---</TableCell>
       <TableCell align="center">
         <IconButton size="small" onClick={onCancel} disabled={isLoading}>
           <X size={18} color="red" />
@@ -560,6 +599,9 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
         <Skeleton variant="text" width={40} />
       </TableCell>
       <TableCell align="center">
+        <Skeleton variant="text" width={80} />
+      </TableCell>
+      <TableCell align="center">
         <Skeleton variant="circular" width={18} height={18} />
       </TableCell>
     </TableRow>
@@ -618,6 +660,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                 <TableCell align="center">إجمالي المخزون</TableCell>
                 <TableCell align="center">أحدث تكلفة</TableCell>
                 <TableCell align="center">آخر سعر بيع</TableCell>
+                <TableCell align="center">تاريخ الصلاحية</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -634,7 +677,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
 
               {products.length === 0 && !isCreating && !isLoading && (
                 <TableRow>
-                  <TableCell colSpan={12} align="center" sx={{ py: 3 }}>
+                  <TableCell colSpan={13} align="center" sx={{ py: 3 }}>
                     <Typography variant="body1" color="text.secondary">
                       لا توجد منتجات لعرضها
                     </Typography>
@@ -662,7 +705,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
               {/* Sentinel for infinite scroll */}
               {!isLoading && !isFetchingNextPage && hasNextPage && (
                 <TableRow ref={lastElementRef}>
-                  <TableCell colSpan={12} sx={{ borderBottom: "none" }} />
+                  <TableCell colSpan={13} sx={{ borderBottom: "none" }} />
                 </TableRow>
               )}
             </TableBody>

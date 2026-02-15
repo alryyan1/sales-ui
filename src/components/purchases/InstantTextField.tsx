@@ -17,6 +17,7 @@ interface InstantTextFieldProps {
   size?: "small" | "medium";
   error?: boolean;
   helperText?: string;
+  inputRef?: React.Ref<HTMLInputElement>;
 }
 
 const InstantTextField: React.FC<InstantTextFieldProps> = ({
@@ -32,6 +33,7 @@ const InstantTextField: React.FC<InstantTextFieldProps> = ({
   size = "small",
   error,
   helperText,
+  inputRef,
 }) => {
   // Format number to remove unnecessary decimal places for integers
   const formatNumberValue = React.useCallback(
@@ -95,16 +97,53 @@ const InstantTextField: React.FC<InstantTextFieldProps> = ({
       const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
       const formattedDate = lastDay.toISOString().split("T")[0];
       setInputValue(formattedDate);
-      onChangeValue(formattedDate);
       return;
     }
 
+    // Only update local state, don't trigger onChangeValue yet
     setInputValue(raw);
-    if (type === "number") {
-      const parsed = raw === "" ? "" : Number(raw);
-      onChangeValue(parsed as number | "");
-    } else {
-      onChangeValue(raw);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+
+      // Trigger update
+      if (type === "number") {
+        const parsed = inputValue === "" ? "" : Number(inputValue);
+        onChangeValue(parsed as number | "");
+      } else {
+        onChangeValue(inputValue);
+      }
+
+      // Focus next field with a small delay to ensure DOM is ready
+      setTimeout(() => {
+        const currentInput = e.currentTarget;
+        // Find all visible, enabled input elements in the document
+        const allInputs = Array.from(
+          document.querySelectorAll<HTMLInputElement>(
+            'input[type="text"], input[type="number"], input[type="date"]',
+          ),
+        ).filter((input) => {
+          // Filter out disabled and hidden inputs
+          return (
+            !input.disabled &&
+            input.offsetParent !== null && // Check if visible
+            input.type !== "hidden"
+          );
+        });
+
+        const currentIndex = allInputs.indexOf(currentInput);
+
+        if (currentIndex !== -1 && currentIndex < allInputs.length - 1) {
+          const nextInput = allInputs[currentIndex + 1];
+          nextInput?.focus();
+          // Use setTimeout to select after focus
+          setTimeout(() => {
+            nextInput?.select();
+          }, 0);
+        }
+      }, 0);
     }
   };
 
@@ -116,6 +155,7 @@ const InstantTextField: React.FC<InstantTextFieldProps> = ({
     <TextField
       value={inputValue}
       onChange={handleChange}
+      onKeyDown={handleKeyDown}
       onFocus={handleFocus}
       type={type}
       placeholder={placeholder}
@@ -125,6 +165,7 @@ const InstantTextField: React.FC<InstantTextFieldProps> = ({
       disabled={disabled}
       error={error}
       helperText={helperText}
+      inputRef={inputRef}
       InputProps={{
         inputProps: { min, max, step },
       }}

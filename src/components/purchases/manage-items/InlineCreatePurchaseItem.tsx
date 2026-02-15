@@ -24,12 +24,14 @@ interface InlineCreatePurchaseItemProps {
   onSave: (data: AddPurchaseItemData) => Promise<void>;
   onCancel: () => void;
   isLoading: boolean;
+  markupPercentage?: number;
 }
 
 const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
   onSave,
   onCancel,
   isLoading,
+  markupPercentage = 20,
 }) => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productInputValue, setProductInputValue] = useState("");
@@ -46,7 +48,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
     return threeYearsFromNow.toISOString().split("T")[0];
   });
 
-  // Ref for quantity input to auto-focus after product selection
+  // Ref for inputs to handle focus navigation
   const productInputRef = useRef<HTMLInputElement>(null);
   const quantityInputRef = useRef<HTMLInputElement>(null);
   const unitCostInputRef = useRef<HTMLInputElement>(null);
@@ -54,7 +56,14 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
   const batchNumberInputRef = useRef<HTMLInputElement>(null);
   const expiryDateInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-adjust expiry date to last day of month whenever it changes
+  // Auto-calculate Sale Price based on Unit Cost and Markup Percentage
+  useEffect(() => {
+    if (unitCost !== undefined && unitCost >= 0) {
+      const calculatedPrice = unitCost * (1 + markupPercentage / 100);
+      // Round to 2 decimal places
+      setSalePrice(Number(calculatedPrice.toFixed(2)));
+    }
+  }, [unitCost, markupPercentage]);
 
   // Fetch products based on search query (debounced)
   useEffect(() => {
@@ -90,10 +99,10 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
     setSelectedProduct(product);
     if (product) {
       setProductInputValue(product.name);
-      // Auto-focus quantity field after product selection
+      // Auto-focus batch number field after product selection
       setTimeout(() => {
-        quantityInputRef.current?.focus();
-        quantityInputRef.current?.select();
+        batchNumberInputRef.current?.focus();
+        batchNumberInputRef.current?.select();
       }, 100);
     } else {
       setProductInputValue("");
@@ -158,13 +167,12 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
     resetForm,
   ]);
 
-  // Handle Enter key - try to save, or focus next field if validation fails
-  const handleKeyDown = useCallback(
+  // Handle Enter key for final submission
+  const handleSubmissionKeyDown = useCallback(
     async (e: React.KeyboardEvent) => {
       if (e.key === "Enter") {
         e.preventDefault();
         await handleSave();
-        // If save failed due to validation, focus is already handled in handleSave
       }
     },
     [handleSave],
@@ -180,28 +188,10 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
         bgcolor: "action.hover",
         borderRadius: 1,
         mb: 2,
+        direction: "ltr",
       }}
     >
-      {/* Save Button */}
-      <Tooltip title="حفظ">
-        <IconButton
-          size="small"
-          onClick={handleSave}
-          disabled={isLoading || !selectedProduct}
-          color="primary"
-        >
-          <Save size={18} />
-        </IconButton>
-      </Tooltip>
-
-      {/* Cancel Button */}
-      <Tooltip title="إلغاء">
-        <IconButton size="small" onClick={onCancel} disabled={isLoading}>
-          <X size={18} />
-        </IconButton>
-      </Tooltip>
-
-      {/* Product Selector */}
+      {/* Product Selector - 1 */}
       <Box sx={{ flex: 1, minWidth: 200 }}>
         <Autocomplete
           options={productOptions}
@@ -225,7 +215,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
           renderInput={(params) => (
             <TextField
               {...params}
-              placeholder="ابحث عن منتج أو الباركود..."
+              placeholder="Product or Barcode..."
               autoFocus
               inputRef={productInputRef}
               onKeyDown={(e) => {
@@ -273,7 +263,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
                       {[
                         option.sku,
                         option.suggested_sale_price != null &&
-                          `السعر: ${Number(option.suggested_sale_price).toFixed(2)}`,
+                          `Price: ${Number(option.suggested_sale_price).toFixed(2)}`,
                       ]
                         .filter(Boolean)
                         .join(" · ")}
@@ -284,98 +274,34 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
             );
           }}
           noOptionsText={
-            productInputValue.trim() ? "لا توجد نتائج" : "اكتب للبحث"
+            productInputValue.trim() ? "No results" : "Type to search"
           }
         />
       </Box>
 
-      {/* Quantity */}
+      {/* Batch Number - 2 */}
       <TextField
         size="small"
-        type="number"
-        placeholder="الكمية"
-        inputRef={quantityInputRef}
-        onFocus={(e) => {
-          e.target.select();
-        }}
-        value={quantity}
-        onChange={(e) => setQuantity(Number(e.target.value))}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            unitCostInputRef.current?.focus();
-            unitCostInputRef.current?.select();
-          }
-        }}
-        inputProps={{ min: 1, step: 1 }}
-        sx={{ width: 80 }}
-      />
-
-      {/* Unit Cost */}
-      <TextField
-        size="small"
-        type="number"
-        placeholder="التكلفة"
-        inputRef={unitCostInputRef}
-        onFocus={(e) => {
-          e.target.select();
-        }}
-        value={unitCost}
-        onChange={(e) => setUnitCost(Number(e.target.value))}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            salePriceInputRef.current?.focus();
-            salePriceInputRef.current?.select();
-          }
-        }}
-        inputProps={{ min: 0, step: 0.01 }}
-        sx={{ width: 100 }}
-      />
-
-      {/* Sale Price */}
-      <TextField
-        size="small"
-        type="number"
-        placeholder="سعر البيع"
-        inputRef={salePriceInputRef}
-        onFocus={(e) => {
-          e.target.select();
-        }}
-        value={salePrice}
-        onChange={(e) => setSalePrice(Number(e.target.value))}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            batchNumberInputRef.current?.focus();
-            batchNumberInputRef.current?.select();
-          }
-        }}
-        inputProps={{ min: 0, step: 0.01 }}
-        sx={{ width: 100 }}
-      />
-
-      {/* Batch Number */}
-      <TextField
-        size="small"
-        placeholder="رقم الباتش"
+        placeholder="Batch No"
         inputRef={batchNumberInputRef}
         value={batchNumber}
         onChange={(e) => setBatchNumber(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
+            // Focus inside the DatePicker input
+            // Note: DatePicker input ref might be wrapped, strictly using inputRef passed to slotProps
             expiryDateInputRef.current?.focus();
             expiryDateInputRef.current?.select();
           }
         }}
-        sx={{ width: 100 }}
+        sx={{ width: 120 }}
       />
 
-      {/* Expiry Date */}
+      {/* Expiry Date - 3 */}
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <DatePicker
-          label="تاريخ الانتهاء"
+          label=""
           value={expiryDate ? new Date(expiryDate) : null}
           onChange={(newValue) => {
             if (newValue) {
@@ -392,13 +318,118 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
           slotProps={{
             textField: {
               size: "small",
+              placeholder: "Expiry Date",
               sx: { width: 140 },
               inputRef: expiryDateInputRef,
-              onKeyDown: handleKeyDown,
+              onKeyDown: (e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  unitCostInputRef.current?.focus();
+                  unitCostInputRef.current?.select();
+                }
+              },
             },
           }}
         />
       </LocalizationProvider>
+
+      {/* Unit Cost - 4 */}
+      <TextField
+        size="small"
+        type="number"
+        placeholder="Cost"
+        inputRef={unitCostInputRef}
+        onFocus={(e) => {
+          e.target.select();
+        }}
+        value={unitCost || ""}
+        onChange={(e) => setUnitCost(Number(e.target.value))}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            salePriceInputRef.current?.focus();
+            salePriceInputRef.current?.select();
+          }
+        }}
+        inputProps={{ min: 0, step: 0.01 }}
+        sx={{ width: 100 }}
+      />
+
+      {/* Sale Price (Retail) - 5 */}
+      <TextField
+        size="small"
+        type="number"
+        placeholder="Retail"
+        inputRef={salePriceInputRef}
+        onFocus={(e) => {
+          e.target.select();
+        }}
+        value={salePrice || ""}
+        onChange={(e) => setSalePrice(Number(e.target.value))}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            quantityInputRef.current?.focus();
+            quantityInputRef.current?.select();
+          }
+        }}
+        inputProps={{ min: 0, step: 0.01 }}
+        sx={{ width: 100 }}
+      />
+
+      {/* Quantity - 6 */}
+      <TextField
+        size="small"
+        type="number"
+        placeholder="Qty"
+        inputRef={quantityInputRef}
+        onFocus={(e) => {
+          e.target.select();
+        }}
+        value={quantity || ""}
+        onChange={(e) => setQuantity(Number(e.target.value))}
+        onKeyDown={handleSubmissionKeyDown}
+        inputProps={{ min: 1, step: 1 }}
+        sx={{ width: 80 }}
+      />
+
+      {/* Total Cost - 7 */}
+      <Box sx={{ width: 100, textAlign: "center" }}>
+        <Typography variant="body2" color="text.secondary">
+          {(quantity || 0) * (unitCost || 0) > 0
+            ? ((quantity || 0) * (unitCost || 0)).toFixed(2)
+            : "—"}
+        </Typography>
+      </Box>
+
+      {/* Total Retail - 8 */}
+      <Box sx={{ width: 100, textAlign: "center" }}>
+        <Typography variant="body2" color="success.main" fontWeight="bold">
+          {(quantity || 0) * (salePrice || 0) > 0
+            ? ((quantity || 0) * (salePrice || 0)).toFixed(2)
+            : "—"}
+        </Typography>
+      </Box>
+
+      {/* Actions - 9 */}
+      <Box sx={{ display: "flex", gap: 0.5 }}>
+        <Tooltip title="Save">
+          <IconButton
+            size="small"
+            onClick={handleSave}
+            disabled={isLoading || !selectedProduct}
+            color="primary"
+          >
+            <Save size={18} />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip title="Cancel">
+          <IconButton size="small" onClick={onCancel} disabled={isLoading}>
+            <X size={18} />
+          </IconButton>
+        </Tooltip>
+      </Box>
     </Box>
   );
 };

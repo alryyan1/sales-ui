@@ -50,6 +50,7 @@ interface PurchaseItemsListProps {
   // Inline creation props
   onInlineCreate?: (data: AddPurchaseItemData) => Promise<void>;
   isCreating?: boolean;
+  markupPercentage?: number;
 }
 
 import InlineCreatePurchaseItem from "./InlineCreatePurchaseItem";
@@ -70,6 +71,7 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
   onSearchChange,
   onInlineCreate,
   isCreating = false,
+  markupPercentage = 20,
 }) => {
   const [showInlineCreate, setShowInlineCreate] = useState(false);
 
@@ -391,6 +393,7 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
             }}
             onCancel={() => setShowInlineCreate(false)}
             isLoading={isCreating}
+            markupPercentage={markupPercentage}
           />
         )}
 

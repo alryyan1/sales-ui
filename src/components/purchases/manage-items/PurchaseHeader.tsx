@@ -51,6 +51,8 @@ interface PurchaseHeaderProps {
   onOpenSummaryDialog: () => void;
   onCloseSummaryDialog: () => void;
   onExportPdf: () => void;
+  markupPercentage?: number;
+  onMarkupChange?: (value: number) => void;
 }
 
 const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
@@ -69,6 +71,8 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
   onOpenSummaryDialog,
   onCloseSummaryDialog,
   onExportPdf,
+  markupPercentage = 20,
+  onMarkupChange,
 }) => {
   const formatCurrency = useFormatCurrency();
 
@@ -124,6 +128,23 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
 
           {/* Actions Toolbar */}
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Markup Percentage Input */}
+            <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-md px-2 py-1 h-9">
+              <span className="text-xs font-medium text-slate-500 whitespace-nowrap">
+                نسبة الربح %
+              </span>
+              <input
+                type="number"
+                min="0"
+                max="1000"
+                value={markupPercentage}
+                onChange={(e) => onMarkupChange?.(Number(e.target.value))}
+                className="w-12 text-sm font-bold bg-transparent text-center focus:outline-none"
+              />
+            </div>
+
+            <div className="h-8 w-px bg-slate-200 mx-1 hidden sm:block" />
+
             {/* Status Select */}
             <Select
               value={purchase.status}
