@@ -47,6 +47,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
   });
 
   // Ref for quantity input to auto-focus after product selection
+  const productInputRef = useRef<HTMLInputElement>(null);
   const quantityInputRef = useRef<HTMLInputElement>(null);
   const unitCostInputRef = useRef<HTMLInputElement>(null);
   const salePriceInputRef = useRef<HTMLInputElement>(null);
@@ -99,6 +100,24 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
     }
   }, []);
 
+  // Reset form to initial state
+  const resetForm = useCallback(() => {
+    setSelectedProduct(null);
+    setProductInputValue("");
+    setQuantity(undefined);
+    setUnitCost(undefined);
+    setSalePrice(undefined);
+    setBatchNumber("");
+    // Reset expiry date to 3 years from now
+    const threeYearsFromNow = new Date();
+    threeYearsFromNow.setFullYear(threeYearsFromNow.getFullYear() + 3);
+    setExpiryDate(threeYearsFromNow.toISOString().split("T")[0]);
+    // Focus back to product autocomplete for next entry
+    setTimeout(() => {
+      productInputRef.current?.focus();
+    }, 100);
+  }, []);
+
   // Handle save with return value to indicate success
   const handleSave = useCallback(async (): Promise<boolean> => {
     if (!selectedProduct) {
@@ -126,6 +145,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
     };
 
     await onSave(data);
+    resetForm();
     return true;
   }, [
     selectedProduct,
@@ -135,6 +155,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
     batchNumber,
     expiryDate,
     onSave,
+    resetForm,
   ]);
 
   // Handle Enter key - try to save, or focus next field if validation fails
@@ -142,7 +163,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
     async (e: React.KeyboardEvent) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        const success = await handleSave();
+        await handleSave();
         // If save failed due to validation, focus is already handled in handleSave
       }
     },
@@ -206,6 +227,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
               {...params}
               placeholder="ابحث عن منتج أو الباركود..."
               autoFocus
+              inputRef={productInputRef}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !productLoading) {
                   // If there's a selected option in the dropdown, let autocomplete handle it
@@ -239,7 +261,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
             />
           )}
           renderOption={(props, option) => {
-            const { key, ...otherProps } = props;
+            const { ...otherProps } = props;
             return (
               <li key={option.id} {...otherProps}>
                 <Box
@@ -322,7 +344,13 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
         }}
         value={salePrice}
         onChange={(e) => setSalePrice(Number(e.target.value))}
-        onKeyDown={handleKeyDown}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            batchNumberInputRef.current?.focus();
+            batchNumberInputRef.current?.select();
+          }
+        }}
         inputProps={{ min: 0, step: 0.01 }}
         sx={{ width: 100 }}
       />
@@ -337,11 +365,8 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
-            // Focus expiry date picker - need to find the input inside DatePicker
-            const expiryInput = document.querySelector(
-              '[placeholder="تاريخ الانتهاء"]',
-            ) as HTMLInputElement;
-            expiryInput?.focus();
+            expiryDateInputRef.current?.focus();
+            expiryDateInputRef.current?.select();
           }
         }}
         sx={{ width: 100 }}
@@ -368,6 +393,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
             textField: {
               size: "small",
               sx: { width: 140 },
+              inputRef: expiryDateInputRef,
               onKeyDown: handleKeyDown,
             },
           }}

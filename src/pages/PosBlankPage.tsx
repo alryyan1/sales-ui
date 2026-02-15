@@ -918,7 +918,7 @@ const PosBlankPage: React.FC = () => {
   return (
     <Box
       sx={{
-        height: "calc(100vh - 10px)",
+        height: "calc(100vh - 100px)",
         display: "flex",
         flexDirection: "column",
         bgcolor: "grey.100",

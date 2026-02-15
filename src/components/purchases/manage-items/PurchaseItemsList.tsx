@@ -1,5 +1,5 @@
 // src/components/purchases/manage-items/PurchaseItemsList.tsx
-import React, { useMemo, useState, useCallback, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -27,7 +27,7 @@ import {
 } from "@mui/icons-material";
 import { Plus } from "lucide-react";
 
-import PurchaseItemCard from "./PurchaseItemCard";
+import PurchaseItemsTable from "./PurchaseItemsTable";
 import { PurchaseItem } from "@/services/purchaseService";
 import { ProductUnitsMap, AddPurchaseItemData } from "./types";
 import { PaginatedResponse } from "@/services/clientService";
@@ -387,7 +387,7 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
           <InlineCreatePurchaseItem
             onSave={async (data) => {
               await onInlineCreate(data);
-              setShowInlineCreate(false);
+              // Keep form open for adding more items
             }}
             onCancel={() => setShowInlineCreate(false)}
             isLoading={isCreating}
@@ -395,30 +395,17 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
         )}
 
         {items.length > 0 ? (
-          <Stack spacing={2}>
-            {items.map((item, index) => {
-              // Calculate the actual item number considering pagination
-              // Laravel 'from' is 1-indexed, so item number = from + index
-              // But PurchaseItemCard displays index + 1, so we pass (from + index - 1)
-              const itemNumber =
-                paginationData.from > 0
-                  ? paginationData.from + index - 1
-                  : index;
-              return (
-                <PurchaseItemCard
-                  key={item.id}
-                  item={item}
-                  index={itemNumber}
-                  productUnits={productUnits}
-                  isReadOnly={isReadOnly}
-                  isDeleting={isDeleting}
-                  onUpdate={onUpdate}
-                  onDelete={onDelete}
-                  updatingField={updatingField}
-                />
-              );
-            })}
-          </Stack>
+          <PurchaseItemsTable
+            items={items}
+            productUnits={productUnits}
+            isReadOnly={isReadOnly}
+            isDeleting={isDeleting}
+            onUpdate={onUpdate}
+            onDelete={onDelete}
+            updatingField={updatingField}
+            startIndex={paginationData.from > 0 ? paginationData.from - 1 : 0}
+            totalCount={paginationData.total}
+          />
         ) : (
           <Box sx={{ textAlign: "center", py: 4 }}>
             <Typography color="text.secondary">
