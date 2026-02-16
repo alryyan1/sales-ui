@@ -20,6 +20,7 @@ import {
 } from "@mui/material";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
 import { formatNumber } from "@/constants";
 import type { SaleItem } from "@/services/saleService";
 
@@ -100,9 +101,17 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
           e.key === "ArrowDown" ? currentIndex + 1 : currentIndex - 1;
         if (nextIndex >= 0 && nextIndex < list.length) {
           e.preventDefault();
-          setSelectedRowKey(getItemKey(list[nextIndex]));
-          setEditingKey(null);
-          setEditingField(null);
+          const nextItem = list[nextIndex];
+          setSelectedRowKey(getItemKey(nextItem));
+          // Auto-start editing quantity for the newly selected row
+          if (onQuantityChange) {
+            setEditingKey(getItemKey(nextItem));
+            setEditingField("quantity");
+            setEditValue(String(nextItem.quantity));
+          } else {
+            setEditingKey(null);
+            setEditingField(null);
+          }
         }
         return;
       }
@@ -115,7 +124,12 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedRowKey, list]);
+  }, [
+    selectedRowKey,
+    list,
+    onQuantityChange,
+    // we don't include setEditingKey/Field/Value in dep array usually as they are stable from useState
+  ]);
 
   const handleQuantityBlur = useCallback(
     (item: SaleItem) => {
@@ -167,11 +181,47 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
     [editingKey, editingField, editValue, onPriceChange],
   );
 
-  const handleQuantityKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      (e.target as HTMLInputElement).blur();
-    }
-  }, []);
+  const handleQuantityKeyDown = useCallback(
+    (e: React.KeyboardEvent, item: SaleItem) => {
+      if (e.key === "Enter") {
+        e.preventDefault(); // Prevent default form submit or newline
+
+        // 1. Commit current value
+        const raw = editValue.trim();
+        const num = raw === "" ? NaN : Number(raw);
+        if (Number.isFinite(num) && num > 0) {
+          // Only update if changed
+          const current = Number(item.quantity);
+          if (Math.abs(num - current) >= 1e-6) {
+            onQuantityChange?.(item, num);
+          }
+        } else {
+          // Invalid value (empty or <= 0), maybe revert?
+          // For now, let's just not save invalid values or let blur handle revert
+        }
+
+        // 2. Move to next row
+        const currentIndex = list.findIndex(
+          (i) => getItemKey(i) === getItemKey(item),
+        );
+        if (currentIndex !== -1 && currentIndex < list.length - 1) {
+          const nextItem = list[currentIndex + 1];
+          setSelectedRowKey(getItemKey(nextItem));
+          // Start editing next item's quantity
+          if (onQuantityChange) {
+            setEditingKey(getItemKey(nextItem));
+            setEditingField("quantity");
+            setEditValue(String(nextItem.quantity));
+          }
+        } else {
+          // Last item, just blur/stop editing
+          setEditingKey(null);
+          setEditingField(null);
+        }
+      }
+    },
+    [list, editValue, onQuantityChange],
+  );
 
   const handlePriceKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
@@ -214,11 +264,21 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
     [selectedRowKey],
   );
 
-  const handleRowClick = useCallback((item: SaleItem) => {
-    setSelectedRowKey(getItemKey(item));
-    setEditingKey(null);
-    setEditingField(null);
-  }, []);
+  const handleRowClick = useCallback(
+    (item: SaleItem) => {
+      setSelectedRowKey(getItemKey(item));
+      // Auto-start editing quantity
+      if (onQuantityChange && item.id != null) {
+        setEditingKey(getItemKey(item));
+        setEditingField("quantity");
+        setEditValue(String(item.quantity));
+      } else {
+        setEditingKey(null);
+        setEditingField(null);
+      }
+    },
+    [onQuantityChange],
+  );
 
   const columns = useMemo(
     () => [
@@ -233,6 +293,19 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                 size={20}
                 sx={{ display: "block", mx: "auto" }}
               />
+            );
+          }
+          if (isSelected(item)) {
+            return (
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  color: "primary.main",
+                }}
+              >
+                <KeyboardArrowLeftIcon fontSize="small" />
+              </Box>
             );
           }
           return row.index + 1;
@@ -285,7 +358,8 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
                   onBlur={() => handleQuantityBlur(item)}
-                  onKeyDown={handleQuantityKeyDown}
+                  onFocus={(e) => e.target.select()}
+                  onKeyDown={(e) => handleQuantityKeyDown(e, item)}
                   inputProps={{
                     min: 0.01,
                     step: 0.01,
@@ -382,7 +456,11 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
         cell: ({ row }) => {
           const item = row.original;
           const expiryDate =
-            item.expiry_date || item.purchase_item?.expiry_date;
+            item.expiry_date ||
+            item.purchase_item?.expiry_date ||
+            item.purchaseItemBatch?.expiry_date ||
+            item.earliest_expiry_date ||
+            item.product?.earliest_expiry_date;
 
           if (!expiryDate) {
             return (
@@ -468,6 +546,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
                   onBlur={() => handlePriceBlur(item)}
+                  onFocus={(e) => e.target.select()}
                   onKeyDown={handlePriceKeyDown}
                   inputProps={{
                     min: 0,
@@ -606,6 +685,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
       startEditingQuantity,
       startEditingPrice,
       deletingItemId,
+      list,
     ],
   );
 

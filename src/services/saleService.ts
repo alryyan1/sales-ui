@@ -58,6 +58,8 @@ export interface SaleItem {
   // available_stock from batch was a temporary UI field, not usually part of SaleItem model
   created_at?: string;
   updated_at?: string;
+  expiry_date?: string | null;
+  purchase_item?: { expiry_date?: string | null } | null;
 }
 
 export interface Sale {
@@ -302,9 +304,7 @@ const saleService = {
    * Fetch all sales without pagination: by shift (if shiftId passed) or by current date.
    * Uses backend endpoint that returns data without pagination and server date only.
    */
-  fetchSalesByShiftOrDate: async (
-    shiftId?: number | null,
-  ): Promise<Sale[]> => {
+  fetchSalesByShiftOrDate: async (shiftId?: number | null): Promise<Sale[]> => {
     try {
       const params = new URLSearchParams();
       if (shiftId != null && shiftId > 0) {

@@ -205,7 +205,23 @@ const PosBlankPage: React.FC = () => {
       setProductSearchLoading(true);
       productService
         .getProductsForAutocomplete(productInputValue.trim(), 25)
-        .then((list) => setProductOptions(Array.isArray(list) ? list : []))
+        .then((list) => {
+          const raw = Array.isArray(list) ? list : [];
+          const filtered = raw.filter((p) => {
+            const stock = p.current_stock_quantity ?? p.stock_quantity ?? 0;
+            if (stock <= 0) return false;
+
+            // Check expiry if available
+            if (p.earliest_expiry_date) {
+              const exp = new Date(p.earliest_expiry_date);
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              if (exp < today) return false;
+            }
+            return true;
+          });
+          setProductOptions(filtered);
+        })
         .catch(() => setProductOptions([]))
         .finally(() => setProductSearchLoading(false));
     }, 300);
@@ -433,35 +449,41 @@ const PosBlankPage: React.FC = () => {
     [selectedSale],
   );
 
-  const handleAddProductByBarcode = useCallback(async () => {
-    const barcode = productInputValue.trim();
-    if (!barcode || !selectedSale) return;
-    const fromOptions = productOptions.find(
-      (p) => p.sku != null && String(p.sku).trim() === barcode,
-    );
-    if (fromOptions) {
-      handleAddProductToSale(fromOptions);
-      return;
-    }
-    try {
-      setAddProductLoading(true);
-      const list = await productService.getProductsForAutocomplete(barcode, 20);
-      const match = list.find(
+  const handleAddProductByBarcode = useCallback(
+    async (barcodeOverride?: string) => {
+      const barcode = barcodeOverride?.trim() || productInputValue.trim();
+      if (!barcode || !selectedSale) return;
+      const fromOptions = productOptions.find(
         (p) => p.sku != null && String(p.sku).trim() === barcode,
       );
-      if (match) {
-        await handleAddProductToSale(match);
-      } else if (list.length === 1) {
-        await handleAddProductToSale(list[0]);
-      } else {
-        toast.error("لم يتم العثور على منتج بهذا الباركود");
+      if (fromOptions) {
+        handleAddProductToSale(fromOptions);
+        return;
       }
-    } catch {
-      toast.error("لم يتم العثور على منتج بهذا الباركود");
-    } finally {
-      setAddProductLoading(false);
-    }
-  }, [productInputValue, productOptions, selectedSale, handleAddProductToSale]);
+      try {
+        setAddProductLoading(true);
+        const list = await productService.getProductsForAutocomplete(
+          barcode,
+          20,
+        );
+        const match = list.find(
+          (p) => p.sku != null && String(p.sku).trim() === barcode,
+        );
+        if (match) {
+          await handleAddProductToSale(match);
+        } else if (list.length === 1) {
+          await handleAddProductToSale(list[0]);
+        } else {
+          toast.error("لم يتم العثور على منتج بهذا الباركود");
+        }
+      } catch {
+        toast.error("لم يتم العثور على منتج بهذا الباركود");
+      } finally {
+        setAddProductLoading(false);
+      }
+    },
+    [productInputValue, productOptions, selectedSale, handleAddProductToSale],
+  );
 
   const handleOpenShift = useCallback(async () => {
     try {
@@ -1200,21 +1222,27 @@ const PosBlankPage: React.FC = () => {
           {/* Product search – in header */}
           <Box sx={{ flex: 1, minWidth: 160, maxWidth: 380 }}>
             <Autocomplete
+              freeSolo
               value={selectedProduct}
               inputValue={productInputValue}
               onInputChange={(_, value) => setProductInputValue(value)}
-              onChange={(_, newValue: Product | null) => {
-                if (newValue) {
+              onChange={(_, newValue: string | Product | null) => {
+                if (typeof newValue === "string") {
+                  // This handles the "Enter" key on free text (barcode interaction)
+                  handleAddProductByBarcode(newValue);
+                } else if (newValue && typeof newValue === "object") {
+                  // This handles selecting an option from the list
                   handleAddProductToSale(newValue);
+                  setSelectedProduct(null);
                 }
-                setSelectedProduct(null);
               }}
               options={productOptions}
-              getOptionLabel={(option) =>
-                typeof option === "object" && option?.name
+              getOptionLabel={(option) => {
+                if (typeof option === "string") return option;
+                return option?.name
                   ? `${option.name}${option.sku ? ` (${option.sku})` : ""}`
-                  : ""
-              }
+                  : "";
+              }}
               loading={productSearchLoading}
               disabled={!selectedSale || addProductLoading}
               renderInput={(params) => (
@@ -1235,13 +1263,6 @@ const PosBlankPage: React.FC = () => {
                   }}
                   placeholder="ابحث عن منتج أو الباركود..."
                   size="small"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleAddProductByBarcode();
-                    }
-                  }}
                   InputProps={{
                     ...params.InputProps,
                     endAdornment: (
@@ -1253,25 +1274,76 @@ const PosBlankPage: React.FC = () => {
                       </>
                     ),
                   }}
+                  helperText={
+                    productInputValue.length > 0
+                      ? "المنتجات المنتهية أو التي نفد مخزونها مخفية"
+                      : undefined
+                  }
                 />
               )}
               renderOption={(props, option) => (
                 <li {...props} key={option.id}>
                   <Box
-                    sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}
+                    sx={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 0.25,
+                      width: "100%",
+                    }}
                   >
-                    <Typography variant="body2">{option.name}</Typography>
-                    {(option.sku || option.suggested_sale_price != null) && (
+                    <Box
+                      sx={{ display: "flex", justifyContent: "space-between" }}
+                    >
+                      <Typography variant="body2" fontWeight="medium">
+                        {option.name}
+                      </Typography>
+                      {option.current_stock_quantity != null ||
+                      option.stock_quantity != null ? (
+                        <Typography
+                          variant="caption"
+                          color={
+                            (option.current_stock_quantity ??
+                              option.stock_quantity ??
+                              0) <= 5
+                              ? "error.main"
+                              : "success.main"
+                          }
+                          fontWeight="bold"
+                        >
+                          {`الكمية: ${formatNumber(
+                            option.current_stock_quantity ??
+                              option.stock_quantity ??
+                              0,
+                          )}`}
+                        </Typography>
+                      ) : null}
+                    </Box>
+
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
                       <Typography variant="caption" color="text.secondary">
                         {[
                           option.sku,
                           option.suggested_sale_price != null &&
-                            `السعر: ${formatNumber(Number(option.suggested_sale_price))}`,
+                            `السعر: ${formatNumber(
+                              Number(option.suggested_sale_price),
+                            )}`,
                         ]
                           .filter(Boolean)
                           .join(" · ")}
                       </Typography>
-                    )}
+
+                      {option.earliest_expiry_date && (
+                        <Typography variant="caption" color="warning.dark">
+                          {`ينتهي: ${option.earliest_expiry_date}`}
+                        </Typography>
+                      )}
+                    </Box>
                   </Box>
                 </li>
               )}

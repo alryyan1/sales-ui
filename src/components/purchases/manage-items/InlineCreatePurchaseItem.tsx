@@ -56,14 +56,36 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
   const batchNumberInputRef = useRef<HTMLInputElement>(null);
   const expiryDateInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-calculate Sale Price based on Unit Cost and Markup Percentage
+  // Auto-calculate Sale Price when Markup Percentage changes
   useEffect(() => {
     if (unitCost !== undefined && unitCost >= 0) {
       const calculatedPrice = unitCost * (1 + markupPercentage / 100);
-      // Round to 2 decimal places
       setSalePrice(Number(calculatedPrice.toFixed(2)));
     }
-  }, [unitCost, markupPercentage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [markupPercentage]);
+
+  const handleUnitCostChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    const newCost = val === "" ? undefined : Number(val);
+    setUnitCost(newCost);
+
+    if (newCost !== undefined && newCost >= 0) {
+      const calculatedPrice = newCost * (1 + markupPercentage / 100);
+      setSalePrice(Number(calculatedPrice.toFixed(2)));
+    }
+  };
+
+  const handleSalePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    const newPrice = val === "" ? undefined : Number(val);
+    setSalePrice(newPrice);
+
+    if (newPrice !== undefined && newPrice >= 0) {
+      const calculatedCost = newPrice / (1 + markupPercentage / 100);
+      setUnitCost(Number(calculatedCost.toFixed(2)));
+    }
+  };
 
   // Fetch products based on search query (debounced)
   useEffect(() => {
@@ -396,7 +418,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
           e.target.select();
         }}
         value={unitCost || ""}
-        onChange={(e) => setUnitCost(Number(e.target.value))}
+        onChange={handleUnitCostChange}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
@@ -418,7 +440,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
           e.target.select();
         }}
         value={salePrice || ""}
-        onChange={(e) => setSalePrice(Number(e.target.value))}
+        onChange={handleSalePriceChange}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
