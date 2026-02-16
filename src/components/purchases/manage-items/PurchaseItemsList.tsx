@@ -17,6 +17,7 @@ import {
   CircularProgress,
   Backdrop,
   Tooltip,
+  Button,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import {
@@ -180,35 +181,16 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
               أصناف المشتريات ({paginationData.total})
             </Typography>
             {onInlineCreate && !isReadOnly && (
-              <Tooltip title="إضافة صنف سريع">
-                <IconButton
+                <Button
                   size="small"
+                  variant="contained"
+                  startIcon={<Plus size={20} />}
                   onClick={() => setShowInlineCreate(!showInlineCreate)}
                   color="primary"
-                  sx={{
-                    animation: "heartbeat 1.5s ease-in-out infinite",
-                    "@keyframes heartbeat": {
-                      "0%": {
-                        transform: "scale(1)",
-                      },
-                      "14%": {
-                        transform: "scale(1.2)",
-                      },
-                      "28%": {
-                        transform: "scale(1)",
-                      },
-                      "42%": {
-                        transform: "scale(1.2)",
-                      },
-                      "70%": {
-                        transform: "scale(1)",
-                      },
-                    },
-                  }}
+             
                 >
-                  <Plus size={20} />
-                </IconButton>
-              </Tooltip>
+                  اضافه صنف
+                </Button>
             )}
           </Box>
           <TextField

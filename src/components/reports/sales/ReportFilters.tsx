@@ -220,29 +220,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
             </Box>
           )}
 
-          {/* Product Select */}
-          <Box sx={{ minWidth: 200 }}>
-            <Controller
-              control={control}
-              name="productId"
-              render={({ field }) => (
-                <Autocomplete
-                  options={products}
-                  getOptionLabel={(option) => option.name || ""}
-                  value={
-                    products.find((p) => String(p.id) === field.value) || null
-                  }
-                  onChange={(_, newValue) => {
-                    field.onChange(newValue ? String(newValue.id) : null);
-                  }}
-                  renderInput={(params) => (
-                    <TextField {...params} label="المنتج" size="small" />
-                  )}
-                  loading={loadingFilters}
-                />
-              )}
-            />
-          </Box>
+         
 
           {/* Filter Actions */}
           <Stack direction="row" gap={1} spacing={1} sx={{ minWidth: 200 }}>
@@ -253,7 +231,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
               startIcon={<Filter size={18} />}
               sx={{ borderRadius: 2 }}
             >
-              تصفية
+              بحث
             </Button>
             <Button
               fullWidth

@@ -218,19 +218,72 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
               placeholder="Product or Barcode..."
               autoFocus
               inputRef={productInputRef}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !productLoading) {
-                  // If there's a selected option in the dropdown, let autocomplete handle it
-                  // Otherwise, try to find exact SKU match
-                  const barcode = productInputValue.trim();
-                  if (barcode && productOptions.length > 0) {
-                    const match = productOptions.find(
-                      (p) => p.sku != null && String(p.sku).trim() === barcode,
+              onKeyDown={async (e) => {
+                if (e.key === "Enter") {
+                  // If autocomplete is loading, prevent default to avoid selecting incomplete results
+                  // except if we are forcing a scan
+
+                  // Use ref value to get the most current input without waiting for React state updates
+                  // This is critical for barcode scanners which type very fast
+                  const barcode = productInputRef.current?.value?.trim();
+
+                  if (!barcode) return;
+
+                  // If an option is highlighted by the autocomplete (standard behavior), let it be selected.
+                  // However, if the user scanned a barcode rapidly, the dropdown might not even be open or highlighted yet.
+
+                  // Check if we already have an exact match in the *currently loaded* options
+                  // This saves an API call if options are fresh
+                  const exactMatchInOptions = productOptions.find(
+                    (p) =>
+                      p.sku != null &&
+                      String(p.sku).trim().toLowerCase() ===
+                        barcode.toLowerCase(),
+                  );
+
+                  if (exactMatchInOptions) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleProductSelect(exactMatchInOptions);
+                    return;
+                  }
+
+                  // If no exact match locally, force an immediate API call
+                  // This handles the "scan before debounce" scenario
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setProductLoading(true);
+
+                  try {
+                    // Force exact search or close match from backend
+                    const response = await apiClient.get<{ data: Product[] }>(
+                      `/products/autocomplete?search=${encodeURIComponent(barcode)}&limit=1`,
                     );
+                    const products = response.data.data ?? response.data;
+
+                    // Check for exact SKU match in the fresh results
+                    const match = products.find(
+                      (p) =>
+                        p.sku != null &&
+                        String(p.sku).trim().toLowerCase() ===
+                          barcode.toLowerCase(),
+                    );
+
                     if (match) {
-                      e.preventDefault();
                       handleProductSelect(match);
+                    } else if (products.length > 0) {
+                      // If found but not exact SKU match (maybe partial name), update options to show user
+                      setProductOptions(products);
+                    } else {
+                      // Optional: play error sound or strict notification
+                      toast.error("Not found", {
+                        description: `No product found with barcode: ${barcode}`,
+                      });
                     }
+                  } catch (error) {
+                    console.error("Error scanning barcode:", error);
+                  } finally {
+                    setProductLoading(false);
                   }
                 }
               }}
