@@ -30,6 +30,7 @@ import {
   ProductUnitsMap,
 } from "@/components/purchases/manage-items";
 import InventoryImpactDialog from "@/components/purchases/InventoryImpactDialog";
+import { webUrl } from "@/constants";
 
 const ManagePurchaseItemsPage: React.FC = () => {
   const { id: purchaseIdParam } = useParams<{ id: string }>();
@@ -567,7 +568,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
         onCloseSummaryDialog={() => setSummaryDialogOpen(false)}
         onExportPdf={() => {
           // Open the backend-generated PDF in a new tab
-          const pdfUrl = `${import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1/sales-api/public"}/purchases/${purchaseId}/export/pdf`;
+          const pdfUrl = `${webUrl}/purchases/${purchaseId}/export/pdf`;
           window.open(pdfUrl, "_blank");
         }}
         markupPercentage={markupPercentage}

@@ -1,7 +1,9 @@
 // export const host = 'sahara-pharma.com'
-export const schema = "http";
+export const schema = window.location.protocol.replace(":", "");
 // export const host = "lifcaresd.com";
-export const host = "127.0.0.1";
+export const host = window.location.hostname;
+
+console.log(host,'host')
 export const projectFolder = "sales-api";
 // export const host = 'server1'مركز النعيم
 export function blurForNoramlUsers() {
@@ -11,13 +13,13 @@ export function blurForNoramlUsers() {
 // export const url = `${schema}://${host}/system/${projectFolder}/public/api/`;
 // export const webUrl = `${schema}://${host}/system/${projectFolder}/public/`;
 // export const imagesUrl = `${schema}://${host}/system/${projectFolder}/public/`;
-export const url = `${schema}://${host}/${projectFolder}/public/api/`;
-export const webUrl = `${schema}://${host}/${projectFolder}/public/`;
-export const imagesUrl = `${schema}://${host}/${projectFolder}/public/`;
+export const url = `${schema}://${host}/${projectFolder}/public/api`;
+export const webUrl = `${schema}://${host}/${projectFolder}/public`;
+export const imagesUrl = `${schema}://${host}/${projectFolder}/public`;
 
 export function formatNumber(
   number: number | string | null | undefined,
-  decimals: number = 0
+  decimals: number = 0,
 ): string {
   if (number === null || number === undefined) return "---";
 
@@ -62,7 +64,7 @@ export function preciseCalculation(
   a: number,
   b: number,
   operation: "add" | "subtract" | "multiply" | "divide",
-  decimals: number = 2
+  decimals: number = 2,
 ): number {
   const factor = Math.pow(10, decimals);
 
@@ -90,7 +92,7 @@ export function preciseCalculation(
 export function preciseSum(numbers: number[], decimals: number = 2): number {
   return numbers.reduce(
     (sum, num) => preciseCalculation(sum, num, "add", decimals),
-    0
+    0,
   );
 }
 
@@ -105,7 +107,7 @@ export function preciseSum(numbers: number[], decimals: number = 2): number {
 export const formatDate = (
   dateInput: string | Date | number | null | undefined,
   locale?: string, // Example: 'ar-SA' for Arabic (Saudi Arabia)
-  options?: Intl.DateTimeFormatOptions
+  options?: Intl.DateTimeFormatOptions,
 ): string => {
   if (!dateInput) return "---";
 
@@ -114,7 +116,7 @@ export const formatDate = (
     // Attempt to parse common ISO-like formats (YYYY-MM-DD, YYYY-MM-DDTHH:mm:ss)
     // date-fns parseISO is more robust if you have it: dateToFormat = parseISO(dateInput);
     dateToFormat = new Date(
-      dateInput.includes("T") ? dateInput : dateInput + "T00:00:00"
+      dateInput.includes("T") ? dateInput : dateInput + "T00:00:00",
     ); // Add time to avoid timezone issues for YYYY-MM-DD
   } else if (dateInput instanceof Date) {
     dateToFormat = dateInput;
@@ -160,7 +162,7 @@ export const formatCurrency = (
   value: string | number | null | undefined,
   locale?: string, // Example: 'ar-SA' for Arabic (Saudi Arabia)
   currencySymbolOrCode: string = "SDG", // Default currency set globally to Sudanese Pound
-  options?: Intl.NumberFormatOptions
+  options?: Intl.NumberFormatOptions,
 ): string => {
   if (value === null || value === undefined) return "---";
 
@@ -198,7 +200,7 @@ export const formatCurrency = (
         "Value:",
         value,
         "Currency:",
-        currencySymbolOrCode
+        currencySymbolOrCode,
       );
       // Fallback to simpler formatting if Intl fails
       return `${currencySymbolOrCode} ${formatNumber(numberValue)}`;
@@ -207,7 +209,7 @@ export const formatCurrency = (
     // For custom currency symbols (like "ريال", "$"), format manually
     const formattedNumber = formatNumber(
       numberValue,
-      options?.maximumFractionDigits ?? 0
+      options?.maximumFractionDigits ?? 0,
     );
     // RTL-aware: Put symbol after number for Arabic, before for English
     const isRTL =
@@ -222,14 +224,14 @@ export const formatCurrency = (
  * Format date as dd,mm,yyyy (e.g., 15,01,2025)
  */
 export const formatDateDDMMYYYY = (
-  dateInput: string | Date | number | null | undefined
+  dateInput: string | Date | number | null | undefined,
 ): string => {
   if (!dateInput) return "---";
 
   let dateToFormat: Date;
   if (typeof dateInput === "string") {
     dateToFormat = new Date(
-      dateInput.includes("T") ? dateInput : dateInput + "T00:00:00"
+      dateInput.includes("T") ? dateInput : dateInput + "T00:00:00",
     );
   } else if (dateInput instanceof Date) {
     dateToFormat = dateInput;
@@ -240,7 +242,10 @@ export const formatDateDDMMYYYY = (
   }
 
   if (isNaN(dateToFormat.getTime())) {
-    console.warn("formatDateDDMMYYYY received an invalid date input:", dateInput);
+    console.warn(
+      "formatDateDDMMYYYY received an invalid date input:",
+      dateInput,
+    );
     return "---";
   }
 

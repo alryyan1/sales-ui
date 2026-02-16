@@ -40,22 +40,27 @@ import DayExpensesDialog from "@/components/reports/expenses/DayExpensesDialog";
 import { MonthlyExpensesPdf } from "@/components/reports/expenses/MonthlyExpensesPdf";
 import { PDFViewer } from "@react-pdf/renderer";
 import { Expense } from "@/services/expenseService";
+import { webUrl } from "@/constants";
 
 const MonthlyExpensesPage: React.FC = () => {
   const navigate = useNavigate();
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState<number>(
-    getMonth(currentDate) + 1
+    getMonth(currentDate) + 1,
   );
   const [selectedYear, setSelectedYear] = useState<number>(
-    getYear(currentDate)
+    getYear(currentDate),
   );
   const [dayDialogOpen, setDayDialogOpen] = useState(false);
   const [selectedDayDate, setSelectedDayDate] = useState<string | null>(null);
   const [selectedDayExpenses, setSelectedDayExpenses] = useState<Expense[]>([]);
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
 
-  const { data: reportData, isLoading, error } = useMonthlyExpenses({
+  const {
+    data: reportData,
+    isLoading,
+    error,
+  } = useMonthlyExpenses({
     year: selectedYear,
     month: selectedMonth,
   });
@@ -72,9 +77,7 @@ const MonthlyExpensesPage: React.FC = () => {
       params.append("month", String(selectedMonth));
       params.append("year", String(selectedYear));
 
-      const excelUrl = `${
-        import.meta.env.VITE_API_BASE_URL
-      }/reports/monthly-expenses-excel?${params.toString()}`;
+      const excelUrl = `${webUrl}/reports/monthly-expenses-excel?${params.toString()}`;
       window.open(excelUrl, "_blank");
       toast.success("تم فتح ملف Excel في تبويب جديد");
     } catch (error: any) {
@@ -106,10 +109,7 @@ const MonthlyExpensesPage: React.FC = () => {
     "ديسمبر",
   ];
 
-  const years = Array.from(
-    { length: 10 },
-    (_, i) => getYear(currentDate) - i
-  );
+  const years = Array.from({ length: 10 }, (_, i) => getYear(currentDate) - i);
 
   return (
     <Box sx={{ minHeight: "100vh" }}>
@@ -250,7 +250,11 @@ const MonthlyExpensesPage: React.FC = () => {
             <Grid item xs={12} md={4}>
               <Card>
                 <CardContent>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    gutterBottom
+                  >
                     إجمالي المصروفات
                   </Typography>
                   <Typography variant="h5" fontWeight="bold">
@@ -262,10 +266,18 @@ const MonthlyExpensesPage: React.FC = () => {
             <Grid item xs={12} md={4}>
               <Card>
                 <CardContent>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    gutterBottom
+                  >
                     المصروفات النقدية
                   </Typography>
-                  <Typography variant="h5" fontWeight="bold" color="success.main">
+                  <Typography
+                    variant="h5"
+                    fontWeight="bold"
+                    color="success.main"
+                  >
                     {formatNumber(reportData.month_summary.cash_total)}
                   </Typography>
                 </CardContent>
@@ -274,10 +286,18 @@ const MonthlyExpensesPage: React.FC = () => {
             <Grid item xs={12} md={4}>
               <Card>
                 <CardContent>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    gutterBottom
+                  >
                     المصروفات البنكية
                   </Typography>
-                  <Typography variant="h5" fontWeight="bold" color="primary.main">
+                  <Typography
+                    variant="h5"
+                    fontWeight="bold"
+                    color="primary.main"
+                  >
                     {formatNumber(reportData.month_summary.bank_total)}
                   </Typography>
                 </CardContent>
@@ -361,4 +381,3 @@ const MonthlyExpensesPage: React.FC = () => {
 };
 
 export default MonthlyExpensesPage;
-

@@ -213,6 +213,13 @@ const ProductsPage: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ["products"] });
   };
 
+  const handleDeleteSuccess = () => {
+    closeModal();
+    showSnackbar("تم حذف المنتج بنجاح", "success");
+    // Reset queries to force a hard refresh and show loading state
+    queryClient.resetQueries({ queryKey: ["products"] });
+  };
+
   // --- Search Handlers ---
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
@@ -317,100 +324,10 @@ const ProductsPage: React.FC = () => {
             إدارة المنتجات
           </Typography>
           <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
-            {/* Filter: In Stock Only */}
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-              }}
-            >
-              <Tooltip
-                title={
-                  showOnlyInStock
-                    ? "عرض كل المنتجات"
-                    : "عرض المنتجات المتوفرة فقط"
-                }
-              >
-                <IconButton
-                  onClick={handleStockFilterToggle}
-                  color={showOnlyInStock ? "primary" : "default"}
-                  sx={{
-                    bgcolor: showOnlyInStock ? "primary.light" : "transparent",
-                    "&:hover": { bgcolor: "primary.light" },
-                  }}
-                >
-                  <Filter className="h-5 w-5" />
-                </IconButton>
-              </Tooltip>
-              <Typography variant="caption">
-                {showOnlyInStock ? "كل المنتجات" : "المتوفر فقط"}
-              </Typography>
-            </Box>
+          
 
-            {/* Filter: Low Stock Only */}
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-              }}
-            >
-              <Tooltip
-                title={
-                  showLowStockOnly
-                    ? "عرض كل المنتجات"
-                    : "عرض المنتجات منخفضة المخزون فقط"
-                }
-              >
-                <IconButton
-                  onClick={handleLowStockFilterToggle}
-                  color={showLowStockOnly ? "primary" : "default"}
-                  sx={{
-                    bgcolor: showLowStockOnly ? "primary.light" : "transparent",
-                    "&:hover": { bgcolor: "primary.light" },
-                  }}
-                >
-                  <Filter className="h-5 w-5" />
-                </IconButton>
-              </Tooltip>
-              <Typography variant="caption">
-                {showLowStockOnly ? "كل المنتجات" : "منخفض المخزون"}
-              </Typography>
-            </Box>
-
-            {/* Filter: Out of Stock Only */}
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-              }}
-            >
-              <Tooltip
-                title={
-                  showOutOfStockOnly
-                    ? "عرض كل المنتجات"
-                    : "عرض المنتجات غير المتوفرة"
-                }
-              >
-                <IconButton
-                  onClick={handleOutOfStockFilterToggle}
-                  color={showOutOfStockOnly ? "primary" : "default"}
-                  sx={{
-                    bgcolor: showOutOfStockOnly
-                      ? "primary.light"
-                      : "transparent",
-                    "&:hover": { bgcolor: "primary.light" },
-                  }}
-                >
-                  <Filter className="h-5 w-5" />
-                </IconButton>
-              </Tooltip>
-              <Typography variant="caption">
-                {showOutOfStockOnly ? "كل المنتجات" : "غير المتوفر"}
-              </Typography>
-            </Box>
+   
+         
 
             {/* Print Products */}
             <Box
@@ -617,6 +534,7 @@ const ProductsPage: React.FC = () => {
           onClose={closeModal}
           productToEdit={editingProduct as Product | null}
           onSaveSuccess={handleSaveSuccess}
+          onDeleteSuccess={handleDeleteSuccess}
         />
         <ProductImportDialog
           open={isImportDialogOpen}

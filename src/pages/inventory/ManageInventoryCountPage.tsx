@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -16,12 +16,13 @@ import {
   IconButton,
   Chip,
   TextField,
-  MenuItem,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Autocomplete,
+  Grid,
+  CircularProgress,
+  InputAdornment,
+  Avatar,
+  Card,
+  CardContent,
+  Container,
 } from "@mui/material";
 import {
   ArrowBack,
@@ -30,13 +31,19 @@ import {
   CheckCircle,
   Cancel,
   Save,
+  Search,
+  Inventory,
+  Assessment,
+  Warning,
+  ListAlt,
 } from "@mui/icons-material";
 import inventoryCountService, {
-  InventoryCount,
   InventoryCountItem,
 } from "@/services/inventoryCountService";
 import productService from "@/services/productService";
 import dayjs from "dayjs";
+
+import InlineCreateInventoryCountItem from "@/components/inventory/InlineCreateInventoryCountItem";
 
 const ManageInventoryCountPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -44,10 +51,8 @@ const ManageInventoryCountPage: React.FC = () => {
   const queryClient = useQueryClient();
 
   // State
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [productInputValue, setProductInputValue] = useState("");
-  const [actualQuantity, setActualQuantity] = useState<string>("");
+  const [showInlineAdd, setShowInlineAdd] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [localQuantities, setLocalQuantities] = useState<
     Record<number, string>
   >({});
@@ -72,10 +77,6 @@ const ManageInventoryCountPage: React.FC = () => {
     onSuccess: () => {
       toast.success("تم إضافة المنتج بنجاح");
       queryClient.invalidateQueries({ queryKey: ["inventory-count", id] });
-      setAddDialogOpen(false);
-      setSelectedProduct(null);
-      setProductInputValue("");
-      setActualQuantity("");
     },
     onError: (error) => {
       toast.error("خطأ", {
@@ -160,14 +161,6 @@ const ManageInventoryCountPage: React.FC = () => {
   });
 
   // Handlers
-  const handleAddItem = () => {
-    if (!selectedProduct) return;
-    addItemMutation.mutate({
-      product_id: selectedProduct.id,
-      actual_quantity: actualQuantity ? Number(actualQuantity) : undefined,
-    });
-  };
-
   const handleQuantityChange = (item: InventoryCountItem, value: string) => {
     // Update local state immediately for responsive UI
     setLocalQuantities((prev) => ({ ...prev, [item.id]: value }));
@@ -231,8 +224,6 @@ const ManageInventoryCountPage: React.FC = () => {
   };
 
   const summary = calculateSummary();
-  const isReadOnly =
-    count?.status === "approved" || count?.status === "rejected";
   const canEdit = count?.status === "draft" || count?.status === "in_progress";
   const canComplete =
     count?.status === "in_progress" && count?.items && count.items.length > 0;
@@ -245,128 +236,90 @@ const ManageInventoryCountPage: React.FC = () => {
         !count?.items?.some((item) => item.product_id === product.id),
     ) || [];
 
+  // Filter items in the table
+  const filteredItems = useMemo(() => {
+    if (!count?.items) return [];
+    if (!searchQuery) return count.items;
+    const q = searchQuery.toLowerCase();
+    return count.items.filter(
+      (item) =>
+        item.product?.name.toLowerCase().includes(q) ||
+        item.product?.sku?.toLowerCase().includes(q) ||
+        item.product?.barcode?.toLowerCase().includes(q),
+    );
+  }, [count?.items, searchQuery]);
+
   if (isLoading) {
     return (
-      <Box sx={{ p: 3, textAlign: "center" }}>
-        <Typography>جاري التحميل...</Typography>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "50vh",
+        }}
+      >
+        <CircularProgress />
       </Box>
     );
   }
 
   if (!count) {
     return (
-      <Box sx={{ p: 3, textAlign: "center" }}>
-        <Typography>الجرد غير موجود</Typography>
+      <Box sx={{ p: 4, textAlign: "center" }}>
+        <Typography variant="h6" color="text.secondary">
+          الجرد غير موجود
+        </Typography>
+        <Button
+          variant="outlined"
+          sx={{ mt: 2 }}
+          onClick={() => navigate("/inventory/counts")}
+        >
+          العودة للقائمة
+        </Button>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Container maxWidth="xl" sx={{ py: 4 }}>
       {/* Header */}
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 2,
-          }}
-        >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <IconButton onClick={() => navigate("/inventory/counts")}>
-              <ArrowBack />
-            </IconButton>
-            <Typography variant="h5" fontWeight="bold">
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", md: "row" },
+          justifyContent: "space-between",
+          alignItems: { xs: "flex-start", md: "center" },
+          gap: 2,
+          mb: 4,
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <IconButton
+            onClick={() => navigate("/inventory/counts")}
+            sx={{ bgcolor: "background.paper", boxShadow: 1 }}
+          >
+            <ArrowBack />
+          </IconButton>
+          <Box>
+            <Typography variant="h4" fontWeight="bold">
               جرد المخزون #{count.id}
             </Typography>
-          </Box>
-          <Box sx={{ display: "flex", gap: 1 }}>
-            {canEdit && (
-              <>
-                <Button
-                  variant="outlined"
-                  startIcon={<Add />}
-                  onClick={() => {
-                    setAddDialogOpen(true);
-                    setProductInputValue("");
-                    setSelectedProduct(null);
-                  }}
-                >
-                  إضافة منتج
-                </Button>
-                {count.status === "draft" && (
-                  <Button
-                    variant="contained"
-                    color="info"
-                    onClick={() => updateStatusMutation.mutate("in_progress")}
-                  >
-                    بدء الجرد
-                  </Button>
-                )}
-                {canComplete && (
-                  <Button
-                    variant="contained"
-                    color="warning"
-                    startIcon={<Save />}
-                    onClick={() => updateStatusMutation.mutate("completed")}
-                  >
-                    إكمال الجرد
-                  </Button>
-                )}
-              </>
-            )}
-            {canApprove && (
-              <>
-                <Button
-                  variant="contained"
-                  color="success"
-                  startIcon={<CheckCircle />}
-                  onClick={handleApprove}
-                >
-                  اعتماد
-                </Button>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  startIcon={<Cancel />}
-                  onClick={handleReject}
-                >
-                  رفض
-                </Button>
-              </>
-            )}
-          </Box>
-        </Box>
-
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: 2,
-          }}
-        >
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              المستودع
-            </Typography>
-            <Typography variant="body1" fontWeight="bold">
-              {count.warehouse?.name}
-            </Typography>
-          </Box>
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              التاريخ
-            </Typography>
-            <Typography variant="body1" fontWeight="bold">
-              {dayjs(count.count_date).format("YYYY-MM-DD")}
-            </Typography>
-          </Box>
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              الحالة
-            </Typography>
-            <Box sx={{ mt: 0.5 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                {count.warehouse?.name}
+              </Typography>
+              <Box
+                sx={{
+                  width: 4,
+                  height: 4,
+                  borderRadius: "50%",
+                  bgcolor: "text.disabled",
+                }}
+              />
+              <Typography variant="body2" color="text.secondary">
+                {dayjs(count.count_date).format("YYYY-MM-DD")}
+              </Typography>
               <Chip
                 label={
                   count.status === "draft"
@@ -389,239 +342,353 @@ const ManageInventoryCountPage: React.FC = () => {
                         : "default"
                 }
                 size="small"
+                sx={{ fontWeight: "bold" }}
               />
             </Box>
           </Box>
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              المستخدم
-            </Typography>
-            <Typography variant="body1" fontWeight="bold">
-              {count.user?.name}
-            </Typography>
-          </Box>
         </Box>
-      </Paper>
 
-      {/* Summary */}
-      <Paper sx={{ p: 2, mb: 3, bgcolor: "grey.50" }}>
+        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+          {canEdit && (
+            <>
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={() => setShowInlineAdd(true)}
+                sx={{ px: 3 }}
+              >
+                إضافة منتج
+              </Button>
+              {count.status === "draft" && (
+                <Button
+                  variant="outlined"
+                  color="info"
+                  onClick={() => updateStatusMutation.mutate("in_progress")}
+                >
+                  بدء الجرد
+                </Button>
+              )}
+              {canComplete && (
+                <Button
+                  variant="outlined"
+                  color="warning"
+                  startIcon={<Save />}
+                  onClick={() => updateStatusMutation.mutate("completed")}
+                >
+                  إكمال الجرد
+                </Button>
+              )}
+            </>
+          )}
+          {canApprove && (
+            <>
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<CheckCircle />}
+                onClick={handleApprove}
+              >
+                اعتماد
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<Cancel />}
+                onClick={handleReject}
+              >
+                رفض
+              </Button>
+            </>
+          )}
+        </Box>
+      </Box>
+
+      {/* Summary Cards */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} md={4}>
+          <Card
+            elevation={0}
+            sx={{ border: "1px solid", borderColor: "divider" }}
+          >
+            <CardContent
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 2,
+                p: "16px !important",
+              }}
+            >
+              <Avatar
+                variant="rounded"
+                sx={{ bgcolor: "primary.soft", color: "primary.main" }}
+              >
+                <Inventory />
+              </Avatar>
+              <Box>
+                <Typography variant="h5" fontWeight="bold">
+                  {summary.totalItems}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  إجمالي الأصناف
+                </Typography>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Card
+            elevation={0}
+            sx={{ border: "1px solid", borderColor: "divider" }}
+          >
+            <CardContent
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 2,
+                p: "16px !important",
+              }}
+            >
+              <Avatar
+                variant="rounded"
+                sx={{ bgcolor: "info.soft", color: "info.main" }}
+              >
+                <Assessment />
+              </Avatar>
+              <Box>
+                <Typography
+                  variant="h5"
+                  fontWeight="bold"
+                  color={getDifferenceColor(summary.totalDifference)}
+                >
+                  {summary.totalDifference > 0 && "+"}
+                  {summary.totalDifference}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  إجمالي الفرق
+                </Typography>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Card
+            elevation={0}
+            sx={{ border: "1px solid", borderColor: "divider" }}
+          >
+            <CardContent
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 2,
+                p: "16px !important",
+              }}
+            >
+              <Avatar
+                variant="rounded"
+                sx={{ bgcolor: "warning.soft", color: "warning.main" }}
+              >
+                <Warning />
+              </Avatar>
+              <Box>
+                <Typography variant="h5" fontWeight="bold" color="warning.main">
+                  {summary.itemsWithDifference}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  أصناف بها فروقات
+                </Typography>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Inline Add Item Form */}
+      {showInlineAdd && (
+        <Paper
+          elevation={0}
+          sx={{ mb: 3, border: "1px dashed", borderColor: "divider" }}
+        >
+          <InlineCreateInventoryCountItem
+            onSave={(data) => {
+              addItemMutation.mutate(data);
+            }}
+            onCancel={() => setShowInlineAdd(false)}
+            isLoading={addItemMutation.isPending}
+            availableProducts={availableProducts}
+          />
+        </Paper>
+      )}
+
+      {/* Main Content */}
+      <Paper elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
+        {/* Toolbar */}
         <Box
           sx={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: 2,
-            textAlign: "center",
+            p: 2,
+            borderBottom: "1px solid",
+            borderColor: "divider",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
           }}
         >
-          <Box>
-            <Typography variant="h4" fontWeight="bold">
-              {summary.totalItems}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <ListAlt color="action" />
+            <Typography variant="h6" fontWeight="bold">
+              قائمة المنتجات
             </Typography>
-            <Typography variant="caption" color="text.secondary">
-              إجمالي الأصناف
-            </Typography>
+            <Chip
+              label={`${filteredItems.length} منتج`}
+              size="small"
+              sx={{ bgcolor: "grey.100" }}
+            />
           </Box>
-          <Box>
-            <Typography
-              variant="h4"
-              fontWeight="bold"
-              color={getDifferenceColor(summary.totalDifference)}
-            >
-              {summary.totalDifference > 0 && "+"}
-              {summary.totalDifference}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              إجمالي الفرق
-            </Typography>
-          </Box>
-          <Box>
-            <Typography variant="h4" fontWeight="bold" color="warning.main">
-              {summary.itemsWithDifference}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              أصناف بها فروقات
-            </Typography>
-          </Box>
-        </Box>
-      </Paper>
-
-      {/* Items Table */}
-      <TableContainer dir="ltr" component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow sx={{ bgcolor: "grey.100" }}>
-              <TableCell>#</TableCell>
-              <TableCell>المنتج</TableCell>
-              <TableCell align="center">الكمية المسجلة</TableCell>
-              <TableCell align="center">الكمية الفعلية</TableCell>
-              <TableCell align="center">الفرق</TableCell>
-              {canEdit && <TableCell align="center">إجراءات</TableCell>}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {count.items?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} align="center">
-                  لا توجد منتجات في الجرد
-                </TableCell>
-              </TableRow>
-            ) : (
-              count.items?.map((item, index) => (
-                <TableRow key={item.id}>
-                  <TableCell>{index + 1}</TableCell>
-                  <TableCell>{item.product?.name}</TableCell>
-                  <TableCell align="center">{item.expected_quantity}</TableCell>
-                  <TableCell align="center">
-                    {canEdit ? (
-                      <TextField
-                        id={`quantity-input-${index}`}
-                        type="number"
-                        size="small"
-                        value={
-                          localQuantities[item.id] !== undefined
-                            ? localQuantities[item.id]
-                            : (item.actual_quantity ?? "")
-                        }
-                        onChange={(e) =>
-                          handleQuantityChange(item, e.target.value)
-                        }
-                        onFocus={(e) => e.target.select()}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            const nextIndex = index + 1;
-                            const nextInput = document.getElementById(
-                              `quantity-input-${nextIndex}`,
-                            );
-                            if (nextInput) {
-                              nextInput.focus();
-                            }
-                          }
-                        }}
-                        sx={{ width: 100 }}
-                        inputProps={{ min: 0, step: 0.01 }}
-                      />
-                    ) : (
-                      (item.actual_quantity ?? "—")
-                    )}
-                  </TableCell>
-                  <TableCell align="center">
-                    <Typography
-                      fontWeight="bold"
-                      color={getDifferenceColor(item.difference)}
-                    >
-                      {item.difference > 0 && "+"}
-                      {item.difference}
-                    </Typography>
-                  </TableCell>
-                  {canEdit && (
-                    <TableCell align="center">
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => deleteItemMutation.mutate(item.id)}
-                      >
-                        <Delete fontSize="small" />
-                      </IconButton>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      {/* Add Item Dialog */}
-      <Dialog
-        open={addDialogOpen}
-        onClose={() => {
-          setAddDialogOpen(false);
-          setProductInputValue("");
-          setSelectedProduct(null);
-        }}
-        maxWidth="sm"
-        fullWidth
-        dir="rtl"
-      >
-        <DialogTitle>إضافة منتج للجرد</DialogTitle>
-        <DialogContent>
-          <Autocomplete
-            options={availableProducts}
-            getOptionLabel={(option: any) =>
-              option.sku
-                ? `${option.name} (${option.sku})`
-                : option.name ?? ""
-            }
-            inputValue={
-              selectedProduct
-                ? selectedProduct.sku
-                  ? `${selectedProduct.name} (${selectedProduct.sku})`
-                  : selectedProduct.name ?? ""
-                : productInputValue
-            }
-            onInputChange={(_, value) => setProductInputValue(value)}
-            filterOptions={(options, { inputValue }) => {
-              const q = (inputValue || "").trim().toLowerCase();
-              if (!q) return options;
-              return options.filter(
-                (option: any) =>
-                  (option.name && option.name.toLowerCase().includes(q)) ||
-                  (option.sku && option.sku.toLowerCase().includes(q)) ||
-                  (option.barcode && String(option.barcode).toLowerCase().includes(q))
-              );
-            }}
-            value={selectedProduct}
-            onChange={(_, newValue) => {
-              setSelectedProduct(newValue);
-              setProductInputValue("");
-            }}
-            onKeyDown={(e) => {
-              if (e.key !== "Enter") return;
-              const q = productInputValue.trim().toLowerCase();
-              if (!q) return;
-              const match = availableProducts.find(
-                (option: any) =>
-                  (option.name && option.name.toLowerCase().includes(q)) ||
-                  (option.sku && option.sku.toLowerCase().includes(q)) ||
-                  (option.barcode && String(option.barcode).toLowerCase().includes(q))
-              );
-              if (match) {
-                e.preventDefault();
-                setSelectedProduct(match);
-                setProductInputValue("");
-              }
-            }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="المنتج (الاسم أو الباركود)"
-                margin="normal"
-              />
-            )}
-          />
           <TextField
-            type="number"
-            label="الكمية الفعلية (اختياري)"
-            fullWidth
-            margin="normal"
-            value={actualQuantity}
-            onChange={(e) => setActualQuantity(e.target.value)}
-            inputProps={{ min: 0, step: 0.01 }}
+            size="small"
+            placeholder="بحث عن منتج..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search fontSize="small" color="action" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ width: 300 }}
           />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddDialogOpen(false)}>إلغاء</Button>
-          <Button
-            variant="contained"
-            onClick={handleAddItem}
-            disabled={!selectedProduct || addItemMutation.isPending}
-          >
-            {addItemMutation.isPending ? "جاري الإضافة..." : "إضافة"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+        </Box>
+
+        {/* Table */}
+        <TableContainer>
+          <Table size="small">
+            <TableHead>
+              <TableRow sx={{ bgcolor: "grey.50" }}>
+                <TableCell sx={{ fontWeight: "bold" }}>#</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>المنتج</TableCell>
+                <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                  الكمية المسجلة
+                </TableCell>
+                <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                  الكمية الفعلية
+                </TableCell>
+                <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                  الفرق
+                </TableCell>
+                {canEdit && (
+                  <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                    إجراءات
+                  </TableCell>
+                )}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredItems.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 1,
+                        opacity: 0.5,
+                      }}
+                    >
+                      <ListAlt sx={{ fontSize: 48 }} />
+                      <Typography>لا توجد منتجات مطابقة</Typography>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredItems.map((item, index) => (
+                  <TableRow
+                    key={item.id}
+                    hover
+                    sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
+                  >
+                    <TableCell>{index + 1}</TableCell>
+                    <TableCell>
+                      <Box>
+                        <Typography variant="body2" fontWeight="medium">
+                          {item.product?.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {item.product?.sku || item.product?.barcode}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Chip
+                        label={item.expected_quantity}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </TableCell>
+                    <TableCell align="center">
+                      {canEdit ? (
+                        <TextField
+                          id={`quantity-input-${index}`}
+                          type="number"
+                          size="small"
+                          value={
+                            localQuantities[item.id] !== undefined
+                              ? localQuantities[item.id]
+                              : (item.actual_quantity ?? "")
+                          }
+                          onChange={(e) =>
+                            handleQuantityChange(item, e.target.value)
+                          }
+                          onFocus={(e) => e.target.select()}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              const nextIndex = index + 1;
+                              const nextInput = document.getElementById(
+                                `quantity-input-${nextIndex}`,
+                              );
+                              if (nextInput) {
+                                nextInput.focus();
+                              }
+                            }
+                          }}
+                          sx={{ width: 100 }}
+                          inputProps={{ min: 0, step: 0.01 }}
+                          placeholder="0"
+                        />
+                      ) : (
+                        (item.actual_quantity ?? "—")
+                      )}
+                    </TableCell>
+                    <TableCell align="center">
+                      <Typography
+                        variant="body2"
+                        fontWeight="bold"
+                        color={getDifferenceColor(item.difference)}
+                      >
+                        {item.difference > 0 && "+"}
+                        {item.difference}
+                      </Typography>
+                    </TableCell>
+                    {canEdit && (
+                      <TableCell align="center">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => deleteItemMutation.mutate(item.id)}
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
+    </Container>
   );
 };
 

@@ -34,6 +34,7 @@ import {
   Upload,
   X,
   Image as ImageIcon,
+  Trash2,
 } from "lucide-react";
 
 // Services and Types
@@ -69,6 +70,7 @@ interface ProductFormModalProps {
   onClose: () => void;
   productToEdit: Product | null;
   onSaveSuccess: (product: Product) => void;
+  onDeleteSuccess?: () => void;
 }
 
 // --- Component Definition ---
@@ -77,6 +79,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   onClose,
   productToEdit,
   onSaveSuccess,
+  onDeleteSuccess,
 }) => {
   const isEditMode = Boolean(productToEdit);
 
@@ -364,6 +367,31 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
   // --- Render Modal ---
   if (!isOpen) return null;
+
+  // --- Delete Handler ---
+  const handleDelete = async () => {
+    if (!productToEdit) return;
+
+    if (
+      !window.confirm(
+        "هل أنت متأكد من حذف هذا المنتج؟ لا يمكن التراجع عن هذا الإجراء.",
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await productService.deleteProduct(productToEdit.id);
+      toast.success("تم حذف المنتج بنجاح");
+      if (onDeleteSuccess) onDeleteSuccess();
+      onClose();
+    } catch (error) {
+      console.error("Failed to delete product:", error);
+      toast.error("فشل حذف المنتج", {
+        description: productService.getErrorMessage(error),
+      });
+    }
+  };
 
   const handleClose = () => {
     if (isSubmitting) return;
@@ -998,6 +1026,19 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 إلزامية
               </Typography>
               <Box sx={{ display: "flex", gap: 1.5 }}>
+                {isEditMode && (
+                  <Button
+                    type="button"
+                    onClick={handleDelete}
+                    color="error"
+                    variant="outlined"
+                    disabled={isSubmitting}
+                    sx={{ minWidth: 100 }}
+                    startIcon={<Trash2 className="h-4 w-4" />}
+                  >
+                    حذف
+                  </Button>
+                )}
                 <Button
                   type="button"
                   onClick={handleClose}

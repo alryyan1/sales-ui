@@ -1,12 +1,9 @@
 // src/lib/axios.ts
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios"; // Import InternalAxiosRequestConfig
-
-// --- Base URL ---
-const VITE_API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost/sales-api/public";
+import { url } from "../constants";
 
 export const apiClient = axios.create({
-  baseURL: `${VITE_API_BASE_URL}/api`,
+  baseURL: url,
   // withCredentials: false, // <--- Changed: Not needed for bearer tokens
   headers: {
     Accept: "application/json",

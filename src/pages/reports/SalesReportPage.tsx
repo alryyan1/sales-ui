@@ -23,6 +23,7 @@ import apiClient from "@/lib/axios";
 // Services and Types
 import saleService, { Sale } from "@/services/saleService";
 import { useSettings } from "@/context/SettingsContext";
+import { webUrl } from "@/constants";
 
 // React Query Hooks
 import { useQuery } from "@tanstack/react-query";
@@ -60,27 +61,23 @@ const SalesReportPage: React.FC = () => {
   const posMode = getSetting("pos_mode", "shift") as "shift" | "days";
 
   // --- Current Filters and Page (respect posMode: shift only when posMode === "shift") ---
-  const currentFilters = useMemo(
-    () => {
-      const today = format(new Date(), "yyyy-MM-dd");
-      return {
-        startDate: searchParams.get("startDate") || today,
-        endDate: searchParams.get("endDate") || today,
-        clientId: searchParams.get("clientId") || null,
-        userId: searchParams.get("userId") || null,
-        shiftId:
-          posMode === "shift" ? (searchParams.get("shiftId") || null) : null,
-        productId: searchParams.get("productId") || null,
-      };
-    },
-    [searchParams, posMode]
-  );
+  const currentFilters = useMemo(() => {
+    const today = format(new Date(), "yyyy-MM-dd");
+    return {
+      startDate: searchParams.get("startDate") || today,
+      endDate: searchParams.get("endDate") || today,
+      clientId: searchParams.get("clientId") || null,
+      userId: searchParams.get("userId") || null,
+      shiftId: posMode === "shift" ? searchParams.get("shiftId") || null : null,
+      productId: searchParams.get("productId") || null,
+    };
+  }, [searchParams, posMode]);
 
   const initialFilterValues: ReportFilterValues = currentFilters;
 
   const currentPage = useMemo(
     () => Number(searchParams.get("page") || "1"),
-    [searchParams]
+    [searchParams],
   );
 
   // --- React Query Hooks (for shift report PDF data) ---
@@ -99,7 +96,7 @@ const SalesReportPage: React.FC = () => {
     queryKey: ["users-list-filters"],
     queryFn: async () => {
       const res = await apiClient.get<{ data: { id: number; name: string }[] }>(
-        "/users/list"
+        "/users/list",
       );
       return res.data?.data ?? [];
     },
@@ -131,7 +128,7 @@ const SalesReportPage: React.FC = () => {
       shifts.length > 0
     ) {
       const lastShift = shifts.reduce((prev, current) =>
-        prev.id > current.id ? prev : current
+        prev.id > current.id ? prev : current,
       );
       const newParams = new URLSearchParams(searchParams);
       newParams.set("shiftId", String(lastShift.id));
@@ -158,7 +155,7 @@ const SalesReportPage: React.FC = () => {
     const today = format(new Date(), "yyyy-MM-dd");
     if (posMode === "shift" && shifts.length > 0) {
       const lastShift = shifts.reduce((prev, current) =>
-        prev.id > current.id ? prev : current
+        prev.id > current.id ? prev : current,
       );
       setSearchParams({
         page: "1",
@@ -238,9 +235,7 @@ const SalesReportPage: React.FC = () => {
     if (currentFilters.shiftId)
       params.append("shift_id", String(currentFilters.shiftId));
 
-    const pdfUrl = `${
-      import.meta.env.VITE_API_BASE_URL
-    }/reports/sales/pdf?${params.toString()}`;
+    const pdfUrl = `${webUrl}/reports/sales/pdf?${params.toString()}`;
     window.open(pdfUrl, "_blank");
     toast.info("جاري فتح PDF في تبويب جديد...");
   };
@@ -414,7 +409,9 @@ const SalesReportPage: React.FC = () => {
         </DialogTitle>
         <DialogContent sx={{ height: "80vh", p: 2 }}>
           {selectedShift && reportData && (
-            <Typography color="text.secondary">تقرير الوردية PDF غير متاح حالياً</Typography>
+            <Typography color="text.secondary">
+              تقرير الوردية PDF غير متاح حالياً
+            </Typography>
           )}
         </DialogContent>
       </Dialog>

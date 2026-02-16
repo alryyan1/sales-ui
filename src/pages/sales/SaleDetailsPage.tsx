@@ -23,22 +23,31 @@ import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
 
 // Lucide Icons
-import { ArrowLeft, ShoppingCart, DollarSign, FileText, User, Calendar, Printer } from "lucide-react";
+import {
+  ArrowLeft,
+  ShoppingCart,
+  DollarSign,
+  FileText,
+  User,
+  Calendar,
+  Printer,
+} from "lucide-react";
 
 // Services and Types
 import saleService, { Sale } from "../../services/saleService";
 import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 import dayjs from "dayjs";
+import { url } from "@/constants";
 
 // Payment method labels in Arabic
 const paymentMethodLabels: Record<string, string> = {
-  cash: 'نقدي',
-  visa: 'فيزا',
-  mastercard: 'ماستركارد',
-  bank_transfer: 'تحويل بنكي',
-  mada: 'مدى',
-  other: 'أخرى',
-  store_credit: 'رصيد متجر',
+  cash: "نقدي",
+  visa: "فيزا",
+  mastercard: "ماستركارد",
+  bank_transfer: "تحويل بنكي",
+  mada: "مدى",
+  other: "أخرى",
+  store_credit: "رصيد متجر",
 };
 
 const SaleDetailsPage: React.FC = () => {
@@ -83,13 +92,13 @@ const SaleDetailsPage: React.FC = () => {
   const getPaymentStatus = (sale: Sale) => {
     const total = Number(sale.total_amount);
     const paid = Number(sale.paid_amount);
-    
+
     if (paid >= total && total > 0) {
-      return { label: 'مدفوع بالكامل', color: 'success' as const };
+      return { label: "مدفوع بالكامل", color: "success" as const };
     } else if (paid > 0) {
-      return { label: 'مدفوع جزئياً', color: 'warning' as const };
+      return { label: "مدفوع جزئياً", color: "warning" as const };
     } else {
-      return { label: 'غير مدفوع', color: 'error' as const };
+      return { label: "غير مدفوع", color: "error" as const };
     }
   };
 
@@ -97,7 +106,8 @@ const SaleDetailsPage: React.FC = () => {
   const calculateSubtotal = () => {
     if (!sale?.items) return 0;
     return sale.items.reduce((sum, item) => {
-      const itemTotal = Number(item.total_price || item.unit_price) * Number(item.quantity);
+      const itemTotal =
+        Number(item.total_price || item.unit_price) * Number(item.quantity);
       return sum + itemTotal;
     }, 0);
   };
@@ -160,7 +170,10 @@ const SaleDetailsPage: React.FC = () => {
 
   // Display Sale Details
   return (
-    <Box sx={{ p: { xs: 1, sm: 2, md: 3 }, direction: 'rtl' }} className="dark:bg-gray-950 pb-10">
+    <Box
+      sx={{ p: { xs: 1, sm: 2, md: 3 }, direction: "rtl" }}
+      className="dark:bg-gray-950 pb-10"
+    >
       {/* Back Button & Title */}
       <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
         <IconButton
@@ -189,34 +202,34 @@ const SaleDetailsPage: React.FC = () => {
           startIcon={<Printer size={20} />}
           onClick={async () => {
             try {
-              const token = localStorage.getItem('authToken');
-              const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost/sales-api/public';
-              const url = `${VITE_API_BASE_URL}/api/sales/${sale.id}/invoice-pdf`;
-              
+              const token = localStorage.getItem("authToken");
+              // const token = localStorage.getItem('authToken');
+              const pdfUrl = `${url}/sales/${sale.id}/invoice-pdf`;
+
               // Fetch PDF as blob
-              const response = await fetch(url, {
+              const response = await fetch(pdfUrl, {
                 headers: {
-                  'Authorization': `Bearer ${token}`,
+                  Authorization: `Bearer ${token}`,
                 },
               });
 
               if (!response.ok) {
-                throw new Error('Failed to fetch invoice');
+                throw new Error("Failed to fetch invoice");
               }
 
               const blob = await response.blob();
               const blobUrl = URL.createObjectURL(blob);
-              
+
               // Open in new window for printing
-              const printWindow = window.open(blobUrl, '_blank');
-              
+              const printWindow = window.open(blobUrl, "_blank");
+
               if (printWindow) {
                 printWindow.onload = () => {
                   printWindow.print();
                 };
               } else {
                 // Fallback: download if popup blocked
-                const link = document.createElement('a');
+                const link = document.createElement("a");
                 link.href = blobUrl;
                 link.download = `فاتورة_${sale.invoice_number || sale.id}.pdf`;
                 document.body.appendChild(link);
@@ -225,8 +238,8 @@ const SaleDetailsPage: React.FC = () => {
                 URL.revokeObjectURL(blobUrl);
               }
             } catch (error) {
-              console.error('Failed to open invoice:', error);
-              toast.error('فشل فتح الفاتورة');
+              console.error("Failed to open invoice:", error);
+              toast.error("فشل فتح الفاتورة");
             }
           }}
           sx={{ ml: 2 }}
@@ -243,7 +256,11 @@ const SaleDetailsPage: React.FC = () => {
       >
         <Grid container spacing={3}>
           <Grid xs={12} sm={6} md={4}>
-            <Typography variant="overline" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Typography
+              variant="overline"
+              color="text.secondary"
+              sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+            >
               <User size={14} />
               العميل
             </Typography>
@@ -252,7 +269,11 @@ const SaleDetailsPage: React.FC = () => {
             </Typography>
           </Grid>
           <Grid xs={12} sm={6} md={4}>
-            <Typography variant="overline" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Typography
+              variant="overline"
+              color="text.secondary"
+              sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+            >
               <Calendar size={14} />
               تاريخ البيع
             </Typography>
@@ -261,7 +282,11 @@ const SaleDetailsPage: React.FC = () => {
             </Typography>
           </Grid>
           <Grid xs={12} sm={6} md={4}>
-            <Typography variant="overline" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Typography
+              variant="overline"
+              color="text.secondary"
+              sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+            >
               <FileText size={14} />
               رقم الفاتورة
             </Typography>
@@ -271,7 +296,11 @@ const SaleDetailsPage: React.FC = () => {
           </Grid>
           {sale.number && (
             <Grid xs={12} sm={6} md={4}>
-              <Typography variant="overline" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Typography
+                variant="overline"
+                color="text.secondary"
+                sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+              >
                 <ShoppingCart size={14} />
                 رقم الطلب
               </Typography>
@@ -361,7 +390,11 @@ const SaleDetailsPage: React.FC = () => {
                   <TableCell className="dark:text-gray-100">
                     {item.product_name || `(منتج ID: ${item.product_id})`}
                     {item.batch_number_sold && (
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ display: "block", mt: 0.5 }}
+                      >
                         دفعة: {item.batch_number_sold}
                       </Typography>
                     )}
@@ -376,13 +409,20 @@ const SaleDetailsPage: React.FC = () => {
                     {formatCurrency(item.unit_price)}
                   </TableCell>
                   <TableCell align="right" className="dark:text-gray-100">
-                    {formatCurrency(Number(item.total_price || item.unit_price) * Number(item.quantity))}
+                    {formatCurrency(
+                      Number(item.total_price || item.unit_price) *
+                        Number(item.quantity),
+                    )}
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} align="center" className="dark:text-gray-400">
+                <TableCell
+                  colSpan={5}
+                  align="center"
+                  className="dark:text-gray-400"
+                >
                   لا توجد عناصر
                 </TableCell>
               </TableRow>
@@ -439,7 +479,11 @@ const SaleDetailsPage: React.FC = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} align="center" className="dark:text-gray-400">
+                <TableCell
+                  colSpan={5}
+                  align="center"
+                  className="dark:text-gray-400"
+                >
                   لا توجد مدفوعات
                 </TableCell>
               </TableRow>
@@ -449,17 +493,19 @@ const SaleDetailsPage: React.FC = () => {
       </TableContainer>
 
       {/* Summary Section */}
-      <Paper
-        elevation={2}
-        className="dark:bg-gray-800"
-        sx={{ p: 3 }}
-      >
+      <Paper elevation={2} className="dark:bg-gray-800" sx={{ p: 3 }}>
         <Typography variant="h6" component="h2" sx={{ mb: 2, fontWeight: 600 }}>
           الملخص
         </Typography>
         <Divider sx={{ mb: 2 }} />
         <Stack spacing={1.5}>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <Typography variant="body1" color="text.secondary">
               المجموع الفرعي:
             </Typography>
@@ -468,9 +514,19 @@ const SaleDetailsPage: React.FC = () => {
             </Typography>
           </Box>
           {discountAmount > 0 && (
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
               <Typography variant="body1" color="text.secondary">
-                الخصم {sale.discount_type === 'percentage' ? `(${discountAmount}%)` : ''}:
+                الخصم{" "}
+                {sale.discount_type === "percentage"
+                  ? `(${discountAmount}%)`
+                  : ""}
+                :
               </Typography>
               <Typography variant="body1" fontWeight="medium" color="error">
                 - {formatCurrency(discountAmount)}
@@ -478,29 +534,63 @@ const SaleDetailsPage: React.FC = () => {
             </Box>
           )}
           <Divider />
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <Typography variant="h6" fontWeight="bold">
               الإجمالي:
             </Typography>
-            <Typography variant="h6" fontWeight="bold" className="dark:text-gray-100">
+            <Typography
+              variant="h6"
+              fontWeight="bold"
+              className="dark:text-gray-100"
+            >
               {formatCurrency(totalAmount)}
             </Typography>
           </Box>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <Typography variant="body1" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Typography
+              variant="body1"
+              color="text.secondary"
+              sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+            >
               <DollarSign size={16} />
               المدفوع:
             </Typography>
-            <Typography variant="body1" fontWeight="medium" color="success.main">
+            <Typography
+              variant="body1"
+              fontWeight="medium"
+              color="success.main"
+            >
               {formatCurrency(paidAmount)}
             </Typography>
           </Box>
           {dueAmount > 0 && (
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
               <Typography variant="body1" color="text.secondary">
                 المتبقي:
               </Typography>
-              <Typography variant="body1" fontWeight="medium" color="error.main">
+              <Typography
+                variant="body1"
+                fontWeight="medium"
+                color="error.main"
+              >
                 {formatCurrency(dueAmount)}
               </Typography>
             </Box>
@@ -512,4 +602,3 @@ const SaleDetailsPage: React.FC = () => {
 };
 
 export default SaleDetailsPage;
-
