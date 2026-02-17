@@ -79,7 +79,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
   canDeleteItems = true,
   disableQuantityAndPriceEdit = false,
 }) => {
-  const list = items ?? [];
+  const list = useMemo(() => items ?? [], [items]);
   const [editingKey, setEditingKey] = useState<number | string | null>(null);
   const [editingField, setEditingField] = useState<"quantity" | "price" | null>(
     null,
@@ -88,15 +88,37 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
   const [selectedRowKey, setSelectedRowKey] = useState<number | string | null>(
     null,
   );
+  const [updatingKeys, setUpdatingKeys] = useState<Set<number | string>>(
+    new Set(),
+  );
+
+  const trackUpdate = useCallback(
+    async (key: number | string, operation: () => void | Promise<void>) => {
+      setUpdatingKeys((prev) => {
+        const next = new Set(prev);
+        next.add(key);
+        return next;
+      });
+      try {
+        await operation();
+      } finally {
+        setUpdatingKeys((prev) => {
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-        if (list.length === 0) return;
-        const currentIndex =
-          selectedRowKey == null
-            ? -1
-            : list.findIndex((item) => getItemKey(item) === selectedRowKey);
+        if (list.length === 0 || selectedRowKey == null) return;
+        const currentIndex = list.findIndex(
+          (item) => getItemKey(item) === selectedRowKey,
+        );
         const nextIndex =
           e.key === "ArrowDown" ? currentIndex + 1 : currentIndex - 1;
         if (nextIndex >= 0 && nextIndex < list.length) {
@@ -149,11 +171,15 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
         setEditingField(null);
         return;
       }
-      onQuantityChange?.(item, num);
-      setEditingKey(null);
-      setEditingField(null);
+      // onQuantityChange?.(item, num);
+      const updateKey = `${getItemKey(item)}-quantity`;
+      trackUpdate(updateKey, async () => {
+        await onQuantityChange?.(item, num);
+        setEditingKey(null);
+        setEditingField(null);
+      });
     },
-    [editingKey, editingField, editValue, onQuantityChange],
+    [editingKey, editingField, editValue, onQuantityChange, trackUpdate],
   );
 
   const handlePriceBlur = useCallback(
@@ -174,11 +200,15 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
         setEditingField(null);
         return;
       }
-      onPriceChange?.(item, num);
-      setEditingKey(null);
-      setEditingField(null);
+      // onPriceChange?.(item, num);
+      const updateKey = `${getItemKey(item)}-price`;
+      trackUpdate(updateKey, async () => {
+        await onPriceChange?.(item, num);
+        setEditingKey(null);
+        setEditingField(null);
+      });
     },
-    [editingKey, editingField, editValue, onPriceChange],
+    [editingKey, editingField, editValue, onPriceChange, trackUpdate],
   );
 
   const handleQuantityKeyDown = useCallback(
@@ -193,7 +223,9 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
           // Only update if changed
           const current = Number(item.quantity);
           if (Math.abs(num - current) >= 1e-6) {
-            onQuantityChange?.(item, num);
+            // onQuantityChange?.(item, num);
+            const updateKey = `${getItemKey(item)}-quantity`;
+            trackUpdate(updateKey, () => onQuantityChange?.(item, num));
           }
         } else {
           // Invalid value (empty or <= 0), maybe revert?
@@ -220,7 +252,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
         }
       }
     },
-    [list, editValue, onQuantityChange],
+    [list, editValue, onQuantityChange, trackUpdate],
   );
 
   const handlePriceKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -344,6 +376,17 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
             onQuantityChange && item.id != null && !disableQuantityAndPriceEdit,
           );
           const editing = isEditing(item, "quantity");
+          const key = getItemKey(item);
+          const isUpdating = updatingKeys.has(`${key}-quantity`);
+
+          if (isUpdating) {
+            return (
+              <Box sx={{ display: "flex", justifyContent: "center" }}>
+                <CircularProgress size={20} thickness={4} />
+              </Box>
+            );
+          }
+
           if (!canEdit) return formatNumber(item.quantity);
           if (editing) {
             return (
@@ -358,7 +401,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
                   onBlur={() => handleQuantityBlur(item)}
-                  onFocus={(e) => e.target.select()}
+                  // onFocus={(e) => e.target.select()}
                   onKeyDown={(e) => handleQuantityKeyDown(e, item)}
                   inputProps={{
                     min: 0.01,
@@ -532,6 +575,17 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
             onPriceChange && item.id != null && !disableQuantityAndPriceEdit,
           );
           const editing = isEditing(item, "price");
+          const key = getItemKey(item);
+          const isUpdating = updatingKeys.has(`${key}-price`);
+
+          if (isUpdating) {
+            return (
+              <Box sx={{ display: "flex", justifyContent: "center" }}>
+                <CircularProgress size={20} thickness={4} />
+              </Box>
+            );
+          }
+
           if (!canEdit) return formatNumber(Number(item.unit_price ?? 0));
           if (editing) {
             return (
@@ -546,7 +600,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
                   onBlur={() => handlePriceBlur(item)}
-                  onFocus={(e) => e.target.select()}
+                  // onFocus={(e) => e.target.select()}
                   onKeyDown={handlePriceKeyDown}
                   inputProps={{
                     min: 0,
@@ -686,6 +740,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
       startEditingPrice,
       deletingItemId,
       list,
+      updatingKeys,
     ],
   );
 

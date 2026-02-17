@@ -6,7 +6,6 @@ import {
   CircleDollarSign,
   Settings,
   BarChart3,
-  RefreshCw,
 } from "lucide-react";
 import { NavItem } from "./types";
 
@@ -81,7 +80,6 @@ export const navItems: NavItem[] = [
         permission: null,
         category: "المخزون",
       },
-    
     ],
   },
 
@@ -93,7 +91,7 @@ export const navItems: NavItem[] = [
     permission: null,
     category: "المشتريات",
     children: [
-        {
+      {
         to: "/suppliers",
         label: "الموردون",
         permission: null,
@@ -153,10 +151,9 @@ export const navItems: NavItem[] = [
         permission: null,
         category: "التقارير",
       },
-      //moneth expenses
       {
-        to: "/reports/monthly-expenses",
-        label: "تقرير المصروفات الشهرية",
+        to: "/reports/profit-loss",
+        label: "الأرباح والخسائر",
         permission: null,
         category: "التقارير",
       },
@@ -195,12 +192,7 @@ export const navItems: NavItem[] = [
         permission: null,
         category: "الإدارة",
       },
-      {
-        to: "/admin/system",
-        label: "النظام",
-        permission: null,
-        category: "الإدارة",
-      },
+
       {
         to: "/admin/backups",
         label: "النسخ الاحتياطي",
@@ -213,24 +205,7 @@ export const navItems: NavItem[] = [
         permission: null,
         category: "الإدارة",
       },
-      {
-        to: "/admin/whatsapp-schedulers",
-        label: "جدولة واتساب",
-        permission: null,
-        category: "الإدارة",
-      },
-      {
-        to: "/admin/inventory/requisitions/request",
-        label: "طلب مخزون",
-        permission: null,
-        category: "الإدارة",
-      },
-      {
-        to: "/admin/inventory/requisitions",
-        label: "طلبات المخزون",
-        permission: null,
-        category: "الإدارة",
-      },
+
       {
         to: "/admin/idb-manager",
         label: "إدارة DB المحلية",

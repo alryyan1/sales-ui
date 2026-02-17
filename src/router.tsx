@@ -42,6 +42,7 @@ import InventoryLogPage from "./pages/reports/InventoryLogPage";
 import SuppliersSummaryPage from "./pages/reports/SuppliersSummaryPage";
 import SupplierPurchasesPage from "./pages/reports/SupplierPurchasesPage";
 import MonthlyExpensesPage from "./pages/reports/MonthlyExpensesPage";
+import ProfitLossReportPage from "./pages/reports/ProfitLossReportPage";
 // Admin
 import ProfilePage from "./pages/ProfilePage";
 import UsersListPage from "./components/admin/users/UsersListPage";
@@ -315,6 +316,14 @@ const router = createHashRouter([
                 element: (
                   <PermissionGuard requiredPermission="view-reports">
                     <MonthlyExpensesPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "profit-loss",
+                element: (
+                  <PermissionGuard requiredPermission="view-reports">
+                    <ProfitLossReportPage />
                   </PermissionGuard>
                 ),
               },

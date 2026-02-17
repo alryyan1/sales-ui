@@ -30,6 +30,7 @@ import {
   Upload,
   Search,
   Layers,
+  CloudUpload,
 } from "lucide-react";
 
 // Services and Types
@@ -37,9 +38,10 @@ import productService, {
   Product,
   ProductFormData,
 } from "../services/productService"; // Use product service
-import categoryService, { Category } from "../services/CategoryService"; // Import category service
 import unitService, { Unit } from "../services/UnitService"; // Import unit service
+import categoryService, { Category } from "../services/CategoryService"; // Import category service
 import exportService from "../services/exportService"; // Import export service
+import { uploadProductsToFirestore } from "../services/firebaseStore"; // Import Firestore service
 
 // Custom Components
 import { ProductsTable } from "../components/products/ProductsTable"; // Use ProductsTable named export
@@ -59,6 +61,7 @@ const ProductsPage: React.FC = () => {
   const [stockingUnits, setStockingUnits] = useState<Unit[]>([]);
   const [sellableUnits, setSellableUnits] = useState<Unit[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
+  const [syncLoading, setSyncLoading] = useState(false);
   const [showOnlyInStock, setShowOnlyInStock] = useState(false);
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [showOutOfStockOnly, setShowOutOfStockOnly] = useState(false);
@@ -301,6 +304,47 @@ const ProductsPage: React.FC = () => {
     }
   };
 
+  const handleSyncToFirestore = async () => {
+    if (
+      !window.confirm(
+        "هل أنت متأكد من رغبتك في مزامنة جميع المنتجات مع قاعدة بيانات Firebase؟ قد تستغرق هذه العملية بعض الوقت.",
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setSyncLoading(true);
+      showSnackbar("جاري جلب المنتجات والمزامنة...", "success");
+
+      // 1. Fetch all products (large limit)
+      // Note: adjust limit if you have more than 10000 products
+      const response = await productService.getProducts(
+        1,
+        "",
+        "id",
+        "asc",
+        9999,
+      );
+      const allProducts = response.data;
+
+      if (allProducts.length === 0) {
+        showSnackbar("لا توجد منتجات للمزامنة", "error");
+        return;
+      }
+
+      // 2. Upload to Firestore
+      const count = await uploadProductsToFirestore(allProducts);
+
+      showSnackbar(`تمت مزامنة ${count} منتج بنجاح!`, "success");
+    } catch (err) {
+      console.error("Sync error:", err);
+      showSnackbar("فشل المزامنة مع Firebase", "error");
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
   // --- Render ---
   return (
     <>
@@ -324,10 +368,29 @@ const ProductsPage: React.FC = () => {
             إدارة المنتجات
           </Typography>
           <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
-          
-
-   
-         
+            {/* Sync to Firestore */}
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+              }}
+            >
+              <Tooltip title="مزامنة مع Firebase">
+                <IconButton
+                  onClick={handleSyncToFirestore}
+                  color="warning" // Warning color to stand out but not primary action
+                  disabled={syncLoading || isLoading}
+                >
+                  {syncLoading ? (
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : (
+                    <CloudUpload className="h-5 w-5" />
+                  )}
+                </IconButton>
+              </Tooltip>
+              <Typography variant="caption">مزامنة</Typography>
+            </Box>
 
             {/* Print Products */}
             <Box

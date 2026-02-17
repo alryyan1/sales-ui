@@ -1,13 +1,7 @@
 // src/pages/PosBlankPage.tsx
 // Blank POS page: header + layout with sales column (squares) + three columns
 
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  useRef,
-} from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Box,
   Paper,
@@ -24,24 +18,21 @@ import {
   InputLabel,
   FormControl,
   Popover,
-  Divider,
   Stack,
   Badge,
+  TableContainer,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
 } from "@mui/material";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import AddIcon from "@mui/icons-material/Add";
-import SummarizeIcon from "@mui/icons-material/Summarize";
-import ScheduleIcon from "@mui/icons-material/Schedule";
-import PaymentsIcon from "@mui/icons-material/Payments";
-import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
-import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
-import CloseIcon from "@mui/icons-material/Close";
-import TrendingUpIcon from "@mui/icons-material/TrendingUp";
-import LocalOfferIcon from "@mui/icons-material/LocalOffer";
-import AccessTimeIcon from "@mui/icons-material/AccessTime";
-import PersonIcon from "@mui/icons-material/Person";
-import WarningIcon from "@mui/icons-material/Warning";
+import { FileText, FileWarningIcon, CloudUploadIcon } from "lucide-react";
 import ErrorIcon from "@mui/icons-material/Error";
+import AddIcon from "@mui/icons-material/Add";
+import CloseIcon from "@mui/icons-material/Close";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import apiClient from "@/lib/axios";
 import { toast } from "sonner";
 import saleService, {
@@ -54,18 +45,53 @@ import { formatNumber } from "@/constants";
 import { SaleItemsTable } from "@/components/sales/SaleItemsTable";
 import { PosSalesColumn } from "@/components/sales/PosSalesColumn";
 import ExpenseFormModal from "@/components/admin/expenses/ExpenseFormModal";
-import expenseService from "@/services/expenseService";
+
 import { PdfViewerDialog } from "@/components/common/PdfViewerDialog";
 import SalesReturnDialog from "@/components/sales/SalesReturnDialog";
 import { useAuth } from "@/context/AuthContext";
 import ExpiryProductsDialog from "@/components/pos/ExpiryProductsDialog";
+import { uploadFileToFirebase } from "@/services/firebaseStorage";
+import { saveShiftToFirestore } from "@/services/firebaseStore";
+
+interface ShiftStats {
+  sales: {
+    cash: number;
+    bankak: number;
+    fawry: number;
+    ocash: number;
+    total: number;
+  };
+  expenses: {
+    cash: number;
+    bankak: number;
+    fawry: number;
+    ocash: number;
+    total: number;
+  };
+  returns: {
+    cash: number;
+    bankak: number;
+    fawry: number;
+    ocash: number;
+    total: number;
+  };
+  net: {
+    cash: number;
+    bankak: number;
+    fawry: number;
+    ocash: number;
+    total: number;
+  };
+}
 
 interface Shift {
   id: number;
-  opened_at: string | null;
+  user_id: number;
+  user_name?: string;
+  opened_at: string;
   closed_at: string | null;
   is_open: boolean;
-  user_name?: string | null;
+  stats?: ShiftStats;
 }
 
 const PosBlankPage: React.FC = () => {
@@ -95,10 +121,7 @@ const PosBlankPage: React.FC = () => {
     null,
   );
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
-  const [shiftExpenseTotals, setShiftExpenseTotals] = useState({
-    cash: 0,
-    bank: 0,
-  });
+
   const [summaryAnchorEl, setSummaryAnchorEl] = useState<HTMLElement | null>(
     null,
   );
@@ -578,12 +601,27 @@ const PosBlankPage: React.FC = () => {
         );
         return;
       }
+
       setShiftLoading(true);
-      await apiClient.post("/shifts/close");
+      const res = await apiClient.post("/shifts/close");
+
+      // Check for WhatsApp status in meta
+      const meta = res.data.meta;
+      if (meta?.whatsapp_status === "success") {
+        toast.success("تم إغلاق الوردية وإرسال التقرير للواتساب");
+      } else if (meta?.whatsapp_status === "failed") {
+        toast.warning("تم إغلاق الوردية ولكن فشل إرسال الواتساب", {
+          description: meta.whatsapp_message || "خطأ غير معروف",
+          duration: 10000, // Show for longer
+        });
+        console.error("WhatsApp Error:", meta.whatsapp_message);
+      } else {
+        toast.success("تم إغلاق الوردية");
+      }
+
       setShift(null);
       setSelectedSale(null);
       setSales([]);
-      toast.success("تم إغلاق الوردية");
     } catch (err) {
       console.error("Failed to close shift:", err);
       toast.error("فشل إغلاق الوردية");
@@ -601,55 +639,12 @@ const PosBlankPage: React.FC = () => {
     return () => clearTimeout(t);
   }, [selectedSale?.id]);
 
-  // Totals by payment method for the current shift (from loaded sales)
-  const shiftPaymentTotals = useMemo(() => {
-    let cash = 0;
-    let bankak = 0;
-    for (const sale of sales) {
-      for (const p of sale.payments ?? []) {
-        const amount = Number(p.amount) || 0;
-        if (p.method === "cash") cash += amount;
-        else if (p.method === "bankak") bankak += amount;
-      }
-    }
-    return { cash, bankak };
-  }, [sales]);
+  // Calculate totals for current shift (legacy local calculation - now using shift.stats from backend)
+  // We can remove these if we rely solely on shift.stats
+  // keeping them for now if used elsewhere, but lint says unused.
+  // The popup now uses shift.stats.
 
-  const shiftDiscountTotal = useMemo(() => {
-    return sales.reduce(
-      (sum, sale) => sum + Number(sale.discount_amount ?? 0),
-      0,
-    );
-  }, [sales]);
-
-  const fetchShiftExpenseTotals = useCallback(async () => {
-    if (!shift?.id) {
-      setShiftExpenseTotals({ cash: 0, bank: 0 });
-      return;
-    }
-    try {
-      const filters: { shift_id: number; user_id?: number } = {
-        shift_id: shift.id,
-      };
-      if (user?.id) filters.user_id = user.id;
-      const res = await expenseService.getExpenses(1, 500, filters);
-      const list = res.data ?? [];
-      let cash = 0;
-      let bank = 0;
-      for (const e of list) {
-        const amt = Number(e.amount) || 0;
-        if (e.payment_method === "cash") cash += amt;
-        else if (e.payment_method === "bank") bank += amt;
-      }
-      setShiftExpenseTotals({ cash, bank });
-    } catch {
-      setShiftExpenseTotals({ cash: 0, bank: 0 });
-    }
-  }, [shift?.id, user?.id]);
-
-  useEffect(() => {
-    fetchShiftExpenseTotals();
-  }, [fetchShiftExpenseTotals]);
+  // Removing unused variables to fix lint errors:
 
   // Fetch expiry counts for badges
   const fetchExpiryCounts = useCallback(async () => {
@@ -833,29 +828,61 @@ const PosBlankPage: React.FC = () => {
     }
   }, [thermalPdfUrl]);
 
-  const handleCreateShiftPdfReport = useCallback(async () => {
-    if (!shift?.id) return;
-    setShiftPdfLoading(true);
-    try {
-      const params: { shift_id: number; user_id?: number } = {
-        shift_id: shift.id,
-      };
-      if (user?.id) params.user_id = user.id;
-      const response = await apiClient.get("/reports/sales-pdf", {
-        params,
-        responseType: "blob",
-      });
-      const blob = new Blob([response.data], { type: "application/pdf" });
-      const url = window.URL.createObjectURL(blob);
-      setShiftPdfUrl(url);
-      setShiftPdfDialogOpen(true);
-    } catch (err) {
-      console.error("Failed to load shift report PDF:", err);
-      toast.error("فشل تحميل تقرير الوردية PDF");
-    } finally {
-      setShiftPdfLoading(false);
-    }
-  }, [shift?.id, user?.id]);
+  const handleCreateShiftPdfReport = useCallback(
+    async (forceUpload = false) => {
+      if (!shift?.id) return;
+      setShiftPdfLoading(true);
+      try {
+        const params: { shift_id: number; user_id?: number } = {
+          shift_id: shift.id,
+        };
+        if (user?.id) params.user_id = user.id;
+        const response = await apiClient.get("/reports/sales-pdf", {
+          params,
+          responseType: "blob",
+        });
+        const blob = new Blob([response.data], { type: "application/pdf" });
+        const url = window.URL.createObjectURL(blob);
+        setShiftPdfUrl(url);
+        setShiftPdfDialogOpen(true);
+
+        // Upload to Firebase in background only if shift is closed OR forced
+        if (!shift.is_open || forceUpload) {
+          const fileName = `shifts/shift_${shift.id}_${user?.id || "unknown"}_${Date.now()}.pdf`;
+
+          toast.promise(uploadFileToFirebase(blob, fileName), {
+            loading: "جاري رفع التقرير...",
+            success: (url) => {
+              console.log("PDF Uploaded:", url);
+              // Save to Firestore
+              saveShiftToFirestore({
+                shift_id: shift.id,
+                user_id: user?.id || 0,
+                user_name: user?.name,
+                opened_at: shift.opened_at,
+                closed_at: shift.closed_at ?? undefined, // Ensure not null
+                pdf_url: url,
+                stats: shift.stats,
+              });
+              return "تم رفع التقرير وحفظ البيانات بنجاح";
+            },
+            error: (err: unknown) => {
+              console.error("Firebase Upload Error:", err);
+              const errorMessage =
+                err instanceof Error ? err.message : "Unknown error";
+              return `فشل رفع التقرير: ${errorMessage}`;
+            },
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load shift report PDF:", err);
+        toast.error("فشل تحميل تقرير الوردية PDF");
+      } finally {
+        setShiftPdfLoading(false);
+      }
+    },
+    [shift, user],
+  );
 
   const handleCloseShiftPdfDialog = useCallback(() => {
     setShiftPdfDialogOpen(false);
@@ -973,14 +1000,36 @@ const PosBlankPage: React.FC = () => {
             POS
           </Typography>
 
+          {/* Manual Sync Button */}
+          <IconButton
+            onClick={() => handleCreateShiftPdfReport(true)}
+            size="small"
+            color="primary"
+            disabled={!shift?.id || shiftPdfLoading}
+            title="رفع التقرير ومزامنة البيانات"
+            sx={{
+              border: "1px solid",
+              borderColor: "divider",
+              borderRadius: 2,
+            }}
+          >
+            {shiftPdfLoading ? (
+              <CircularProgress size={20} />
+            ) : (
+              <CloudUploadIcon size={20} />
+            )}
+          </IconButton>
+
           {/* Shift summary – click to open popover with details */}
           {shift?.id != null && (
             <>
               <Button
                 variant="outlined"
                 size="small"
-                onClick={(e) => setSummaryAnchorEl(e.currentTarget)}
-                startIcon={<SummarizeIcon />}
+                onClick={(e: React.MouseEvent<HTMLButtonElement>) =>
+                  setSummaryAnchorEl(e.currentTarget)
+                }
+                startIcon={<FileText />}
                 sx={{
                   textTransform: "none",
                   fontWeight: 600,
@@ -1001,160 +1050,197 @@ const PosBlankPage: React.FC = () => {
                   sx: { minWidth: 260, borderRadius: 2, mt: 1.5 },
                 }}
               >
-                <Stack divider={<Divider />} sx={{ py: 1 }}>
+                <Stack sx={{ py: 1, minWidth: 500 }}>
+                  {/* Header Info */}
                   <Stack
                     direction="row"
                     alignItems="center"
-                    gap={1.5}
-                    sx={{ px: 2, py: 1 }}
+                    justifyContent="space-between"
+                    sx={{ px: 2, pb: 1, borderBottom: "1px dashed #e0e0e0" }}
                   >
-                    <ScheduleIcon
-                      sx={{ color: "text.secondary", fontSize: 20 }}
-                    />
-                    <Typography variant="body2" fontWeight={600}>
-                      وردية #{shift.id}
-                    </Typography>
-                  </Stack>
-                  {shift.opened_at && (
-                    <Stack
-                      direction="row"
-                      alignItems="center"
-                      gap={1.5}
-                      sx={{ px: 2, py: 1 }}
-                    >
-                      <AccessTimeIcon
-                        sx={{ color: "text.secondary", fontSize: 20 }}
-                      />
-                      <Typography variant="body2" color="text.secondary">
-                        وقت الفتح:{" "}
-                        {new Date(shift.opened_at).toLocaleString("ar-EG", {
-                          dateStyle: "short",
-                          timeStyle: "short",
-                        })}
+                    <Stack gap={0.5}>
+                      <Typography variant="subtitle2" fontWeight={700}>
+                        وردية #{shift.id}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {shift.user_name && `فتح بواسطة: ${shift.user_name}`}
                       </Typography>
                     </Stack>
-                  )}
-                  {shift.user_name != null && shift.user_name !== "" && (
-                    <Stack
-                      direction="row"
-                      alignItems="center"
-                      gap={1.5}
-                      sx={{ px: 2, py: 1 }}
-                    >
-                      <PersonIcon
-                        sx={{ color: "text.secondary", fontSize: 20 }}
-                      />
-                      <Typography variant="body2" color="text.secondary">
-                        فتح بواسطة: {shift.user_name}
+                    <Stack gap={0.5} alignItems="flex-end">
+                      <Typography variant="caption" color="text.secondary">
+                        {shift.opened_at &&
+                          new Date(shift.opened_at).toLocaleString("ar-EG", {
+                            dateStyle: "short",
+                            timeStyle: "short",
+                          })}
                       </Typography>
                     </Stack>
-                  )}
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    gap={1.5}
-                    sx={{ px: 2, py: 1 }}
-                  >
-                    <PaymentsIcon
-                      sx={{ color: "primary.main", fontSize: 20 }}
-                    />
-                    <Typography variant="body2">
-                      نقدي: {formatNumber(shiftPaymentTotals.cash)}
-                    </Typography>
                   </Stack>
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    gap={1.5}
-                    sx={{ px: 2, py: 1 }}
-                  >
-                    <AccountBalanceIcon
-                      sx={{ color: "primary.main", fontSize: 20 }}
-                    />
-                    <Typography variant="body2">
-                      بنكك: {formatNumber(shiftPaymentTotals.bankak)}
-                    </Typography>
-                  </Stack>
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    gap={1.5}
-                    sx={{ px: 2, py: 1 }}
-                  >
-                    <LocalOfferIcon
-                      sx={{ color: "text.secondary", fontSize: 20 }}
-                    />
-                    <Typography variant="body2" color="text.secondary">
-                      إجمالي الخصومات: {formatNumber(shiftDiscountTotal)}
-                    </Typography>
-                  </Stack>
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    gap={1.5}
-                    sx={{ px: 2, py: 1 }}
-                  >
-                    <ReceiptLongIcon
-                      sx={{ color: "error.main", fontSize: 20 }}
-                    />
-                    <Typography variant="body2" color="error.main">
-                      مصروف نقدي: {formatNumber(shiftExpenseTotals.cash)}
-                    </Typography>
-                  </Stack>
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    gap={1.5}
-                    sx={{ px: 2, py: 1 }}
-                  >
-                    <ReceiptLongIcon
-                      sx={{ color: "error.main", fontSize: 20 }}
-                    />
-                    <Typography variant="body2" color="error.main">
-                      مصروف بنك: {formatNumber(shiftExpenseTotals.bank)}
-                    </Typography>
-                  </Stack>
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    gap={1.5}
-                    sx={{ px: 2, py: 1 }}
-                  >
-                    <TrendingUpIcon
-                      sx={{ color: "success.main", fontSize: 20 }}
-                    />
-                    <Typography
-                      variant="body2"
-                      color="success.main"
-                      fontWeight={700}
+
+                  {/* Financial Table */}
+                  <TableContainer sx={{ px: 2, py: 2 }}>
+                    <Table
+                      size="small"
+                      sx={{
+                        "& td, & th": { px: 1, py: 0.75, borderColor: "#eee" },
+                      }}
                     >
-                      صافي نقدي:{" "}
-                      {formatNumber(
-                        shiftPaymentTotals.cash - shiftExpenseTotals.cash,
-                      )}
-                    </Typography>
-                  </Stack>
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    gap={1.5}
-                    sx={{ px: 2, py: 1 }}
-                  >
-                    <TrendingUpIcon
-                      sx={{ color: "success.main", fontSize: 20 }}
-                    />
-                    <Typography
-                      variant="body2"
-                      color="success.main"
-                      fontWeight={700}
-                    >
-                      صافي بنك:{" "}
-                      {formatNumber(
-                        shiftPaymentTotals.bankak - shiftExpenseTotals.bank,
-                      )}
-                    </Typography>
-                  </Stack>
-                  <Box sx={{ px: 2, py: 1.5 }}>
+                      <TableHead>
+                        <TableRow sx={{ bgcolor: "action.hover" }}>
+                          <TableCell align="right" sx={{ fontWeight: 600 }}>
+                            البيان
+                          </TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 600 }}>
+                            نقدي
+                          </TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 600 }}>
+                            بنكك
+                          </TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 600 }}>
+                            فوري
+                          </TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 600 }}>
+                            أوكاش
+                          </TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 600 }}>
+                            الإجمالي
+                          </TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {/* Revenue */}
+                        <TableRow>
+                          <TableCell
+                            component="th"
+                            scope="row"
+                            align="right"
+                            sx={{ fontWeight: 500 }}
+                          >
+                            الإيرادات
+                          </TableCell>
+                          <TableCell align="center">
+                            {formatNumber(shift.stats?.sales.cash ?? 0)}
+                          </TableCell>
+                          <TableCell align="center">
+                            {formatNumber(shift.stats?.sales.bankak ?? 0)}
+                          </TableCell>
+                          <TableCell align="center">
+                            {formatNumber(shift.stats?.sales.fawry ?? 0)}
+                          </TableCell>
+                          <TableCell align="center">
+                            {formatNumber(shift.stats?.sales.ocash ?? 0)}
+                          </TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 600 }}>
+                            {formatNumber(shift.stats?.sales.total ?? 0)}
+                          </TableCell>
+                        </TableRow>
+
+                        {/* Expenses */}
+                        <TableRow>
+                          <TableCell
+                            component="th"
+                            scope="row"
+                            align="right"
+                            sx={{ fontWeight: 500 }}
+                          >
+                            المصروفات
+                          </TableCell>
+                          <TableCell align="center">
+                            {formatNumber(shift.stats?.expenses.cash ?? 0)}
+                          </TableCell>
+                          <TableCell align="center">
+                            {formatNumber(shift.stats?.expenses.bankak ?? 0)}
+                          </TableCell>
+                          <TableCell align="center">
+                            {formatNumber(shift.stats?.expenses.fawry ?? 0)}
+                          </TableCell>
+                          <TableCell align="center">
+                            {formatNumber(shift.stats?.expenses.ocash ?? 0)}
+                          </TableCell>
+                          <TableCell
+                            align="center"
+                            sx={{ fontWeight: 600, color: "error.main" }}
+                          >
+                            {formatNumber(shift.stats?.expenses.total ?? 0)}
+                          </TableCell>
+                        </TableRow>
+
+                        {/* Returns */}
+                        <TableRow>
+                          <TableCell
+                            component="th"
+                            scope="row"
+                            align="right"
+                            sx={{ fontWeight: 500 }}
+                          >
+                            مردودات المبيعات
+                          </TableCell>
+                          <TableCell align="center">
+                            {formatNumber(shift.stats?.returns.cash ?? 0)}
+                          </TableCell>
+                          <TableCell align="center">
+                            {formatNumber(shift.stats?.returns.bankak ?? 0)}
+                          </TableCell>
+                          <TableCell align="center">
+                            {formatNumber(shift.stats?.returns.fawry ?? 0)}
+                          </TableCell>
+                          <TableCell align="center">
+                            {formatNumber(shift.stats?.returns.ocash ?? 0)}
+                          </TableCell>
+                          <TableCell
+                            align="center"
+                            sx={{ fontWeight: 600, color: "warning.main" }}
+                          >
+                            {formatNumber(shift.stats?.returns.total ?? 0)}
+                          </TableCell>
+                        </TableRow>
+
+                        {/* Net */}
+                        <TableRow sx={{ bgcolor: "primary.lighter" }}>
+                          <TableCell
+                            component="th"
+                            scope="row"
+                            align="right"
+                            sx={{ fontWeight: 700, color: "primary.main" }}
+                          >
+                            الصافي
+                          </TableCell>
+                          <TableCell
+                            align="center"
+                            sx={{ fontWeight: 600, color: "primary.main" }}
+                          >
+                            {formatNumber(shift.stats?.net.cash ?? 0)}
+                          </TableCell>
+                          <TableCell
+                            align="center"
+                            sx={{ fontWeight: 600, color: "primary.main" }}
+                          >
+                            {formatNumber(shift.stats?.net.bankak ?? 0)}
+                          </TableCell>
+                          <TableCell
+                            align="center"
+                            sx={{ fontWeight: 600, color: "primary.main" }}
+                          >
+                            {formatNumber(shift.stats?.net.fawry ?? 0)}
+                          </TableCell>
+                          <TableCell
+                            align="center"
+                            sx={{ fontWeight: 600, color: "primary.main" }}
+                          >
+                            {formatNumber(shift.stats?.net.ocash ?? 0)}
+                          </TableCell>
+                          <TableCell
+                            align="center"
+                            sx={{ fontWeight: 700, color: "primary.main" }}
+                          >
+                            {formatNumber(shift.stats?.net.total ?? 0)}
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+
+                  <Box sx={{ px: 2, pb: 2 }}>
                     <Button
                       fullWidth
                       variant="contained"
@@ -1164,10 +1250,10 @@ const PosBlankPage: React.FC = () => {
                         shiftPdfLoading ? (
                           <CircularProgress size={18} color="inherit" />
                         ) : (
-                          <SummarizeIcon />
+                          <FileText />
                         )
                       }
-                      onClick={handleCreateShiftPdfReport}
+                      onClick={() => handleCreateShiftPdfReport(false)}
                       sx={{ textTransform: "none", fontWeight: 600 }}
                     >
                       {shiftPdfLoading
@@ -1200,7 +1286,7 @@ const PosBlankPage: React.FC = () => {
             }}
           >
             <Badge badgeContent={nearExpiringCount} color="warning">
-              <WarningIcon />
+              <FileWarningIcon />
             </Badge>
           </IconButton>
 
