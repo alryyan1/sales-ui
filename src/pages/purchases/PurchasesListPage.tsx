@@ -94,6 +94,9 @@ import dayjs from "dayjs";
 import { formatCurrency } from "@/constants";
 import { PurchaseItemDetailsDialog } from "@/components/purchases/PurchaseItemDetailsDialog";
 import { cn } from "@/lib/utils";
+import ConfirmationDialog from "@/components/common/ConfirmationDialog";
+import { toast } from "sonner";
+import { Trash2 } from "lucide-react";
 
 // Filter interface
 interface PurchaseFilters {
@@ -128,6 +131,11 @@ const PurchasesListPage: React.FC = () => {
   const [loadingProductPurchases, setLoadingProductPurchases] = useState(false);
   const [productHistoryDialogOpen, setProductHistoryDialogOpen] =
     useState(false);
+
+  // Delete dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [purchaseToDelete, setPurchaseToDelete] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Status configuration
   const statusConfig = {
@@ -172,7 +180,7 @@ const PurchasesListPage: React.FC = () => {
         "",
         "name",
         "asc",
-        1000
+        1000,
       );
       setProducts(response.data || []);
     } catch (error) {
@@ -203,7 +211,7 @@ const PurchasesListPage: React.FC = () => {
 
         const data = await purchaseService.getPurchases(
           page,
-          params.toString()
+          params.toString(),
         );
         setPurchasesResponse(data);
       } catch (err) {
@@ -212,7 +220,7 @@ const PurchasesListPage: React.FC = () => {
         setIsLoading(false);
       }
     },
-    []
+    [],
   );
 
   useEffect(() => {
@@ -227,7 +235,7 @@ const PurchasesListPage: React.FC = () => {
   // --- Handlers ---
   const handleFilterChange = (
     key: keyof PurchaseFilters,
-    value: string | number | undefined
+    value: string | number | undefined,
   ) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
     setCurrentPage(1);
@@ -239,14 +247,14 @@ const PurchasesListPage: React.FC = () => {
   };
 
   const hasActiveFilters = Object.values(filters).some(
-    (value) => value !== undefined && value !== null && value !== ""
+    (value) => value !== undefined && value !== null && value !== "",
   );
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
   const handlePageChange = (
     _event: React.ChangeEvent<unknown>,
-    value: number
+    value: number,
   ) => {
     setCurrentPage(value);
   };
@@ -265,7 +273,7 @@ const PurchasesListPage: React.FC = () => {
     setLoadingProductPurchases(true);
     try {
       const purchases = await purchaseService.getPurchasesForProduct(
-        product.id
+        product.id,
       );
       setProductPurchases(purchases);
     } catch (error) {
@@ -290,6 +298,32 @@ const PurchasesListPage: React.FC = () => {
     }
   };
 
+  const handleDeleteClick = (id: number) => {
+    setPurchaseToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!purchaseToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await purchaseService.deletePurchase(purchaseToDelete);
+      toast.success("تم حذف الشراء بنجاح");
+      setDeleteDialogOpen(false);
+      setPurchaseToDelete(null);
+      // Refresh the list
+      fetchPurchases(currentPage, filters);
+    } catch (error) {
+      console.error("Failed to delete purchase:", error);
+      toast.error("فشل حذف الشراء", {
+        description: purchaseService.getErrorMessage(error),
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   // Stats calculation
   const stats = {
     total: purchasesResponse?.meta?.total || 0,
@@ -302,7 +336,7 @@ const PurchasesListPage: React.FC = () => {
     totalAmount:
       purchasesResponse?.data?.reduce(
         (sum: number, p: any) => sum + Number(p.total_amount || 0),
-        0
+        0,
       ) || 0,
   };
 
@@ -314,68 +348,64 @@ const PurchasesListPage: React.FC = () => {
       >
         {/* Header */}
         <div className="mb-6">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              {/* Title Section */}
-              <div className="flex items-center gap-4">
-                <div className="p-2 bg-white/30 backdrop-blur-sm rounded-lg">
-                  <ShoppingCart className="h-6 w-6 " />
-                  </div>
-                  <div>
-                    <h1 className="text-xl md:text-2xl font-bold ">
-                      المشتريات
-                    </h1>
-                    <p className=" text-xs">
-                      إدارة عمليات الشراء والمخزون
-                    </p>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowFilters(!showFilters)}
-                    className="bg-white/10 border-white/20  hover:bg-white/20"
-                  >
-                    {showFilters ? (
-                      <ChevronUp className="h-4 w-4 ml-2" />
-                    ) : (
-                      <Filter className="h-4 w-4 ml-2" />
-                    )}
-                    الفلاتر
-                    {activeFilterCount > 0 && (
-                      <Badge className="mr-2  text-blue-600 hover:">
-                        {activeFilterCount}
-                      </Badge>
-                    )}
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExportExcel}
-                    className="/10 border-white/20  hover:/20"
-                  >
-                    <FileSpreadsheet className="h-4 w-4 ml-2" />
-                    تصدير
-                  </Button>
-
-                  <Button
-                    size="sm"
-                    // className=" text-sky-600 hover:bg-sky-50 shadow-md"
-                    asChild
-                  >
-                    <RouterLink to="/purchases/add">
-                      <Plus className="h-4 w-4 ml-2" />
-                      إضافة شراء
-                    </RouterLink>
-                  </Button>
-                </div>
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            {/* Title Section */}
+            <div className="flex items-center gap-4">
+              <div className="p-2 bg-white/30 backdrop-blur-sm rounded-lg">
+                <ShoppingCart className="h-6 w-6 " />
               </div>
+              <div>
+                <h1 className="text-xl md:text-2xl font-bold ">المشتريات</h1>
+                <p className=" text-xs">إدارة عمليات الشراء والمخزون</p>
+              </div>
+            </div>
 
-              {/* Stats Cards */}
-              {/* <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+                className="bg-white/10 border-white/20  hover:bg-white/20"
+              >
+                {showFilters ? (
+                  <ChevronUp className="h-4 w-4 ml-2" />
+                ) : (
+                  <Filter className="h-4 w-4 ml-2" />
+                )}
+                الفلاتر
+                {activeFilterCount > 0 && (
+                  <Badge className="mr-2  text-blue-600 hover:">
+                    {activeFilterCount}
+                  </Badge>
+                )}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportExcel}
+                className="/10 border-white/20  hover:/20"
+              >
+                <FileSpreadsheet className="h-4 w-4 ml-2" />
+                تصدير
+              </Button>
+
+              <Button
+                size="sm"
+                // className=" text-sky-600 hover:bg-sky-50 shadow-md"
+                asChild
+              >
+                <RouterLink to="/purchases/add">
+                  <Plus className="h-4 w-4 ml-2" />
+                  إضافة شراء
+                </RouterLink>
+              </Button>
+            </div>
+          </div>
+
+          {/* Stats Cards */}
+          {/* <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
                 <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
                   <div className="flex items-center justify-between">
                     <Boxes className="h-4 w-4 /80" />
@@ -422,391 +452,396 @@ const PurchasesListPage: React.FC = () => {
         {/* Filters */}
         <Collapsible open={showFilters} onOpenChange={setShowFilters}>
           <CollapsibleContent>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Search className="h-5 w-5 text-muted-foreground" />
-                    <CardTitle className="text-lg">بحث وفلترة</CardTitle>
-                  </div>
-                  {hasActiveFilters && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={clearFilters}
-                      className="text-destructive"
-                    >
-                      <X className="h-4 w-4 ml-1" />
-                      مسح الكل
-                    </Button>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Search className="h-5 w-5 text-muted-foreground" />
+                <CardTitle className="text-lg">بحث وفلترة</CardTitle>
+              </div>
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="text-destructive"
+                >
+                  <X className="h-4 w-4 ml-1" />
+                  مسح الكل
+                </Button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+              {/* Supplier Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-1">
+                  <User className="h-4 w-4" />
+                  المورد
+                </label>
+                <Autocomplete
+                  options={suppliers}
+                  getOptionLabel={(option) => option.name}
+                  value={
+                    suppliers.find((s) => s.id === filters.supplier_id) || null
+                  }
+                  onChange={(_, newValue) =>
+                    handleFilterChange("supplier_id", newValue?.id)
+                  }
+                  loading={loadingSuppliers}
+                  size="small"
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="اختر المورد"
+                      size="small"
+                    />
                   )}
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-                  {/* Supplier Filter */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium flex items-center gap-1">
-                      <User className="h-4 w-4" />
-                      المورد
-                    </label>
-                    <Autocomplete
-                      options={suppliers}
-                      getOptionLabel={(option) => option.name}
-                      value={
-                        suppliers.find((s) => s.id === filters.supplier_id) ||
-                        null
-                      }
-                      onChange={(_, newValue) =>
-                        handleFilterChange("supplier_id", newValue?.id)
-                      }
-                      loading={loadingSuppliers}
+                />
+              </div>
+
+              {/* Product Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-1">
+                  <Package className="h-4 w-4" />
+                  المنتج
+                </label>
+                <Autocomplete
+                  options={products}
+                  getOptionLabel={(option) =>
+                    `${option.name}${option.sku ? ` (${option.sku})` : ""}`
+                  }
+                  value={
+                    products.find((p) => p.id === filters.product_id) || null
+                  }
+                  onChange={(_, newValue) =>
+                    handleFilterChange("product_id", newValue?.id)
+                  }
+                  loading={loadingProducts}
+                  size="small"
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="اختر المنتج"
                       size="small"
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          placeholder="اختر المورد"
-                          size="small"
-                        />
-                      )}
                     />
-                  </div>
+                  )}
+                />
+              </div>
 
-                  {/* Product Filter */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium flex items-center gap-1">
-                      <Package className="h-4 w-4" />
-                      المنتج
-                    </label>
-                    <Autocomplete
-                      options={products}
-                      getOptionLabel={(option) =>
-                        `${option.name}${option.sku ? ` (${option.sku})` : ""}`
-                      }
-                      value={
-                        products.find((p) => p.id === filters.product_id) ||
-                        null
-                      }
-                      onChange={(_, newValue) =>
-                        handleFilterChange("product_id", newValue?.id)
-                      }
-                      loading={loadingProducts}
-                      size="small"
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          placeholder="اختر المنتج"
-                          size="small"
-                        />
-                      )}
-                    />
-                  </div>
+              {/* Reference Number */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-1">
+                  <Hash className="h-4 w-4" />
+                  رقم المرجع
+                </label>
+                <Input
+                  placeholder="أدخل الرقم"
+                  value={filters.reference_number || ""}
+                  onChange={(e) =>
+                    handleFilterChange("reference_number", e.target.value)
+                  }
+                />
+              </div>
 
-                  {/* Reference Number */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium flex items-center gap-1">
-                      <Hash className="h-4 w-4" />
-                      رقم المرجع
-                    </label>
-                    <Input
-                      placeholder="أدخل الرقم"
-                      value={filters.reference_number || ""}
-                      onChange={(e) =>
-                        handleFilterChange("reference_number", e.target.value)
-                      }
-                    />
-                  </div>
+              {/* Status */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">الحالة</label>
+                <Select
+                  value={filters.status || ""}
+                  onValueChange={(value) =>
+                    handleFilterChange("status", value || undefined)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر الحالة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">قيد الانتظار</SelectItem>
+                    <SelectItem value="ordered">تم الطلب</SelectItem>
+                    <SelectItem value="received">تم الاستلام</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                  {/* Status */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">الحالة</label>
-                    <Select
-                      value={filters.status || ""}
-                      onValueChange={(value) =>
-                        handleFilterChange("status", value || undefined)
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="اختر الحالة" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pending">قيد الانتظار</SelectItem>
-                        <SelectItem value="ordered">تم الطلب</SelectItem>
-                        <SelectItem value="received">تم الاستلام</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+              {/* Purchase Date */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-1">
+                  <Calendar className="h-4 w-4" />
+                  تاريخ الشراء
+                </label>
+                <Input
+                  type="date"
+                  value={filters.purchase_date || ""}
+                  onChange={(e) =>
+                    handleFilterChange("purchase_date", e.target.value)
+                  }
+                  max={dayjs().format("YYYY-MM-DD")}
+                />
+              </div>
 
-                  {/* Purchase Date */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      تاريخ الشراء
-                    </label>
-                    <Input
-                      type="date"
-                      value={filters.purchase_date || ""}
-                      onChange={(e) =>
-                        handleFilterChange("purchase_date", e.target.value)
-                      }
-                      max={dayjs().format("YYYY-MM-DD")}
-                    />
-                  </div>
-
-                  {/* Created At */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">تاريخ الإنشاء</label>
-                    <Input
-                      type="date"
-                      value={filters.created_at || ""}
-                      onChange={(e) =>
-                        handleFilterChange("created_at", e.target.value)
-                      }
-                      max={dayjs().format("YYYY-MM-DD")}
-                    />
-                  </div>
-                </div>
+              {/* Created At */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">تاريخ الإنشاء</label>
+                <Input
+                  type="date"
+                  value={filters.created_at || ""}
+                  onChange={(e) =>
+                    handleFilterChange("created_at", e.target.value)
+                  }
+                  max={dayjs().format("YYYY-MM-DD")}
+                />
+              </div>
+            </div>
           </CollapsibleContent>
         </Collapsible>
 
         {/* Main Content */}
-          {/* Loading State */}
-          {isLoading && (
-            <CardContent className="p-8">
-              <div className="space-y-4">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="flex items-center gap-4">
-                    <Skeleton className="h-12 w-12 rounded-lg" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-1/3" />
-                      <Skeleton className="h-3 w-1/4" />
-                    </div>
-                    <Skeleton className="h-8 w-24" />
+        {/* Loading State */}
+        {isLoading && (
+          <CardContent className="p-8">
+            <div className="space-y-4">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <Skeleton className="h-12 w-12 rounded-lg" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-1/3" />
+                    <Skeleton className="h-3 w-1/4" />
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          )}
-
-          {/* Error State */}
-          {!isLoading && error && (
-            <CardContent className="p-8">
-              <div className="flex flex-col items-center justify-center text-center">
-                <div className="p-4 bg-destructive/10 rounded-full mb-4">
-                  <X className="h-8 w-8 text-destructive" />
+                  <Skeleton className="h-8 w-24" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">حدث خطأ</h3>
-                <p className="text-muted-foreground mb-4">{error}</p>
-                <Button
-                  onClick={() => fetchPurchases(currentPage, filters)}
-                  variant="outline"
-                >
-                  <RefreshCw className="h-4 w-4 ml-2" />
-                  إعادة المحاولة
-                </Button>
-              </div>
-            </CardContent>
-          )}
+              ))}
+            </div>
+          </CardContent>
+        )}
 
-          {/* Table */}
-          {!isLoading && !error && purchasesResponse && (
-            <>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="text-center font-bold">#</TableHead>
-                      <TableHead className="text-center font-bold">
-                        التاريخ
-                      </TableHead>
-                      <TableHead className="text-center font-bold">
-                        المورد
-                      </TableHead>
-                      <TableHead className="text-center font-bold">
-                        المخزن
-                      </TableHead>
-                      {/* <TableHead className="text-center font-bold">
+        {/* Error State */}
+        {!isLoading && error && (
+          <CardContent className="p-8">
+            <div className="flex flex-col items-center justify-center text-center">
+              <div className="p-4 bg-destructive/10 rounded-full mb-4">
+                <X className="h-8 w-8 text-destructive" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">حدث خطأ</h3>
+              <p className="text-muted-foreground mb-4">{error}</p>
+              <Button
+                onClick={() => fetchPurchases(currentPage, filters)}
+                variant="outline"
+              >
+                <RefreshCw className="h-4 w-4 ml-2" />
+                إعادة المحاولة
+              </Button>
+            </div>
+          </CardContent>
+        )}
+
+        {/* Table */}
+        {!isLoading && !error && purchasesResponse && (
+          <>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="text-center font-bold">#</TableHead>
+                    <TableHead className="text-center font-bold">
+                      التاريخ
+                    </TableHead>
+                    <TableHead className="text-center font-bold">
+                      المورد
+                    </TableHead>
+                    <TableHead className="text-center font-bold">
+                      المخزن
+                    </TableHead>
+                    {/* <TableHead className="text-center font-bold">
                         رقم المرجع
                       </TableHead> */}
-                      <TableHead className="text-center font-bold">
-                        العملة
-                      </TableHead>
-                      <TableHead className="text-center font-bold">
-                        الحالة
-                      </TableHead>
-                      <TableHead className="text-center font-bold">
-                        الإجمالي
-                      </TableHead>
-                      <TableHead className="text-center font-bold">
-                        إجراءات
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {purchasesResponse.data.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={9} className="h-48 text-center">
-                          <div className="flex flex-col items-center justify-center">
-                            <div className="p-4 bg-muted rounded-full mb-4">
-                              <ShoppingCart className="h-12 w-12 text-muted-foreground" />
-                            </div>
-                            <h3 className="text-lg font-semibold mb-2">
-                              لا توجد عمليات شراء
-                            </h3>
-                            <p className="text-muted-foreground mb-4">
-                              ابدأ بإضافة أول عملية شراء
-                            </p>
-                            <Button asChild>
-                              <RouterLink to="/purchases/add">
-                                <Plus className="h-4 w-4 ml-2" />
-                                إضافة شراء
-                              </RouterLink>
-                            </Button>
+                    <TableHead className="text-center font-bold">
+                      العملة
+                    </TableHead>
+                    <TableHead className="text-center font-bold">
+                      الحالة
+                    </TableHead>
+                    <TableHead className="text-center font-bold">
+                      الإجمالي
+                    </TableHead>
+                    <TableHead className="text-center font-bold">
+                      إجراءات
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {purchasesResponse.data.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="h-48 text-center">
+                        <div className="flex flex-col items-center justify-center">
+                          <div className="p-4 bg-muted rounded-full mb-4">
+                            <ShoppingCart className="h-12 w-12 text-muted-foreground" />
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      purchasesResponse.data.map((purchase: any) => {
-                        const status =
-                          statusConfig[
-                            purchase.status as keyof typeof statusConfig
-                          ] || statusConfig.pending;
-                        const StatusIcon = status.icon;
+                          <h3 className="text-lg font-semibold mb-2">
+                            لا توجد عمليات شراء
+                          </h3>
+                          <p className="text-muted-foreground mb-4">
+                            ابدأ بإضافة أول عملية شراء
+                          </p>
+                          <Button asChild>
+                            <RouterLink to="/purchases/add">
+                              <Plus className="h-4 w-4 ml-2" />
+                              إضافة شراء
+                            </RouterLink>
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    purchasesResponse.data.map((purchase: any) => {
+                      const status =
+                        statusConfig[
+                          purchase.status as keyof typeof statusConfig
+                        ] || statusConfig.pending;
+                      const StatusIcon = status.icon;
 
-                        return (
-                          <TableRow
-                            key={purchase.id}
-                            className="cursor-pointer hover:bg-muted/50 transition-colors"
-                            onClick={() =>
-                              navigate(`/purchases/${purchase.id}/manage-items`)
-                            }
-                          >
-                            <TableCell className="text-center">
-                              <Badge variant="outline" className="font-mono">
-                                {purchase.id}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <div className="flex items-center justify-center gap-2">
-                                <Calendar className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-medium">
-                                  {dayjs(purchase.purchase_date).format(
-                                    "YYYY-MM-DD"
-                                  )}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <span className="font-semibold">
-                                {purchase.supplier_name || "—"}
+                      return (
+                        <TableRow
+                          key={purchase.id}
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() =>
+                            navigate(`/purchases/${purchase.id}/manage-items`)
+                          }
+                        >
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="font-mono">
+                              {purchase.id}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <Calendar className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-medium">
+                                {dayjs(purchase.purchase_date).format(
+                                  "YYYY-MM-DD",
+                                )}
                               </span>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Badge variant="outline" className="font-medium">
-                                {purchase.warehouse_name || "—"}
-                              </Badge>
-                            </TableCell>
-                            {/* <TableCell className="text-center">
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className="font-semibold">
+                              {purchase.supplier_name || "—"}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="font-medium">
+                              {purchase.warehouse_name || "—"}
+                            </Badge>
+                          </TableCell>
+                          {/* <TableCell className="text-center">
                               <code className="text-sm text-muted-foreground">
                                 {purchase.reference_number || "—"}
                               </code>
                             </TableCell> */}
-                            <TableCell className="text-center">
-                              <Badge variant="secondary" className="font-mono">
-                                {purchase.currency || "SDG"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Badge
-                                className={cn("gap-1 border", status.color)}
+                          <TableCell className="text-center">
+                            <Badge variant="secondary" className="font-mono">
+                              {purchase.currency || "SDG"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge className={cn("gap-1 border", status.color)}>
+                              <StatusIcon className="h-3 w-3" />
+                              {status.label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className="font-bold text-primary">
+                              {formatCurrency(purchase.total_amount)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger
+                                asChild
+                                onClick={(e) => e.stopPropagation()}
                               >
-                                <StatusIcon className="h-3 w-3" />
-                                {status.label}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <span className="font-bold text-primary">
-                                {formatCurrency(purchase.total_amount)}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger
-                                  asChild
-                                  onClick={(e) => e.stopPropagation()}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
                                 >
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                  >
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuLabel>
-                                    الإجراءات
-                                  </DropdownMenuLabel>
-                                  <DropdownMenuSeparator />
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(
+                                      `/purchases/${purchase.id}/manage-items`,
+                                    );
+                                  }}
+                                >
+                                  <Package className="h-4 w-4 ml-2" />
+                                  إدارة البنود
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleViewPdfReport(purchase.id);
+                                  }}
+                                >
+                                  <FileText className="h-4 w-4 ml-2" />
+                                  عرض PDF
+                                </DropdownMenuItem>
+                                {filters.product_id && (
                                   <DropdownMenuItem
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      navigate(
-                                        `/purchases/${purchase.id}/manage-items`
+                                      const product = products.find(
+                                        (p) => p.id === filters.product_id,
                                       );
+                                      if (product)
+                                        handleViewProductHistory(product);
                                     }}
                                   >
-                                    <Package className="h-4 w-4 ml-2" />
-                                    إدارة البنود
+                                    <History className="h-4 w-4 ml-2" />
+                                    سجل المنتج
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleViewPdfReport(purchase.id);
-                                    }}
-                                  >
-                                    <FileText className="h-4 w-4 ml-2" />
-                                    عرض PDF
-                                  </DropdownMenuItem>
-                                  {filters.product_id && (
-                                    <DropdownMenuItem
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        const product = products.find(
-                                          (p) => p.id === filters.product_id
-                                        );
-                                        if (product)
-                                          handleViewProductHistory(product);
-                                      }}
-                                    >
-                                      <History className="h-4 w-4 ml-2" />
-                                      سجل المنتج
-                                    </DropdownMenuItem>
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                                )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteClick(purchase.id);
+                                  }}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 ml-2" />
+                                  حذف
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
 
-              {/* Pagination */}
-              {purchasesResponse?.meta?.last_page > 1 && (
-                <div className="flex justify-center p-4 border-t">
-                  <Pagination
-                    count={purchasesResponse.meta.last_page}
-                    page={currentPage}
-                    onChange={handlePageChange}
-                    color="primary"
-                    shape="rounded"
-                    showFirstButton
-                    showLastButton
-                    disabled={isLoading}
-                  />
-                </div>
-              )}
-            </>
-          )}
+            {/* Pagination */}
+            {purchasesResponse?.meta?.last_page > 1 && (
+              <div className="flex justify-center p-4 border-t">
+                <Pagination
+                  count={purchasesResponse.meta.last_page}
+                  page={currentPage}
+                  onChange={handlePageChange}
+                  color="primary"
+                  shape="rounded"
+                  showFirstButton
+                  showLastButton
+                  disabled={isLoading}
+                />
+              </div>
+            )}
+          </>
+        )}
 
         {/* Product History Dialog */}
         <PurchaseItemDetailsDialog
@@ -817,6 +852,23 @@ const PurchasesListPage: React.FC = () => {
           isLoading={loadingProductPurchases}
         />
       </div>
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        open={deleteDialogOpen}
+        onClose={() => {
+          if (!isDeleting) {
+            setDeleteDialogOpen(false);
+            setPurchaseToDelete(null);
+          }
+        }}
+        onConfirm={handleConfirmDelete}
+        title="تأكيد الحذف"
+        message="هل أنت متأكد من رغبتك في حذف هذا الشراء؟ لا يمكن التراجع عن هذا الإجراء."
+        confirmText="حذف"
+        cancelText="إلغاء"
+        confirmVariant="destructive"
+        isLoading={isDeleting}
+      />
     </TooltipProvider>
   );
 };

@@ -186,89 +186,11 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
                   إضافة صنف
                 </Button> */}
 
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={onAddAllProducts}
-                        disabled={isAddAllPending}
-                        className="h-9 w-9 text-slate-600 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200"
-                      >
-                        {isAddAllPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <ListChecks className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>إضافة كل المنتجات</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={onDeleteZeroQuantity}
-                        disabled={isDeleteZeroPending}
-                        className="h-9 w-9 text-slate-600 hover:text-red-600 hover:bg-red-50 hover:border-red-200"
-                      >
-                        {isDeleteZeroPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>حذف الأصناف الصفرية</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
               </>
             )}
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={onOpenSummaryDialog}
-                    className="h-9 w-9 text-slate-600"
-                  >
-                    <FileText className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>ملخص الفاتورة</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={onExportPdf}
-                    className="h-9 w-9 text-slate-600 hover:text-blue-600 hover:bg-blue-50"
-                  >
-                    <FileDown className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>تصدير PDF</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+             <Button onClick={onExportPdf}>طباعه الفاتوره</Button>
 
             <Dialog
               open={summaryDialogOpen}
