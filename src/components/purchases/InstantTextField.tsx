@@ -151,12 +151,26 @@ const InstantTextField: React.FC<InstantTextFieldProps> = ({
     e.target.select();
   };
 
+  const handleBlur = () => {
+    // Only trigger if value actually changed
+    const currentValueStr = formatNumberValue(value);
+    if (inputValue !== currentValueStr) {
+      if (type === "number") {
+        const parsed = inputValue === "" ? "" : Number(inputValue);
+        onChangeValue(parsed as number | "");
+      } else {
+        onChangeValue(inputValue);
+      }
+    }
+  };
+
   return (
     <TextField
       value={inputValue}
       onChange={handleChange}
       onKeyDown={handleKeyDown}
       onFocus={handleFocus}
+      onBlur={handleBlur}
       type={type}
       placeholder={placeholder}
       label={label}

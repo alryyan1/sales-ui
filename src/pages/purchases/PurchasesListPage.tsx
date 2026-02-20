@@ -96,7 +96,8 @@ import { PurchaseItemDetailsDialog } from "@/components/purchases/PurchaseItemDe
 import { cn } from "@/lib/utils";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import { Trash2, Edit2 } from "lucide-react";
+import { EditPurchaseDialog } from "@/components/purchases/EditPurchaseDialog";
 
 // Filter interface
 interface PurchaseFilters {
@@ -136,6 +137,10 @@ const PurchasesListPage: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [purchaseToDelete, setPurchaseToDelete] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Edit dialog state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [purchaseToEdit, setPurchaseToEdit] = useState<any | null>(null);
 
   // Status configuration
   const statusConfig = {
@@ -771,6 +776,17 @@ const PurchasesListPage: React.FC = () => {
                                 <DropdownMenuItem
                                   onClick={(e) => {
                                     e.stopPropagation();
+                                    setPurchaseToEdit(purchase);
+                                    setEditDialogOpen(true);
+                                  }}
+                                  disabled={purchase.status === "received"}
+                                >
+                                  <Edit2 className="h-4 w-4 ml-2" />
+                                  تعديل الترويسة
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     navigate(
                                       `/purchases/${purchase.id}/manage-items`,
                                     );
@@ -868,6 +884,17 @@ const PurchasesListPage: React.FC = () => {
         cancelText="إلغاء"
         confirmVariant="destructive"
         isLoading={isDeleting}
+      />
+      {/* Edit Purchase Dialog */}
+      <EditPurchaseDialog
+        open={editDialogOpen}
+        onClose={() => {
+          setEditDialogOpen(false);
+          setPurchaseToEdit(null);
+        }}
+        purchase={purchaseToEdit}
+        suppliers={suppliers}
+        onUpdate={() => fetchPurchases(currentPage, filters)}
       />
     </TooltipProvider>
   );

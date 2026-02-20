@@ -166,7 +166,7 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
                   onUpdate(item.id, "expiry_date", String(v) || null)
                 }
                 type="date"
-                disabled={isReadOnly}
+                disabled={false}
               />
               {isFieldUpdating(item.id, "expiry_date") && (
                 <CircularProgress

@@ -762,7 +762,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
         overflow: "auto",
       }}
     >
-      <Table size="small" stickyHeader>
+      <Table size="small" style={{direction:'ltr'}} stickyHeader>
         <TableHead>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
