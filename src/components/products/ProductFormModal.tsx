@@ -63,6 +63,9 @@ type ProductFormValues = {
   units_per_stocking_unit: number;
   category_id: string;
   stock_alert_level: number | null;
+  sale_price: number | string;
+  cost_price: number | string;
+  expire_date: string;
 };
 
 interface ProductFormModalProps {
@@ -121,6 +124,9 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       units_per_stocking_unit: 1,
       category_id: "",
       stock_alert_level: 10,
+      sale_price: "",
+      cost_price: "",
+      expire_date: "",
     },
   });
 
@@ -269,7 +275,10 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           category_id: productToEdit.category_id
             ? String(productToEdit.category_id)
             : "",
-          stock_alert_level: productToEdit.stock_alert_level || 10,
+          stock_alert_level: productToEdit.stock_alert_level ?? 10,
+          sale_price: productToEdit.sale_price ?? "",
+          cost_price: productToEdit.cost_price ?? "",
+          expire_date: productToEdit.expire_date ?? "",
         });
       } else {
         reset({
@@ -282,6 +291,9 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           sellable_unit_id: "",
           units_per_stocking_unit: 1,
           stock_alert_level: 10,
+          sale_price: "",
+          cost_price: "",
+          expire_date: "",
         });
       }
       // Reset tabs when opening
@@ -321,6 +333,9 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       stock_alert_level: data.stock_alert_level
         ? Number(data.stock_alert_level)
         : null,
+      sale_price: data.sale_price !== "" ? Number(data.sale_price) : null,
+      cost_price: data.cost_price !== "" ? Number(data.cost_price) : null,
+      expire_date: data.expire_date || null,
     };
 
     try {
@@ -1001,6 +1016,103 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         fieldState.error?.message ||
                         "عند الوصول لهذه الكمية سيتم إظهار تنبيه بانخفاض المخزون (اختياري)"
                       }
+                      error={!!fieldState.error}
+                    />
+                  )}
+                />
+              </Box>
+
+              <Typography
+                variant="subtitle1"
+                fontWeight={600}
+                sx={{ mb: 2.5, mt: 3, color: "text.primary" }}
+              >
+                تحديث الأسعار وتاريخ الصلاحية (اختياري)
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                عند تعبئة هذه الحقول، ستلغي الأسعار والصلاحية المحسوبة من
+                المشتريات وتُعتمد هذه القيم.
+              </Typography>
+
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr 1fr" },
+                  gap: 2.5,
+                }}
+              >
+                {/* Cost Price */}
+                <Controller
+                  control={control}
+                  name="cost_price"
+                  rules={{
+                    min: {
+                      value: 0,
+                      message: "السعر يجب أن يكون 0 أو أكثر",
+                    },
+                  }}
+                  render={({ field, fieldState }) => (
+                    <TextField
+                      {...field}
+                      label="سعر التكلفة (اختياري)"
+                      type="number"
+                      fullWidth
+                      size="small"
+                      inputProps={{ min: 0, step: "0.01" }}
+                      disabled={isSubmitting}
+                      onFocus={(e) => e.target.select()}
+                      value={field.value ?? ""}
+                      onChange={(e) => field.onChange(e.target.value)}
+                      helperText={fieldState.error?.message}
+                      error={!!fieldState.error}
+                    />
+                  )}
+                />
+
+                {/* Sale Price */}
+                <Controller
+                  control={control}
+                  name="sale_price"
+                  rules={{
+                    min: {
+                      value: 0,
+                      message: "السعر يجب أن يكون 0 أو أكثر",
+                    },
+                  }}
+                  render={({ field, fieldState }) => (
+                    <TextField
+                      {...field}
+                      label="سعر البيع (اختياري)"
+                      type="number"
+                      fullWidth
+                      size="small"
+                      inputProps={{ min: 0, step: "0.01" }}
+                      disabled={isSubmitting}
+                      onFocus={(e) => e.target.select()}
+                      value={field.value ?? ""}
+                      onChange={(e) => field.onChange(e.target.value)}
+                      helperText={fieldState.error?.message}
+                      error={!!fieldState.error}
+                    />
+                  )}
+                />
+
+                {/* Expire Date */}
+                <Controller
+                  control={control}
+                  name="expire_date"
+                  render={({ field, fieldState }) => (
+                    <TextField
+                      {...field}
+                      label="تاريخ الصلاحية (اختياري)"
+                      type="date"
+                      fullWidth
+                      size="small"
+                      disabled={isSubmitting}
+                      InputLabelProps={{ shrink: true }}
+                      value={field.value ?? ""}
+                      onChange={(e) => field.onChange(e.target.value)}
+                      helperText={fieldState.error?.message}
                       error={!!fieldState.error}
                     />
                   )}

@@ -294,6 +294,9 @@ const InlineCreateRow: React.FC<{
     stock_alert_level: 10,
     stock_quantity: 0,
     description: "",
+    cost_price: "",
+    sale_price: "",
+    expire_date: "",
   });
 
   const handleChange = (field: keyof ProductFormData, value: any) => {
@@ -492,12 +495,38 @@ const InlineCreateRow: React.FC<{
           0
         </Typography>
       </TableCell>
-      {/* Latest Cost - empty for new */}
-      <TableCell align="center">---</TableCell>
-      {/* Last Sale Price - empty for new */}
-      <TableCell align="center">---</TableCell>
-      {/* Expiry Date - empty for new */}
-      <TableCell align="center">---</TableCell>
+      {/* Latest Cost */}
+      <TableCell align="center">
+        <TextField
+          type="number"
+          size="small"
+          placeholder="Cost"
+          value={formData.cost_price || ""}
+          onChange={(e) => handleChange("cost_price", e.target.value)}
+          sx={{ width: 80 }}
+        />
+      </TableCell>
+      {/* Last Sale Price */}
+      <TableCell align="center">
+        <TextField
+          type="number"
+          size="small"
+          placeholder="Sale"
+          value={formData.sale_price || ""}
+          onChange={(e) => handleChange("sale_price", e.target.value)}
+          sx={{ width: 80 }}
+        />
+      </TableCell>
+      {/* Expiry Date */}
+      <TableCell align="center">
+        <TextField
+          type="date"
+          size="small"
+          value={formData.expire_date || ""}
+          onChange={(e) => handleChange("expire_date", e.target.value)}
+          sx={{ width: 130 }}
+        />
+      </TableCell>
       <TableCell align="center">
         <IconButton size="small" onClick={onCancel} disabled={isLoading}>
           <X size={18} color="red" />

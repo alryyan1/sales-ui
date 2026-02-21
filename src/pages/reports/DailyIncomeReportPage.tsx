@@ -22,6 +22,7 @@ import {
   Select,
   MenuItem,
   FormControl,
+  TableContainer,
   Table,
   TableBody,
   TableCell,
@@ -34,18 +35,28 @@ import {
 } from "@mui/material";
 
 // Lucide Icons
-import {
-  ArrowLeft,
-  Calendar,
-  FileText,
-  FileSpreadsheet,
-} from "lucide-react";
+import { ArrowLeft, Calendar, FileText, FileSpreadsheet } from "lucide-react";
 
 import apiClient from "@/lib/axios";
 import { formatCurrency, formatDateDDMMYYYY } from "@/constants";
-import { useFormatCurrency, useCurrencySymbol } from "@/hooks/useFormatCurrency";
+import {
+  useFormatCurrency,
+  useCurrencySymbol,
+} from "@/hooks/useFormatCurrency";
 import { toast } from "sonner";
 import dayjs from "dayjs";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  LineChart,
+  Line,
+} from "recharts";
 
 // --- Types ---
 interface DailyReportEntry {
@@ -194,7 +205,8 @@ const DailyIncomeReportPDF: React.FC<{
             شهر: {data.month_name} {data.year}
           </Text>
           <Text style={pdfStyles.subtitle}>
-            تاريخ التوليد: {format(new Date(), "yyyy-MM-dd HH:mm", { locale: arSA })}
+            تاريخ التوليد:{" "}
+            {format(new Date(), "yyyy-MM-dd HH:mm", { locale: arSA })}
           </Text>
         </View>
 
@@ -214,7 +226,9 @@ const DailyIncomeReportPDF: React.FC<{
           {/* Table Rows */}
           {data.daily_breakdown.map((row) => (
             <View key={row.date} style={pdfStyles.tableRow}>
-              <Text style={pdfStyles.tableCell}>{formatDateDDMMYYYY(row.date)}</Text>
+              <Text style={pdfStyles.tableCell}>
+                {formatDateDDMMYYYY(row.date)}
+              </Text>
               <Text style={pdfStyles.tableCell}>
                 {formatCurrency(row.total_sales, undefined, currencySymbol)}
               </Text>
@@ -240,22 +254,46 @@ const DailyIncomeReportPDF: React.FC<{
           <View style={pdfStyles.totalRow}>
             <Text style={pdfStyles.totalCell}>الإجمالي</Text>
             <Text style={pdfStyles.totalCell}>
-              {formatCurrency(data.month_summary.total_sales, undefined, currencySymbol)}
+              {formatCurrency(
+                data.month_summary.total_sales,
+                undefined,
+                currencySymbol,
+              )}
             </Text>
             <Text style={pdfStyles.totalCell}>
-              {formatCurrency(data.month_summary.total_paid, undefined, currencySymbol)}
+              {formatCurrency(
+                data.month_summary.total_paid,
+                undefined,
+                currencySymbol,
+              )}
             </Text>
             <Text style={pdfStyles.totalCell}>
-              {formatCurrency(data.month_summary.total_cash, undefined, currencySymbol)}
+              {formatCurrency(
+                data.month_summary.total_cash,
+                undefined,
+                currencySymbol,
+              )}
             </Text>
             <Text style={pdfStyles.totalCell}>
-              {formatCurrency(data.month_summary.total_bank, undefined, currencySymbol)}
+              {formatCurrency(
+                data.month_summary.total_bank,
+                undefined,
+                currencySymbol,
+              )}
             </Text>
             <Text style={pdfStyles.totalCell}>
-              {formatCurrency(data.month_summary.total_expense, undefined, currencySymbol)}
+              {formatCurrency(
+                data.month_summary.total_expense,
+                undefined,
+                currencySymbol,
+              )}
             </Text>
             <Text style={pdfStyles.totalCell}>
-              {formatCurrency(data.month_summary.net, undefined, currencySymbol)}
+              {formatCurrency(
+                data.month_summary.net,
+                undefined,
+                currencySymbol,
+              )}
             </Text>
           </View>
         </View>
@@ -277,17 +315,20 @@ const DailyIncomeReportPage: React.FC = () => {
 
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState<number>(
-    getMonth(currentDate) + 1
+    getMonth(currentDate) + 1,
   );
   const [selectedYear, setSelectedYear] = useState<number>(
-    getYear(currentDate)
+    getYear(currentDate),
   );
   const [reportData, setReportData] = useState<MonthlyRevenueReportData | null>(
-    null
+    null,
   );
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isExportingExcel, setIsExportingExcel] = useState(false);
+  const [chartType, setChartType] = useState<
+    "sales_vs_paid" | "cash_vs_bank" | "expense_vs_net"
+  >("sales_vs_paid");
 
   const fetchReport = useCallback(async () => {
     setIsLoading(true);
@@ -297,7 +338,7 @@ const DailyIncomeReportPage: React.FC = () => {
       params.append("year", String(selectedYear));
 
       const response = await apiClient.get<{ data: MonthlyRevenueReportData }>(
-        `/reports/monthly-revenue?${params.toString()}`
+        `/reports/monthly-revenue?${params.toString()}`,
       );
       setReportData(response.data.data);
     } catch (error: any) {
@@ -317,7 +358,7 @@ const DailyIncomeReportPage: React.FC = () => {
 
   const years = Array.from(
     { length: 5 },
-    (_, i) => getYear(currentDate) - 2 + i
+    (_, i) => getYear(currentDate) - 2 + i,
   );
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
 
@@ -330,7 +371,12 @@ const DailyIncomeReportPage: React.FC = () => {
 
     try {
       setIsGeneratingPdf(true);
-      const doc = <DailyIncomeReportPDF data={reportData} currencySymbol={currencySymbol} />;
+      const doc = (
+        <DailyIncomeReportPDF
+          data={reportData}
+          currencySymbol={currencySymbol}
+        />
+      );
       const asPdf = pdf(doc);
       const blob = await asPdf.toBlob();
       const url = URL.createObjectURL(blob);
@@ -370,7 +416,7 @@ const DailyIncomeReportPage: React.FC = () => {
         `/reports/monthly-revenue-excel?${params.toString()}`,
         {
           responseType: "blob",
-        }
+        },
       );
 
       // Create blob URL and download
@@ -403,7 +449,7 @@ const DailyIncomeReportPage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3, lg: 4 }, minHeight: "100vh", pb: 10 }}>
+    <Box>
       {/* Header */}
       <Stack
         direction={{ xs: "column", md: "row" }}
@@ -501,11 +547,7 @@ const DailyIncomeReportPage: React.FC = () => {
           }}
         >
           <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
-            <Stack
-              direction="row"
-              spacing={1.5}
-              alignItems="center"
-            >
+            <Stack direction="row" spacing={1.5} alignItems="center">
               <Calendar size={18} style={{ opacity: 0.6 }} />
               <FormControl size="small" sx={{ minWidth: 140 }}>
                 <Select
@@ -563,225 +605,397 @@ const DailyIncomeReportPage: React.FC = () => {
           <CircularProgress />
         </Box>
       ) : reportData ? (
-        <Card
-          sx={{
-            borderRadius: 3,
-            boxShadow: 2,
-          }}
-        >
-          <CardContent sx={{ p: 0 }}>
-            <Table>
-              <TableHead>
-                <TableRow sx={{ bgcolor: "grey.50" }}>
-                  <TableCell
-                    align="center"
-                    sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {/* Infographics Section */}
+          {reportData.daily_breakdown.length > 0 && (
+            <Card sx={{ borderRadius: 3, boxShadow: 1 }}>
+              <CardContent>
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  justifyContent="center"
+                  sx={{ mb: 4 }}
+                >
+                  <Button
+                    variant={
+                      chartType === "sales_vs_paid" ? "contained" : "outlined"
+                    }
+                    onClick={() => setChartType("sales_vs_paid")}
                   >
-                    التاريخ
-                  </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
+                    المبيعات مقابل المدفوع
+                  </Button>
+                  <Button
+                    variant={
+                      chartType === "cash_vs_bank" ? "contained" : "outlined"
+                    }
+                    onClick={() => setChartType("cash_vs_bank")}
                   >
-                    إجمالي المبيعات
-                  </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
+                    النقدي مقابل البنكي
+                  </Button>
+                  <Button
+                    variant={
+                      chartType === "expense_vs_net" ? "contained" : "outlined"
+                    }
+                    onClick={() => setChartType("expense_vs_net")}
                   >
-                    إجمالي المدفوع
-                  </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
-                  >
-                    إجمالي النقدي
-                  </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
-                  >
-                    إجمالي البنكي
-                  </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
-                  >
-                    إجمالي المصروفات
-                  </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
-                  >
-                    صافي
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {reportData.daily_breakdown.map((row) => (
-                  <TableRow
-                    key={row.date}
-                    sx={{
-                      "&:hover": {
-                        bgcolor: "action.hover",
-                      },
-                      transition: "background-color 0.2s ease",
-                    }}
-                  >
-                    <TableCell
-                      align="center"
-                      sx={{ fontWeight: 500, py: 2.5, fontSize: "1rem" }}
-                    >
-                      {dayjs(row.date).format("DD/MM/YYYY")}
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{ py: 2.5, fontSize: "1rem" }}
-                    >
-                      {formatCurrency(row.total_sales)}
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{ py: 2.5, fontSize: "1rem" }}
-                    >
-                      {formatCurrency(row.total_paid)}
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{ py: 2.5, fontSize: "1rem" }}
-                    >
-                      {formatCurrency(row.total_cash)}
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{ py: 2.5, fontSize: "1rem" }}
-                    >
-                      {formatCurrency(row.total_bank)}
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{ py: 2.5, fontSize: "1rem" }}
-                    >
-                      {formatCurrency(row.total_expense)}
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{
-                        fontWeight: 700,
-                        py: 2.5,
-                        fontSize: "1rem",
-                        color: "success.main",
-                      }}
-                    >
-                      {formatCurrency(row.net)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {/* Sum Row */}
-                {reportData.daily_breakdown.length > 0 && (
-                  <TableRow
-                    sx={{
-                      bgcolor: (theme) =>
-                        theme.palette.mode === "dark"
-                          ? "rgba(25, 118, 210, 0.2)"
-                          : "rgba(25, 118, 210, 0.08)",
-                      "& .MuiTableCell-root": {
-                        borderTop: 2,
-                        borderColor: "primary.main",
-                      },
-                    }}
-                  >
-                    <TableCell
-                      align="center"
-                      sx={{
-                        fontWeight: 700,
-                        py: 2.5,
-                        fontSize: "1.1rem",
-                        color: "primary.main",
-                      }}
-                    >
-                      الإجمالي
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{
-                        fontWeight: 700,
-                        py: 2.5,
-                        fontSize: "1.1rem",
-                      }}
-                    >
-                      {formatCurrency(reportData.month_summary.total_sales)}
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{
-                        fontWeight: 700,
-                        py: 2.5,
-                        fontSize: "1.1rem",
-                      }}
-                    >
-                      {formatCurrency(reportData.month_summary.total_paid)}
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{
-                        fontWeight: 700,
-                        py: 2.5,
-                        fontSize: "1.1rem",
-                      }}
-                    >
-                      {formatCurrency(reportData.month_summary.total_cash)}
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{
-                        fontWeight: 700,
-                        py: 2.5,
-                        fontSize: "1.1rem",
-                      }}
-                    >
-                      {formatCurrency(reportData.month_summary.total_bank)}
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{
-                        fontWeight: 700,
-                        py: 2.5,
-                        fontSize: "1.1rem",
-                      }}
-                    >
-                      {formatCurrency(reportData.month_summary.total_expense)}
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{
-                        fontWeight: 700,
-                        py: 2.5,
-                        fontSize: "1.1rem",
-                        color: "success.main",
-                      }}
-                    >
-                      {formatCurrency(reportData.month_summary.net)}
-                    </TableCell>
-                  </TableRow>
-                )}
-                {reportData.daily_breakdown.length === 0 && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={7}
-                      align="center"
-                      sx={{ py: 8, fontSize: "1rem" }}
-                    >
-                      <Typography variant="body2" color="text.secondary">
-                        لا توجد بيانات متاحة لهذا الشهر.
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                    المصروفات مقابل الصافي
+                  </Button>
+                </Stack>
+
+                <Box sx={{ height: 400, width: "100%", direction: "ltr" }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    {chartType === "sales_vs_paid" ? (
+                      <BarChart
+                        data={reportData.daily_breakdown}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="date"
+                          tickFormatter={(date) => dayjs(date).format("DD/MM")}
+                        />
+                        <YAxis />
+                        <Tooltip
+                          wrapperStyle={{
+                            direction: "rtl",
+                            textAlign: "right",
+                          }}
+                          formatter={(value: number) => formatCurrency(value)}
+                          labelFormatter={(label) =>
+                            dayjs(label).format("DD/MM/YYYY")
+                          }
+                        />
+                        <Legend />
+                        <Bar
+                          dataKey="total_sales"
+                          name="المبيعات"
+                          fill="#1976d2"
+                          radius={[4, 4, 0, 0]}
+                        />
+                        <Bar
+                          dataKey="total_paid"
+                          name="المدفوع"
+                          fill="#2e7d32"
+                          radius={[4, 4, 0, 0]}
+                        />
+                      </BarChart>
+                    ) : chartType === "cash_vs_bank" ? (
+                      <BarChart
+                        data={reportData.daily_breakdown}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="date"
+                          tickFormatter={(date) => dayjs(date).format("DD/MM")}
+                        />
+                        <YAxis />
+                        <Tooltip
+                          wrapperStyle={{
+                            direction: "rtl",
+                            textAlign: "right",
+                          }}
+                          formatter={(value: number) => formatCurrency(value)}
+                          labelFormatter={(label) =>
+                            dayjs(label).format("DD/MM/YYYY")
+                          }
+                        />
+                        <Legend />
+                        <Bar
+                          dataKey="total_cash"
+                          name="النقدي"
+                          fill="#ed6c02"
+                          radius={[4, 4, 0, 0]}
+                        />
+                        <Bar
+                          dataKey="total_bank"
+                          name="البنكي"
+                          fill="#9c27b0"
+                          radius={[4, 4, 0, 0]}
+                        />
+                      </BarChart>
+                    ) : (
+                      <LineChart
+                        data={reportData.daily_breakdown}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="date"
+                          tickFormatter={(date) => dayjs(date).format("DD/MM")}
+                        />
+                        <YAxis />
+                        <Tooltip
+                          wrapperStyle={{
+                            direction: "rtl",
+                            textAlign: "right",
+                          }}
+                          formatter={(value: number) => formatCurrency(value)}
+                          labelFormatter={(label) =>
+                            dayjs(label).format("DD/MM/YYYY")
+                          }
+                        />
+                        <Legend />
+                        <Line
+                          type="monotone"
+                          dataKey="total_expense"
+                          name="المصروفات"
+                          stroke="#d32f2f"
+                          strokeWidth={2}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="net"
+                          name="الصافي"
+                          stroke="#2e7d32"
+                          strokeWidth={2}
+                        />
+                      </LineChart>
+                    )}
+                  </ResponsiveContainer>
+                </Box>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Table Section */}
+          <Card
+            sx={{
+              borderRadius: 3,
+              boxShadow: 2,
+            }}
+          >
+            <CardContent sx={{ p: 0 }}>
+              <TableContainer sx={{ maxHeight: "60vh", overflow: "auto" }}>
+                <Table stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell
+                        align="center"
+                        sx={{
+                          fontWeight: 600,
+                          py: 2.5,
+                          fontSize: "1rem",
+                          bgcolor: "grey.50",
+                        }}
+                      >
+                        التاريخ
+                      </TableCell>
+                      <TableCell
+                        align="center"
+                        sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
+                      >
+                        إجمالي المبيعات
+                      </TableCell>
+                      <TableCell
+                        align="center"
+                        sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
+                      >
+                        إجمالي المدفوع
+                      </TableCell>
+                      <TableCell
+                        align="center"
+                        sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
+                      >
+                        إجمالي النقدي
+                      </TableCell>
+                      <TableCell
+                        align="center"
+                        sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
+                      >
+                        إجمالي البنكي
+                      </TableCell>
+                      <TableCell
+                        align="center"
+                        sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
+                      >
+                        إجمالي المصروفات
+                      </TableCell>
+                      <TableCell
+                        align="center"
+                        sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
+                      >
+                        صافي
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {reportData.daily_breakdown.map((row) => {
+                      const isToday = dayjs().format("YYYY-MM-DD") === row.date;
+                      return (
+                        <TableRow
+                          key={row.date}
+                          sx={{
+                            bgcolor: isToday
+                              ? "rgba(25, 118, 210, 0.08)"
+                              : "inherit",
+                            "&:hover": {
+                              bgcolor: isToday
+                                ? "rgba(25, 118, 210, 0.15)"
+                                : "action.hover",
+                            },
+                            transition: "background-color 0.2s ease",
+                          }}
+                        >
+                          <TableCell
+                            align="center"
+                            sx={{ fontWeight: 500, py: 2.5, fontSize: "1rem" }}
+                          >
+                            {dayjs(row.date).format("DD/MM/YYYY")}
+                          </TableCell>
+                          <TableCell
+                            align="center"
+                            sx={{ py: 2.5, fontSize: "1rem" }}
+                          >
+                            {formatCurrency(row.total_sales)}
+                          </TableCell>
+                          <TableCell
+                            align="center"
+                            sx={{ py: 2.5, fontSize: "1rem" }}
+                          >
+                            {formatCurrency(row.total_paid)}
+                          </TableCell>
+                          <TableCell
+                            align="center"
+                            sx={{ py: 2.5, fontSize: "1rem" }}
+                          >
+                            {formatCurrency(row.total_cash)}
+                          </TableCell>
+                          <TableCell
+                            align="center"
+                            sx={{ py: 2.5, fontSize: "1rem" }}
+                          >
+                            {formatCurrency(row.total_bank)}
+                          </TableCell>
+                          <TableCell
+                            align="center"
+                            sx={{ py: 2.5, fontSize: "1rem" }}
+                          >
+                            {formatCurrency(row.total_expense)}
+                          </TableCell>
+                          <TableCell
+                            align="center"
+                            sx={{
+                              fontWeight: 700,
+                              py: 2.5,
+                              fontSize: "1rem",
+                              color: "success.main",
+                            }}
+                          >
+                            {formatCurrency(row.net)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                    {/* Sum Row */}
+                    {reportData.daily_breakdown.length > 0 && (
+                      <TableRow
+                        sx={{
+                          bgcolor: (theme) =>
+                            theme.palette.mode === "dark"
+                              ? "rgba(25, 118, 210, 0.2)"
+                              : "rgba(25, 118, 210, 0.08)",
+                          "& .MuiTableCell-root": {
+                            borderTop: 2,
+                            borderColor: "primary.main",
+                          },
+                        }}
+                      >
+                        <TableCell
+                          align="center"
+                          sx={{
+                            fontWeight: 700,
+                            py: 2.5,
+                            fontSize: "1.1rem",
+                            color: "primary.main",
+                          }}
+                        >
+                          الإجمالي
+                        </TableCell>
+                        <TableCell
+                          align="center"
+                          sx={{
+                            fontWeight: 700,
+                            py: 2.5,
+                            fontSize: "1.1rem",
+                          }}
+                        >
+                          {formatCurrency(reportData.month_summary.total_sales)}
+                        </TableCell>
+                        <TableCell
+                          align="center"
+                          sx={{
+                            fontWeight: 700,
+                            py: 2.5,
+                            fontSize: "1.1rem",
+                          }}
+                        >
+                          {formatCurrency(reportData.month_summary.total_paid)}
+                        </TableCell>
+                        <TableCell
+                          align="center"
+                          sx={{
+                            fontWeight: 700,
+                            py: 2.5,
+                            fontSize: "1.1rem",
+                          }}
+                        >
+                          {formatCurrency(reportData.month_summary.total_cash)}
+                        </TableCell>
+                        <TableCell
+                          align="center"
+                          sx={{
+                            fontWeight: 700,
+                            py: 2.5,
+                            fontSize: "1.1rem",
+                          }}
+                        >
+                          {formatCurrency(reportData.month_summary.total_bank)}
+                        </TableCell>
+                        <TableCell
+                          align="center"
+                          sx={{
+                            fontWeight: 700,
+                            py: 2.5,
+                            fontSize: "1.1rem",
+                          }}
+                        >
+                          {formatCurrency(
+                            reportData.month_summary.total_expense,
+                          )}
+                        </TableCell>
+                        <TableCell
+                          align="center"
+                          sx={{
+                            fontWeight: 700,
+                            py: 2.5,
+                            fontSize: "1.1rem",
+                            color: "success.main",
+                          }}
+                        >
+                          {formatCurrency(reportData.month_summary.net)}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {reportData.daily_breakdown.length === 0 && (
+                      <TableRow>
+                        <TableCell
+                          colSpan={7}
+                          align="center"
+                          sx={{ py: 8, fontSize: "1rem" }}
+                        >
+                          <Typography variant="body2" color="text.secondary">
+                            لا توجد بيانات متاحة لهذا الشهر.
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
+        </Box>
       ) : (
         <Card
           sx={{
@@ -804,6 +1018,5 @@ const DailyIncomeReportPage: React.FC = () => {
     </Box>
   );
 };
-
 
 export default DailyIncomeReportPage;

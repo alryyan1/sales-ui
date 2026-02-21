@@ -2130,6 +2130,7 @@ const PosBlankPage: React.FC = () => {
                     direction="row"
                     spacing={1}
                     sx={{ mt: 2, width: "100%" }}
+                    gap={1}
                   >
                     <Button
                       fullWidth
@@ -2148,7 +2149,7 @@ const PosBlankPage: React.FC = () => {
                     >
                       {thermalPdfLoading
                         ? "جاري التحميل..."
-                        : "طباعة فاتورة حراري"}
+                        : "طباعة فاتورة "}
                     </Button>
                     <Button
                       fullWidth

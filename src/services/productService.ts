@@ -44,6 +44,9 @@ export interface Product {
   last_sale_price_per_sellable_unit?: number | null;
   earliest_expiry_date?: string | null;
   current_stock_quantity?: number;
+  sale_price?: number | null;
+  cost_price?: number | null;
+  expire_date?: string | null;
   // --- Inventory Report specific fields ---
   total_items_purchased?: number | null;
   total_items_sold?: number | null;
@@ -83,6 +86,9 @@ export interface ProductFormData {
   units_per_stocking_unit?: string | number | null; // Form might send string
   stock_quantity: string | number; // Form might use string, API expects integer
   stock_alert_level: string | number | null; // Form might use string, API expects integer/null
+  sale_price?: string | number | null;
+  cost_price?: string | number | null;
+  expire_date?: string | null;
   // unit?: string | null;
   category_id?: number | null;
   has_expiry_date?: boolean;
@@ -136,7 +142,7 @@ const productService = {
     inStockOnly?: boolean,
     lowStockOnly?: boolean,
     outOfStockOnly?: boolean,
-    warehouseId?: number
+    warehouseId?: number,
   ): Promise<ApiPaginatedResponse<Product>> => {
     try {
       const params = new URLSearchParams();
@@ -152,7 +158,7 @@ const productService = {
       if (warehouseId) params.append("warehouse_id", warehouseId.toString());
 
       const response = await apiClient.get<ApiPaginatedResponse<Product>>(
-        `/products?${params.toString()}`
+        `/products?${params.toString()}`,
       );
       console.log("getProducts response:", response.data);
       return response.data;
@@ -170,7 +176,7 @@ const productService = {
    */
   getProductsForAutocomplete: async (
     search: string = "",
-    limit: number = 20
+    limit: number = 20,
   ): Promise<Product[]> => {
     // Returns flat array, not paginated
     try {
@@ -180,7 +186,7 @@ const productService = {
 
       // Assumes backend endpoint /api/products/autocomplete exists
       const response = await apiClient.get<{ data: Product[] }>(
-        `/products/autocomplete?${params.toString()}`
+        `/products/autocomplete?${params.toString()}`,
       );
       console.log("getProductsForAutocomplete response:", response.data.data);
       // Adapt if backend directly returns array: return response.data;
@@ -205,9 +211,9 @@ const productService = {
       // Send IDs as POST request with JSON body to ensure proper array format
       const response = await apiClient.post<{ data: Product[] } | Product[]>(
         `/product/by-ids`,
-        { ids: ids }
+        { ids: ids },
       );
-    
+
       console.log("getProductsByIds response:", response.data);
 
       // Handle Laravel Resource Collection response
@@ -224,7 +230,7 @@ const productService = {
       } else {
         console.warn(
           "Unexpected response structure from getProductsByIds:",
-          responseData
+          responseData,
         );
         return [];
       }
@@ -241,7 +247,7 @@ const productService = {
     try {
       // Assuming API returns { product: { ... } }
       const response = await apiClient.get<{ product: Product }>(
-        `/products/${id}`
+        `/products/${id}`,
       );
       return response.data.product; // Adjust if needed
     } catch (error) {
@@ -266,7 +272,7 @@ const productService = {
       // };
       const response = await apiClient.post<{ product: Product }>(
         "/products",
-        productData
+        productData,
       ); // Send ProductFormData directly if backend handles conversion
       return response.data.product; // Adjust if needed
     } catch (error) {
@@ -280,7 +286,7 @@ const productService = {
    */
   updateProduct: async (
     id: number,
-    productData: Partial<ProductFormData>
+    productData: Partial<ProductFormData>,
   ): Promise<Product> => {
     try {
       // Optional: Convert string numbers before sending
@@ -289,7 +295,7 @@ const productService = {
       // // ... etc for other numeric fields
       const response = await apiClient.put<{ product: Product }>(
         `/products/${id}`,
-        productData
+        productData,
       );
       return response.data.product; // Adjust if needed
     } catch (error) {
@@ -310,7 +316,10 @@ const productService = {
         // Handle conflict error (e.g., product used in sales/purchases)
         console.warn(`Cannot delete product ${id} due to existing records.`);
         throw new Error(
-          getErrorMessage(error, "Cannot delete product with existing records.")
+          getErrorMessage(
+            error,
+            "Cannot delete product with existing records.",
+          ),
         );
       }
       throw error;
@@ -323,7 +332,7 @@ const productService = {
    * @returns Promise resolving to headers from Excel file
    */
   importProductsStep1: async (
-    file: File
+    file: File,
   ): Promise<{ headers: string[]; message: string }> => {
     try {
       const formData = new FormData();
@@ -352,7 +361,7 @@ const productService = {
   importProductsPreview: async (
     file: File,
     columnMapping: Record<string, string>,
-    skipHeader: boolean = true
+    skipHeader: boolean = true,
   ): Promise<{ preview: any[] }> => {
     try {
       const formData = new FormData();
@@ -372,7 +381,7 @@ const productService = {
             "Content-Type": "multipart/form-data",
           },
           timeout: 60000, // 1 minute timeout for preview
-        }
+        },
       );
 
       return response.data;
@@ -392,7 +401,7 @@ const productService = {
   importProductsStep2: async (
     file: File,
     columnMapping: Record<string, string>,
-    skipHeader: boolean = true
+    skipHeader: boolean = true,
   ): Promise<{
     imported: number;
     errors: number;
@@ -417,7 +426,7 @@ const productService = {
             "Content-Type": "multipart/form-data",
           },
           timeout: 300000, // 5 minutes timeout for large imports
-        }
+        },
       );
 
       return response.data;
@@ -430,10 +439,10 @@ const productService = {
   getPurchaseHistory: async (
     productId: number,
     page: number = 1,
-    limit: number = 10
+    limit: number = 10,
   ): Promise<PaginatedResponse<any>> => {
     const response = await apiClient.get<PaginatedResponse<any>>(
-      `/products/${productId}/purchase-history?page=${page}&per_page=${limit}`
+      `/products/${productId}/purchase-history?page=${page}&per_page=${limit}`,
     );
     return response.data;
   },
@@ -441,10 +450,10 @@ const productService = {
   getSalesHistory: async (
     productId: number,
     page: number = 1,
-    limit: number = 10
+    limit: number = 10,
   ): Promise<PaginatedResponse<any>> => {
     const response = await apiClient.get<PaginatedResponse<any>>(
-      `/products/${productId}/sales-history?page=${page}&per_page=${limit}`
+      `/products/${productId}/sales-history?page=${page}&per_page=${limit}`,
     );
     return response.data;
   },
