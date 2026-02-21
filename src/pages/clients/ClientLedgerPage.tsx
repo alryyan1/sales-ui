@@ -27,7 +27,6 @@ import {
   InputLabel,
   FormControl,
   Stack,
-  Paper,
   Divider,
   CircularProgress,
   IconButton,
@@ -64,7 +63,7 @@ const ClientLedgerPage: React.FC = () => {
   const [settleDialogOpen, setSettleDialogOpen] = useState(false);
   const [settleAmount, setSettleAmount] = useState<string>("");
   const [settleDate, setSettleDate] = useState<string>(
-    new Date().toISOString().slice(0, 10)
+    new Date().toISOString().slice(0, 10),
   );
   const [settleMethod, setSettleMethod] = useState<string>("cash");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -181,7 +180,7 @@ const ClientLedgerPage: React.FC = () => {
   };
 
   const getTypeColor = (
-    type: ClientLedgerEntry["type"]
+    type: ClientLedgerEntry["type"],
   ): "error" | "success" | "default" => {
     switch (type) {
       case "sale":
@@ -587,14 +586,12 @@ const ClientLedgerPage: React.FC = () => {
               <Select
                 value={settleMethod}
                 label="طريقة الدفع"
-                onChange={(e) => setSettleMethod(e.target.value)}
+                onChange={(e) => setSettleMethod(e.target.value as string)}
               >
-                <MenuItem value="cash">نقدًا</MenuItem>
-                <MenuItem value="bank_transfer">تحويل بنكي</MenuItem>
-                <MenuItem value="visa">فيزا</MenuItem>
-                <MenuItem value="mastercard">ماستركارد</MenuItem>
-                <MenuItem value="mada">مدى</MenuItem>
-                <MenuItem value="other">أخرى</MenuItem>
+                <MenuItem value="cash">كاش</MenuItem>
+                <MenuItem value="bankak">بنكك</MenuItem>
+                <MenuItem value="fawry">فوري</MenuItem>
+                <MenuItem value="ocash">أوكاش</MenuItem>
               </Select>
             </FormControl>
             <TextField

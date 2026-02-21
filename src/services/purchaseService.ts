@@ -51,6 +51,19 @@ export interface UpdatePurchaseData {
   }>;
   // Backend might not expect total_amount for update, as it will recalculate
 }
+export interface PurchasePayment {
+  id: number;
+  purchase_id: number;
+  user_id: number | null;
+  user?: { id: number; name: string };
+  method: string;
+  amount: string;
+  payment_date: string; // Format YYYY-MM-DD
+  reference_number: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
 // Matches PurchaseResource structure
 export interface Purchase {
   id: number;
@@ -64,11 +77,14 @@ export interface Purchase {
   reference_number: string | null;
   status: "received" | "pending" | "ordered";
   total_amount: string; // Comes as string
+  total_paid?: string | number; // Added from resource
+  balance?: string | number; // Added from resource
   notes: string | null;
   currency?: string;
   created_at: string;
   items?: PurchaseItem[]; // Array of items, included if eager loaded (e.g., on show)
   supplier?: Supplier; // Optional: Full supplier details if loaded
+  payments?: PurchasePayment[]; // Added from resource
 }
 
 // Data structure for creating a new purchase (matches backend validation)
@@ -96,7 +112,7 @@ const purchaseService = {
    */
   getPurchases: async (
     page: number = 1,
-    queryParams?: string
+    queryParams?: string,
   ): Promise<PaginatedResponse<Purchase>> => {
     try {
       const params = new URLSearchParams();
@@ -113,7 +129,7 @@ const purchaseService = {
       }
 
       const response = await apiClient.get<PaginatedResponse<Purchase>>(
-        `/purchases?${params.toString()}`
+        `/purchases?${params.toString()}`,
       );
       console.log("getPurchases response:", response.data);
       return response.data;
@@ -130,7 +146,7 @@ const purchaseService = {
     try {
       // Assuming API returns { purchase: { ... } }
       const response = await apiClient.get<{ purchase: Purchase }>(
-        `/purchases/${id}`
+        `/purchases/${id}`,
       );
       return response.data.purchase; // Adjust if needed
     } catch (error) {
@@ -143,13 +159,13 @@ const purchaseService = {
    * Create a new purchase.
    */
   createPurchase: async (
-    purchaseData: CreatePurchaseData
+    purchaseData: CreatePurchaseData,
   ): Promise<Purchase> => {
     try {
       // Assuming API returns { purchase: { ... } }
       const response = await apiClient.post<{ purchase: Purchase }>(
         "/purchases",
-        purchaseData
+        purchaseData,
       );
       return response.data.purchase; // Adjust if needed
     } catch (error) {
@@ -172,7 +188,7 @@ const purchaseService = {
         // Handle forbidden error specifically if desired
         console.warn("Deletion forbidden by server policy.");
         throw new Error(
-          getErrorMessage(error, "Deleting purchases is not allowed.")
+          getErrorMessage(error, "Deleting purchases is not allowed."),
         ); // Throw specific message
       }
       throw error; // Rethrow other errors
@@ -186,14 +202,14 @@ const purchaseService = {
    */
   updatePurchase: async (
     id: number,
-    purchaseData: UpdatePurchaseData
+    purchaseData: UpdatePurchaseData,
   ): Promise<Purchase> => {
     try {
       // Assuming API returns { purchase: { ... } } after successful update
       // The backend will need to handle diffing items, updating stock, etc.
       const response = await apiClient.put<{ purchase: Purchase }>(
         `/purchases/${id}`,
-        purchaseData
+        purchaseData,
       );
       console.log(`updatePurchase response for ID ${id}:`, response.data);
       return response.data.purchase; // Adjust if your API returns the purchase object directly
@@ -203,7 +219,7 @@ const purchaseService = {
       if (axios.isAxiosError(error) && error.response?.status === 422) {
         console.warn(
           `Validation error during purchase update for ID ${id}:`,
-          error.response.data
+          error.response.data,
         );
       }
       throw error; // Rethrow for component/form handling
@@ -216,13 +232,13 @@ const purchaseService = {
   getPurchasesForProduct: async (productId: number): Promise<Purchase[]> => {
     try {
       const response = await apiClient.get<{ data: Purchase[] }>(
-        `/purchases?product_id=${productId}&include_items=true`
+        `/purchases?product_id=${productId}&include_items=true`,
       );
       return response.data.data || [];
     } catch (error) {
       console.error(
         `Error fetching purchases for product ${productId}:`,
-        error
+        error,
       );
       throw error;
     }
@@ -234,7 +250,7 @@ const purchaseService = {
    * @returns Promise resolving to headers from Excel file
    */
   importPurchaseItemsStep1: async (
-    file: File
+    file: File,
   ): Promise<{ headers: string[]; message: string }> => {
     try {
       const formData = new FormData();
@@ -247,7 +263,7 @@ const purchaseService = {
           headers: {
             "Content-Type": "multipart/form-data",
           },
-        }
+        },
       );
 
       return response.data;
@@ -270,12 +286,12 @@ const purchaseService = {
       sale_price: number;
       sale_price_stocking_unit?: number | null;
       expiry_date?: string | null;
-    }
+    },
   ): Promise<{ purchase: Purchase }> => {
     try {
       const response = await apiClient.post(
         `/purchases/${purchaseId}/items`,
-        itemData
+        itemData,
       );
       return response.data;
     } catch (error) {
@@ -291,7 +307,7 @@ const purchaseService = {
     purchaseId: number,
     page: number = 1,
     perPage: number = 15,
-    search: string = ""
+    search: string = "",
   ): Promise<PaginatedResponse<PurchaseItem>> => {
     try {
       const params = new URLSearchParams();
@@ -300,7 +316,7 @@ const purchaseService = {
       if (search) params.append("search", search);
 
       const response = await apiClient.get<PaginatedResponse<PurchaseItem>>(
-        `/purchases/${purchaseId}/items?${params.toString()}`
+        `/purchases/${purchaseId}/items?${params.toString()}`,
       );
       return response.data;
     } catch (error) {
@@ -323,12 +339,12 @@ const purchaseService = {
       sale_price: number;
       sale_price_stocking_unit?: number | null;
       expiry_date?: string | null;
-    }
+    },
   ): Promise<{ purchase: Purchase }> => {
     try {
       const response = await apiClient.put(
         `/purchases/${purchaseId}/items/${itemId}`,
-        itemData
+        itemData,
       );
       return response.data;
     } catch (error) {
@@ -342,11 +358,11 @@ const purchaseService = {
    */
   deletePurchaseItem: async (
     purchaseId: number,
-    itemId: number
+    itemId: number,
   ): Promise<{ purchase: Purchase }> => {
     try {
       const response = await apiClient.delete(
-        `/purchases/${purchaseId}/items/${itemId}`
+        `/purchases/${purchaseId}/items/${itemId}`,
       );
       return response.data;
     } catch (error) {
@@ -359,11 +375,11 @@ const purchaseService = {
    * Delete all items with quantity = 0 for the specified purchase.
    */
   deleteZeroQuantityItems: async (
-    purchaseId: number
+    purchaseId: number,
   ): Promise<{ purchase: Purchase; deleted_count: number }> => {
     try {
       const response = await apiClient.delete(
-        `/purchases/${purchaseId}/items-zero-quantity`
+        `/purchases/${purchaseId}/items-zero-quantity`,
       );
       return response.data;
     } catch (error) {
@@ -376,11 +392,11 @@ const purchaseService = {
    * Add all products not currently in the purchase.
    */
   addAllMissingProducts: async (
-    purchaseId: number
+    purchaseId: number,
   ): Promise<{ purchase: Purchase; added_count: number }> => {
     try {
       const response = await apiClient.post(
-        `/purchases/${purchaseId}/add-all-missing-products`
+        `/purchases/${purchaseId}/add-all-missing-products`,
       );
       return response.data;
     } catch (error) {
@@ -399,7 +415,7 @@ const purchaseService = {
   importPurchaseItemsPreview: async (
     file: File,
     columnMapping: Record<string, string>,
-    skipHeader: boolean = true
+    skipHeader: boolean = true,
   ): Promise<{ preview: any[] }> => {
     try {
       const formData = new FormData();
@@ -419,7 +435,7 @@ const purchaseService = {
             "Content-Type": "multipart/form-data",
           },
           timeout: 60000, // 1 minute timeout for preview
-        }
+        },
       );
 
       return response.data;
@@ -441,7 +457,7 @@ const purchaseService = {
     file: File,
     columnMapping: Record<string, string>,
     skipHeader: boolean = true,
-    purchaseId: number
+    purchaseId: number,
   ): Promise<{
     imported: number;
     errors: number;
@@ -467,7 +483,7 @@ const purchaseService = {
             "Content-Type": "multipart/form-data",
           },
           timeout: 300000, // 5 minutes timeout for large imports
-        }
+        },
       );
 
       return response.data;
@@ -483,11 +499,54 @@ const purchaseService = {
   getProductBySku: async (sku: string): Promise<Product> => {
     try {
       const response = await apiClient.get(
-        `/products/by-sku/${encodeURIComponent(sku)}`
+        `/products/by-sku/${encodeURIComponent(sku)}`,
       );
       return response.data.product || response.data;
     } catch (error) {
       console.error("Error getting product by SKU:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get purchase payments (ledger)
+   */
+  getPayments: async (purchaseId: number): Promise<PurchasePayment[]> => {
+    try {
+      const response = await apiClient.get<{ payments: PurchasePayment[] }>(
+        `/purchases/${purchaseId}/payments`,
+      );
+      return response.data.payments;
+    } catch (error) {
+      console.error(
+        `Error fetching payments for purchase ${purchaseId}:`,
+        error,
+      );
+      throw error;
+    }
+  },
+
+  /**
+   * Add a payment to a purchase
+   */
+  addPayment: async (
+    purchaseId: number,
+    paymentData: {
+      amount: number | string;
+      method: string;
+      payment_date: string;
+      reference_number?: string | null;
+      notes?: string | null;
+    },
+  ): Promise<{ message: string; payment: PurchasePayment }> => {
+    try {
+      const response = await apiClient.post<{
+        message: string;
+        payment: PurchasePayment;
+      }>(`/purchases/${purchaseId}/payments`, paymentData);
+      return response.data;
+    } catch (error) {
+      console.error(`Error adding payment to purchase ${purchaseId}:`, error);
       throw error;
     }
   },

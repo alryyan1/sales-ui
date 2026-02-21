@@ -41,6 +41,7 @@ import saleService, {
   type Payment,
 } from "@/services/saleService";
 import productService, { Product } from "@/services/productService";
+import clientService, { Client } from "@/services/clientService";
 import { formatNumber } from "@/constants";
 import { SaleItemsTable } from "@/components/sales/SaleItemsTable";
 import { PosSalesColumn } from "@/components/sales/PosSalesColumn";
@@ -122,6 +123,11 @@ const PosBlankPage: React.FC = () => {
   );
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
 
+  // Client Autocomplete State
+  const [clientOptions, setClientOptions] = useState<Client[]>([]);
+  const [clientSearchLoading, setClientSearchLoading] = useState(false);
+  const [clientInputValue, setClientInputValue] = useState("");
+
   const [summaryAnchorEl, setSummaryAnchorEl] = useState<HTMLElement | null>(
     null,
   );
@@ -129,6 +135,10 @@ const PosBlankPage: React.FC = () => {
   const [thermalPdfLoading, setThermalPdfLoading] = useState(false);
   const [thermalPdfDialogOpen, setThermalPdfDialogOpen] = useState(false);
   const [thermalPdfUrl, setThermalPdfUrl] = useState<string | null>(null);
+
+  const [a4PdfLoading, setA4PdfLoading] = useState(false);
+  const [a4PdfDialogOpen, setA4PdfDialogOpen] = useState(false);
+  const [a4PdfUrl, setA4PdfUrl] = useState<string | null>(null);
   const [shiftPdfDialogOpen, setShiftPdfDialogOpen] = useState(false);
   const [shiftPdfUrl, setShiftPdfUrl] = useState<string | null>(null);
   const [shiftPdfLoading, setShiftPdfLoading] = useState(false);
@@ -250,6 +260,52 @@ const PosBlankPage: React.FC = () => {
     }, 300);
     return () => clearTimeout(t);
   }, [productInputValue]);
+
+  // Handle Client Search
+  useEffect(() => {
+    const term = clientInputValue.trim();
+    if (!term) {
+      setClientOptions([]);
+      return;
+    }
+    const t = setTimeout(() => {
+      setClientSearchLoading(true);
+      clientService
+        .autocompleteClients(term)
+        .then(setClientOptions)
+        .catch(() => setClientOptions([]))
+        .finally(() => setClientSearchLoading(false));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [clientInputValue]);
+
+  const handleClientChange = useCallback(
+    async (client: Client | null) => {
+      if (!selectedSale?.id) return;
+      try {
+        let updated;
+        if (client) {
+          updated = await saleService.updateSale(selectedSale.id, {
+            client_id: client.id,
+          });
+          updated.client = client;
+          updated.client_name = client.name;
+        } else {
+          updated = await saleService.removeClientFromSale(selectedSale.id);
+          updated.client = undefined;
+          updated.client_name = undefined;
+        }
+        setSelectedSale(updated);
+        setSales((prev) =>
+          prev.map((s) => (s.id === updated.id ? updated : s)),
+        );
+        toast.success(client ? "تم تحديث العميل" : "تم إلغاء العميل");
+      } catch (err) {
+        toast.error(saleService.getErrorMessage(err));
+      }
+    },
+    [selectedSale?.id],
+  );
 
   const handleAddPayment = useCallback(async () => {
     if (!selectedSale) return;
@@ -446,6 +502,14 @@ const PosBlankPage: React.FC = () => {
         toast.error("اختر عملية بيع أولاً");
         return;
       }
+
+      const total = Number(selectedSale.total_amount ?? 0);
+      const paid = Number(selectedSale.paid_amount ?? 0);
+      if (total > 0 && total === paid) {
+        toast.error("لا يمكن إضافة منتجات لعملية بيع مدفوعة بالكامل");
+        return;
+      }
+
       const unitPrice = Number(product.last_sale_price_per_sellable_unit) || 0;
       try {
         setAddProductLoading(true);
@@ -828,6 +892,36 @@ const PosBlankPage: React.FC = () => {
     }
   }, [thermalPdfUrl]);
 
+  const handlePrintA4Invoice = useCallback(async () => {
+    if (!selectedSale?.id) return;
+    setA4PdfLoading(true);
+    try {
+      const response = await apiClient.get(
+        `/sales/${selectedSale.id}/a4-invoice-pdf/view`,
+        {
+          responseType: "blob",
+        },
+      );
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      setA4PdfUrl(url);
+      setA4PdfDialogOpen(true);
+    } catch (err) {
+      console.error("Failed to load A4 invoice:", err);
+      toast.error("فشل تحميل فاتورة A4");
+    } finally {
+      setA4PdfLoading(false);
+    }
+  }, [selectedSale?.id]);
+
+  const handleCloseA4PdfDialog = useCallback(() => {
+    setA4PdfDialogOpen(false);
+    if (a4PdfUrl) {
+      window.URL.revokeObjectURL(a4PdfUrl);
+      setA4PdfUrl(null);
+    }
+  }, [a4PdfUrl]);
+
   const handleCreateShiftPdfReport = useCallback(
     async (forceUpload = false) => {
       if (!shift?.id) return;
@@ -971,6 +1065,7 @@ const PosBlankPage: React.FC = () => {
         display: "flex",
         flexDirection: "column",
         bgcolor: "grey.100",
+        userSelect: "none",
       }}
     >
       {/* Header */}
@@ -1615,16 +1710,66 @@ const PosBlankPage: React.FC = () => {
                   <Typography variant="subtitle1" fontWeight={700} gutterBottom>
                     تفاصيل البيع #{selectedSale.id}
                   </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mb: 1.5 }}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 1,
+                      alignItems: "center",
+                      mb: 1.5,
+                    }}
                   >
-                    {selectedSale.sale_date}
-                    {selectedSale.client_name && (
-                      <> · {selectedSale.client_name}</>
+                    <Typography variant="body2" color="text.secondary">
+                      {selectedSale.sale_date}
+                    </Typography>
+                  </Box>
+
+                  <Autocomplete
+                    size="small"
+                    options={clientOptions}
+                    getOptionLabel={(option) => option.name || ""}
+                    inputValue={clientInputValue}
+                    onInputChange={(_, value) => setClientInputValue(value)}
+                    value={
+                      selectedSale.client ||
+                      (selectedSale.client_name
+                        ? ({
+                            id: selectedSale.client_id,
+                            name: selectedSale.client_name,
+                          } as Client)
+                        : null)
+                    }
+                    onChange={(_, newValue) => handleClientChange(newValue)}
+                    isOptionEqualToValue={(option, value) =>
+                      option.id === value.id
+                    }
+                    loading={clientSearchLoading}
+                    disabled={!selectedSale}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder="اختر عميل / زبون..."
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <React.Fragment>
+                              {clientSearchLoading ? (
+                                <CircularProgress color="inherit" size={20} />
+                              ) : null}
+                              {params.InputProps.endAdornment}
+                            </React.Fragment>
+                          ),
+                        }}
+                      />
                     )}
-                  </Typography>
+                    sx={{
+                      mb:
+                        selectedSale.client || selectedSale.client_name ? 1 : 2,
+                    }}
+                    noOptionsText={
+                      clientInputValue.trim() ? "لا توجد نتائج" : "اكتب للبحث"
+                    }
+                  />
 
                   <Box
                     sx={{ display: "flex", flexDirection: "column", gap: 1 }}
@@ -1981,25 +2126,48 @@ const PosBlankPage: React.FC = () => {
                       {selectedSale.notes}
                     </Typography>
                   )}
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    size="small"
-                    disabled={thermalPdfLoading}
-                    startIcon={
-                      thermalPdfLoading ? (
-                        <CircularProgress size={18} color="inherit" />
-                      ) : (
-                        <ReceiptLongIcon />
-                      )
-                    }
-                    sx={{ mt: 2, textTransform: "none" }}
-                    onClick={handlePrintThermalInvoice}
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{ mt: 2, width: "100%" }}
                   >
-                    {thermalPdfLoading
-                      ? "جاري التحميل..."
-                      : "طباعة فاتورة حراري PDF"}
-                  </Button>
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      size="small"
+                      disabled={thermalPdfLoading}
+                      startIcon={
+                        thermalPdfLoading ? (
+                          <CircularProgress size={18} color="inherit" />
+                        ) : (
+                          <ReceiptLongIcon />
+                        )
+                      }
+                      sx={{ textTransform: "none" }}
+                      onClick={handlePrintThermalInvoice}
+                    >
+                      {thermalPdfLoading
+                        ? "جاري التحميل..."
+                        : "طباعة فاتورة حراري"}
+                    </Button>
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      size="small"
+                      disabled={a4PdfLoading || !selectedSale?.client_id}
+                      startIcon={
+                        a4PdfLoading ? (
+                          <CircularProgress size={18} color="inherit" />
+                        ) : (
+                          <ReceiptLongIcon />
+                        )
+                      }
+                      sx={{ textTransform: "none" }}
+                      onClick={handlePrintA4Invoice}
+                    >
+                      {a4PdfLoading ? "جاري التحميل..." : "فاتورة A4 PDF"}
+                    </Button>
+                  </Stack>
                   <Button
                     fullWidth
                     variant="contained"
@@ -2044,6 +2212,18 @@ const PosBlankPage: React.FC = () => {
           selectedSale
             ? `فاتورة حراري #${selectedSale.number ?? selectedSale.id}`
             : "فاتورة حراري"
+        }
+      />
+
+      {/* A4 invoice PDF dialog */}
+      <PdfViewerDialog
+        isOpen={a4PdfDialogOpen && !!a4PdfUrl}
+        onClose={handleCloseA4PdfDialog}
+        pdfUrl={a4PdfUrl ?? ""}
+        title={
+          selectedSale
+            ? `فاتورة A4 #${selectedSale.number ?? selectedSale.id}`
+            : "فاتورة A4"
         }
       />
 

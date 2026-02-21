@@ -452,6 +452,24 @@ const saleService = {
   },
 
   /**
+   * Remove client from an existing sale.
+   */
+  removeClientFromSale: async (id: number): Promise<Sale> => {
+    try {
+      const response = await apiClient.put<{ sale: Sale } | Sale>(
+        `/sales/${id}/remove-client`,
+      );
+      if ("sale" in response.data) {
+        return response.data.sale;
+      }
+      return response.data as Sale;
+    } catch (error) {
+      console.error(`Error removing client from sale ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
    * Add payments to an existing sale.
    */
   addPaymentToSale: async (

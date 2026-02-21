@@ -53,13 +53,35 @@ const clientService = {
     try {
       // استخدام apiClient لإرسال طلب GET مع رقم الصفحة كـ query parameter
       const response = await apiClient.get<PaginatedResponse<Client>>(
-        `/clients?page=${page}`
+        `/clients?page=${page}`,
       );
       console.log("getClients response:", response.data); // للمساعدة في التصحيح
       return response.data; // إرجاع بيانات الاستجابة
     } catch (error) {
       console.error("Error fetching clients:", error);
       throw error; // إعادة رمي الخطأ ليتم التعامل معه في المكون الذي استدعى الدالة
+    }
+  },
+
+  /**
+   * Search clients for autocomplete
+   */
+  autocompleteClients: async (
+    search: string,
+    limit: number = 15,
+  ): Promise<Client[]> => {
+    try {
+      if (!search.trim()) return [];
+      const response = await apiClient.get<{ data: Client[] }>(
+        `/clients/autocomplete`,
+        {
+          params: { search, limit },
+        },
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error("Error fetching clients autocomplete:", error);
+      throw error;
     }
   },
 
@@ -88,7 +110,7 @@ const clientService = {
       // إرسال طلب POST مع بيانات العميل في جسم الطلب
       const response = await apiClient.post<{ client: Client }>(
         "/clients",
-        clientData
+        clientData,
       ); // قد يعيد الـ API الكائن داخل مفتاح 'client' أو مباشرة
       // تحقق من بنية الاستجابة الفعلية من الـ API الخاص بك
       // إذا كان الـ API يعيد { client: { ... } }
@@ -109,13 +131,13 @@ const clientService = {
    */
   updateClient: async (
     id: number,
-    clientData: Partial<ClientFormData>
+    clientData: Partial<ClientFormData>,
   ): Promise<Client> => {
     try {
       // استخدام PUT أو PATCH (apiResource في Laravel يعالج كليهما للتحديث)
       const response = await apiClient.put<{ client: Client }>(
         `/clients/${id}`,
-        clientData
+        clientData,
       ); // أو .patch()
       // تحقق من بنية الاستجابة الفعلية
       return response.data.client;

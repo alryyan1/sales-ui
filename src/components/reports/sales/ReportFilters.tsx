@@ -30,7 +30,7 @@ export const reportFilterSchema = z
     {
       message: "تاريخ الانتهاء يجب أن يكون بعد تاريخ البدء",
       path: ["endDate"],
-    }
+    },
   );
 
 export type ReportFilterValues = z.infer<typeof reportFilterSchema>;
@@ -189,38 +189,37 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
 
           {/* Shift Select */}
           {posMode === "shift" && (
-            <Box sx={{ minWidth: 150 }}>
+            <Box sx={{ minWidth: 200 }}>
               <Controller
                 control={control}
                 name="shiftId"
-                render={({ field, fieldState }) => (
-                  <FormControl
-                    fullWidth
-                    size="small"
-                    error={!!fieldState.error}
-                  >
-                    <InputLabel>الوردية</InputLabel>
-                    <Select
-                      value={field.value ?? ""}
-                      onChange={field.onChange}
-                      label="الوردية"
-                      disabled={loadingFilters}
-                    >
-                      <MenuItem value="">الكل</MenuItem>
-                      {shifts.map((shift) => (
-                        <MenuItem key={shift.id} value={String(shift.id)}>
-                          {shift.name || `الوردية #${shift.id}`}{" "}
-                          {shift.shift_date ? `(${shift.shift_date})` : ""}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                render={({ field }) => (
+                  <Autocomplete
+                    options={shifts}
+                    getOptionLabel={(option) =>
+                      option.name
+                        ? `${option.name} ${
+                            option.shift_date ? `(${option.shift_date})` : ""
+                          }`
+                        : `الوردية #${option.id} ${
+                            option.shift_date ? `(${option.shift_date})` : ""
+                          }`
+                    }
+                    value={
+                      shifts.find((s) => String(s.id) === field.value) || null
+                    }
+                    onChange={(_, newValue) => {
+                      field.onChange(newValue ? String(newValue.id) : null);
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} label="الوردية" size="small" />
+                    )}
+                    loading={loadingFilters}
+                  />
                 )}
               />
             </Box>
           )}
-
-         
 
           {/* Filter Actions */}
           <Stack direction="row" gap={1} spacing={1} sx={{ minWidth: 200 }}>

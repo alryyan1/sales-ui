@@ -121,20 +121,8 @@ const SalesReportPage: React.FC = () => {
     loadingClients || loadingProducts || loadingShifts || loadingUsers;
 
   // --- Auto-select last shift on first load ---
-  useEffect(() => {
-    if (
-      posMode === "shift" &&
-      !searchParams.get("shiftId") &&
-      shifts.length > 0
-    ) {
-      const lastShift = shifts.reduce((prev, current) =>
-        prev.id > current.id ? prev : current,
-      );
-      const newParams = new URLSearchParams(searchParams);
-      newParams.set("shiftId", String(lastShift.id));
-      setSearchParams(newParams, { replace: true });
-    }
-  }, [shifts, searchParams, setSearchParams, posMode]);
+  // Removed per user request: "i dont want to autoselect shift by default it should not be set to any shift"
+  // useEffect(() => { ... }, []);
 
   // --- Filter Handlers (respect posMode) ---
   const onFilterSubmit = (data: ReportFilterValues) => {
@@ -153,23 +141,11 @@ const SalesReportPage: React.FC = () => {
 
   const clearFilters = () => {
     const today = format(new Date(), "yyyy-MM-dd");
-    if (posMode === "shift" && shifts.length > 0) {
-      const lastShift = shifts.reduce((prev, current) =>
-        prev.id > current.id ? prev : current,
-      );
-      setSearchParams({
-        page: "1",
-        shiftId: String(lastShift.id),
-        startDate: today,
-        endDate: today,
-      });
-    } else {
-      setSearchParams({
-        page: "1",
-        startDate: today,
-        endDate: today,
-      });
-    }
+    setSearchParams({
+      page: "1",
+      startDate: today,
+      endDate: today,
+    });
   };
 
   const handlePageChange = (newPage: number) => {

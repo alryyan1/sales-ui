@@ -21,6 +21,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter,
 } from "@/components/ui/table";
 import {
   Select,
@@ -35,14 +36,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Collapsible,
@@ -52,13 +45,15 @@ import {
 
 // MUI Components (for complex interactions)
 import {
-  Pagination,
   Autocomplete,
   TextField,
-  CircularProgress,
+  Menu,
+  MenuItem,
+  IconButton,
+  ListItemIcon,
+  ListItemText,
+  Divider,
 } from "@mui/material";
-
-// Lucide Icons
 import {
   Plus,
   Filter,
@@ -77,12 +72,7 @@ import {
   Truck,
   RefreshCw,
   MoreHorizontal,
-  ChevronDown,
   ChevronUp,
-  TrendingUp,
-  Boxes,
-  DollarSign,
-  ArrowUpRight,
 } from "lucide-react";
 
 // Services and Types
@@ -96,8 +86,9 @@ import { PurchaseItemDetailsDialog } from "@/components/purchases/PurchaseItemDe
 import { cn } from "@/lib/utils";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
 import { toast } from "sonner";
-import { Trash2, Edit2 } from "lucide-react";
+import { Trash2, Edit2, Wallet } from "lucide-react";
 import { EditPurchaseDialog } from "@/components/purchases/EditPurchaseDialog";
+import { PurchaseLedgerDialog } from "@/components/purchases/PurchaseLedgerDialog";
 
 // Filter interface
 interface PurchaseFilters {
@@ -141,6 +132,31 @@ const PurchasesListPage: React.FC = () => {
   // Edit dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [purchaseToEdit, setPurchaseToEdit] = useState<any | null>(null);
+
+  // Ledger dialog state
+  const [ledgerDialogOpen, setLedgerDialogOpen] = useState(false);
+  const [purchaseForLedger, setPurchaseForLedger] = useState<any | null>(null);
+
+  // MUI Menu state
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [activeMenuPurchase, setActiveMenuPurchase] = useState<any | null>(
+    null,
+  );
+
+  const handleMenuOpen = (
+    event: React.MouseEvent<HTMLElement>,
+    purchase: any,
+  ) => {
+    event.stopPropagation();
+    setAnchorEl(event.currentTarget);
+    setActiveMenuPurchase(purchase);
+  };
+
+  const handleMenuClose = (event?: React.MouseEvent<HTMLElement>) => {
+    if (event) event.stopPropagation();
+    setAnchorEl(null);
+    setActiveMenuPurchase(null);
+  };
 
   // Status configuration
   const statusConfig = {
@@ -202,6 +218,7 @@ const PurchasesListPage: React.FC = () => {
       try {
         const params = new URLSearchParams();
         params.append("page", page.toString());
+        params.append("per_page", "1000000"); // Fetch all without pagination
 
         if (filters.supplier_id)
           params.append("supplier_id", filters.supplier_id.toString());
@@ -256,13 +273,6 @@ const PurchasesListPage: React.FC = () => {
   );
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
-
-  const handlePageChange = (
-    _event: React.ChangeEvent<unknown>,
-    value: number,
-  ) => {
-    setCurrentPage(value);
-  };
 
   const handleViewPdfReport = async (id: number) => {
     try {
@@ -330,20 +340,20 @@ const PurchasesListPage: React.FC = () => {
   };
 
   // Stats calculation
-  const stats = {
-    total: purchasesResponse?.meta?.total || 0,
-    received:
-      purchasesResponse?.data?.filter((p: any) => p.status === "received")
-        .length || 0,
-    pending:
-      purchasesResponse?.data?.filter((p: any) => p.status === "pending")
-        .length || 0,
-    totalAmount:
-      purchasesResponse?.data?.reduce(
-        (sum: number, p: any) => sum + Number(p.total_amount || 0),
-        0,
-      ) || 0,
-  };
+  // const stats = {
+  //   total: purchasesResponse?.meta?.total || 0,
+  //   received:
+  //     purchasesResponse?.data?.filter((p: any) => p.status === "received")
+  //       .length || 0,
+  //   pending:
+  //     purchasesResponse?.data?.filter((p: any) => p.status === "pending")
+  //       .length || 0,
+  //   totalAmount:
+  //     purchasesResponse?.data?.reduce(
+  //       (sum: number, p: any) => sum + Number(p.total_amount || 0),
+  //       0,
+  //     ) || 0,
+  // };
 
   return (
     <TooltipProvider>
@@ -664,7 +674,13 @@ const PurchasesListPage: React.FC = () => {
                       الحالة
                     </TableHead>
                     <TableHead className="text-center font-bold">
-                      الإجمالي
+                      إجمالي مدين
+                    </TableHead>
+                    <TableHead className="text-center font-bold">
+                      إجمالي دائن
+                    </TableHead>
+                    <TableHead className="text-center font-bold">
+                      الرصيد
                     </TableHead>
                     <TableHead className="text-center font-bold">
                       إجراءات
@@ -674,7 +690,7 @@ const PurchasesListPage: React.FC = () => {
                 <TableBody>
                   {purchasesResponse.data.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="h-48 text-center">
+                      <TableCell colSpan={11} className="h-48 text-center">
                         <div className="flex flex-col items-center justify-center">
                           <div className="p-4 bg-muted rounded-full mb-4">
                             <ShoppingCart className="h-12 w-12 text-muted-foreground" />
@@ -751,111 +767,189 @@ const PurchasesListPage: React.FC = () => {
                               {status.label}
                             </Badge>
                           </TableCell>
+
                           <TableCell className="text-center">
-                            <span className="font-bold text-primary">
-                              {formatCurrency(purchase.total_amount)}
+                            <span className="font-bold text-destructive">
+                              {formatCurrency(purchase.total_amount || 0)}
                             </span>
                           </TableCell>
                           <TableCell className="text-center">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger
-                                asChild
-                                onClick={(e) => e.stopPropagation()}
+                            <span className="font-bold text-emerald-600">
+                              {formatCurrency(purchase.total_paid || 0)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className="font-bold text-primary">
+                              {formatCurrency(
+                                (Number(purchase.total_amount) || 0) -
+                                  (Number(purchase.total_paid) || 0),
+                              )}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => handleMenuOpen(e, purchase)}
+                            >
+                              <MoreHorizontal className="h-5 w-5" />
+                            </IconButton>
+                            <Menu
+                              anchorEl={anchorEl}
+                              open={
+                                Boolean(anchorEl) &&
+                                activeMenuPurchase?.id === purchase.id
+                              }
+                              onClose={() => handleMenuClose()}
+                              onClick={(e) => e.stopPropagation()}
+                              PaperProps={{
+                                elevation: 2,
+                                sx: { minWidth: 200 },
+                              }}
+                            >
+                              <MenuItem disabled className="opacity-70">
+                                <ListItemText
+                                  primary="الإجراءات"
+                                  primaryTypographyProps={{
+                                    fontWeight: "bold",
+                                  }}
+                                />
+                              </MenuItem>
+                              <Divider />
+
+                              <MenuItem
+                                onClick={(e) => {
+                                  handleMenuClose(e);
+                                  setPurchaseToEdit(purchase);
+                                  setEditDialogOpen(true);
+                                }}
+                                disabled={purchase.status === "received"}
                               >
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
+                                <ListItemIcon>
+                                  <Edit2 className="h-4 w-4" />
+                                </ListItemIcon>
+                                <ListItemText primary="تعديل الترويسة" />
+                              </MenuItem>
+
+                              <MenuItem
+                                onClick={(e) => {
+                                  handleMenuClose(e);
+                                  setPurchaseForLedger(purchase);
+                                  setLedgerDialogOpen(true);
+                                }}
+                              >
+                                <ListItemIcon>
+                                  <Wallet className="h-4 w-4" />
+                                </ListItemIcon>
+                                <ListItemText primary="دفتر الأستاذ (المدفوعات)" />
+                              </MenuItem>
+
+                              <MenuItem
+                                onClick={(e) => {
+                                  handleMenuClose(e);
+                                  navigate(
+                                    `/purchases/${purchase.id}/manage-items`,
+                                  );
+                                }}
+                              >
+                                <ListItemIcon>
+                                  <Package className="h-4 w-4" />
+                                </ListItemIcon>
+                                <ListItemText primary="إدارة البنود" />
+                              </MenuItem>
+
+                              <MenuItem
+                                onClick={(e) => {
+                                  handleMenuClose(e);
+                                  handleViewPdfReport(purchase.id);
+                                }}
+                              >
+                                <ListItemIcon>
+                                  <FileText className="h-4 w-4" />
+                                </ListItemIcon>
+                                <ListItemText primary="عرض PDF" />
+                              </MenuItem>
+
+                              {filters.product_id && (
+                                <MenuItem
                                   onClick={(e) => {
-                                    e.stopPropagation();
-                                    setPurchaseToEdit(purchase);
-                                    setEditDialogOpen(true);
-                                  }}
-                                  disabled={purchase.status === "received"}
-                                >
-                                  <Edit2 className="h-4 w-4 ml-2" />
-                                  تعديل الترويسة
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(
-                                      `/purchases/${purchase.id}/manage-items`,
+                                    handleMenuClose(e);
+                                    const product = products.find(
+                                      (p) => p.id === filters.product_id,
                                     );
+                                    if (product)
+                                      handleViewProductHistory(product);
                                   }}
                                 >
-                                  <Package className="h-4 w-4 ml-2" />
-                                  إدارة البنود
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleViewPdfReport(purchase.id);
-                                  }}
-                                >
-                                  <FileText className="h-4 w-4 ml-2" />
-                                  عرض PDF
-                                </DropdownMenuItem>
-                                {filters.product_id && (
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const product = products.find(
-                                        (p) => p.id === filters.product_id,
-                                      );
-                                      if (product)
-                                        handleViewProductHistory(product);
-                                    }}
-                                  >
-                                    <History className="h-4 w-4 ml-2" />
-                                    سجل المنتج
-                                  </DropdownMenuItem>
-                                )}
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteClick(purchase.id);
-                                  }}
-                                  className="text-destructive focus:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4 ml-2" />
-                                  حذف
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                                  <ListItemIcon>
+                                    <History className="h-4 w-4" />
+                                  </ListItemIcon>
+                                  <ListItemText primary="سجل المنتج" />
+                                </MenuItem>
+                              )}
+
+                              <Divider />
+
+                              <MenuItem
+                                onClick={(e) => {
+                                  handleMenuClose(e);
+                                  handleDeleteClick(purchase.id);
+                                }}
+                                sx={{ color: "error.main" }}
+                              >
+                                <ListItemIcon sx={{ color: "inherit" }}>
+                                  <Trash2 className="h-4 w-4" />
+                                </ListItemIcon>
+                                <ListItemText primary="حذف" />
+                              </MenuItem>
+                            </Menu>
                           </TableCell>
                         </TableRow>
                       );
                     })
                   )}
                 </TableBody>
+                {purchasesResponse.data.length > 0 && (
+                  <TableFooter className="bg-muted/50 font-bold">
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-lg">
+                        الإجمالي الكلي
+                      </TableCell>
+                      <TableCell className="text-center text-destructive text-lg">
+                        {formatCurrency(
+                          purchasesResponse.data.reduce(
+                            (sum: number, p: any) =>
+                              sum + Number(p.total_amount || 0),
+                            0,
+                          ),
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center text-emerald-600 text-lg">
+                        {formatCurrency(
+                          purchasesResponse.data.reduce(
+                            (sum: number, p: any) =>
+                              sum + Number(p.total_paid || 0),
+                            0,
+                          ),
+                        )}
+                      </TableCell>
+
+                      <TableCell className="text-center text-primary text-lg">
+                        {formatCurrency(
+                          purchasesResponse.data.reduce(
+                            (sum: number, p: any) =>
+                              sum +
+                              (Number(p.total_amount || 0) -
+                                Number(p.total_paid || 0)),
+                            0,
+                          ),
+                        )}
+                      </TableCell>
+                      <TableCell></TableCell>
+                    </TableRow>
+                  </TableFooter>
+                )}
               </Table>
             </div>
-
-            {/* Pagination */}
-            {purchasesResponse?.meta?.last_page > 1 && (
-              <div className="flex justify-center p-4 border-t">
-                <Pagination
-                  count={purchasesResponse.meta.last_page}
-                  page={currentPage}
-                  onChange={handlePageChange}
-                  color="primary"
-                  shape="rounded"
-                  showFirstButton
-                  showLastButton
-                  disabled={isLoading}
-                />
-              </div>
-            )}
           </>
         )}
 
@@ -894,6 +988,17 @@ const PurchasesListPage: React.FC = () => {
         }}
         purchase={purchaseToEdit}
         suppliers={suppliers}
+        onUpdate={() => fetchPurchases(currentPage, filters)}
+      />
+
+      {/* Purchase Ledger Dialog */}
+      <PurchaseLedgerDialog
+        open={ledgerDialogOpen}
+        onClose={() => {
+          setLedgerDialogOpen(false);
+          setPurchaseForLedger(null);
+        }}
+        purchase={purchaseForLedger}
         onUpdate={() => fetchPurchases(currentPage, filters)}
       />
     </TooltipProvider>
