@@ -43,6 +43,7 @@ import SuppliersSummaryPage from "./pages/reports/SuppliersSummaryPage";
 import SupplierPurchasesPage from "./pages/reports/SupplierPurchasesPage";
 import MonthlyExpensesPage from "./pages/reports/MonthlyExpensesPage";
 import ProfitLossReportPage from "./pages/reports/ProfitLossReportPage";
+import ReportsDashboardPage from "./pages/reports/ReportsDashboardPage";
 // Admin
 import ProfilePage from "./pages/ProfilePage";
 import UsersListPage from "./components/admin/users/UsersListPage";
@@ -247,6 +248,14 @@ const router = createHashRouter([
           {
             path: "reports",
             children: [
+              {
+                path: "dashboard",
+                element: (
+                  <PermissionGuard requiredPermission="view-reports">
+                    <ReportsDashboardPage />
+                  </PermissionGuard>
+                ),
+              },
               {
                 path: "sales",
                 element: (

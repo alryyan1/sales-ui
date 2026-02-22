@@ -115,6 +115,12 @@ export const navItems: NavItem[] = [
     category: "التقارير",
     children: [
       {
+        to: "/reports/dashboard",
+        label: "لوحة المعلومات",
+        permission: null,
+        category: "التقارير",
+      },
+      {
         to: "/reports/sales",
         label: "تقرير المبيعات",
         permission: null,
