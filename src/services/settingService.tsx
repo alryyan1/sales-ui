@@ -1,10 +1,5 @@
 // src/services/settingService.ts
-import apiClient, {
-  getValidationErrors,
-  getErrorMessage,
-  ApiErrorResponse,
-} from "../lib/axios";
-import { AxiosError } from "axios";
+import apiClient, { getValidationErrors, getErrorMessage } from "../lib/axios";
 
 // Interface for the settings object (should match keys in config/app_settings.php)
 export interface AppSettings {
@@ -28,6 +23,7 @@ export interface AppSettings {
   whatsapp_api_token: string;
   whatsapp_instance_id: string;
   whatsapp_default_phone: string;
+  whatsapp_shift_closure_numbers: string;
 
   // Add other settings as defined in your config
   // UI preferences
@@ -59,7 +55,7 @@ const settingService = {
     try {
       // Backend returns { data: AppSettings }
       const response = await apiClient.get<{ data: AppSettings }>(
-        "/admin/settings"
+        "/admin/settings",
       );
       return response.data.data; // Assuming data is nested under 'data' key
     } catch (error) {
@@ -73,7 +69,7 @@ const settingService = {
    * Requires 'update-settings' permission.
    */
   updateSettings: async (
-    settingsData: UpdateAppSettingsData
+    settingsData: UpdateAppSettingsData,
   ): Promise<AppSettings> => {
     try {
       // Backend returns { message: '...', data: AppSettings }
@@ -134,11 +130,6 @@ const settingService = {
   getValidationErrors,
   getErrorMessage,
 };
-
-// Re-usable Axios error check function
-function isAxiosError(error: unknown): error is AxiosError<ApiErrorResponse> {
-  return (error as AxiosError).isAxiosError === true;
-}
 
 export default settingService;
 export type { AppSettings as AppSettingsType }; // Export type

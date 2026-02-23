@@ -96,6 +96,9 @@ export interface ShiftData {
   opened_at?: string;
   closed_at?: string;
   pdf_url: string;
+  cost_pdf_url?: string;
+  sold_items_pdf_url?: string;
+  returns_pdf_url?: string;
   stats?: ShiftStats;
 }
 
@@ -116,16 +119,13 @@ export const saveShiftToFirestore = async (data: ShiftData) => {
 
     await setDoc(docRef, {
       ...sanitizedData,
-      // explicit check for optional fields just in case JSON.stringify misses something (though it removes undefined keys, spreading them back might be tricky if we want them as null).
-      // actually JSON.stringify removes undefined keys. setDoc with { ... } will just omit them.
-      // But user error says "Unsupported field value: undefined (found in field closed_at)".
-      // This means the object passed HAS the key "closed_at" with value undefined.
-      // Easiest fix is to manually clean the object or use a helper.
-      // Let's just default optional fields to null if they are seemingly undefined/missing.
       user_name: data.user_name || null,
       opened_at: data.opened_at || null,
       closed_at: data.closed_at || null,
       stats: data.stats || null,
+      cost_pdf_url: data.cost_pdf_url || null,
+      sold_items_pdf_url: data.sold_items_pdf_url || null,
+      returns_pdf_url: data.returns_pdf_url || null,
       created_at: serverTimestamp(),
     });
     console.log("Document written at: ", docRef.path);

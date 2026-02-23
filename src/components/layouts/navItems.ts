@@ -206,6 +206,12 @@ export const navItems: NavItem[] = [
         category: "الإدارة",
       },
       {
+        to: "/admin/whatsapp-test",
+        label: "تجربة الواتساب",
+        permission: null,
+        category: "الإدارة",
+      },
+      {
         to: "/admin/warehouses",
         label: "المخازن",
         permission: null,

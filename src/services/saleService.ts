@@ -55,6 +55,7 @@ export interface SaleItem {
   unit_price: string | number;
   total_price?: string | number; // Usually calculated by backend/resource
   cost_price_at_sale?: string | number; // Cost per sellable unit at sale time
+  returned_quantity?: number; // Total quantity already returned
   // available_stock from batch was a temporary UI field, not usually part of SaleItem model
   created_at?: string;
   updated_at?: string;

@@ -1,0 +1,293 @@
+import React, { useState } from "react";
+import {
+  Box,
+  Typography,
+  Card,
+  TextField,
+  Button,
+  Tabs,
+  Tab,
+  Alert,
+  CircularProgress,
+  Stack,
+} from "@mui/material";
+import { Send, MessageSquare, LayoutTemplate } from "lucide-react";
+import apiClient from "@/lib/axios";
+import { toast } from "sonner";
+
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function CustomTabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`simple-tabpanel-${index}`}
+      aria-labelledby={`simple-tab-${index}`}
+      {...other}
+    >
+      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+    </div>
+  );
+}
+
+const WhatsAppTestPage: React.FC = () => {
+  const [tabValue, setTabValue] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  // Text Message State
+  const [textPhone, setTextPhone] = useState("");
+  const [textMessage, setTextMessage] = useState("");
+
+  // Template Message State
+  const [templatePhone, setTemplatePhone] = useState("");
+  const [templateName, setTemplateName] = useState("");
+  const [languageCode, setLanguageCode] = useState("ar");
+  const [componentsJson, setComponentsJson] = useState("[]");
+
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+  };
+
+  const handleSendText = async () => {
+    if (!textPhone || !textMessage) {
+      toast.warning("Please fill phone number and message.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await apiClient.post("/admin/whatsapp-cloud/send-text", {
+        to: textPhone,
+        text: textMessage,
+      });
+
+      if (response.data.success) {
+        toast.success("Text message sent successfully!");
+        setTextMessage("");
+      } else {
+        toast.error("Failed to send message: " + response.data.error);
+      }
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Error sending message";
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendTemplate = async () => {
+    if (!templatePhone || !templateName) {
+      toast.warning("Please fill phone number and template name.");
+      return;
+    }
+
+    let parsedComponents = [];
+    try {
+      if (componentsJson.trim()) {
+        parsedComponents = JSON.parse(componentsJson);
+      }
+    } catch (_e) {
+      toast.error("Invalid JSON in components field.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await apiClient.post(
+        "/admin/whatsapp-cloud/send-template",
+        {
+          to: templatePhone,
+          template_name: templateName,
+          language_code: languageCode,
+          components: parsedComponents,
+        },
+      );
+
+      if (response.data.success) {
+        toast.success("Template message sent successfully!");
+      } else {
+        toast.error("Failed to send template: " + response.data.error);
+      }
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Error sending template";
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Box sx={{ maxWidth: 800, mx: "auto", mt: 4 }}>
+      <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 2 }}>
+        <MessageSquare size={32} color="#10B981" />
+        <Typography variant="h4" sx={{ fontWeight: "bold", color: "#1F2937" }}>
+          WhatsApp Cloud API Testing
+        </Typography>
+      </Box>
+
+      <Card elevation={0} sx={{ border: "1px solid #E5E7EB", borderRadius: 2 }}>
+        <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+          <Tabs
+            value={tabValue}
+            onChange={handleTabChange}
+            aria-label="whatsapp test tabs"
+          >
+            <Tab
+              icon={<MessageSquare size={18} style={{ marginRight: 8 }} />}
+              iconPosition="start"
+              label="Text Message"
+            />
+            <Tab
+              icon={<LayoutTemplate size={18} style={{ marginRight: 8 }} />}
+              iconPosition="start"
+              label="Template Message"
+            />
+          </Tabs>
+        </Box>
+
+        {/* Text Message Tab */}
+        <CustomTabPanel value={tabValue} index={0}>
+          <Stack spacing={3}>
+            <TextField
+              fullWidth
+              label="Phone Number (e.g., 249123456789)"
+              variant="outlined"
+              value={textPhone}
+              onChange={(e) => setTextPhone(e.target.value)}
+              placeholder="Include country code without +"
+            />
+
+            <TextField
+              fullWidth
+              label="Message Text"
+              variant="outlined"
+              multiline
+              rows={4}
+              value={textMessage}
+              onChange={(e) => setTextMessage(e.target.value)}
+            />
+
+            <Box>
+              <Button
+                variant="contained"
+                color="primary"
+                size="large"
+                startIcon={
+                  loading ? (
+                    <CircularProgress size={20} color="inherit" />
+                  ) : (
+                    <Send size={20} />
+                  )
+                }
+                onClick={handleSendText}
+                disabled={loading}
+                sx={{ px: 4, py: 1.5 }}
+              >
+                Send Text Message
+              </Button>
+            </Box>
+          </Stack>
+        </CustomTabPanel>
+
+        {/* Template Message Tab */}
+        <CustomTabPanel value={tabValue} index={1}>
+          <Stack spacing={3}>
+            <TextField
+              fullWidth
+              label="Phone Number (e.g., 249123456789)"
+              variant="outlined"
+              value={templatePhone}
+              onChange={(e) => setTemplatePhone(e.target.value)}
+              placeholder="Include country code without +"
+            />
+
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={3}>
+              <TextField
+                fullWidth
+                label="Template Name"
+                variant="outlined"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                placeholder="e.g., hello_world"
+              />
+
+              <TextField
+                fullWidth
+                label="Language Code"
+                variant="outlined"
+                value={languageCode}
+                onChange={(e) => setLanguageCode(e.target.value)}
+                placeholder="e.g., en_US, ar"
+              />
+            </Stack>
+
+            <Box>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Provide the components array in valid JSON format. Example:
+                <br />
+                <code>
+                  {`[
+  {
+    "type": "body",
+    "parameters": [
+      { "type": "text", "text": "Value 1" }
+    ]
+  }
+]`}
+                </code>
+              </Alert>
+              <TextField
+                fullWidth
+                label="Components (JSON)"
+                variant="outlined"
+                multiline
+                rows={6}
+                value={componentsJson}
+                onChange={(e) => setComponentsJson(e.target.value)}
+                placeholder="[]"
+                InputProps={{
+                  style: { fontFamily: "monospace" },
+                }}
+              />
+            </Box>
+
+            <Box>
+              <Button
+                variant="contained"
+                color="primary"
+                size="large"
+                startIcon={
+                  loading ? (
+                    <CircularProgress size={20} color="inherit" />
+                  ) : (
+                    <Send size={20} />
+                  )
+                }
+                onClick={handleSendTemplate}
+                disabled={loading}
+                sx={{ px: 4, py: 1.5 }}
+              >
+                Send Template Message
+              </Button>
+            </Box>
+          </Stack>
+        </CustomTabPanel>
+      </Card>
+    </Box>
+  );
+};
+
+export default WhatsAppTestPage;

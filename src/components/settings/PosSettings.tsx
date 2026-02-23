@@ -9,6 +9,7 @@ import {
   Radio,
   FormControl,
   Switch,
+  TextField,
   alpha,
   useTheme,
 } from "@mui/material";
@@ -67,7 +68,11 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
                     control={<Radio />}
                     label={
                       <Box>
-                        <Typography variant="body1" fontWeight={500} gutterBottom>
+                        <Typography
+                          variant="body1"
+                          fontWeight={500}
+                          gutterBottom
+                        >
                           نظام الورديات (Shift Based)
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
@@ -83,7 +88,11 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
                     control={<Radio />}
                     label={
                       <Box>
-                        <Typography variant="body1" fontWeight={500} gutterBottom>
+                        <Typography
+                          variant="body1"
+                          fontWeight={500}
+                          gutterBottom
+                        >
                           نظام الأيام (Daily Based)
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
@@ -142,6 +151,42 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
                     </Box>
                   }
                   sx={{ alignItems: "flex-start" }}
+                />
+              )}
+            />
+          </FormControl>
+        </Box>
+        <Box
+          sx={{
+            bgcolor: alpha(theme.palette.primary.main, 0.05),
+            p: 3,
+            borderRadius: 2,
+            border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+            mt: 3,
+          }}
+        >
+          <FormControl component="fieldset" sx={{ width: "100%" }}>
+            <Typography
+              variant="subtitle1"
+              fontWeight={600}
+              gutterBottom
+              sx={{ mb: 2 }}
+            >
+              إشعارات الواتساب (WhatsApp Notifications)
+            </Typography>
+            <Controller
+              name="whatsapp_shift_closure_numbers"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  value={field.value || ""}
+                  label="أرقام استلام تقرير إغلاق الوردية"
+                  placeholder="مثال: 249991961111,249123456789"
+                  helperText="أدخل أرقام الهواتف (مفصولة بفاصلة) التي يجب أن تتلقى رسالة الواتساب عند إغلاق أي وردية. يجب أن تتضمن الرمز الدولي بدون +"
+                  fullWidth
+                  variant="outlined"
+                  dir="ltr"
                 />
               )}
             />

@@ -80,6 +80,7 @@ const SettingsPage: React.FC = () => {
       pdf_font: "Amiri",
       pos_mode: "shift",
       pos_filter_sales_by_user: false,
+      whatsapp_shift_closure_numbers: "",
     },
   });
 
@@ -116,6 +117,8 @@ const SettingsPage: React.FC = () => {
         pdf_font: settings.pdf_font || "Amiri",
         pos_mode: settings.pos_mode || "shift",
         pos_filter_sales_by_user: settings.pos_filter_sales_by_user || false,
+        whatsapp_shift_closure_numbers:
+          settings.whatsapp_shift_closure_numbers || "",
       });
 
       if (settings.company_logo_url) setLogoPreview(settings.company_logo_url);
@@ -167,7 +170,7 @@ const SettingsPage: React.FC = () => {
       const updated = await settingService.uploadLogo(file);
       setValue("company_logo_url", updated.company_logo_url || "");
       toast.success("تم رفع الشعار بنجاح");
-    } catch (err) {
+    } catch {
       toast.error("فشل رفع الشعار");
     }
   };
@@ -179,7 +182,7 @@ const SettingsPage: React.FC = () => {
       const updated = await settingService.uploadHeader(file);
       setValue("company_header_url", updated.company_header_url || "");
       toast.success("تم رفع الهيدر بنجاح");
-    } catch (err) {
+    } catch {
       toast.error("فشل رفع الهيدر");
     }
   };

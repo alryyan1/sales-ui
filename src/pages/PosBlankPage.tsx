@@ -20,14 +20,13 @@ import {
   Popover,
   Stack,
   Badge,
-  TableContainer,
-  Table,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
 } from "@mui/material";
-import { FileText, FileWarningIcon, CloudUploadIcon } from "lucide-react";
+import {
+  FileText,
+  FileWarningIcon,
+  CloudUploadIcon,
+  SearchIcon,
+} from "lucide-react";
 import ErrorIcon from "@mui/icons-material/Error";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
@@ -53,37 +52,10 @@ import { useAuth } from "@/context/AuthContext";
 import ExpiryProductsDialog from "@/components/pos/ExpiryProductsDialog";
 import { uploadFileToFirebase } from "@/services/firebaseStorage";
 import { saveShiftToFirestore } from "@/services/firebaseStore";
-
-interface ShiftStats {
-  sales: {
-    cash: number;
-    bankak: number;
-    fawry: number;
-    ocash: number;
-    total: number;
-  };
-  expenses: {
-    cash: number;
-    bankak: number;
-    fawry: number;
-    ocash: number;
-    total: number;
-  };
-  returns: {
-    cash: number;
-    bankak: number;
-    fawry: number;
-    ocash: number;
-    total: number;
-  };
-  net: {
-    cash: number;
-    bankak: number;
-    fawry: number;
-    ocash: number;
-    total: number;
-  };
-}
+import {
+  ShiftFinancialTable,
+  ShiftStats,
+} from "@/components/sales/ShiftFinancialTable";
 
 interface Shift {
   id: number;
@@ -107,6 +79,8 @@ const PosBlankPage: React.FC = () => {
   const [productSearchLoading, setProductSearchLoading] = useState(false);
   const [productInputValue, setProductInputValue] = useState("");
   const productInputRef = useRef<HTMLInputElement | null>(null);
+  const [saleSearchInput, setSaleSearchInput] = useState("");
+  const [saleSearchLoading, setSaleSearchLoading] = useState(false);
   const [addProductLoading, setAddProductLoading] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [fullPaymentLoading, setFullPaymentLoading] = useState(false);
@@ -588,6 +562,24 @@ const PosBlankPage: React.FC = () => {
     }
   }, []);
 
+  const handleSearchSaleById = useCallback(async () => {
+    const id = Number(saleSearchInput.trim());
+    if (!id || !Number.isFinite(id)) {
+      toast.error("أدخل رقم فاتورة صحيح");
+      return;
+    }
+    setSaleSearchLoading(true);
+    try {
+      const sale = await saleService.getSale(id);
+      setSelectedSale(sale);
+      setSaleSearchInput("");
+    } catch {
+      toast.error("لا توجد فاتورة بهذا الرقم");
+    } finally {
+      setSaleSearchLoading(false);
+    }
+  }, [saleSearchInput]);
+
   const handleCloseShift = useCallback(async () => {
     try {
       const latestSales = await fetchSales();
@@ -683,6 +675,9 @@ const PosBlankPage: React.FC = () => {
         toast.success("تم إغلاق الوردية");
       }
 
+      // Automatically generate & upload all PDFs to Firebase
+      await handleCreateShiftPdfReport(true);
+
       setShift(null);
       setSelectedSale(null);
       setSales([]);
@@ -692,7 +687,7 @@ const PosBlankPage: React.FC = () => {
     } finally {
       setShiftLoading(false);
     }
-  }, [fetchSales]);
+  }, [fetchSales]); // handleCreateShiftPdfReport intentionally omitted — defined later in file, it's a stable useCallback ref
 
   const isShiftOpen = shift?.is_open === true;
 
@@ -942,31 +937,152 @@ const PosBlankPage: React.FC = () => {
 
         // Upload to Firebase in background only if shift is closed OR forced
         if (!shift.is_open || forceUpload) {
-          const fileName = `shifts/shift_${shift.id}_${user?.id || "unknown"}_${Date.now()}.pdf`;
+          const shiftId = shift.id;
+          const basePath = `one_care/shifts/${shiftId}`;
 
-          toast.promise(uploadFileToFirebase(blob, fileName), {
-            loading: "جاري رفع التقرير...",
-            success: (url) => {
-              console.log("PDF Uploaded:", url);
-              // Save to Firestore
-              saveShiftToFirestore({
-                shift_id: shift.id,
+          // Download extra PDFs in parallel
+          const [costRes, soldItemsRes, returnsRes] = await Promise.allSettled([
+            apiClient.get(`/reports/shift-cost-pdf?shift_id=${shiftId}`, {
+              responseType: "blob",
+            }),
+            apiClient.get(`/reports/shift-sold-items-pdf?shift_id=${shiftId}`, {
+              responseType: "blob",
+            }),
+            apiClient.get(`/reports/shift-returns-pdf?shift_id=${shiftId}`, {
+              responseType: "blob",
+            }),
+          ]);
+
+          const costBlob =
+            costRes.status === "fulfilled"
+              ? new Blob([costRes.value.data], { type: "application/pdf" })
+              : null;
+          const soldItemsBlob =
+            soldItemsRes.status === "fulfilled"
+              ? new Blob([soldItemsRes.value.data], { type: "application/pdf" })
+              : null;
+          const returnsBlob =
+            returnsRes.status === "fulfilled"
+              ? new Blob([returnsRes.value.data], { type: "application/pdf" })
+              : null;
+
+          // Run upload pipeline in background with step-by-step toast updates
+          (async () => {
+            const toastId = toast.loading("⏳ جاري تحضير تقارير الوردية...");
+            const urls: {
+              mainUrl?: string;
+              costUrl?: string;
+              soldItemsUrl?: string;
+              returnsUrl?: string;
+            } = {};
+
+            // 1. Upload main shift report
+            try {
+              toast.loading("📊 جاري رفع تقرير المبيعات (1/4)...", {
+                id: toastId,
+              });
+              urls.mainUrl = await uploadFileToFirebase(
+                blob,
+                `${basePath}/shift_report.pdf`,
+              );
+              toast.loading(
+                "✅ تقرير المبيعات — تم | ⏳ جاري رفع تقرير المصروفات (2/4)...",
+                { id: toastId },
+              );
+            } catch {
+              toast.loading("⚠️ فشل تقرير المبيعات | جاري المتابعة...", {
+                id: toastId,
+              });
+            }
+
+            // 2. Upload cost/expenses PDF
+            if (costBlob) {
+              try {
+                urls.costUrl = await uploadFileToFirebase(
+                  costBlob,
+                  `${basePath}/cost_report.pdf`,
+                );
+                toast.loading(
+                  "✅ تقرير المصروفات — تم | ⏳ جاري رفع الأصناف المباعة (3/4)...",
+                  { id: toastId },
+                );
+              } catch {
+                toast.loading("⚠️ فشل تقرير المصروفات | جاري المتابعة...", {
+                  id: toastId,
+                });
+              }
+            } else {
+              toast.loading(
+                "⏭️ لا توجد مصروفات — تخطي | ⏳ جاري رفع الأصناف المباعة (3/4)...",
+                { id: toastId },
+              );
+            }
+
+            // 3. Upload sold items PDF
+            if (soldItemsBlob) {
+              try {
+                urls.soldItemsUrl = await uploadFileToFirebase(
+                  soldItemsBlob,
+                  `${basePath}/sold_items_report.pdf`,
+                );
+                toast.loading(
+                  "✅ الأصناف المباعة — تم | ⏳ جاري رفع المردودات (4/4)...",
+                  { id: toastId },
+                );
+              } catch {
+                toast.loading("⚠️ فشل الأصناف المباعة | جاري المتابعة...", {
+                  id: toastId,
+                });
+              }
+            } else {
+              toast.loading(
+                "⏭️ لا توجد أصناف — تخطي | ⏳ جاري رفع المردودات (4/4)...",
+                { id: toastId },
+              );
+            }
+
+            // 4. Upload returns PDF
+            if (returnsBlob) {
+              try {
+                urls.returnsUrl = await uploadFileToFirebase(
+                  returnsBlob,
+                  `${basePath}/returns_report.pdf`,
+                );
+              } catch {
+                toast.loading("⚠️ فشل تقرير المردودات | جاري الحفظ...", {
+                  id: toastId,
+                });
+              }
+            }
+
+            // 5. Save to Firestore
+            try {
+              toast.loading("☁️ جاري حفظ البيانات في Firestore...", {
+                id: toastId,
+              });
+              await saveShiftToFirestore({
+                shift_id: shiftId,
                 user_id: user?.id || 0,
                 user_name: user?.name,
                 opened_at: shift.opened_at,
-                closed_at: shift.closed_at ?? undefined, // Ensure not null
-                pdf_url: url,
+                closed_at: shift.closed_at ?? undefined,
+                pdf_url: urls.mainUrl ?? "",
+                cost_pdf_url: urls.costUrl,
+                sold_items_pdf_url: urls.soldItemsUrl,
+                returns_pdf_url: urls.returnsUrl,
                 stats: shift.stats,
               });
-              return "تم رفع التقرير وحفظ البيانات بنجاح";
-            },
-            error: (err: unknown) => {
-              console.error("Firebase Upload Error:", err);
-              const errorMessage =
-                err instanceof Error ? err.message : "Unknown error";
-              return `فشل رفع التقرير: ${errorMessage}`;
-            },
-          });
+              toast.success(
+                "✅ تم رفع جميع التقارير وحفظ بيانات الوردية بنجاح!",
+                { id: toastId, duration: 5000 },
+              );
+            } catch {
+              toast.error(
+                "⚠️ تم رفع الملفات لكن فشل حفظ البيانات في Firestore",
+                { id: toastId, duration: 5000 },
+              );
+            }
+          })();
         }
       } catch (err) {
         console.error("Failed to load shift report PDF:", err);
@@ -1173,167 +1289,7 @@ const PosBlankPage: React.FC = () => {
                   </Stack>
 
                   {/* Financial Table */}
-                  <TableContainer sx={{ px: 2, py: 2 }}>
-                    <Table
-                      size="small"
-                      sx={{
-                        "& td, & th": { px: 1, py: 0.75, borderColor: "#eee" },
-                      }}
-                    >
-                      <TableHead>
-                        <TableRow sx={{ bgcolor: "action.hover" }}>
-                          <TableCell align="right" sx={{ fontWeight: 600 }}>
-                            البيان
-                          </TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600 }}>
-                            نقدي
-                          </TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600 }}>
-                            بنكك
-                          </TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600 }}>
-                            فوري
-                          </TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600 }}>
-                            أوكاش
-                          </TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600 }}>
-                            الإجمالي
-                          </TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {/* Revenue */}
-                        <TableRow>
-                          <TableCell
-                            component="th"
-                            scope="row"
-                            align="right"
-                            sx={{ fontWeight: 500 }}
-                          >
-                            الإيرادات
-                          </TableCell>
-                          <TableCell align="center">
-                            {formatNumber(shift.stats?.sales.cash ?? 0)}
-                          </TableCell>
-                          <TableCell align="center">
-                            {formatNumber(shift.stats?.sales.bankak ?? 0)}
-                          </TableCell>
-                          <TableCell align="center">
-                            {formatNumber(shift.stats?.sales.fawry ?? 0)}
-                          </TableCell>
-                          <TableCell align="center">
-                            {formatNumber(shift.stats?.sales.ocash ?? 0)}
-                          </TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600 }}>
-                            {formatNumber(shift.stats?.sales.total ?? 0)}
-                          </TableCell>
-                        </TableRow>
-
-                        {/* Expenses */}
-                        <TableRow>
-                          <TableCell
-                            component="th"
-                            scope="row"
-                            align="right"
-                            sx={{ fontWeight: 500 }}
-                          >
-                            المصروفات
-                          </TableCell>
-                          <TableCell align="center">
-                            {formatNumber(shift.stats?.expenses.cash ?? 0)}
-                          </TableCell>
-                          <TableCell align="center">
-                            {formatNumber(shift.stats?.expenses.bankak ?? 0)}
-                          </TableCell>
-                          <TableCell align="center">
-                            {formatNumber(shift.stats?.expenses.fawry ?? 0)}
-                          </TableCell>
-                          <TableCell align="center">
-                            {formatNumber(shift.stats?.expenses.ocash ?? 0)}
-                          </TableCell>
-                          <TableCell
-                            align="center"
-                            sx={{ fontWeight: 600, color: "error.main" }}
-                          >
-                            {formatNumber(shift.stats?.expenses.total ?? 0)}
-                          </TableCell>
-                        </TableRow>
-
-                        {/* Returns */}
-                        <TableRow>
-                          <TableCell
-                            component="th"
-                            scope="row"
-                            align="right"
-                            sx={{ fontWeight: 500 }}
-                          >
-                            مردودات المبيعات
-                          </TableCell>
-                          <TableCell align="center">
-                            {formatNumber(shift.stats?.returns.cash ?? 0)}
-                          </TableCell>
-                          <TableCell align="center">
-                            {formatNumber(shift.stats?.returns.bankak ?? 0)}
-                          </TableCell>
-                          <TableCell align="center">
-                            {formatNumber(shift.stats?.returns.fawry ?? 0)}
-                          </TableCell>
-                          <TableCell align="center">
-                            {formatNumber(shift.stats?.returns.ocash ?? 0)}
-                          </TableCell>
-                          <TableCell
-                            align="center"
-                            sx={{ fontWeight: 600, color: "warning.main" }}
-                          >
-                            {formatNumber(shift.stats?.returns.total ?? 0)}
-                          </TableCell>
-                        </TableRow>
-
-                        {/* Net */}
-                        <TableRow sx={{ bgcolor: "primary.lighter" }}>
-                          <TableCell
-                            component="th"
-                            scope="row"
-                            align="right"
-                            sx={{ fontWeight: 700, color: "primary.main" }}
-                          >
-                            الصافي
-                          </TableCell>
-                          <TableCell
-                            align="center"
-                            sx={{ fontWeight: 600, color: "primary.main" }}
-                          >
-                            {formatNumber(shift.stats?.net.cash ?? 0)}
-                          </TableCell>
-                          <TableCell
-                            align="center"
-                            sx={{ fontWeight: 600, color: "primary.main" }}
-                          >
-                            {formatNumber(shift.stats?.net.bankak ?? 0)}
-                          </TableCell>
-                          <TableCell
-                            align="center"
-                            sx={{ fontWeight: 600, color: "primary.main" }}
-                          >
-                            {formatNumber(shift.stats?.net.fawry ?? 0)}
-                          </TableCell>
-                          <TableCell
-                            align="center"
-                            sx={{ fontWeight: 600, color: "primary.main" }}
-                          >
-                            {formatNumber(shift.stats?.net.ocash ?? 0)}
-                          </TableCell>
-                          <TableCell
-                            align="center"
-                            sx={{ fontWeight: 700, color: "primary.main" }}
-                          >
-                            {formatNumber(shift.stats?.net.total ?? 0)}
-                          </TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
+                  <ShiftFinancialTable shiftId={shift.id} />
 
                   <Box sx={{ px: 2, pb: 2 }}>
                     <Button
@@ -1400,6 +1356,29 @@ const PosBlankPage: React.FC = () => {
             </Badge>
           </IconButton>
 
+          {/* Sale ID search */}
+          <Box sx={{ width: 140 }}>
+            <TextField
+              size="small"
+              placeholder="بحث برقم "
+              value={saleSearchInput}
+              onChange={(e) => setSaleSearchInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearchSaleById()}
+              disabled={saleSearchLoading}
+              InputProps={{
+                startAdornment: saleSearchLoading ? (
+                  <CircularProgress size={16} sx={{ mr: 1 }} />
+                ) : (
+                  <SearchIcon
+                    size={16}
+                    style={{ marginRight: 8, opacity: 0.5 }}
+                  />
+                ),
+              }}
+              sx={{ bgcolor: "background.paper", borderRadius: 1 }}
+            />
+          </Box>
+
           {/* Product search – in header */}
           <Box sx={{ flex: 1, minWidth: 160, maxWidth: 380 }}>
             <Autocomplete
@@ -1418,8 +1397,9 @@ const PosBlankPage: React.FC = () => {
                 }
               }}
               options={productOptions}
-              getOptionLabel={(option) => {
-                if (typeof option === "string") return option;
+              getOptionLabel={(opt) => {
+                if (typeof opt === "string") return opt;
+                const option = opt as Product;
                 return option?.name
                   ? `${option.name}${option.sku ? ` (${option.sku})` : ""}`
                   : "";
@@ -1462,72 +1442,84 @@ const PosBlankPage: React.FC = () => {
                   }
                 />
               )}
-              renderOption={(props, option) => (
-                <li {...props} key={option.id}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 0.25,
-                      width: "100%",
-                    }}
-                  >
-                    <Box
-                      sx={{ display: "flex", justifyContent: "space-between" }}
-                    >
-                      <Typography variant="body2" fontWeight="medium">
-                        {option.name}
-                      </Typography>
-                      {option.current_stock_quantity != null ||
-                      option.stock_quantity != null ? (
-                        <Typography
-                          variant="caption"
-                          color={
-                            (option.current_stock_quantity ??
-                              option.stock_quantity ??
-                              0) <= 5
-                              ? "error.main"
-                              : "success.main"
-                          }
-                          fontWeight="bold"
-                        >
-                          {`الكمية: ${formatNumber(
-                            option.current_stock_quantity ??
-                              option.stock_quantity ??
-                              0,
-                          )}`}
-                        </Typography>
-                      ) : null}
-                    </Box>
-
+              renderOption={(props, opt) => {
+                if (typeof opt === "string")
+                  return (
+                    <li {...props} key={opt}>
+                      {opt}
+                    </li>
+                  );
+                const option = opt as Product;
+                return (
+                  <li {...props} key={option.id}>
                     <Box
                       sx={{
                         display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
+                        flexDirection: "column",
+                        gap: 0.25,
+                        width: "100%",
                       }}
                     >
-                      <Typography variant="caption" color="text.secondary">
-                        {[
-                          option.sku,
-                          option.suggested_sale_price != null &&
-                            `السعر: ${formatNumber(
-                              Number(option.suggested_sale_price),
-                            )}`,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </Typography>
-
-                      {option.earliest_expiry_date && (
-                        <Typography variant="caption" color="warning.dark">
-                          {`ينتهي: ${option.earliest_expiry_date}`}
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <Typography variant="body2" fontWeight="medium">
+                          {option.name}
                         </Typography>
-                      )}
+                        {option.current_stock_quantity != null ||
+                        option.stock_quantity != null ? (
+                          <Typography
+                            variant="caption"
+                            color={
+                              (option.current_stock_quantity ??
+                                option.stock_quantity ??
+                                0) <= 5
+                                ? "error.main"
+                                : "success.main"
+                            }
+                            fontWeight="bold"
+                          >
+                            {`الكمية: ${formatNumber(
+                              option.current_stock_quantity ??
+                                option.stock_quantity ??
+                                0,
+                            )}`}
+                          </Typography>
+                        ) : null}
+                      </Box>
+
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          {[
+                            option.sku,
+                            option.suggested_sale_price != null &&
+                              `السعر: ${formatNumber(
+                                Number(option.suggested_sale_price),
+                              )}`,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </Typography>
+
+                        {option.earliest_expiry_date && (
+                          <Typography variant="caption" color="warning.dark">
+                            {`ينتهي: ${option.earliest_expiry_date}`}
+                          </Typography>
+                        )}
+                      </Box>
                     </Box>
-                  </Box>
-                </li>
-              )}
+                  </li>
+                );
+              }}
               noOptionsText={
                 productInputValue.trim() ? "لا توجد نتائج" : "اكتب للبحث"
               }
@@ -2147,9 +2139,7 @@ const PosBlankPage: React.FC = () => {
                       sx={{ textTransform: "none" }}
                       onClick={handlePrintThermalInvoice}
                     >
-                      {thermalPdfLoading
-                        ? "جاري التحميل..."
-                        : "طباعة فاتورة "}
+                      {thermalPdfLoading ? "جاري التحميل..." : "طباعة فاتورة "}
                     </Button>
                     <Button
                       fullWidth
@@ -2244,7 +2234,7 @@ const PosBlankPage: React.FC = () => {
         onSaveSuccess={() => {
           toast.success("تمت إضافة المصروف");
           setExpenseDialogOpen(false);
-          fetchShiftExpenseTotals();
+          fetchCurrentShift();
         }}
         shiftId={shift?.id ?? null}
       />

@@ -44,6 +44,7 @@ import SupplierPurchasesPage from "./pages/reports/SupplierPurchasesPage";
 import MonthlyExpensesPage from "./pages/reports/MonthlyExpensesPage";
 import ProfitLossReportPage from "./pages/reports/ProfitLossReportPage";
 import ReportsDashboardPage from "./pages/reports/ReportsDashboardPage";
+import MonthlyShiftsReportPage from "./pages/reports/MonthlyShiftsReportPage";
 // Admin
 import ProfilePage from "./pages/ProfilePage";
 import UsersListPage from "./components/admin/users/UsersListPage";
@@ -57,6 +58,7 @@ import WhatsAppSchedulersPage from "./pages/admin/WhatsAppSchedulersPage";
 import IndexedDBManagerPage from "./pages/admin/IndexedDBManagerPage";
 import UnitsPage from "./pages/UnitsPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import WhatsAppTestPage from "./pages/admin/WhatsAppTestPage";
 
 import { AuthProvider } from "./context/AuthContext";
 
@@ -336,6 +338,14 @@ const router = createHashRouter([
                   </PermissionGuard>
                 ),
               },
+              {
+                path: "monthly-shifts",
+                element: (
+                  <PermissionGuard requiredPermission="view-reports">
+                    <MonthlyShiftsReportPage />
+                  </PermissionGuard>
+                ),
+              },
             ],
           },
 
@@ -412,6 +422,14 @@ const router = createHashRouter([
                 element: (
                   <PermissionGuard requiredPermission="manage-whatsapp-schedulers">
                     <WhatsAppSchedulersPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "whatsapp-test",
+                element: (
+                  <PermissionGuard requiredPermission="manage-settings">
+                    <WhatsAppTestPage />
                   </PermissionGuard>
                 ),
               },
