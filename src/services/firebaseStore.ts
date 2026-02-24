@@ -3,7 +3,10 @@ import { doc, setDoc, serverTimestamp, writeBatch } from "firebase/firestore";
 
 // ... (existing code: ShiftStats, ShiftData, saveShiftToFirestore)
 
-export const uploadProductsToFirestore = async (products: any[]) => {
+export const uploadProductsToFirestore = async (
+  products: any[],
+  collectionName: string = "one_care",
+) => {
   try {
     const BATCH_SIZE = 450; // Firestore limit is 500, keep margin
     const chunks = [];
@@ -21,10 +24,10 @@ export const uploadProductsToFirestore = async (products: any[]) => {
       const batch = writeBatch(db);
 
       chunk.forEach((product: any) => {
-        // Firestore structure: Collection (one_care) -> Document (products) -> Collection (products) -> Document ({id})
+        // Firestore structure: Collection ({collectionName}) -> Document (products) -> Collection (products) -> Document ({id})
         const docRef = doc(
           db,
-          "one_care",
+          collectionName,
           "products",
           "products", // subcollection
           `${product.id}`,
@@ -102,13 +105,16 @@ export interface ShiftData {
   stats?: ShiftStats;
 }
 
-export const saveShiftToFirestore = async (data: ShiftData) => {
+export const saveShiftToFirestore = async (
+  data: ShiftData,
+  collectionName: string = "one_care",
+) => {
   try {
-    // Firestore structure: Collection (one_care) -> Document (shifts) -> Collection (shifts) -> Document ({shift_id})
+    // Firestore structure: Collection ({collectionName}) -> Document (shifts) -> Collection (shifts) -> Document ({shift_id})
     // Note: User manually set this path structure. Ensure it has even number of segments (4).
     const docRef = doc(
       db,
-      "one_care",
+      collectionName,
       "shifts",
       "shifts", // subcollection
       `${data.shift_id}`,

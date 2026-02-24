@@ -31,13 +31,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Loader2,
-  Eye,
-  EyeOff,
-  CheckCircle2,
-  AlertCircle,
-} from "lucide-react";
+import { Loader2, Eye, EyeOff, CheckCircle2, AlertCircle } from "lucide-react";
 
 // Services and Types
 import userService, { Role } from "@/services/userService";
@@ -101,7 +95,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
   }, [isOpen]);
 
   // --- Form Setup ---
-  const [allowedNavs, setAllowedNavs] = useState<string[]>([]);
+  const [allowedNavs, setAllowedNavs] = useState<string[] | null>(null);
 
   const form = useForm<UserFormValues>({
     defaultValues: {
@@ -132,8 +126,9 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
     setShowConfirmPassword(false);
 
     if (isEditMode && userToEdit) {
-      const navs = userToEdit.allowed_navs || [];
-      const normalizedNavs = Array.isArray(navs) ? navs : [];
+      const navs = userToEdit.allowed_navs;
+      const normalizedNavs =
+        navs === null ? null : Array.isArray(navs) ? navs : [];
 
       setAllowedNavs(normalizedNavs);
       reset({
@@ -143,7 +138,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
         password_confirmation: "",
         roles: userToEdit.roles || [],
         warehouse_id: userToEdit.warehouse_id || null,
-        allowed_navs: normalizedNavs,
+        allowed_navs: normalizedNavs || [],
       });
     } else {
       setAllowedNavs([]);
@@ -204,16 +199,16 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
           username: data.username,
           roles: data.roles,
           warehouse_id: data.warehouse_id,
-          allowed_navs: allowedNavs.length > 0 ? allowedNavs : null,
+          allowed_navs: allowedNavs,
         };
         savedUser = await userService.updateUser(
           userToEdit.id,
-          updateData as any
+          updateData as any,
         );
       } else {
         const createData = {
           ...data,
-          allowed_navs: allowedNavs.length > 0 ? allowedNavs : null,
+          allowed_navs: allowedNavs,
         };
         savedUser = await userService.createUser(createData as any);
       }
@@ -241,8 +236,14 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && !isSubmitting && onClose()}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto" dir="rtl">
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => !open && !isSubmitting && onClose()}
+    >
+      <DialogContent
+        className="max-w-6xl max-h-[90vh] overflow-y-auto"
+        dir="rtl"
+      >
         <Form {...form}>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Header */}
@@ -280,10 +281,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
                         <FormItem>
                           <FormLabel>الاسم</FormLabel>
                           <FormControl>
-                            <Input
-                              {...field}
-                              placeholder="أدخل الاسم"
-                            />
+                            <Input {...field} placeholder="أدخل الاسم" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -409,7 +407,9 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
                               <div className="relative">
                                 <Input
                                   {...field}
-                                  type={showConfirmPassword ? "text" : "password"}
+                                  type={
+                                    showConfirmPassword ? "text" : "password"
+                                  }
                                   placeholder="أعد إدخال كلمة المرور"
                                 />
                                 <Button
@@ -454,7 +454,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
                             <div className="flex flex-wrap gap-3">
                               {availableRoles.map((role) => {
                                 const isSelected = field.value?.includes(
-                                  role.name
+                                  role.name,
                                 );
                                 return (
                                   <div
@@ -474,8 +474,8 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
                                         } else {
                                           field.onChange(
                                             currentRoles.filter(
-                                              (r) => r !== role.name
-                                            )
+                                              (r) => r !== role.name,
+                                            ),
                                           );
                                         }
                                       }}

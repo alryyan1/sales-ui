@@ -56,6 +56,7 @@ import {
   ShiftFinancialTable,
   ShiftStats,
 } from "@/components/sales/ShiftFinancialTable";
+import { useSettings } from "@/context/SettingsContext";
 
 interface Shift {
   id: number;
@@ -69,6 +70,11 @@ interface Shift {
 
 const PosBlankPage: React.FC = () => {
   const { user } = useAuth();
+  const { getSetting } = useSettings();
+  const firebaseCollectionName = getSetting(
+    "firebase_collection_name",
+    "one_care",
+  );
   const [shift, setShift] = useState<Shift | null>(null);
   const [shiftLoading, setShiftLoading] = useState(false);
   const [createSaleLoading, setCreateSaleLoading] = useState(false);
@@ -501,6 +507,7 @@ const PosBlankPage: React.FC = () => {
         toast.success("تمت إضافة المنتج");
         setSelectedProduct(null);
         setProductInputValue("");
+        setTimeout(() => productInputRef.current?.focus(), 0);
       } catch (err) {
         toast.error(saleService.getErrorMessage(err));
       } finally {
@@ -661,6 +668,10 @@ const PosBlankPage: React.FC = () => {
       setShiftLoading(true);
       const res = await apiClient.post("/shifts/close");
 
+      // Extract closed shift data (including computed stats) from the response
+      const closedShiftData = res.data.data ?? res.data;
+      const closedShiftStats = closedShiftData?.stats ?? undefined;
+
       // Check for WhatsApp status in meta
       const meta = res.data.meta;
       if (meta?.whatsapp_status === "success") {
@@ -676,7 +687,8 @@ const PosBlankPage: React.FC = () => {
       }
 
       // Automatically generate & upload all PDFs to Firebase
-      await handleCreateShiftPdfReport(true);
+      // Pass the fresh stats from the API response so Firestore doesn't get zeros
+      await handleCreateShiftPdfReport(true, closedShiftStats);
 
       setShift(null);
       setSelectedSale(null);
@@ -918,7 +930,7 @@ const PosBlankPage: React.FC = () => {
   }, [a4PdfUrl]);
 
   const handleCreateShiftPdfReport = useCallback(
-    async (forceUpload = false) => {
+    async (forceUpload = false, statsOverride?: ShiftStats) => {
       if (!shift?.id) return;
       setShiftPdfLoading(true);
       try {
@@ -938,7 +950,7 @@ const PosBlankPage: React.FC = () => {
         // Upload to Firebase in background only if shift is closed OR forced
         if (!shift.is_open || forceUpload) {
           const shiftId = shift.id;
-          const basePath = `one_care/shifts/${shiftId}`;
+          const basePath = `${firebaseCollectionName}/shifts/${shiftId}`;
 
           // Download extra PDFs in parallel
           const [costRes, soldItemsRes, returnsRes] = await Promise.allSettled([
@@ -1060,18 +1072,21 @@ const PosBlankPage: React.FC = () => {
               toast.loading("☁️ جاري حفظ البيانات في Firestore...", {
                 id: toastId,
               });
-              await saveShiftToFirestore({
-                shift_id: shiftId,
-                user_id: user?.id || 0,
-                user_name: user?.name,
-                opened_at: shift.opened_at,
-                closed_at: shift.closed_at ?? undefined,
-                pdf_url: urls.mainUrl ?? "",
-                cost_pdf_url: urls.costUrl,
-                sold_items_pdf_url: urls.soldItemsUrl,
-                returns_pdf_url: urls.returnsUrl,
-                stats: shift.stats,
-              });
+              await saveShiftToFirestore(
+                {
+                  shift_id: shiftId,
+                  user_id: user?.id || 0,
+                  user_name: user?.name,
+                  opened_at: shift.opened_at,
+                  closed_at: shift.closed_at ?? undefined,
+                  pdf_url: urls.mainUrl ?? "",
+                  cost_pdf_url: urls.costUrl,
+                  sold_items_pdf_url: urls.soldItemsUrl,
+                  returns_pdf_url: urls.returnsUrl,
+                  stats: statsOverride ?? shift.stats,
+                },
+                firebaseCollectionName,
+              );
               toast.success(
                 "✅ تم رفع جميع التقارير وحفظ بيانات الوردية بنجاح!",
                 { id: toastId, duration: 5000 },
@@ -1091,7 +1106,7 @@ const PosBlankPage: React.FC = () => {
         setShiftPdfLoading(false);
       }
     },
-    [shift, user],
+    [shift, user, firebaseCollectionName],
   );
 
   const handleCloseShiftPdfDialog = useCallback(() => {

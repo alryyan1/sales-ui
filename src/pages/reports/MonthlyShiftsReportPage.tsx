@@ -22,6 +22,11 @@ import {
 } from "lucide-react";
 import apiClient from "@/lib/axios";
 import { ShiftFinancialTable } from "@/components/sales/ShiftFinancialTable";
+import { uploadFileToFirebase } from "@/services/firebaseStorage";
+import { saveShiftToFirestore } from "@/services/firebaseStore";
+import { useSettings } from "@/context/SettingsContext";
+import { toast } from "sonner";
+import { CloudUpload as CloudUploadIcon } from "lucide-react";
 
 interface ShiftSummary {
   id: number;
@@ -96,6 +101,146 @@ const MonthlyShiftsReportPage: React.FC = () => {
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   // Expanded state per shift-id
   const [expandedShift, setExpandedShift] = useState<number | null>(null);
+
+  const { getSetting } = useSettings();
+  const firebaseCollectionName = getSetting(
+    "firebase_collection_name",
+    "one_care",
+  );
+  const [uploadingShiftId, setUploadingShiftId] = useState<number | null>(null);
+
+  const handleUploadToFirebase = async (
+    e: React.MouseEvent,
+    shift: ShiftSummary,
+  ) => {
+    e.stopPropagation();
+    if (uploadingShiftId) return;
+
+    const toastId = toast.loading(
+      `⏳ جاري تحضير تقارير الوردية #${shift.id}...`,
+    );
+    setUploadingShiftId(shift.id);
+
+    try {
+      // 1. Fetch full shift info to get user_id and stats
+      const res = await apiClient.get(`/shifts/${shift.id}`);
+      const fullShift = res.data?.data;
+      const stats = fullShift?.stats;
+      const userId = fullShift?.user_id || 0;
+
+      // 2. Download PDFs
+      const [mainRes, costRes, soldItemsRes, returnsRes] =
+        await Promise.allSettled([
+          apiClient.get(`/reports/sales-pdf?shift_id=${shift.id}`, {
+            responseType: "blob",
+          }),
+          apiClient.get(`/reports/shift-cost-pdf?shift_id=${shift.id}`, {
+            responseType: "blob",
+          }),
+          apiClient.get(`/reports/shift-sold-items-pdf?shift_id=${shift.id}`, {
+            responseType: "blob",
+          }),
+          apiClient.get(`/reports/shift-returns-pdf?shift_id=${shift.id}`, {
+            responseType: "blob",
+          }),
+        ]);
+
+      const getBlob = (result: PromiseSettledResult<unknown>) =>
+        result.status === "fulfilled"
+          ? new Blob(
+              [(result as PromiseFulfilledResult<{ data: Blob }>).value.data],
+              { type: "application/pdf" },
+            )
+          : null;
+
+      const mainBlob = getBlob(mainRes);
+      const costBlob = getBlob(costRes);
+      const soldItemsBlob = getBlob(soldItemsRes);
+      const returnsBlob = getBlob(returnsRes);
+
+      if (!mainBlob) throw new Error("فشل في تحميل تقرير المبيعات الأساسي");
+
+      const basePath = `${firebaseCollectionName}/shifts/${shift.id}`;
+      const urls: {
+        mainUrl?: string;
+        costUrl?: string;
+        soldItemsUrl?: string;
+        returnsUrl?: string;
+      } = {};
+
+      toast.loading("📊 جاري رفع تقرير المبيعات (1/4)...", { id: toastId });
+      urls.mainUrl = await uploadFileToFirebase(
+        mainBlob,
+        `${basePath}/shift_report.pdf`,
+      );
+
+      if (costBlob) {
+        toast.loading(
+          "✅ تقرير المبيعات — تم | ⏳ جاري رفع تقرير المصروفات (2/4)...",
+          { id: toastId },
+        );
+        urls.costUrl = await uploadFileToFirebase(
+          costBlob,
+          `${basePath}/cost_report.pdf`,
+        );
+      }
+
+      if (soldItemsBlob) {
+        toast.loading(
+          "✅ تقرير المصروفات — تم | ⏳ جاري رفع الأصناف المباعة (3/4)...",
+          { id: toastId },
+        );
+        urls.soldItemsUrl = await uploadFileToFirebase(
+          soldItemsBlob,
+          `${basePath}/sold_items_report.pdf`,
+        );
+      }
+
+      if (returnsBlob) {
+        toast.loading(
+          "✅ الأصناف المباعة — تم | ⏳ جاري رفع المردودات (4/4)...",
+          { id: toastId },
+        );
+        urls.returnsUrl = await uploadFileToFirebase(
+          returnsBlob,
+          `${basePath}/returns_report.pdf`,
+        );
+      }
+
+      toast.loading("☁️ جاري حفظ البيانات في Firestore...", { id: toastId });
+
+      await saveShiftToFirestore(
+        {
+          shift_id: shift.id,
+          user_id: userId,
+          user_name: shift.user_name,
+          opened_at: shift.opened_at,
+          closed_at: shift.closed_at ?? undefined,
+          pdf_url: urls.mainUrl ?? "",
+          cost_pdf_url: urls.costUrl,
+          sold_items_pdf_url: urls.soldItemsUrl,
+          returns_pdf_url: urls.returnsUrl,
+          stats: stats,
+        },
+        firebaseCollectionName,
+      );
+
+      toast.success("✅ تم رفع جميع التقارير وحفظ بيانات الوردية بنجاح!", {
+        id: toastId,
+        duration: 5000,
+      });
+    } catch (err: unknown) {
+      console.error(err);
+      const errorMessage =
+        err instanceof Error ? err.message : "حدث خطأ غير معروف";
+      toast.error(`⚠️ فشل الرفع: ${errorMessage}`, {
+        id: toastId,
+        duration: 5000,
+      });
+    } finally {
+      setUploadingShiftId(null);
+    }
+  };
 
   const allDays = useMemo(() => getDaysInMonth(year, month), [year, month]);
 
@@ -360,6 +505,30 @@ const MonthlyShiftsReportPage: React.FC = () => {
                                     color="success"
                                   />
                                 )}
+                                <Tooltip title="رفع إلى Firebase">
+                                  <span>
+                                    <IconButton
+                                      size="small"
+                                      color="primary"
+                                      disabled={uploadingShiftId === shift.id}
+                                      onClick={(e) =>
+                                        handleUploadToFirebase(e, shift)
+                                      }
+                                      sx={{
+                                        ml: 1,
+                                        bgcolor: "primary.50",
+                                        width: 28,
+                                        height: 28,
+                                      }}
+                                    >
+                                      {uploadingShiftId === shift.id ? (
+                                        <CircularProgress size={16} />
+                                      ) : (
+                                        <CloudUploadIcon size={16} />
+                                      )}
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
                               </Stack>
                             </Stack>
                           </AccordionSummary>

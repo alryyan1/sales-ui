@@ -6,10 +6,7 @@ import { useSalesReport } from "@/hooks/useSalesReport";
 import { useSettings } from "@/context/SettingsContext";
 import { formatNumber } from "@/constants";
 import { ReportFilterValues } from "./ReportFilters";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -112,63 +109,44 @@ export const SalesTable: React.FC<SalesTableProps> = ({
 
   return (
     <Card className="mb-6 overflow-hidden shadow-sm">
-   
       {/* <CardContent className="p-0"> */}
-        {reportData.data.length === 0 ? (
-          <div className="text-center py-12 px-4">
-            <div className="inline-flex p-4 bg-muted rounded-xl mb-4">
-              <FileText size={32} className="opacity-40" />
-            </div>
-            <h3 className="text-lg font-semibold mb-1">لا توجد مبيعات</h3>
-            <p className="text-sm text-muted-foreground">
-              جرب تعديل الفلاتر
-            </p>
+      {reportData.data.length === 0 ? (
+        <div className="text-center py-12 px-4">
+          <div className="inline-flex p-4 bg-muted rounded-xl mb-4">
+            <FileText size={32} className="opacity-40" />
           </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="text-center  ">
-                    <TableHead className="text-center">
-                      رقم العمليه
-                    </TableHead>
-                    <TableHead className="text-center">
-                      التاريخ
-                    </TableHead>
-                    <TableHead className="text-center">
-                      العميل
-                    </TableHead>
-                    <TableHead className="text-center">
-                      المستخدم
-                    </TableHead>
-                    <TableHead className="text-center">
-                      المدفوعات
-                    </TableHead>
-                    <TableHead className=" text-center">
-                      الخصم
-                    </TableHead>
-                    <TableHead className=" text-center">
-                      المبلغ الإجمالي
-                    </TableHead>
-                    <TableHead className=" text-center">
-                      المدفوع
-                    </TableHead>
-                    <TableHead className=" text-center">
-                      المستحق
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {reportData.data.map((sale) => (
+          <h3 className="text-lg font-semibold mb-1">لا توجد مبيعات</h3>
+          <p className="text-sm text-muted-foreground">جرب تعديل الفلاتر</p>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="text-center  ">
+                  <TableHead className="text-center">رقم العمليه</TableHead>
+                  <TableHead className="text-center">التاريخ</TableHead>
+                  <TableHead className="text-center">العميل</TableHead>
+                  <TableHead className="text-center">المستخدم</TableHead>
+                  <TableHead className="text-center">المدفوعات</TableHead>
+                  <TableHead className=" text-center">الخصم</TableHead>
+                  <TableHead className=" text-center">
+                    المبلغ الإجمالي
+                  </TableHead>
+                  <TableHead className=" text-center">المدفوع</TableHead>
+                  <TableHead className=" text-center">المستحق</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {[...reportData.data]
+                  .sort((a, b) => b.id - a.id)
+                  .map((sale) => (
                     <TableRow
                       key={sale.id}
                       onClick={() => onRowClick(sale.id)}
                       className="cursor-pointer text-center transition-all hover:bg-muted/50 "
                     >
-                      <TableCell className="text-center">
-                        #{sale.id}
-                      </TableCell>
+                      <TableCell className="text-center">#{sale.id}</TableCell>
                       <TableCell className="text-center">
                         <span className="text-center text-sm font-medium">
                           {format(parseISO(sale.sale_date), "yyyy-MM-dd")}
@@ -177,7 +155,9 @@ export const SalesTable: React.FC<SalesTableProps> = ({
                       <TableCell className="text-center">
                         {sale.client_name && sale.client_id ? (
                           <button
-                            onClick={(e) => handleClientClick(e, sale.client_id)}
+                            onClick={(e) =>
+                              handleClientClick(e, sale.client_id)
+                            }
                             className="text-center text-sm font-medium text-primary hover:underline cursor-pointer transition-colors"
                           >
                             {sale.client_name}
@@ -253,80 +233,90 @@ export const SalesTable: React.FC<SalesTableProps> = ({
                       </TableCell>
                     </TableRow>
                   ))}
-                </TableBody>
-              </Table>
-            </div>
+              </TableBody>
+            </Table>
+          </div>
 
-            {/* Pagination */}
-            {reportData.last_page > 1 && (
-              <div className="flex justify-center py-6 border-t">
-                <Pagination>
-                  <PaginationContent>
-                    {currentPage > 1 && (
-                      <PaginationItem>
-                        <PaginationPrevious
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            onPageChange(currentPage - 1);
-                          }}
-                          className={isLoading ? "pointer-events-none opacity-50" : ""}
-                        />
-                      </PaginationItem>
-                    )}
-                    {Array.from({ length: reportData.last_page }, (_, i) => i + 1)
-                      .filter((page) => {
-                        // Show first page, last page, current page, and pages around current
-                        if (page === 1 || page === reportData.last_page) return true;
-                        if (Math.abs(page - currentPage) <= 1) return true;
-                        return false;
-                      })
-                      .map((page, index, array) => {
-                        // Add ellipsis
-                        const prevPage = array[index - 1];
-                        const showEllipsisBefore = prevPage && page - prevPage > 1;
-                        
-                        return (
-                          <React.Fragment key={page}>
-                            {showEllipsisBefore && (
-                              <PaginationItem>
-                                <PaginationEllipsis />
-                              </PaginationItem>
-                            )}
+          {/* Pagination */}
+          {reportData.last_page > 1 && (
+            <div className="flex justify-center py-6 border-t">
+              <Pagination>
+                <PaginationContent>
+                  {currentPage > 1 && (
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onPageChange(currentPage - 1);
+                        }}
+                        className={
+                          isLoading ? "pointer-events-none opacity-50" : ""
+                        }
+                      />
+                    </PaginationItem>
+                  )}
+                  {Array.from({ length: reportData.last_page }, (_, i) => i + 1)
+                    .filter((page) => {
+                      // Show first page, last page, current page, and pages around current
+                      if (page === 1 || page === reportData.last_page)
+                        return true;
+                      if (Math.abs(page - currentPage) <= 1) return true;
+                      return false;
+                    })
+                    .map((page, index, array) => {
+                      // Add ellipsis
+                      const prevPage = array[index - 1];
+                      const showEllipsisBefore =
+                        prevPage && page - prevPage > 1;
+
+                      return (
+                        <React.Fragment key={page}>
+                          {showEllipsisBefore && (
                             <PaginationItem>
-                              <PaginationLink
-                                href="#"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  if (!isLoading) onPageChange(page);
-                                }}
-                                isActive={page === currentPage}
-                                className={isLoading ? "pointer-events-none opacity-50" : ""}
-                              >
-                                {page}
-                              </PaginationLink>
+                              <PaginationEllipsis />
                             </PaginationItem>
-                          </React.Fragment>
-                        );
-                      })}
-                    {currentPage < reportData.last_page && (
-                      <PaginationItem>
-                        <PaginationNext
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            onPageChange(currentPage + 1);
-                          }}
-                          className={isLoading ? "pointer-events-none opacity-50" : ""}
-                        />
-                      </PaginationItem>
-                    )}
-                  </PaginationContent>
-                </Pagination>
-              </div>
-            )}
-          </>
-        )}
+                          )}
+                          <PaginationItem>
+                            <PaginationLink
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                if (!isLoading) onPageChange(page);
+                              }}
+                              isActive={page === currentPage}
+                              className={
+                                isLoading
+                                  ? "pointer-events-none opacity-50"
+                                  : ""
+                              }
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        </React.Fragment>
+                      );
+                    })}
+                  {currentPage < reportData.last_page && (
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onPageChange(currentPage + 1);
+                        }}
+                        className={
+                          isLoading ? "pointer-events-none opacity-50" : ""
+                        }
+                      />
+                    </PaginationItem>
+                  )}
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
+        </>
+      )}
       {/* </CardContent> */}
     </Card>
   );

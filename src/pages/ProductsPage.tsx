@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useProducts } from "../hooks/useProducts";
+import { useSettings } from "../context/SettingsContext";
 
 // MUI Components
 import Box from "@mui/material/Box";
@@ -52,6 +53,11 @@ import UnitsPage from "../pages/UnitsPage"; // Import UnitsPage
 // Product type is now used directly from productService
 
 const ProductsPage: React.FC = () => {
+  const { getSetting } = useSettings();
+  const firebaseCollectionName = getSetting(
+    "firebase_collection_name",
+    "one_care",
+  );
   // --- State ---
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
@@ -334,7 +340,10 @@ const ProductsPage: React.FC = () => {
       }
 
       // 2. Upload to Firestore
-      const count = await uploadProductsToFirestore(allProducts);
+      const count = await uploadProductsToFirestore(
+        allProducts,
+        firebaseCollectionName,
+      );
 
       showSnackbar(`تمت مزامنة ${count} منتج بنجاح!`, "success");
     } catch (err) {

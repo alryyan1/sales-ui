@@ -1,6 +1,12 @@
 // src/components/admin/users/NavigationPermissionsSection.tsx
 import React, { useState, useMemo } from "react";
-import { CheckSquare, Square, ChevronDown, ChevronUp, Info } from "lucide-react";
+import {
+  CheckSquare,
+  Square,
+  ChevronDown,
+  ChevronUp,
+  Info,
+} from "lucide-react";
 import { navItems } from "@/components/layouts/navItems";
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
@@ -27,18 +33,16 @@ interface NavigationCategory {
 }
 
 interface NavigationPermissionsSectionProps {
-  value: string[];
+  value: string[] | null;
   onChange: (routes: string[]) => void;
   isSuperadmin?: boolean;
 }
 
-const NavigationPermissionsSection: React.FC<NavigationPermissionsSectionProps> = ({
-  value,
-  onChange,
-  isSuperadmin = false,
-}) => {
+const NavigationPermissionsSection: React.FC<
+  NavigationPermissionsSectionProps
+> = ({ value: rawValue, onChange, isSuperadmin = false }) => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
 
   // Fetch navigation items from API (or use local navItems as fallback)
@@ -97,7 +101,7 @@ const NavigationPermissionsSection: React.FC<NavigationPermissionsSectionProps> 
   // Local navigation structure built once from static navItems (source of truth)
   const localNavigationStructure = useMemo<NavigationCategory[]>(
     () => buildNavStructure(),
-    []
+    [],
   );
 
   // Set of valid routes based on current frontend navItems/router
@@ -105,10 +109,10 @@ const NavigationPermissionsSection: React.FC<NavigationPermissionsSectionProps> 
     () =>
       new Set(
         localNavigationStructure.flatMap((cat) =>
-          cat.items.map((item) => item.route)
-        )
+          cat.items.map((item) => item.route),
+        ),
       ),
-    [localNavigationStructure]
+    [localNavigationStructure],
   );
 
   // Use API data if available, but only for routes that still exist locally.
@@ -146,9 +150,11 @@ const NavigationPermissionsSection: React.FC<NavigationPermissionsSectionProps> 
   // Get all routes from navigation structure
   const allRoutes = useMemo(() => {
     return navigationStructure.flatMap((cat) =>
-      cat.items.map((item) => item.route)
+      cat.items.map((item) => item.route),
     );
   }, [navigationStructure]);
+
+  const value = rawValue === null ? allRoutes : rawValue;
 
   // Check if all routes in a category are selected
   const isCategoryFullySelected = (category: NavigationCategory): boolean => {
@@ -157,7 +163,7 @@ const NavigationPermissionsSection: React.FC<NavigationPermissionsSectionProps> 
 
   // Check if some routes in a category are selected
   const isCategoryPartiallySelected = (
-    category: NavigationCategory
+    category: NavigationCategory,
   ): boolean => {
     return (
       category.items.some((item) => value.includes(item.route)) &&
@@ -192,20 +198,156 @@ const NavigationPermissionsSection: React.FC<NavigationPermissionsSectionProps> 
     }
   };
 
-  // Check if all routes are selected
   const isAllSelected =
     value.length === allRoutes.length && allRoutes.length > 0;
-  const isSomeSelected =
-    value.length > 0 && value.length < allRoutes.length;
 
   if (isSuperadmin) {
     return (
-      <Alert className="mb-4">
-        <Info className="h-4 w-4" />
-        <AlertDescription>
-          المستخدم لديه صلاحية الوصول الكاملة لجميع صفحات النظام (Superadmin)
-        </AlertDescription>
-      </Alert>
+      <div className="space-y-4">
+        <Alert className="mb-4">
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            المستخدم لديه صلاحية الوصول الكاملة لجميع صفحات النظام (Superadmin)،
+            ولكن يمكنك تخصيص القائمة الجانبية له.
+          </AlertDescription>
+        </Alert>
+        {/* Render the normal content below the alert */}
+        <div className="rounded-lg border p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold">
+              تخصيص القائمة الجانبية المسموحة
+            </h3>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={toggleAllSelection}
+              className="h-8"
+            >
+              {isAllSelected ? (
+                <>
+                  <CheckSquare className="mr-2 h-4 w-4" />
+                  إلغاء تحديد الكل
+                </>
+              ) : (
+                <>
+                  <Square className="mr-2 h-4 w-4" />
+                  تحديد الكل
+                </>
+              )}
+            </Button>
+          </div>
+
+          <p className="text-sm text-muted-foreground">
+            اختر الصفحات التي تود إظهارها في القائمة الجانبية لهذا المستخدم.
+          </p>
+
+          <Separator />
+
+          <div className="space-y-2">
+            {navigationStructure.map((category) => {
+              const isExpanded = expandedCategories.has(category.category);
+              const isFullySelected = isCategoryFullySelected(category);
+              const isPartiallySelected = isCategoryPartiallySelected(category);
+
+              return (
+                <Collapsible
+                  key={category.category}
+                  open={isExpanded}
+                  onOpenChange={() => toggleCategory(category.category)}
+                >
+                  <div className="flex items-center justify-between rounded-md p-2 hover:bg-accent transition-colors">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id={`category-${category.category}`}
+                        checked={isFullySelected}
+                        onCheckedChange={() => {
+                          toggleCategorySelection(category);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className={cn(
+                          isPartiallySelected &&
+                            "data-[state=checked]:bg-primary/50",
+                        )}
+                      />
+                      <Label
+                        htmlFor={`category-${category.category}`}
+                        className="cursor-pointer font-semibold text-sm"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {category.category}
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        ({category.items.length} صفحة)
+                      </span>
+                      <CollapsibleTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                        >
+                          {isExpanded ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </CollapsibleTrigger>
+                    </div>
+                  </div>
+
+                  <CollapsibleContent className="pr-8 pt-2 space-y-2">
+                    {category.items.map((item) => {
+                      const isChecked = value.includes(item.route);
+                      return (
+                        <div
+                          key={item.route}
+                          className="flex items-start space-x-2 space-x-reverse"
+                        >
+                          <Checkbox
+                            id={`nav-${item.route}`}
+                            checked={isChecked}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                onChange([...value, item.route]);
+                              } else {
+                                onChange(value.filter((r) => r !== item.route));
+                              }
+                            }}
+                            className="mt-0.5"
+                          />
+                          <Label
+                            htmlFor={`nav-${item.route}`}
+                            className="cursor-pointer flex-1"
+                          >
+                            <div className="text-sm font-medium">
+                              {item.label}
+                            </div>
+                            <div className="text-xs text-muted-foreground font-mono">
+                              {item.route}
+                            </div>
+                          </Label>
+                        </div>
+                      );
+                    })}
+                  </CollapsibleContent>
+                </Collapsible>
+              );
+            })}
+          </div>
+
+          {value.length > 0 && (
+            <div className="pt-2">
+              <p className="text-xs text-muted-foreground">
+                تم تحديد {value.length} من {allRoutes.length} صفحة
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
     );
   }
 
@@ -258,12 +400,13 @@ const NavigationPermissionsSection: React.FC<NavigationPermissionsSectionProps> 
                   <Checkbox
                     id={`category-${category.category}`}
                     checked={isFullySelected}
-                    onCheckedChange={(checked) => {
+                    onCheckedChange={() => {
                       toggleCategorySelection(category);
                     }}
                     onClick={(e) => e.stopPropagation()}
                     className={cn(
-                      isPartiallySelected && "data-[state=checked]:bg-primary/50"
+                      isPartiallySelected &&
+                        "data-[state=checked]:bg-primary/50",
                     )}
                   />
                   <Label

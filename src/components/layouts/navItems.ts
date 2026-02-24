@@ -62,18 +62,18 @@ export const navItems: NavItem[] = [
         permission: null,
         category: "المخزون",
       },
-      // {
-      //   to: "/inventory/adjustments",
-      //   label: "تعديلات المخزون",
-      //   permission: null,
-      //   category: "المخزون",
-      // },
-      // {
-      //   to: "/inventory/transfers",
-      //   label: "تحويل المخزون",
-      //   permission: null,
-      //   category: "المخزون",
-      // },
+      {
+        to: "/inventory/adjustments",
+        label: "تعديلات المخزون",
+        permission: null,
+        category: "المخزون",
+      },
+      {
+        to: "/inventory/transfers",
+        label: "تحويل المخزون",
+        permission: null,
+        category: "المخزون",
+      },
       {
         to: "/inventory/counts",
         label: "جرد المخزون",
@@ -132,7 +132,12 @@ export const navItems: NavItem[] = [
         permission: null,
         category: "التقارير",
       },
-      // { to: "/reports/purchases", label: "تقرير المشتريات", permission: null, category: "التقارير" },
+      {
+        to: "/reports/purchases",
+        label: "تقرير المشتريات",
+        permission: null,
+        category: "التقارير",
+      },
       {
         to: "/reports/suppliers-summary",
         label: "ملخص الموردين",
@@ -158,8 +163,38 @@ export const navItems: NavItem[] = [
         category: "التقارير",
       },
       {
+        to: "/reports/monthly-expenses",
+        label: "تقرير المصروفات الشهرية",
+        permission: null,
+        category: "التقارير",
+      },
+      {
         to: "/reports/profit-loss",
         label: "الأرباح والخسائر",
+        permission: null,
+        category: "التقارير",
+      },
+      {
+        to: "/reports/best-selling-products",
+        label: "المنتجات الأكثر مبيعاً",
+        permission: null,
+        category: "التقارير",
+      },
+      {
+        to: "/reports/stagnant-products",
+        label: "المنتجات الراكدة",
+        permission: null,
+        category: "التقارير",
+      },
+      {
+        to: "/reports/low-stock-products",
+        label: "المنتجات منخفضة المخزون",
+        permission: null,
+        category: "التقارير",
+      },
+      {
+        to: "/reports/monthly-shifts",
+        label: "تقرير الورديات الشهري",
         permission: null,
         category: "التقارير",
       },
@@ -198,10 +233,27 @@ export const navItems: NavItem[] = [
         permission: null,
         category: "الإدارة",
       },
-
+      {
+        to: "/admin/system",
+        label: "النظام",
+        permission: null,
+        category: "الإدارة",
+      },
       {
         to: "/admin/backups",
         label: "النسخ الاحتياطي",
+        permission: null,
+        category: "الإدارة",
+      },
+      {
+        to: "/admin/warehouses",
+        label: "المخازن",
+        permission: null,
+        category: "الإدارة",
+      },
+      {
+        to: "/admin/whatsapp-schedulers",
+        label: "جدولة واتساب",
         permission: null,
         category: "الإدارة",
       },
@@ -212,12 +264,17 @@ export const navItems: NavItem[] = [
         category: "الإدارة",
       },
       {
-        to: "/admin/warehouses",
-        label: "المخازن",
+        to: "/admin/inventory/requisitions/request",
+        label: "طلب مخزون",
         permission: null,
         category: "الإدارة",
       },
-
+      {
+        to: "/admin/inventory/requisitions",
+        label: "طلبات المخزون",
+        permission: null,
+        category: "الإدارة",
+      },
       {
         to: "/admin/idb-manager",
         label: "إدارة DB المحلية",

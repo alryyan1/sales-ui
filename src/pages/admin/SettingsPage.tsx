@@ -81,6 +81,7 @@ const SettingsPage: React.FC = () => {
       pos_mode: "shift",
       pos_filter_sales_by_user: false,
       whatsapp_shift_closure_numbers: "",
+      firebase_collection_name: "one_care",
     },
   });
 
@@ -119,6 +120,8 @@ const SettingsPage: React.FC = () => {
         pos_filter_sales_by_user: settings.pos_filter_sales_by_user || false,
         whatsapp_shift_closure_numbers:
           settings.whatsapp_shift_closure_numbers || "",
+        firebase_collection_name:
+          settings.firebase_collection_name || "one_care",
       });
 
       if (settings.company_logo_url) setLogoPreview(settings.company_logo_url);

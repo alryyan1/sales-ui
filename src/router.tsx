@@ -45,6 +45,9 @@ import MonthlyExpensesPage from "./pages/reports/MonthlyExpensesPage";
 import ProfitLossReportPage from "./pages/reports/ProfitLossReportPage";
 import ReportsDashboardPage from "./pages/reports/ReportsDashboardPage";
 import MonthlyShiftsReportPage from "./pages/reports/MonthlyShiftsReportPage";
+import BestSellingProductsPage from "./pages/reports/BestSellingProductsPage";
+import StagnantProductsPage from "./pages/reports/StagnantProductsPage";
+import LowStockProductsPage from "./pages/reports/LowStockProductsPage";
 // Admin
 import ProfilePage from "./pages/ProfilePage";
 import UsersListPage from "./components/admin/users/UsersListPage";
@@ -343,6 +346,30 @@ const router = createHashRouter([
                 element: (
                   <PermissionGuard requiredPermission="view-reports">
                     <MonthlyShiftsReportPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "best-selling-products",
+                element: (
+                  <PermissionGuard requiredPermission="view-reports">
+                    <BestSellingProductsPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "stagnant-products",
+                element: (
+                  <PermissionGuard requiredPermission="view-reports">
+                    <StagnantProductsPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "low-stock-products",
+                element: (
+                  <PermissionGuard requiredPermission="view-reports">
+                    <LowStockProductsPage />
                   </PermissionGuard>
                 ),
               },

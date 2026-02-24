@@ -192,6 +192,42 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
             />
           </FormControl>
         </Box>
+        <Box
+          sx={{
+            bgcolor: alpha(theme.palette.primary.main, 0.05),
+            p: 3,
+            borderRadius: 2,
+            border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+            mt: 3,
+          }}
+        >
+          <FormControl component="fieldset" sx={{ width: "100%" }}>
+            <Typography
+              variant="subtitle1"
+              fontWeight={600}
+              gutterBottom
+              sx={{ mb: 2 }}
+            >
+              إعدادات Firebase (Firebase Settings)
+            </Typography>
+            <Controller
+              name="firebase_collection_name"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  value={field.value || "one_care"}
+                  label="اسم مجموعة Firebase (Collection Name)"
+                  placeholder="مثال: one_care"
+                  helperText="اسم المجموعة (Collection) في Firestore حيث يتم تخزين المنتجات والورديات."
+                  fullWidth
+                  variant="outlined"
+                  dir="ltr"
+                />
+              )}
+            />
+          </FormControl>
+        </Box>
       </CardContent>
     </Card>
   );
