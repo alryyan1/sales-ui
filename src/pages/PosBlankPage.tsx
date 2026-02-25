@@ -41,6 +41,7 @@ import saleService, {
 } from "@/services/saleService";
 import productService, { Product } from "@/services/productService";
 import clientService, { Client } from "@/services/clientService";
+import reportService from "@/services/reportService";
 import { formatNumber } from "@/constants";
 import { SaleItemsTable } from "@/components/sales/SaleItemsTable";
 import { PosSalesColumn } from "@/components/sales/PosSalesColumn";
@@ -591,7 +592,9 @@ const PosBlankPage: React.FC = () => {
     try {
       const latestSales = await fetchSales();
       const unpaidSales = latestSales.filter(
-        (s) => Number(s.total_amount ?? 0) - Number(s.paid_amount ?? 0) > 1e-6,
+        (s) =>
+          Number(s.total_amount ?? 0) - Number(s.paid_amount ?? 0) > 1e-6 &&
+          (!s.client_id || s.client_id === 0),
       );
       if (unpaidSales.length > 0) {
         const saleIds = unpaidSales
@@ -672,19 +675,8 @@ const PosBlankPage: React.FC = () => {
       const closedShiftData = res.data.data ?? res.data;
       const closedShiftStats = closedShiftData?.stats ?? undefined;
 
-      // Check for WhatsApp status in meta
-      const meta = res.data.meta;
-      if (meta?.whatsapp_status === "success") {
-        toast.success("تم إغلاق الوردية وإرسال التقرير للواتساب");
-      } else if (meta?.whatsapp_status === "failed") {
-        toast.warning("تم إغلاق الوردية ولكن فشل إرسال الواتساب", {
-          description: meta.whatsapp_message || "خطأ غير معروف",
-          duration: 10000, // Show for longer
-        });
-        console.error("WhatsApp Error:", meta.whatsapp_message);
-      } else {
-        toast.success("تم إغلاق الوردية");
-      }
+      // Check for WhatsApp status in meta (Removed from API, moved to upload step)
+      toast.success("تم إغلاق الوردية");
 
       // Automatically generate & upload all PDFs to Firebase
       // Pass the fresh stats from the API response so Firestore doesn't get zeros
@@ -791,6 +783,30 @@ const PosBlankPage: React.FC = () => {
       }
     },
     [selectedSale, handleAddProductToSale],
+  );
+
+  const handleMoveExpiredProduct = useCallback(
+    async (purchaseItemId: number) => {
+      try {
+        setExpiryItemsLoading(true);
+        await reportService.moveExpiredProduct(purchaseItemId);
+        toast.success("تم نقل المنتج بنجاح وتحديث المخزون");
+
+        // Refresh the dialog list
+        if (expiryDialogType) {
+          fetchExpiryProducts(expiryDialogType);
+        }
+        // Refresh the counts badge
+        fetchExpiryCounts();
+      } catch (err: any) {
+        toast.error(
+          err.response?.data?.message || err.message || "فشل نقل المنتج",
+        );
+      } finally {
+        setExpiryItemsLoading(false);
+      }
+    },
+    [expiryDialogType, fetchExpiryProducts, fetchExpiryCounts],
   );
 
   const handleCreateNewSale = useCallback(async () => {
@@ -950,7 +966,7 @@ const PosBlankPage: React.FC = () => {
         // Upload to Firebase in background only if shift is closed OR forced
         if (!shift.is_open || forceUpload) {
           const shiftId = shift.id;
-          const basePath = `${firebaseCollectionName}/shifts/${shiftId}`;
+          const basePath = `pharmacies/${firebaseCollectionName}/shifts/${shiftId}`;
 
           // Download extra PDFs in parallel
           const [costRes, soldItemsRes, returnsRes] = await Promise.allSettled([
@@ -1067,7 +1083,7 @@ const PosBlankPage: React.FC = () => {
               }
             }
 
-            // 5. Save to Firestore
+            // 5. Save to Firestore and 6. Notify
             try {
               toast.loading("☁️ جاري حفظ البيانات في Firestore...", {
                 id: toastId,
@@ -1087,13 +1103,36 @@ const PosBlankPage: React.FC = () => {
                 },
                 firebaseCollectionName,
               );
-              toast.success(
-                "✅ تم رفع جميع التقارير وحفظ بيانات الوردية بنجاح!",
-                { id: toastId, duration: 5000 },
+
+              toast.loading("📱 جاري إرسال إشعارات الإغلاق...", {
+                id: toastId,
+              });
+              const notifyRes = await apiClient.post(
+                `/shifts/${shiftId}/notify`,
               );
-            } catch {
+              const notifyData = notifyRes.data;
+
+              if (notifyData?.whatsapp_status === "success") {
+                toast.success(
+                  "✅ تم رفع التقارير، حفظ البيانات، وإرسال الواتساب بنجاح!",
+                  { id: toastId, duration: 5000 },
+                );
+              } else if (notifyData?.whatsapp_status === "failed") {
+                toast.warning("⚠️ تم رفع التقارير، لكن فشل إرسال الواتساب", {
+                  id: toastId,
+                  description: notifyData.whatsapp_message || "خطأ غير معروف",
+                  duration: 8000,
+                });
+              } else {
+                toast.success(
+                  "✅ تم رفع جميع التقارير وحفظ بيانات الوردية بنجاح!",
+                  { id: toastId, duration: 5000 },
+                );
+              }
+            } catch (err: unknown) {
+              console.error("Firestore/Notify Error:", err);
               toast.error(
-                "⚠️ تم رفع الملفات لكن فشل حفظ البيانات في Firestore",
+                "⚠️ تم رفع الملفات لكن حدث خطأ أثناء الحفظ أو الإشعار",
                 { id: toastId, duration: 5000 },
               );
             }
@@ -1366,8 +1405,11 @@ const PosBlankPage: React.FC = () => {
               "&:hover": { bgcolor: "error.light" },
             }}
           >
-            <Badge badgeContent={expiredCount} color="error">
-              <ErrorIcon />
+            <Badge
+              badgeContent={expiredCount}
+              color={expiredCount == 0 ? "info" : "error"}
+            >
+              <ErrorIcon color={expiredCount == 0 ? "info" : "error"} />
             </Badge>
           </IconButton>
 
@@ -1616,12 +1658,14 @@ const PosBlankPage: React.FC = () => {
           }}
         >
           {/* Sales column – each sale as a square */}
-          <PosSalesColumn
-            sales={sales}
-            salesLoading={salesLoading}
-            selectedSale={selectedSale}
-            onSelectSale={setSelectedSale}
-          />
+          {isShiftOpen && (
+            <PosSalesColumn
+              sales={sales}
+              salesLoading={salesLoading}
+              selectedSale={selectedSale}
+              onSelectSale={setSelectedSale}
+            />
+          )}
 
           {/* Center column – sale items table */}
           <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -2254,7 +2298,6 @@ const PosBlankPage: React.FC = () => {
         shiftId={shift?.id ?? null}
       />
 
-      {/* Expiry Products Dialog */}
       <ExpiryProductsDialog
         open={expiryDialogOpen}
         onClose={handleCloseExpiryDialog}
@@ -2262,6 +2305,7 @@ const PosBlankPage: React.FC = () => {
         items={expiryItems}
         loading={expiryItemsLoading}
         onAddToCart={handleAddExpiryProductToCart}
+        onMoveProduct={handleMoveExpiredProduct}
       />
     </Box>
   );

@@ -37,9 +37,10 @@ import {
   DollarSign,
   TrendingUp,
   TrendingDown,
-  Wallet,
   Receipt,
-  X,
+  Edit,
+  CreditCard,
+  Wallet,
 } from "lucide-react";
 
 import clientLedgerService, {
@@ -47,9 +48,11 @@ import clientLedgerService, {
   ClientLedgerEntry,
 } from "@/services/clientLedgerService";
 import { ClientLedgerPdf } from "@/components/clients/ClientLedgerPdf";
-import saleService from "@/services/saleService";
+import { LedgerSaleEditorDialog } from "@/components/clients/LedgerSaleEditorDialog";
 import { useSettings } from "@/context/SettingsContext";
 import { toast } from "sonner";
+import apiClient from "@/lib/axios";
+import { X } from "lucide-react";
 
 const ClientLedgerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -74,6 +77,23 @@ const ClientLedgerPage: React.FC = () => {
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
+  // Editor Dialog State
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingSaleId, setEditingSaleId] = useState<number | null>(null);
+
+  // Sale Payment Dialog State
+  const [salePaymentOpen, setSalePaymentOpen] = useState(false);
+  const [payingSaleId, setPayingSaleId] = useState<number | null>(null);
+  const [salePaymentAmount, setSalePaymentAmount] = useState<string>("");
+  const [salePaymentMethod, setSalePaymentMethod] = useState<string>("cash");
+  const [salePaymentReference, setSalePaymentReference] = useState<string>("");
+  const [isSubmittingSalePayment, setIsSubmittingSalePayment] = useState(false);
+
+  const handleEditSaleClick = (saleId: number) => {
+    setEditingSaleId(saleId);
+    setEditorOpen(true);
+  };
+
   const handleSaleClick = async (entry: ClientLedgerEntry) => {
     if (entry.type !== "sale" || !entry.sale_id) return;
 
@@ -81,11 +101,20 @@ const ClientLedgerPage: React.FC = () => {
     setError(null);
 
     try {
-      await saleService.getSale(entry.sale_id);
-      toast.info("فاتورة PDF غير متاحة حالياً");
-    } catch (err: any) {
-      console.error("Error loading sale:", err);
-      setError(err.message || "فشل في تحميل بيانات العملية");
+      const response = await apiClient.get(
+        `/sales/${entry.sale_id}/a4-invoice-pdf/view`,
+        {
+          responseType: "blob",
+        },
+      );
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      setPdfUrl(url);
+      setPdfDialogOpen(true);
+    } catch (err: unknown) {
+      console.error("Error loading A4 invoice:", err);
+      setError(err instanceof Error ? err.message : "فشل تحميل فاتورة A4");
+      toast.error("فشل تحميل فاتورة A4");
     } finally {
       setFetchingSaleId(null);
     }
@@ -152,30 +181,63 @@ const ClientLedgerPage: React.FC = () => {
   };
 
   const handleSettle = async () => {
-    if (!clientId) return;
-    const amountNum = parseFloat(settleAmount);
-    if (!amountNum || amountNum <= 0) {
-      setError("المبلغ غير صالح");
+    if (!ledger) return;
+    if (!settleAmount || parseFloat(settleAmount) <= 0) {
+      toast.error("الرجاء إدخال مبلغ صحيح");
       return;
     }
+
     setIsSubmitting(true);
     try {
-      await clientLedgerService.settleDebt(clientId, {
-        amount: amountNum,
+      await clientLedgerService.settleDebt({
+        client_id: clientId,
+        amount: parseFloat(settleAmount),
         payment_date: settleDate,
         method: settleMethod,
-        reference_number: reference || undefined,
-        notes: notes || undefined,
+        reference_number: reference || null,
+        notes: notes || null,
       });
+
+      toast.success("تمت التسوية بنجاح");
       setSettleDialogOpen(false);
       setSettleAmount("");
       setReference("");
       setNotes("");
-      await fetchLedger();
-    } catch (e) {
-      setError(clientLedgerService.getErrorMessage(e));
+      fetchLedger();
+    } catch (err) {
+      toast.error(clientLedgerService.getErrorMessage(err));
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleAddSalePayment = async () => {
+    if (!payingSaleId) return;
+    if (!salePaymentAmount || parseFloat(salePaymentAmount) <= 0) {
+      toast.error("الرجاء إدخال مبلغ صحيح");
+      return;
+    }
+
+    setIsSubmittingSalePayment(true);
+    try {
+      // Use addPayment to add a single payment without overwriting existing ones
+      await saleService.addPayment(payingSaleId, {
+        method: salePaymentMethod as "cash" | "bankak" | "fawry" | "ocash",
+        amount: parseFloat(salePaymentAmount),
+        reference_number: salePaymentReference || null,
+      });
+
+      toast.success("تمت إضافة الدفعة بنجاح");
+      setSalePaymentOpen(false);
+      setSalePaymentAmount("");
+      setSalePaymentReference("");
+      setPayingSaleId(null);
+      fetchLedger(); // Refresh ledger
+    } catch (err: unknown) {
+      console.error("Error adding sale payment:", err);
+      toast.error(err instanceof Error ? err.message : "فشل إضافة الدفعة");
+    } finally {
+      setIsSubmittingSalePayment(false);
     }
   };
 
@@ -472,24 +534,55 @@ const ClientLedgerPage: React.FC = () => {
                     <TableCell align="center">{entry.notes || "-"}</TableCell>
                     <TableCell align="center">
                       {entry.type === "sale" && entry.sale_id ? (
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          onClick={() => handleSaleClick(entry)}
-                          disabled={fetchingSaleId !== null}
-                          startIcon={
-                            fetchingSaleId === entry.sale_id ? (
-                              <CircularProgress size={16} />
-                            ) : (
-                              <Receipt size={16} />
-                            )
-                          }
-                          sx={{ minWidth: "fit-content" }}
+                        <Box
+                          sx={{
+                            display: "flex",
+                            gap: 1,
+                            justifyContent: "center",
+                          }}
                         >
-                          {fetchingSaleId === entry.sale_id
-                            ? "جاري التحميل..."
-                            : "طباعه الفاتوره"}
-                        </Button>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => handleSaleClick(entry)}
+                            disabled={fetchingSaleId !== null}
+                            startIcon={
+                              fetchingSaleId === entry.sale_id ? (
+                                <CircularProgress size={16} />
+                              ) : (
+                                <Receipt size={16} />
+                              )
+                            }
+                            sx={{ minWidth: "fit-content" }}
+                          >
+                            {fetchingSaleId === entry.sale_id
+                              ? "جاري التحميل..."
+                              : "طباعه الفاتوره"}
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            color="secondary"
+                            size="small"
+                            onClick={() => handleEditSaleClick(entry.sale_id!)}
+                            startIcon={<Edit size={16} />}
+                            sx={{ minWidth: "fit-content" }}
+                          >
+                            تعديل
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            color="success"
+                            size="small"
+                            onClick={() => {
+                              setPayingSaleId(entry.sale_id!);
+                              setSalePaymentOpen(true);
+                            }}
+                            startIcon={<CreditCard size={16} />}
+                            sx={{ minWidth: "fit-content" }}
+                          >
+                            دفع
+                          </Button>
+                        </Box>
                       ) : (
                         "-"
                       )}
@@ -630,6 +723,84 @@ const ClientLedgerPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Add Sale Payment Dialog */}
+      <Dialog
+        open={salePaymentOpen}
+        onClose={() => setSalePaymentOpen(false)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>إضافة دفعة للفاتورة #{payingSaleId}</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2.5} sx={{ pt: 1 }}>
+            <TextField
+              label="المبلغ"
+              type="number"
+              fullWidth
+              inputProps={{ min: 0, step: 0.01 }}
+              value={salePaymentAmount}
+              onChange={(e) => setSalePaymentAmount(e.target.value)}
+              placeholder="أدخل المبلغ المدفوع"
+            />
+            <FormControl fullWidth>
+              <InputLabel>طريقة الدفع</InputLabel>
+              <Select
+                value={salePaymentMethod}
+                label="طريقة الدفع"
+                onChange={(e) => setSalePaymentMethod(e.target.value as string)}
+              >
+                <MenuItem value="cash">كاش</MenuItem>
+                <MenuItem value="bankak">بنكك</MenuItem>
+                <MenuItem value="fawry">فوري</MenuItem>
+                <MenuItem value="ocash">أوكاش</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              label="المرجع (اختياري)"
+              fullWidth
+              value={salePaymentReference}
+              onChange={(e) => setSalePaymentReference(e.target.value)}
+              placeholder="رقم المعاملة البنكية..."
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button
+            variant="outlined"
+            onClick={() => setSalePaymentOpen(false)}
+            disabled={isSubmittingSalePayment}
+          >
+            إلغاء
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            onClick={handleAddSalePayment}
+            disabled={isSubmittingSalePayment}
+            startIcon={
+              isSubmittingSalePayment ? (
+                <CircularProgress size={16} />
+              ) : (
+                <CreditCard size={16} />
+              )
+            }
+          >
+            {isSubmittingSalePayment ? "جاري الدفع..." : "تأكيد الدفع"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Sale Editor Dialog */}
+      <LedgerSaleEditorDialog
+        open={editorOpen}
+        onClose={() => {
+          setEditorOpen(false);
+          setEditingSaleId(null);
+        }}
+        saleId={editingSaleId}
+        onSaleUpdated={fetchLedger}
+      />
     </Box>
   );
 };

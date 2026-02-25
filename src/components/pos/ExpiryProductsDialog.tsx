@@ -20,7 +20,7 @@ import {
   CircularProgress,
   Tooltip,
 } from "@mui/material";
-import { X, Plus } from "lucide-react";
+import { X, Plus, Trash2 } from "lucide-react";
 import { formatDate } from "@/constants";
 
 interface PurchaseItem {
@@ -47,6 +47,7 @@ interface ExpiryProductsDialogProps {
   items: PurchaseItem[];
   loading: boolean;
   onAddToCart: (productId: number, productName: string) => void;
+  onMoveProduct?: (purchaseItemId: number) => void;
 }
 
 const ExpiryProductsDialog: React.FC<ExpiryProductsDialogProps> = ({
@@ -56,6 +57,7 @@ const ExpiryProductsDialog: React.FC<ExpiryProductsDialogProps> = ({
   items,
   loading,
   onAddToCart,
+  onMoveProduct,
 }) => {
   const title =
     type === "near_expiring"
@@ -153,7 +155,7 @@ const ExpiryProductsDialog: React.FC<ExpiryProductsDialogProps> = ({
                     <strong>الحالة</strong>
                   </TableCell>
                   <TableCell align="center">
-                    <strong>إضافة</strong>
+                    <strong>الإجراء</strong>
                   </TableCell>
                 </TableRow>
               </TableHead>
@@ -191,18 +193,30 @@ const ExpiryProductsDialog: React.FC<ExpiryProductsDialogProps> = ({
                       <TableCell align="center">
                         {getExpiryColor(item.expiry_date) === "error" &&
                         getDaysRemaining(item.expiry_date).includes("منتهي") ? (
-                          <Tooltip title="لا يمكن بيع منتج منتهي الصلاحية">
-                            <span>
+                          onMoveProduct ? (
+                            <Tooltip title="نقل المنتج من الرفوف لتسوية المخزون">
                               <IconButton
                                 size="small"
-                                color="primary"
-                                disabled
-                                sx={{ cursor: "not-allowed" }}
+                                color="error"
+                                onClick={() => onMoveProduct(item.id)}
                               >
-                                <Plus size={18} />
+                                <Trash2 size={18} />
                               </IconButton>
-                            </span>
-                          </Tooltip>
+                            </Tooltip>
+                          ) : (
+                            <Tooltip title="لا يمكن بيع منتج منتهي الصلاحية">
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  color="primary"
+                                  disabled
+                                  sx={{ cursor: "not-allowed" }}
+                                >
+                                  <Plus size={18} />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                          )
                         ) : (
                           <IconButton
                             size="small"

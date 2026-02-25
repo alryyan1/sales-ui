@@ -160,7 +160,7 @@ const MonthlyShiftsReportPage: React.FC = () => {
 
       if (!mainBlob) throw new Error("فشل في تحميل تقرير المبيعات الأساسي");
 
-      const basePath = `${firebaseCollectionName}/shifts/${shift.id}`;
+      const basePath = `pharmacies/${firebaseCollectionName}/shifts/${shift.id}`;
       const urls: {
         mainUrl?: string;
         costUrl?: string;
@@ -225,10 +225,30 @@ const MonthlyShiftsReportPage: React.FC = () => {
         firebaseCollectionName,
       );
 
-      toast.success("✅ تم رفع جميع التقارير وحفظ بيانات الوردية بنجاح!", {
-        id: toastId,
-        duration: 5000,
-      });
+      toast.loading("📱 جاري إرسال إشعارات الإغلاق...", { id: toastId });
+      const notifyRes = await apiClient.post(`/shifts/${shift.id}/notify`);
+      const notifyData = notifyRes.data;
+
+      if (notifyData?.whatsapp_status === "success") {
+        toast.success(
+          "✅ تم رفع التقارير، حفظ البيانات، وإرسال الواتساب بنجاح!",
+          {
+            id: toastId,
+            duration: 5000,
+          },
+        );
+      } else if (notifyData?.whatsapp_status === "failed") {
+        toast.warning("⚠️ تم رفع التقارير، لكن فشل إرسال الواتساب", {
+          id: toastId,
+          description: notifyData.whatsapp_message || "خطأ غير معروف",
+          duration: 8000,
+        });
+      } else {
+        toast.success("✅ تم رفع جميع التقارير وحفظ بيانات الوردية بنجاح!", {
+          id: toastId,
+          duration: 5000,
+        });
+      }
     } catch (err: unknown) {
       console.error(err);
       const errorMessage =

@@ -83,6 +83,32 @@ const reportService = {
       throw error;
     }
   },
+
+  getMovedExpiredProducts: async (
+    params: Record<string, any> = {},
+  ): Promise<any> => {
+    try {
+      const response = await apiClient.get("/reports/moved-expired", {
+        params,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching moved expired products:", error);
+      throw error;
+    }
+  },
+
+  moveExpiredProduct: async (id: number): Promise<any> => {
+    try {
+      const response = await apiClient.post(
+        `/reports/expired-products/${id}/move`,
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error moving expired product:", error);
+      throw error;
+    }
+  },
 };
 
 export default reportService;

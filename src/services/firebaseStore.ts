@@ -24,12 +24,12 @@ export const uploadProductsToFirestore = async (
       const batch = writeBatch(db);
 
       chunk.forEach((product: any) => {
-        // Firestore structure: Collection ({collectionName}) -> Document (products) -> Collection (products) -> Document ({id})
+        // Firestore structure: pharmacies -> {collectionName} -> products -> {id}
         const docRef = doc(
           db,
+          "pharmacies",
           collectionName,
           "products",
-          "products", // subcollection
           `${product.id}`,
         );
 
@@ -110,13 +110,12 @@ export const saveShiftToFirestore = async (
   collectionName: string = "one_care",
 ) => {
   try {
-    // Firestore structure: Collection ({collectionName}) -> Document (shifts) -> Collection (shifts) -> Document ({shift_id})
-    // Note: User manually set this path structure. Ensure it has even number of segments (4).
+    // Firestore structure: pharmacies -> {collectionName} -> shifts -> {shift_id}
     const docRef = doc(
       db,
+      "pharmacies",
       collectionName,
       "shifts",
-      "shifts", // subcollection
       `${data.shift_id}`,
     );
 
