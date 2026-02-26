@@ -13,9 +13,13 @@ import {
   TextField,
   InputAdornment,
   CircularProgress,
+  Button,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
-import { FileWarning as FileWarningIcon } from "lucide-react";
+import {
+  FileWarning as FileWarningIcon,
+  Printer as PrintIcon,
+} from "lucide-react";
 import reportService from "@/services/reportService";
 import { toast } from "sonner";
 import { formatDate } from "@/constants";
@@ -68,6 +72,12 @@ function MovedExpiredProductsPage() {
     setPage(0);
   };
 
+  const handleExportPdf = () => {
+    reportService.exportMovedExpiredProductsPdf({
+      search: searchQuery,
+    });
+  };
+
   return (
     <Box>
       <Box
@@ -100,6 +110,18 @@ function MovedExpiredProductsPage() {
             </Typography>
           </Box>
         </Box>
+        <Button
+          variant="outlined"
+          startIcon={<PrintIcon size={20} />}
+          onClick={handleExportPdf}
+          sx={{
+            borderRadius: 2,
+            textTransform: "none",
+            fontWeight: "bold",
+          }}
+        >
+          طباعة التقرير
+        </Button>
       </Box>
 
       <Paper sx={{ p: 2, mb: 3 }}>
@@ -151,9 +173,9 @@ function MovedExpiredProductsPage() {
                 items.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell sx={{ fontWeight: "medium" }}>
-                      {item.product?.name || "منتج غير معروف"}
+                      {item.product_name || "منتج غير معروف"}
                     </TableCell>
-                    <TableCell>{item.product?.sku || "-"}</TableCell>
+                    <TableCell>{item.product_sku || "-"}</TableCell>
                     <TableCell>{item.batch_number || "-"}</TableCell>
                     <TableCell>
                       {item.expiry_date ? formatDate(item.expiry_date) : "-"}

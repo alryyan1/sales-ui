@@ -21,11 +21,12 @@ import MenuItem from "@mui/material/MenuItem";
 import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Switch from "@mui/material/Switch";
 
 // Lucide Icons (shadcn)
 import {
   Plus,
-  Filter,
   Printer,
   FileSpreadsheet,
   Upload,
@@ -68,9 +69,7 @@ const ProductsPage: React.FC = () => {
   const [sellableUnits, setSellableUnits] = useState<Unit[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
-  const [showOnlyInStock, setShowOnlyInStock] = useState(false);
-  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
-  const [showOutOfStockOnly, setShowOutOfStockOnly] = useState(false);
+  const [showOnlyInStock, setShowOnlyInStock] = useState(true);
   const navigate = useNavigate();
 
   // Modal State
@@ -127,8 +126,6 @@ const ProductsPage: React.FC = () => {
     search: debouncedSearchTerm,
     categoryId: selectedCategory,
     inStockOnly: showOnlyInStock,
-    lowStockOnly: showLowStockOnly,
-    outOfStockOnly: showOutOfStockOnly,
   });
 
   // Flatten pages into a single array of products
@@ -236,18 +233,6 @@ const ProductsPage: React.FC = () => {
   const handleCategoryChange = (event: SelectChangeEvent<number | null>) => {
     const categoryId = event.target.value as number | null;
     setSelectedCategory(categoryId);
-  };
-
-  const handleStockFilterToggle = () => {
-    setShowOnlyInStock(!showOnlyInStock);
-  };
-
-  const handleLowStockFilterToggle = () => {
-    setShowLowStockOnly(!showLowStockOnly);
-  };
-
-  const handleOutOfStockFilterToggle = () => {
-    setShowOutOfStockOnly(!showOutOfStockOnly);
   };
 
   const handlePrintProducts = async () => {
@@ -572,6 +557,22 @@ const ProductsPage: React.FC = () => {
                   ))}
                 </Select>
               </FormControl>
+            </Box>
+
+            {/* Out of Stock Toggle */}
+            <Box
+              sx={{ flex: { md: 1 }, display: "flex", alignItems: "center" }}
+            >
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={!showOnlyInStock}
+                    onChange={() => setShowOnlyInStock(!showOnlyInStock)}
+                    color="primary"
+                  />
+                }
+                label="عرض المنتجات المخلصة (النواقص)"
+              />
             </Box>
           </Box>
         </Box>

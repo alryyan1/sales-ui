@@ -193,6 +193,12 @@ export const navItems: NavItem[] = [
         category: "التقارير",
       },
       {
+        to: "/reports/shortages",
+        label: "الطلبية (النواقص)",
+        permission: null,
+        category: "التقارير",
+      },
+      {
         to: "/reports/moved-expired-products",
         label: "المنتجات التالفة/المنتهية",
         permission: null,

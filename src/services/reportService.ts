@@ -109,6 +109,23 @@ const reportService = {
       throw error;
     }
   },
+
+  exportMovedExpiredProductsPdf: async (
+    params: Record<string, any> = {},
+  ): Promise<void> => {
+    try {
+      const token = localStorage.getItem("token");
+      if (token) {
+        params.token = token;
+      }
+      const queryString = new URLSearchParams(params as any).toString();
+      const url = `${apiClient.defaults.baseURL}/reports/moved-expired-pdf${queryString ? `?${queryString}` : ""}`;
+      window.open(url, "_blank");
+    } catch (error) {
+      console.error("Error exporting moved expired products PDF:", error);
+      throw error;
+    }
+  },
 };
 
 export default reportService;

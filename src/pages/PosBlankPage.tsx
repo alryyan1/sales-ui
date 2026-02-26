@@ -32,6 +32,7 @@ import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import apiClient from "@/lib/axios";
 import { toast } from "sonner";
 import saleService, {
@@ -51,6 +52,7 @@ import { PdfViewerDialog } from "@/components/common/PdfViewerDialog";
 import SalesReturnDialog from "@/components/sales/SalesReturnDialog";
 import { useAuth } from "@/context/AuthContext";
 import ExpiryProductsDialog from "@/components/pos/ExpiryProductsDialog";
+import TopSellingProductsDialog from "@/components/pos/TopSellingProductsDialog";
 import { uploadFileToFirebase } from "@/services/firebaseStorage";
 import { saveShiftToFirestore } from "@/services/firebaseStore";
 import {
@@ -139,6 +141,9 @@ const PosBlankPage: React.FC = () => {
   >(null);
   const [expiryItems, setExpiryItems] = useState<any[]>([]);
   const [expiryItemsLoading, setExpiryItemsLoading] = useState(false);
+
+  // Top selling
+  const [topSellingDialogOpen, setTopSellingDialogOpen] = useState(false);
 
   // Pre-fill add-payment amount with the sale's due (remainder) when selection changes
   useEffect(() => {
@@ -1458,7 +1463,7 @@ const PosBlankPage: React.FC = () => {
                 if (typeof opt === "string") return opt;
                 const option = opt as Product;
                 return option?.name
-                  ? `${option.name}${option.sku ? ` (${option.sku})` : ""}`
+                  ? `${option.name}${option.sale_price ? ` (${option.sale_price})` : ""}`
                   : "";
               }}
               loading={productSearchLoading}
@@ -1557,10 +1562,11 @@ const PosBlankPage: React.FC = () => {
                       >
                         <Typography variant="caption" color="text.secondary">
                           {[
-                            option.sku,
-                            option.suggested_sale_price != null &&
+                            option.last_sale_price_per_sellable_unit != null &&
                               `السعر: ${formatNumber(
-                                Number(option.suggested_sale_price),
+                                Number(
+                                  option.last_sale_price_per_sellable_unit,
+                                ),
                               )}`,
                           ]
                             .filter(Boolean)
@@ -1615,6 +1621,21 @@ const PosBlankPage: React.FC = () => {
             }}
           >
             إضافة مصروف
+          </Button>
+
+          {/* Top Selling Products */}
+          <Button
+            variant="contained"
+            color="info"
+            startIcon={<TrendingUpIcon />}
+            onClick={() => setTopSellingDialogOpen(true)}
+            sx={{
+              textTransform: "none",
+              fontWeight: 600,
+              borderRadius: 2,
+            }}
+          >
+            الأكثر مبيعاً
           </Button>
 
           {/* Open / Close shift button */}
@@ -2306,6 +2327,12 @@ const PosBlankPage: React.FC = () => {
         loading={expiryItemsLoading}
         onAddToCart={handleAddExpiryProductToCart}
         onMoveProduct={handleMoveExpiredProduct}
+      />
+
+      <TopSellingProductsDialog
+        open={topSellingDialogOpen}
+        onClose={() => setTopSellingDialogOpen(false)}
+        onAddProduct={handleAddExpiryProductToCart}
       />
     </Box>
   );
