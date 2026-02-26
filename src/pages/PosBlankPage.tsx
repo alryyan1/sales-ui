@@ -19,20 +19,13 @@ import {
   FormControl,
   Popover,
   Stack,
-  Badge,
 } from "@mui/material";
-import {
-  FileText,
-  FileWarningIcon,
-  CloudUploadIcon,
-  SearchIcon,
-} from "lucide-react";
-import ErrorIcon from "@mui/icons-material/Error";
+import { CloudUploadIcon, FileText, SearchIcon } from "lucide-react";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
-import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+
 import apiClient from "@/lib/axios";
 import { toast } from "sonner";
 import saleService, {
@@ -133,8 +126,6 @@ const PosBlankPage: React.FC = () => {
   const [discountLoading, setDiscountLoading] = useState(false);
 
   // Expiry alerts state
-  const [nearExpiringCount, setNearExpiringCount] = useState(0);
-  const [expiredCount, setExpiredCount] = useState(0);
   const [expiryDialogOpen, setExpiryDialogOpen] = useState(false);
   const [expiryDialogType, setExpiryDialogType] = useState<
     "near_expiring" | "expired" | null
@@ -144,6 +135,13 @@ const PosBlankPage: React.FC = () => {
 
   // Top selling
   const [topSellingDialogOpen, setTopSellingDialogOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenDialog = () => setTopSellingDialogOpen(true);
+    window.addEventListener("open-top-selling-dialog", handleOpenDialog);
+    return () =>
+      window.removeEventListener("open-top-selling-dialog", handleOpenDialog);
+  }, []);
 
   // Pre-fill add-payment amount with the sale's due (remainder) when selection changes
   useEffect(() => {
@@ -268,6 +266,12 @@ const PosBlankPage: React.FC = () => {
   const handleClientChange = useCallback(
     async (client: Client | null) => {
       if (!selectedSale?.id) return;
+
+      if (!client && (selectedSale.payments?.length ?? 0) > 0) {
+        toast.error("لا يمكن إزالة العميل لوجود مدفوعات مرتبطة بالبيع");
+        return;
+      }
+
       try {
         let updated;
         if (client) {
@@ -290,7 +294,7 @@ const PosBlankPage: React.FC = () => {
         toast.error(saleService.getErrorMessage(err));
       }
     },
-    [selectedSale?.id],
+    [selectedSale?.id, selectedSale?.payments?.length],
   );
 
   const handleAddPayment = useCallback(async () => {
@@ -749,11 +753,6 @@ const PosBlankPage: React.FC = () => {
     [],
   );
 
-  // Load expiry counts on mount and after sales change
-  useEffect(() => {
-    fetchExpiryCounts();
-  }, [fetchExpiryCounts, sales.length]);
-
   // Handle opening expiry dialog
   const handleOpenExpiryDialog = useCallback(
     (type: "near_expiring" | "expired") => {
@@ -764,14 +763,33 @@ const PosBlankPage: React.FC = () => {
     [fetchExpiryProducts],
   );
 
+  // Listen for open dialog events from top app bar
+  useEffect(() => {
+    const handleOpenNearExpiring = () =>
+      handleOpenExpiryDialog("near_expiring");
+    const handleOpenExpired = () => handleOpenExpiryDialog("expired");
+
+    window.addEventListener(
+      "open-near-expiring-dialog",
+      handleOpenNearExpiring,
+    );
+    window.addEventListener("open-expired-dialog", handleOpenExpired);
+
+    return () => {
+      window.removeEventListener(
+        "open-near-expiring-dialog",
+        handleOpenNearExpiring,
+      );
+      window.removeEventListener("open-expired-dialog", handleOpenExpired);
+    };
+  }, [handleOpenExpiryDialog]);
+
   // Handle closing expiry dialog
   const handleCloseExpiryDialog = useCallback(() => {
     setExpiryDialogOpen(false);
     setExpiryDialogType(null);
     setExpiryItems([]);
   }, []);
-
-  // Handle adding product from expiry dialog to cart
   const handleAddExpiryProductToCart = useCallback(
     async (productId: number, productName: string) => {
       if (!selectedSale) {
@@ -1385,39 +1403,6 @@ const PosBlankPage: React.FC = () => {
             إرجاع مبيعات
           </Button>
 
-          {/* Near Expiring Products Button */}
-          <IconButton
-            color="warning"
-            size="small"
-            onClick={() => handleOpenExpiryDialog("near_expiring")}
-            sx={{
-              bgcolor: "warning.lighter",
-              "&:hover": { bgcolor: "warning.light" },
-            }}
-          >
-            <Badge badgeContent={nearExpiringCount} color="warning">
-              <FileWarningIcon />
-            </Badge>
-          </IconButton>
-
-          {/* Expired Products Button */}
-          <IconButton
-            color="error"
-            size="small"
-            onClick={() => handleOpenExpiryDialog("expired")}
-            sx={{
-              bgcolor: "error.lighter",
-              "&:hover": { bgcolor: "error.light" },
-            }}
-          >
-            <Badge
-              badgeContent={expiredCount}
-              color={expiredCount == 0 ? "info" : "error"}
-            >
-              <ErrorIcon color={expiredCount == 0 ? "info" : "error"} />
-            </Badge>
-          </IconButton>
-
           {/* Sale ID search */}
           <Box sx={{ width: 140 }}>
             <TextField
@@ -1623,21 +1608,6 @@ const PosBlankPage: React.FC = () => {
             إضافة مصروف
           </Button>
 
-          {/* Top Selling Products */}
-          <Button
-            variant="contained"
-            color="info"
-            startIcon={<TrendingUpIcon />}
-            onClick={() => setTopSellingDialogOpen(true)}
-            sx={{
-              textTransform: "none",
-              fontWeight: 600,
-              borderRadius: 2,
-            }}
-          >
-            الأكثر مبيعاً
-          </Button>
-
           {/* Open / Close shift button */}
           <Button
             variant={isShiftOpen ? "outlined" : "contained"}
@@ -1817,6 +1787,10 @@ const PosBlankPage: React.FC = () => {
                     }
                     loading={clientSearchLoading}
                     disabled={!selectedSale}
+                    disableClearable={
+                      (selectedSale?.payments?.length ?? 0) > 0 &&
+                      !!(selectedSale?.client || selectedSale?.client_name)
+                    }
                     renderInput={(params) => (
                       <TextField
                         {...params}
@@ -1958,7 +1932,8 @@ const PosBlankPage: React.FC = () => {
                               disabled={
                                 discountLoading ||
                                 !discountValue.trim() ||
-                                (selectedSale.items?.length ?? 0) === 0
+                                (selectedSale.items?.length ?? 0) === 0 ||
+                                (selectedSale.payments?.length ?? 0) > 0
                               }
                             >
                               {discountLoading ? "..." : "تطبيق"}
@@ -1969,7 +1944,10 @@ const PosBlankPage: React.FC = () => {
                                 variant="text"
                                 color="error"
                                 onClick={handleRemoveDiscount}
-                                disabled={discountLoading}
+                                disabled={
+                                  discountLoading ||
+                                  (selectedSale.payments?.length ?? 0) > 0
+                                }
                               >
                                 إلغاء الخصم
                               </Button>

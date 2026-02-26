@@ -569,19 +569,6 @@ const ClientLedgerPage: React.FC = () => {
                           >
                             تعديل
                           </Button>
-                          <Button
-                            variant="outlined"
-                            color="success"
-                            size="small"
-                            onClick={() => {
-                              setPayingSaleId(entry.sale_id!);
-                              setSalePaymentOpen(true);
-                            }}
-                            startIcon={<CreditCard size={16} />}
-                            sx={{ minWidth: "fit-content" }}
-                          >
-                            دفع
-                          </Button>
                         </Box>
                       ) : (
                         "-"

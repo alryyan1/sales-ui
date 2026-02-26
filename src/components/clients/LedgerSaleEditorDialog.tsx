@@ -638,7 +638,11 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
                       size="small"
                       variant="outlined"
                       onClick={handleApplyDiscount}
-                      disabled={discountLoading || !discountValue.trim()}
+                      disabled={
+                        discountLoading ||
+                        !discountValue.trim() ||
+                        (sale.payments?.length ?? 0) > 0
+                      }
                     >
                       تطبيق
                     </Button>
@@ -650,7 +654,9 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
                       variant="text"
                       color="error"
                       onClick={handleRemoveDiscount}
-                      disabled={discountLoading}
+                      disabled={
+                        discountLoading || (sale.payments?.length ?? 0) > 0
+                      }
                       sx={{ alignSelf: "flex-start" }}
                     >
                       إلغاء الخصم

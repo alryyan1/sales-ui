@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
   DialogActions,
   Button,
@@ -10,16 +9,23 @@ import {
   CircularProgress,
   List,
   ListItem,
-  ListItemText,
-  Divider,
-  Chip,
   IconButton,
+  Avatar,
+  Slide,
+  useTheme,
+  alpha,
+  Skeleton,
+  Stack,
+  Tooltip,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import AddShoppingCartIcon from "@mui/icons-material/AddShoppingCart";
+import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
+import QrCodeOutlinedIcon from "@mui/icons-material/QrCodeOutlined";
+import SellOutlinedIcon from "@mui/icons-material/SellOutlined";
 import reportService, { BestSellingProduct } from "@/services/reportService";
 import { formatNumber } from "@/constants";
-import AddShoppingCartIcon from "@mui/icons-material/AddShoppingCart";
 import { toast } from "sonner";
 
 interface TopSellingProductsDialogProps {
@@ -28,11 +34,19 @@ interface TopSellingProductsDialogProps {
   onAddProduct: (productId: number, productName: string) => Promise<void>;
 }
 
+const Transition = React.forwardRef(function Transition(
+  props: React.ComponentPropsWithoutRef<typeof Slide>,
+  ref: React.Ref<unknown>,
+) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
+
 export default function TopSellingProductsDialog({
   open,
   onClose,
   onAddProduct,
 }: TopSellingProductsDialogProps) {
+  const theme = useTheme();
   const [products, setProducts] = useState<BestSellingProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [addingId, setAddingId] = useState<number | null>(null);
@@ -40,7 +54,6 @@ export default function TopSellingProductsDialog({
   const fetchTopSelling = useCallback(async () => {
     try {
       setLoading(true);
-      // Fetch top 20 best-selling products from the last 30 days
       const data = await reportService.getBestSellingProducts(30, 20);
       setProducts(data || []);
     } catch (err) {
@@ -70,138 +83,365 @@ export default function TopSellingProductsDialog({
     }
   };
 
+  const getRankColor = (index: number) => {
+    switch (index) {
+      case 0:
+        return { bg: "#FFD700", text: "#8B6508" }; // Gold
+      case 1:
+        return { bg: "#E0E0E0", text: "#616161" }; // Silver
+      case 2:
+        return { bg: "#CD7F32", text: "#5C3A21" }; // Bronze
+      default:
+        return {
+          bg: alpha(theme.palette.primary.main, 0.1),
+          text: theme.palette.primary.main,
+        };
+    }
+  };
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle
-        sx={{ m: 0, p: 2, display: "flex", alignItems: "center", gap: 1 }}
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      TransitionComponent={Transition}
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 24px 48px rgba(0,0,0,0.5)"
+              : "0 24px 48px rgba(0,0,0,0.1)",
+          overflow: "hidden",
+        },
+      }}
+    >
+      {/* HEADER */}
+      <Box
+        sx={{
+          background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+          px: 3,
+          py: 2.5,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
       >
-        <TrendingUpIcon color="primary" />
-        الأدوية الأكثر مبيعاً (آخر 30 يوم)
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Avatar
+            sx={{
+              bgcolor: "rgba(255,255,255,0.2)",
+              color: "#fff",
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            <TrendingUpIcon />
+          </Avatar>
+          <Box>
+            <Typography
+              variant="h6"
+              fontWeight="bold"
+              color="white"
+              sx={{ lineHeight: 1.2 }}
+            >
+              الأكثر مبيعاً
+            </Typography>
+            <Typography
+              variant="caption"
+              sx={{ color: "rgba(255,255,255,0.8)" }}
+            >
+              أفضل الأدوية والمنتجات خلال آخر 30 يوماً
+            </Typography>
+          </Box>
+        </Box>
         <IconButton
-          aria-label="close"
           onClick={onClose}
           sx={{
-            position: "absolute",
-            right: 8,
-            top: 8,
-            color: (theme) => theme.palette.grey[500],
+            color: "white",
+            bgcolor: "rgba(255,255,255,0.1)",
+            "&:hover": { bgcolor: "rgba(255,255,255,0.2)" },
           }}
         >
           <CloseIcon />
         </IconButton>
-      </DialogTitle>
+      </Box>
 
-      <DialogContent dividers sx={{ p: 0 }}>
+      {/* CONTENT */}
+      <DialogContent
+        sx={{
+          p: 0,
+          background: theme.palette.mode === "dark" ? "#121212" : "#F8FAFC",
+        }}
+      >
         {loading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
-            <CircularProgress />
+          <Box sx={{ p: 3 }}>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Box
+                key={i}
+                sx={{
+                  display: "flex",
+                  gap: 2,
+                  mb: 2,
+                  p: 2,
+                  bgcolor: "background.paper",
+                  borderRadius: 2,
+                }}
+              >
+                <Skeleton variant="circular" width={44} height={44} />
+                <Box
+                  sx={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 1,
+                  }}
+                >
+                  <Skeleton
+                    variant="text"
+                    width="60%"
+                    height={24}
+                    sx={{ borderRadius: 1 }}
+                  />
+                  <Skeleton
+                    variant="rectangular"
+                    width="40%"
+                    height={20}
+                    sx={{ borderRadius: 1 }}
+                  />
+                </Box>
+                <Skeleton
+                  variant="rectangular"
+                  width={120}
+                  height={40}
+                  sx={{ borderRadius: "10px" }}
+                />
+              </Box>
+            ))}
           </Box>
         ) : products.length === 0 ? (
-          <Box sx={{ p: 4, textAlign: "center", color: "text.secondary" }}>
-            لا توجد بيانات متاحة
+          <Box
+            sx={{
+              p: 8,
+              textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 2,
+            }}
+          >
+            <Avatar
+              sx={{
+                width: 80,
+                height: 80,
+                bgcolor: alpha(theme.palette.text.secondary, 0.1),
+                color: "text.secondary",
+                mb: 2,
+              }}
+            >
+              <Inventory2OutlinedIcon sx={{ fontSize: 40 }} />
+            </Avatar>
+            <Typography variant="h6" color="text.secondary" fontWeight="bold">
+              لا توجد بيانات متاحة
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              لم يتم العثور على أي منتجات مبيعة خلال الفترة المحددة.
+            </Typography>
           </Box>
         ) : (
-          <List sx={{ pt: 0, pb: 0 }}>
-            {products.map((product, index) => (
-              <React.Fragment key={product.id}>
-                {index > 0 && <Divider component="li" />}
+          <List
+            sx={{ p: 2, display: "flex", flexDirection: "column", gap: 1.5 }}
+          >
+            {products.map((product, index) => {
+              const rank = getRankColor(index);
+              const isOutOfStock = product.current_stock <= 0;
+
+              return (
                 <ListItem
+                  key={product.id}
                   sx={{
-                    pl: 2,
-                    pr: 2,
-                    py: 1.5,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 2,
+                    bgcolor: "background.paper",
+                    borderRadius: 2,
+                    p: 2,
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                    transition: "all 0.2s ease",
+                    border: "1px solid",
+                    borderColor:
+                      theme.palette.mode === "dark" ? "divider" : "transparent",
+                    "&:hover": {
+                      transform: "translateY(-2px)",
+                      boxShadow: "0 8px 16px rgba(0,0,0,0.08)",
+                      borderColor: alpha(theme.palette.primary.main, 0.2),
+                    },
                   }}
-                  secondaryAction={
+                >
+                  <Box
+                    sx={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 2.5,
+                    }}
+                  >
+                    {/* RANK INDICATOR */}
+                    <Box
+                      sx={{
+                        width: 44,
+                        height: 44,
+                        flexShrink: 0,
+                        borderRadius: "12px",
+                        bgcolor: rank.bg,
+                        color: rank.text,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: 800,
+                        fontSize: "1.1rem",
+                        boxShadow:
+                          index < 3
+                            ? `0 4px 12px ${alpha(rank.bg, 0.4)}`
+                            : "none",
+                      }}
+                    >
+                      #{index + 1}
+                    </Box>
+
+                    {/* PRODUCT INFO */}
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography
+                        variant="subtitle1"
+                        fontWeight="700"
+                        sx={{
+                          mb: 0.5,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {product.name}
+                      </Typography>
+
+                      <Stack
+                        direction="row"
+                        flexWrap="wrap"
+                        gap={2}
+                        alignItems="center"
+                      >
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 0.5,
+                            color: "text.secondary",
+                          }}
+                        >
+                          <QrCodeOutlinedIcon sx={{ fontSize: 16 }} />
+                          <Typography
+                            variant="caption"
+                            fontFamily="monospace"
+                            fontSize="0.75rem"
+                          >
+                            {product.sku || "N/A"}
+                          </Typography>
+                        </Box>
+
+                        <Tooltip title="الكمية المباعة">
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 0.5,
+                              color: "text.secondary",
+                            }}
+                          >
+                            <SellOutlinedIcon
+                              sx={{
+                                fontSize: 16,
+                                color: theme.palette.success.main,
+                              }}
+                            />
+                            <Typography variant="caption" fontWeight="bold">
+                              {formatNumber(product.total_quantity_sold)}
+                            </Typography>
+                          </Box>
+                        </Tooltip>
+
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 0.5,
+                          }}
+                        >
+                          <Inventory2OutlinedIcon
+                            sx={{
+                              fontSize: 16,
+                              color: isOutOfStock
+                                ? theme.palette.error.main
+                                : theme.palette.info.main,
+                            }}
+                          />
+                          <Typography
+                            variant="caption"
+                            color={
+                              isOutOfStock ? "error.main" : "text.secondary"
+                            }
+                            fontWeight={isOutOfStock ? "bold" : "regular"}
+                          >
+                            المخزون:{" "}
+                            {isOutOfStock ? "نفذت" : product.current_stock}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    </Box>
+
+                    {/* ACTION BUTTON */}
                     <Button
-                      variant="contained"
-                      size="small"
+                      variant={isOutOfStock ? "outlined" : "contained"}
+                      color={isOutOfStock ? "error" : "primary"}
                       startIcon={
                         addingId === product.id ? (
-                          <CircularProgress size={16} color="inherit" />
+                          <CircularProgress size={18} color="inherit" />
                         ) : (
                           <AddShoppingCartIcon />
                         )
                       }
                       onClick={() => handleAdd(product)}
-                      disabled={
-                        addingId === product.id || product.current_stock <= 0
-                      }
-                      color={product.current_stock > 0 ? "primary" : "inherit"}
+                      disabled={addingId === product.id || isOutOfStock}
+                      disableElevation
+                      sx={{
+                        borderRadius: "10px",
+                        px: 3,
+                        py: 1,
+                        fontWeight: "bold",
+                        textTransform: "none",
+                        minWidth: 120,
+                      }}
                     >
-                      إضافة
+                      {isOutOfStock ? "غير متوفر" : "إضافة"}
                     </Button>
-                  }
-                >
-                  <Box
-                    sx={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: "50%",
-                      bgcolor: "primary.light",
-                      color: "primary.contrastText",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontWeight: "bold",
-                      fontSize: "0.8rem",
-                    }}
-                  >
-                    {index + 1}
                   </Box>
-                  <ListItemText
-                    primary={
-                      <Typography variant="subtitle2" fontWeight="bold">
-                        {product.name}
-                      </Typography>
-                    }
-                    secondary={
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1,
-                          mt: 0.5,
-                        }}
-                      >
-                        <Typography variant="caption" color="text.secondary">
-                          الباركود:{" "}
-                          <strong dir="ltr">{product.sku || "-"}</strong>
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          | المباع:{" "}
-                          <strong>
-                            {formatNumber(product.total_quantity_sold)}
-                          </strong>
-                        </Typography>
-                        {product.current_stock <= 0 ? (
-                          <Chip
-                            label="نفذت الكمية"
-                            size="small"
-                            color="error"
-                            sx={{ height: 20, fontSize: "0.7rem" }}
-                          />
-                        ) : (
-                          <Chip
-                            label={`بالمخزن: ${product.current_stock}`}
-                            size="small"
-                            color="success"
-                            sx={{ height: 20, fontSize: "0.7rem" }}
-                          />
-                        )}
-                      </Box>
-                    }
-                  />
                 </ListItem>
-              </React.Fragment>
-            ))}
+              );
+            })}
           </List>
         )}
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} color="inherit">
+
+      <DialogActions
+        sx={{
+          p: 2,
+          bgcolor: "background.paper",
+          borderTop: "1px solid",
+          borderColor: "divider",
+        }}
+      >
+        <Button
+          onClick={onClose}
+          variant="outlined"
+          color="inherit"
+          sx={{ borderRadius: "8px", px: 3, fontWeight: "bold" }}
+        >
           إغلاق
         </Button>
       </DialogActions>

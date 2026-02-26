@@ -20,8 +20,12 @@ import {
   Keyboard,
   Clock,
   CalendarDays,
+  TrendingUp,
+  FileWarning as FileWarningIcon,
 } from "lucide-react";
+import ErrorIcon from "@mui/icons-material/Error";
 import { useNavigate, useLocation } from "react-router-dom";
+import { Button, Badge } from "@mui/material";
 import { useSettings } from "@/context/SettingsContext";
 import { ThemeToggle } from "../layout/ThemeToggle";
 import { DRAWER_WIDTH } from "./types";
@@ -48,6 +52,20 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
   const { user } = useAuth();
   const { getSetting } = useSettings();
   const [shortcutsDialogOpen, setShortcutsDialogOpen] = React.useState(false);
+  const [expiryCounts, setExpiryCounts] = React.useState({
+    nearExpiringCount: 0,
+    expiredCount: 0,
+  });
+
+  React.useEffect(() => {
+    const handleUpdateCounts = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setExpiryCounts(customEvent.detail);
+    };
+    window.addEventListener("update-expiry-counts", handleUpdateCounts);
+    return () =>
+      window.removeEventListener("update-expiry-counts", handleUpdateCounts);
+  }, []);
 
   // Get POS mode setting
   const posMode = getSetting("pos_mode", "shift") as "shift" | "days";
@@ -58,7 +76,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
   const handleResetData = async () => {
     if (
       !confirm(
-        "Are you sure you want to refresh products and clients cache? Pending sales will be kept."
+        "Are you sure you want to refresh products and clients cache? Pending sales will be kept.",
       )
     ) {
       return;
@@ -73,7 +91,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
 
       toast.info("Re-fetching products...");
       await offlineSaleService.initializeProducts(
-        user?.warehouse_id || undefined
+        user?.warehouse_id || undefined,
       );
       await offlineSaleService.initializeClients();
 
@@ -130,7 +148,75 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
           component="div"
           sx={{ flexGrow: 1, fontSize: "1rem", fontWeight: 600 }}
         >
-          {/* Dynamic title could go here */}
+          {location.pathname === "/sales/pos-blank" && (
+            <Button
+              variant="contained"
+              color="info"
+              size="small"
+              startIcon={<TrendingUp size={16} />}
+              onClick={() =>
+                window.dispatchEvent(new CustomEvent("open-top-selling-dialog"))
+              }
+              sx={{
+                textTransform: "none",
+                fontWeight: 600,
+                borderRadius: 2,
+              }}
+            >
+              الأكثر مبيعاً
+            </Button>
+          )}
+
+          {location.pathname === "/sales/pos-blank" && (
+            <>
+              {/* Near Expiring Products Button */}
+              <IconButton
+                color="warning"
+                size="small"
+                onClick={() =>
+                  window.dispatchEvent(
+                    new CustomEvent("open-near-expiring-dialog"),
+                  )
+                }
+                sx={{
+                  bgcolor: "warning.lighter",
+                  "&:hover": { bgcolor: "warning.light" },
+                  ml: 1,
+                }}
+              >
+                <Badge
+                  badgeContent={expiryCounts.nearExpiringCount}
+                  color="warning"
+                >
+                  <FileWarningIcon size={20} />
+                </Badge>
+              </IconButton>
+
+              {/* Expired Products Button */}
+              <IconButton
+                color="error"
+                size="small"
+                onClick={() =>
+                  window.dispatchEvent(new CustomEvent("open-expired-dialog"))
+                }
+                sx={{
+                  bgcolor: "error.lighter",
+                  "&:hover": { bgcolor: "error.light" },
+                  ml: 1,
+                }}
+              >
+                <Badge
+                  badgeContent={expiryCounts.expiredCount}
+                  color={expiryCounts.expiredCount === 0 ? "info" : "error"}
+                >
+                  <ErrorIcon
+                    fontSize="small"
+                    color={expiryCounts.expiredCount === 0 ? "info" : "error"}
+                  />
+                </Badge>
+              </IconButton>
+            </>
+          )}
         </Typography>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
