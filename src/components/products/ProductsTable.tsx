@@ -21,6 +21,7 @@ import {
   MenuItem,
   FormControl,
 } from "@mui/material";
+import { ProductImage } from "./ProductImage";
 import {
   AlertTriangle,
   Copy,
@@ -49,6 +50,7 @@ interface ProductWithOptionalBatches extends Omit<
   sellable_unit_name?: string | null;
   stocking_unit_name?: string | null;
   units_per_stocking_unit?: number | null;
+  image?: string | null;
 }
 
 interface ProductsTableProps {
@@ -91,11 +93,6 @@ const ProductRow: React.FC<ProductRowProps> = ({
     stockQty <= (product.stock_alert_level as number);
   const isOutOfStock = stockQty <= 0;
 
-  // Check if product is expired
-  const isExpired = product.earliest_expiry_date
-    ? new Date(product.earliest_expiry_date) < new Date()
-    : false;
-
   const prevStockRef = useRef<number>(stockQty);
   const [animationClass, setAnimationClass] = useState("");
 
@@ -115,28 +112,21 @@ const ProductRow: React.FC<ProductRowProps> = ({
     }
   }, [stockQty]);
 
-  // Format expiry date
-  const formatExpiryDate = (dateString: string | null) => {
-    if (!dateString) return "---";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-CA"); // YYYY-MM-DD format
-  };
-
   return (
     <TableRow
       hover
       sx={{
         cursor: "pointer",
-        bgcolor: isExpired
-          ? "rgba(211, 47, 47, 0.08)"
-          : isOutOfStock
-            ? "rgba(237, 108, 2, 0.08)"
+        bgcolor: isOutOfStock
+          ? "rgba(239, 68, 68, 0.1)" // red-500 with 10% opacity
+          : isLow
+            ? "rgba(245, 158, 11, 0.1)" // amber-500 with 10% opacity
             : "transparent",
         "&:hover": {
-          bgcolor: isExpired
-            ? "rgba(211, 47, 47, 0.12) !important"
-            : isOutOfStock
-              ? "rgba(237, 108, 2, 0.12) !important"
+          bgcolor: isOutOfStock
+            ? "rgba(239, 68, 68, 0.15) !important"
+            : isLow
+              ? "rgba(245, 158, 11, 0.15) !important"
               : undefined,
         },
       }}
@@ -144,6 +134,13 @@ const ProductRow: React.FC<ProductRowProps> = ({
       onClick={() => onEdit(product)}
     >
       <TableCell align="center">{product.id}</TableCell>
+      <TableCell align="center">
+        <ProductImage
+          imageUrl={product.image_url}
+          productName={product.name}
+          size={40}
+        />
+      </TableCell>
       <TableCell align="center">
         <Stack
           direction="row"
@@ -186,7 +183,21 @@ const ProductRow: React.FC<ProductRowProps> = ({
           {product.name}
         </Typography>
       </TableCell>
-      <TableCell align="center">{product.scientific_name || "---"}</TableCell>
+      <TableCell align="left">
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{
+            maxWidth: 200,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {product.description || "---"}
+        </Typography>
+      </TableCell>
+      {/* <TableCell align="center">{product.scientific_name || "---"}</TableCell> */}
       <TableCell align="center">
         {product.category_name ? (
           <Chip
@@ -252,7 +263,7 @@ const ProductRow: React.FC<ProductRowProps> = ({
           ? formatCurrency(Number(product.last_sale_price_per_sellable_unit))
           : "---"}
       </TableCell>
-      <TableCell align="center">
+      {/* <TableCell align="center">
         <Typography
           variant="body2"
           sx={{
@@ -262,7 +273,7 @@ const ProductRow: React.FC<ProductRowProps> = ({
         >
           {formatExpiryDate(product.earliest_expiry_date)}
         </Typography>
-      </TableCell>
+      </TableCell> */}
     </TableRow>
   );
 };
@@ -346,15 +357,21 @@ const InlineCreateRow: React.FC<{
   return (
     <TableRow sx={{ bgcolor: "action.hover" }}>
       <TableCell align="center">
-        <IconButton
-          size="small"
-          onClick={handleSave}
-          disabled={isLoading || !formData.name}
-          color="primary"
-        >
-          <Save size={18} />
-        </IconButton>
+        <Stack direction="row" spacing={0.5} justifyContent="center">
+          <IconButton
+            size="small"
+            onClick={handleSave}
+            disabled={isLoading || !formData.name}
+            color="primary"
+          >
+            <Save size={18} />
+          </IconButton>
+          <IconButton size="small" onClick={onCancel} disabled={isLoading}>
+            <X size={18} color="red" />
+          </IconButton>
+        </Stack>
       </TableCell>
+      <TableCell align="center" /> {/* Image Placeholder */}
       <TableCell align="center">
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
           <TextField
@@ -390,18 +407,17 @@ const InlineCreateRow: React.FC<{
       <TableCell align="center">
         <TextField
           size="small"
-          placeholder="Scientific Name"
-          value={formData.scientific_name || ""}
-          onChange={(e) => handleChange("scientific_name", e.target.value)}
+          placeholder="Description"
+          value={formData.description || ""}
+          onChange={(e) => handleChange("description", e.target.value)}
           onKeyDown={handleKeyDown}
           sx={{
-            minWidth: 100,
-            width: `${Math.max(10, (formData.scientific_name || "").length + 2)}ch`,
+            minWidth: 120,
+            width: `${Math.max(12, (formData.description || "").length + 2)}ch`,
             transition: "width 0.2s ease",
           }}
         />
       </TableCell>
-
       <TableCell align="center">
         <FormControl size="small" fullWidth sx={{ minWidth: 100 }}>
           <Select
@@ -517,21 +533,6 @@ const InlineCreateRow: React.FC<{
           sx={{ width: 80 }}
         />
       </TableCell>
-      {/* Expiry Date */}
-      <TableCell align="center">
-        <TextField
-          type="date"
-          size="small"
-          value={formData.expire_date || ""}
-          onChange={(e) => handleChange("expire_date", e.target.value)}
-          sx={{ width: 130 }}
-        />
-      </TableCell>
-      <TableCell align="center">
-        <IconButton size="small" onClick={onCancel} disabled={isLoading}>
-          <X size={18} color="red" />
-        </IconButton>
-      </TableCell>
     </TableRow>
   );
 };
@@ -596,10 +597,23 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
         <Skeleton variant="text" width={20} />
       </TableCell>
       <TableCell align="center">
+        <Box sx={{ display: "flex", justifyContent: "center" }}>
+          <Skeleton
+            variant="rectangular"
+            width={40}
+            height={40}
+            sx={{ borderRadius: "12px" }}
+          />
+        </Box>
+      </TableCell>
+      <TableCell align="center">
         <Skeleton variant="text" width={80} />
       </TableCell>
       <TableCell align="left">
         <Skeleton variant="text" width="80%" />
+      </TableCell>
+      <TableCell align="left">
+        <Skeleton variant="text" width="60%" />
       </TableCell>
       <TableCell align="center">
         <Skeleton variant="text" width={100} />
@@ -625,13 +639,10 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
         <Skeleton variant="text" width={80} />
       </TableCell>
       <TableCell align="center">
-        <Skeleton variant="text" width={40} />
+        <Skeleton variant="text" width={60} />
       </TableCell>
       <TableCell align="center">
-        <Skeleton variant="text" width={80} />
-      </TableCell>
-      <TableCell align="center">
-        <Skeleton variant="circular" width={18} height={18} />
+        <Skeleton variant="text" width={60} />
       </TableCell>
     </TableRow>
   );
@@ -678,9 +689,11 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                     </IconButton>
                   </Tooltip>
                 </TableCell>
+                <TableCell align="center">الصورة</TableCell>
                 <TableCell align="center"> (SKU)</TableCell>
                 <TableCell align="right">اسم المنتج</TableCell>
-                <TableCell align="center">الاسم العلمي</TableCell>
+                <TableCell align="right">وصف المنتج</TableCell>
+                {/* <TableCell align="center">الاسم العلمي</TableCell> */}
                 <TableCell align="center">الفئة</TableCell>
                 <TableCell align="center">وحدة البيع</TableCell>
                 <TableCell align="center">وحدة التخزين</TableCell>
@@ -689,7 +702,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                 <TableCell align="center">إجمالي المخزون</TableCell>
                 <TableCell align="center">أحدث تكلفة</TableCell>
                 <TableCell align="center">آخر سعر بيع</TableCell>
-                <TableCell align="center">تاريخ الصلاحية</TableCell>
+                {/* <TableCell align="center">تاريخ الصلاحية</TableCell> */}
               </TableRow>
             </TableHead>
             <TableBody>

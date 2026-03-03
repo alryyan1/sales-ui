@@ -159,10 +159,6 @@ const ManagePurchaseItemsPage: React.FC = () => {
             : currentItem.sale_price_stocking_unit !== undefined
               ? (currentItem.sale_price_stocking_unit as number | null)
               : null,
-        expiry_date:
-          field === "expiry_date"
-            ? (value as string) || null
-            : currentItem.expiry_date || null,
       };
 
       return await purchaseService.updatePurchaseItem(
@@ -287,7 +283,6 @@ const ManagePurchaseItemsPage: React.FC = () => {
           quantity: item.quantity,
           unit_cost: item.unit_cost,
           sale_price: item.sale_price,
-          expiry_date: item.expiry_date,
         })) || [];
 
       return await purchaseService.updatePurchase(purchaseId!, {

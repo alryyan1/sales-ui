@@ -153,38 +153,6 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
         size: 120,
       }),
 
-      // 4. Expiry Date column
-      columnHelper.accessor("expiry_date", {
-        header: "Expiry Date",
-        cell: ({ row }) => {
-          const item = row.original;
-          return (
-            <Box sx={{ position: "relative", minWidth: 120 }}>
-              <InstantTextField
-                value={item.expiry_date || ""}
-                onChangeValue={(v) =>
-                  onUpdate(item.id, "expiry_date", String(v) || null)
-                }
-                type="date"
-                disabled={false}
-              />
-              {isFieldUpdating(item.id, "expiry_date") && (
-                <CircularProgress
-                  size={16}
-                  sx={{
-                    position: "absolute",
-                    right: 8,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                  }}
-                />
-              )}
-            </Box>
-          );
-        },
-        size: 140,
-      }),
-
       // 5. Unit Cost column
       columnHelper.accessor("unit_cost", {
         header: ({ table }) => {

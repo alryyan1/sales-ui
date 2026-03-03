@@ -21,17 +21,15 @@ import {
   Package,
   Search,
   Hash,
-  Calendar,
   DollarSign,
   Layers,
   Tag,
   Loader2,
-  RefreshCw, // Import RefreshCw
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import apiClient from "@/lib/axios";
-import purchaseService from "@/services/purchaseService";
 import productService, { Product } from "@/services/productService";
 import { useSettings } from "@/context/SettingsContext";
 import { AddPurchaseItemData } from "./types";
@@ -73,7 +71,6 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
     number | undefined
   >(undefined);
   const [batchNumber, setBatchNumber] = useState("");
-  const [expiryDate, setExpiryDate] = useState("");
 
   // Reset form
   const resetForm = useCallback(() => {
@@ -86,8 +83,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
     setSalePrice(undefined);
     setSalePriceStockingUnit(undefined);
     setBatchNumber("");
-    setExpiryDate("");
-  }, []);
+  }, [settings?.default_profit_rate]);
 
   // Fetch ALL products for client-side filtering/scanning
   const fetchAllProducts = useCallback(async (forceRefresh = false) => {
@@ -288,7 +284,6 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
             ? roundToThreeDecimals(salePriceStockingUnit)
             : undefined,
         batch_number: batchNumber || undefined,
-        expiry_date: expiryDate || undefined,
       };
 
       onAddItem(data);
@@ -303,9 +298,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
     salePrice,
     salePriceStockingUnit,
     batchNumber,
-    expiryDate,
     unitsPerStockingUnit,
-    profitRate,
     onAddItem,
   ]);
 
@@ -498,48 +491,45 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                   }}
                 />
               )}
-              renderOption={(props, option) => {
-                const { key, ...otherProps } = props;
-                return (
-                  <li key={option.id} {...otherProps}>
+              renderOption={(props, option) => (
+                <li {...props} key={option.id}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 2,
+                      py: 0.5,
+                    }}
+                  >
                     <Box
                       sx={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 1.5,
+                        bgcolor: "primary.50",
                         display: "flex",
                         alignItems: "center",
-                        gap: 2,
-                        py: 0.5,
+                        justifyContent: "center",
                       }}
                     >
-                      <Box
-                        sx={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 1.5,
-                          bgcolor: "primary.50",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <Package size={18} color="#3b82f6" />
-                      </Box>
-                      <Box>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {option.name}
-                        </Typography>
-                        {option.sku && (
-                          <Typography
-                            variant="caption"
-                            sx={{ color: "grey.500" }}
-                          >
-                            باركود: {option.sku}
-                          </Typography>
-                        )}
-                      </Box>
+                      <Package size={18} color="#3b82f6" />
                     </Box>
-                  </li>
-                );
-              }}
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {option.name}
+                      </Typography>
+                      {option.sku && (
+                        <Typography
+                          variant="caption"
+                          sx={{ color: "grey.500" }}
+                        >
+                          باركود: {option.sku}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                </li>
+              )}
             />
           </Box>
 
@@ -830,89 +820,33 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                   </Box>
                 </Box>
 
-                {/* Third Row: Batch & Expiry */}
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-                    gap: 2,
-                  }}
-                >
-                  <Box>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 600,
-                        color: "grey.700",
-                        mb: 1,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                      }}
-                    >
-                      <Hash size={16} />
-                      رقم الدفعة
-                    </Typography>
-                    <TextField
-                      value={batchNumber}
-                      onChange={(e) => setBatchNumber(e.target.value)}
-                      size="small"
-                      fullWidth
-                      placeholder="اختياري"
-                      onKeyDown={handleFormInputKeyDown}
-                      sx={{
-                        "& .MuiOutlinedInput-root": { borderRadius: 2 },
-                      }}
-                    />
-                  </Box>
-
-                  <Box>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 600,
-                        color: "grey.700",
-                        mb: 1,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                      }}
-                    >
-                      <Calendar size={16} />
-                      تاريخ الانتهاء
-                    </Typography>
-                    <TextField
-                      type="date"
-                      value={expiryDate}
-                      onChange={(e) => {
-                        const newValue = e.target.value;
-                        if (newValue) {
-                          // Parse the selected date
-                          const date = new Date(newValue);
-                          // Get the last day of the selected month
-                          const lastDay = new Date(
-                            date.getFullYear(),
-                            date.getMonth() + 1,
-                            0,
-                          );
-                          // Format as YYYY-MM-DD
-                          const formattedDate = lastDay
-                            .toISOString()
-                            .split("T")[0];
-                          setExpiryDate(formattedDate);
-                        } else {
-                          setExpiryDate(newValue);
-                        }
-                      }}
-                      size="small"
-                      fullWidth
-                      InputLabelProps={{ shrink: true }}
-                      onKeyDown={handleFormInputKeyDown}
-                      sx={{
-                        "& .MuiOutlinedInput-root": { borderRadius: 2 },
-                      }}
-                    />
-                  </Box>
+                {/* Batch Number */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontWeight: 600,
+                      color: "grey.700",
+                      mb: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                    }}
+                  >
+                    <Hash size={16} />
+                    رقم الدفعة
+                  </Typography>
+                  <TextField
+                    value={batchNumber}
+                    onChange={(e) => setBatchNumber(e.target.value)}
+                    size="small"
+                    fullWidth
+                    placeholder="اختياري"
+                    onKeyDown={handleFormInputKeyDown}
+                    sx={{
+                      "& .MuiOutlinedInput-root": { borderRadius: 2 },
+                    }}
+                  />
                 </Box>
               </Box>
             </Fade>

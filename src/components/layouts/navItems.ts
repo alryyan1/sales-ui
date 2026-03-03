@@ -9,6 +9,60 @@ import {
 } from "lucide-react";
 import { NavItem } from "./types";
 
+/**
+ * Registry of icons for routes and categories.
+ * This is used to enrich the navigation data fetched from the backend.
+ */
+export const iconRegistry: Record<string, React.ElementType> = {
+  // Routes
+  "/dashboard": LayoutDashboard,
+  "/sales/pos-blank": CircleDollarSign,
+  "/sales/returns": CircleDollarSign,
+  "/clients": CircleDollarSign,
+  "/products": BoxIcon,
+  "/inventory/adjustments": BoxIcon,
+  "/inventory/transfers": BoxIcon,
+  "/inventory/counts": BoxIcon,
+  "/suppliers": ShoppingCart,
+  "/purchases": ShoppingCart,
+  "/reports/dashboard": BarChart3,
+  "/reports/sales": BarChart3,
+  "/reports/sale-returns": BarChart3,
+  "/reports/purchases": BarChart3,
+  "/reports/suppliers-summary": BarChart3,
+  "/reports/inventory-log": BarChart3,
+  "/reports/sales-discounts": BarChart3,
+  "/reports/daily-income": BarChart3,
+  "/reports/monthly-expenses": BarChart3,
+  "/reports/profit-loss": BarChart3,
+  "/reports/best-selling-products": BarChart3,
+  "/reports/stagnant-products": BarChart3,
+  "/reports/low-stock-products": BarChart3,
+  "/reports/shortages": BarChart3,
+
+  "/reports/monthly-shifts": BarChart3,
+  "/admin/users": Settings,
+  "/admin/roles": Settings,
+  "/admin/expenses": Settings,
+  "/admin/settings": Settings,
+  "/admin/system": Settings,
+  "/admin/backups": Settings,
+  "/admin/warehouses": Settings,
+  "/admin/whatsapp-schedulers": Settings,
+  "/admin/whatsapp-test": Settings,
+  "/admin/inventory/requisitions/request": Settings,
+  "/admin/inventory/requisitions": Settings,
+  "/admin/idb-manager": Settings,
+
+  // Categories (used as parent icons)
+  "لوحة التحكم": LayoutDashboard,
+  المبيعات: CircleDollarSign,
+  المخزون: BoxIcon,
+  الواردات: ShoppingCart,
+  التقارير: BarChart3,
+  الإدارة: Settings,
+};
+
 export const navItems: NavItem[] = [
   // Dashboard
   {
@@ -198,12 +252,7 @@ export const navItems: NavItem[] = [
         permission: null,
         category: "التقارير",
       },
-      {
-        to: "/reports/moved-expired-products",
-        label: "المنتجات التالفة/المنتهية",
-        permission: null,
-        category: "التقارير",
-      },
+
       {
         to: "/reports/monthly-shifts",
         label: "تقرير الورديات الشهري",

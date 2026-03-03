@@ -70,6 +70,7 @@ const ProductsPage: React.FC = () => {
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
   const [showOnlyInStock, setShowOnlyInStock] = useState(true);
+  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const navigate = useNavigate();
 
   // Modal State
@@ -126,6 +127,7 @@ const ProductsPage: React.FC = () => {
     search: debouncedSearchTerm,
     categoryId: selectedCategory,
     inStockOnly: showOnlyInStock,
+    lowStockOnly: showLowStockOnly,
   });
 
   // Flatten pages into a single array of products
@@ -557,6 +559,22 @@ const ProductsPage: React.FC = () => {
                   ))}
                 </Select>
               </FormControl>
+            </Box>
+
+            {/* Low Stock Toggle */}
+            <Box
+              sx={{ flex: { md: 1 }, display: "flex", alignItems: "center" }}
+            >
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={showLowStockOnly}
+                    onChange={() => setShowLowStockOnly(!showLowStockOnly)}
+                    color="warning"
+                  />
+                }
+                label="عرض النواقص (تنبيه المخزون)"
+              />
             </Box>
 
             {/* Out of Stock Toggle */}

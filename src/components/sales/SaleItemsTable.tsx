@@ -23,6 +23,7 @@ import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
 import { formatNumber } from "@/constants";
 import type { SaleItem } from "@/services/saleService";
+import ProductImage from "@/components/products/ProductImage";
 
 export interface SaleItemsTableProps {
   items: SaleItem[] | undefined;
@@ -355,11 +356,19 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
               item.product_name ?? item.product?.name ?? `#${item.product_id}`;
             const scientificName = item.product?.scientific_name;
             return (
-              <Box>
-                <Typography component="span" sx={{ fontSize: "0.8125rem" }}>
-                  {name}
-                  {scientificName ? ` (${scientificName})` : ""}
-                </Typography>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <ProductImage
+                  imageUrl={item.product?.image_url}
+                  productName={name}
+                  size={32}
+                  variant="rounded"
+                />
+                <Box>
+                  <Typography component="span" sx={{ fontSize: "0.8125rem" }}>
+                    {name}
+                    {scientificName ? ` (${scientificName})` : ""}
+                  </Typography>
+                </Box>
               </Box>
             );
           },
@@ -493,78 +502,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
         },
         meta: { align: "center" },
       }),
-      columnHelper.display({
-        id: "expiry_date",
-        header: "تاريخ الانتهاء",
-        cell: ({ row }) => {
-          const item = row.original;
-          const expiryDate =
-            item.expiry_date ||
-            item.purchase_item?.expiry_date ||
-            item.purchaseItemBatch?.expiry_date ||
-            item.earliest_expiry_date ||
-            item.product?.earliest_expiry_date;
-
-          if (!expiryDate) {
-            return (
-              <Typography
-                component="span"
-                sx={{ fontSize: "0.8125rem", color: "text.disabled" }}
-              >
-                —
-              </Typography>
-            );
-          }
-
-          // Calculate days until expiry
-          const today = new Date();
-          const expiry = new Date(expiryDate);
-          const diffDays = Math.ceil(
-            (expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
-          );
-
-          // Determine color based on expiry status
-          let color = "text.primary";
-          let bgcolor = "transparent";
-          if (diffDays < 0) {
-            color = "error.main";
-            bgcolor = "error.lighter";
-          } else if (diffDays <= 7) {
-            color = "error.main";
-            bgcolor = "error.lighter";
-          } else if (diffDays <= 30) {
-            color = "warning.main";
-            bgcolor = "warning.lighter";
-          }
-
-          // Format date as YYYY-MM-DD
-          const formattedDate = expiryDate.split("T")[0];
-
-          return (
-            <Box
-              sx={{
-                display: "inline-block",
-                px: 1,
-                py: 0.5,
-                borderRadius: 1,
-                bgcolor,
-              }}
-            >
-              <Typography
-                component="span"
-                sx={{
-                  fontSize: "0.8125rem",
-                  color,
-                  fontWeight: diffDays <= 7 ? 600 : 400,
-                }}
-              >
-                {formattedDate}
-              </Typography>
-            </Box>
-          );
-        },
-        meta: { align: "center" },
-      }),
+ 
       columnHelper.accessor((row) => Number(row.unit_price ?? 0), {
         id: "price",
         header: "السعر",
@@ -762,7 +700,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
         overflow: "auto",
       }}
     >
-      <Table size="small" style={{direction:'ltr'}} stickyHeader>
+      <Table size="small" style={{ direction: "ltr" }} stickyHeader>
         <TableHead>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>

@@ -169,52 +169,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
 
           {location.pathname === "/sales/pos-blank" && (
             <>
-              {/* Near Expiring Products Button */}
-              <IconButton
-                color="warning"
-                size="small"
-                onClick={() =>
-                  window.dispatchEvent(
-                    new CustomEvent("open-near-expiring-dialog"),
-                  )
-                }
-                sx={{
-                  bgcolor: "warning.lighter",
-                  "&:hover": { bgcolor: "warning.light" },
-                  ml: 1,
-                }}
-              >
-                <Badge
-                  badgeContent={expiryCounts.nearExpiringCount}
-                  color="warning"
-                >
-                  <FileWarningIcon size={20} />
-                </Badge>
-              </IconButton>
-
-              {/* Expired Products Button */}
-              <IconButton
-                color="error"
-                size="small"
-                onClick={() =>
-                  window.dispatchEvent(new CustomEvent("open-expired-dialog"))
-                }
-                sx={{
-                  bgcolor: "error.lighter",
-                  "&:hover": { bgcolor: "error.light" },
-                  ml: 1,
-                }}
-              >
-                <Badge
-                  badgeContent={expiryCounts.expiredCount}
-                  color={expiryCounts.expiredCount === 0 ? "info" : "error"}
-                >
-                  <ErrorIcon
-                    fontSize="small"
-                    color={expiryCounts.expiredCount === 0 ? "info" : "error"}
-                  />
-                </Badge>
-              </IconButton>
+        
             </>
           )}
         </Typography>

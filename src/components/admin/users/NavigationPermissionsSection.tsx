@@ -7,7 +7,7 @@ import {
   ChevronUp,
   Info,
 } from "lucide-react";
-import { navItems } from "@/components/layouts/navItems";
+import { navItems as fallbackNavItems } from "@/components/layouts/navItems";
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 import { Button } from "@/components/ui/button";
@@ -60,49 +60,27 @@ const NavigationPermissionsSection: React.FC<
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Build navigation structure from navItems.ts
-  const buildNavStructure = (): NavigationCategory[] => {
+  // Local navigation structure built once from static navItems (source of truth)
+  const localNavigationStructure = useMemo<NavigationCategory[]>(() => {
     const categories: Record<string, NavigationItem[]> = {};
-
-    navItems.forEach((item) => {
+    (fallbackNavItems as any[]).forEach((item: any) => {
       const category = item.category || "غير مصنف";
-
-      // Add parent item if it has a route (not just a parent)
       if (item.to !== "#" && item.to) {
-        if (!categories[category]) {
-          categories[category] = [];
-        }
-        categories[category].push({
-          route: item.to,
-          label: item.label,
-        });
+        if (!categories[category]) categories[category] = [];
+        categories[category].push({ route: item.to, label: item.label });
       }
-
-      // Add children
       if (item.children) {
-        item.children.forEach((child) => {
-          if (!categories[category]) {
-            categories[category] = [];
-          }
-          categories[category].push({
-            route: child.to,
-            label: child.label,
-          });
+        item.children.forEach((child: any) => {
+          if (!categories[category]) categories[category] = [];
+          categories[category].push({ route: child.to, label: child.label });
         });
       }
     });
-
     return Object.entries(categories).map(([category, items]) => ({
       category,
       items,
     }));
-  };
-
-  // Local navigation structure built once from static navItems (source of truth)
-  const localNavigationStructure = useMemo<NavigationCategory[]>(
-    () => buildNavStructure(),
-    [],
-  );
+  }, []);
 
   // Set of valid routes based on current frontend navItems/router
   const allowedRoutes = useMemo<Set<string>>(
@@ -116,21 +94,15 @@ const NavigationPermissionsSection: React.FC<
   );
 
   // Use API data if available, but only for routes that still exist locally.
-  // Fallback entirely to local structure when API is missing or has only stale routes.
   const navigationStructure = useMemo<NavigationCategory[]>(() => {
     if (apiNavItems?.data && apiNavItems.data.length > 0) {
-      const filteredFromApi: NavigationCategory[] = apiNavItems.data
+      return apiNavItems.data
         .map((cat) => ({
           category: cat.category,
           items: cat.items.filter((item) => allowedRoutes.has(item.route)),
         }))
         .filter((cat) => cat.items.length > 0);
-
-      if (filteredFromApi.length > 0) {
-        return filteredFromApi;
-      }
     }
-    // Fallback / source of truth
     return localNavigationStructure;
   }, [apiNavItems, allowedRoutes, localNavigationStructure]);
 

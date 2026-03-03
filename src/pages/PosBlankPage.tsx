@@ -53,6 +53,7 @@ import {
   ShiftStats,
 } from "@/components/sales/ShiftFinancialTable";
 import { useSettings } from "@/context/SettingsContext";
+import ProductImage from "@/components/products/ProductImage";
 
 interface Shift {
   id: number;
@@ -1502,67 +1503,83 @@ const PosBlankPage: React.FC = () => {
                     <Box
                       sx={{
                         display: "flex",
-                        flexDirection: "column",
-                        gap: 0.25,
+                        alignItems: "center",
+                        gap: 1.5,
                         width: "100%",
                       }}
                     >
+                      <ProductImage
+                        imageUrl={option.image_url}
+                        name={option.name}
+                        size={40}
+                        variant="rounded"
+                      />
                       <Box
                         sx={{
                           display: "flex",
-                          justifyContent: "space-between",
+                          flexDirection: "column",
+                          gap: 0.25,
+                          flex: 1,
                         }}
                       >
-                        <Typography variant="body2" fontWeight="medium">
-                          {option.name}
-                        </Typography>
-                        {option.current_stock_quantity != null ||
-                        option.stock_quantity != null ? (
-                          <Typography
-                            variant="caption"
-                            color={
-                              (option.current_stock_quantity ??
-                                option.stock_quantity ??
-                                0) <= 5
-                                ? "error.main"
-                                : "success.main"
-                            }
-                            fontWeight="bold"
-                          >
-                            {`الكمية: ${formatNumber(
-                              option.current_stock_quantity ??
-                                option.stock_quantity ??
-                                0,
-                            )}`}
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                          }}
+                        >
+                          <Typography variant="body2" fontWeight="medium">
+                            {option.name}
                           </Typography>
-                        ) : null}
-                      </Box>
+                          {option.current_stock_quantity != null ||
+                          option.stock_quantity != null ? (
+                            <Typography
+                              variant="caption"
+                              color={
+                                (option.current_stock_quantity ??
+                                  option.stock_quantity ??
+                                  0) <= 5
+                                  ? "error.main"
+                                  : "success.main"
+                              }
+                              fontWeight="bold"
+                            >
+                              {`الكمية: ${formatNumber(
+                                option.current_stock_quantity ??
+                                  option.stock_quantity ??
+                                  0,
+                              )}`}
+                            </Typography>
+                          ) : null}
+                        </Box>
 
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        <Typography variant="caption" color="text.secondary">
-                          {[
-                            option.last_sale_price_per_sellable_unit != null &&
-                              `السعر: ${formatNumber(
-                                Number(
-                                  option.last_sale_price_per_sellable_unit,
-                                ),
-                              )}`,
-                          ]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </Typography>
-
-                        {option.earliest_expiry_date && (
-                          <Typography variant="caption" color="warning.dark">
-                            {`ينتهي: ${option.earliest_expiry_date}`}
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
+                        >
+                          <Typography variant="caption" color="text.secondary">
+                            {[
+                              option.last_sale_price_per_sellable_unit !=
+                                null &&
+                                `السعر: ${formatNumber(
+                                  Number(
+                                    option.last_sale_price_per_sellable_unit,
+                                  ),
+                                )}`,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
                           </Typography>
-                        )}
+
+                          {option.earliest_expiry_date && (
+                            <Typography variant="caption" color="warning.dark">
+                              {`ينتهي: ${option.earliest_expiry_date}`}
+                            </Typography>
+                          )}
+                        </Box>
                       </Box>
                     </Box>
                   </li>
