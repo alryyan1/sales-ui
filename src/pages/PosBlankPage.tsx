@@ -2231,7 +2231,11 @@ const PosBlankPage: React.FC = () => {
                       sx={{ textTransform: "none" }}
                       onClick={handlePrintA4Invoice}
                     >
-                      {a4PdfLoading ? "جاري التحميل..." : "فاتورة A4 PDF"}
+                      {a4PdfLoading
+                        ? "جاري التحميل..."
+                        : Number(selectedSale?.paid_amount ?? 0) <= 0
+                          ? "فاتوره مبدئيه"
+                          : "فاتورة A4 PDF"}
                     </Button>
                   </Stack>
                   <Button
