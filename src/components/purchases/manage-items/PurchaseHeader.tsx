@@ -177,14 +177,14 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
 
             {!isReadOnly && (
               <>
-                {/* <Button
+                <Button
                   onClick={onOpenAddDialog}
                   size="sm"
                   className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
                 >
                   <Plus className="h-4 w-4 ml-1.5" />
                   إضافة صنف
-                </Button> */}
+                </Button>
 
               </>
             )}
