@@ -370,7 +370,7 @@ const PurchasesListPage: React.FC = () => {
                 <ShoppingCart className="h-6 w-6 " />
               </div>
               <div>
-                <h1 className="text-xl md:text-2xl font-bold ">المشتريات</h1>
+                <h1 className="text-xl md:text-2xl font-bold ">الواردات</h1>
                 <p className=" text-xs">إدارة عمليات الشراء والمخزون</p>
               </div>
             </div>
@@ -714,7 +714,7 @@ const PurchasesListPage: React.FC = () => {
                     purchasesResponse.data.map((purchase: any) => {
                       const status =
                         statusConfig[
-                          purchase.status as keyof typeof statusConfig
+                        purchase.status as keyof typeof statusConfig
                         ] || statusConfig.pending;
                       const StatusIcon = status.icon;
 
@@ -782,7 +782,7 @@ const PurchasesListPage: React.FC = () => {
                             <span className="font-bold text-primary">
                               {formatCurrency(
                                 (Number(purchase.total_amount) || 0) -
-                                  (Number(purchase.total_paid) || 0),
+                                (Number(purchase.total_paid) || 0),
                               )}
                             </span>
                           </TableCell>

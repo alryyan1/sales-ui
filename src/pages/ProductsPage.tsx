@@ -359,7 +359,7 @@ const ProductsPage: React.FC = () => {
             component="h1"
             className="text-gray-800 dark:text-gray-100 font-semibold"
           >
-            إدارة المنتجات
+            إدارة المعدات
           </Typography>
           <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
             {/* Sync to Firestore */}

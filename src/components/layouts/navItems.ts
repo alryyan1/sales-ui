@@ -29,7 +29,7 @@ export const navItems: NavItem[] = [
     children: [
       {
         to: "/sales/pos-blank",
-        label: "نقطة البيع الموحدة",
+        label: "المعرض",
         permission: null,
         category: "المبيعات",
       },
@@ -58,7 +58,7 @@ export const navItems: NavItem[] = [
     children: [
       {
         to: "/products",
-        label: "المنتجات",
+        label: "المعدات",
         permission: null,
         category: "المخزون",
       },
@@ -86,10 +86,10 @@ export const navItems: NavItem[] = [
   // Purchases Group
   {
     to: "#",
-    label: "المشتريات",
+    label: "الواردات",
     icon: ShoppingCart,
     permission: null,
-    category: "المشتريات",
+    category: "الواردات",
     children: [
       {
         to: "/suppliers",
