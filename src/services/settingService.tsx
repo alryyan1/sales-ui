@@ -42,6 +42,7 @@ export interface AppSettings {
   product_images_show_in_invoices?: boolean;
   product_images_show_in_reports?: boolean;
   firebase_collection_name?: string;
+  usd_to_sdg_factor?: number;
 }
 
 // Type for the update payload (can be partial)

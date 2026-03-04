@@ -501,7 +501,9 @@ const PosBlankPage: React.FC = () => {
         return;
       }
 
-      const unitPrice = Number(product.last_sale_price_per_sellable_unit) || 0;
+      const usdFactor = getSetting("usd_to_sdg_factor", 1) as number;
+      const unitPrice =
+        (Number(product.last_sale_price_per_sellable_unit) || 0) * usdFactor;
       try {
         setAddProductLoading(true);
         const res = await saleService.addSaleItem(selectedSale.id, {
@@ -525,7 +527,7 @@ const PosBlankPage: React.FC = () => {
         setAddProductLoading(false);
       }
     },
-    [selectedSale],
+    [selectedSale, getSetting],
   );
 
   const handleAddProductByBarcode = useCallback(

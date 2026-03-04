@@ -8,14 +8,20 @@ import { useSettings } from "@/context/SettingsContext";
  */
 export const useFormatCurrency = () => {
   const { getSetting } = useSettings();
-  const currencySymbol = getSetting("currency_symbol", "$");
+  const globalCurrencySymbol = getSetting("currency_symbol", "$");
 
   return useMemo(
-    () => (value: string | number | null | undefined, options?: Intl.NumberFormatOptions) => {
-      // Use currency symbol from settings
-      return formatCurrencyUtil(value, undefined, currencySymbol, options);
-    },
-    [currencySymbol]
+    () =>
+      (
+        value: string | number | null | undefined,
+        overrideCurrency?: string,
+        options?: Intl.NumberFormatOptions,
+      ) => {
+        // Use currency symbol from parameters or settings
+        const symbol = overrideCurrency || globalCurrencySymbol;
+        return formatCurrencyUtil(value, undefined, symbol, options);
+      },
+    [globalCurrencySymbol],
   );
 };
 
@@ -26,4 +32,3 @@ export const useCurrencySymbol = () => {
   const { getSetting } = useSettings();
   return getSetting("currency_symbol", "$");
 };
-
