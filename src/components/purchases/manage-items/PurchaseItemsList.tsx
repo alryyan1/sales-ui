@@ -52,6 +52,7 @@ interface PurchaseItemsListProps {
   onInlineCreate?: (data: AddPurchaseItemData) => Promise<void>;
   isCreating?: boolean;
   markupPercentage?: number;
+  currency?: string;
 }
 
 import InlineCreatePurchaseItem from "./InlineCreatePurchaseItem";
@@ -73,6 +74,7 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
   onInlineCreate,
   isCreating = false,
   markupPercentage = 20,
+  currency,
 }) => {
   const [showInlineCreate, setShowInlineCreate] = useState(false);
 
@@ -181,16 +183,15 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
               أصناف المشتريات ({paginationData.total})
             </Typography>
             {onInlineCreate && !isReadOnly && (
-                <Button
-                  size="small"
-                  variant="contained"
-                  startIcon={<Plus size={20} />}
-                  onClick={() => setShowInlineCreate(!showInlineCreate)}
-                  color="primary"
-             
-                >
-                  اضافه صنف
-                </Button>
+              <Button
+                size="small"
+                variant="contained"
+                startIcon={<Plus size={20} />}
+                onClick={() => setShowInlineCreate(!showInlineCreate)}
+                color="primary"
+              >
+                اضافه صنف
+              </Button>
             )}
           </Box>
           <TextField
@@ -390,6 +391,7 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
             updatingField={updatingField}
             startIndex={paginationData.from > 0 ? paginationData.from - 1 : 0}
             totalCount={paginationData.total}
+            currency={currency}
           />
         ) : (
           <Box sx={{ textAlign: "center", py: 4 }}>
