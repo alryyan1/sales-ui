@@ -1,16 +1,6 @@
 // src/components/purchases/manage-items/PurchaseHeader.tsx
 import React from "react";
-import {
-  ArrowLeft,
-  Plus,
-  ListChecks,
-  Trash2,
-  FileText,
-  Receipt,
-  Loader2,
-  Building2,
-  FileDown,
-} from "lucide-react";
+import { ArrowLeft, Plus, Receipt, Building2 } from "lucide-react";
 // Shadcn UI Components
 import { Button } from "@/components/ui/button";
 import {
@@ -20,12 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 // Custom Components & Utils
@@ -41,14 +25,9 @@ interface PurchaseHeaderProps {
   isReadOnly: boolean;
   onBack: () => void;
   onOpenAddDialog: () => void;
-  onAddAllProducts: () => void;
-  onDeleteZeroQuantity: () => void;
   onStatusChange: (status: "pending" | "ordered" | "received") => void;
-  isAddAllPending: boolean;
-  isDeleteZeroPending: boolean;
   isStatusPending: boolean;
   summaryDialogOpen: boolean;
-  onOpenSummaryDialog: () => void;
   onCloseSummaryDialog: () => void;
   onExportPdf: () => void;
   markupPercentage?: number;
@@ -61,14 +40,9 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
   isReadOnly,
   onBack,
   onOpenAddDialog,
-  onAddAllProducts,
-  onDeleteZeroQuantity,
   onStatusChange,
-  isAddAllPending,
-  isDeleteZeroPending,
   isStatusPending,
   summaryDialogOpen,
-  onOpenSummaryDialog,
   onCloseSummaryDialog,
   onExportPdf,
   markupPercentage = 20,
@@ -118,7 +92,7 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
             </div>
             <div className="bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg flex flex-col items-center min-w-[100px]">
               <span className="text-lg font-bold leading-none">
-                {formatCurrency(summary.totalCost)}
+                {formatCurrency(summary.totalCost, purchase.currency)}
               </span>
               <span className="text-[10px] opacity-80 font-medium">
                 إجمالي التكلفة
@@ -185,12 +159,10 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
                   <Plus className="h-4 w-4 ml-1.5" />
                   إضافة صنف
                 </Button>
-
               </>
             )}
 
-
-             <Button onClick={onExportPdf}>طباعه الفاتوره</Button>
+            <Button onClick={onExportPdf}>طباعه الفاتوره</Button>
 
             <Dialog
               open={summaryDialogOpen}
@@ -200,6 +172,7 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
                 <PurchaseSummaryDialog
                   summary={summary}
                   supplierName={purchase.supplier_name || "—"}
+                  currency={purchase.currency}
                 />
               </DialogContent>
             </Dialog>

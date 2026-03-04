@@ -62,8 +62,12 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
   const [downloadingCost, setDownloadingCost] = useState(false);
   const [downloadingReturns, setDownloadingReturns] = useState(false);
   const [downloadingItems, setDownloadingItems] = useState(false);
+  const [downloadingInventoryEffects, setDownloadingInventoryEffects] =
+    useState(false);
 
-  const handleDownloadPdf = async (type: "cost" | "returns" | "items") => {
+  const handleDownloadPdf = async (
+    type: "cost" | "returns" | "items" | "inventory_effects",
+  ) => {
     if (!shiftId) return;
 
     const setLoader =
@@ -71,21 +75,27 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
         ? setDownloadingCost
         : type === "returns"
           ? setDownloadingReturns
-          : setDownloadingItems;
+          : type === "items"
+            ? setDownloadingItems
+            : setDownloadingInventoryEffects;
 
     const endpoint =
       type === "cost"
         ? "/reports/shift-cost-pdf"
         : type === "returns"
           ? "/reports/shift-returns-pdf"
-          : "/reports/shift-sold-items-pdf";
+          : type === "items"
+            ? "/reports/shift-sold-items-pdf"
+            : "/reports/shift-inventory-effects-pdf";
 
     const title =
       type === "cost"
         ? "المصروفات"
         : type === "returns"
           ? "مردودات المبيعات"
-          : "الأصناف المباعة";
+          : type === "items"
+            ? "الأصناف المباعة"
+            : "أثر المخزون";
 
     try {
       setLoader(true);
@@ -323,7 +333,6 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
           color="secondary"
           size="small"
           disabled={downloadingCost}
-        
           onClick={() => handleDownloadPdf("cost")}
           sx={{ fontWeight: 600 }}
         >
@@ -335,7 +344,6 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
           color="warning"
           size="small"
           disabled={downloadingReturns}
-     
           onClick={() => handleDownloadPdf("returns")}
           sx={{ fontWeight: 600 }}
         >
@@ -347,11 +355,21 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
           color="success"
           size="small"
           disabled={downloadingItems}
-       
           onClick={() => handleDownloadPdf("items")}
           sx={{ fontWeight: 600 }}
         >
           {downloadingItems ? "جاري التحميل..." : "الأصناف  PDF"}
+        </Button>
+
+        <Button
+          variant="outlined"
+          color="primary"
+          size="small"
+          disabled={downloadingInventoryEffects}
+          onClick={() => handleDownloadPdf("inventory_effects")}
+          sx={{ fontWeight: 600 }}
+        >
+          {downloadingInventoryEffects ? "جاري التحميل..." : "أثر المخزون PDF"}
         </Button>
       </Stack>
     </TableContainer>
