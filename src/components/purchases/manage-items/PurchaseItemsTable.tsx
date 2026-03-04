@@ -43,6 +43,7 @@ interface PurchaseItemsTableProps {
   updatingField: string | null;
   startIndex: number; // For pagination numbering
   totalCount: number; // Total number of items across all pages
+  currency?: string;
 }
 
 const columnHelper = createColumnHelper<PurchaseItem>();
@@ -57,6 +58,7 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
   updatingField,
   startIndex,
   totalCount,
+  currency,
 }) => {
   // Helper to check if a specific field is being updated
   const isFieldUpdating = useCallback(
@@ -334,7 +336,11 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
           const item = row.original;
           return (
             <Typography variant="body2" fontWeight="700" color="primary.main">
-              {formatCurrency(item.quantity * Number(item.unit_cost))}
+              {formatCurrency(
+                item.quantity * Number(item.unit_cost),
+                undefined,
+                currency,
+              )}
             </Typography>
           );
         },
@@ -350,7 +356,7 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
           const totalRetail = item.quantity * Number(item.sale_price || 0);
           return (
             <Typography variant="body2" fontWeight="700" color="success.main">
-              {formatCurrency(totalRetail)}
+              {formatCurrency(totalRetail, undefined, currency)}
             </Typography>
           );
         },
@@ -393,6 +399,7 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
       startIndex,
       totalCount,
       isFieldUpdating,
+      currency,
     ],
   );
 

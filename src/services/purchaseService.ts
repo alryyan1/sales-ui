@@ -5,6 +5,11 @@ import { PaginatedResponse } from "./clientService";
 import { Product } from "./productService"; // For purchase item details
 import { Supplier } from "./supplierService"; // For purchase header details
 
+export interface TaxDetail {
+  label: string;
+  amount: number | string;
+}
+
 // --- Interfaces ---
 
 // Matches PurchaseItemResource structure
@@ -31,15 +36,13 @@ export interface PurchaseItem {
 // It's often similar to CreatePurchaseData but items MUST have IDs if they are existing,
 // or no ID if they are new items being added during the update.
 export interface UpdatePurchaseData {
-  // Header fields that can be updated
-  supplier_id?: number; // Optional if not changing supplier
-  purchase_date?: string; // Format YYYY-MM-DD
-  reference_number?: string | null;
-  status?: "received" | "pending" | "ordered";
-  notes?: string | null;
   currency?: string;
+  tax_amount?: number | string;
+  customs_amount?: number | string;
+  tax_details?: TaxDetail[] | null;
+  customs_details?: TaxDetail[] | null;
   // Items array can contain existing items (with ID) and new items (without ID)
-  items: Array<{
+  items?: Array<{
     id?: number | null; // ID of existing item to update, null/missing for new item
     product_id: number;
     batch_number?: string | null;
@@ -81,6 +84,10 @@ export interface Purchase {
   balance?: string | number; // Added from resource
   notes: string | null;
   currency?: string;
+  tax_amount: string | number;
+  customs_amount: string | number;
+  tax_details?: TaxDetail[] | null;
+  customs_details?: TaxDetail[] | null;
   created_at: string;
   items?: PurchaseItem[]; // Array of items, included if eager loaded (e.g., on show)
   supplier?: Supplier; // Optional: Full supplier details if loaded
@@ -95,6 +102,10 @@ export interface CreatePurchaseData {
   status: "received" | "pending" | "ordered";
   notes?: string | null;
   currency?: string; // Add currency here
+  tax_amount?: number | string;
+  customs_amount?: number | string;
+  tax_details?: TaxDetail[] | null;
+  customs_details?: TaxDetail[] | null;
   items: Array<{
     product_id: number;
     batch_number?: string | null; // New
@@ -416,7 +427,7 @@ const purchaseService = {
     file: File,
     columnMapping: Record<string, string>,
     skipHeader: boolean = true,
-  ): Promise<{ preview: any[] }> => {
+  ): Promise<{ preview: Record<string, unknown>[] }> => {
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -462,7 +473,7 @@ const purchaseService = {
     imported: number;
     errors: number;
     message: string;
-    errorDetails: any[];
+    errorDetails: Record<string, unknown>[];
   }> => {
     try {
       const formData = new FormData();
@@ -554,6 +565,43 @@ const purchaseService = {
   // --- Error Helpers ---
   getValidationErrors,
   getErrorMessage,
+
+  /**
+   * Export tax and customs details to PDF.
+   */
+  exportTaxPdf: async (
+    purchaseId: number,
+    includeDetails: boolean = false,
+  ): Promise<void> => {
+    try {
+      const response = await apiClient.get(
+        `/purchases/${purchaseId}/export-tax-pdf`,
+        {
+          params: { include_details: includeDetails ? 1 : 0 },
+          responseType: "blob",
+        },
+      );
+
+      // Create a URL for the blob
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      const filename = `${includeDetails ? "detailed_tax_" : "summary_tax_"}${purchaseId}.pdf`;
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(
+        `Error exporting tax PDF for purchase ${purchaseId}:`,
+        error,
+      );
+      throw error;
+    }
+  },
 };
 
 export default purchaseService;

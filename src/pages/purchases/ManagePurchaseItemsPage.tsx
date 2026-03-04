@@ -609,6 +609,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
         onInlineCreate={handleInlineCreate}
         isCreating={addItemMutation.isPending}
         markupPercentage={markupPercentage}
+        currency={purchase?.currency}
       />
 
       {/* Inventory Impact Dialog */}

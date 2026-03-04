@@ -1,5 +1,4 @@
 // src/router.tsx
-import React from "react";
 import { createHashRouter, Navigate } from "react-router-dom";
 import RootLayout from "./components/layouts/RootLayout";
 import ProtectedRoute from "./components/layouts/ProtectedRoute";
@@ -18,6 +17,7 @@ import PurchasesListPage from "./pages/purchases/PurchasesListPage";
 import PurchaseFormPage from "./pages/PurchaseFormPage";
 import PurchaseDetailsPage from "./pages/purchases/PurchaseDetailsPage";
 import ManagePurchaseItemsPage from "./pages/purchases/ManagePurchaseItemsPage";
+import TaxCustomsManagementPage from "./pages/purchases/TaxCustomsManagementPage";
 import StockAdjustmentsListPage from "./components/inventory/StockAdjustmentsListPage";
 import StockTransfersPage from "./pages/inventory/StockTransfersPage";
 import InventoryCountPage from "./pages/inventory/InventoryCountPage";
@@ -165,6 +165,10 @@ const router = createHashRouter([
               {
                 path: ":id/manage-items",
                 element: <ManagePurchaseItemsPage />,
+              },
+              {
+                path: "tax-customs",
+                element: <TaxCustomsManagementPage />,
               },
             ],
           },

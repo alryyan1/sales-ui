@@ -103,6 +103,12 @@ export const navItems: NavItem[] = [
         permission: null,
         category: "المشتريات",
       },
+      {
+        to: "/purchases/tax-customs",
+        label: "الضرائب والجمارك",
+        permission: null,
+        category: "المشتريات",
+      },
     ],
   },
 
