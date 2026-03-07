@@ -218,12 +218,14 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
           autoHighlight
           freeSolo
           size="small"
+          dir="ltr"
           renderInput={(params) => (
             <TextField
               {...params}
               placeholder="Product or Barcode..."
               autoFocus
               inputRef={productInputRef}
+              sx={{ direction: "ltr !important" }}
               onKeyDown={async (e) => {
                 if (e.key === "Enter") {
                   // If autocomplete is loading, prevent default to avoid selecting incomplete results

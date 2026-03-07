@@ -19,6 +19,7 @@ import {
   FormControl,
   Popover,
   Stack,
+  createFilterOptions,
 } from "@mui/material";
 import { CloudUploadIcon, FileText, SearchIcon } from "lucide-react";
 import AddIcon from "@mui/icons-material/Add";
@@ -54,6 +55,13 @@ import {
   ShiftStats,
 } from "@/components/sales/ShiftFinancialTable";
 import { useSettings } from "@/context/SettingsContext";
+import ClientFormModal from "@/components/clients/ClientFormModal";
+
+interface ClientOptionType extends Partial<Client> {
+  inputValue?: string;
+}
+
+const filter = createFilterOptions<ClientOptionType>();
 
 interface Shift {
   id: number;
@@ -104,6 +112,8 @@ const PosBlankPage: React.FC = () => {
   const [clientOptions, setClientOptions] = useState<Client[]>([]);
   const [clientSearchLoading, setClientSearchLoading] = useState(false);
   const [clientInputValue, setClientInputValue] = useState("");
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [initialClientName, setInitialClientName] = useState("");
 
   const [summaryAnchorEl, setSummaryAnchorEl] = useState<HTMLElement | null>(
     null,
@@ -1752,7 +1762,12 @@ const PosBlankPage: React.FC = () => {
             >
               {selectedSale ? (
                 <Box>
-                  <Stack direction={"row"} gap={2} alignItems={"center"} justifyContent={'space-between'}>
+                  <Stack
+                    direction={"row"}
+                    gap={2}
+                    alignItems={"center"}
+                    justifyContent={"space-between"}
+                  >
                     <Typography
                       variant="subtitle1"
                       fontWeight={700}
@@ -1760,17 +1775,44 @@ const PosBlankPage: React.FC = () => {
                     >
                       تفاصيل البيع #{selectedSale.id}
                     </Typography>
-                
-                      <Typography variant="body2" color="text.secondary">
-                        {selectedSale.sale_date}
-                      </Typography>
-                    
+
+                    <Typography variant="body2" color="text.secondary">
+                      {selectedSale.sale_date}
+                    </Typography>
                   </Stack>
 
                   <Autocomplete
                     size="small"
-                    options={clientOptions}
-                    getOptionLabel={(option) => option.name || ""}
+                    options={clientOptions as ClientOptionType[]}
+                    getOptionLabel={(option) => {
+                      // Value selected with enter, right from the input
+                      if (typeof option === "string") {
+                        return option;
+                      }
+                      // Add "xxx" option created dynamically
+                      if (option.inputValue) {
+                        return option.inputValue;
+                      }
+                      // Regular option
+                      return option.name || "";
+                    }}
+                    filterOptions={(options, params) => {
+                      const filtered = filter(options, params);
+
+                      const { inputValue } = params;
+                      // Suggest the creation of a new value
+                      const isExisting = options.some(
+                        (option) => inputValue === option.name,
+                      );
+                      if (inputValue !== "" && !isExisting) {
+                        filtered.push({
+                          inputValue,
+                          name: `إضافة "${inputValue}"`,
+                        });
+                      }
+
+                      return filtered;
+                    }}
                     inputValue={clientInputValue}
                     onInputChange={(_, value) => setClientInputValue(value)}
                     value={
@@ -1782,12 +1824,36 @@ const PosBlankPage: React.FC = () => {
                           } as Client)
                         : null)
                     }
-                    onChange={(_, newValue) => handleClientChange(newValue)}
+                    onChange={(_, newValue) => {
+                      if (typeof newValue === "string") {
+                        // Handle string case if needed
+                        setInitialClientName(newValue);
+                        setIsClientModalOpen(true);
+                      } else if (newValue && newValue.inputValue) {
+                        // Create a new value from the user input
+                        setInitialClientName(newValue.inputValue);
+                        setIsClientModalOpen(true);
+                      } else {
+                        handleClientChange(newValue as Client | null);
+                      }
+                    }}
+                    renderOption={(props, option) => {
+                      const { key, ...optionProps } = props;
+                      return (
+                        <li key={key} {...optionProps}>
+                          {option.name}
+                        </li>
+                      );
+                    }}
                     isOptionEqualToValue={(option, value) =>
                       option.id === value.id
                     }
                     loading={clientSearchLoading}
                     disabled={!selectedSale}
+                    freeSolo
+                    selectOnFocus
+                    clearOnBlur
+                    handleHomeEndKeys
                     disableClearable={
                       (selectedSale?.payments?.length ?? 0) > 0 &&
                       !!(selectedSale?.client || selectedSale?.client_name)
@@ -2144,11 +2210,9 @@ const PosBlankPage: React.FC = () => {
                             type="number"
                             placeholder="المبلغ"
                             value={newPaymentAmount}
-                            onFocus={
-                              (e)=>{
-                                e.target.select()
-                              }
-                            }
+                            onFocus={(e) => {
+                              e.target.select();
+                            }}
                             onChange={(e) =>
                               setNewPaymentAmount(e.target.value)
                             }
@@ -2216,7 +2280,7 @@ const PosBlankPage: React.FC = () => {
                   <Stack
                     direction="row"
                     spacing={1}
-                    alignItems={'center'}
+                    alignItems={"center"}
                     gap={1}
                   >
                     <Button
@@ -2224,7 +2288,6 @@ const PosBlankPage: React.FC = () => {
                       variant="outlined"
                       size="small"
                       disabled={thermalPdfLoading}
-                    
                       sx={{ textTransform: "none" }}
                       onClick={handlePrintThermalInvoice}
                     >
@@ -2235,7 +2298,6 @@ const PosBlankPage: React.FC = () => {
                       variant="outlined"
                       size="small"
                       disabled={a4PdfLoading || !selectedSale?.client_id}
-                    
                       sx={{ textTransform: "none" }}
                       onClick={handlePrintA4Invoice}
                     >
@@ -2336,6 +2398,19 @@ const PosBlankPage: React.FC = () => {
         open={topSellingDialogOpen}
         onClose={() => setTopSellingDialogOpen(false)}
         onAddProduct={handleAddExpiryProductToCart}
+      />
+
+      <ClientFormModal
+        isOpen={isClientModalOpen}
+        onClose={() => setIsClientModalOpen(false)}
+        initialName={initialClientName}
+        clientToEdit={null}
+        onSaveSuccess={(newClient) => {
+          if (newClient) {
+            handleClientChange(newClient);
+          }
+          setIsClientModalOpen(false);
+        }}
       />
     </Box>
   );

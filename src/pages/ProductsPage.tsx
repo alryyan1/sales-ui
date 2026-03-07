@@ -573,7 +573,7 @@ const ProductsPage: React.FC = () => {
                     color="warning"
                   />
                 }
-                label="عرض النواقص (تنبيه المخزون)"
+                label="المخزون المنخفض"
               />
             </Box>
 
@@ -589,7 +589,7 @@ const ProductsPage: React.FC = () => {
                     color="primary"
                   />
                 }
-                label="عرض المنتجات المخلصة (النواقص)"
+                label="المخزون الصفري"
               />
             </Box>
           </Box>

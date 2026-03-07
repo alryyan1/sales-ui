@@ -31,6 +31,7 @@ interface ClientFormModalProps {
   onClose: () => void;
   clientToEdit: Client | null;
   onSaveSuccess: (client?: Client) => void;
+  initialName?: string;
 }
 
 // --- Component Definition ---
@@ -39,6 +40,7 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
   onClose,
   clientToEdit,
   onSaveSuccess,
+  initialName = "",
 }) => {
   const isEditMode = Boolean(clientToEdit);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -73,14 +75,14 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
         });
       } else {
         reset({
-          name: "",
+          name: initialName || "",
           email: "",
           phone: "",
           address: "",
         });
       }
     }
-  }, [isOpen, isEditMode, clientToEdit, reset]);
+  }, [isOpen, isEditMode, clientToEdit, reset, initialName]);
 
   // --- Form Submission Handler ---
   const onSubmit: SubmitHandler<ClientFormValues> = async (data) => {
@@ -100,7 +102,7 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
       if (isEditMode && clientToEdit) {
         savedClient = await clientService.updateClient(
           clientToEdit.id,
-          dataToSend
+          dataToSend,
         );
       } else {
         savedClient = await clientService.createClient(dataToSend);
