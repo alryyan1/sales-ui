@@ -1,7 +1,7 @@
 // export const host = 'sahara-pharma.com'
-export const schema = window.location.protocol.replace(":", "");
+export const schema = 'https';
 // export const host = "lifcaresd.com";
-export const host = window.location.hostname;
+export const host = 'backend.alsamar-laundry.com';
 
 console.log(host,'host')
 export const projectFolder = "sales-api";
