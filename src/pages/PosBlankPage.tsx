@@ -25,6 +25,7 @@ import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import CheckIcon from "@mui/icons-material/Check";
 
 import apiClient from "@/lib/axios";
 import { toast } from "sonner";
@@ -53,7 +54,6 @@ import {
   ShiftStats,
 } from "@/components/sales/ShiftFinancialTable";
 import { useSettings } from "@/context/SettingsContext";
-import ProductImage from "@/components/products/ProductImage";
 
 interface Shift {
   id: number;
@@ -1505,83 +1505,67 @@ const PosBlankPage: React.FC = () => {
                     <Box
                       sx={{
                         display: "flex",
-                        alignItems: "center",
-                        gap: 1.5,
+                        flexDirection: "column",
+                        gap: 0.25,
                         width: "100%",
                       }}
                     >
-                      <ProductImage
-                        imageUrl={option.image_url}
-                        name={option.name}
-                        size={40}
-                        variant="rounded"
-                      />
                       <Box
                         sx={{
                           display: "flex",
-                          flexDirection: "column",
-                          gap: 0.25,
-                          flex: 1,
+                          justifyContent: "space-between",
                         }}
                       >
-                        <Box
-                          sx={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                          }}
-                        >
-                          <Typography variant="body2" fontWeight="medium">
-                            {option.name}
+                        <Typography variant="body2" fontWeight="medium">
+                          {option.name}
+                        </Typography>
+                        {option.current_stock_quantity != null ||
+                        option.stock_quantity != null ? (
+                          <Typography
+                            variant="caption"
+                            color={
+                              (option.current_stock_quantity ??
+                                option.stock_quantity ??
+                                0) <= 5
+                                ? "error.main"
+                                : "success.main"
+                            }
+                            fontWeight="bold"
+                          >
+                            {`الكمية: ${formatNumber(
+                              option.current_stock_quantity ??
+                                option.stock_quantity ??
+                                0,
+                            )}`}
                           </Typography>
-                          {option.current_stock_quantity != null ||
-                          option.stock_quantity != null ? (
-                            <Typography
-                              variant="caption"
-                              color={
-                                (option.current_stock_quantity ??
-                                  option.stock_quantity ??
-                                  0) <= 5
-                                  ? "error.main"
-                                  : "success.main"
-                              }
-                              fontWeight="bold"
-                            >
-                              {`الكمية: ${formatNumber(
-                                option.current_stock_quantity ??
-                                  option.stock_quantity ??
-                                  0,
-                              )}`}
-                            </Typography>
-                          ) : null}
-                        </Box>
+                        ) : null}
+                      </Box>
 
-                        <Box
-                          sx={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                          }}
-                        >
-                          <Typography variant="caption" color="text.secondary">
-                            {[
-                              option.last_sale_price_per_sellable_unit !=
-                                null &&
-                                `السعر: ${formatNumber(
-                                  Number(
-                                    option.last_sale_price_per_sellable_unit,
-                                  ),
-                                )}`,
-                            ]
-                              .filter(Boolean)
-                              .join(" · ")}
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          {[
+                            option.last_sale_price_per_sellable_unit != null &&
+                              `السعر: ${formatNumber(
+                                Number(
+                                  option.last_sale_price_per_sellable_unit,
+                                ),
+                              )}`,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </Typography>
+
+                        {option.earliest_expiry_date && (
+                          <Typography variant="caption" color="warning.dark">
+                            {`ينتهي: ${option.earliest_expiry_date}`}
                           </Typography>
-
-                          {option.earliest_expiry_date && (
-                            <Typography variant="caption" color="warning.dark">
-                              {`ينتهي: ${option.earliest_expiry_date}`}
-                            </Typography>
-                          )}
-                        </Box>
+                        )}
                       </Box>
                     </Box>
                   </li>
@@ -1768,22 +1752,20 @@ const PosBlankPage: React.FC = () => {
             >
               {selectedSale ? (
                 <Box>
-                  <Typography variant="subtitle1" fontWeight={700} gutterBottom>
-                    تفاصيل البيع #{selectedSale.id}
-                  </Typography>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 1,
-                      alignItems: "center",
-                      mb: 1.5,
-                    }}
-                  >
-                    <Typography variant="body2" color="text.secondary">
-                      {selectedSale.sale_date}
+                  <Stack direction={"row"} gap={2} alignItems={"center"} justifyContent={'space-between'}>
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight={700}
+                      gutterBottom
+                    >
+                      تفاصيل البيع #{selectedSale.id}
                     </Typography>
-                  </Box>
+                
+                      <Typography variant="body2" color="text.secondary">
+                        {selectedSale.sale_date}
+                      </Typography>
+                    
+                  </Stack>
 
                   <Autocomplete
                     size="small"
@@ -1839,7 +1821,7 @@ const PosBlankPage: React.FC = () => {
                   <Box
                     sx={{ display: "flex", flexDirection: "column", gap: 1 }}
                   >
-                    <Box
+                    {/* <Box
                       sx={{ display: "flex", justifyContent: "space-between" }}
                     >
                       <Typography variant="body2" color="text.secondary">
@@ -1848,7 +1830,7 @@ const PosBlankPage: React.FC = () => {
                       <Typography variant="body2" fontWeight={600}>
                         {selectedSale.items?.length ?? 0}
                       </Typography>
-                    </Box>
+                    </Box> */}
                     {(() => {
                       const subtotal =
                         selectedSale.subtotal != null
@@ -1871,7 +1853,7 @@ const PosBlankPage: React.FC = () => {
                             <Typography variant="body2" color="text.secondary">
                               المجموع الفرعي
                             </Typography>
-                            <Typography variant="body2" fontWeight={600}>
+                            <Typography variant="body1" fontWeight={700}>
                               {formatNumber(subtotal)}
                             </Typography>
                           </Box>
@@ -1889,8 +1871,8 @@ const PosBlankPage: React.FC = () => {
                                 الخصم
                               </Typography>
                               <Typography
-                                variant="body2"
-                                fontWeight={600}
+                                variant="body1"
+                                fontWeight={700}
                                 color="error.main"
                               >
                                 - {formatNumber(discountAmt)}
@@ -1942,11 +1924,17 @@ const PosBlankPage: React.FC = () => {
                                     : undefined,
                                 step: discountType === "percentage" ? 1 : 0.01,
                               }}
-                              sx={{ width: 80 }}
+                              sx={{
+                                width: 110,
+                                "& .MuiInputBase-input": {
+                                  fontSize: "1.1rem",
+                                  fontWeight: 700,
+                                },
+                              }}
                             />
-                            <Button
+                            <IconButton
                               size="small"
-                              variant="outlined"
+                              color="success"
                               onClick={handleApplyDiscount}
                               disabled={
                                 discountLoading ||
@@ -1954,9 +1942,14 @@ const PosBlankPage: React.FC = () => {
                                 (selectedSale.items?.length ?? 0) === 0 ||
                                 (selectedSale.payments?.length ?? 0) > 0
                               }
+                              aria-label="تطبيق الخصم"
                             >
-                              {discountLoading ? "..." : "تطبيق"}
-                            </Button>
+                              {discountLoading ? (
+                                <CircularProgress size={20} color="inherit" />
+                              ) : (
+                                <CheckIcon />
+                              )}
+                            </IconButton>
                             {discountAmt > 0 && (
                               <Button
                                 size="small"
@@ -1982,8 +1975,8 @@ const PosBlankPage: React.FC = () => {
                         الإجمالي
                       </Typography>
                       <Typography
-                        variant="body2"
-                        fontWeight={600}
+                        variant="body1"
+                        fontWeight={800}
                         color="success.main"
                       >
                         {formatNumber(Number(selectedSale.total_amount ?? 0))}
@@ -1992,20 +1985,24 @@ const PosBlankPage: React.FC = () => {
                     <Box
                       sx={{ display: "flex", justifyContent: "space-between" }}
                     >
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body1" color="text.secondary">
                         المدفوع
                       </Typography>
-                      <Typography variant="body2" fontWeight={600}>
+                      <Typography variant="body1" fontWeight={700}>
                         {formatNumber(Number(selectedSale.paid_amount ?? 0))}
                       </Typography>
                     </Box>
                     <Box
                       sx={{ display: "flex", justifyContent: "space-between" }}
                     >
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body1" color="text.secondary">
                         المتبقي
                       </Typography>
-                      <Typography variant="body2" fontWeight={600}>
+                      <Typography
+                        variant="body1"
+                        fontWeight={800}
+                        color="error.dark"
+                      >
                         {formatNumber(
                           selectedSale.due_amount != null
                             ? Number(selectedSale.due_amount)
@@ -2020,7 +2017,7 @@ const PosBlankPage: React.FC = () => {
                   </Box>
                   {selectedSale.payments &&
                     selectedSale.payments.length > 0 && (
-                      <Box sx={{ mt: 1.5 }}>
+                      <Box>
                         <Typography
                           variant="caption"
                           color="text.secondary"
@@ -2073,7 +2070,7 @@ const PosBlankPage: React.FC = () => {
                                   gap: 0.5,
                                 }}
                               >
-                                <Typography variant="caption" fontWeight={600}>
+                                <Typography variant="body2" fontWeight={700}>
                                   {formatNumber(Number(p.amount))}
                                 </Typography>
                                 {p.id != null && (
@@ -2147,11 +2144,22 @@ const PosBlankPage: React.FC = () => {
                             type="number"
                             placeholder="المبلغ"
                             value={newPaymentAmount}
+                            onFocus={
+                              (e)=>{
+                                e.target.select()
+                              }
+                            }
                             onChange={(e) =>
                               setNewPaymentAmount(e.target.value)
                             }
                             inputProps={{ min: 0.01, step: 0.01 }}
-                            sx={{ width: 90 }}
+                            sx={{
+                              width: 120,
+                              "& .MuiInputBase-input": {
+                                fontSize: "1.2rem",
+                                fontWeight: 800,
+                              },
+                            }}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") handleAddPayment();
                               else if (e.key === "+") {
@@ -2181,7 +2189,17 @@ const PosBlankPage: React.FC = () => {
                           color="text.secondary"
                           sx={{ display: "block", mt: 0.5 }}
                         >
-                          المتبقي: {formatNumber(due)}
+                          المتبقي:{" "}
+                          <Box
+                            component="span"
+                            sx={{
+                              fontSize: "1.1rem",
+                              fontWeight: 800,
+                              color: "error.main",
+                            }}
+                          >
+                            {formatNumber(due)}
+                          </Box>
                         </Typography>
                       </Box>
                     ) : null;
@@ -2198,7 +2216,7 @@ const PosBlankPage: React.FC = () => {
                   <Stack
                     direction="row"
                     spacing={1}
-                    sx={{ mt: 2, width: "100%" }}
+                    alignItems={'center'}
                     gap={1}
                   >
                     <Button
@@ -2206,13 +2224,7 @@ const PosBlankPage: React.FC = () => {
                       variant="outlined"
                       size="small"
                       disabled={thermalPdfLoading}
-                      startIcon={
-                        thermalPdfLoading ? (
-                          <CircularProgress size={18} color="inherit" />
-                        ) : (
-                          <ReceiptLongIcon />
-                        )
-                      }
+                    
                       sx={{ textTransform: "none" }}
                       onClick={handlePrintThermalInvoice}
                     >
@@ -2223,21 +2235,11 @@ const PosBlankPage: React.FC = () => {
                       variant="outlined"
                       size="small"
                       disabled={a4PdfLoading || !selectedSale?.client_id}
-                      startIcon={
-                        a4PdfLoading ? (
-                          <CircularProgress size={18} color="inherit" />
-                        ) : (
-                          <ReceiptLongIcon />
-                        )
-                      }
+                    
                       sx={{ textTransform: "none" }}
                       onClick={handlePrintA4Invoice}
                     >
-                      {a4PdfLoading
-                        ? "جاري التحميل..."
-                        : Number(selectedSale?.paid_amount ?? 0) <= 0
-                          ? "فاتوره مبدئيه"
-                          : "فاتورة A4 PDF"}
+                      {a4PdfLoading ? "جاري التحميل..." : "فاتورة A4 PDF"}
                     </Button>
                   </Stack>
                   <Button
