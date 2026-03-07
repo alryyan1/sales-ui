@@ -71,10 +71,10 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
     const newPrice = val === "" ? undefined : Number(val);
     setSalePrice(newPrice);
 
-    if (newPrice !== undefined && newPrice >= 0) {
-      const calculatedCost = newPrice / (1 + markupPercentage / 100);
-      setUnitCost(Number(calculatedCost.toFixed(2)));
-    }
+    // if (newPrice !== undefined && newPrice >= 0) {
+    //   const calculatedCost = newPrice / (1 + markupPercentage / 100);
+    //   setUnitCost(Number(calculatedCost.toFixed(2)));
+    // }
   };
 
   // Fetch products based on search query (debounced)
@@ -312,8 +312,15 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
             />
           )}
           renderOption={(props, option) => (
-            <li {...props} key={option.id}>
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
+            <li {...props} key={option.id} style={{ direction: "ltr" }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 0.25,
+                  textAlign: "left",
+                }}
+              >
                 <Typography variant="body2">{option.name}</Typography>
                 {(option.sku || option.suggested_sale_price != null) && (
                   <Typography variant="caption" color="text.secondary">

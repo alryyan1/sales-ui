@@ -128,7 +128,8 @@
   }
 
   /* Autocomplete should be LTR for search/SKUs */
-  [dir="rtl"] .MuiAutocomplete-input {
+  [dir="rtl"] .MuiAutocomplete-input,
+  [dir="rtl"] .MuiAutocomplete-listbox {
     text-align: left !important;
     direction: ltr !important;
   }
