@@ -8,6 +8,8 @@ import Alert from "@mui/material/Alert";
 import Pagination from "@mui/material/Pagination";
 import Button from "@mui/material/Button";
 import { CircularProgress } from "@mui/material";
+import TextField from "@mui/material/TextField";
+import InputAdornment from "@mui/material/InputAdornment";
 
 // Services and Types
 import clientService, {
@@ -20,7 +22,7 @@ import ClientsTable from "../components/clients/ClientsTable";
 import ClientFormModal from "../components/clients/ClientFormModal";
 import ConfirmationDialog from "../components/common/ConfirmationDialog";
 import ClientProceduresDialog from "../components/clients/ClientProceduresDialog";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, Search as SearchIcon } from "lucide-react";
 import { useSettings } from "../context/SettingsContext";
 
 const ClientsPage: React.FC = () => {
@@ -30,6 +32,19 @@ const ClientsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true); // Loading client list
   const [error, setError] = useState<string | null>(null); // Error fetching list
   const [currentPage, setCurrentPage] = useState(1); // Pagination
+
+  // Search State
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+
+  // Debounce effect
+  useEffect(() => {
+    const timerId = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setCurrentPage(1); // Reset page on new search
+    }, 500);
+    return () => clearTimeout(timerId);
+  }, [searchTerm]);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -50,11 +65,12 @@ const ClientsPage: React.FC = () => {
   const companyName = getSetting("company_name", "اسم الشركة") as string;
 
   // --- Data Fetching ---
-  const fetchClients = useCallback(async (page: number) => {
+  const fetchClients = useCallback(async (page: number, search: string = "") => {
+    console.log(`fetchClients: Fetching page ${page} with search term "${search}"`);
     setIsLoading(true);
     setError(null);
     try {
-      const data = await clientService.getClients(page);
+      const data = await clientService.getClients(page, search);
       setClientsResponse(data);
     } catch (err) {
       setError(clientService.getErrorMessage(err));
@@ -65,8 +81,8 @@ const ClientsPage: React.FC = () => {
 
   // Effect to fetch data on mount and when page changes
   useEffect(() => {
-    fetchClients(currentPage);
-  }, [fetchClients, currentPage]);
+    fetchClients(currentPage, debouncedSearchTerm);
+  }, [fetchClients, currentPage, debouncedSearchTerm]);
 
   // --- Modal Handlers ---
   const openModal = (client: Client | null = null) => {
@@ -82,7 +98,7 @@ const ClientsPage: React.FC = () => {
   const handleSaveSuccess = () => {
     closeModal();
     const pageToFetch = editingClient ? currentPage : 1;
-    fetchClients(pageToFetch);
+    fetchClients(pageToFetch, debouncedSearchTerm);
     if (!editingClient) setCurrentPage(1);
   };
 
@@ -115,7 +131,7 @@ const ClientsPage: React.FC = () => {
       ) {
         setCurrentPage((prev) => prev - 1);
       } else {
-        fetchClients(currentPage);
+        fetchClients(currentPage, debouncedSearchTerm);
       }
     } catch {
       // Keep dialog open on error? Or close? Closing for now.
@@ -153,15 +169,42 @@ const ClientsPage: React.FC = () => {
         >
           العملاء
         </Typography>
-        <Button
-          onClick={() => openModal()}
-          variant="contained"
-          color="primary"
-          startIcon={<PlusIcon className="h-5 w-5" />}
-          sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}
-        >
-          إضافة عميل
-        </Button>
+
+        <Box sx={{ display: "flex", gap: 2, alignItems: "center", width: { xs: "100%", sm: "auto" } }}>
+          <TextField
+            variant="outlined"
+            size="small"
+            placeholder="البحث باسم العميل..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon className="h-5 w-5 text-gray-400" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{
+              minWidth: { xs: "100%", sm: "300px" },
+              "& .MuiOutlinedInput-root": {
+                borderRadius: 2,
+                backgroundColor: "background.paper",
+                "&.Mui-focused fieldset": {
+                  borderColor: "primary.main",
+                },
+              },
+            }}
+          />
+          <Button
+            onClick={() => openModal()}
+            variant="contained"
+            color="primary"
+            startIcon={<PlusIcon className="h-5 w-5" />}
+            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, whiteSpace: "nowrap" }}
+          >
+            إضافة عميل
+          </Button>
+        </Box>
       </Box>
 
       {isLoading && (

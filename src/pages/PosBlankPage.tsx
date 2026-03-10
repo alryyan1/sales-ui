@@ -164,10 +164,10 @@ const PosBlankPage: React.FC = () => {
       selectedSale.due_amount != null
         ? Number(selectedSale.due_amount)
         : Math.max(
-            0,
-            Number(selectedSale.total_amount ?? 0) -
-              Number(selectedSale.paid_amount ?? 0),
-          );
+          0,
+          Number(selectedSale.total_amount ?? 0) -
+          Number(selectedSale.paid_amount ?? 0),
+        );
     setNewPaymentAmount(due > 0 ? String(due) : "");
   }, [selectedSale]);
 
@@ -314,10 +314,10 @@ const PosBlankPage: React.FC = () => {
       selectedSale.due_amount != null
         ? Number(selectedSale.due_amount)
         : Math.max(
-            0,
-            Number(selectedSale.total_amount ?? 0) -
-              Number(selectedSale.paid_amount ?? 0),
-          );
+          0,
+          Number(selectedSale.total_amount ?? 0) -
+          Number(selectedSale.paid_amount ?? 0),
+        );
     if (due <= 0) return;
     const amount = Number(newPaymentAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
@@ -372,10 +372,10 @@ const PosBlankPage: React.FC = () => {
         selectedSale.due_amount != null
           ? Number(selectedSale.due_amount)
           : Math.max(
-              0,
-              Number(selectedSale.total_amount ?? 0) -
-                Number(selectedSale.paid_amount ?? 0),
-            );
+            0,
+            Number(selectedSale.total_amount ?? 0) -
+            Number(selectedSale.paid_amount ?? 0),
+          );
       if (due <= 0 || !newPaymentAmount.trim() || addPaymentLoading) return;
       e.preventDefault();
       handleAddPayment();
@@ -411,10 +411,10 @@ const PosBlankPage: React.FC = () => {
       selectedSale.due_amount != null
         ? Number(selectedSale.due_amount)
         : Math.max(
-            0,
-            Number(selectedSale.total_amount ?? 0) -
-              Number(selectedSale.paid_amount ?? 0),
-          );
+          0,
+          Number(selectedSale.total_amount ?? 0) -
+          Number(selectedSale.paid_amount ?? 0),
+        );
     if (due <= 0) {
       toast.info("البيع مدفوع بالكامل");
       return;
@@ -926,7 +926,7 @@ const PosBlankPage: React.FC = () => {
     setThermalPdfLoading(true);
     try {
       const response = await apiClient.get(
-        `/sales/${selectedSale.id}/thermal-invoice-pdf`,
+        `/sales/${selectedSale.id}/thermal-invoice-pdf?t=${Date.now()}`,
         {
           responseType: "blob",
         },
@@ -956,7 +956,7 @@ const PosBlankPage: React.FC = () => {
     setA4PdfLoading(true);
     try {
       const response = await apiClient.get(
-        `/sales/${selectedSale.id}/a4-invoice-pdf/view`,
+        `/sales/${selectedSale.id}/a4-invoice-pdf/view?t=${Date.now()}`,
         {
           responseType: "blob",
         },
@@ -1530,7 +1530,7 @@ const PosBlankPage: React.FC = () => {
                           {option.name}
                         </Typography>
                         {option.current_stock_quantity != null ||
-                        option.stock_quantity != null ? (
+                          option.stock_quantity != null ? (
                           <Typography
                             variant="caption"
                             color={
@@ -1544,8 +1544,8 @@ const PosBlankPage: React.FC = () => {
                           >
                             {`الكمية: ${formatNumber(
                               option.current_stock_quantity ??
-                                option.stock_quantity ??
-                                0,
+                              option.stock_quantity ??
+                              0,
                             )}`}
                           </Typography>
                         ) : null}
@@ -1561,11 +1561,11 @@ const PosBlankPage: React.FC = () => {
                         <Typography variant="caption" color="text.secondary">
                           {[
                             option.last_sale_price_per_sellable_unit != null &&
-                              `السعر: ${formatNumber(
-                                Number(
-                                  option.last_sale_price_per_sellable_unit,
-                                ),
-                              )}`,
+                            `السعر: ${formatNumber(
+                              Number(
+                                option.last_sale_price_per_sellable_unit,
+                              ),
+                            )}`,
                           ]
                             .filter(Boolean)
                             .join(" · ")}
@@ -1727,7 +1727,7 @@ const PosBlankPage: React.FC = () => {
                     disableQuantityAndPriceEdit={
                       Math.abs(
                         Number(selectedSale.paid_amount ?? 0) -
-                          Number(selectedSale.total_amount ?? 0),
+                        Number(selectedSale.total_amount ?? 0),
                       ) < 1e-6
                     }
                   />
@@ -1819,9 +1819,9 @@ const PosBlankPage: React.FC = () => {
                       selectedSale.client ||
                       (selectedSale.client_name
                         ? ({
-                            id: selectedSale.client_id,
-                            name: selectedSale.client_name,
-                          } as Client)
+                          id: selectedSale.client_id,
+                          name: selectedSale.client_name,
+                        } as Client)
                         : null)
                     }
                     onChange={(_, newValue) => {
@@ -1902,9 +1902,9 @@ const PosBlankPage: React.FC = () => {
                         selectedSale.subtotal != null
                           ? Number(selectedSale.subtotal)
                           : (selectedSale.items ?? []).reduce(
-                              (sum, i) => sum + Number(i.total_price ?? 0),
-                              0,
-                            );
+                            (sum, i) => sum + Number(i.total_price ?? 0),
+                            0,
+                          );
                       const discountAmt = Number(
                         selectedSale.discount_amount ?? 0,
                       );
@@ -2073,10 +2073,10 @@ const PosBlankPage: React.FC = () => {
                           selectedSale.due_amount != null
                             ? Number(selectedSale.due_amount)
                             : Math.max(
-                                0,
-                                Number(selectedSale.total_amount ?? 0) -
-                                  Number(selectedSale.paid_amount ?? 0),
-                              ),
+                              0,
+                              Number(selectedSale.total_amount ?? 0) -
+                              Number(selectedSale.paid_amount ?? 0),
+                            ),
                         )}
                       </Typography>
                     </Box>
@@ -2162,10 +2162,10 @@ const PosBlankPage: React.FC = () => {
                       selectedSale.due_amount != null
                         ? Number(selectedSale.due_amount)
                         : Math.max(
-                            0,
-                            Number(selectedSale.total_amount ?? 0) -
-                              Number(selectedSale.paid_amount ?? 0),
-                          );
+                          0,
+                          Number(selectedSale.total_amount ?? 0) -
+                          Number(selectedSale.paid_amount ?? 0),
+                        );
                     const notFullyPaid = due > 0;
                     return notFullyPaid ? (
                       <Box sx={{ mt: 1.5 }}>
@@ -2313,8 +2313,8 @@ const PosBlankPage: React.FC = () => {
                       (selectedSale.due_amount != null
                         ? Number(selectedSale.due_amount) <= 0
                         : Number(selectedSale.total_amount ?? 0) -
-                            Number(selectedSale.paid_amount ?? 0) <=
-                          0)
+                        Number(selectedSale.paid_amount ?? 0) <=
+                        0)
                     }
                     sx={{ mt: 1, textTransform: "none" }}
                     onClick={handleFullPayment}

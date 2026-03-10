@@ -47,13 +47,18 @@ const clientService = {
   /**
    * جلب قائمة العملاء مع التقسيم لصفحات.
    * @param {number} page - رقم الصفحة المطلوب (افتراضيًا 1).
+   * @param {string} search - نص البحث الممرر للفلترة.
    * @returns {Promise<PaginatedResponse<Client>>} وعد يحتوي على بيانات العملاء المقسمة.
    */
-  getClients: async (page: number = 1): Promise<PaginatedResponse<Client>> => {
+  getClients: async (page: number = 1, search: string = ""): Promise<PaginatedResponse<Client>> => {
     try {
       // استخدام apiClient لإرسال طلب GET مع رقم الصفحة كـ query parameter
+      console.log(`getClients calling API with param: search="${search}"`);
       const response = await apiClient.get<PaginatedResponse<Client>>(
-        `/clients?page=${page}`,
+        `clients`, // Removed leading slash
+        {
+          params: { page, search: search || undefined } 
+        }
       );
       console.log("getClients response:", response.data); // للمساعدة في التصحيح
       return response.data; // إرجاع بيانات الاستجابة

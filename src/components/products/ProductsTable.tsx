@@ -255,12 +255,12 @@ const ProductRow: React.FC<ProductRowProps> = ({
 
       <TableCell align="center">
         {product.latest_cost_per_sellable_unit
-          ? formatCurrency(Number(product.latest_cost_per_sellable_unit))
+          ? formatCurrency(Number(product.latest_cost_per_sellable_unit), undefined, "USD")
           : "---"}
       </TableCell>
       <TableCell align="center">
         {product.last_sale_price_per_sellable_unit
-          ? formatCurrency(Number(product.last_sale_price_per_sellable_unit))
+          ? formatCurrency(Number(product.last_sale_price_per_sellable_unit), undefined, "SDG")
           : "---"}
       </TableCell>
       {/* <TableCell align="center">
@@ -700,8 +700,8 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                 <TableCell align="center">عدد الوحدات </TableCell>
                 <TableCell align="center">تنبيه المخزون</TableCell>
                 <TableCell align="center">إجمالي المخزون</TableCell>
-                <TableCell align="center">أحدث تكلفة</TableCell>
-                <TableCell align="center">آخر سعر بيع</TableCell>
+                <TableCell align="center">أحدث تكلفة (USD)</TableCell>
+                <TableCell align="center">آخر سعر بيع (SDG)</TableCell>
                 {/* <TableCell align="center">تاريخ الصلاحية</TableCell> */}
               </TableRow>
             </TableHead>

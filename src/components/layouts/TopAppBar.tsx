@@ -78,6 +78,10 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
   }, [usdFactor]);
 
   const handleFactorClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!user?.permissions?.includes("update-dollar-rate")) {
+      toast.error("ليس لديك صلاحية لتعديل معامل تحويل الدولار");
+      return;
+    }
     setFactorAnchorEl(event.currentTarget);
   };
 
@@ -214,7 +218,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
 
           {location.pathname === "/sales/pos-blank" && (
             <>
-        
+
             </>
           )}
         </Typography>

@@ -22,7 +22,7 @@ import {
   TableHead,
   TableRow,
 } from "@mui/material";
-import { X, Search as SearchIcon, Trash2, CreditCard } from "lucide-react";
+import { X, Search as SearchIcon, Trash2, CreditCard, Check } from "lucide-react";
 import { toast } from "sonner";
 import saleService, { Sale, SaleItem } from "@/services/saleService";
 import productService, { Product } from "@/services/productService";
@@ -634,18 +634,18 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
                       onChange={(e) => setDiscountValue(e.target.value)}
                       sx={{ width: 80 }}
                     />
-                    <Button
+                    <IconButton
                       size="small"
-                      variant="outlined"
                       onClick={handleApplyDiscount}
                       disabled={
                         discountLoading ||
                         !discountValue.trim() ||
                         (sale.payments?.length ?? 0) > 0
                       }
+                      sx={{ color: "success.main" }}
                     >
-                      تطبيق
-                    </Button>
+                      <Check size={20} />
+                    </IconButton>
                   </Box>
 
                   {Number(sale.discount_amount ?? 0) > 0 && (
