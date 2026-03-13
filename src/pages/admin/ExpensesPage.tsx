@@ -139,6 +139,7 @@ const ExpensesPage: React.FC = () => {
     closeModal();
     setCurrentPage(1);
     fetchExpenses();
+    fetchCategories();
   };
   const handleDelete = async (expense: ExpenseTableItem) => {
     if (!window.confirm("هل أنت متأكد من حذف هذه المصروفات؟")) return;
@@ -200,9 +201,9 @@ const ExpensesPage: React.FC = () => {
         </Grid>
         <Grid item xs={12} md={6} lg={3}>
           <FormControl size="small" fullWidth>
-            <InputLabel>القسم</InputLabel>
+            <InputLabel>القسم / التصنيف</InputLabel>
             <Select
-              label="القسم"
+              label="القسم / التصنيف"
               value={selectedCategory ?? ""}
               onChange={handleCategoryChange}
             >

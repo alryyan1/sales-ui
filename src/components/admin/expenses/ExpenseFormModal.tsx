@@ -19,12 +19,16 @@ import {
   CircularProgress,
   Alert,
 } from "@mui/material";
-import { X } from "lucide-react";
+import { X, Plus } from "lucide-react";
 
 import expenseService, {
   Expense,
   ExpenseFormData,
 } from "@/services/expenseService";
+import expenseCategoryService, {
+  ExpenseCategory,
+} from "@/services/ExpenseCategoryService";
+import ExpenseCategoryFormModal from "./ExpenseCategoryFormModal";
 
 interface ExpenseFormModalProps {
   isOpen: boolean;
@@ -38,6 +42,7 @@ type ExpenseFormFields = {
   title: string;
   amount: string | number;
   payment_method: string;
+  expense_category_id: number | "";
 };
 
 const getToday = () => {
@@ -67,8 +72,25 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
       title: "",
       amount: "",
       payment_method: "cash",
+      expense_category_id: "",
     },
   });
+
+  const [categories, setCategories] = React.useState<ExpenseCategory[]>([]);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = React.useState(false);
+
+  const fetchCategories = React.useCallback(async () => {
+    try {
+      const data = await expenseCategoryService.getCategories(1, 1000, "", true);
+      setCategories(data as ExpenseCategory[]);
+    } catch (err) {
+      console.error("Failed to fetch categories", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -78,12 +100,14 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
         title: expenseToEdit.title ?? "",
         amount: String(expenseToEdit.amount ?? ""),
         payment_method: expenseToEdit.payment_method ?? "cash",
+        expense_category_id: expenseToEdit.expense_category_id ?? "",
       });
     } else {
       reset({
         title: "",
         amount: "",
         payment_method: "cash",
+        expense_category_id: "",
       });
     }
   }, [isOpen, isEditMode, expenseToEdit, reset]);
@@ -96,7 +120,7 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
       expense_date: isEditMode && expenseToEdit?.expense_date
         ? expenseToEdit.expense_date
         : getToday(),
-      expense_category_id: null,
+      expense_category_id: data.expense_category_id === "" ? null : Number(data.expense_category_id),
       payment_method: data.payment_method === "cash" || data.payment_method === "bank" ? data.payment_method : null,
       reference: null,
       description: null,
@@ -125,6 +149,14 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
         });
       }
     }
+  };
+
+  const handleCategorySaveSuccess = (newCategory: ExpenseCategory) => {
+    fetchCategories();
+    reset((prev) => ({
+      ...prev,
+      expense_category_id: newCategory.id,
+    }));
   };
 
   return (
@@ -195,6 +227,50 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
                 />
               )}
             />
+            <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+              <Controller
+                name="expense_category_id"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <FormControl
+                    fullWidth
+                    size="small"
+                    error={!!fieldState.error}
+                  >
+                    <InputLabel>القسم / التصنيف</InputLabel>
+                    <Select
+                      {...field}
+                      label="القسم / التصنيف"
+                      fullWidth
+                      disabled={isSubmitting}
+                    >
+                      <MenuItem value="">
+                        <em>بدون قسم</em>
+                      </MenuItem>
+                      {categories.map((cat) => (
+                        <MenuItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    {fieldState.error && (
+                      <Typography variant="caption" color="error">
+                        {fieldState.error.message}
+                      </Typography>
+                    )}
+                  </FormControl>
+                )}
+              />
+              <IconButton
+                size="small"
+                color="primary"
+                onClick={() => setIsCategoryModalOpen(true)}
+                sx={{ mt: 0.5 }}
+                title="إضافة قسم جديد"
+              >
+                <Plus size={20} />
+              </IconButton>
+            </Box>
             <Controller
               name="payment_method"
               control={control}
@@ -243,6 +319,12 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
           </Button>
         </DialogActions>
       </form>
+
+      <ExpenseCategoryFormModal
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
+        onSaveSuccess={handleCategorySaveSuccess}
+      />
     </Dialog>
   );
 };
