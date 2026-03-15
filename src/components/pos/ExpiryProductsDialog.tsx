@@ -23,7 +23,7 @@ import {
 import { X, Plus, Trash2 } from "lucide-react";
 import { formatDate } from "@/constants";
 
-interface PurchaseItem {
+export interface PurchaseItem {
   id: number;
   product_id: number;
   product_name?: string;

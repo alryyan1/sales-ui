@@ -22,15 +22,12 @@ import {
   Clock,
   CalendarDays,
   TrendingUp,
-  FileWarning as FileWarningIcon,
   DollarSign,
   Check,
 } from "lucide-react";
-import ErrorIcon from "@mui/icons-material/Error";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Button,
-  Badge,
   Popover,
   TextField,
   InputAdornment,
@@ -42,6 +39,9 @@ import { dbService, STORES } from "../../services/db";
 import { offlineSaleService } from "../../services/offlineSaleService";
 import { toast } from "sonner";
 import { KeyboardShortcutsDialog } from "../common/KeyboardShortcutsDialog";
+import packageService, { Package } from "@/services/packageService";
+import { FileText } from "lucide-react";
+import { Autocomplete } from "@mui/material";
 
 const COLLAPSED_DRAWER_WIDTH = 72;
 
@@ -61,10 +61,6 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
   const { user } = useAuth();
   const { getSetting, updateSettings } = useSettings();
   const [shortcutsDialogOpen, setShortcutsDialogOpen] = React.useState(false);
-  const [expiryCounts, setExpiryCounts] = React.useState({
-    nearExpiringCount: 0,
-    expiredCount: 0,
-  });
 
   // USD to SDG Factor state
   const usdFactor = getSetting("usd_to_sdg_factor", 1) as number;
@@ -72,6 +68,49 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
   const [factorAnchorEl, setFactorAnchorEl] =
     React.useState<HTMLDivElement | null>(null);
   const [isUpdatingFactor, setIsUpdatingFactor] = React.useState(false);
+
+  // Packages state (Moved from POS)
+  const [packageOptions, setPackageOptions] = React.useState<Package[]>([]);
+  const [packageSearchLoading, setPackageSearchLoading] = React.useState(false);
+  const [packageInputValue, setPackageInputValue] = React.useState("");
+  const [isAddingPackage, setIsAddingPackage] = React.useState(false);
+
+  // Search Packages logic
+  React.useEffect(() => {
+    const term = packageInputValue.trim();
+    if (!term) {
+      setPackageOptions([]);
+      return;
+    }
+    const t = setTimeout(() => {
+      setPackageSearchLoading(true);
+      packageService
+        .getPackages()
+        .then((list) => {
+          const filtered = list.filter((p) =>
+            p.name.toLowerCase().includes(term.toLowerCase()),
+          );
+          setPackageOptions(filtered);
+        })
+        .catch(() => setPackageOptions([]))
+        .finally(() => setPackageSearchLoading(false));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [packageInputValue]);
+
+  // Listen for addition status from POS page
+  React.useEffect(() => {
+    const handleStatus = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setIsAddingPackage(customEvent.detail.isAdding);
+      if (customEvent.detail.success) {
+        setPackageInputValue("");
+      }
+    };
+    window.addEventListener("package-addition-status", handleStatus);
+    return () =>
+      window.removeEventListener("package-addition-status", handleStatus);
+  }, []);
 
   React.useEffect(() => {
     setLocalFactor(String(usdFactor));
@@ -107,9 +146,8 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
   };
 
   React.useEffect(() => {
-    const handleUpdateCounts = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      setExpiryCounts(customEvent.detail);
+    const handleUpdateCounts = () => {
+      // Logic for updating counts if needed, but the state was removed
     };
     window.addEventListener("update-expiry-counts", handleUpdateCounts);
     return () =>
@@ -191,11 +229,14 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
         </IconButton>
 
         {/* Placeholder for Page Title or Breadcrumbs */}
-        <Typography
-          variant="h6"
-          noWrap
-          component="div"
-          sx={{ flexGrow: 1, fontSize: "1rem", fontWeight: 600 }}
+        <Box
+          sx={{
+            flexGrow: 1,
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            overflow: "hidden",
+          }}
         >
           {location.pathname === "/sales/pos-blank" && (
             <Button
@@ -217,11 +258,59 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
           )}
 
           {location.pathname === "/sales/pos-blank" && (
-            <>
-
-            </>
+            <Box sx={{ minWidth: 320 }}>
+              <Autocomplete
+                options={packageOptions}
+                getOptionLabel={(option) => option.name}
+                loading={packageSearchLoading || isAddingPackage}
+                inputValue={packageInputValue}
+                onInputChange={(_, value) => setPackageInputValue(value)}
+                onChange={(_, value) => {
+                  if (value) {
+                    window.dispatchEvent(
+                      new CustomEvent("add-package-to-sale", { detail: value }),
+                    );
+                  }
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder="إضافة مجموعة (Package)..."
+                    size="small"
+                    fullWidth
+                    InputProps={{
+                      ...params.InputProps,
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <FileText size={18} />
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <React.Fragment>
+                          {packageSearchLoading || isAddingPackage ? (
+                            <CircularProgress color="inherit" size={20} />
+                          ) : null}
+                          {params.InputProps.endAdornment}
+                        </React.Fragment>
+                      ),
+                    }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        bgcolor: alpha(theme.palette.background.paper, 0.5),
+                        "& fieldset": {
+                          borderColor: alpha(theme.palette.divider, 0.1),
+                        },
+                      },
+                    }}
+                  />
+                )}
+                noOptionsText={
+                  packageInputValue.trim() ? "لا توجد نتائج" : "اكتب للبحث"
+                }
+              />
+            </Box>
           )}
-        </Typography>
+        </Box>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <IconButton

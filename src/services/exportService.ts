@@ -186,4 +186,43 @@ export const generateDailySalesPdf = async (filterParams?: string): Promise<void
   }
 };
 
+/**
+ * Generate Multi-Warehouse Inventory Audit PDF report
+ * @param filters - Optional filter parameters (search, category_id)
+ * @returns Promise that resolves when PDF opens in new tab
+ */
+export const exportInventoryAuditPdf = async (filters: ExportFilters = {}): Promise<void> => {
+  try {
+    const params = new URLSearchParams();
+    if (filters.search) params.append('search', filters.search);
+    if (filters.category_id) params.append('category_id', filters.category_id.toString());
+
+    // Use API route with blob response to handle authentication and inline viewing
+    const response = await apiClient.get(`/reports/inventory-audit-pdf?${params.toString()}`, {
+      responseType: 'blob',
+    });
+    
+    // Create blob URL and open in new tab
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    
+    // Open in new tab
+    const newTab = window.open();
+    if (newTab) {
+      newTab.location.href = url;
+    } else {
+      // Fallback if popup blocked
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = '_blank';
+      link.click();
+    }
+    
+    // revoked later by browser or manually if needed, but for simple viewing this works best.
+  } catch (error) {
+    console.error('Failed to export inventory audit PDF:', error);
+    throw new Error('Failed to export PDF report');
+  }
+};
+
 export default exportService; 

@@ -494,10 +494,23 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
               : Number(item.product?.stock_quantity));
           const value =
             stock != null && !Number.isNaN(stock) ? formatNumber(stock) : "—";
+          const batch = item.batch_number_sold;
+
           return (
-            <Typography component="span" sx={{ fontSize: "0.8125rem" }}>
-              {value}
-            </Typography>
+            <Box sx={{ textAlign: "center" }}>
+              <Typography component="div" sx={{ fontSize: "0.8125rem" }}>
+                {value}
+              </Typography>
+              {batch && (
+                <Typography
+                  variant="caption"
+                  display="block"
+                  sx={{ color: "text.secondary", fontSize: "0.7rem" }}
+                >
+                  {batch}
+                </Typography>
+              )}
+            </Box>
           );
         },
         meta: { align: "center" },

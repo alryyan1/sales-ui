@@ -125,7 +125,7 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
               onValueChange={(value) =>
                 onStatusChange(value as "received" | "pending" | "ordered")
               }
-              disabled={isStatusPending}
+              disabled={isStatusPending || isReadOnly}
             >
               <SelectTrigger
                 className={cn(

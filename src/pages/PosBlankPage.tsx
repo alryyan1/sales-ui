@@ -25,7 +25,6 @@ import { CloudUploadIcon, FileText, SearchIcon } from "lucide-react";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import CheckIcon from "@mui/icons-material/Check";
 
 import apiClient from "@/lib/axios";
@@ -46,7 +45,7 @@ import ExpenseFormModal from "@/components/admin/expenses/ExpenseFormModal";
 import { PdfViewerDialog } from "@/components/common/PdfViewerDialog";
 import SalesReturnDialog from "@/components/sales/SalesReturnDialog";
 import { useAuth } from "@/context/AuthContext";
-import ExpiryProductsDialog from "@/components/pos/ExpiryProductsDialog";
+import ExpiryProductsDialog, { PurchaseItem } from "@/components/pos/ExpiryProductsDialog";
 import TopSellingProductsDialog from "@/components/pos/TopSellingProductsDialog";
 import { uploadFileToFirebase } from "@/services/firebaseStorage";
 import { saveShiftToFirestore } from "@/services/firebaseStore";
@@ -56,6 +55,7 @@ import {
 } from "@/components/sales/ShiftFinancialTable";
 import { useSettings } from "@/context/SettingsContext";
 import ClientFormModal from "@/components/clients/ClientFormModal";
+import { Package } from "@/services/packageService";
 
 interface ClientOptionType extends Partial<Client> {
   inputValue?: string;
@@ -136,14 +136,16 @@ const PosBlankPage: React.FC = () => {
   const [discountValue, setDiscountValue] = useState("");
   const [discountLoading, setDiscountLoading] = useState(false);
 
+  // Batch quantity update state
+  const [batchQuantity, setBatchQuantity] = useState<string>("");
+  const [isBatchUpdating, setIsBatchUpdating] = useState(false);
   // Expiry alerts state
   const [expiryDialogOpen, setExpiryDialogOpen] = useState(false);
   const [expiryDialogType, setExpiryDialogType] = useState<
     "near_expiring" | "expired" | null
   >(null);
-  const [expiryItems, setExpiryItems] = useState<any[]>([]);
+  const [expiryItems, setExpiryItems] = useState<PurchaseItem[]>([]);
   const [expiryItemsLoading, setExpiryItemsLoading] = useState(false);
-
   // Top selling
   const [topSellingDialogOpen, setTopSellingDialogOpen] = useState(false);
 
@@ -232,10 +234,15 @@ const PosBlankPage: React.FC = () => {
     const t = setTimeout(() => {
       setProductSearchLoading(true);
       productService
-        .getProductsForAutocomplete(productInputValue.trim(), 25)
+        .getProductsForAutocomplete(
+          productInputValue.trim(),
+          25,
+          user?.warehouse_id || undefined,
+        )
         .then((list) => {
           const raw = Array.isArray(list) ? list : [];
           const filtered = raw.filter((p) => {
+            // Stock quantity returned from server will be warehouse-specific if warehouse_id was passed
             const stock = p.current_stock_quantity ?? p.stock_quantity ?? 0;
             if (stock <= 0) return false;
 
@@ -254,7 +261,7 @@ const PosBlankPage: React.FC = () => {
         .finally(() => setProductSearchLoading(false));
     }, 300);
     return () => clearTimeout(t);
-  }, [productInputValue]);
+  }, [productInputValue, user?.warehouse_id]);
 
   // Handle Client Search
   useEffect(() => {
@@ -284,15 +291,15 @@ const PosBlankPage: React.FC = () => {
       }
 
       try {
-        let updated;
+        let updated: Sale;
         if (client) {
-          updated = await saleService.updateSale(selectedSale.id, {
+          updated = (await saleService.updateSale(selectedSale.id, {
             client_id: client.id,
-          });
+          })) as Sale;
           updated.client = client;
           updated.client_name = client.name;
         } else {
-          updated = await saleService.removeClientFromSale(selectedSale.id);
+          updated = await saleService.removeClientFromSale(selectedSale.id) as Sale;
           updated.client = undefined;
           updated.client_name = undefined;
         }
@@ -307,6 +314,80 @@ const PosBlankPage: React.FC = () => {
     },
     [selectedSale?.id, selectedSale?.payments?.length],
   );
+
+  // Handle Package Search (Moved to TopAppBar)
+
+  const handleAddPackageToSale = useCallback(
+    async (pkg: Package) => {
+      if (!selectedSale) {
+        toast.error("اختر عملية بيع أولاً");
+        return;
+      }
+
+      if (!pkg.items || pkg.items.length === 0) {
+        toast.error("هذه المجموعة فارغة");
+        return;
+      }
+
+      try {
+        const usdFactor = getSetting("usd_to_sdg_factor", 1) as number;
+
+        // Add items one by one (or use a bulk API if available)
+        // For simplicity and to reuse existing logic, we call sequentially
+        for (const item of pkg.items) {
+          const unitPrice =
+            (Number(item.product?.last_sale_price_per_sellable_unit ?? item.product?.sale_price) || 0) *
+            usdFactor;
+
+          const res = await saleService.addSaleItem(selectedSale.id, {
+            product_id: item.product_id,
+            quantity: 1,
+            unit_price: unitPrice,
+          });
+
+          if (res.sale) {
+            setSelectedSale(res.sale);
+            setSales((prev) =>
+              prev.map((s) => (s.id === res.sale.id ? res.sale : s)),
+            );
+          }
+        }
+
+        toast.success(`تم إضافة مجموعة "${pkg.name}" بنجاح`);
+        window.dispatchEvent(
+          new CustomEvent("package-addition-status", {
+            detail: { isAdding: false, success: true },
+          }),
+        );
+      } catch (err: unknown) {
+        toast.error(saleService.getErrorMessage(err));
+        window.dispatchEvent(
+          new CustomEvent("package-addition-status", {
+            detail: { isAdding: false, success: false },
+          }),
+        );
+      } finally {
+        // Status handled by event dispatchers above
+      }
+    },
+    [selectedSale, getSetting],
+  );
+
+  // Listen for package selection from TopAppBar
+  useEffect(() => {
+    const handleAddPackage = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      handleAddPackageToSale(customEvent.detail);
+      window.dispatchEvent(
+        new CustomEvent("package-addition-status", {
+          detail: { isAdding: true, success: false },
+        }),
+      );
+    };
+    window.addEventListener("add-package-to-sale", handleAddPackage);
+    return () =>
+      window.removeEventListener("add-package-to-sale", handleAddPackage);
+  }, [handleAddPackageToSale]);
 
   const handleAddPayment = useCallback(async () => {
     if (!selectedSale) return;
@@ -404,6 +485,53 @@ const PosBlankPage: React.FC = () => {
     },
     [selectedSale],
   );
+
+  const handleBatchQuantityUpdate = useCallback(async () => {
+    if (
+      !selectedSale ||
+      !selectedSale.id ||
+      !selectedSale.items ||
+      selectedSale.items.length === 0
+    )
+      return;
+    const qty = parseFloat(batchQuantity);
+    if (isNaN(qty) || qty <= 0) {
+      toast.error("يرجى إدخال كمية صالحة");
+      return;
+    }
+
+    setIsBatchUpdating(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    try {
+      // We iterate and update each item.
+      // Note: Ideally the backend should have a bulk update endpoint for performance.
+      for (const item of selectedSale.items) {
+        try {
+          await saleService.updateSaleItem(selectedSale.id, item.id, {
+            quantity: qty,
+            unit_price: Number(item.unit_price),
+          });
+          successCount++;
+        } catch (err) {
+          console.error(`Failed to update item ${item.id}:`, err);
+          failCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`تم تحديث ${successCount} صنف بنجاح`);
+        fetchCurrentShift(); // Refresh to get updated sale data
+        setBatchQuantity("");
+      }
+      if (failCount > 0) {
+        toast.error(`فشل تحديث ${failCount} صنف`);
+      }
+    } finally {
+      setIsBatchUpdating(false);
+    }
+  }, [selectedSale, batchQuantity, fetchCurrentShift]);
 
   const handleFullPayment = useCallback(async () => {
     if (!selectedSale) return;
@@ -513,7 +641,7 @@ const PosBlankPage: React.FC = () => {
 
       const usdFactor = getSetting("usd_to_sdg_factor", 1) as number;
       const unitPrice =
-        (Number(product.last_sale_price_per_sellable_unit) || 0) * usdFactor;
+        (Number(product.last_sale_price_per_sellable_unit ?? product.sale_price) || 0) * usdFactor;
       try {
         setAddProductLoading(true);
         const res = await saleService.addSaleItem(selectedSale.id, {
@@ -735,8 +863,10 @@ const PosBlankPage: React.FC = () => {
   const fetchExpiryCounts = useCallback(async () => {
     try {
       const res = await apiClient.get("/reports/expiry-counts");
-      setNearExpiringCount(res.data.near_expiring_count || 0);
-      setExpiredCount(res.data.expired_count || 0);
+      window.dispatchEvent(new CustomEvent("update-expiry-counts", { detail: { 
+        nearExpiringCount: res.data.near_expiring_count || 0,
+        expiredCount: res.data.expired_count || 0
+      }}));
     } catch (err) {
       console.error("Failed to fetch expiry counts:", err);
     }
@@ -1593,7 +1723,7 @@ const PosBlankPage: React.FC = () => {
             variant="contained"
             color="primary"
             onClick={handleCreateNewSale}
-            disabled={createSaleLoading || !isShiftOpen}
+            disabled={createSaleLoading || !isShiftOpen || !user?.warehouse_id}
             sx={{
               textTransform: "none",
               fontWeight: 600,
@@ -1626,7 +1756,7 @@ const PosBlankPage: React.FC = () => {
             variant={isShiftOpen ? "outlined" : "contained"}
             color={isShiftOpen ? "error" : "primary"}
             onClick={isShiftOpen ? handleCloseShift : handleOpenShift}
-            disabled={shiftLoading}
+            disabled={shiftLoading || (!isShiftOpen && !user?.warehouse_id)}
             sx={{
               textTransform: "none",
               fontWeight: 600,
@@ -1673,6 +1803,25 @@ const PosBlankPage: React.FC = () => {
 
           {/* Center column – sale items table */}
           <Box sx={{ flex: 1, minWidth: 0 }}>
+            {!user?.warehouse_id && (
+              <Box
+                sx={{
+                  mb: 2,
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: "error.light",
+                  // color: "error.contrastText",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                  boxShadow: "0 2px 4px rgba(211, 47, 47, 0.2)",
+                }}
+              >
+                <Typography variant="body1" fontWeight={700}>
+                  تنبيه: لم يتم تعيين مخزن لحسابك. يرجى التواصل مع المسؤول لتعيين مخزن لتتمكن من استخدام نقطة البيع.
+                </Typography>
+              </Box>
+            )}
             <Paper
               sx={{
                 height: "100%",
@@ -1682,7 +1831,7 @@ const PosBlankPage: React.FC = () => {
               }}
             >
               {selectedSale ? (
-                <>
+                <React.Fragment>
                   <Box
                     sx={{
                       display: "flex",
@@ -1700,21 +1849,48 @@ const PosBlankPage: React.FC = () => {
                     >
                       عناصر البيع #{selectedSale.id}
                     </Typography>
-                    {selectedSale.items && selectedSale.items.length > 0 && (
-                      <Button
-                        size="small"
-                        color="error"
-                        variant="outlined"
-                        onClick={handleRemoveAllSaleItems}
-                        disabled={
-                          removeAllItemsLoading ||
-                          (selectedSale.payments?.length ?? 0) > 0
-                        }
-                        aria-label="إزالة كل الأصناف"
-                      >
-                        {removeAllItemsLoading ? "جاري..." : "إزالة كل الأصناف"}
-                      </Button>
-                    )}
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      {selectedSale.items && selectedSale.items.length > 0 && (
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mr: 2 }}>
+                          <TextField
+                            size="small"
+                            placeholder="الكمية للكل..."
+                            type="number"
+                            value={batchQuantity}
+                            onChange={(e) => setBatchQuantity(e.target.value)}
+                            sx={{ width: 120 }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleBatchQuantityUpdate();
+                            }}
+                            disabled={isBatchUpdating || (selectedSale.payments?.length ?? 0) > 0}
+                          />
+                          <Button
+                            size="small"
+                            variant="contained"
+                            onClick={handleBatchQuantityUpdate}
+                            disabled={isBatchUpdating || !batchQuantity || (selectedSale.payments?.length ?? 0) > 0}
+                          >
+                            {isBatchUpdating ? <CircularProgress size={20} color="inherit" /> : "تحديث الكل"}
+                          </Button>
+                        </Box>
+                      )}
+                      {selectedSale.items && selectedSale.items.length > 0 && (
+                        <Button
+                          size="small"
+                          color="error"
+                          variant="outlined"
+                          onClick={handleRemoveAllSaleItems}
+                          disabled={
+                            removeAllItemsLoading ||
+                            isBatchUpdating ||
+                            (selectedSale.payments?.length ?? 0) > 0
+                          }
+                          aria-label="إزالة كل الأصناف"
+                        >
+                          {removeAllItemsLoading ? "جاري..." : "إزالة كل الأصناف"}
+                        </Button>
+                      )}
+                    </Box>
                   </Box>
                   <SaleItemsTable
                     items={selectedSale.items}
@@ -1731,7 +1907,7 @@ const PosBlankPage: React.FC = () => {
                       ) < 1e-6
                     }
                   />
-                </>
+                </React.Fragment>
               ) : (
                 <Typography
                   variant="body2"
@@ -1883,6 +2059,8 @@ const PosBlankPage: React.FC = () => {
                       clientInputValue.trim() ? "لا توجد نتائج" : "اكتب للبحث"
                     }
                   />
+
+                  {/* Package Autocomplete Moved to TopAppBar */}
 
                   <Box
                     sx={{ display: "flex", flexDirection: "column", gap: 1 }}
@@ -2322,11 +2500,11 @@ const PosBlankPage: React.FC = () => {
                     {fullPaymentLoading ? "جاري التسديد..." : "تسديد كامل"}
                   </Button>
                 </Box>
-              ) : (
-                <Typography variant="subtitle2" color="text.secondary">
-                  Column 3
-                </Typography>
-              )}
+            ) : (
+              <Typography variant="subtitle2" color="text.secondary">
+                Column 3
+              </Typography>
+            )}
             </Paper>
           </Box>
         </Box>

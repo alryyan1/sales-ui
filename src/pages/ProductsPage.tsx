@@ -1,7 +1,7 @@
 // src/pages/ProductsPage.tsx
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { useProducts } from "../hooks/useProducts";
 import { useSettings } from "../context/SettingsContext";
 
@@ -23,6 +23,13 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Switch from "@mui/material/Switch";
+import Tabs from "@mui/material/Tabs";
+import Tab from "@mui/material/Tab";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Grid from "@mui/material/Grid";
+import Button from "@mui/material/Button";
+import Skeleton from "@mui/material/Skeleton";
 
 // Lucide Icons (shadcn)
 import {
@@ -33,6 +40,10 @@ import {
   Search,
   Layers,
   CloudUpload,
+  Package as PackageIcon,
+  Trash2,
+  Edit,
+  Sparkles,
 } from "lucide-react";
 
 // Services and Types
@@ -42,14 +53,17 @@ import productService, {
 } from "../services/productService"; // Use product service
 import unitService, { Unit } from "../services/UnitService"; // Import unit service
 import categoryService, { Category } from "../services/CategoryService"; // Import category service
-import exportService from "../services/exportService"; // Import export service
+import exportService, { exportInventoryAuditPdf } from "../services/exportService"; // Import export service
 import { uploadProductsToFirestore } from "../services/firebaseStore"; // Import Firestore service
+import packageService, { Package } from "../services/packageService";
+import { warehouseService, Warehouse } from "../services/warehouseService";
 
 // Custom Components
 import { ProductsTable } from "../components/products/ProductsTable"; // Use ProductsTable named export
 import ProductFormModal from "../components/products/ProductFormModal"; // Use ProductFormModal
 import ProductImportDialog from "../components/products/ProductImportDialog"; // Import dialog
 import UnitsPage from "../pages/UnitsPage"; // Import UnitsPage
+import PackageFormModal from "../components/products/PackageFormModal";
 
 // Product type is now used directly from productService
 
@@ -65,19 +79,29 @@ const ProductsPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const rowsPerPage = 50;
   const [categories, setCategories] = useState<Category[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [stockingUnits, setStockingUnits] = useState<Unit[]>([]);
   const [sellableUnits, setSellableUnits] = useState<Unit[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
+  const [loadingWarehouses, setLoadingWarehouses] = useState(false);
+  const [selectedWarehouse, setSelectedWarehouse] = useState<number | "">("");
   const [syncLoading, setSyncLoading] = useState(false);
   const [showOnlyInStock, setShowOnlyInStock] = useState(true);
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const navigate = useNavigate();
 
+  // Tab State
+  const [activeTab, setActiveTab] = useState(0);
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null); // Use Product type directly
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isUnitsDialogOpen, setIsUnitsDialogOpen] = useState(false);
+
+  // Package State
+  const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
+  const [editingPackage, setEditingPackage] = useState<Package | null>(null);
 
   // Snackbar State
   const [snackbar, setSnackbar] = useState<{
@@ -128,6 +152,7 @@ const ProductsPage: React.FC = () => {
     categoryId: selectedCategory,
     inStockOnly: showOnlyInStock,
     lowStockOnly: showLowStockOnly,
+    warehouseId: selectedWarehouse ? (selectedWarehouse as number) : undefined,
   });
 
   // Flatten pages into a single array of products
@@ -187,6 +212,22 @@ const ProductsPage: React.FC = () => {
     fetchUnits();
   }, []);
 
+  // --- Fetch Warehouses ---
+  useEffect(() => {
+    const fetchWarehouses = async () => {
+      setLoadingWarehouses(true);
+      try {
+        const data = await warehouseService.getAll();
+        setWarehouses(data);
+      } catch (err) {
+        console.error("Error fetching warehouses:", err);
+      } finally {
+        setLoadingWarehouses(false);
+      }
+    };
+    fetchWarehouses();
+  }, []);
+
   // --- Notification Handlers ---
   const showSnackbar = (message: string, type: "success" | "error") => {
     setSnackbar({
@@ -205,15 +246,53 @@ const ProductsPage: React.FC = () => {
     setSnackbar((prev) => ({ ...prev, open: false }));
   };
 
-  // --- Modal Handlers ---
+  const queryClient = useQueryClient();
+
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
+  };
+
+  const { data: packages, isLoading: isPackagesLoading } = useQuery({
+    queryKey: ["packages"],
+    queryFn: () => packageService.getPackages(),
+  });
+
+  const deletePackageMutation = useMutation({
+    mutationFn: (id: number) => packageService.deletePackage(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["packages"] });
+      showSnackbar("تم حذف المجموعة بنجاح", "success");
+    },
+    onError: () => {
+      showSnackbar("فشل حذف المجموعة", "error");
+    },
+  });
+
+  const handleDeletePackage = (id: number) => {
+    if (window.confirm("هل أنت متأكد من حذف هذه المجموعة؟")) {
+      deletePackageMutation.mutate(id);
+    }
+  };
+
+  const openPackageModal = (pkg: Package | null = null) => {
+    setEditingPackage(pkg);
+    setIsPackageModalOpen(true);
+  };
+
+  const closePackageModal = () => {
+    setIsPackageModalOpen(false);
+    setEditingPackage(null);
+  };
+
   const openModal = (product: Product | null = null) => {
     setEditingProduct(product);
     setIsModalOpen(true);
   };
+
   const closeModal = () => {
+    setEditingProduct(null);
     setIsModalOpen(false);
   };
-  const queryClient = useQueryClient();
 
   const handleSaveSuccess = () => {
     closeModal();
@@ -236,6 +315,9 @@ const ProductsPage: React.FC = () => {
     const categoryId = event.target.value as number | null;
     setSelectedCategory(categoryId);
   };
+  const handleWarehouseChange = (event: SelectChangeEvent<number | "">) => {
+    setSelectedWarehouse(event.target.value as number | "");
+  };
 
   const handlePrintProducts = async () => {
     try {
@@ -245,6 +327,7 @@ const ProductsPage: React.FC = () => {
         category_id: selectedCategory,
         in_stock_only: showOnlyInStock,
         low_stock_only: showLowStockOnly,
+        warehouse_id: selectedWarehouse || undefined,
       };
 
       await exportService.exportProductsPdf(filters);
@@ -252,6 +335,21 @@ const ProductsPage: React.FC = () => {
     } catch (err) {
       showSnackbar(
         err instanceof Error ? err.message : "Failed to export PDF",
+        "error",
+      );
+    }
+  };
+
+  const handleExportAuditReport = async () => {
+    try {
+      await exportInventoryAuditPdf({
+        search: debouncedSearchTerm,
+        category_id: selectedCategory,
+      });
+      showSnackbar("جاري تصدير محضر الحصر...", "success");
+    } catch (error) {
+      showSnackbar(
+        error instanceof Error ? error.message : "فشل تصدير محضر الحصر",
         "error",
       );
     }
@@ -265,6 +363,7 @@ const ProductsPage: React.FC = () => {
         category_id: selectedCategory,
         in_stock_only: showOnlyInStock,
         low_stock_only: showLowStockOnly,
+        warehouse_id: selectedWarehouse || undefined,
       };
 
       await exportService.exportProductsExcel(filters);
@@ -357,12 +456,24 @@ const ProductsPage: React.FC = () => {
             px: 2, // Add some horizontal padding for the header
           }}
         >
-          <Typography
-            component="h1"
-            className="text-gray-800 dark:text-gray-100 font-semibold"
-          >
-            إدارة المعدات
-          </Typography>
+          <Box>
+            <Typography
+              component="h1"
+              className="text-gray-800 dark:text-gray-100 font-semibold"
+            >
+              إدارة المعدات
+            </Typography>
+            <Tabs
+              value={activeTab}
+              onChange={handleTabChange}
+              sx={{ mt: 1 }}
+              indicatorColor="primary"
+              textColor="primary"
+            >
+              <Tab label="المنتجات" id="products-tab" />
+              <Tab label="المجموعات (Packages)" id="packages-tab" />
+            </Tabs>
+          </Box>
           <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
             {/* Sync to Firestore */}
             <Box
@@ -423,6 +534,25 @@ const ProductsPage: React.FC = () => {
               <Typography variant="caption">Excel</Typography>
             </Box>
 
+            {/* Export Inventory Audit PDF */}
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+              }}
+            >
+              <Tooltip title="تصدير تقرير ارصده المخازن">
+                <IconButton
+                  onClick={() => handleExportAuditReport()}
+                  color="secondary"
+                >
+                  <Sparkles className="h-5 w-5" />
+                </IconButton>
+              </Tooltip>
+              <Typography variant="caption">تقرير ارصده المخازن </Typography>
+            </Box>
+
             {/* Import from File */}
             <Box
               sx={{
@@ -442,7 +572,7 @@ const ProductsPage: React.FC = () => {
               <Typography variant="caption">استيراد</Typography>
             </Box>
 
-            {/* Add Product */}
+            {/* Add Button (Conditional) */}
             <Box
               sx={{
                 display: "flex",
@@ -450,9 +580,11 @@ const ProductsPage: React.FC = () => {
                 alignItems: "center",
               }}
             >
-              <Tooltip title="إضافة منتج جديد">
+              <Tooltip
+                title={activeTab === 0 ? "إضافة منتج جديد" : "إضافة مجموعة جديدة"}
+              >
                 <IconButton
-                  onClick={() => openModal()}
+                  onClick={activeTab === 0 ? () => openModal() : () => openPackageModal()}
                   color="primary"
                   sx={{
                     bgcolor: "primary.main",
@@ -561,6 +693,28 @@ const ProductsPage: React.FC = () => {
               </FormControl>
             </Box>
 
+            {/* Warehouse Filter */}
+            <Box sx={{ flex: { md: 1 } }}>
+              <FormControl fullWidth size="small">
+                <InputLabel className="dark:text-gray-300">تصفية حسب المتجر</InputLabel>
+                <Select
+                  value={selectedWarehouse}
+                  onChange={handleWarehouseChange}
+                  label="تصفية حسب المتجر"
+                  disabled={loadingWarehouses}
+                >
+                  <MenuItem value="">
+                    <em>كل المتاجر</em>
+                  </MenuItem>
+                  {warehouses.map((warehouse) => (
+                    <MenuItem key={warehouse.id} value={warehouse.id}>
+                      {warehouse.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+
             {/* Low Stock Toggle */}
             <Box
               sx={{ flex: { md: 1 }, display: "flex", alignItems: "center" }}
@@ -601,7 +755,7 @@ const ProductsPage: React.FC = () => {
           </Alert>
         )}
         {/* Content Area */}
-        {!error && (
+        {!error && activeTab === 0 && (
           <Box sx={{ mt: 2, width: "100%", px: 2 }}>
             <ProductsTable
               products={(products as Product[]) || []}
@@ -619,6 +773,107 @@ const ProductsPage: React.FC = () => {
             />
           </Box>
         )}
+
+        {!error && activeTab === 1 && (
+          <Box sx={{ mt: 2, width: "100%", px: 2 }}>
+            {isPackagesLoading ? (
+              <Grid container spacing={2}>
+                {[1, 2, 3].map((i) => (
+                  <Grid item xs={12} sm={6} md={4} key={i}>
+                    <Skeleton variant="rectangular" height={150} />
+                  </Grid>
+                ))}
+              </Grid>
+            ) : (
+              <Grid container spacing={2}>
+                {packages?.map((pkg) => (
+                  <Grid item xs={12} sm={6} md={4} key={pkg.id}>
+                    <Card
+                      elevation={2}
+                      sx={{
+                        height: "100%",
+                        display: "flex",
+                        flexDirection: "column",
+                        position: "relative",
+                        "&:hover": {
+                          boxShadow: 6,
+                        },
+                      }}
+                    >
+                      <CardContent>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "flex-start",
+                          }}
+                        >
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                            <PackageIcon className="text-primary-main" />
+                            <Typography variant="h6" fontWeight="bold">
+                              {pkg.name}
+                            </Typography>
+                          </Box>
+                          <Box>
+                            <IconButton
+                              size="small"
+                              onClick={() => openPackageModal(pkg)}
+                            >
+                              <Edit size={18} />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => handleDeletePackage(pkg.id!)}
+                            >
+                              <Trash2 size={18} />
+                            </IconButton>
+                          </Box>
+                        </Box>
+
+                        <Typography variant="subtitle2" fontWeight="bold">
+                          المنتجات ({pkg.items?.length || 0}):
+                        </Typography>
+                        <Box sx={{ mt: 1 }}>
+                          {pkg.items?.slice(0, 3).map((item) => (
+                            <Typography
+                              key={item.id}
+                              variant="caption"
+                              display="block"
+                            >
+                              • {item.product?.name}
+                            </Typography>
+                          ))}
+                          {(pkg.items?.length || 0) > 3 && (
+                            <Typography variant="caption" color="text.secondary">
+                              ... وغيرهم
+                            </Typography>
+                          )}
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+                {(!packages || packages.length === 0) && (
+                  <Box sx={{ width: "100%", textAlign: "center", py: 8 }}>
+                    <PackageIcon size={64} className="text-gray-300 mb-4 mx-auto" strokeWidth={1} />
+                    <Typography color="text.secondary" variant="h6" sx={{ mb: 3 }}>
+                      لا توجد مجموعات حالياً. انقر على الزر أدناه لإضافة واحدة.
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      startIcon={<Plus size={20} />}
+                      onClick={() => openPackageModal()}
+                      sx={{ borderRadius: 2, px: 4, py: 1.5 }}
+                    >
+                      إنشاء مجموعة جديدة
+                    </Button>
+                  </Box>
+                )}
+              </Grid>
+            )}
+          </Box>
+        )}
         {/* Modals and Snackbar */}
         <ProductFormModal
           isOpen={isModalOpen}
@@ -631,6 +886,12 @@ const ProductsPage: React.FC = () => {
           open={isImportDialogOpen}
           onClose={() => setIsImportDialogOpen(false)}
           onImportSuccess={handleImportSuccess}
+        />
+
+        <PackageFormModal
+          isOpen={isPackageModalOpen}
+          onClose={closePackageModal}
+          packageToEdit={editingPackage}
         />
         {/* Removed ConfirmationDialog */}
         {/* Snackbar for notifications */}

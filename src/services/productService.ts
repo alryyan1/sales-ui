@@ -172,17 +172,20 @@ const productService = {
    * Get products specifically for autocomplete (lightweight response).
    * @param search Search term.
    * @param limit Max number of results.
+   * @param warehouseId Optional warehouse ID to filter stock by.
    * @returns Promise resolving to an array of products (only essential fields).
    */
   getProductsForAutocomplete: async (
     search: string = "",
     limit: number = 20,
+    warehouseId?: number,
   ): Promise<Product[]> => {
     // Returns flat array, not paginated
     try {
       const params = new URLSearchParams();
       if (search) params.append("search", search);
       params.append("limit", limit.toString());
+      if (warehouseId) params.append("warehouse_id", warehouseId.toString());
 
       // Assumes backend endpoint /api/products/autocomplete exists
       const response = await apiClient.get<{ data: Product[] }>(
