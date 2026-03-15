@@ -42,8 +42,8 @@ import { PurchaseItem } from "../../services/purchaseService";
 import apiClient from "@/lib/axios";
 import dayjs from "dayjs";
 import { useAuth } from "@/context/AuthContext";
-import { offlineSaleService } from "@/services/offlineSaleService"; // Use offline service for cached products
-import { warehouseService, Warehouse } from "@/services/warehouseService"; // Import warehouse service
+// import { offlineSaleService } from "@/services/offlineSaleService"; // Removed offline service dependency
+import { warehouseService, Warehouse } from "@/services/warehouseService";
 
 // --- Zod Schema with Arabic messages ---
 const adjustmentReasons = [
@@ -158,17 +158,11 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
 
   // --- Fetch Products (Cached / Debounced) ---
   const fetchProducts = useCallback(async (search: string) => {
-    // If no warehouse selected, maybe don't search? Or search global?
-    // Usually stock adjustment is warehouse specific.
-    // Let's assume we can search all, but ideally we filter by warehouse if possible.
-    // The cached search `offlineSaleService.searchProducts` returns all products.
-
     setLoadingProducts(true);
     try {
-      // Use offline service for cached/fast search
-      // Note: This returns all products in local DB.
-      const response = await offlineSaleService.searchProducts(search);
-      setProducts(response.slice(0, 50)); // Limit to 50 for performance
+      // Use online service for reliable/searchable products
+      const response = await productService.getProductsForAutocomplete(search, 50);
+      setProducts(response);
     } catch (error) {
       console.error("Error searching products", error);
       setProducts([]);
@@ -367,6 +361,7 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
                   getOptionLabel={(option) =>
                     `${option.name}${option.sku ? ` (${option.sku})` : ""}`
                   }
+                  filterOptions={(x) => x} // Use server-side searching
                   loading={loadingProducts}
                   onInputChange={(_, newInputValue) => {
                     setProductSearchInput(newInputValue);

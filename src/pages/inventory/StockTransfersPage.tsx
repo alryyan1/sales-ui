@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 // import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import {
@@ -92,12 +92,12 @@ export default function StockTransfersPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>التاريخ</TableHead>
-                      <TableHead>المنتج</TableHead>
-                      <TableHead>من</TableHead>
-                      <TableHead>إلى</TableHead>
+                      <TableHead className="text-right">التاريخ</TableHead>
+                      <TableHead className="text-right">المنتج</TableHead>
+                      <TableHead className="text-right">من</TableHead>
+                      <TableHead className="text-right">إلى</TableHead>
                       <TableHead className="text-right">الكمية</TableHead>
-                      <TableHead>المستخدم</TableHead>
+                      <TableHead className="text-right">المستخدم</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

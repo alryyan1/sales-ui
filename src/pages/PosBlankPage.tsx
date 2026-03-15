@@ -522,12 +522,21 @@ const PosBlankPage: React.FC = () => {
 
       if (successCount > 0) {
         toast.success(`تم تحديث ${successCount} صنف بنجاح`);
-        fetchCurrentShift(); // Refresh to get updated sale data
+        // Refresh the specific sale to update the UI
+        const updated = await saleService.getSale(selectedSale.id);
+        setSelectedSale(updated);
+        setSales((prev) =>
+          prev.map((s) => (s.id === updated.id ? updated : s)),
+        );
+
+        fetchCurrentShift(); // Also refresh shift stats if any
         setBatchQuantity("");
       }
       if (failCount > 0) {
         toast.error(`فشل تحديث ${failCount} صنف`);
       }
+    } catch (err) {
+      toast.error(saleService.getErrorMessage(err));
     } finally {
       setIsBatchUpdating(false);
     }

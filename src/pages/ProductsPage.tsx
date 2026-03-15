@@ -696,15 +696,15 @@ const ProductsPage: React.FC = () => {
             {/* Warehouse Filter */}
             <Box sx={{ flex: { md: 1 } }}>
               <FormControl fullWidth size="small">
-                <InputLabel className="dark:text-gray-300">تصفية حسب المتجر</InputLabel>
+                <InputLabel className="dark:text-gray-300">تصفية حسب المخزن</InputLabel>
                 <Select
                   value={selectedWarehouse}
                   onChange={handleWarehouseChange}
-                  label="تصفية حسب المتجر"
+                  label="تصفية حسب المخزن"
                   disabled={loadingWarehouses}
                 >
                   <MenuItem value="">
-                    <em>كل المتاجر</em>
+                    <em>كل المخازن</em>
                   </MenuItem>
                   {warehouses.map((warehouse) => (
                     <MenuItem key={warehouse.id} value={warehouse.id}>

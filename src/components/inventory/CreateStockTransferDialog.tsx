@@ -12,17 +12,17 @@ import {
   Grid,
   Typography,
   Alert,
+  Autocomplete,
 } from "@mui/material";
 
 // Services
 import { warehouseService, Warehouse } from "@/services/warehouseService";
+import productService, { Product } from "@/services/productService";
+import { toast } from "sonner";
+import { Save } from "lucide-react";
 import stockTransferService, {
   CreateStockTransferData,
 } from "@/services/stockTransferService";
-import { Product } from "@/services/productService";
-import { offlineSaleService } from "@/services/offlineSaleService";
-import { toast } from "sonner";
-import { Save } from "lucide-react";
 
 interface CreateStockTransferDialogProps {
   onSuccess?: () => void;
@@ -47,6 +47,7 @@ export function CreateStockTransferDialog({
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [productInputValue, setProductInputValue] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<TransferFormValues>({
@@ -101,12 +102,22 @@ export function CreateStockTransferDialog({
   useEffect(() => {
     if (open) {
       loadWarehouses();
-      loadProducts(""); // Initial load or empty search
     } else {
       // Reset form when dialog closes
       form.reset();
     }
   }, [open]);
+
+  // Debounced product search
+  useEffect(() => {
+    if (!open) return;
+    
+    const delayDebounceFn = setTimeout(() => {
+      loadProducts(productInputValue);
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [productInputValue, open]);
 
   // Reset "to_warehouse_id" if it becomes invalid (same as from_warehouse_id)
   useEffect(() => {
@@ -129,23 +140,15 @@ export function CreateStockTransferDialog({
     }
   };
 
-  // Load products from IndexedDB cache
+  // Load products from API
   const loadProducts = async (search: string) => {
     try {
       setLoadingProducts(true);
-      // Try to load from IndexedDB cache first
-      const cachedProducts = await offlineSaleService.searchProducts(search);
-      
-      if (cachedProducts.length > 0) {
-        setProducts(cachedProducts);
-      } else {
-        // If cache is empty, show message but don't fail
-        toast.info("لا توجد منتجات في الذاكرة المؤقتة. يرجى تحديث البيانات.");
-        setProducts([]);
-      }
+      const data = await productService.getProductsForAutocomplete(search, 20);
+      setProducts(data);
     } catch (error) {
-      console.error("Error loading products from cache:", error);
-      toast.error("فشل تحميل المنتجات من الذاكرة المؤقتة");
+      console.error("Error loading products:", error);
+      toast.error("فشل تحميل المنتجات");
       setProducts([]);
     } finally {
       setLoadingProducts(false);
@@ -281,46 +284,56 @@ export function CreateStockTransferDialog({
                   name="product_id"
                   rules={{ required: "مطلوب" }}
                   render={({ field }) => (
-                    <TextField
-                      {...field}
-                      select
-                      label={loadingProducts ? "جاري التحميل..." : "المنتج"}
-                      fullWidth
-                      error={!!form.formState.errors.product_id}
-                      helperText={form.formState.errors.product_id?.message}
-                      disabled={loadingProducts}
-                    >
-                      {products.length === 0 ? (
-                        <MenuItem disabled>
-                          {loadingProducts
-                            ? "جاري التحميل..."
-                            : "لا توجد منتجات متاحة"}
-                        </MenuItem>
-                      ) : (
-                        products.map((p) => {
-                          // Show warehouse-specific stock if available
-                          let stockDisplay = p.stock_quantity || 0;
-                          if (
-                            fromWarehouseId &&
-                            p.warehouses &&
-                            p.warehouses.length > 0
-                          ) {
-                            const warehouseId = parseInt(fromWarehouseId);
-                            const warehouseStock = p.warehouses.find(
-                              (w) => w.id === warehouseId
-                            );
-                            if (warehouseStock) {
-                              stockDisplay = warehouseStock.pivot.quantity;
-                            }
-                          }
-                          return (
-                            <MenuItem key={p.id} value={p.id.toString()}>
-                              {p.name} (المخزون: {stockDisplay})
-                            </MenuItem>
+                    <Autocomplete
+                      options={products}
+                      loading={loadingProducts}
+                      getOptionLabel={(p) => {
+                        // Stock quantity calculation for display
+                        let stockDisplay = p.stock_quantity || 0;
+                        if (
+                          fromWarehouseId &&
+                          p.warehouses &&
+                          p.warehouses.length > 0
+                        ) {
+                          const warehouseId = parseInt(fromWarehouseId);
+                          const warehouseStock = p.warehouses.find(
+                            (w) => w.id === warehouseId
                           );
-                        })
+                          if (warehouseStock) {
+                            stockDisplay = warehouseStock.pivot.quantity;
+                          }
+                        }
+                        return `${p.name} (المخزون: ${stockDisplay})`;
+                      }}
+                      filterOptions={(x) => x} // Disable fixed filtering to use server search
+                      inputValue={productInputValue}
+                      onInputChange={(_, newValue) => setProductInputValue(newValue)}
+                      onChange={(_, newValue) => {
+                        field.onChange(newValue ? newValue.id.toString() : "");
+                      }}
+                      value={products.find((p) => p.id.toString() === field.value) || null}
+                      noOptionsText={productInputValue.trim() ? "لا توجد نتائج" : "اكتب للبحث..."}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="المنتج (ابحث بالاسم أو الباركود)"
+                          fullWidth
+                          error={!!form.formState.errors.product_id}
+                          helperText={form.formState.errors.product_id?.message}
+                          InputProps={{
+                            ...params.InputProps,
+                            endAdornment: (
+                              <React.Fragment>
+                                {loadingProducts ? (
+                                  <CircularProgress color="inherit" size={20} />
+                                ) : null}
+                                {params.InputProps.endAdornment}
+                              </React.Fragment>
+                            ),
+                          }}
+                        />
                       )}
-                    </TextField>
+                    />
                   )}
                 />
                 {/* Show available stock info */}
