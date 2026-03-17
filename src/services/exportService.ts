@@ -5,6 +5,8 @@ export interface ExportFilters {
   search?: string;
   category_id?: number | null;
   in_stock_only?: boolean;
+  low_stock_only?: boolean;
+  out_of_stock_only?: boolean;
 }
 
 export interface PurchaseExportFilters {
@@ -37,6 +39,14 @@ const exportService = {
       
       if (filters.in_stock_only) {
         params.append('in_stock_only', '1');
+      }
+
+      if (filters.low_stock_only) {
+        params.append('low_stock_only', '1');
+      }
+
+      if (filters.out_of_stock_only) {
+        params.append('out_of_stock_only', '1');
       }
 
       // Create the URL for the web PDF endpoint (not API)

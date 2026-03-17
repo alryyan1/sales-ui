@@ -241,8 +241,8 @@ const ProductsPage: React.FC = () => {
       const filters = {
         search: debouncedSearchTerm,
         category_id: selectedCategory,
-        in_stock_only: showOnlyInStock,
-        low_stock_only: showLowStockOnly,
+        // in_stock_only: showOnlyInStock, // User requested to show all products in export
+        // low_stock_only: showLowStockOnly, // Fixed: showLowStockOnly was undefined
       };
 
       await exportService.exportProductsPdf(filters);
@@ -261,8 +261,8 @@ const ProductsPage: React.FC = () => {
       const filters = {
         search: debouncedSearchTerm,
         category_id: selectedCategory,
-        in_stock_only: showOnlyInStock,
-        low_stock_only: showLowStockOnly,
+        // in_stock_only: showOnlyInStock, // User requested to show all products in export
+        // low_stock_only: showLowStockOnly, // Fixed: showLowStockOnly was undefined
       };
 
       await exportService.exportProductsExcel(filters);
@@ -571,7 +571,7 @@ const ProductsPage: React.FC = () => {
                     color="primary"
                   />
                 }
-                label="عرض المنتجات المخلصة (النواقص)"
+                label="عرض النواقص"
               />
             </Box>
           </Box>
