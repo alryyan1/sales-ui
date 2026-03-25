@@ -37,6 +37,7 @@ import { Unit } from "@/services/UnitService";
 import { ProductFormData } from "@/services/productService";
 
 import { formatNumber, formatCurrency } from "@/constants";
+import { useSettings } from "@/context/SettingsContext";
 
 // Interface for Product with potentially loaded batches
 interface ProductWithOptionalBatches extends Omit<
@@ -64,24 +65,30 @@ interface ProductsTableProps {
   onLoadMore: () => void;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
+  // Column Visibility
+  visibleColumns?: {
+    sku?: boolean; name?: boolean; scientific_name?: boolean; category?: boolean;
+    sellable_unit?: boolean; stocking_unit?: boolean; units_per_stocking?: boolean;
+    stock?: boolean; cost?: boolean; sale_price?: boolean; expire_date?: boolean;
+  };
 }
 
 interface ProductRowProps {
   product: ProductWithOptionalBatches;
   onEdit: (product: ProductWithOptionalBatches) => void;
-
   copyToClipboard: (sku: string) => void;
   copiedSku: string | null;
   isLoading: boolean;
+  vis: NonNullable<ProductsTableProps["visibleColumns"]>;
 }
 
 const ProductRow: React.FC<ProductRowProps> = ({
   product,
   onEdit,
-
   copyToClipboard,
   copiedSku,
   isLoading,
+  vis,
 }) => {
   const stockQty = Number(
     product.current_stock_quantity ?? product.stock_quantity ?? 0,
@@ -91,10 +98,12 @@ const ProductRow: React.FC<ProductRowProps> = ({
     stockQty <= (product.stock_alert_level as number);
   const isOutOfStock = stockQty <= 0;
 
-  // Check if product is expired
   const isExpired = product.earliest_expiry_date
     ? new Date(product.earliest_expiry_date) < new Date()
     : false;
+
+  const { getSetting } = useSettings();
+  const colorHighlight = getSetting("product_row_color_highlight", true);
 
   const prevStockRef = useRef<number>(stockQty);
   const [animationClass, setAnimationClass] = useState("");
@@ -127,142 +136,94 @@ const ProductRow: React.FC<ProductRowProps> = ({
       hover
       sx={{
         cursor: "pointer",
-        bgcolor: isExpired
-          ? "rgba(211, 47, 47, 0.08)"
-          : isOutOfStock
-            ? "rgba(237, 108, 2, 0.08)"
-            : "transparent",
-        "&:hover": {
-          bgcolor: isExpired
-            ? "rgba(211, 47, 47, 0.12) !important"
+        bgcolor: colorHighlight
+          ? isExpired
+            ? "rgba(211, 47, 47, 0.08)"
             : isOutOfStock
-              ? "rgba(237, 108, 2, 0.12) !important"
-              : undefined,
+              ? "rgba(237, 108, 2, 0.08)"
+              : "transparent"
+          : "transparent",
+        "&:hover": {
+          bgcolor: colorHighlight
+            ? isExpired
+              ? "rgba(211, 47, 47, 0.12) !important"
+              : isOutOfStock
+                ? "rgba(237, 108, 2, 0.12) !important"
+                : undefined
+            : undefined,
         },
       }}
       className={animationClass}
       onClick={() => onEdit(product)}
     >
       <TableCell align="center">{product.id}</TableCell>
-      <TableCell align="center">
-        <Stack
-          direction="row"
-          spacing={0.5}
-          alignItems="center"
-          justifyContent="center"
-        >
-          <Typography variant="body2" component="span">
-            {product.sku || "---"}
+      {vis.sku !== false && (
+        <TableCell sx={{ maxWidth: 100 }} align="center">
+          <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center">
+            <Typography variant="body2" component="span">{product.sku || "---"}</Typography>
+            {product.sku && (
+              <Tooltip title={copiedSku === product.sku ? "تم النسخ" : "نسخ SKU"}>
+                <IconButton size="small" onClick={(e) => { e.stopPropagation(); copyToClipboard(product.sku!); }}
+                  disabled={isLoading} sx={{ width: 24, height: 24, p: 0 }}>
+                  {copiedSku === product.sku
+                    ? <Check style={{ width: 14, height: 14, color: "var(--mui-palette-success-main)" }} />
+                    : <Copy style={{ width: 14, height: 14 }} />}
+                </IconButton>
+              </Tooltip>
+            )}
+          </Stack>
+        </TableCell>
+      )}
+      {vis.name !== false && (
+        <TableCell align="center">
+          <Typography variant="body2" fontWeight={600}>{product.name}</Typography>
+        </TableCell>
+      )}
+      {vis.scientific_name !== false && (
+        <TableCell sx={{ minWidth: 300 }} align="center">{product.scientific_name || "---"}</TableCell>
+      )}
+      {vis.category !== false && (
+        <TableCell align="center">
+          {product.category_name
+            ? <Chip label={product.category_name} size="small" variant="outlined" sx={{ fontSize: "0.75rem", height: 24 }} />
+            : "---"}
+        </TableCell>
+      )}
+      {vis.sellable_unit !== false && <TableCell align="center">{product.sellable_unit_name || "---"}</TableCell>}
+      {vis.stocking_unit !== false && <TableCell align="center">{product.stocking_unit_name || "---"}</TableCell>}
+      {vis.units_per_stocking !== false && <TableCell align="center">{product.units_per_stocking_unit || "---"}</TableCell>}
+      {vis.stock !== false && (
+        <TableCell align="center">
+          <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center">
+            <Typography variant="body1" fontWeight={600}>{formatNumber(stockQty)}</Typography>
+            {(isLow || isOutOfStock) && (
+              <Tooltip title={isOutOfStock ? "نفاد المخزون" : "تنبيه: المخزون منخفض"}>
+                <AlertTriangle style={{ width: 16, height: 16,
+                  color: isOutOfStock ? "var(--mui-palette-error-main)" : "var(--mui-palette-warning-main)" }} />
+              </Tooltip>
+            )}
+          </Stack>
+        </TableCell>
+      )}
+      {vis.cost !== false && (
+        <TableCell align="center">
+          {product.latest_cost_per_sellable_unit
+            ? formatCurrency(Number(product.latest_cost_per_sellable_unit)) : "---"}
+        </TableCell>
+      )}
+      {vis.sale_price !== false && (
+        <TableCell align="center">
+          {product.last_sale_price_per_sellable_unit
+            ? formatCurrency(Number(product.last_sale_price_per_sellable_unit)) : "---"}
+        </TableCell>
+      )}
+      {vis.expire_date !== false && (
+        <TableCell sx={{ minWidth: 100 }} align="center">
+          <Typography variant="body2" sx={{ color: isExpired ? "error.main" : "text.primary", fontWeight: isExpired ? 600 : 400 }}>
+            {formatExpiryDate(product.earliest_expiry_date)}
           </Typography>
-          {product.sku && (
-            <Tooltip title={copiedSku === product.sku ? "تم النسخ" : "نسخ SKU"}>
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  copyToClipboard(product.sku!);
-                }}
-                disabled={isLoading}
-                sx={{ width: 24, height: 24, p: 0 }}
-              >
-                {copiedSku === product.sku ? (
-                  <Check
-                    style={{
-                      width: 14,
-                      height: 14,
-                      color: "var(--mui-palette-success-main)",
-                    }}
-                  />
-                ) : (
-                  <Copy style={{ width: 14, height: 14 }} />
-                )}
-              </IconButton>
-            </Tooltip>
-          )}
-        </Stack>
-      </TableCell>
-      <TableCell align="left">
-        <Typography variant="body2" fontWeight={600}>
-          {product.name}
-        </Typography>
-      </TableCell>
-      <TableCell align="center">{product.scientific_name || "---"}</TableCell>
-      <TableCell align="center">
-        {product.category_name ? (
-          <Chip
-            label={product.category_name}
-            size="small"
-            variant="outlined"
-            sx={{ fontSize: "0.75rem", height: 24 }}
-          />
-        ) : (
-          "---"
-        )}
-      </TableCell>
-      <TableCell align="center">
-        {product.sellable_unit_name || "---"}
-      </TableCell>
-      <TableCell align="center">
-        {product.stocking_unit_name || "---"}
-      </TableCell>
-      <TableCell align="center">
-        {product.units_per_stocking_unit || "---"}
-      </TableCell>
-
-      <TableCell align="center">
-        {product.stock_alert_level !== null
-          ? formatNumber(product.stock_alert_level)
-          : "---"}
-      </TableCell>
-      <TableCell align="center">
-        <Stack
-          direction="row"
-          spacing={0.5}
-          alignItems="center"
-          justifyContent="center"
-        >
-          <Typography variant="body1" fontWeight={600}>
-            {formatNumber(stockQty)}
-          </Typography>
-          {(isLow || isOutOfStock) && (
-            <Tooltip
-              title={isOutOfStock ? "نفاد المخزون" : "تنبيه: المخزون منخفض"}
-            >
-              <AlertTriangle
-                style={{
-                  width: 16,
-                  height: 16,
-                  color: isOutOfStock
-                    ? "var(--mui-palette-error-main)"
-                    : "var(--mui-palette-warning-main)",
-                }}
-              />
-            </Tooltip>
-          )}
-        </Stack>
-      </TableCell>
-
-      <TableCell align="center">
-        {product.latest_cost_per_sellable_unit
-          ? formatCurrency(Number(product.latest_cost_per_sellable_unit))
-          : "---"}
-      </TableCell>
-      <TableCell align="center">
-        {product.last_sale_price_per_sellable_unit
-          ? formatCurrency(Number(product.last_sale_price_per_sellable_unit))
-          : "---"}
-      </TableCell>
-      <TableCell align="center">
-        <Typography
-          variant="body2"
-          sx={{
-            color: isExpired ? "error.main" : "text.primary",
-            fontWeight: isExpired ? 600 : 400,
-          }}
-        >
-          {formatExpiryDate(product.earliest_expiry_date)}
-        </Typography>
-      </TableCell>
+        </TableCell>
+      )}
     </TableRow>
   );
 };
@@ -547,7 +508,9 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
   onLoadMore,
   hasNextPage,
   isFetchingNextPage,
+  visibleColumns: vc = {},
 }) => {
+  const vis = vc;
   const [copiedSku, setCopiedSku] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isCreatingLoading, setIsCreatingLoading] = useState(false);
@@ -678,18 +641,18 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                     </IconButton>
                   </Tooltip>
                 </TableCell>
-                <TableCell align="center"> (SKU)</TableCell>
-                <TableCell align="right">اسم المنتج</TableCell>
-                <TableCell align="center">الاسم العلمي</TableCell>
-                <TableCell align="center">الفئة</TableCell>
-                <TableCell align="center">وحدة البيع</TableCell>
-                <TableCell align="center">وحدة التخزين</TableCell>
-                <TableCell align="center">عدد الوحدات </TableCell>
-                <TableCell align="center">تنبيه المخزون</TableCell>
-                <TableCell align="center">إجمالي المخزون</TableCell>
-                <TableCell align="center">أحدث تكلفة</TableCell>
-                <TableCell align="center">آخر سعر بيع</TableCell>
-                <TableCell align="center">تاريخ الصلاحية</TableCell>
+                {vis.sku !== false && <TableCell align="center"> (SKU)</TableCell>}
+                {vis.name !== false && <TableCell sx={{ minWidth: 300 }} align="center">اسم المنتج</TableCell>}
+                {vis.scientific_name !== false && <TableCell align="center">الاسم العلمي</TableCell>}
+                {vis.category !== false && <TableCell align="center">الفئة</TableCell>}
+                {vis.sellable_unit !== false && <TableCell align="center">وحدة البيع</TableCell>}
+                {vis.stocking_unit !== false && <TableCell align="center">وحدة التخزين</TableCell>}
+                {vis.units_per_stocking !== false && <TableCell align="center">عدد الوحدات</TableCell>}
+                {/* <TableCell align="center">تنبيه المخزون</TableCell> */}
+                {vis.stock !== false && <TableCell align="center"> المخزون</TableCell>}
+                {vis.cost !== false && <TableCell align="center">تكلفة</TableCell>}
+                {vis.sale_price !== false && <TableCell align="center">سعر البيع</TableCell>}
+                {vis.expire_date !== false && <TableCell align="center"> الصلاحية</TableCell>}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -722,6 +685,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                   copyToClipboard={copyToClipboard}
                   copiedSku={copiedSku}
                   isLoading={isLoading}
+                  vis={vis}
                 />
               ))}
 

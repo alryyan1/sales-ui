@@ -243,12 +243,10 @@ const PurchaseFormPage: React.FC = () => {
   return (
     <Box
       sx={{
-        minHeight: "100vh",
         bgcolor: "#f8fafc",
         pb: 6,
         pt: { xs: 2, sm: 3 },
       }}
-      dir="rtl"
     >
       <Container maxWidth="lg">
         {/* Header Section */}
@@ -399,26 +397,7 @@ const PurchaseFormPage: React.FC = () => {
               <form onSubmit={handleSubmit(onSubmit)} noValidate>
                 <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
                   {/* Server Error Alert */}
-                  {serverError && !isSubmitting && (
-                    <Fade in>
-                      <Alert
-                        severity="error"
-                        icon={<AlertCircle size={20} />}
-                        sx={{
-                          mb: 3,
-                          borderRadius: 2,
-                          bgcolor: "error.50",
-                          border: "1px solid",
-                          borderColor: "error.200",
-                        }}
-                      >
-                        <AlertTitle sx={{ fontWeight: 700 }}>
-                          خطأ في التحقق
-                        </AlertTitle>
-                        <Typography variant="body2">{serverError}</Typography>
-                      </Alert>
-                    </Fade>
-                  )}
+               =
 
                   {/* Header Form Section */}
                   <PurchaseHeaderFormSection

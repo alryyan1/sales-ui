@@ -122,6 +122,8 @@ const SettingsPage: React.FC = () => {
           settings.whatsapp_shift_closure_numbers || "",
         firebase_collection_name:
           settings.firebase_collection_name || "one_care",
+        product_row_color_highlight:
+          settings.product_row_color_highlight ?? true,
       });
 
       if (settings.company_logo_url) setLogoPreview(settings.company_logo_url);

@@ -661,15 +661,11 @@ const PurchasesListPage: React.FC = () => {
                     <TableHead className="text-center font-bold">
                       المورد
                     </TableHead>
-                    <TableHead className="text-center font-bold">
-                      المخزن
-                    </TableHead>
+           
                     {/* <TableHead className="text-center font-bold">
                         رقم المرجع
                       </TableHead> */}
-                    <TableHead className="text-center font-bold">
-                      العملة
-                    </TableHead>
+                
                     <TableHead className="text-center font-bold">
                       الحالة
                     </TableHead>
@@ -746,21 +742,13 @@ const PurchasesListPage: React.FC = () => {
                               {purchase.supplier_name || "—"}
                             </span>
                           </TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant="outline" className="font-medium">
-                              {purchase.warehouse_name || "—"}
-                            </Badge>
-                          </TableCell>
+                        
                           {/* <TableCell className="text-center">
                               <code className="text-sm text-muted-foreground">
                                 {purchase.reference_number || "—"}
                               </code>
                             </TableCell> */}
-                          <TableCell className="text-center">
-                            <Badge variant="secondary" className="font-mono">
-                              {purchase.currency || "SDG"}
-                            </Badge>
-                          </TableCell>
+                       
                           <TableCell className="text-center">
                             <Badge className={cn("gap-1 border", status.color)}>
                               <StatusIcon className="h-3 w-3" />
@@ -816,20 +804,7 @@ const PurchasesListPage: React.FC = () => {
                               </MenuItem>
                               <Divider />
 
-                              <MenuItem
-                                onClick={(e) => {
-                                  handleMenuClose(e);
-                                  setPurchaseToEdit(purchase);
-                                  setEditDialogOpen(true);
-                                }}
-                                disabled={purchase.status === "received"}
-                              >
-                                <ListItemIcon>
-                                  <Edit2 className="h-4 w-4" />
-                                </ListItemIcon>
-                                <ListItemText primary="تعديل الترويسة" />
-                              </MenuItem>
-
+                           
                               <MenuItem
                                 onClick={(e) => {
                                   handleMenuClose(e);
@@ -895,11 +870,19 @@ const PurchasesListPage: React.FC = () => {
                                   handleDeleteClick(purchase.id);
                                 }}
                                 sx={{ color: "error.main" }}
+                                disabled={purchase.status === "received"}
                               >
                                 <ListItemIcon sx={{ color: "inherit" }}>
                                   <Trash2 className="h-4 w-4" />
                                 </ListItemIcon>
-                                <ListItemText primary="حذف" />
+                                <ListItemText
+                                  primary="حذف"
+                                  secondary={
+                                    purchase.status === "received"
+                                      ? "لا يمكن حذف مشتريات تم استلامها"
+                                      : undefined
+                                  }
+                                />
                               </MenuItem>
                             </Menu>
                           </TableCell>
@@ -972,9 +955,9 @@ const PurchasesListPage: React.FC = () => {
           }
         }}
         onConfirm={handleConfirmDelete}
-        title="تأكيد الحذف"
-        message="هل أنت متأكد من رغبتك في حذف هذا الشراء؟ لا يمكن التراجع عن هذا الإجراء."
-        confirmText="حذف"
+        title="⚠️ تأكيد حذف الشراء"
+        message="هل أنت متأكد من حذف هذا الشراء؟ سيتم حذف جميع بنوده بشكل نهائي ولا يمكن التراجع عن هذه العملية."
+        confirmText="نعم، احذف"
         cancelText="إلغاء"
         confirmVariant="destructive"
         isLoading={isDeleting}

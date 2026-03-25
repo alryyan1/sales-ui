@@ -33,7 +33,10 @@ import {
   Search,
   Layers,
   CloudUpload,
+  Columns3,
 } from "lucide-react";
+import Popover from "@mui/material/Popover";
+import Checkbox from "@mui/material/Checkbox";
 
 // Services and Types
 import productService, {
@@ -57,7 +60,7 @@ const ProductsPage: React.FC = () => {
   const { getSetting } = useSettings();
   const firebaseCollectionName = getSetting(
     "firebase_collection_name",
-    "one_care",
+    "put here the colloection name if not present in the settings",
   );
   // --- State ---
   const [searchTerm, setSearchTerm] = useState("");
@@ -69,7 +72,7 @@ const ProductsPage: React.FC = () => {
   const [sellableUnits, setSellableUnits] = useState<Unit[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
-  const [showOnlyInStock, setShowOnlyInStock] = useState(true);
+  const [showOnlyInStock, setShowOnlyInStock] = useState(false);
   const navigate = useNavigate();
 
   // Modal State
@@ -77,6 +80,35 @@ const ProductsPage: React.FC = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null); // Use Product type directly
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isUnitsDialogOpen, setIsUnitsDialogOpen] = useState(false);
+
+  // Column Visibility
+  const COLUMN_KEYS = ["sku", "name", "scientific_name", "category", "sellable_unit", "stocking_unit", "units_per_stocking", "stock", "cost", "sale_price", "expire_date"] as const;
+  type ColumnKey = typeof COLUMN_KEYS[number];
+  const COLUMN_LABELS: Record<ColumnKey, string> = {
+    sku: "SKU", name: "اسم المنتج", scientific_name: "الاسم العلمي",
+    category: "الفئة", sellable_unit: "وحدة البيع", stocking_unit: "وحدة التخزين",
+    units_per_stocking: "عدد الوحدات", stock: "المخزون", cost: "تكلفة",
+    sale_price: "سعر البيع", expire_date: "الصلاحية",
+  };
+  const defaultVisibility: Record<ColumnKey, boolean> = {
+    sku: true, name: true, scientific_name: true, category: true,
+    sellable_unit: true, stocking_unit: true, units_per_stocking: true,
+    stock: true, cost: true, sale_price: true, expire_date: true,
+  };
+  const [visibleColumns, setVisibleColumns] = useState<Record<ColumnKey, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem("products_table_columns");
+      return saved ? { ...defaultVisibility, ...JSON.parse(saved) } : defaultVisibility;
+    } catch { return defaultVisibility; }
+  });
+  const [columnsAnchor, setColumnsAnchor] = useState<HTMLButtonElement | null>(null);
+  const toggleColumn = (key: ColumnKey) => {
+    setVisibleColumns(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem("products_table_columns", JSON.stringify(next));
+      return next;
+    });
+  };
 
   // Snackbar State
   const [snackbar, setSnackbar] = useState<{
@@ -362,6 +394,38 @@ const ProductsPage: React.FC = () => {
             إدارة المنتجات
           </Typography>
           <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+            {/* Columns Toggle */}
+            <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <Tooltip title="إظهار/إخفاء الأعمدة">
+                <IconButton onClick={(e) => setColumnsAnchor(e.currentTarget)} color="default">
+                  <Columns3 className="h-5 w-5" />
+                </IconButton>
+              </Tooltip>
+              <Typography variant="caption">الأعمدة</Typography>
+            </Box>
+            <Popover
+              open={Boolean(columnsAnchor)}
+              anchorEl={columnsAnchor}
+              onClose={() => setColumnsAnchor(null)}
+              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+              transformOrigin={{ vertical: "top", horizontal: "right" }}
+            >
+              <Box sx={{ p: 2, minWidth: 200 }}>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>الأعمدة المرئية</Typography>
+                {COLUMN_KEYS.map((key) => (
+                  <Box key={key} sx={{ display: "flex", alignItems: "center" }}>
+                    <Checkbox
+                      size="small"
+                      checked={visibleColumns[key]}
+                      onChange={() => toggleColumn(key)}
+                      // name=true is always required — prevent hiding it:
+                      disabled={key === "name"}
+                    />
+                    <Typography variant="body2">{COLUMN_LABELS[key]}</Typography>
+                  </Box>
+                ))}
+              </Box>
+            </Popover>
             {/* Sync to Firestore */}
             <Box
               sx={{
@@ -571,7 +635,7 @@ const ProductsPage: React.FC = () => {
                     color="primary"
                   />
                 }
-                label="عرض النواقص"
+                label="عرض الكميات المنخفضه"
               />
             </Box>
           </Box>
@@ -598,6 +662,7 @@ const ProductsPage: React.FC = () => {
               stockingUnits={stockingUnits}
               sellableUnits={sellableUnits}
               onProductCreate={handleProductCreate}
+              visibleColumns={visibleColumns}
             />
           </Box>
         )}

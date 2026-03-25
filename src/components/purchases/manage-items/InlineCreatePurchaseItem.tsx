@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { Product } from "@/services/productService";
 import { AddPurchaseItemData } from "./types";
 import apiClient from "@/lib/axios";
+import { formatNumber } from "@/constants";
 
 interface InlineCreatePurchaseItemProps {
   onSave: (data: AddPurchaseItemData) => Promise<void>;
@@ -81,10 +82,6 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
     const newPrice = val === "" ? undefined : Number(val);
     setSalePrice(newPrice);
 
-    if (newPrice !== undefined && newPrice >= 0) {
-      const calculatedCost = newPrice / (1 + markupPercentage / 100);
-      setUnitCost(Number(calculatedCost.toFixed(2)));
-    }
   };
 
   // Fetch products based on search query (debounced)
@@ -471,18 +468,22 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
       {/* Total Cost - 7 */}
       <Box sx={{ width: 100, textAlign: "center" }}>
         <Typography variant="body2" color="text.secondary">
-          {(quantity || 0) * (unitCost || 0) > 0
-            ? ((quantity || 0) * (unitCost || 0)).toFixed(2)
-            : "—"}
+          {formatNumber(
+            (quantity || 0) * (unitCost || 0) > 0
+              ? ((quantity || 0) * (unitCost || 0)).toFixed(2)
+              : "—",
+          )}
         </Typography>
       </Box>
 
       {/* Total Retail - 8 */}
       <Box sx={{ width: 100, textAlign: "center" }}>
         <Typography variant="body2" color="success.main" fontWeight="bold">
-          {(quantity || 0) * (salePrice || 0) > 0
-            ? ((quantity || 0) * (salePrice || 0)).toFixed(2)
-            : "—"}
+          {formatNumber(
+            (quantity || 0) * (salePrice || 0) > 0
+              ? ((quantity || 0) * (salePrice || 0)).toFixed(2)
+              : "—",
+          )}
         </Typography>
       </Box>
 

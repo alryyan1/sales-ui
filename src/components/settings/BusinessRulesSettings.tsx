@@ -8,6 +8,8 @@ import {
   MenuItem,
   Divider,
   Stack,
+  Switch,
+  FormControlLabel,
   useTheme,
 } from "@mui/material";
 import { AppSettings } from "@/services/settingService";
@@ -183,6 +185,37 @@ export const BusinessRulesSettings = ({
                 />
               </Box>
             </Box>
+          </Box>
+
+          <Divider />
+
+          <Box>
+            <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ mb: 2, fontWeight: 500 }}>
+              عرض جدول المنتجات
+            </Typography>
+            <Controller
+              name="product_row_color_highlight"
+              control={control}
+              render={({ field }) => (
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={!!field.value}
+                      onChange={(e) => field.onChange(e.target.checked)}
+                      color="primary"
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography variant="body2" fontWeight={500}>تلوين صفوف المنتجات المنتهية أو الناقصة</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        عند التفعيل، تُلوَّن صفوف المنتجات المنتهية الصلاحية (أحمر) والنافدة من المخزون (برتقالي)
+                      </Typography>
+                    </Box>
+                  }
+                />
+              )}
+            />
           </Box>
 
           <Divider />

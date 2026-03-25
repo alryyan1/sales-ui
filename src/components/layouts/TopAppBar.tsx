@@ -226,22 +226,8 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
         </Typography>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <IconButton
-            onClick={() => setShortcutsDialogOpen(true)}
-            color="inherit"
-            title="اختصارات لوحة المفاتيح"
-          >
-            <Keyboard size={20} />
-          </IconButton>
-
-          <IconButton
-            onClick={handleResetData}
-            color="error"
-            title="Reset Offline Data"
-          >
-            <RefreshCcw size={20} />
-          </IconButton>
-
+       
+       
           {/* Warehouse Display */}
           {user?.warehouse && (
             <Chip
@@ -268,29 +254,13 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
             />
           )}
 
-          <ThemeToggle />
+          {/* <ThemeToggle /> */}
 
           {/* USD to SDG Factor */}
     
 
 
-          {/* POS Mode Indicator - Icon only */}
-          <IconButton
-            color="inherit"
-            title={posMode === "shift" ? "وضع الوردية" : "وضع الأيام"}
-            sx={{
-              color:
-                posMode === "shift"
-                  ? theme.palette.info.main
-                  : theme.palette.success.main,
-            }}
-          >
-            {posMode === "shift" ? (
-              <Clock size={20} />
-            ) : (
-              <CalendarDays size={20} />
-            )}
-          </IconButton>
+    
 
           {user && (
             <ButtonBase
