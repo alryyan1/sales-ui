@@ -11,7 +11,6 @@ import {
   Avatar,
   ButtonBase,
   Chip,
-  CircularProgress,
 } from "@mui/material";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -23,17 +22,12 @@ import {
   CalendarDays,
   TrendingUp,
   FileWarning as FileWarningIcon,
-  DollarSign,
-  Check,
 } from "lucide-react";
 import ErrorIcon from "@mui/icons-material/Error";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Button,
   Badge,
-  Popover,
-  TextField,
-  InputAdornment,
 } from "@mui/material";
 import { useSettings } from "@/context/SettingsContext";
 import { ThemeToggle } from "../layout/ThemeToggle";
@@ -59,48 +53,15 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
   const navigate = useNavigate(); // Initialize useNavigate
   const location = useLocation();
   const { user } = useAuth();
-  const { getSetting, updateSettings } = useSettings();
+  const { getSetting } = useSettings();
   const [shortcutsDialogOpen, setShortcutsDialogOpen] = React.useState(false);
   const [expiryCounts, setExpiryCounts] = React.useState({
     nearExpiringCount: 0,
     expiredCount: 0,
   });
 
-  // USD to SDG Factor state
-  const usdFactor = getSetting("usd_to_sdg_factor", 1) as number;
-  const [localFactor, setLocalFactor] = React.useState(String(usdFactor));
-  const [factorAnchorEl, setFactorAnchorEl] =
-    React.useState<HTMLDivElement | null>(null);
-  const [isUpdatingFactor, setIsUpdatingFactor] = React.useState(false);
 
-  React.useEffect(() => {
-    setLocalFactor(String(usdFactor));
-  }, [usdFactor]);
 
-  const handleFactorClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    setFactorAnchorEl(event.currentTarget);
-  };
-
-  const handleFactorClose = () => {
-    setFactorAnchorEl(null);
-  };
-
-  const handleSaveFactor = async () => {
-    const val = parseFloat(localFactor);
-    if (isNaN(val) || val <= 0) {
-      toast.error("يرجى إدخال معامل تحويل صحيح");
-      return;
-    }
-    try {
-      setIsUpdatingFactor(true);
-      await updateSettings({ usd_to_sdg_factor: val });
-      handleFactorClose();
-    } catch (err) {
-      console.error("Failed to update factor:", err);
-    } finally {
-      setIsUpdatingFactor(false);
-    }
-  };
 
   React.useEffect(() => {
     const handleUpdateCounts = (e: Event) => {
@@ -310,75 +271,8 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
           <ThemeToggle />
 
           {/* USD to SDG Factor */}
-          <Chip
-            icon={<DollarSign size={16} />}
-            label={`USD: ${usdFactor}`}
-            size="small"
-            onClick={handleFactorClick}
-            sx={{
-              bgcolor: alpha(theme.palette.warning.main, 0.1),
-              color: theme.palette.warning.main,
-              fontWeight: 600,
-              height: 28,
-              cursor: "pointer",
-              "& .MuiChip-icon": {
-                color: theme.palette.warning.main,
-              },
-              "&:hover": {
-                bgcolor: alpha(theme.palette.warning.main, 0.2),
-              },
-            }}
-          />
+    
 
-          <Popover
-            open={Boolean(factorAnchorEl)}
-            anchorEl={factorAnchorEl}
-            onClose={handleFactorClose}
-            anchorOrigin={{
-              vertical: "bottom",
-              horizontal: "center",
-            }}
-            transformOrigin={{
-              vertical: "top",
-              horizontal: "center",
-            }}
-            PaperProps={{
-              sx: { p: 2, width: 220, borderRadius: 2, mt: 1 },
-            }}
-          >
-            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-              معامل تحويل الدولار (USD → SDG)
-            </Typography>
-            <TextField
-              size="small"
-              fullWidth
-              value={localFactor}
-              onChange={(e) => setLocalFactor(e.target.value)}
-              placeholder="مثلاً: 3600"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleSaveFactor();
-              }}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      size="small"
-                      onClick={handleSaveFactor}
-                      disabled={isUpdatingFactor}
-                      color="primary"
-                    >
-                      {isUpdatingFactor ? (
-                        <CircularProgress size={16} />
-                      ) : (
-                        <Check size={16} />
-                      )}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </Popover>
 
           {/* POS Mode Indicator - Icon only */}
           <IconButton

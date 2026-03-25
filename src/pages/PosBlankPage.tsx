@@ -19,12 +19,13 @@ import {
   FormControl,
   Popover,
   Stack,
+  createFilterOptions,
 } from "@mui/material";
 import { CloudUploadIcon, FileText, SearchIcon } from "lucide-react";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import CheckIcon from "@mui/icons-material/Check";
 
 import apiClient from "@/lib/axios";
 import { toast } from "sonner";
@@ -44,7 +45,7 @@ import ExpenseFormModal from "@/components/admin/expenses/ExpenseFormModal";
 import { PdfViewerDialog } from "@/components/common/PdfViewerDialog";
 import SalesReturnDialog from "@/components/sales/SalesReturnDialog";
 import { useAuth } from "@/context/AuthContext";
-import ExpiryProductsDialog from "@/components/pos/ExpiryProductsDialog";
+import ExpiryProductsDialog, { PurchaseItem } from "@/components/pos/ExpiryProductsDialog";
 import TopSellingProductsDialog from "@/components/pos/TopSellingProductsDialog";
 import { uploadFileToFirebase } from "@/services/firebaseStorage";
 import { saveShiftToFirestore } from "@/services/firebaseStore";
@@ -53,6 +54,14 @@ import {
   ShiftStats,
 } from "@/components/sales/ShiftFinancialTable";
 import { useSettings } from "@/context/SettingsContext";
+import ClientFormModal from "@/components/clients/ClientFormModal";
+import { Package } from "@/services/packageService";
+
+interface ClientOptionType extends Partial<Client> {
+  inputValue?: string;
+}
+
+const filter = createFilterOptions<ClientOptionType>();
 
 interface Shift {
   id: number;
@@ -103,6 +112,8 @@ const PosBlankPage: React.FC = () => {
   const [clientOptions, setClientOptions] = useState<Client[]>([]);
   const [clientSearchLoading, setClientSearchLoading] = useState(false);
   const [clientInputValue, setClientInputValue] = useState("");
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [initialClientName, setInitialClientName] = useState("");
 
   const [summaryAnchorEl, setSummaryAnchorEl] = useState<HTMLElement | null>(
     null,
@@ -125,14 +136,16 @@ const PosBlankPage: React.FC = () => {
   const [discountValue, setDiscountValue] = useState("");
   const [discountLoading, setDiscountLoading] = useState(false);
 
+  // Batch quantity update state
+  const [batchQuantity, setBatchQuantity] = useState<string>("");
+  const [isBatchUpdating, setIsBatchUpdating] = useState(false);
   // Expiry alerts state
   const [expiryDialogOpen, setExpiryDialogOpen] = useState(false);
   const [expiryDialogType, setExpiryDialogType] = useState<
     "near_expiring" | "expired" | null
   >(null);
-  const [expiryItems, setExpiryItems] = useState<any[]>([]);
+  const [expiryItems, setExpiryItems] = useState<PurchaseItem[]>([]);
   const [expiryItemsLoading, setExpiryItemsLoading] = useState(false);
-
   // Top selling
   const [topSellingDialogOpen, setTopSellingDialogOpen] = useState(false);
 
@@ -153,10 +166,10 @@ const PosBlankPage: React.FC = () => {
       selectedSale.due_amount != null
         ? Number(selectedSale.due_amount)
         : Math.max(
-            0,
-            Number(selectedSale.total_amount ?? 0) -
-              Number(selectedSale.paid_amount ?? 0),
-          );
+          0,
+          Number(selectedSale.total_amount ?? 0) -
+          Number(selectedSale.paid_amount ?? 0),
+        );
     setNewPaymentAmount(due > 0 ? String(due) : "");
   }, [selectedSale]);
 
@@ -221,10 +234,15 @@ const PosBlankPage: React.FC = () => {
     const t = setTimeout(() => {
       setProductSearchLoading(true);
       productService
-        .getProductsForAutocomplete(productInputValue.trim(), 25)
+        .getProductsForAutocomplete(
+          productInputValue.trim(),
+          25,
+          user?.warehouse_id || undefined,
+        )
         .then((list) => {
           const raw = Array.isArray(list) ? list : [];
           const filtered = raw.filter((p) => {
+            // Stock quantity returned from server will be warehouse-specific if warehouse_id was passed
             const stock = p.current_stock_quantity ?? p.stock_quantity ?? 0;
             if (stock <= 0) return false;
 
@@ -243,7 +261,7 @@ const PosBlankPage: React.FC = () => {
         .finally(() => setProductSearchLoading(false));
     }, 300);
     return () => clearTimeout(t);
-  }, [productInputValue]);
+  }, [productInputValue, user?.warehouse_id]);
 
   // Handle Client Search
   useEffect(() => {
@@ -273,15 +291,15 @@ const PosBlankPage: React.FC = () => {
       }
 
       try {
-        let updated;
+        let updated: Sale;
         if (client) {
-          updated = await saleService.updateSale(selectedSale.id, {
+          updated = (await saleService.updateSale(selectedSale.id, {
             client_id: client.id,
-          });
+          })) as Sale;
           updated.client = client;
           updated.client_name = client.name;
         } else {
-          updated = await saleService.removeClientFromSale(selectedSale.id);
+          updated = await saleService.removeClientFromSale(selectedSale.id) as Sale;
           updated.client = undefined;
           updated.client_name = undefined;
         }
@@ -297,16 +315,90 @@ const PosBlankPage: React.FC = () => {
     [selectedSale?.id, selectedSale?.payments?.length],
   );
 
+  // Handle Package Search (Moved to TopAppBar)
+
+  const handleAddPackageToSale = useCallback(
+    async (pkg: Package) => {
+      if (!selectedSale) {
+        toast.error("اختر عملية بيع أولاً");
+        return;
+      }
+
+      if (!pkg.items || pkg.items.length === 0) {
+        toast.error("هذه المجموعة فارغة");
+        return;
+      }
+
+      try {
+        const usdFactor = getSetting("usd_to_sdg_factor", 1) as number;
+
+        // Add items one by one (or use a bulk API if available)
+        // For simplicity and to reuse existing logic, we call sequentially
+        for (const item of pkg.items) {
+          const unitPrice =
+            (Number(item.product?.last_sale_price_per_sellable_unit ?? item.product?.sale_price) || 0) *
+            usdFactor;
+
+          const res = await saleService.addSaleItem(selectedSale.id, {
+            product_id: item.product_id,
+            quantity: 1,
+            unit_price: unitPrice,
+          });
+
+          if (res.sale) {
+            setSelectedSale(res.sale);
+            setSales((prev) =>
+              prev.map((s) => (s.id === res.sale.id ? res.sale : s)),
+            );
+          }
+        }
+
+        toast.success(`تم إضافة مجموعة "${pkg.name}" بنجاح`);
+        window.dispatchEvent(
+          new CustomEvent("package-addition-status", {
+            detail: { isAdding: false, success: true },
+          }),
+        );
+      } catch (err: unknown) {
+        toast.error(saleService.getErrorMessage(err));
+        window.dispatchEvent(
+          new CustomEvent("package-addition-status", {
+            detail: { isAdding: false, success: false },
+          }),
+        );
+      } finally {
+        // Status handled by event dispatchers above
+      }
+    },
+    [selectedSale, getSetting],
+  );
+
+  // Listen for package selection from TopAppBar
+  useEffect(() => {
+    const handleAddPackage = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      handleAddPackageToSale(customEvent.detail);
+      window.dispatchEvent(
+        new CustomEvent("package-addition-status", {
+          detail: { isAdding: true, success: false },
+        }),
+      );
+    };
+    window.addEventListener("add-package-to-sale", handleAddPackage);
+    return () =>
+      window.removeEventListener("add-package-to-sale", handleAddPackage);
+  }, [handleAddPackageToSale]);
+
   const handleAddPayment = useCallback(async () => {
     if (!selectedSale) return;
     const due =
       selectedSale.due_amount != null
         ? Number(selectedSale.due_amount)
         : Math.max(
-            0,
-            Number(selectedSale.total_amount ?? 0) -
-              Number(selectedSale.paid_amount ?? 0),
-          );
+          0,
+          Number(selectedSale.total_amount ?? 0) -
+          Number(selectedSale.paid_amount ?? 0),
+        );
     if (due <= 0) return;
     const amount = Number(newPaymentAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
@@ -361,10 +453,10 @@ const PosBlankPage: React.FC = () => {
         selectedSale.due_amount != null
           ? Number(selectedSale.due_amount)
           : Math.max(
-              0,
-              Number(selectedSale.total_amount ?? 0) -
-                Number(selectedSale.paid_amount ?? 0),
-            );
+            0,
+            Number(selectedSale.total_amount ?? 0) -
+            Number(selectedSale.paid_amount ?? 0),
+          );
       if (due <= 0 || !newPaymentAmount.trim() || addPaymentLoading) return;
       e.preventDefault();
       handleAddPayment();
@@ -394,16 +486,72 @@ const PosBlankPage: React.FC = () => {
     [selectedSale],
   );
 
+  const handleBatchQuantityUpdate = useCallback(async () => {
+    if (
+      !selectedSale ||
+      !selectedSale.id ||
+      !selectedSale.items ||
+      selectedSale.items.length === 0
+    )
+      return;
+    const qty = parseFloat(batchQuantity);
+    if (isNaN(qty) || qty <= 0) {
+      toast.error("يرجى إدخال كمية صالحة");
+      return;
+    }
+
+    setIsBatchUpdating(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    try {
+      // We iterate and update each item.
+      // Note: Ideally the backend should have a bulk update endpoint for performance.
+      for (const item of selectedSale.items) {
+        try {
+          await saleService.updateSaleItem(selectedSale.id, item.id, {
+            quantity: qty,
+            unit_price: Number(item.unit_price),
+          });
+          successCount++;
+        } catch (err) {
+          console.error(`Failed to update item ${item.id}:`, err);
+          failCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`تم تحديث ${successCount} صنف بنجاح`);
+        // Refresh the specific sale to update the UI
+        const updated = await saleService.getSale(selectedSale.id);
+        setSelectedSale(updated);
+        setSales((prev) =>
+          prev.map((s) => (s.id === updated.id ? updated : s)),
+        );
+
+        fetchCurrentShift(); // Also refresh shift stats if any
+        setBatchQuantity("");
+      }
+      if (failCount > 0) {
+        toast.error(`فشل تحديث ${failCount} صنف`);
+      }
+    } catch (err) {
+      toast.error(saleService.getErrorMessage(err));
+    } finally {
+      setIsBatchUpdating(false);
+    }
+  }, [selectedSale, batchQuantity, fetchCurrentShift]);
+
   const handleFullPayment = useCallback(async () => {
     if (!selectedSale) return;
     const due =
       selectedSale.due_amount != null
         ? Number(selectedSale.due_amount)
         : Math.max(
-            0,
-            Number(selectedSale.total_amount ?? 0) -
-              Number(selectedSale.paid_amount ?? 0),
-          );
+          0,
+          Number(selectedSale.total_amount ?? 0) -
+          Number(selectedSale.paid_amount ?? 0),
+        );
     if (due <= 0) {
       toast.info("البيع مدفوع بالكامل");
       return;
@@ -502,7 +650,7 @@ const PosBlankPage: React.FC = () => {
 
       const usdFactor = getSetting("usd_to_sdg_factor", 1) as number;
       const unitPrice =
-        (Number(product.last_sale_price_per_sellable_unit) || 0) * usdFactor;
+        (Number(product.last_sale_price_per_sellable_unit ?? product.sale_price) || 0) * usdFactor;
       try {
         setAddProductLoading(true);
         const res = await saleService.addSaleItem(selectedSale.id, {
@@ -724,8 +872,10 @@ const PosBlankPage: React.FC = () => {
   const fetchExpiryCounts = useCallback(async () => {
     try {
       const res = await apiClient.get("/reports/expiry-counts");
-      setNearExpiringCount(res.data.near_expiring_count || 0);
-      setExpiredCount(res.data.expired_count || 0);
+      window.dispatchEvent(new CustomEvent("update-expiry-counts", { detail: { 
+        nearExpiringCount: res.data.near_expiring_count || 0,
+        expiredCount: res.data.expired_count || 0
+      }}));
     } catch (err) {
       console.error("Failed to fetch expiry counts:", err);
     }
@@ -915,7 +1065,7 @@ const PosBlankPage: React.FC = () => {
     setThermalPdfLoading(true);
     try {
       const response = await apiClient.get(
-        `/sales/${selectedSale.id}/thermal-invoice-pdf`,
+        `/sales/${selectedSale.id}/thermal-invoice-pdf?t=${Date.now()}`,
         {
           responseType: "blob",
         },
@@ -945,7 +1095,7 @@ const PosBlankPage: React.FC = () => {
     setA4PdfLoading(true);
     try {
       const response = await apiClient.get(
-        `/sales/${selectedSale.id}/a4-invoice-pdf/view`,
+        `/sales/${selectedSale.id}/a4-invoice-pdf/view?t=${Date.now()}`,
         {
           responseType: "blob",
         },
@@ -1519,7 +1669,7 @@ const PosBlankPage: React.FC = () => {
                           {option.name}
                         </Typography>
                         {option.current_stock_quantity != null ||
-                        option.stock_quantity != null ? (
+                          option.stock_quantity != null ? (
                           <Typography
                             variant="caption"
                             color={
@@ -1533,8 +1683,8 @@ const PosBlankPage: React.FC = () => {
                           >
                             {`الكمية: ${formatNumber(
                               option.current_stock_quantity ??
-                                option.stock_quantity ??
-                                0,
+                              option.stock_quantity ??
+                              0,
                             )}`}
                           </Typography>
                         ) : null}
@@ -1550,11 +1700,11 @@ const PosBlankPage: React.FC = () => {
                         <Typography variant="caption" color="text.secondary">
                           {[
                             option.last_sale_price_per_sellable_unit != null &&
-                              `السعر: ${formatNumber(
-                                Number(
-                                  option.last_sale_price_per_sellable_unit,
-                                ),
-                              )}`,
+                            `السعر: ${formatNumber(
+                              Number(
+                                option.last_sale_price_per_sellable_unit,
+                              ),
+                            )}`,
                           ]
                             .filter(Boolean)
                             .join(" · ")}
@@ -1582,7 +1732,7 @@ const PosBlankPage: React.FC = () => {
             variant="contained"
             color="primary"
             onClick={handleCreateNewSale}
-            disabled={createSaleLoading || !isShiftOpen}
+            disabled={createSaleLoading || !isShiftOpen || !user?.warehouse_id}
             sx={{
               textTransform: "none",
               fontWeight: 600,
@@ -1615,7 +1765,7 @@ const PosBlankPage: React.FC = () => {
             variant={isShiftOpen ? "outlined" : "contained"}
             color={isShiftOpen ? "error" : "primary"}
             onClick={isShiftOpen ? handleCloseShift : handleOpenShift}
-            disabled={shiftLoading}
+            disabled={shiftLoading || (!isShiftOpen && !user?.warehouse_id)}
             sx={{
               textTransform: "none",
               fontWeight: 600,
@@ -1662,6 +1812,25 @@ const PosBlankPage: React.FC = () => {
 
           {/* Center column – sale items table */}
           <Box sx={{ flex: 1, minWidth: 0 }}>
+            {!user?.warehouse_id && (
+              <Box
+                sx={{
+                  mb: 2,
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: "error.light",
+                  // color: "error.contrastText",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                  boxShadow: "0 2px 4px rgba(211, 47, 47, 0.2)",
+                }}
+              >
+                <Typography variant="body1" fontWeight={700}>
+                  تنبيه: لم يتم تعيين مخزن لحسابك. يرجى التواصل مع المسؤول لتعيين مخزن لتتمكن من استخدام نقطة البيع.
+                </Typography>
+              </Box>
+            )}
             <Paper
               sx={{
                 height: "100%",
@@ -1671,7 +1840,7 @@ const PosBlankPage: React.FC = () => {
               }}
             >
               {selectedSale ? (
-                <>
+                <React.Fragment>
                   <Box
                     sx={{
                       display: "flex",
@@ -1689,21 +1858,48 @@ const PosBlankPage: React.FC = () => {
                     >
                       عناصر البيع #{selectedSale.id}
                     </Typography>
-                    {selectedSale.items && selectedSale.items.length > 0 && (
-                      <Button
-                        size="small"
-                        color="error"
-                        variant="outlined"
-                        onClick={handleRemoveAllSaleItems}
-                        disabled={
-                          removeAllItemsLoading ||
-                          (selectedSale.payments?.length ?? 0) > 0
-                        }
-                        aria-label="إزالة كل الأصناف"
-                      >
-                        {removeAllItemsLoading ? "جاري..." : "إزالة كل الأصناف"}
-                      </Button>
-                    )}
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      {selectedSale.items && selectedSale.items.length > 0 && (
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mr: 2 }}>
+                          <TextField
+                            size="small"
+                            placeholder="الكمية للكل..."
+                            type="number"
+                            value={batchQuantity}
+                            onChange={(e) => setBatchQuantity(e.target.value)}
+                            sx={{ width: 120 }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleBatchQuantityUpdate();
+                            }}
+                            disabled={isBatchUpdating || (selectedSale.payments?.length ?? 0) > 0}
+                          />
+                          <Button
+                            size="small"
+                            variant="contained"
+                            onClick={handleBatchQuantityUpdate}
+                            disabled={isBatchUpdating || !batchQuantity || (selectedSale.payments?.length ?? 0) > 0}
+                          >
+                            {isBatchUpdating ? <CircularProgress size={20} color="inherit" /> : "تحديث الكل"}
+                          </Button>
+                        </Box>
+                      )}
+                      {selectedSale.items && selectedSale.items.length > 0 && (
+                        <Button
+                          size="small"
+                          color="error"
+                          variant="outlined"
+                          onClick={handleRemoveAllSaleItems}
+                          disabled={
+                            removeAllItemsLoading ||
+                            isBatchUpdating ||
+                            (selectedSale.payments?.length ?? 0) > 0
+                          }
+                          aria-label="إزالة كل الأصناف"
+                        >
+                          {removeAllItemsLoading ? "جاري..." : "إزالة كل الأصناف"}
+                        </Button>
+                      )}
+                    </Box>
                   </Box>
                   <SaleItemsTable
                     items={selectedSale.items}
@@ -1716,11 +1912,11 @@ const PosBlankPage: React.FC = () => {
                     disableQuantityAndPriceEdit={
                       Math.abs(
                         Number(selectedSale.paid_amount ?? 0) -
-                          Number(selectedSale.total_amount ?? 0),
+                        Number(selectedSale.total_amount ?? 0),
                       ) < 1e-6
                     }
                   />
-                </>
+                </React.Fragment>
               ) : (
                 <Typography
                   variant="body2"
@@ -1751,44 +1947,98 @@ const PosBlankPage: React.FC = () => {
             >
               {selectedSale ? (
                 <Box>
-                  <Typography variant="subtitle1" fontWeight={700} gutterBottom>
-                    تفاصيل البيع #{selectedSale.id}
-                  </Typography>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 1,
-                      alignItems: "center",
-                      mb: 1.5,
-                    }}
+                  <Stack
+                    direction={"row"}
+                    gap={2}
+                    alignItems={"center"}
+                    justifyContent={"space-between"}
                   >
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight={700}
+                      gutterBottom
+                    >
+                      تفاصيل البيع #{selectedSale.id}
+                    </Typography>
+
                     <Typography variant="body2" color="text.secondary">
                       {selectedSale.sale_date}
                     </Typography>
-                  </Box>
+                  </Stack>
 
                   <Autocomplete
                     size="small"
-                    options={clientOptions}
-                    getOptionLabel={(option) => option.name || ""}
+                    options={clientOptions as ClientOptionType[]}
+                    getOptionLabel={(option) => {
+                      // Value selected with enter, right from the input
+                      if (typeof option === "string") {
+                        return option;
+                      }
+                      // Add "xxx" option created dynamically
+                      if (option.inputValue) {
+                        return option.inputValue;
+                      }
+                      // Regular option
+                      return option.name || "";
+                    }}
+                    filterOptions={(options, params) => {
+                      const filtered = filter(options, params);
+
+                      const { inputValue } = params;
+                      // Suggest the creation of a new value
+                      const isExisting = options.some(
+                        (option) => inputValue === option.name,
+                      );
+                      if (inputValue !== "" && !isExisting) {
+                        filtered.push({
+                          inputValue,
+                          name: `إضافة "${inputValue}"`,
+                        });
+                      }
+
+                      return filtered;
+                    }}
                     inputValue={clientInputValue}
                     onInputChange={(_, value) => setClientInputValue(value)}
                     value={
                       selectedSale.client ||
                       (selectedSale.client_name
                         ? ({
-                            id: selectedSale.client_id,
-                            name: selectedSale.client_name,
-                          } as Client)
+                          id: selectedSale.client_id,
+                          name: selectedSale.client_name,
+                        } as Client)
                         : null)
                     }
-                    onChange={(_, newValue) => handleClientChange(newValue)}
+                    onChange={(_, newValue) => {
+                      if (typeof newValue === "string") {
+                        // Handle string case if needed
+                        setInitialClientName(newValue);
+                        setIsClientModalOpen(true);
+                      } else if (newValue && newValue.inputValue) {
+                        // Create a new value from the user input
+                        setInitialClientName(newValue.inputValue);
+                        setIsClientModalOpen(true);
+                      } else {
+                        handleClientChange(newValue as Client | null);
+                      }
+                    }}
+                    renderOption={(props, option) => {
+                      const { key, ...optionProps } = props;
+                      return (
+                        <li key={key} {...optionProps}>
+                          {option.name}
+                        </li>
+                      );
+                    }}
                     isOptionEqualToValue={(option, value) =>
                       option.id === value.id
                     }
                     loading={clientSearchLoading}
                     disabled={!selectedSale}
+                    freeSolo
+                    selectOnFocus
+                    clearOnBlur
+                    handleHomeEndKeys
                     disableClearable={
                       (selectedSale?.payments?.length ?? 0) > 0 &&
                       !!(selectedSale?.client || selectedSale?.client_name)
@@ -1819,10 +2069,12 @@ const PosBlankPage: React.FC = () => {
                     }
                   />
 
+                  {/* Package Autocomplete Moved to TopAppBar */}
+
                   <Box
                     sx={{ display: "flex", flexDirection: "column", gap: 1 }}
                   >
-                    <Box
+                    {/* <Box
                       sx={{ display: "flex", justifyContent: "space-between" }}
                     >
                       <Typography variant="body2" color="text.secondary">
@@ -1831,15 +2083,15 @@ const PosBlankPage: React.FC = () => {
                       <Typography variant="body2" fontWeight={600}>
                         {selectedSale.items?.length ?? 0}
                       </Typography>
-                    </Box>
+                    </Box> */}
                     {(() => {
                       const subtotal =
                         selectedSale.subtotal != null
                           ? Number(selectedSale.subtotal)
                           : (selectedSale.items ?? []).reduce(
-                              (sum, i) => sum + Number(i.total_price ?? 0),
-                              0,
-                            );
+                            (sum, i) => sum + Number(i.total_price ?? 0),
+                            0,
+                          );
                       const discountAmt = Number(
                         selectedSale.discount_amount ?? 0,
                       );
@@ -1854,7 +2106,7 @@ const PosBlankPage: React.FC = () => {
                             <Typography variant="body2" color="text.secondary">
                               المجموع الفرعي
                             </Typography>
-                            <Typography variant="body2" fontWeight={600}>
+                            <Typography variant="body1" fontWeight={700}>
                               {formatNumber(subtotal)}
                             </Typography>
                           </Box>
@@ -1872,8 +2124,8 @@ const PosBlankPage: React.FC = () => {
                                 الخصم
                               </Typography>
                               <Typography
-                                variant="body2"
-                                fontWeight={600}
+                                variant="body1"
+                                fontWeight={700}
                                 color="error.main"
                               >
                                 - {formatNumber(discountAmt)}
@@ -1925,11 +2177,17 @@ const PosBlankPage: React.FC = () => {
                                     : undefined,
                                 step: discountType === "percentage" ? 1 : 0.01,
                               }}
-                              sx={{ width: 80 }}
+                              sx={{
+                                width: 110,
+                                "& .MuiInputBase-input": {
+                                  fontSize: "1.1rem",
+                                  fontWeight: 700,
+                                },
+                              }}
                             />
-                            <Button
+                            <IconButton
                               size="small"
-                              variant="outlined"
+                              color="success"
                               onClick={handleApplyDiscount}
                               disabled={
                                 discountLoading ||
@@ -1937,9 +2195,14 @@ const PosBlankPage: React.FC = () => {
                                 (selectedSale.items?.length ?? 0) === 0 ||
                                 (selectedSale.payments?.length ?? 0) > 0
                               }
+                              aria-label="تطبيق الخصم"
                             >
-                              {discountLoading ? "..." : "تطبيق"}
-                            </Button>
+                              {discountLoading ? (
+                                <CircularProgress size={20} color="inherit" />
+                              ) : (
+                                <CheckIcon />
+                              )}
+                            </IconButton>
                             {discountAmt > 0 && (
                               <Button
                                 size="small"
@@ -1965,8 +2228,8 @@ const PosBlankPage: React.FC = () => {
                         الإجمالي
                       </Typography>
                       <Typography
-                        variant="body2"
-                        fontWeight={600}
+                        variant="body1"
+                        fontWeight={800}
                         color="success.main"
                       >
                         {formatNumber(Number(selectedSale.total_amount ?? 0))}
@@ -1975,35 +2238,39 @@ const PosBlankPage: React.FC = () => {
                     <Box
                       sx={{ display: "flex", justifyContent: "space-between" }}
                     >
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body1" color="text.secondary">
                         المدفوع
                       </Typography>
-                      <Typography variant="body2" fontWeight={600}>
+                      <Typography variant="body1" fontWeight={700}>
                         {formatNumber(Number(selectedSale.paid_amount ?? 0))}
                       </Typography>
                     </Box>
                     <Box
                       sx={{ display: "flex", justifyContent: "space-between" }}
                     >
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body1" color="text.secondary">
                         المتبقي
                       </Typography>
-                      <Typography variant="body2" fontWeight={600}>
+                      <Typography
+                        variant="body1"
+                        fontWeight={800}
+                        color="error.dark"
+                      >
                         {formatNumber(
                           selectedSale.due_amount != null
                             ? Number(selectedSale.due_amount)
                             : Math.max(
-                                0,
-                                Number(selectedSale.total_amount ?? 0) -
-                                  Number(selectedSale.paid_amount ?? 0),
-                              ),
+                              0,
+                              Number(selectedSale.total_amount ?? 0) -
+                              Number(selectedSale.paid_amount ?? 0),
+                            ),
                         )}
                       </Typography>
                     </Box>
                   </Box>
                   {selectedSale.payments &&
                     selectedSale.payments.length > 0 && (
-                      <Box sx={{ mt: 1.5 }}>
+                      <Box>
                         <Typography
                           variant="caption"
                           color="text.secondary"
@@ -2056,7 +2323,7 @@ const PosBlankPage: React.FC = () => {
                                   gap: 0.5,
                                 }}
                               >
-                                <Typography variant="caption" fontWeight={600}>
+                                <Typography variant="body2" fontWeight={700}>
                                   {formatNumber(Number(p.amount))}
                                 </Typography>
                                 {p.id != null && (
@@ -2082,10 +2349,10 @@ const PosBlankPage: React.FC = () => {
                       selectedSale.due_amount != null
                         ? Number(selectedSale.due_amount)
                         : Math.max(
-                            0,
-                            Number(selectedSale.total_amount ?? 0) -
-                              Number(selectedSale.paid_amount ?? 0),
-                          );
+                          0,
+                          Number(selectedSale.total_amount ?? 0) -
+                          Number(selectedSale.paid_amount ?? 0),
+                        );
                     const notFullyPaid = due > 0;
                     return notFullyPaid ? (
                       <Box sx={{ mt: 1.5 }}>
@@ -2130,11 +2397,20 @@ const PosBlankPage: React.FC = () => {
                             type="number"
                             placeholder="المبلغ"
                             value={newPaymentAmount}
+                            onFocus={(e) => {
+                              e.target.select();
+                            }}
                             onChange={(e) =>
                               setNewPaymentAmount(e.target.value)
                             }
                             inputProps={{ min: 0.01, step: 0.01 }}
-                            sx={{ width: 90 }}
+                            sx={{
+                              width: 120,
+                              "& .MuiInputBase-input": {
+                                fontSize: "1.2rem",
+                                fontWeight: 800,
+                              },
+                            }}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") handleAddPayment();
                               else if (e.key === "+") {
@@ -2164,7 +2440,17 @@ const PosBlankPage: React.FC = () => {
                           color="text.secondary"
                           sx={{ display: "block", mt: 0.5 }}
                         >
-                          المتبقي: {formatNumber(due)}
+                          المتبقي:{" "}
+                          <Box
+                            component="span"
+                            sx={{
+                              fontSize: "1.1rem",
+                              fontWeight: 800,
+                              color: "error.main",
+                            }}
+                          >
+                            {formatNumber(due)}
+                          </Box>
                         </Typography>
                       </Box>
                     ) : null;
@@ -2181,7 +2467,7 @@ const PosBlankPage: React.FC = () => {
                   <Stack
                     direction="row"
                     spacing={1}
-                    sx={{ mt: 2, width: "100%" }}
+                    alignItems={"center"}
                     gap={1}
                   >
                     <Button
@@ -2189,13 +2475,6 @@ const PosBlankPage: React.FC = () => {
                       variant="outlined"
                       size="small"
                       disabled={thermalPdfLoading}
-                      startIcon={
-                        thermalPdfLoading ? (
-                          <CircularProgress size={18} color="inherit" />
-                        ) : (
-                          <ReceiptLongIcon />
-                        )
-                      }
                       sx={{ textTransform: "none" }}
                       onClick={handlePrintThermalInvoice}
                     >
@@ -2206,13 +2485,6 @@ const PosBlankPage: React.FC = () => {
                       variant="outlined"
                       size="small"
                       disabled={a4PdfLoading || !selectedSale?.client_id}
-                      startIcon={
-                        a4PdfLoading ? (
-                          <CircularProgress size={18} color="inherit" />
-                        ) : (
-                          <ReceiptLongIcon />
-                        )
-                      }
                       sx={{ textTransform: "none" }}
                       onClick={handlePrintA4Invoice}
                     >
@@ -2228,8 +2500,8 @@ const PosBlankPage: React.FC = () => {
                       (selectedSale.due_amount != null
                         ? Number(selectedSale.due_amount) <= 0
                         : Number(selectedSale.total_amount ?? 0) -
-                            Number(selectedSale.paid_amount ?? 0) <=
-                          0)
+                        Number(selectedSale.paid_amount ?? 0) <=
+                        0)
                     }
                     sx={{ mt: 1, textTransform: "none" }}
                     onClick={handleFullPayment}
@@ -2237,11 +2509,11 @@ const PosBlankPage: React.FC = () => {
                     {fullPaymentLoading ? "جاري التسديد..." : "تسديد كامل"}
                   </Button>
                 </Box>
-              ) : (
-                <Typography variant="subtitle2" color="text.secondary">
-                  Column 3
-                </Typography>
-              )}
+            ) : (
+              <Typography variant="subtitle2" color="text.secondary">
+                Column 3
+              </Typography>
+            )}
             </Paper>
           </Box>
         </Box>
@@ -2313,6 +2585,19 @@ const PosBlankPage: React.FC = () => {
         open={topSellingDialogOpen}
         onClose={() => setTopSellingDialogOpen(false)}
         onAddProduct={handleAddExpiryProductToCart}
+      />
+
+      <ClientFormModal
+        isOpen={isClientModalOpen}
+        onClose={() => setIsClientModalOpen(false)}
+        initialName={initialClientName}
+        clientToEdit={null}
+        onSaveSuccess={(newClient) => {
+          if (newClient) {
+            handleClientChange(newClient);
+          }
+          setIsClientModalOpen(false);
+        }}
       />
     </Box>
   );
