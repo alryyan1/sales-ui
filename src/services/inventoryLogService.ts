@@ -1,10 +1,10 @@
 // src/services/inventoryLogService.ts
-import apiClient, { getErrorMessage, ApiErrorResponse } from "../lib/axios";
+import apiClient, { getErrorMessage } from "../lib/axios";
 import { PaginatedResponse } from "./clientService";
 
 export interface InventoryLogEntry {
   transaction_date: string;
-  type: "purchase" | "sale" | "adjustment" | "requisition_issue" | string;
+  type: "purchase" | "sale" | "adjustment" | string;
   product_id: number;
   product_name: string;
   product_sku: string | null;

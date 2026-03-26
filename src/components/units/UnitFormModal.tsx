@@ -6,10 +6,6 @@ import {
   DialogActions,
   Button,
   TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   FormControlLabel,
   Checkbox,
   Stack,
@@ -33,7 +29,6 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
 }) => {
   const [formData, setFormData] = useState<UnitFormData>({
     name: "",
-    type: "sellable",
     description: "",
     is_active: true,
     is_default: false,
@@ -44,7 +39,6 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
     if (unit) {
       setFormData({
         name: unit.name,
-        type: unit.type,
         description: unit.description || "",
         is_active: unit.is_active,
         is_default: unit.is_default,
@@ -52,7 +46,6 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
     } else {
       setFormData({
         name: "",
-        type: "sellable",
         description: "",
         is_active: true,
         is_default: false,
@@ -104,51 +97,21 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
   const isLoading = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
       <form onSubmit={handleSubmit}>
-        <DialogTitle>{unit ? "Edit Unit" : "Add New Unit"}</DialogTitle>
+        <DialogTitle>{unit ? "تعديل وحدة" : "إضافة وحدة جديدة"}</DialogTitle>
         <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
+          <Stack spacing={3} sx={{ mt: 1 }}>
             {error && <Alert severity="error">{error}</Alert>}
 
             <TextField
-              label="Name"
+              label="اسم الوحدة"
               value={formData.name}
               onChange={(e) => handleChange("name", e.target.value)}
               required
               fullWidth
               autoFocus
-            />
-
-            <FormControl fullWidth required>
-              <InputLabel>Type</InputLabel>
-              <Select
-                value={formData.type}
-                label="Type"
-                onChange={(e) => handleChange("type", e.target.value)}
-              >
-                <MenuItem value="sellable">Sellable</MenuItem>
-                <MenuItem value="stocking">Stocking</MenuItem>
-              </Select>
-            </FormControl>
-
-            <TextField
-              label="Description"
-              value={formData.description}
-              onChange={(e) => handleChange("description", e.target.value)}
-              multiline
-              rows={3}
-              fullWidth
-            />
-
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={formData.is_active}
-                  onChange={(e) => handleChange("is_active", e.target.checked)}
-                />
-              }
-              label="Active"
+              variant="outlined"
             />
 
             <FormControlLabel
@@ -156,18 +119,19 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
                 <Checkbox
                   checked={formData.is_default}
                   onChange={(e) => handleChange("is_default", e.target.checked)}
+                  color="primary"
                 />
               }
-              label="Set as Default"
+              label="تعيين كافتراضي"
             />
           </Stack>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose} disabled={isLoading}>
-            Cancel
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={onClose} disabled={isLoading} variant="outlined" color="inherit">
+            إلغاء
           </Button>
-          <Button type="submit" variant="contained" disabled={isLoading}>
-            {isLoading ? "Saving..." : unit ? "Update" : "Create"}
+          <Button type="submit" variant="contained" disabled={isLoading} sx={{ minWidth: 100 }}>
+            {isLoading ? "جاري الحفظ..." : unit ? "تحديث" : "حفظ"}
           </Button>
         </DialogActions>
       </form>

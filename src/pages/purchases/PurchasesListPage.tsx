@@ -541,20 +541,7 @@ const PurchasesListPage: React.FC = () => {
                 />
               </div>
 
-              {/* Reference Number */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center gap-1">
-                  <Hash className="h-4 w-4" />
-                  رقم المرجع
-                </label>
-                <Input
-                  placeholder="أدخل الرقم"
-                  value={filters.reference_number || ""}
-                  onChange={(e) =>
-                    handleFilterChange("reference_number", e.target.value)
-                  }
-                />
-              </div>
+           
 
               {/* Status */}
               <div className="space-y-2">

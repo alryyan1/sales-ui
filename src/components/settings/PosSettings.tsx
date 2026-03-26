@@ -10,6 +10,7 @@ import {
   FormControl,
   Switch,
   TextField,
+  Stack,
   alpha,
   useTheme,
 } from "@mui/material";
@@ -154,6 +155,80 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
                 />
               )}
             />
+          </FormControl>
+        </Box>
+
+        {/* Product Visibility Settings */}
+        <Box
+          sx={{
+            bgcolor: alpha(theme.palette.primary.main, 0.05),
+            p: 3,
+            borderRadius: 2,
+            border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+            mt: 3,
+          }}
+        >
+          <FormControl component="fieldset" sx={{ width: "100%" }}>
+            <Typography
+              variant="subtitle1"
+              fontWeight={600}
+              gutterBottom
+              sx={{ mb: 2 }}
+            >
+              ظهور المنتجات (Product Visibility)
+            </Typography>
+            <Stack spacing={2}>
+              <Controller
+                name="pos_show_expired_products"
+                control={control}
+                render={({ field }) => (
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={Boolean(field.value)}
+                        onChange={(e) => field.onChange(e.target.checked)}
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Typography variant="body1" fontWeight={500}>
+                          عرض المنتجات المنتهية الصلاحية
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          عند التفعيل، ستظهر المنتجات منتهية الصلاحية في نتائج بحث نقطة البيع.
+                        </Typography>
+                      </Box>
+                    }
+                    sx={{ alignItems: "flex-start" }}
+                  />
+                )}
+              />
+              <Controller
+                name="pos_show_out_of_stock_products"
+                control={control}
+                render={({ field }) => (
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={Boolean(field.value)}
+                        onChange={(e) => field.onChange(e.target.checked)}
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Typography variant="body1" fontWeight={500}>
+                          عرض المنتجات التي نفد مخزونها
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          عند التفعيل، ستظهر المنتجات التي رصيدها صفراً أو أقل في نتائج بحث نقطة البيع.
+                        </Typography>
+                      </Box>
+                    }
+                    sx={{ alignItems: "flex-start" }}
+                  />
+                )}
+              />
+            </Stack>
           </FormControl>
         </Box>
         <Box

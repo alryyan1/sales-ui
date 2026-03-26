@@ -19,7 +19,6 @@ import {
   TextField,
   Button,
   CircularProgress,
-  IconButton,
   Select,
   MenuItem,
   FormControl,
@@ -27,7 +26,6 @@ import {
   InputAdornment,
   Collapse,
   Pagination,
-  Box,
 } from "@mui/material";
 
 // Icons (Lucide)
@@ -40,16 +38,14 @@ import {
   ChevronDown,
   ChevronUp,
   User,
-  FileText,
   AlertCircle,
 } from "lucide-react";
 
 // Services and Types
 import inventoryLogService, {
   InventoryLogEntry,
-  PaginatedResponse as LogPaginatedResponse,
 } from "../../services/inventoryLogService";
-import productService, { Product } from "../../services/productService";
+import { PaginatedResponse as LogPaginatedResponse } from "../../services/clientService";
 import { warehouseService, Warehouse } from "../../services/warehouseService";
 import { formatNumber } from "@/constants";
 
@@ -74,7 +70,6 @@ const movementTypes = [
   { value: "purchase", label: "شراء", colorClass: "chip-success" },
   { value: "sale", label: "بيع", colorClass: "chip-error" },
   { value: "adjustment", label: "تعديل مخزني", colorClass: "chip-warning" },
-  { value: "requisition_issue", label: "صرف مخزني", colorClass: "chip-info" },
 ];
 
 const getMovementLabel = (type: string) => {
@@ -96,9 +91,7 @@ const InventoryLogPage: React.FC = () => {
     useState<LogPaginatedResponse<InventoryLogEntry> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [productsForFilter, setProductsForFilter] = useState<Product[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
-  const [loadingProductsFilter, setLoadingProductsFilter] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [showFilters, setShowFilters] = useState(true);
 
@@ -124,18 +117,9 @@ const InventoryLogPage: React.FC = () => {
       .catch(() =>
         toast.error("فشل تحميل المستودعات", { id: "warehouse-fetch-error" })
       );
-    fetchProductsForFilter("");
   }, []);
 
-  const fetchProductsForFilter = useCallback(async (search = "") => {
-    setLoadingProductsFilter(true);
-    try {
-      const data = await productService.getProductsForAutocomplete(search, 100);
-      setProductsForFilter(data);
-    } finally {
-      setLoadingProductsFilter(false);
-    }
-  }, []);
+
 
   const fetchLog = useCallback(
     async (filters: LogFilterValues, page: number) => {
@@ -213,7 +197,7 @@ const InventoryLogPage: React.FC = () => {
     setSearchParams({});
   };
 
-  const handlePageChange = (_: any, newPage: number) => {
+  const handlePageChange = (_: React.ChangeEvent<unknown>, newPage: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("page", newPage.toString());
     setSearchParams(params);
@@ -461,7 +445,7 @@ const InventoryLogPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {logData.data.map((row, i) => (
+                {logData.data.map((row: InventoryLogEntry, i: number) => (
                   <tr key={i}>
                     <td>
                       <div className="text-sm font-bold">

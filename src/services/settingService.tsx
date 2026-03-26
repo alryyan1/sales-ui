@@ -43,7 +43,11 @@ export interface AppSettings {
   product_images_show_in_reports?: boolean;
   firebase_collection_name?: string;
   usd_to_sdg_factor?: number;
-  product_row_color_highlight?: boolean; // Highlight expired/out-of-stock rows in the products table
+  product_row_color_highlight?: boolean;
+  product_scientific_name_visible?: boolean;
+  product_scientific_name_required?: boolean;
+  pos_show_expired_products?: boolean;
+  pos_show_out_of_stock_products?: boolean;
 }
 
 // Type for the update payload (can be partial)

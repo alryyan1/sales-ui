@@ -3,7 +3,6 @@ import apiClient, { getValidationErrors, getErrorMessage } from "@/lib/axios";
 export interface Unit {
   id: number;
   name: string;
-  type: "stocking" | "sellable";
   description?: string;
   is_active: boolean;
   is_default: boolean;
@@ -13,7 +12,6 @@ export interface Unit {
 
 export interface UnitFormData {
   name: string;
-  type: "stocking" | "sellable";
   description?: string;
   is_active?: boolean;
   is_default?: boolean;
@@ -27,7 +25,7 @@ class UnitService {
     perPage: number = 15,
     search: string = "",
     includeInactive: boolean = false,
-  ): Promise<{ data: Unit[]; meta: any }> {
+  ): Promise<{ data: Unit[]; meta: { current_page: number; last_page: number; per_page: number; total: number } }> {
     try {
       const response = await apiClient.get(this.baseUrl, {
         params: {
@@ -43,22 +41,21 @@ class UnitService {
     }
   }
 
-  async getStockingUnits(): Promise<Unit[]> {
+  async getAllUnits(): Promise<Unit[]> {
     try {
-      const response = await apiClient.get(`${this.baseUrl}/stocking`);
+      const response = await apiClient.get(`${this.baseUrl}/all`);
       return response.data.data;
     } catch (error) {
       throw this.handleError(error);
     }
   }
 
+  async getStockingUnits(): Promise<Unit[]> {
+    return this.getAllUnits();
+  }
+
   async getSellableUnits(): Promise<Unit[]> {
-    try {
-      const response = await apiClient.get(`${this.baseUrl}/sellable`);
-      return response.data.data;
-    } catch (error) {
-      throw this.handleError(error);
-    }
+    return this.getAllUnits();
   }
 
   async createUnit(data: UnitFormData): Promise<Unit> {
@@ -96,21 +93,24 @@ class UnitService {
     }
   }
 
-  private handleError(error: any): Error {
-    if (error.response?.data?.message) {
-      return new Error(error.response.data.message);
+  private handleError(error: unknown): Error {
+    if (error && typeof error === 'object' && 'response' in error) {
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      if (axiosError.response?.data?.message) {
+        return new Error(axiosError.response.data.message);
+      }
     }
     return new Error("An error occurred while processing the request.");
   }
 
   getErrorMessage(
-    error: any,
+    error: unknown,
     fallbackMessage: string = "An error occurred",
   ): string {
     return getErrorMessage(error, fallbackMessage);
   }
 
-  getValidationErrors(error: any): Record<string, string[]> | null {
+  getValidationErrors(error: unknown): Record<string, string[]> | null {
     return getValidationErrors(error);
   }
 }

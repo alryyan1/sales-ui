@@ -34,6 +34,7 @@ import {
   Layers,
   CloudUpload,
   Columns3,
+  RefreshCcw,
 } from "lucide-react";
 import Popover from "@mui/material/Popover";
 import Checkbox from "@mui/material/Checkbox";
@@ -53,6 +54,7 @@ import { ProductsTable } from "../components/products/ProductsTable"; // Use Pro
 import ProductFormModal from "../components/products/ProductFormModal"; // Use ProductFormModal
 import ProductImportDialog from "../components/products/ProductImportDialog"; // Import dialog
 import UnitsPage from "../pages/UnitsPage"; // Import UnitsPage
+import { Button } from "@mui/material";
 
 // Product type is now used directly from productService
 
@@ -70,6 +72,7 @@ const ProductsPage: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [stockingUnits, setStockingUnits] = useState<Unit[]>([]);
   const [sellableUnits, setSellableUnits] = useState<Unit[]>([]);
+
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
   const [showOnlyInStock, setShowOnlyInStock] = useState(false);
@@ -80,6 +83,9 @@ const ProductsPage: React.FC = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null); // Use Product type directly
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isUnitsDialogOpen, setIsUnitsDialogOpen] = useState(false);
+  const [isBulkUpdateDialogOpen, setIsBulkUpdateDialogOpen] = useState(false);
+  const [selectedBulkUnit, setSelectedBulkUnit] = useState<number | "">("");
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
 
   // Column Visibility
   const COLUMN_KEYS = ["sku", "name", "scientific_name", "category", "sellable_unit", "stocking_unit", "units_per_stocking", "stock", "cost", "sale_price", "expire_date"] as const;
@@ -208,6 +214,8 @@ const ProductsPage: React.FC = () => {
           unitService.getStockingUnits(),
           unitService.getSellableUnits(),
         ]);
+        console.log("Stocking units:", stocking);
+        console.log("Sellable units:", sellable);
         setStockingUnits(stocking);
         setSellableUnits(sellable);
       } catch (err) {
@@ -368,6 +376,27 @@ const ProductsPage: React.FC = () => {
       showSnackbar("فشل المزامنة مع Firebase", "error");
     } finally {
       setSyncLoading(false);
+    }
+  };
+
+  const handleBulkUpdate = async () => {
+    if (!selectedBulkUnit) return;
+    
+    if (!window.confirm("هل أنت متأكد من رغبتك في تحديث وحدة جميع المنتجات؟ سيؤدي هذا لتغيير وحدة البيع ووحدة التخزين لجميع المنتجات في النظام.")) {
+      return;
+    }
+
+    try {
+      setIsBulkUpdating(true);
+      await productService.bulkUpdateUnits(selectedBulkUnit as number);
+      showSnackbar("تم تحديث وحدات جميع المنتجات بنجاح", "success");
+      setIsBulkUpdateDialogOpen(false);
+      setSelectedBulkUnit("");
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    } catch (err) {
+      showSnackbar(err instanceof Error ? err.message : "فشل تحديث الوحدات", "error");
+    } finally {
+      setIsBulkUpdating(false);
     }
   };
 
@@ -565,6 +594,25 @@ const ProductsPage: React.FC = () => {
               </Tooltip>
               <Typography variant="caption">الوحدات</Typography>
             </Box>
+
+            {/* Bulk Update Units */}
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+              }}
+            >
+              <Tooltip title="تحديث جماعي للوحدات">
+                <IconButton
+                  onClick={() => setIsBulkUpdateDialogOpen(true)}
+                  color="secondary"
+                >
+                  <RefreshCcw className="h-5 w-5" />
+                </IconButton>
+              </Tooltip>
+              <Typography variant="caption">تحديث جماعي</Typography>
+            </Box>
           </Box>
         </Box>
         {/* Search and Filters */}
@@ -694,9 +742,59 @@ const ProductsPage: React.FC = () => {
           maxWidth="lg"
           fullWidth
         >
-          <DialogTitle>إدارة الوحدات</DialogTitle>
           <DialogContent>
             <UnitsPage />
+          </DialogContent>
+        </Dialog>
+
+        {/* Bulk Update Units Dialog */}
+        <Dialog
+          open={isBulkUpdateDialogOpen}
+          onClose={() => !isBulkUpdating && setIsBulkUpdateDialogOpen(false)}
+          maxWidth="xs"
+          fullWidth
+        >
+          <DialogTitle sx={{ fontWeight: 600 }}>تحديث جماعي لوحدات المنتجات</DialogTitle>
+          <DialogContent>
+            <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 3 }}>
+              <Typography variant="body2" color="text.secondary">
+                اختر الوحدة التي تريد تعيينها كـ "وحدة بيع" و "وحدة تخزين" لكل المنتجات في النظام.
+              </Typography>
+              
+              <FormControl fullWidth>
+                <InputLabel>اختر الوحدة</InputLabel>
+                <Select
+                  value={selectedBulkUnit}
+                  onChange={(e) => setSelectedBulkUnit(e.target.value as number)}
+                  label="اختر الوحدة"
+                  disabled={isBulkUpdating}
+                >
+                  {sellableUnits.map((u) => (
+                    <MenuItem key={u.id} value={u.id}>
+                      {u.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end", mt: 1 }}>
+                <Button 
+                  onClick={() => setIsBulkUpdateDialogOpen(false)} 
+                  disabled={isBulkUpdating}
+                >
+                  إلغاء
+                </Button>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleBulkUpdate}
+                  disabled={!selectedBulkUnit || isBulkUpdating}
+                  startIcon={isBulkUpdating && <RefreshCcw className="h-4 w-4 animate-spin" />}
+                >
+                  {isBulkUpdating ? "جاري التحديث..." : "تحديث الكل"}
+                </Button>
+              </Box>
+            </Box>
           </DialogContent>
         </Dialog>
         {/* Add deleteConfirm key */}

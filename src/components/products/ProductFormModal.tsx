@@ -60,6 +60,7 @@ import CategoryFormModal from "@/components/admin/users/categories/CategoryFormM
 import UnitFormModal from "@/components/admin/users/units/UnitFormModal";
 
 import { formatNumber, formatCurrency } from "@/constants";
+import { useSettings } from "@/context/SettingsContext";
 
 // --- Component Props & Types ---
 type ProductFormValues = {
@@ -141,8 +142,11 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [serverError, setServerError] = useState<string | null>(null);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
 
-  const [stockingUnits, setStockingUnits] = useState<Unit[]>([]);
-  const [sellableUnits, setSellableUnits] = useState<Unit[]>([]);
+  const { getSetting } = useSettings();
+  const scientificNameVisible = getSetting("product_scientific_name_visible", true);
+  const scientificNameRequired = getSetting("product_scientific_name_required", false);
+
+  const [units, setUnits] = useState<Unit[]>([]);
   const [loadingUnits, setLoadingUnits] = useState(true);
 
   const [isStockingUnitModalOpen, setIsStockingUnitModalOpen] = useState(false);
@@ -197,12 +201,17 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const fetchUnitsForSelect = useCallback(async () => {
     setLoadingUnits(true);
     try {
-      const [stockingData, sellableData] = await Promise.all([
-        unitService.getStockingUnits(),
-        unitService.getSellableUnits(),
-      ]);
-      setStockingUnits(stockingData);
-      setSellableUnits(sellableData);
+      const unitsData = await unitService.getAllUnits();
+      setUnits(unitsData);
+
+      // Default unit auto-selection for new products
+      if (!isEditMode) {
+        const defaultUnit = unitsData.find((u) => u.is_default);
+        if (defaultUnit) {
+          form.setValue("stocking_unit_id", String(defaultUnit.id));
+          form.setValue("sellable_unit_id", String(defaultUnit.id));
+        }
+      }
     } catch (error) {
       toast.error("خطأ", {
         description: unitService.getErrorMessage(error, "فشل تحميل الوحدات"),
@@ -210,7 +219,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     } finally {
       setLoadingUnits(false);
     }
-  }, []);
+  }, [isEditMode, form]);
 
   const handleCategoryCreated = useCallback(
     (newCategory: Category) => {
@@ -223,7 +232,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
   const handleStockingUnitCreated = useCallback(
     (newUnit: Unit) => {
-      setStockingUnits((prev) => [...prev, newUnit]);
+      setUnits((prev) => [...prev, newUnit]);
       form.setValue("stocking_unit_id", String(newUnit.id));
       setIsStockingUnitModalOpen(false);
     },
@@ -232,7 +241,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
   const handleSellableUnitCreated = useCallback(
     (newUnit: Unit) => {
-      setSellableUnits((prev) => [...prev, newUnit]);
+      setUnits((prev) => [...prev, newUnit]);
       form.setValue("sellable_unit_id", String(newUnit.id));
       setIsSellableUnitModalOpen(false);
     },
@@ -458,7 +467,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
       {/* ── Tabs (edit mode only) ── */}
       {isEditMode && (
-        <Box sx={{ borderBottom: 1, borderColor: "divider", bgcolor: "background.paper" }}>
+        <Box sx={{ borderBottom: 1, bgcolor: "background.paper" }}>
           <Tabs
             value={activeTab}
             onChange={(_e, v) => setActiveTab(v)}
@@ -482,7 +491,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
         </Box>
       )}
 
-      <DialogContent sx={{ p: 3, maxHeight: "72vh", overflowY: "auto", bgcolor: (t) => alpha(t.palette.grey[100], 0.4) }}>
+      <DialogContent sx={{ p: 1, maxHeight: "72vh", overflowY: "auto", bgcolor: (t) => alpha(t.palette.grey[100], 0.4) }}>
 
         {/* ── Server Error ── */}
         {serverError && !isSubmitting && (
@@ -504,7 +513,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
             <Paper
               elevation={0}
-              sx={{ p: 1, mb: 1, border: "1px solid", borderColor: "divider", borderRadius: 2, bgcolor: "background.paper" }}
+              sx={{ p: 1, mb: 1, borderRadius: 2, bgcolor: "background.paper" }}
             >
               <SectionHeader
                 icon={<Tag size={18} />}
@@ -526,6 +535,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       {...field}
                       label="اسم المنتج *"
                       placeholder="اكتب اسم المنتج"
+                      autoFocus={true}
                       size="small"
                       disabled={isSubmitting}
                       error={!!fieldState.error}
@@ -540,14 +550,16 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 />
 
                 {/* Scientific Name */}
+              {scientificNameVisible && (
                 <Controller
                   control={control}
                   name="scientific_name"
+                  rules={scientificNameRequired ? { required: "الاسم العلمي مطلوب" } : {}}
                   render={({ field, fieldState }) => (
                     <TextField
                       {...field}
-                      label="الاسم العلمي"
-                      placeholder="(اختياري)"
+                      label={scientificNameRequired ? "الاسم العلمي *" : "الاسم العلمي"}
+                      placeholder={scientificNameRequired ? "" : "(اختياري)"}
                       size="small"
                       disabled={isSubmitting}
                       error={!!fieldState.error}
@@ -556,6 +568,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     />
                   )}
                 />
+              )}
 
                 {/* SKU */}
                 <Controller
@@ -580,7 +593,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                           size="small"
                           onClick={() => field.onChange(generateRandomSKU("PROD", 6))}
                           disabled={isSubmitting}
-                          sx={{ mt: 0.5, border: "1px solid", borderColor: "divider", borderRadius: 1.5 }}
+                          sx={{ mt: 0.5, borderRadius: 1.5 }}
                         >
                           <RefreshCw size={15} />
                         </IconButton>
@@ -612,7 +625,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                             placeholder={loadingCategories ? "جاري التحميل..." : "اختر الفئة"}
                             error={!!fieldState.error}
                             helperText={fieldState.error?.message}
-                            sx={fieldSx}
+                            sx={{minWidth: 250}}
                           />
                         )}
                         noOptionsText="لا توجد فئات"
@@ -622,7 +635,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                           size="small"
                           onClick={() => setIsCategoryModalOpen(true)}
                           disabled={isSubmitting}
-                          sx={{ mt: 0.5, border: "1px solid", borderColor: "divider", borderRadius: 1.5, color: "primary.main" }}
+                          sx={{ mt: 0.5, borderRadius: 1.5, color: "primary.main" }}
                         >
                           <Plus size={15} />
                         </IconButton>
@@ -636,7 +649,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
             <Paper
               elevation={0}
-              sx={{ p: 1, mb: 1, border: "1px solid", borderColor: "divider", borderRadius: 2, bgcolor: "background.paper" }}
+              sx={{ p: 1, mb: 1, borderRadius: 2, bgcolor: "background.paper" }}
             >
               <SectionHeader
                 icon={<Layers size={18} />}
@@ -656,11 +669,11 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       <Autocomplete
                         fullWidth
                         size="small"
-                        options={stockingUnits}
+                        options={units}
                         loading={loadingUnits}
                         getOptionLabel={(option) => option.name || ""}
                         isOptionEqualToValue={(option, value) => option.id === value.id}
-                        value={stockingUnits.find((u) => String(u.id) === field.value) || null}
+                        value={units.find((u) => String(u.id) === field.value) || null}
                         onChange={(_, newValue) => field.onChange(newValue ? String(newValue.id) : "")}
                         disabled={isSubmitting || loadingUnits}
                         renderInput={(params) => (
@@ -672,7 +685,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       />
                       <Tooltip title="إضافة وحدة تخزين">
                         <IconButton size="small" onClick={() => setIsStockingUnitModalOpen(true)} disabled={isSubmitting}
-                          sx={{ mt: 0.5, border: "1px solid", borderColor: "divider", borderRadius: 1.5, color: "primary.main" }}>
+                          sx={{ mt: 0.5, borderRadius: 1.5, color: "primary.main" }}>
                           <Plus size={15} />
                         </IconButton>
                       </Tooltip>
@@ -689,11 +702,11 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       <Autocomplete
                         fullWidth
                         size="small"
-                        options={sellableUnits}
+                        options={units}
                         loading={loadingUnits}
                         getOptionLabel={(option) => option.name || ""}
                         isOptionEqualToValue={(option, value) => option.id === value.id}
-                        value={sellableUnits.find((u) => String(u.id) === field.value) || null}
+                        value={units.find((u) => String(u.id) === field.value) || null}
                         onChange={(_, newValue) => field.onChange(newValue ? String(newValue.id) : "")}
                         disabled={isSubmitting || loadingUnits}
                         renderInput={(params) => (
@@ -705,7 +718,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       />
                       <Tooltip title="إضافة وحدة بيع">
                         <IconButton size="small" onClick={() => setIsSellableUnitModalOpen(true)} disabled={isSubmitting}
-                          sx={{ mt: 0.5, border: "1px solid", borderColor: "divider", borderRadius: 1.5, color: "primary.main" }}>
+                          sx={{ mt: 0.5, borderRadius: 1.5, color: "primary.main" }}>
                           <Plus size={15} />
                         </IconButton>
                       </Tooltip>
@@ -746,7 +759,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
             <Paper
               elevation={0}
-              sx={{ p: 1, mb: 1, border: "1px solid", borderColor: "divider", borderRadius: 2, bgcolor: "background.paper" }}
+              sx={{ p: 1, mb: 1, borderRadius: 2, bgcolor: "background.paper" }}
             >
               <SectionHeader
                 icon={<DollarSign size={18} />}
@@ -892,7 +905,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
               variant="fullWidth"
               textColor="primary"
               indicatorColor="primary"
-              sx={{ mb: 2, borderBottom: 1, borderColor: "divider" }}
+              sx={{ mb: 2, borderBottom: 1 }}
             >
               <Tab
                 label="المشتروات"
@@ -910,7 +923,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
             <Paper
               elevation={0}
-              sx={{ border: 1, borderColor: "divider", borderRadius: 2.5, overflow: "hidden" }}
+              sx={{ border: 1, borderRadius: 2.5, overflow: "hidden" }}
             >
               <TableContainer sx={{ maxHeight: 420 }}>
                 <Table stickyHeader size="small">

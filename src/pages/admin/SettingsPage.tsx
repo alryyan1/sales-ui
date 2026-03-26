@@ -124,6 +124,14 @@ const SettingsPage: React.FC = () => {
           settings.firebase_collection_name || "one_care",
         product_row_color_highlight:
           settings.product_row_color_highlight ?? true,
+        product_scientific_name_visible:
+          settings.product_scientific_name_visible ?? true,
+        product_scientific_name_required:
+          settings.product_scientific_name_required ?? false,
+        pos_show_expired_products:
+          settings.pos_show_expired_products ?? false,
+        pos_show_out_of_stock_products:
+          settings.pos_show_out_of_stock_products ?? false,
       });
 
       if (settings.company_logo_url) setLogoPreview(settings.company_logo_url);
@@ -157,6 +165,8 @@ const SettingsPage: React.FC = () => {
       pdf_font: data.pdf_font || "Amiri",
       pos_mode: data.pos_mode || "shift",
       pos_filter_sales_by_user: Boolean(data.pos_filter_sales_by_user),
+      pos_show_expired_products: Boolean(data.pos_show_expired_products),
+      pos_show_out_of_stock_products: Boolean(data.pos_show_out_of_stock_products),
     };
 
     try {

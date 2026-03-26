@@ -14,11 +14,9 @@ import {
   Box,
   Alert,
   AlertTitle,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Typography,
+  Checkbox,
+  FormControlLabel,
 } from "@mui/material";
 import { Loader2, AlertCircle } from "lucide-react";
 import unitService, { Unit, UnitFormData } from "@/services/UnitService";
@@ -26,9 +24,9 @@ import unitService, { Unit, UnitFormData } from "@/services/UnitService";
 // --- Form Types ---
 type UnitFormValues = {
   name: string;
-  type: 'stocking' | 'sellable';
   description?: string;
   is_active: boolean;
+  is_default: boolean;
 };
 
 // --- Component Props ---
@@ -37,7 +35,6 @@ interface UnitFormModalProps {
   onClose: () => void;
   unitToEdit: Unit | null;
   onSaveSuccess: (unit: Unit) => void;
-  defaultType?: 'stocking' | 'sellable'; // For pre-selecting type when creating from product form
 }
 
 const UnitFormModal: React.FC<UnitFormModalProps> = ({
@@ -45,7 +42,6 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
   onClose,
   unitToEdit,
   onSaveSuccess,
-  defaultType,
 }) => {
   const isEditMode = Boolean(unitToEdit);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -53,9 +49,9 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
   const form = useForm<UnitFormValues>({
     defaultValues: { 
       name: "", 
-      type: defaultType || 'stocking', 
       description: "", 
-      is_active: true 
+      is_active: true,
+      is_default: false
     },
   });
   const {
@@ -72,20 +68,20 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
       if (isEditMode && unitToEdit) {
         reset({
           name: unitToEdit.name || "",
-          type: unitToEdit.type,
           description: unitToEdit.description || "",
           is_active: unitToEdit.is_active,
+          is_default: unitToEdit.is_default,
         });
       } else {
         reset({
           name: "",
-          type: defaultType || 'stocking',
           description: "",
           is_active: true,
+          is_default: false,
         });
       }
     }
-  }, [isOpen, isEditMode, unitToEdit, reset, defaultType]);
+  }, [isOpen, isEditMode, unitToEdit, reset]);
 
   const onSubmit = async (data: UnitFormValues) => {
     setServerError(null);
@@ -96,16 +92,11 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
       setError("name", { type: "manual", message: "هذا الحقل مطلوب" });
       return;
     }
-    if (!data.type) {
-      setError("type", { type: "manual", message: "هذا الحقل مطلوب" });
-      return;
-    }
-
     const dataToSend: UnitFormData = {
       name: data.name.trim(),
-      type: data.type,
       description: data.description?.trim() || undefined,
       is_active: data.is_active,
+      is_default: data.is_default,
     };
 
     try {
@@ -159,19 +150,17 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
       open={isOpen}
       onClose={handleClose}
       fullWidth
-      maxWidth="sm"
+      maxWidth="xs"
     >
       <DialogTitle
         sx={{
-          pb: 1.5,
+          pb: 2,
           pt: 3,
           px: 3,
-          borderBottom: 1,
-          borderColor: "divider",
         }}
       >
         <Typography variant="h6" component="div" fontWeight={600}>
-          {isEditMode ? "تعديل وحدة" : "إضافة وحدة"}
+          {isEditMode ? "تعديل وحدة" : "إضافة وحدة جديدة"}
         </Typography>
       </DialogTitle>
       <Box
@@ -181,11 +170,9 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
       >
         <DialogContent
           sx={{
-            pt: 3,
+            pt: 1,
             px: 3,
             pb: 2,
-            maxHeight: "70vh",
-            overflowY: "auto",
           }}
         >
           {/* General Server Error Alert */}
@@ -199,136 +186,55 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
             </Alert>
           )}
 
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
             {/* Name Field */}
             <Controller
               control={control}
               name="name"
               rules={{
-                required: "هذا الحقل مطلوب",
+                required: "اسم الوحدة مطلوب",
               }}
               render={({ field, fieldState }) => (
                 <TextField
                   {...field}
-                  label={
-                    <>
-                      اسم الوحدة
-                      <span style={{ color: "red" }}> *</span>
-                    </>
-                  }
-                  placeholder="أدخل اسم الوحدة"
+                  label="اسم الوحدة"
+                  placeholder="مثال: حبة، كرتونة، باكت..."
                   fullWidth
                   size="small"
                   disabled={isSubmitting}
                   error={!!fieldState.error}
                   helperText={fieldState.error?.message || ""}
+                  autoFocus
                 />
               )}
             />
 
-            {/* Type Field */}
+            {/* Default Status Field */}
             <Controller
               control={control}
-              name="type"
-              rules={{
-                required: "هذا الحقل مطلوب",
-              }}
-              render={({ field, fieldState }) => (
-                <FormControl
-                  fullWidth
-                  size="small"
-                  disabled={isSubmitting}
-                  error={!!fieldState.error}
-                >
-                  <InputLabel>
-                    نوع الوحدة
-                    <span style={{ color: "red" }}> *</span>
-                  </InputLabel>
-                  <Select
-                    {...field}
-                    label="نوع الوحدة *"
-                    value={field.value}
-                  >
-                    <MenuItem value="stocking">
-                      وحدة تخزين
-                    </MenuItem>
-                    <MenuItem value="sellable">
-                      وحدة بيع
-                    </MenuItem>
-                  </Select>
-                  {fieldState.error && (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
-                      {fieldState.error.message || ""}
+              name="is_default"
+              render={({ field }) => (
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={field.value}
+                      onChange={(e) => field.onChange(e.target.checked)}
+                      disabled={isSubmitting}
+                      color="primary"
+                    />
+                  }
+                  label={
+                    <Typography variant="body2" fontWeight={500}>
+                      تعيين كافتراضي
                     </Typography>
-                  )}
-                </FormControl>
-              )}
-            />
-
-            {/* Description Field */}
-            <Controller
-              control={control}
-              name="description"
-              render={({ field, fieldState }) => (
-                <TextField
-                  {...field}
-                  label="الوصف"
-                  placeholder="أدخل وصف الوحدة"
-                  fullWidth
-                  size="small"
-                  multiline
-                  minRows={3}
-                  disabled={isSubmitting}
-                  value={field.value ?? ""}
-                  error={!!fieldState.error}
-                  helperText={fieldState.error?.message}
+                  }
                 />
-              )}
-            />
-
-            {/* Active Status Field */}
-            <Controller
-              control={control}
-              name="is_active"
-              render={({ field, fieldState }) => (
-                <FormControl
-                  fullWidth
-                  size="small"
-                  disabled={isSubmitting}
-                  error={!!fieldState.error}
-                >
-                  <InputLabel>الحالة</InputLabel>
-                  <Select
-                    {...field}
-                    label="الحالة"
-                    value={field.value ? 'true' : 'false'}
-                    onChange={(e) => field.onChange(e.target.value === 'true')}
-                  >
-                    <MenuItem value="true">
-                      نشط
-                    </MenuItem>
-                    <MenuItem value="false">
-                      غير نشط
-                    </MenuItem>
-                  </Select>
-                  {fieldState.error && (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
-                      {fieldState.error.message}
-                    </Typography>
-                  )}
-                </FormControl>
               )}
             />
           </Box>
         </DialogContent>
-        <DialogActions
-          sx={{
-            px: 3,
-            pb: 3,
-            pt: 2,
-            borderTop: 1,
-            borderColor: "divider",
-          }}
+        <DialogActions sx={{display:'flex',gap:1}}
+        
         >
           <Button
             type="button"
@@ -336,7 +242,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
             color="inherit"
             variant="outlined"
             disabled={isSubmitting}
-            sx={{ minWidth: 100 }}
+            sx={{ minWidth: 90 }}
           >
             إلغاء
           </Button>
@@ -344,14 +250,14 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
             type="submit"
             variant="contained"
             disabled={isSubmitting}
-            sx={{ minWidth: 100 }}
+            sx={{ minWidth: 90 }}
             startIcon={
               isSubmitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : undefined
             }
           >
-            {isEditMode ? "تحديث" : "إنشاء"}
+            {isEditMode ? "تحديث" : "حفظ"}
           </Button>
         </DialogActions>
       </Box>

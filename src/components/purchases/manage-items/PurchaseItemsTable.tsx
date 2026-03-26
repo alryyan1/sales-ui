@@ -24,7 +24,7 @@ import {
 import { DeleteIcon } from "lucide-react";
 
 import InstantTextField from "@/components/purchases/InstantTextField";
-import { formatCurrency } from "@/constants";
+import { formatCurrency, formatNumber } from "@/constants";
 import { PurchaseItem } from "@/services/purchaseService";
 import { ProductUnitsMap } from "./types";
 
@@ -336,10 +336,8 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
           const item = row.original;
           return (
             <Typography variant="body2" fontWeight="700" color="primary.main">
-              {formatCurrency(
+              {formatNumber(
                 item.quantity * Number(item.unit_cost),
-                undefined,
-                currency,
               )}
             </Typography>
           );
@@ -356,7 +354,7 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
           const totalRetail = item.quantity * Number(item.sale_price || 0);
           return (
             <Typography variant="body2" fontWeight="700" color="success.main">
-              {formatCurrency(totalRetail, undefined, currency)}
+              {formatNumber(totalRetail)}
             </Typography>
           );
         },

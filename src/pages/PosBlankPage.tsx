@@ -19,13 +19,10 @@ import {
   FormControl,
   Popover,
   Stack,
-  createFilterOptions,
 } from "@mui/material";
 import { CloudUploadIcon, FileText, SearchIcon } from "lucide-react";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import CheckIcon from "@mui/icons-material/Check";
 
 import apiClient from "@/lib/axios";
 import { toast } from "sonner";
@@ -57,11 +54,8 @@ import { useSettings } from "@/context/SettingsContext";
 import ClientFormModal from "@/components/clients/ClientFormModal";
 import { SaleSummaryPanel } from "@/components/pos/SaleSummaryPanel";
 
-interface ClientOptionType extends Partial<Client> {
-  inputValue?: string;
-}
 
-const filter = createFilterOptions<ClientOptionType>();
+// const filter = createFilterOptions<ClientOptionType>();
 
 interface Shift {
   id: number;
@@ -241,17 +235,20 @@ const PosBlankPage: React.FC = () => {
         )
         .then((list) => {
           const raw = Array.isArray(list) ? list : [];
+          const showExpired = getSetting("pos_show_expired_products", false);
+          const showOutOfStock = getSetting("pos_show_out_of_stock_products", false);
+
           const filtered = raw.filter((p) => {
             // Stock quantity returned from server will be warehouse-specific if warehouse_id was passed
             const stock = p.current_stock_quantity ?? p.stock_quantity ?? 0;
-            if (stock <= 0) return false;
+            if (!showOutOfStock && stock <= 0) return false;
 
             // Check expiry if available
             if (p.earliest_expiry_date) {
               const exp = new Date(p.earliest_expiry_date);
               const today = new Date();
               today.setHours(0, 0, 0, 0);
-              if (exp < today) return false;
+              if (!showExpired && exp < today) return false;
             }
             return true;
           });
@@ -261,7 +258,7 @@ const PosBlankPage: React.FC = () => {
         .finally(() => setProductSearchLoading(false));
     }, 300);
     return () => clearTimeout(t);
-  }, [productInputValue, user?.warehouse_id]);
+  }, [productInputValue, user?.warehouse_id, getSetting]);
 
   // Handle Client Search
   useEffect(() => {
@@ -1564,7 +1561,14 @@ const PosBlankPage: React.FC = () => {
                   }}
                   helperText={
                     productInputValue.length > 0
-                      ? "المنتجات المنتهية أو التي نفد مخزونها مخفية"
+                      ? (() => {
+                        const showExpired = getSetting("pos_show_expired_products", false);
+                        const showOutOfStock = getSetting("pos_show_out_of_stock_products", false);
+                        if (!showExpired && !showOutOfStock) return "المنتجات المنتهية أو التي نفد مخزونها مخفية";
+                        if (!showExpired) return "المنتجات المنتهية مخفية";
+                        if (!showOutOfStock) return "المنتجات التي نفد مخزونها مخفية";
+                        return undefined;
+                      })()
                       : undefined
                   }
                 />
@@ -1787,30 +1791,7 @@ const PosBlankPage: React.FC = () => {
                       عناصر البيع #{selectedSale.id}
                     </Typography>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      {selectedSale.items && selectedSale.items.length > 0 && (
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mr: 2 }}>
-                          <TextField
-                            size="small"
-                            placeholder="الكمية للكل..."
-                            type="number"
-                            value={batchQuantity}
-                            onChange={(e) => setBatchQuantity(e.target.value)}
-                            sx={{ width: 120 }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") handleBatchQuantityUpdate();
-                            }}
-                            disabled={isBatchUpdating || (selectedSale.payments?.length ?? 0) > 0}
-                          />
-                          <Button
-                            size="small"
-                            variant="contained"
-                            onClick={handleBatchQuantityUpdate}
-                            disabled={isBatchUpdating || !batchQuantity || (selectedSale.payments?.length ?? 0) > 0}
-                          >
-                            {isBatchUpdating ? <CircularProgress size={20} color="inherit" /> : "تحديث الكل"}
-                          </Button>
-                        </Box>
-                      )}
+                    
                       {selectedSale.items && selectedSale.items.length > 0 && (
                         <Button
                           size="small"

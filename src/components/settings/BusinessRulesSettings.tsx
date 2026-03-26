@@ -198,21 +198,45 @@ export const BusinessRulesSettings = ({
               control={control}
               render={({ field }) => (
                 <FormControlLabel
-                  control={
-                    <Switch
-                      checked={!!field.value}
-                      onChange={(e) => field.onChange(e.target.checked)}
-                      color="primary"
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography variant="body2" fontWeight={500}>تلوين صفوف المنتجات المنتهية أو الناقصة</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        عند التفعيل، تُلوَّن صفوف المنتجات المنتهية الصلاحية (أحمر) والنافدة من المخزون (برتقالي)
-                      </Typography>
-                    </Box>
-                  }
+                  control={<Switch checked={!!field.value} onChange={(e) => field.onChange(e.target.checked)} color="primary" />}
+                  label={<Box>
+                    <Typography variant="body2" fontWeight={500}>تلوين صفوف المنتجات المنتهية أو الناقصة</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      عند التفعيل، تُلوَّن صفوف المنتجات المنتهية الصلاحية (أحمر) والنافدة من المخزون (برتقالي)
+                    </Typography>
+                  </Box>}
+                />
+              )}
+            />
+
+            <Controller
+              name="product_scientific_name_visible"
+              control={control}
+              render={({ field }) => (
+                <FormControlLabel
+                  control={<Switch checked={!!field.value} onChange={(e) => field.onChange(e.target.checked)} color="primary" />}
+                  label={<Box>
+                    <Typography variant="body2" fontWeight={500}>إظهار حقل الاسم العلمي في نموذج المنتج</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      عند التعطيل، يُخفى حقل "الاسم العلمي" كلياً من نموذج الإضافة والتعديل
+                    </Typography>
+                  </Box>}
+                />
+              )}
+            />
+
+            <Controller
+              name="product_scientific_name_required"
+              control={control}
+              render={({ field }) => (
+                <FormControlLabel
+                  control={<Switch checked={!!field.value} onChange={(e) => field.onChange(e.target.checked)} color="warning" />}
+                  label={<Box>
+                    <Typography variant="body2" fontWeight={500}>جعل الاسم العلمي إلزامياً</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      عند التفعيل، لا يمكن حفظ المنتج بدون إدخال الاسم العلمي
+                    </Typography>
+                  </Box>}
                 />
               )}
             />

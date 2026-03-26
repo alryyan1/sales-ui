@@ -22,9 +22,6 @@ import StockAdjustmentsListPage from "./components/inventory/StockAdjustmentsLis
 import StockTransfersPage from "./pages/inventory/StockTransfersPage";
 import InventoryCountPage from "./pages/inventory/InventoryCountPage";
 import ManageInventoryCountPage from "./pages/inventory/ManageInventoryCountPage";
-import RequestStockPage from "./pages/inventory/RequestStockPage";
-import ManageStockRequisitionsListPage from "./pages/inventory/ManageStockRequisitionsListPage";
-import ProcessRequisitionPage from "./components/admin/inventory/ProcessRequisitionPage";
 import WarehousesListPage from "./pages/warehouses/WarehousesListPage";
 import WarehouseProductsPage from "./pages/warehouses/WarehouseProductsPage";
 // Sales & POS
@@ -57,10 +54,7 @@ import RolesListPage from "./pages/admin/RolesListPage";
 import CategoriesListPage from "./pages/admin/CategoriesListPage";
 import ExpensesPage from "./pages/admin/ExpensesPage";
 import SettingsPage from "./pages/admin/SettingsPage";
-import SystemPage from "./pages/admin/SystemPage";
 import BackupPage from "./pages/admin/BackupPage";
-import WhatsAppSchedulersPage from "./pages/admin/WhatsAppSchedulersPage";
-import IndexedDBManagerPage from "./pages/admin/IndexedDBManagerPage";
 import UnitsPage from "./pages/UnitsPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import WhatsAppTestPage from "./pages/admin/WhatsAppTestPage";
@@ -451,14 +445,6 @@ const router = createHashRouter([
                 ),
               },
               {
-                path: "system",
-                element: (
-                  <PermissionGuard requiredPermission="manage-system">
-                    <SystemPage />
-                  </PermissionGuard>
-                ),
-              },
-              {
                 path: "backups",
                 element: (
                   <PermissionGuard requiredPermission="manage-backups">
@@ -467,26 +453,10 @@ const router = createHashRouter([
                 ),
               },
               {
-                path: "whatsapp-schedulers",
-                element: (
-                  <PermissionGuard requiredPermission="manage-whatsapp-schedulers">
-                    <WhatsAppSchedulersPage />
-                  </PermissionGuard>
-                ),
-              },
-              {
                 path: "whatsapp-test",
                 element: (
                   <PermissionGuard requiredPermission="manage-settings">
                     <WhatsAppTestPage />
-                  </PermissionGuard>
-                ),
-              },
-              {
-                path: "idb-manager",
-                element: (
-                  <PermissionGuard requiredPermission="manage-idb">
-                    <IndexedDBManagerPage />
                   </PermissionGuard>
                 ),
               },
@@ -505,37 +475,6 @@ const router = createHashRouter([
                     <WarehouseProductsPage />
                   </PermissionGuard>
                 ),
-              },
-
-              // Admin Inventory
-              {
-                path: "inventory",
-                children: [
-                  {
-                    path: "requisitions/request",
-                    element: (
-                      <PermissionGuard requiredPermission="request-stock">
-                        <RequestStockPage />
-                      </PermissionGuard>
-                    ),
-                  },
-                  {
-                    path: "requisitions",
-                    element: (
-                      <PermissionGuard requiredPermission="view-stock-requisitions">
-                        <ManageStockRequisitionsListPage />
-                      </PermissionGuard>
-                    ),
-                  },
-                  {
-                    path: "requisitions/:requisitionId/process",
-                    element: (
-                      <PermissionGuard requiredPermission="view-stock-requisitions">
-                        <ProcessRequisitionPage />
-                      </PermissionGuard>
-                    ),
-                  },
-                ],
               },
             ],
           },

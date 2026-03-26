@@ -29,7 +29,7 @@ export const navItems: NavItem[] = [
     children: [
       {
         to: "/sales/pos-blank",
-        label: "نقطة البيع الموحدة",
+        label: "نقطة البيع ",
         permission: null,
         category: "المبيعات",
       },
@@ -103,12 +103,7 @@ export const navItems: NavItem[] = [
         permission: null,
         category: "المشتريات",
       },
-      {
-        to: "/purchases/tax-customs",
-        label: "الضرائب والجمارك",
-        permission: null,
-        category: "المشتريات",
-      },
+    
     ],
   },
 
@@ -120,12 +115,7 @@ export const navItems: NavItem[] = [
     permission: null,
     category: "التقارير",
     children: [
-      {
-        to: "/reports/dashboard",
-        label: "لوحة المعلومات",
-        permission: null,
-        category: "التقارير",
-      },
+   
       {
         to: "/reports/sales",
         label: "تقرير المبيعات",
@@ -144,24 +134,14 @@ export const navItems: NavItem[] = [
         permission: null,
         category: "التقارير",
       },
-      {
-        to: "/reports/suppliers-summary",
-        label: "ملخص الموردين",
-        permission: null,
-        category: "التقارير",
-      },
+    
       {
         to: "/reports/inventory-log",
         label: "سجل المخزون",
         permission: null,
         category: "التقارير",
       },
-      {
-        to: "/reports/sales-discounts",
-        label: "المبيعات المخفضة",
-        permission: null,
-        category: "التقارير",
-      },
+ 
       {
         to: "/reports/daily-income",
         label: "تقرير المبيعات الشهري",
@@ -174,12 +154,7 @@ export const navItems: NavItem[] = [
         permission: null,
         category: "التقارير",
       },
-      {
-        to: "/reports/profit-loss",
-        label: "الأرباح والخسائر",
-        permission: null,
-        category: "التقارير",
-      },
+  
       {
         to: "/reports/best-selling-products",
         label: "المنتجات الأكثر مبيعاً",
@@ -252,12 +227,6 @@ export const navItems: NavItem[] = [
         category: "الإدارة",
       },
       {
-        to: "/admin/system",
-        label: "النظام",
-        permission: null,
-        category: "الإدارة",
-      },
-      {
         to: "/admin/backups",
         label: "النسخ الاحتياطي",
         permission: null,
@@ -270,32 +239,8 @@ export const navItems: NavItem[] = [
         category: "الإدارة",
       },
       {
-        to: "/admin/whatsapp-schedulers",
-        label: "جدولة واتساب",
-        permission: null,
-        category: "الإدارة",
-      },
-      {
         to: "/admin/whatsapp-test",
         label: "تجربة الواتساب",
-        permission: null,
-        category: "الإدارة",
-      },
-      {
-        to: "/admin/inventory/requisitions/request",
-        label: "طلب مخزون",
-        permission: null,
-        category: "الإدارة",
-      },
-      {
-        to: "/admin/inventory/requisitions",
-        label: "طلبات المخزون",
-        permission: null,
-        category: "الإدارة",
-      },
-      {
-        to: "/admin/idb-manager",
-        label: "إدارة DB المحلية",
         permission: null,
         category: "الإدارة",
       },
