@@ -291,9 +291,9 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
               render={({ field }) => (
                 <TextField
                   {...field}
-                  value={field.value || "one_care"}
+                  value={field.value || "none"}
                   label="اسم مجموعة Firebase (Collection Name)"
-                  placeholder="مثال: one_care"
+                  placeholder="مثال: none"
                   helperText="اسم المجموعة (Collection) في Firestore حيث يتم تخزين المنتجات والورديات."
                   fullWidth
                   variant="outlined"

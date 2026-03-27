@@ -51,7 +51,7 @@ const ClientsPage: React.FC = () => {
   // Settings for Company Name
   const { getSetting } = useSettings();
   const companyName = getSetting("company_name", "اسم الشركة") as string;
-  const firebaseCollectionName = getSetting("firebase_collection_name", "one_care") as string;
+  const firebaseCollectionName = getSetting("firebase_collection_name", "none") as string;
 
   // Firebase sync state
   const [isSyncing, setIsSyncing] = useState(false);

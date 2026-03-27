@@ -69,6 +69,9 @@ interface SaleSummaryPanelProps {
   handlePrintA4Invoice: () => void;
   fullPaymentLoading: boolean;
   handleFullPayment: () => void;
+  canPayment?: boolean;
+  canCancelPayment?: boolean;
+  canDiscount?: boolean;
   handleSaleDateChange: (date: string) => Promise<void>;
   saleDateLoading?: boolean;
   whatsAppLoading: boolean;
@@ -146,6 +149,9 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
   saleDateLoading,
   whatsAppLoading,
   handleSendWhatsApp,
+  canPayment = true,
+  canCancelPayment = true,
+  canDiscount = true,
 }) => {
   const [dateEditing, setDateEditing] = useState(false);
   const [tempDate, setTempDate] = useState("");
@@ -406,7 +412,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
             <IconButton
               size="small"
               onClick={handleApplyDiscount}
-              disabled={discountLoading || !discountValue.trim() || (selectedSale.items?.length ?? 0) === 0 || (selectedSale.payments?.length ?? 0) > 0}
+              disabled={!canDiscount || discountLoading || !discountValue.trim() || (selectedSale.items?.length ?? 0) === 0 || (selectedSale.payments?.length ?? 0) > 0}
               sx={{ bgcolor: "success.main", color: "white", "&:hover": { bgcolor: "success.dark" }, "&.Mui-disabled": { bgcolor: "grey.200" }, width: 28, height: 28, borderRadius: 1 }}
             >
               {discountLoading ? <CircularProgress size={14} color="inherit" /> : <CheckIcon sx={{ fontSize: 16 }} />}
@@ -417,7 +423,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                 variant="text"
                 color="error"
                 onClick={handleRemoveDiscount}
-                disabled={discountLoading || (selectedSale.payments?.length ?? 0) > 0}
+                disabled={!canDiscount || discountLoading || (selectedSale.payments?.length ?? 0) > 0}
                 sx={{ fontSize: "0.65rem", px: 0.5, minWidth: 0, whiteSpace: "nowrap" }}
               >
                 إلغاء
@@ -451,7 +457,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                         {formatNumber(Number(p.amount))}
                       </Typography>
                       {p.id != null && (
-                        <IconButton size="small" color="error" onClick={() => handleDeletePayment(p.id!)} disabled={deletingPaymentId === p.id} sx={{ p: 0.2 }}>
+                        <IconButton size="small" color="error" onClick={() => handleDeletePayment(p.id!)} disabled={!canCancelPayment || deletingPaymentId === p.id} sx={{ p: 0.2 }}>
                           {deletingPaymentId === p.id
                             ? <CircularProgress size={12} color="inherit" />
                             : <DeleteOutlineIcon sx={{ fontSize: 14 }} />}
@@ -504,7 +510,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                 <IconButton
                   size="small"
                   onClick={handleAddPayment}
-                  disabled={addPaymentLoading || !newPaymentAmount.trim()}
+                  disabled={!canPayment || addPaymentLoading || !newPaymentAmount.trim()}
                   sx={{ bgcolor: "primary.main", color: "white", "&:hover": { bgcolor: "primary.dark" }, "&.Mui-disabled": { bgcolor: "grey.200" }, width: 30, height: 30, borderRadius: 1 }}
                 >
                   {addPaymentLoading ? <CircularProgress size={14} color="inherit" /> : <AddIcon sx={{ fontSize: 18 }} />}
@@ -554,7 +560,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
 
             <Button
               fullWidth variant="contained" size="small"
-              disabled={fullPaymentLoading || isFullyPaid}
+              disabled={!canPayment || fullPaymentLoading || isFullyPaid}
               onClick={handleFullPayment}
               sx={{
                 textTransform: "none", fontWeight: 700, fontSize: "0.8rem", py: 0.75,

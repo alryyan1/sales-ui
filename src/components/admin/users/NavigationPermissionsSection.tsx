@@ -8,8 +8,6 @@ import {
   Info,
 } from "lucide-react";
 import { navItems } from "@/components/layouts/navItems";
-import { useQuery } from "@tanstack/react-query";
-import apiClient from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -44,21 +42,6 @@ const NavigationPermissionsSection: React.FC<
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(),
   );
-
-  // Fetch navigation items from API (or use local navItems as fallback)
-  const { data: apiNavItems } = useQuery<{ data: NavigationCategory[] }>({
-    queryKey: ["navigation-items"],
-    queryFn: async () => {
-      try {
-        const response = await apiClient.get("/admin/navigation-items");
-        return response.data;
-      } catch (error) {
-        console.error("Failed to fetch navigation items:", error);
-        return { data: [] };
-      }
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
 
   // Build navigation structure from navItems.ts
   const buildNavStructure = (): NavigationCategory[] => {
@@ -98,41 +81,11 @@ const NavigationPermissionsSection: React.FC<
     }));
   };
 
-  // Local navigation structure built once from static navItems (source of truth)
-  const localNavigationStructure = useMemo<NavigationCategory[]>(
+  // Navigation structure built from static navItems.ts (single source of truth)
+  const navigationStructure = useMemo<NavigationCategory[]>(
     () => buildNavStructure(),
     [],
   );
-
-  // Set of valid routes based on current frontend navItems/router
-  const allowedRoutes = useMemo<Set<string>>(
-    () =>
-      new Set(
-        localNavigationStructure.flatMap((cat) =>
-          cat.items.map((item) => item.route),
-        ),
-      ),
-    [localNavigationStructure],
-  );
-
-  // Use API data if available, but only for routes that still exist locally.
-  // Fallback entirely to local structure when API is missing or has only stale routes.
-  const navigationStructure = useMemo<NavigationCategory[]>(() => {
-    if (apiNavItems?.data && apiNavItems.data.length > 0) {
-      const filteredFromApi: NavigationCategory[] = apiNavItems.data
-        .map((cat) => ({
-          category: cat.category,
-          items: cat.items.filter((item) => allowedRoutes.has(item.route)),
-        }))
-        .filter((cat) => cat.items.length > 0);
-
-      if (filteredFromApi.length > 0) {
-        return filteredFromApi;
-      }
-    }
-    // Fallback / source of truth
-    return localNavigationStructure;
-  }, [apiNavItems, allowedRoutes, localNavigationStructure]);
 
   // Toggle category expansion
   const toggleCategory = (category: string) => {

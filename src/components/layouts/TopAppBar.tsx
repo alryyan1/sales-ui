@@ -63,7 +63,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
     expiredCount: 0,
   });
   const [firebaseConnected, setFirebaseConnected] = React.useState(false);
-  const firebaseCollectionName = getSetting("firebase_collection_name", "one_care") as string;
+  const firebaseCollectionName = getSetting("firebase_collection_name", "none") as string;
 
   React.useEffect(() => {
     const q = query(collection(db, "pharmacies", firebaseCollectionName, "shifts"), limit(1));

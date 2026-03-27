@@ -80,7 +80,9 @@ const SidebarPro: React.FC<SidebarProProps> = ({
             active={item.children.some((child) =>
               location.pathname.startsWith(child.to)
             )}
+
             rootStyles={{
+              userSelect:'none',
               ["& > .ps-menu-button"]: {
                 backgroundColor: "transparent !important",
               },

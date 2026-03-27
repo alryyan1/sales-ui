@@ -83,7 +83,7 @@ const SettingsPage: React.FC = () => {
       pos_mode: "shift",
       pos_filter_sales_by_user: false,
       whatsapp_shift_closure_numbers: "",
-      firebase_collection_name: "one_care",
+      firebase_collection_name: "none",
       purchase_use_batch_number: true,
       purchase_use_expiry_date: true,
     },
@@ -125,7 +125,7 @@ const SettingsPage: React.FC = () => {
         whatsapp_shift_closure_numbers:
           settings.whatsapp_shift_closure_numbers || "",
         firebase_collection_name:
-          settings.firebase_collection_name || "one_care",
+          settings.firebase_collection_name || "none",
         product_row_color_highlight:
           settings.product_row_color_highlight ?? true,
         product_scientific_name_visible:

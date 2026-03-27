@@ -258,16 +258,16 @@ const RolesListPage: React.FC = () => {
                 <Table sx={{ minWidth: 650 }}>
                   <TableHead sx={{ bgcolor: "action.hover" }}>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: "bold" }}>
+                      <TableCell sx={{ fontWeight: "bold",textAlign:'center' }}>
                         اسم الدور
                       </TableCell>
-                      <TableCell sx={{ fontWeight: "bold" }}>
+                      <TableCell sx={{ fontWeight: "bold" ,textAlign:'center'}}>
                         عدد الصلاحيات
                       </TableCell>
-                      <TableCell sx={{ fontWeight: "bold" }}>
+                      <TableCell sx={{ fontWeight: "bold" ,textAlign:'center'}}>
                         عدد المستخدمين
                       </TableCell>
-                      <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                      <TableCell align="center" sx={{ fontWeight: "bold",textAlign:'center' }}>
                         إجراءات
                       </TableCell>
                     </TableRow>

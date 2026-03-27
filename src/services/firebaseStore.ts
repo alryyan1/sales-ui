@@ -15,7 +15,7 @@ export const uploadSuppliersToFirestore = async (
     total_credit?: number | null;
     balance?: number | null;
   }>,
-  collectionName: string = "one_care",
+  collectionName: string = "none",
 ) => {
   try {
     const BATCH_SIZE = 450;
@@ -78,7 +78,7 @@ export const uploadClientsToFirestore = async (
     total_debit?: number | null;
     total_credit?: number | null;
   }>,
-  collectionName: string = "one_care",
+  collectionName: string = "none",
 ) => {
   try {
     const BATCH_SIZE = 450;
@@ -131,7 +131,7 @@ export const uploadClientsToFirestore = async (
 
 export const uploadProductsToFirestore = async (
   products: any[],
-  collectionName: string = "one_care",
+  collectionName: string = "none",
 ) => {
   try {
     const BATCH_SIZE = 450; // Firestore limit is 500, keep margin
@@ -233,7 +233,7 @@ export interface ShiftData {
 
 export const saveShiftToFirestore = async (
   data: ShiftData,
-  collectionName: string = "one_care",
+  collectionName: string = "none",
 ) => {
   try {
     // Firestore structure: pharmacies -> {collectionName} -> shifts -> {shift_id}
@@ -310,7 +310,7 @@ export interface SaleData {
 
 export const saveSaleToFirestore = async (
   data: SaleData,
-  collectionName: string = "one_care",
+  collectionName: string = "none",
 ): Promise<string> => {
   try {
     // Firestore structure: pharmacies -> {collectionName} -> sales -> {sale_id}

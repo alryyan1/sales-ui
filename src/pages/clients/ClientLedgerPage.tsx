@@ -54,7 +54,7 @@ const ClientLedgerPage: React.FC = () => {
   const clientId = Number(id);
 
   const { getSetting } = useSettings();
-  const firebaseCollectionName = getSetting("firebase_collection_name", "one_care") as string;
+  const firebaseCollectionName = getSetting("firebase_collection_name", "none") as string;
 
   const [ledger, setLedger] = useState<ClientLedger | null>(null);
   const [isLoading, setIsLoading] = useState(true);

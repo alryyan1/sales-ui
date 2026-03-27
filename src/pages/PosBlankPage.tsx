@@ -42,6 +42,7 @@ import ExpenseFormModal from "@/components/admin/expenses/ExpenseFormModal";
 import { PdfViewerDialog } from "@/components/common/PdfViewerDialog";
 import SalesReturnDialog from "@/components/sales/SalesReturnDialog";
 import { useAuth } from "@/context/AuthContext";
+import { useAuthorization } from "@/hooks/useAuthorization";
 import ExpiryProductsDialog, { PurchaseItem } from "@/components/pos/ExpiryProductsDialog";
 import TopSellingProductsDialog from "@/components/pos/TopSellingProductsDialog";
 import { uploadFileToFirebase } from "@/services/firebaseStorage";
@@ -53,6 +54,7 @@ import {
 import { useSettings } from "@/context/SettingsContext";
 import ClientFormModal from "@/components/clients/ClientFormModal";
 import { SaleSummaryPanel } from "@/components/pos/SaleSummaryPanel";
+import axios from "axios";
 
 
 // const filter = createFilterOptions<ClientOptionType>();
@@ -113,9 +115,16 @@ interface Shift {
 const PosBlankPage: React.FC = () => {
   const { user } = useAuth();
   const { getSetting } = useSettings();
+  const { hasPermission } = useAuthorization();
+  const canPayment = hasPermission('سداد');
+  const canCancelPayment = hasPermission('الغاء سداد');
+  const canDiscount = hasPermission('تخفيض');
+  const canDeleteSaleItem = hasPermission('حذف منتج مضاف في عمليه بيع');
+  const canOpenShift = hasPermission('فتح ورديه');
+  const canCloseShift = hasPermission('اغلاق ورديه');
   const firebaseCollectionName = getSetting(
     "firebase_collection_name",
-    "one_care",
+    "none",
   );
 
   const syncSaleToFirestore = useCallback(
@@ -842,8 +851,16 @@ const PosBlankPage: React.FC = () => {
       setSelectedSale(null);
       setSales([]);
     } catch (err) {
-      console.error("Failed to close shift:", err);
-      toast.error("فشل إغلاق الوردية");
+      if(axios.isAxiosError(err)){
+        // alert('this is axios error')
+        const errorMessage = err.response?.data.message;
+        // alert(errorMessage)
+        toast.error(errorMessage)
+      }else{
+        
+        toast.error("فشل إغلاق الوردية");
+      }
+      
     } finally {
       setShiftLoading(false);
     }
@@ -1853,7 +1870,7 @@ const PosBlankPage: React.FC = () => {
             variant={isShiftOpen ? "outlined" : "contained"}
             color={isShiftOpen ? "error" : "primary"}
             onClick={isShiftOpen ? handleCloseShift : handleOpenShift}
-            disabled={shiftLoading || (!isShiftOpen && !user?.warehouse_id)}
+            disabled={shiftLoading || (!isShiftOpen && (!user?.warehouse_id || !canOpenShift)) || (isShiftOpen && !canCloseShift)}
             sx={{
               textTransform: "none",
               fontWeight: 600,
@@ -1973,7 +1990,7 @@ const PosBlankPage: React.FC = () => {
                     onPriceChange={handlePriceChange}
                     deletingItemId={deletingSaleItemId}
                     onDeleteItem={handleDeleteSaleItem}
-                    canDeleteItems={(selectedSale.payments?.length ?? 0) === 0}
+                    canDeleteItems={canDeleteSaleItem && (selectedSale.payments?.length ?? 0) === 0}
                     disableQuantityAndPriceEdit={
                       Math.abs(
                         Number(selectedSale.paid_amount ?? 0) -
@@ -2027,6 +2044,9 @@ const PosBlankPage: React.FC = () => {
             handlePrintA4Invoice={handlePrintA4Invoice}
             fullPaymentLoading={fullPaymentLoading}
             handleFullPayment={handleFullPayment}
+            canPayment={canPayment}
+            canCancelPayment={canCancelPayment}
+            canDiscount={canDiscount}
             handleSaleDateChange={handleSaleDateChange}
             saleDateLoading={saleDateLoading}
             whatsAppLoading={whatsAppLoading}

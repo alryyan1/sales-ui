@@ -122,12 +122,7 @@ export const navItems: NavItem[] = [
         permission: null,
         category: "التقارير",
       },
-      {
-        to: "/reports/sale-returns",
-        label: "تقرير مردودات المبيعات",
-        permission: null,
-        category: "التقارير",
-      },
+   
       {
         to: "/reports/purchases",
         label: "تقرير المشتريات",
@@ -175,7 +170,7 @@ export const navItems: NavItem[] = [
       },
       {
         to: "/reports/shortages",
-        label: "الطلبية (النواقص)",
+        label: "الطلبية ",
         permission: null,
         category: "التقارير",
       },

@@ -118,7 +118,7 @@ const SuppliersPage: React.FC = () => {
 
   const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const firebaseCollectionName = getSetting("firebase_collection_name", "one_care") as string;
+  const firebaseCollectionName = getSetting("firebase_collection_name", "none") as string;
 
   const [isSyncing, setIsSyncing] = useState(false);
 

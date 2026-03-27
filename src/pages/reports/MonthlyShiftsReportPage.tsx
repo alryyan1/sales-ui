@@ -105,7 +105,7 @@ const MonthlyShiftsReportPage: React.FC = () => {
   const { getSetting } = useSettings();
   const firebaseCollectionName = getSetting(
     "firebase_collection_name",
-    "one_care",
+    "none",
   );
   const [uploadingShiftId, setUploadingShiftId] = useState<number | null>(null);
 

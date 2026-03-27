@@ -194,7 +194,7 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                 onClick={() => setShowInlineCreate(!showInlineCreate)}
                 color="primary"
               >
-                اضافه صنف
+           اضافه صنف سريع
               </Button>
             )}
           </Box>
