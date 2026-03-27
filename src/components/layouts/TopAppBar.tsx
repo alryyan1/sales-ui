@@ -11,6 +11,7 @@ import {
   Avatar,
   ButtonBase,
   Chip,
+  Tooltip,
 } from "@mui/material";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -36,6 +37,8 @@ import { dbService, STORES } from "../../services/db";
 import { offlineSaleService } from "../../services/offlineSaleService";
 import { toast } from "sonner";
 import { KeyboardShortcutsDialog } from "../common/KeyboardShortcutsDialog";
+import { db } from "@/firebase";
+import { collection, query, limit, onSnapshot } from "firebase/firestore";
 
 const COLLAPSED_DRAWER_WIDTH = 72;
 
@@ -59,6 +62,23 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
     nearExpiringCount: 0,
     expiredCount: 0,
   });
+  const [firebaseConnected, setFirebaseConnected] = React.useState(false);
+  const firebaseCollectionName = getSetting("firebase_collection_name", "one_care") as string;
+
+  React.useEffect(() => {
+    const q = query(collection(db, "pharmacies", firebaseCollectionName, "shifts"), limit(1));
+    const unsubscribe = onSnapshot(
+      q,
+      { includeMetadataChanges: true },
+      (snapshot) => {
+        setFirebaseConnected(!snapshot.metadata.fromCache);
+      },
+      () => {
+        setFirebaseConnected(false);
+      }
+    );
+    return () => unsubscribe();
+  }, [firebaseCollectionName]);
 
 
 
@@ -226,8 +246,38 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
         </Typography>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-       
-       
+
+          {/* Firebase Connection Indicator */}
+          <Tooltip title={`pharmacies/${firebaseCollectionName}/shifts`}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, cursor: "default" }}>
+              <Box
+                sx={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: "50%",
+                  bgcolor: firebaseConnected ? "#22c55e" : "#9ca3af",
+                  boxShadow: firebaseConnected
+                    ? "0 0 0 3px rgba(34,197,94,0.25)"
+                    : "none",
+                  transition: "all 0.3s ease",
+                  flexShrink: 0,
+                }}
+              />
+              <Typography
+                variant="caption"
+                sx={{
+                  color: firebaseConnected ? "#22c55e" : "text.disabled",
+                  fontWeight: 600,
+                  fontSize: "0.7rem",
+                  letterSpacing: 0.3,
+                  transition: "color 0.3s ease",
+                }}
+              >
+                {firebaseCollectionName}
+              </Typography>
+            </Box>
+          </Tooltip>
+
           {/* Warehouse Display */}
           {user?.warehouse && (
             <Chip

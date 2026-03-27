@@ -1,6 +1,7 @@
 import React from "react";
 import { Badge, Box, Paper, Stack, CircularProgress } from "@mui/material";
 import PersonIcon from "@mui/icons-material/Person";
+import ReplayIcon from "@mui/icons-material/Replay";
 import type { Sale } from "@/services/saleService";
 
 export interface PosSalesColumnProps {
@@ -39,6 +40,8 @@ export const PosSalesColumn: React.FC<PosSalesColumnProps> = ({
             const itemsCount = sale.items?.length ?? 0;
             const hasClient = sale.client_id != null && sale.client_id > 0;
             const hasNoPayments = (sale.payments?.length ?? 0) === 0;
+            console.log(sale,'sale')
+            const hasReturn = sale.is_returned === true;
             const badgeColor = hasNoPayments ? "error" : isActive ? "secondary" : "primary";
             return (
               <Stack direction="row" gap={1} key={sale.id}>
@@ -65,7 +68,7 @@ export const PosSalesColumn: React.FC<PosSalesColumnProps> = ({
                       height: 60,
                       borderRadius: 1.5,
                       border: "2px solid",
-                      borderColor: isActive ? "primary.main" : "divider",
+                      borderColor: isActive ? "primary.main" : hasReturn ? "warning.main" : "divider",
                       bgcolor: isActive ? "primary.main" : "transparent",
                       color: isActive ? "primary.contrastText" : "text.primary",
                       p: 1,
@@ -88,6 +91,19 @@ export const PosSalesColumn: React.FC<PosSalesColumnProps> = ({
                         }}
                       >
                         <PersonIcon sx={{ fontSize: 14 }} />
+                      </Box>
+                    )}
+                    {hasReturn && (
+                      <Box
+                        sx={{
+                          position: "absolute",
+                          bottom: 3,
+                          right: 3,
+                          color: isActive ? "primary.contrastText" : "warning.main",
+                          display: "flex",
+                        }}
+                      >
+                        <ReplayIcon sx={{ fontSize: 13 }} />
                       </Box>
                     )}
                     <Box component="span" sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>

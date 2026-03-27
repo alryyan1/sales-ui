@@ -2,7 +2,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { pdf } from "@react-pdf/renderer";
 import {
   Box,
   Button,
@@ -42,22 +41,26 @@ import clientLedgerService, {
   ClientLedger,
   ClientLedgerEntry,
 } from "@/services/clientLedgerService";
-import { ClientLedgerPdf } from "@/components/clients/ClientLedgerPdf";
 import { LedgerSaleEditorDialog } from "@/components/clients/LedgerSaleEditorDialog";
 import { useSettings } from "@/context/SettingsContext";
+import { uploadFileToFirebase } from "@/services/firebaseStorage";
 import { toast } from "sonner";
 import apiClient from "@/lib/axios";
+import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 
 const ClientLedgerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const clientId = Number(id);
 
-  const { settings } = useSettings();
+  const { getSetting } = useSettings();
+  const firebaseCollectionName = getSetting("firebase_collection_name", "one_care") as string;
+
   const [ledger, setLedger] = useState<ClientLedger | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
   const [fetchingSaleId, setFetchingSaleId] = useState<number | null>(null);
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -115,23 +118,73 @@ const ClientLedgerPage: React.FC = () => {
     if (!ledger) return;
     setIsGeneratingPdf(true);
     try {
-      const doc = (
-        <ClientLedgerPdf
-          ledger={ledger}
-          settings={settings}
-          companyName={settings?.company_name || "اسم الشركة"}
-        />
-      );
-      const asPdf = pdf(doc);
-      const blob = await asPdf.toBlob();
+      const response = await apiClient.get(`/clients/${clientId}/ledger/pdf`, {
+        responseType: "blob",
+      });
+      const blob = new Blob([response.data], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
       setTimeout(() => URL.revokeObjectURL(url), 100);
     } catch (err) {
       console.error("Error generating PDF:", err);
-      setError("فشل في إنشاء ملف PDF");
+      toast.error("فشل في إنشاء ملف PDF");
     } finally {
       setIsGeneratingPdf(false);
+    }
+  };
+
+  const handleSendWhatsApp = async () => {
+    if (!ledger) return;
+    const phone = ledger.client.phone;
+    if (!phone) {
+      toast.error("لا يوجد رقم هاتف للعميل");
+      return;
+    }
+    setIsSendingWhatsApp(true);
+    const toastId = `ledger-wa-${clientId}`;
+    try {
+      const filename = `ledger_${clientId}.pdf`;
+
+      toast.loading("جاري تحميل كشف الحساب...", { id: toastId });
+      const pdfResponse = await apiClient.get(`/clients/${clientId}/ledger/pdf`, {
+        responseType: "blob",
+      });
+      const pdfBlob = new Blob([pdfResponse.data], { type: "application/pdf" });
+
+      toast.loading("جاري رفع الملف إلى Firebase...", { id: toastId });
+      const storagePath = `ledgers/${firebaseCollectionName}/${filename}`;
+      const downloadUrl = await uploadFileToFirebase(pdfBlob, storagePath);
+
+      toast.loading("جاري إرسال الواتساب...", { id: toastId });
+      await apiClient.post("/admin/whatsapp-cloud/send-template", {
+        to: phone,
+        template_name: "client_ledger",
+        language_code: "ar",
+        components: [
+          {
+            type: "header",
+            parameters: [
+              {
+                type: "document",
+                document: { link: downloadUrl, filename },
+              },
+            ],
+          },
+          {
+            type: "body",
+            parameters: [
+              { type: "text", text: ledger.client.name },
+            ],
+          },
+        ],
+      });
+
+      toast.success("✅ تم إرسال كشف الحساب عبر واتساب", { id: toastId, duration: 4000 });
+    } catch (err) {
+      console.error("WhatsApp ledger send error:", err);
+      toast.error("فشل إرسال كشف الحساب عبر واتساب", { id: toastId });
+    } finally {
+      setIsSendingWhatsApp(false);
     }
   };
 
@@ -227,13 +280,23 @@ const ClientLedgerPage: React.FC = () => {
         >
           {isGeneratingPdf ? "جاري الإنشاء..." : "PDF"}
         </Button>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={isSendingWhatsApp ? <CircularProgress size={14} /> : <WhatsAppIcon sx={{ fontSize: 16 }} />}
+          onClick={handleSendWhatsApp}
+          disabled={isSendingWhatsApp || !ledger?.client.phone}
+          sx={{ textTransform: "none", color: "success.main", borderColor: "success.main", "&:hover": { borderColor: "success.dark", bgcolor: "success.50" }, "& .MuiButton-startIcon": { ml: "6px" } }}
+        >
+          {isSendingWhatsApp ? "جاري الإرسال..." : "واتساب"}
+        </Button>
       </Box>
 
       {/* Summary Strip */}
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
+          gridTemplateColumns: "200px 200px 200px",
           gap: 1.5,
         }}
       >
@@ -319,6 +382,7 @@ const ClientLedgerPage: React.FC = () => {
             <Box sx={{ flex: 1, minWidth: 160 }}>
               <Autocomplete
                 size="small"
+                
                 options={productOptions}
                 getOptionLabel={(o) => o.product_name}
                 isOptionEqualToValue={(a, b) => a.product_id === b.product_id}
@@ -333,7 +397,7 @@ const ClientLedgerPage: React.FC = () => {
                 )}
                 noOptionsText="لا توجد منتجات"
                 clearOnEscape
-                sx={{ "& .MuiInputBase-root": { py: "1px" } }}
+                sx={{ width:200 }}
               />
             </Box>
           </Box>

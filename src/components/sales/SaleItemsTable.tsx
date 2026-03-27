@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-table";
 import {
   Box,
+  Chip,
   CircularProgress,
   IconButton,
   Table,
@@ -16,6 +17,7 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
@@ -354,12 +356,35 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
             const name =
               item.product_name ?? item.product?.name ?? `#${item.product_id}`;
             const scientificName = item.product?.scientific_name;
+            const returnedQty = item.returned_quantity ?? 0;
+            const isFullyReturned = returnedQty > 0 && returnedQty >= (item.quantity ?? 0);
             return (
-              <Box>
-                <Typography component="span" sx={{ fontSize: "0.8125rem" }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexWrap: "wrap" }}>
+                <Typography
+                  component="span"
+                  sx={{
+                    fontSize: "0.8125rem",
+                    textDecoration: isFullyReturned ? "line-through" : "none",
+                    color: isFullyReturned ? "text.disabled" : "text.primary",
+                  }}
+                >
                   {name}
                   {scientificName ? ` (${scientificName})` : ""}
                 </Typography>
+                {returnedQty > 0 && (
+                  <Tooltip
+                    title={isFullyReturned ? "تم إرجاع هذا الصنف بالكامل" : `تم إرجاع ${returnedQty} من أصل ${item.quantity}`}
+                    arrow
+                  >
+                    <Chip
+                      label={`مرتجع ${returnedQty}`}
+                      size="small"
+                      color={isFullyReturned ? "error" : "warning"}
+                      variant="outlined"
+                      sx={{ height: 17, fontSize: "0.65rem", cursor: "default" }}
+                    />
+                  </Tooltip>
+                )}
               </Box>
             );
           },
@@ -808,13 +833,22 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
               const selected = isSelected(item);
               const isDeleting =
                 deletingItemId != null && item.id === deletingItemId;
+              const returnedQty = item.returned_quantity ?? 0;
+              const isFullyReturned = returnedQty > 0 && returnedQty >= (item.quantity ?? 0);
+              const isPartiallyReturned = returnedQty > 0 && !isFullyReturned;
               return (
                 <TableRow
                   key={row.id}
                   onClick={() => !isDeleting && handleRowClick(item)}
                   sx={{
                     cursor: isDeleting ? "wait" : "pointer",
-                    backgroundColor: selected ? "action.selected" : undefined,
+                    backgroundColor: selected
+                      ? "action.selected"
+                      : isFullyReturned
+                        ? "error.50"
+                        : isPartiallyReturned
+                          ? "warning.50"
+                          : undefined,
                     opacity: isDeleting ? 0.7 : 1,
                     pointerEvents: isDeleting ? "none" : undefined,
                     "&:hover": {

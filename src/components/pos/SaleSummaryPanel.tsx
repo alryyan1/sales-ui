@@ -22,6 +22,7 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import CheckIcon from "@mui/icons-material/Check";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
@@ -70,6 +71,8 @@ interface SaleSummaryPanelProps {
   handleFullPayment: () => void;
   handleSaleDateChange: (date: string) => Promise<void>;
   saleDateLoading?: boolean;
+  whatsAppLoading: boolean;
+  handleSendWhatsApp: () => void;
 }
 
 const METHOD_LABELS: Record<string, string> = {
@@ -141,6 +144,8 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
   handleFullPayment,
   handleSaleDateChange,
   saleDateLoading,
+  whatsAppLoading,
+  handleSendWhatsApp,
 }) => {
   const [dateEditing, setDateEditing] = useState(false);
   const [tempDate, setTempDate] = useState("");
@@ -535,6 +540,15 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                 sx={{ textTransform: "none", fontSize: "0.7rem", fontWeight: 600, py: 0.5 }}
               >
                 {a4PdfLoading ? "..." : "A4 PDF"}
+              </Button>
+              <Button
+                fullWidth variant="outlined" size="small"
+                disabled={whatsAppLoading || !selectedSale?.client_id}
+                startIcon={<WhatsAppIcon sx={{ fontSize: "0.85rem !important" }} />}
+                onClick={handleSendWhatsApp}
+                sx={{ textTransform: "none", fontSize: "0.7rem", fontWeight: 600, py: 0.5, color: "success.main", borderColor: "success.main", "&:hover": { borderColor: "success.dark", bgcolor: "success.50" } }}
+              >
+                {whatsAppLoading ? "..." : "واتساب"}
               </Button>
             </Stack>
 

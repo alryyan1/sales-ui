@@ -20,8 +20,11 @@ import ClientsTable from "../components/clients/ClientsTable";
 import ClientFormModal from "../components/clients/ClientFormModal";
 import ConfirmationDialog from "../components/common/ConfirmationDialog";
 import ClientProceduresDialog from "../components/clients/ClientProceduresDialog";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, CloudUpload } from "lucide-react";
 import { useSettings } from "../context/SettingsContext";
+import { uploadClientsToFirestore } from "../services/firebaseStore";
+import apiClient from "../lib/axios";
+import { toast } from "sonner";
 
 const ClientsPage: React.FC = () => {
   // --- State Management ---
@@ -48,6 +51,35 @@ const ClientsPage: React.FC = () => {
   // Settings for Company Name
   const { getSetting } = useSettings();
   const companyName = getSetting("company_name", "اسم الشركة") as string;
+  const firebaseCollectionName = getSetting("firebase_collection_name", "one_care") as string;
+
+  // Firebase sync state
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSyncToFirebase = async () => {
+    setIsSyncing(true);
+    try {
+      // Fetch all clients by looping pages
+      const allClients: Client[] = [];
+      let page = 1;
+      let lastPage = 1;
+      do {
+        const res = await apiClient.get<{ data: Client[]; last_page: number }>(
+          `/clients?page=${page}&per_page=500`,
+        );
+        allClients.push(...res.data.data);
+        lastPage = res.data.last_page;
+        page++;
+      } while (page <= lastPage);
+
+      await uploadClientsToFirestore(allClients, firebaseCollectionName);
+      toast.success(`تم رفع ${allClients.length} عميل إلى Firebase`);
+    } catch {
+      toast.error("فشل رفع العملاء إلى Firebase");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // --- Data Fetching ---
   const fetchClients = useCallback(async (page: number) => {
@@ -153,15 +185,27 @@ const ClientsPage: React.FC = () => {
         >
           العملاء
         </Typography>
-        <Button
-          onClick={() => openModal()}
-          variant="contained"
-          color="primary"
-          startIcon={<PlusIcon className="h-5 w-5" />}
-          sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}
-        >
-          إضافة عميل
-        </Button>
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <Button
+            onClick={handleSyncToFirebase}
+            variant="outlined"
+            color="success"
+            startIcon={isSyncing ? <CircularProgress size={16} color="inherit" /> : <CloudUpload size={18} />}
+            disabled={isSyncing}
+            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}
+          >
+            {isSyncing ? "جاري الرفع..." : "رفع إلى Firebase"}
+          </Button>
+          <Button
+            onClick={() => openModal()}
+            variant="contained"
+            color="primary"
+            startIcon={<PlusIcon className="h-5 w-5" />}
+            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}
+          >
+            إضافة عميل
+          </Button>
+        </Box>
       </Box>
 
       {isLoading && (

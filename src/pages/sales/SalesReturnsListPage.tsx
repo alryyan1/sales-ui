@@ -13,14 +13,41 @@ import {
   TableRow,
   TableCell,
   TableBody,
+  Chip,
+  Divider,
+  CircularProgress,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ArrowLeft, RefreshCw, FileText } from "lucide-react";
+import {
+  ArrowLeft,
+  RefreshCw,
+  RotateCcw,
+  Plus,
+  PackageX,
+  DollarSign,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import saleReturnService, { SaleReturn } from "@/services/saleReturnService";
-import { useShifts } from "@/hooks/useShifts";
 import { formatNumber } from "@/constants";
+
+const METHOD_LABELS: Record<string, string> = {
+  cash: "نقدي",
+  bankak: "بنكك",
+  fawry: "فوري",
+  ocash: "أوكاش",
+};
+
+const METHOD_COLORS: Record<string, "default" | "success" | "info" | "warning"> = {
+  cash: "success",
+  bankak: "info",
+  fawry: "warning",
+  ocash: "default",
+};
 
 const SalesReturnsListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -32,8 +59,6 @@ const SalesReturnsListPage: React.FC = () => {
   const shiftIdParam = searchParams.get("shiftId");
   const pageParam = Number(searchParams.get("page") || "1");
 
-  const { data: shifts = [] } = useShifts();
-
   const selectedShiftId = useMemo(
     () => (shiftIdParam ? Number(shiftIdParam) : undefined),
     [shiftIdParam],
@@ -43,6 +68,7 @@ const SalesReturnsListPage: React.FC = () => {
     data: returnsResult,
     isLoading,
     refetch,
+    isFetching,
   } = useQuery({
     queryKey: ["sales-returns-list", startDate, endDate, selectedShiftId, pageParam],
     queryFn: () =>
@@ -103,277 +129,308 @@ const SalesReturnsListPage: React.FC = () => {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        bgcolor: "background.default",
-        py: 3,
-      }}
-    >
-      <Box
+    <Box sx={{ p: { xs: 1.5, md: 2 }, display: "flex", flexDirection: "column", gap: 1.5 }}>
+
+      {/* Header */}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+        <IconButton onClick={() => navigate("/sales/pos-blank")} size="small">
+          <ArrowLeft size={18} />
+        </IconButton>
+
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography variant="h6" fontWeight={700} noWrap>
+            مردودات المبيعات
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            عرض وإدارة مردودات المبيعات حسب التاريخ والوردية
+          </Typography>
+        </Box>
+
+   
+      </Box>
+
+      {/* Summary Strip */}
+      <Box sx={{ display: "grid", gridTemplateColumns: "200px 200px", gap: 1.5 }}>
+        {[
+          {
+            label: "عدد المردودات",
+            value: formatNumber(meta.total ?? returns.length),
+            icon: <PackageX size={18} />,
+            color: "warning" as const,
+          },
+          {
+            label: "إجمالي القيمة",
+            value: formatNumber(totalAmount),
+            icon: <DollarSign size={18} />,
+            color: "error" as const,
+          },
+        ].map(({ label, value, icon, color }) => (
+          <Card key={label} variant="outlined" sx={{ borderRadius: 2 }}>
+            <CardContent sx={{ p: "12px !important" }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <Box
+                  sx={{
+                    p: 1,
+                    borderRadius: 1.5,
+                    bgcolor: `${color}.50`,
+                    color: `${color}.main`,
+                    display: "flex",
+                  }}
+                >
+                  {icon}
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    {label}
+                  </Typography>
+                  <Typography variant="subtitle1" fontWeight={700} color={`${color}.main`} lineHeight={1.2}>
+                    {value}
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        ))}
+      </Box>
+
+      {/* Filters */}
+      <Card variant="outlined" sx={{ borderRadius: 2 }}>
+        <CardContent sx={{ p: "12px !important" }}>
+          <Box
+            component="form"
+            onSubmit={handleFilterSubmit}
+            sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, alignItems: "flex-end" }}
+          >
+            <TextField
+              name="startDate"
+              type="date"
+              size="small"
+              label="من تاريخ"
+              InputLabelProps={{ shrink: true }}
+              defaultValue={startDate}
+              sx={{ width: 160 }}
+            />
+            <TextField
+              name="endDate"
+              type="date"
+              size="small"
+              label="إلى تاريخ"
+              InputLabelProps={{ shrink: true }}
+              defaultValue={endDate}
+              sx={{ width: 160 }}
+            />
+            <TextField
+              name="shiftId"
+              size="small"
+              label="رقم الوردية"
+              defaultValue={shiftIdParam || ""}
+              sx={{ width: 140 }}
+            />
+            <Button
+              type="submit"
+              variant="contained"
+              size="small"
+              sx={{ textTransform: "none", height: 36 }}
+            >
+              تطبيق
+            </Button>
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* Table Card */}
+      <Card
+        variant="outlined"
         sx={{
-          maxWidth: "1200px",
-          mx: "auto",
-          px: { xs: 2, sm: 3, lg: 4 },
+          borderRadius: 2,
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          minHeight: 0,
+          maxHeight: "calc(100vh - 300px)",
         }}
       >
-        <Stack spacing={3}>
-          {/* Header */}
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-            flexWrap="wrap"
-            gap={2}
-          >
-            <Stack direction="row" alignItems="center" spacing={2}>
-              <Button
-                onClick={() => navigate("/sales/pos-blank")}
-                size="small"
-                variant="outlined"
-                startIcon={<ArrowLeft size={16} />}
-                sx={{ borderRadius: 2, textTransform: "none" }}
-              >
-                رجوع
-              </Button>
-              <Box>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  سجل مردودات المبيعات
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  عرض وإدارة مردودات المبيعات حسب التاريخ والوردية
-                </Typography>
+        <CardContent
+          sx={{
+            p: "12px !important",
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+          }}
+        >
+          {/* Table header row */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+            <RotateCcw size={15} style={{ color: "var(--mui-palette-text-secondary)" }} />
+            <Typography variant="subtitle2" fontWeight={700}>
+              قائمة المردودات
+            </Typography>
+            <Chip
+              label={meta.total ?? returns.length}
+              size="small"
+              sx={{ height: 20, fontSize: "0.7rem" }}
+            />
+            <Box sx={{ flex: 1 }} />
+            <Tooltip title="تحديث">
+              <span>
+                <IconButton size="small" onClick={() => refetch()} disabled={isFetching}>
+                  <RefreshCw size={15} className={isFetching ? "animate-spin" : ""} />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Box>
+          <Divider sx={{ mb: 1 }} />
+
+          <Box sx={{ flex: 1, overflow: "auto" }}>
+            {isLoading ? (
+              <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: 8, gap: 1.5 }}>
+                <CircularProgress size={24} />
+                <Typography color="text.secondary" variant="body2">جاري التحميل...</Typography>
               </Box>
-            </Stack>
-
-            <Button
-              variant="contained"
-              onClick={() => navigate("/sales/returns/new")}
-              sx={{ textTransform: "none", borderRadius: 2 }}
-            >
-              مردود جديد
-            </Button>
-          </Stack>
-
-          {/* Filters */}
-          <Card>
-            <CardContent>
-              <Box
-                component="form"
-                onSubmit={handleFilterSubmit}
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "1fr",
-                    sm: "repeat(3, 1fr)",
-                    md: "repeat(4, 1fr)",
-                  },
-                  gap: 2,
-                  alignItems: "flex-end",
-                }}
-              >
-                <TextField
-                  name="startDate"
-                  type="date"
-                  size="small"
-                  label="من تاريخ"
-                  InputLabelProps={{ shrink: true }}
-                  defaultValue={startDate}
-                />
-                <TextField
-                  name="endDate"
-                  type="date"
-                  size="small"
-                  label="إلى تاريخ"
-                  InputLabelProps={{ shrink: true }}
-                  defaultValue={endDate}
-                />
-                <TextField
-                  name="shiftId"
-                  size="small"
-                  label="رقم الوردية (اختياري)"
-                  defaultValue={shiftIdParam || ""}
-                />
-                <Button
-                  type="submit"
-                  variant="contained"
-                  sx={{ textTransform: "none", borderRadius: 2 }}
-                >
-                  تطبيق الفلاتر
-                </Button>
+            ) : returns.length === 0 ? (
+              <Box sx={{ textAlign: "center", py: 8, color: "text.secondary" }}>
+                <PackageX size={40} style={{ opacity: 0.25, marginBottom: 8 }} />
+                <Typography variant="body2">لا توجد مردودات مطابقة للفلاتر الحالية</Typography>
               </Box>
-            </CardContent>
-          </Card>
+            ) : (
+              <Table size="small" stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 700, width: 40 }}>م</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>التاريخ</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>#فاتورة</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>رقم الهاتف</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>المستخدم</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>الوردية</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>السبب</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }} align="center">طريقة المردود</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }} align="center">الأصناف</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }} align="right">الإجمالي</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {returns.map((r, index) => {
+                    const itemsTotal =
+                      r.items?.reduce(
+                        (acc, item) => acc + Number(item.price) * Number(item.quantity),
+                        0,
+                      ) ?? 0;
+                    const method = r.returned_payment_method ?? "";
+                    const methodLabel = METHOD_LABELS[method] ?? method;
+                    const methodColor = METHOD_COLORS[method] ?? "default";
 
-          {/* Stats */}
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-            <Card sx={{ flex: 1, minWidth: 220 }}>
-              <CardContent>
-                <Stack direction="row" justifyContent="space-between">
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      عدد المردودات
-                    </Typography>
-                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                      {formatNumber(meta.total ?? returns.length)}
-                    </Typography>
-                  </Box>
-                  <FileText className="h-8 w-8 text-blue-500" />
-                </Stack>
-              </CardContent>
-            </Card>
-            <Card sx={{ flex: 1, minWidth: 220 }}>
-              <CardContent>
-                <Typography variant="body2" color="text.secondary">
-                  إجمالي القيمة
-                </Typography>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                  {formatNumber(totalAmount)}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Stack>
+                    return (
+                      <TableRow key={r.id} hover sx={{ "&:last-child td": { border: 0 } }}>
+                        <TableCell sx={{ fontSize: "0.75rem", color: "text.disabled", textAlign: "center" }}>
+                          {(pageParam - 1) * 20 + index + 1}
+                        </TableCell>
 
-          {/* Table */}
-          <Card>
-            <CardContent>
-              <Stack
-                direction="row"
-                justifyContent="space-between"
-                alignItems="center"
-                mb={2}
-              >
-                <Typography variant="subtitle1" fontWeight={600}>
-                  قائمة المردودات
-                </Typography>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => refetch()}
-                  startIcon={<RefreshCw size={16} />}
-                  disabled={isLoading}
-                  sx={{ textTransform: "none", borderRadius: 2 }}
-                >
-                  تحديث
-                </Button>
-              </Stack>
+                        <TableCell sx={{ whiteSpace: "nowrap" }}>
+                          <Typography variant="body2" fontSize="0.8rem">
+                            {r.created_at
+                              ? format(new Date(r.created_at), "yyyy-MM-dd")
+                              : "—"}
+                          </Typography>
+                          {r.created_at && (
+                            <Typography variant="caption" color="text.disabled" display="block" fontSize="0.7rem">
+                              {format(new Date(r.created_at), "HH:mm")}
+                            </Typography>
+                          )}
+                        </TableCell>
 
-              {isLoading ? (
-                <Typography variant="body2">جاري التحميل...</Typography>
-              ) : returns.length === 0 ? (
-                <Box sx={{ textAlign: "center", py: 6 }}>
-                  <Typography variant="body1" color="text.secondary">
-                    لا توجد مردودات مطابقة للفلاتر الحالية
-                  </Typography>
-                </Box>
-              ) : (
-                <Box sx={{ overflowX: "auto" }}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>#</TableCell>
-                        <TableCell>التاريخ</TableCell>
-                        <TableCell>الفاتورة</TableCell>
-                        <TableCell>رقم الهاتف</TableCell>
-                        <TableCell>المستخدم</TableCell>
-                        <TableCell>الوردية</TableCell>
-                        <TableCell>السبب</TableCell>
-                        <TableCell>طريقة المردود</TableCell>
-                        <TableCell align="right">عدد الأصناف</TableCell>
-                        <TableCell align="right">إجمالي القيمة</TableCell>
+                        <TableCell sx={{ fontSize: "0.8rem", color: "text.secondary" }}>
+                          {r.sale_id != null ? (
+                            <Chip
+                              label={`#${r.sale_id}`}
+                              size="small"
+                              variant="outlined"
+                              sx={{ height: 18, fontSize: "0.7rem" }}
+                            />
+                          ) : "—"}
+                        </TableCell>
+
+                        <TableCell sx={{ fontSize: "0.8rem" }} dir="ltr">
+                          {r.phone_number ?? "—"}
+                        </TableCell>
+
+                        <TableCell sx={{ fontSize: "0.8rem" }}>
+                          {r.user?.name ?? "—"}
+                        </TableCell>
+
+                        <TableCell sx={{ fontSize: "0.8rem", color: "text.secondary" }}>
+                          {r.shift_id ? `#${r.shift_id}` : "—"}
+                        </TableCell>
+
+                        <TableCell sx={{ fontSize: "0.8rem", maxWidth: 160 }}>
+                          <Typography
+                            variant="body2"
+                            fontSize="0.8rem"
+                            noWrap
+                            title={r.reason ?? ""}
+                          >
+                            {r.reason ?? "—"}
+                          </Typography>
+                        </TableCell>
+
+                        <TableCell align="center">
+                          <Chip
+                            label={methodLabel}
+                            size="small"
+                            color={methodColor}
+                            variant="outlined"
+                            sx={{ height: 20, fontSize: "0.7rem" }}
+                          />
+                        </TableCell>
+
+                        <TableCell align="center">
+                          <Chip
+                            label={r.items?.length ?? 0}
+                            size="small"
+                            variant="outlined"
+                            sx={{ height: 18, fontSize: "0.7rem" }}
+                          />
+                        </TableCell>
+
+                        <TableCell align="right" dir="ltr" sx={{ fontWeight: 700, fontSize: "0.82rem", color: "error.main" }}>
+                          {formatNumber(itemsTotal)}
+                        </TableCell>
                       </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {returns.map((r) => {
-                        const createdAt = r.created_at
-                          ? new Date(r.created_at).toLocaleString("ar-EG", {
-                              dateStyle: "short",
-                              timeStyle: "short",
-                            })
-                          : "";
-                        const itemsTotal =
-                          r.items?.reduce(
-                            (acc, item) =>
-                              acc +
-                              Number(item.price) * Number(item.quantity),
-                            0,
-                          ) ?? 0;
-                        const paymentLabel =
-                          r.returned_payment_method === "cash"
-                            ? "نقدي"
-                            : r.returned_payment_method === "bankak"
-                            ? "بنكك"
-                            : r.returned_payment_method === "fawry"
-                            ? "فوري"
-                            : r.returned_payment_method === "ocash"
-                            ? "أوكاش"
-                            : r.returned_payment_method;
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </Box>
 
-                        return (
-                          <TableRow key={r.id}>
-                            <TableCell>{r.id}</TableCell>
-                            <TableCell>{createdAt}</TableCell>
-                            <TableCell>
-                              {r.sale_id != null ? `#${r.sale_id}` : "-"}
-                            </TableCell>
-                            <TableCell>{r.phone_number ?? "-"}</TableCell>
-                            <TableCell>{r.user?.name ?? "-"}</TableCell>
-                            <TableCell>
-                              {r.shift_id ? `#${r.shift_id}` : "-"}
-                            </TableCell>
-                            <TableCell>{r.reason ?? "-"}</TableCell>
-                            <TableCell>{paymentLabel}</TableCell>
-                            <TableCell align="right">
-                              {r.items?.length ?? 0}
-                            </TableCell>
-                            <TableCell align="right">
-                              {formatNumber(itemsTotal)}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </Box>
-              )}
-
-              {/* Simple previous/next pagination */}
-              {meta.last_page > 1 && (
-                <Stack
-                  direction="row"
-                  justifyContent="center"
-                  alignItems="center"
-                  spacing={2}
-                  mt={3}
+          {/* Pagination */}
+          {meta.last_page > 1 && (
+            <>
+              <Divider sx={{ mt: 1 }} />
+              <Stack direction="row" justifyContent="center" alignItems="center" spacing={1} pt={1}>
+                <IconButton
+                  size="small"
+                  onClick={() => handlePageChange(-1)}
+                  disabled={meta.current_page <= 1}
                 >
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => handlePageChange(-1)}
-                    disabled={meta.current_page <= 1}
-                  >
-                    السابق
-                  </Button>
-                  <Typography variant="body2">
-                    صفحة {meta.current_page} من {meta.last_page}
-                  </Typography>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => handlePageChange(1)}
-                    disabled={meta.current_page >= meta.last_page}
-                  >
-                    التالي
-                  </Button>
-                </Stack>
-              )}
-            </CardContent>
-          </Card>
-        </Stack>
-      </Box>
+                  <ChevronRight size={16} />
+                </IconButton>
+                <Typography variant="caption" color="text.secondary">
+                  صفحة {meta.current_page} من {meta.last_page}
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => handlePageChange(1)}
+                  disabled={meta.current_page >= meta.last_page}
+                >
+                  <ChevronLeft size={16} />
+                </IconButton>
+              </Stack>
+            </>
+          )}
+        </CardContent>
+      </Card>
     </Box>
   );
 };
 
 export default SalesReturnsListPage;
-

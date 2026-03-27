@@ -72,9 +72,12 @@ const BackupPage: React.FC = () => {
       setShowCreateDialog(false);
       setCreateForm({ description: '', include_data: true, include_structure: true });
       loadData();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error creating backup:', error);
-      toast.error('فشل في إنشاء النسخة الاحتياطية');
+      const msg = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data?.error
+        || (error as { response?: { data?: { message?: string } } })?.response?.data?.message
+        || 'فشل في إنشاء النسخة الاحتياطية';
+      toast.error(msg);
     } finally {
       setCreating(false);
     }

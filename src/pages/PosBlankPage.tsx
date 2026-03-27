@@ -34,7 +34,7 @@ import saleService, {
 import productService, { Product } from "@/services/productService";
 import clientService, { Client } from "@/services/clientService";
 import reportService from "@/services/reportService";
-import { formatNumber } from "@/constants";
+import { formatNumber, url as apiBaseUrl } from "@/constants";
 import { SaleItemsTable } from "@/components/sales/SaleItemsTable";
 import { PosSalesColumn } from "@/components/sales/PosSalesColumn";
 import ExpenseFormModal from "@/components/admin/expenses/ExpenseFormModal";
@@ -45,7 +45,7 @@ import { useAuth } from "@/context/AuthContext";
 import ExpiryProductsDialog, { PurchaseItem } from "@/components/pos/ExpiryProductsDialog";
 import TopSellingProductsDialog from "@/components/pos/TopSellingProductsDialog";
 import { uploadFileToFirebase } from "@/services/firebaseStorage";
-import { saveShiftToFirestore } from "@/services/firebaseStore";
+import { saveShiftToFirestore, saveSaleToFirestore, SaleData } from "@/services/firebaseStore";
 import {
   ShiftFinancialTable,
   ShiftStats,
@@ -56,6 +56,49 @@ import { SaleSummaryPanel } from "@/components/pos/SaleSummaryPanel";
 
 
 // const filter = createFilterOptions<ClientOptionType>();
+
+function toFirestoreSaleData(sale: Sale): SaleData {
+  return {
+    id: sale.id,
+    number:          sale.number          ?? null,
+    client_id:       sale.client_id       ?? null,
+    client_name:     sale.client_name     ?? null,
+    user_id:         sale.user_id         ?? null,
+    user_name:       sale.user_name       ?? null,
+    shift_id:        sale.shift_id        ?? null,
+    sale_date:       sale.sale_date,
+    invoice_number:  sale.invoice_number  ?? null,
+    status:          sale.status          ?? null,
+    total_amount:    Number(sale.total_amount   ?? 0),
+    subtotal:        sale.subtotal        != null ? Number(sale.subtotal)        : null,
+    paid_amount:     Number(sale.paid_amount    ?? 0),
+    due_amount:      sale.due_amount      != null ? Number(sale.due_amount)      : null,
+    discount_amount: sale.discount_amount != null ? Number(sale.discount_amount) : null,
+    discount_type:   sale.discount_type   ?? null,
+    is_returned:     sale.is_returned     ?? null,
+    notes:           sale.notes           ?? null,
+    created_at:      sale.created_at,
+    updated_at:      sale.updated_at      ?? null,
+    items: sale.items?.map((item) => ({
+      id:                 item.id                 ?? null,
+      product_id:         item.product_id,
+      product_name:       item.product_name       ?? null,
+      quantity:           Number(item.quantity    ?? 0),
+      unit_price:         Number(item.unit_price  ?? 0),
+      total_price:        item.total_price        != null ? Number(item.total_price)        : null,
+      cost_price_at_sale: item.cost_price_at_sale != null ? Number(item.cost_price_at_sale) : null,
+      returned_quantity:  item.returned_quantity  ?? null,
+    })) ?? null,
+    payments: sale.payments?.map((p) => ({
+      id:               p.id               ?? null,
+      method:           p.method,
+      amount:           Number(p.amount    ?? 0),
+      payment_date:     p.payment_date     ?? null,
+      reference_number: p.reference_number ?? null,
+      notes:            p.notes            ?? null,
+    })) ?? null,
+  };
+}
 
 interface Shift {
   id: number;
@@ -74,6 +117,17 @@ const PosBlankPage: React.FC = () => {
     "firebase_collection_name",
     "one_care",
   );
+
+  const syncSaleToFirestore = useCallback(
+    (sale: Sale) => {
+      saveSaleToFirestore(
+        toFirestoreSaleData(sale),
+        firebaseCollectionName as string,
+      ).catch((e) => console.warn("Sale Firestore sync failed:", e));
+    },
+    [firebaseCollectionName],
+  );
+
   const [shift, setShift] = useState<Shift | null>(null);
   const [shiftLoading, setShiftLoading] = useState(false);
   const [createSaleLoading, setCreateSaleLoading] = useState(false);
@@ -367,6 +421,7 @@ const PosBlankPage: React.FC = () => {
       const updated = await saleService.getSale(selectedSale.id);
       setSelectedSale(updated);
       setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+      syncSaleToFirestore(updated);
       setNewPaymentAmount("");
       toast.success("تمت إضافة الدفعة");
     } catch (err) {
@@ -517,6 +572,7 @@ const PosBlankPage: React.FC = () => {
       const updated = await saleService.getSale(selectedSale.id);
       setSelectedSale(updated);
       setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+      syncSaleToFirestore(updated);
       toast.success("تم التسديد بالكامل");
     } catch (err) {
       toast.error(saleService.getErrorMessage(err));
@@ -1060,6 +1116,90 @@ const PosBlankPage: React.FC = () => {
       setA4PdfUrl(null);
     }
   }, [a4PdfUrl]);
+
+  const [whatsAppLoading, setWhatsAppLoading] = useState(false);
+
+  const handleSendWhatsApp = useCallback(async () => {
+    if (!selectedSale?.id || !selectedSale.client_id) return;
+
+    // phone is on selectedSale.client (loaded via getSale); fall back to clientOptions cache
+    let phone = selectedSale.client?.phone;
+    const cachedClient = clientOptions.find((c) => c.id === selectedSale.client_id);
+    if (!phone) phone = cachedClient?.phone ?? null;
+
+    // If still missing, fetch client directly
+    if (!phone) {
+      try {
+        const res = await apiClient.get(`/clients/${selectedSale.client_id}`);
+        phone = res.data?.phone ?? null;
+      } catch {
+        // ignore
+      }
+    }
+
+    if (!phone) {
+      toast.error("لا يوجد رقم هاتف للعميل");
+      return;
+    }
+
+    setWhatsAppLoading(true);
+    const toastId = `whatsapp-${selectedSale.id}`;
+    try {
+      const clientName = selectedSale.client_name || cachedClient?.name || "";
+      const filename = `invoice_${selectedSale.id}.pdf`;
+
+      // Step 1 — fetch the PDF blob from the backend
+      toast.loading("جاري تحميل الفاتورة...", { id: toastId });
+      const pdfResponse = await apiClient.get(
+        `/sales/${selectedSale.id}/a4-invoice-pdf/view`,
+        { responseType: "blob" },
+      );
+      const pdfBlob = new Blob([pdfResponse.data], { type: "application/pdf" });
+
+      // Step 2 — upload to Firebase Storage under invoices/{collection}/
+      toast.loading("جاري رفع الفاتورة إلى Firebase...", { id: toastId });
+      const storagePath = `invoices/${firebaseCollectionName}/${filename}`;
+      const downloadUrl = await uploadFileToFirebase(pdfBlob, storagePath);
+
+      // Step 3 — send WhatsApp template with the Firebase download URL
+      toast.loading("جاري إرسال الواتساب...", { id: toastId });
+      await apiClient.post("/admin/whatsapp-cloud/send-template", {
+        to: phone,
+        template_name: "client_invoice",
+        language_code: "ar",
+        components: [
+          {
+            type: "header",
+            parameters: [
+              {
+                type: "document",
+                document: {
+                  link: downloadUrl,
+                  filename,
+                },
+              },
+            ],
+          },
+          {
+            type: "body",
+            parameters: [
+              {
+                type: "text",
+                text: clientName,
+              },
+            ],
+          },
+        ],
+      });
+
+      toast.success("✅ تم إرسال الفاتورة عبر واتساب بنجاح", { id: toastId, duration: 4000 });
+    } catch (err) {
+      console.error("WhatsApp send error:", err);
+      toast.error("فشل إرسال الفاتورة عبر واتساب", { id: toastId });
+    } finally {
+      setWhatsAppLoading(false);
+    }
+  }, [selectedSale, clientOptions, firebaseCollectionName]);
 
   const handleCreateShiftPdfReport = useCallback(
     async (forceUpload = false, statsOverride?: ShiftStats) => {
@@ -1889,6 +2029,8 @@ const PosBlankPage: React.FC = () => {
             handleFullPayment={handleFullPayment}
             handleSaleDateChange={handleSaleDateChange}
             saleDateLoading={saleDateLoading}
+            whatsAppLoading={whatsAppLoading}
+            handleSendWhatsApp={handleSendWhatsApp}
           />
         </Box>
       </Box>

@@ -1,6 +1,6 @@
 // src/components/layouts/UserMenu.tsx
 import React from 'react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import {
     Menu,
     MenuItem,
@@ -18,12 +18,10 @@ interface UserMenuProps {
 
 const UserMenu: React.FC<UserMenuProps> = ({ anchorEl, onClose }) => {
     const { handleLogout } = useAuth();
-    const navigate = useNavigate();
 
-    const handleLogoutClick = () => {
-        handleLogout();
+    const handleLogoutClick = async () => {
         onClose();
-        navigate('/login');
+        await handleLogout();
     };
 
     return (
