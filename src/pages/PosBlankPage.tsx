@@ -129,6 +129,7 @@ const PosBlankPage: React.FC = () => {
   );
   const [discountValue, setDiscountValue] = useState("");
   const [discountLoading, setDiscountLoading] = useState(false);
+  const [saleDateLoading, setSaleDateLoading] = useState(false);
 
   // Batch quantity update state
   const [batchQuantity, setBatchQuantity] = useState<string>("");
@@ -313,6 +314,21 @@ const PosBlankPage: React.FC = () => {
   );
 
 
+
+  const handleSaleDateChange = useCallback(async (date: string) => {
+    if (!selectedSale?.id) return;
+    setSaleDateLoading(true);
+    try {
+      await saleService.updateSale(selectedSale.id, { sale_date: date });
+      setSelectedSale((prev) => (prev ? { ...prev, sale_date: date } : prev));
+      setSales((prev) => prev.map((s) => (s.id === selectedSale.id ? { ...s, sale_date: date } : s)));
+      toast.success("تم تحديث تاريخ الفاتورة");
+    } catch (err) {
+      toast.error(saleService.getErrorMessage(err));
+    } finally {
+      setSaleDateLoading(false);
+    }
+  }, [selectedSale?.id]);
 
   const handleAddPayment = useCallback(async () => {
     if (!selectedSale) return;
@@ -1871,6 +1887,8 @@ const PosBlankPage: React.FC = () => {
             handlePrintA4Invoice={handlePrintA4Invoice}
             fullPaymentLoading={fullPaymentLoading}
             handleFullPayment={handleFullPayment}
+            handleSaleDateChange={handleSaleDateChange}
+            saleDateLoading={saleDateLoading}
           />
         </Box>
       </Box>

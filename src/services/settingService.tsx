@@ -48,6 +48,8 @@ export interface AppSettings {
   product_scientific_name_required?: boolean;
   pos_show_expired_products?: boolean;
   pos_show_out_of_stock_products?: boolean;
+  purchase_use_batch_number?: boolean;
+  purchase_use_expiry_date?: boolean;
 }
 
 // Type for the update payload (can be partial)

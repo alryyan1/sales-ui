@@ -20,6 +20,7 @@ import purchaseService from "@/services/purchaseService";
 import productService, {
   Product as ProductType,
 } from "@/services/productService";
+import { useSettings } from "@/context/SettingsContext";
 
 // Subcomponents
 import {
@@ -37,6 +38,9 @@ const ManagePurchaseItemsPage: React.FC = () => {
   const purchaseId = purchaseIdParam ? Number(purchaseIdParam) : null;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { getSetting } = useSettings();
+  const showBatchNumber = getSetting("purchase_use_batch_number", true) ?? true;
+  const showExpiryDate = getSetting("purchase_use_expiry_date", true) ?? true;
 
   // Dialog states
   const [addItemDialogOpen, setAddItemDialogOpen] = useState(false);
@@ -610,6 +614,8 @@ const ManagePurchaseItemsPage: React.FC = () => {
         isCreating={addItemMutation.isPending}
         markupPercentage={markupPercentage}
         currency={purchase?.currency}
+        showBatchNumber={showBatchNumber}
+        showExpiryDate={showExpiryDate}
       />
 
       {/* Inventory Impact Dialog */}

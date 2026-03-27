@@ -11,6 +11,7 @@ import { PDF_FONTS } from "@/utils/pdfFontRegistry";
 import { CompanyInfoSettings } from "@/components/settings/CompanyInfoSettings";
 import { BusinessRulesSettings } from "@/components/settings/BusinessRulesSettings";
 import { PosSettings } from "@/components/settings/PosSettings";
+import { PurchaseSettings } from "@/components/settings/PurchaseSettings";
 
 // shadcn/ui Components
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ import {
   FileText,
   Upload,
   Save,
+  ShoppingCart,
 } from "lucide-react";
 
 // Form values type
@@ -82,6 +84,8 @@ const SettingsPage: React.FC = () => {
       pos_filter_sales_by_user: false,
       whatsapp_shift_closure_numbers: "",
       firebase_collection_name: "one_care",
+      purchase_use_batch_number: true,
+      purchase_use_expiry_date: true,
     },
   });
 
@@ -132,6 +136,10 @@ const SettingsPage: React.FC = () => {
           settings.pos_show_expired_products ?? false,
         pos_show_out_of_stock_products:
           settings.pos_show_out_of_stock_products ?? false,
+        purchase_use_batch_number:
+          settings.purchase_use_batch_number ?? true,
+        purchase_use_expiry_date:
+          settings.purchase_use_expiry_date ?? true,
       });
 
       if (settings.company_logo_url) setLogoPreview(settings.company_logo_url);
@@ -167,6 +175,8 @@ const SettingsPage: React.FC = () => {
       pos_filter_sales_by_user: Boolean(data.pos_filter_sales_by_user),
       pos_show_expired_products: Boolean(data.pos_show_expired_products),
       pos_show_out_of_stock_products: Boolean(data.pos_show_out_of_stock_products),
+      purchase_use_batch_number: Boolean(data.purchase_use_batch_number),
+      purchase_use_expiry_date: Boolean(data.purchase_use_expiry_date),
     };
 
     try {
@@ -313,6 +323,20 @@ const SettingsPage: React.FC = () => {
                     <div className="font-medium">إعدادات PDF</div>
                     <div className="text-xs text-muted-foreground">
                       الخطوط وتنسيق الطباعة
+                    </div>
+                  </div>
+                </div>
+              </TabsTrigger>
+              <TabsTrigger
+                value="5"
+                className="h-18 rounded-none border-b-2 border-transparent px-4 py-4 data-[state=active]:border-primary data-[state=active]:bg-transparent"
+              >
+                <div className="flex items-center gap-2 text-right">
+                  <ShoppingCart className="h-5 w-5" />
+                  <div>
+                    <div className="font-medium">المشتريات</div>
+                    <div className="text-xs text-muted-foreground">
+                      الباتش وتاريخ الانتهاء
                     </div>
                   </div>
                 </div>
@@ -570,6 +594,11 @@ const SettingsPage: React.FC = () => {
                     />
                   </CardContent>
                 </Card>
+              </TabsContent>
+
+              {/* SECTION 5: Purchase Settings */}
+              <TabsContent value="5">
+                <PurchaseSettings control={control} />
               </TabsContent>
             </div>
           </Tabs>

@@ -26,6 +26,8 @@ interface InlineCreatePurchaseItemProps {
   onCancel: () => void;
   isLoading: boolean;
   markupPercentage?: number;
+  showBatchNumber?: boolean;
+  showExpiryDate?: boolean;
 }
 
 const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
@@ -33,6 +35,8 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
   onCancel,
   isLoading,
   markupPercentage = 20,
+  showBatchNumber = true,
+  showExpiryDate = true,
 }) => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productInputValue, setProductInputValue] = useState("");
@@ -51,6 +55,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
 
   // Ref for inputs to handle focus navigation
   const productInputRef = useRef<HTMLInputElement>(null);
+  const highlightedProductRef = useRef<Product | null>(null);
   const quantityInputRef = useRef<HTMLInputElement>(null);
   const unitCostInputRef = useRef<HTMLInputElement>(null);
   const salePriceInputRef = useRef<HTMLInputElement>(null);
@@ -118,15 +123,23 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
     setSelectedProduct(product);
     if (product) {
       setProductInputValue(product.name);
-      // Auto-focus batch number field after product selection
+      // Auto-focus the first visible field after product
       setTimeout(() => {
-        batchNumberInputRef.current?.focus();
-        batchNumberInputRef.current?.select();
+        if (showBatchNumber) {
+          batchNumberInputRef.current?.focus();
+          batchNumberInputRef.current?.select();
+        } else if (showExpiryDate) {
+          expiryDateInputRef.current?.focus();
+          expiryDateInputRef.current?.select();
+        } else {
+          unitCostInputRef.current?.focus();
+          unitCostInputRef.current?.select();
+        }
       }, 100);
     } else {
       setProductInputValue("");
     }
-  }, []);
+  }, [showBatchNumber, showExpiryDate]);
 
   // Reset form to initial state
   const resetForm = useCallback(() => {
@@ -231,6 +244,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
           autoHighlight
           freeSolo
           size="small"
+          onHighlightChange={(_, option) => { highlightedProductRef.current = option; }}
           renderInput={(params) => (
             <TextField
               {...params}
@@ -239,11 +253,10 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
               inputRef={productInputRef}
               onKeyDown={async (e) => {
                 if (e.key === "Enter") {
-                  // If autocomplete is loading, prevent default to avoid selecting incomplete results
-                  // except if we are forcing a scan
+                  // If the dropdown has a highlighted option, let the Autocomplete
+                  // handle the Enter key natively so arrow-key selection works.
+                  if (highlightedProductRef.current) return;
 
-                  // Use ref value to get the most current input without waiting for React state updates
-                  // This is critical for barcode scanners which type very fast
                   const barcode = productInputRef.current?.value?.trim();
 
                   if (!barcode) return;
@@ -352,58 +365,65 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
       </Box>
 
       {/* Batch Number - 2 */}
-      <TextField
-        size="small"
-        placeholder="Batch No"
-        inputRef={batchNumberInputRef}
-        value={batchNumber}
-        onChange={(e) => setBatchNumber(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            // Focus inside the DatePicker input
-            // Note: DatePicker input ref might be wrapped, strictly using inputRef passed to slotProps
-            expiryDateInputRef.current?.focus();
-            expiryDateInputRef.current?.select();
-          }
-        }}
-        sx={{ width: 120 }}
-      />
-
-      {/* Expiry Date - 3 */}
-      <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <DatePicker
-          label=""
-          value={expiryDate ? new Date(expiryDate) : null}
-          onChange={(newValue) => {
-            if (newValue) {
-              const formattedDate = newValue.toISOString().split("T")[0];
-              setExpiryDate(formattedDate);
-            } else {
-              setExpiryDate("");
+      {showBatchNumber && (
+        <TextField
+          size="small"
+          placeholder="Batch No"
+          inputRef={batchNumberInputRef}
+          value={batchNumber}
+          onChange={(e) => setBatchNumber(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              if (showExpiryDate) {
+                expiryDateInputRef.current?.focus();
+                expiryDateInputRef.current?.select();
+              } else {
+                unitCostInputRef.current?.focus();
+                unitCostInputRef.current?.select();
+              }
             }
           }}
-          format="yyyy/MM/dd"
-          slots={{
-            openPickerButton: () => null,
-          }}
-          slotProps={{
-            textField: {
-              size: "small",
-              placeholder: "Expiry Date",
-              sx: { width: 140 },
-              inputRef: expiryDateInputRef,
-              onKeyDown: (e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  unitCostInputRef.current?.focus();
-                  unitCostInputRef.current?.select();
-                }
-              },
-            },
-          }}
+          sx={{ width: 120 }}
         />
-      </LocalizationProvider>
+      )}
+
+      {/* Expiry Date - 3 */}
+      {showExpiryDate && (
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DatePicker
+            label=""
+            value={expiryDate ? new Date(expiryDate) : null}
+            onChange={(newValue) => {
+              if (newValue) {
+                const formattedDate = newValue.toISOString().split("T")[0];
+                setExpiryDate(formattedDate);
+              } else {
+                setExpiryDate("");
+              }
+            }}
+            format="yyyy/MM/dd"
+            slots={{
+              openPickerButton: () => null,
+            }}
+            slotProps={{
+              textField: {
+                size: "small",
+                placeholder: "Expiry Date",
+                sx: { width: 140 },
+                inputRef: expiryDateInputRef,
+                onKeyDown: (e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    unitCostInputRef.current?.focus();
+                    unitCostInputRef.current?.select();
+                  }
+                },
+              },
+            }}
+          />
+        </LocalizationProvider>
+      )}
 
       {/* Unit Cost - 4 */}
       <TextField

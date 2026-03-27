@@ -44,6 +44,8 @@ interface PurchaseItemsTableProps {
   startIndex: number; // For pagination numbering
   totalCount: number; // Total number of items across all pages
   currency?: string;
+  showBatchNumber?: boolean;
+  showExpiryDate?: boolean;
 }
 
 const columnHelper = createColumnHelper<PurchaseItem>();
@@ -59,6 +61,8 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
   startIndex,
   totalCount,
   currency,
+  showBatchNumber = true,
+  showExpiryDate = true,
 }) => {
   // Helper to check if a specific field is being updated
   const isFieldUpdating = useCallback(
@@ -124,68 +128,78 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
         size: 200,
       }),
 
-      // 3. Batch Number column
-      columnHelper.accessor("batch_number", {
-        header: "Batch Number",
-        cell: ({ row }) => {
-          const item = row.original;
-          return (
-            <Box sx={{ position: "relative", minWidth: 100 }}>
-              <InstantTextField
-                value={item.batch_number || ""}
-                onChangeValue={(v) => onUpdate(item.id, "batch_number", v)}
-                type="text"
-                placeholder="—"
-                disabled={isReadOnly}
-              />
-              {isFieldUpdating(item.id, "batch_number") && (
-                <CircularProgress
-                  size={16}
-                  sx={{
-                    position: "absolute",
-                    right: 8,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                  }}
-                />
-              )}
-            </Box>
-          );
-        },
-        size: 120,
-      }),
+      // 3. Batch Number column (optional)
+      ...(showBatchNumber
+        ? [
+            columnHelper.accessor("batch_number", {
+              header: "Batch Number",
+              cell: ({ row }: { row: any }) => {
+                const item = row.original;
+                return (
+                  <Box sx={{ position: "relative", minWidth: 100 }}>
+                    <InstantTextField
+                      value={item.batch_number || ""}
+                      onChangeValue={(v: string) =>
+                        onUpdate(item.id, "batch_number", v)
+                      }
+                      type="text"
+                      placeholder="—"
+                      disabled={isReadOnly}
+                    />
+                    {isFieldUpdating(item.id, "batch_number") && (
+                      <CircularProgress
+                        size={16}
+                        sx={{
+                          position: "absolute",
+                          right: 8,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                        }}
+                      />
+                    )}
+                  </Box>
+                );
+              },
+              size: 120,
+            }),
+          ]
+        : []),
 
-      // 4. Expiry Date column
-      columnHelper.accessor("expiry_date", {
-        header: "Expiry Date",
-        cell: ({ row }) => {
-          const item = row.original;
-          return (
-            <Box sx={{ position: "relative", minWidth: 120 }}>
-              <InstantTextField
-                value={item.expiry_date || ""}
-                onChangeValue={(v) =>
-                  onUpdate(item.id, "expiry_date", String(v) || null)
-                }
-                type="date"
-                disabled={false}
-              />
-              {isFieldUpdating(item.id, "expiry_date") && (
-                <CircularProgress
-                  size={16}
-                  sx={{
-                    position: "absolute",
-                    right: 8,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                  }}
-                />
-              )}
-            </Box>
-          );
-        },
-        size: 140,
-      }),
+      // 4. Expiry Date column (optional)
+      ...(showExpiryDate
+        ? [
+            columnHelper.accessor("expiry_date", {
+              header: "Expiry Date",
+              cell: ({ row }: { row: any }) => {
+                const item = row.original;
+                return (
+                  <Box sx={{ position: "relative", minWidth: 120 }}>
+                    <InstantTextField
+                      value={item.expiry_date || ""}
+                      onChangeValue={(v: string) =>
+                        onUpdate(item.id, "expiry_date", String(v) || null)
+                      }
+                      type="date"
+                      disabled={false}
+                    />
+                    {isFieldUpdating(item.id, "expiry_date") && (
+                      <CircularProgress
+                        size={16}
+                        sx={{
+                          position: "absolute",
+                          right: 8,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                        }}
+                      />
+                    )}
+                  </Box>
+                );
+              },
+              size: 140,
+            }),
+          ]
+        : []),
 
       // 5. Unit Cost column
       columnHelper.accessor("unit_cost", {
@@ -398,6 +412,8 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
       totalCount,
       isFieldUpdating,
       currency,
+      showBatchNumber,
+      showExpiryDate,
     ],
   );
 
@@ -409,7 +425,7 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
 
   return (
     <TableContainer dir="ltr" component={Paper}>
-      <Table size="small" sx={{ minWidth: 1200 }}>
+      <Table size="small" >
         <TableHead>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>

@@ -1,5 +1,5 @@
 // src/pages/clients/ClientLedgerPage.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { pdf } from "@react-pdf/renderer";
@@ -18,18 +18,14 @@ import {
   Alert,
   AlertTitle,
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
-  TextField,
-  MenuItem,
-  Select,
-  InputLabel,
-  FormControl,
   Stack,
   Divider,
   CircularProgress,
   IconButton,
+  Tooltip,
+  Autocomplete,
+  TextField,
 } from "@mui/material";
 import {
   ArrowLeft,
@@ -39,8 +35,7 @@ import {
   TrendingDown,
   Receipt,
   Edit,
-  CreditCard,
-  Wallet,
+  X,
 } from "lucide-react";
 
 import clientLedgerService, {
@@ -52,7 +47,6 @@ import { LedgerSaleEditorDialog } from "@/components/clients/LedgerSaleEditorDia
 import { useSettings } from "@/context/SettingsContext";
 import { toast } from "sonner";
 import apiClient from "@/lib/axios";
-import { X } from "lucide-react";
 
 const ClientLedgerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -63,62 +57,32 @@ const ClientLedgerPage: React.FC = () => {
   const [ledger, setLedger] = useState<ClientLedger | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [settleDialogOpen, setSettleDialogOpen] = useState(false);
-  const [settleAmount, setSettleAmount] = useState<string>("");
-  const [settleDate, setSettleDate] = useState<string>(
-    new Date().toISOString().slice(0, 10),
-  );
-  const [settleMethod, setSettleMethod] = useState<string>("cash");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [reference, setReference] = useState<string>("");
-  const [notes, setNotes] = useState<string>("");
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [fetchingSaleId, setFetchingSaleId] = useState<number | null>(null);
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
-  // Editor Dialog State
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingSaleId, setEditingSaleId] = useState<number | null>(null);
 
-  // Sale Payment Dialog State
-  const [salePaymentOpen, setSalePaymentOpen] = useState(false);
-  const [payingSaleId, setPayingSaleId] = useState<number | null>(null);
-  const [salePaymentAmount, setSalePaymentAmount] = useState<string>("");
-  const [salePaymentMethod, setSalePaymentMethod] = useState<string>("cash");
-  const [salePaymentReference, setSalePaymentReference] = useState<string>("");
-  const [isSubmittingSalePayment, setIsSubmittingSalePayment] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<{ product_id: number; product_name: string } | null>(null);
 
-  const handleEditSaleClick = (saleId: number) => {
-    setEditingSaleId(saleId);
-    setEditorOpen(true);
-  };
+  const productOptions = useMemo(() => {
+    const map = new Map<number, string>();
+    ledger?.ledger_entries.forEach((e) =>
+      e.items?.forEach((i) => {
+        if (!map.has(i.product_id)) map.set(i.product_id, i.product_name);
+      })
+    );
+    return Array.from(map.entries()).map(([product_id, product_name]) => ({ product_id, product_name }));
+  }, [ledger]);
 
-  const handleSaleClick = async (entry: ClientLedgerEntry) => {
-    if (entry.type !== "sale" || !entry.sale_id) return;
-
-    setFetchingSaleId(entry.sale_id);
-    setError(null);
-
-    try {
-      const response = await apiClient.get(
-        `/sales/${entry.sale_id}/a4-invoice-pdf/view`,
-        {
-          responseType: "blob",
-        },
-      );
-      const blob = new Blob([response.data], { type: "application/pdf" });
-      const url = window.URL.createObjectURL(blob);
-      setPdfUrl(url);
-      setPdfDialogOpen(true);
-    } catch (err: unknown) {
-      console.error("Error loading A4 invoice:", err);
-      setError(err instanceof Error ? err.message : "فشل تحميل فاتورة A4");
-      toast.error("فشل تحميل فاتورة A4");
-    } finally {
-      setFetchingSaleId(null);
-    }
-  };
+  const filteredEntries = useMemo(() =>
+    selectedProduct
+      ? (ledger?.ledger_entries ?? []).filter((e) => e.items?.some((i) => i.product_id === selectedProduct.product_id))
+      : (ledger?.ledger_entries ?? []),
+    [ledger, selectedProduct]
+  );
 
   const fetchLedger = async () => {
     if (!clientId) return;
@@ -139,7 +103,6 @@ const ClientLedgerPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
-  // Clean up PDF URLs to prevent memory leaks
   useEffect(() => {
     return () => {
       if (pdfUrl && pdfUrl.startsWith("blob:")) {
@@ -150,10 +113,8 @@ const ClientLedgerPage: React.FC = () => {
 
   const handleDownloadPdf = async () => {
     if (!ledger) return;
-
     setIsGeneratingPdf(true);
     try {
-      // Create the PDF document
       const doc = (
         <ClientLedgerPdf
           ledger={ledger}
@@ -161,16 +122,10 @@ const ClientLedgerPage: React.FC = () => {
           companyName={settings?.company_name || "اسم الشركة"}
         />
       );
-
-      // Generate blob
       const asPdf = pdf(doc);
       const blob = await asPdf.toBlob();
-
-      // Create blob URL and open in new tab
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
-
-      // Clean up the URL after a delay
       setTimeout(() => URL.revokeObjectURL(url), 100);
     } catch (err) {
       console.error("Error generating PDF:", err);
@@ -180,90 +135,26 @@ const ClientLedgerPage: React.FC = () => {
     }
   };
 
-  const handleSettle = async () => {
-    if (!ledger) return;
-    if (!settleAmount || parseFloat(settleAmount) <= 0) {
-      toast.error("الرجاء إدخال مبلغ صحيح");
-      return;
-    }
-
-    setIsSubmitting(true);
+  const handleSaleClick = async (entry: ClientLedgerEntry) => {
+    if (!entry.sale_id) return;
+    setFetchingSaleId(entry.sale_id);
     try {
-      await clientLedgerService.settleDebt({
-        client_id: clientId,
-        amount: parseFloat(settleAmount),
-        payment_date: settleDate,
-        method: settleMethod,
-        reference_number: reference || null,
-        notes: notes || null,
-      });
-
-      toast.success("تمت التسوية بنجاح");
-      setSettleDialogOpen(false);
-      setSettleAmount("");
-      setReference("");
-      setNotes("");
-      fetchLedger();
-    } catch (err) {
-      toast.error(clientLedgerService.getErrorMessage(err));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleAddSalePayment = async () => {
-    if (!payingSaleId) return;
-    if (!salePaymentAmount || parseFloat(salePaymentAmount) <= 0) {
-      toast.error("الرجاء إدخال مبلغ صحيح");
-      return;
-    }
-
-    setIsSubmittingSalePayment(true);
-    try {
-      // Use addPayment to add a single payment without overwriting existing ones
-      await saleService.addPayment(payingSaleId, {
-        method: salePaymentMethod as "cash" | "bankak" | "fawry" | "ocash",
-        amount: parseFloat(salePaymentAmount),
-        reference_number: salePaymentReference || null,
-      });
-
-      toast.success("تمت إضافة الدفعة بنجاح");
-      setSalePaymentOpen(false);
-      setSalePaymentAmount("");
-      setSalePaymentReference("");
-      setPayingSaleId(null);
-      fetchLedger(); // Refresh ledger
+      const response = await apiClient.get(
+        `/sales/${entry.sale_id}/a4-invoice-pdf/view`,
+        { responseType: "blob" },
+      );
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      setPdfUrl(url);
+      setPdfDialogOpen(true);
     } catch (err: unknown) {
-      console.error("Error adding sale payment:", err);
-      toast.error(err instanceof Error ? err.message : "فشل إضافة الدفعة");
+      console.error("Error loading A4 invoice:", err);
+      toast.error("فشل تحميل فاتورة A4");
     } finally {
-      setIsSubmittingSalePayment(false);
+      setFetchingSaleId(null);
     }
   };
 
-  const getTypeColor = (
-    type: ClientLedgerEntry["type"],
-  ): "error" | "success" | "default" => {
-    switch (type) {
-      case "sale":
-        return "error";
-      case "payment":
-        return "success";
-      default:
-        return "default";
-    }
-  };
-
-  const getTypeLabel = (type: ClientLedgerEntry["type"]) => {
-    switch (type) {
-      case "sale":
-        return "عملية بيع";
-      case "payment":
-        return "دفعة";
-      default:
-        return type;
-    }
-  };
 
   if (isLoading) {
     return (
@@ -272,13 +163,12 @@ const ClientLedgerPage: React.FC = () => {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          minHeight: "400px",
+          minHeight: "40vh",
+          gap: 2,
         }}
       >
-        <CircularProgress />
-        <Typography sx={{ ml: 2 }} color="text.secondary">
-          جاري التحميل...
-        </Typography>
+        <CircularProgress size={28} />
+        <Typography color="text.secondary">جاري التحميل...</Typography>
       </Box>
     );
   }
@@ -289,12 +179,7 @@ const ClientLedgerPage: React.FC = () => {
         <Alert severity="error">
           <AlertTitle>خطأ</AlertTitle>
           {error}
-          <Button
-            onClick={fetchLedger}
-            sx={{ mt: 2 }}
-            variant="outlined"
-            size="small"
-          >
+          <Button onClick={fetchLedger} sx={{ mt: 1 }} variant="outlined" size="small">
             إعادة المحاولة
           </Button>
         </Alert>
@@ -310,284 +195,238 @@ const ClientLedgerPage: React.FC = () => {
     );
   }
 
+  const { summary, client, ledger_entries } = ledger;
+
   return (
-    <Box sx={{ p: { xs: 2, md: 3 }, height: "100%", overflow: "hidden" }}>
+    <Box sx={{ p: { xs: 1.5, md: 2 }, display: "flex", flexDirection: "column", gap: 1.5 }}>
+
       {/* Header */}
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 2,
-          mb: 3,
-          flexWrap: "wrap",
-        }}
-      >
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
         <IconButton onClick={() => navigate("/clients")} size="small">
-          <ArrowLeft />
+          <ArrowLeft size={18} />
         </IconButton>
-        <Stack direction={"column"}>
-          <Typography variant="h4" fontWeight="bold" sx={{ flex: 1 }}>
-            كشف حساب العميل {ledger.client.name}
+
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography variant="h6" fontWeight={700} noWrap>
+            كشف حساب — {client.name}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {ledger.client.phone}
-          </Typography>
-        </Stack>
+          {client.phone && (
+            <Typography variant="caption" color="text.secondary">
+              {client.phone}
+            </Typography>
+          )}
+        </Box>
+
         <Button
           variant="outlined"
-          startIcon={
-            isGeneratingPdf ? <CircularProgress size={16} /> : <FileText />
-          }
+          size="small"
+          startIcon={isGeneratingPdf ? <CircularProgress size={14} /> : <FileText size={15} />}
           onClick={handleDownloadPdf}
           disabled={isGeneratingPdf}
-          sx={{
-            textTransform: "none",
-            "& .MuiButton-startIcon": { marginLeft: "12px" },
-          }}
+          sx={{ textTransform: "none", "& .MuiButton-startIcon": { ml: "6px" } }}
         >
-          {isGeneratingPdf ? "جاري الإنشاء..." : "فتح PDF"}
-        </Button>
-        <Button
-          variant="outlined"
-          startIcon={<Wallet />}
-          onClick={() => setSettleDialogOpen(true)}
-          disabled={ledger.summary.balance === 0}
-        >
-          تسوية الدين
+          {isGeneratingPdf ? "جاري الإنشاء..." : "PDF"}
         </Button>
       </Box>
 
-      {/* Summary Cards */}
+      {/* Summary Strip */}
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: {
-            xs: "1fr",
-            sm: "repeat(3, 1fr)",
-          },
-          gap: 2,
-          mb: 3,
+          gridTemplateColumns: "repeat(3, 1fr)",
+          gap: 1.5,
         }}
       >
-        <Card>
-          <CardContent>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <Box
-                sx={{
-                  p: 1.5,
-                  borderRadius: 2,
-                  bgcolor: "error.50",
-                  color: "error.main",
-                }}
-              >
-                <TrendingUp size={24} />
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="caption" color="text.secondary">
-                  إجمالي المبيعات
-                </Typography>
-                <Typography variant="h5" fontWeight="bold" color="error.main">
-                  {ledger.summary.total_sales.toLocaleString()}
-                </Typography>
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <Box
-                sx={{
-                  p: 1.5,
-                  borderRadius: 2,
-                  bgcolor: "success.50",
-                  color: "success.main",
-                }}
-              >
-                <TrendingDown size={24} />
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="caption" color="text.secondary">
-                  إجمالي الدفعات
-                </Typography>
-                <Typography variant="h5" fontWeight="bold" color="success.main">
-                  {ledger.summary.total_payments.toLocaleString()}
-                </Typography>
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <Box
-                sx={{
-                  p: 1.5,
-                  borderRadius: 2,
-                  bgcolor:
-                    ledger.summary.balance > 0 ? "error.50" : "success.50",
-                  color:
-                    ledger.summary.balance > 0 ? "error.main" : "success.main",
-                }}
-              >
-                <DollarSign size={24} />
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="caption" color="text.secondary">
-                  الرصيد الحالي
-                </Typography>
-                <Typography
-                  variant="h5"
-                  fontWeight="bold"
-                  color={
-                    ledger.summary.balance > 0 ? "error.main" : "success.main"
-                  }
+        {[
+          {
+            label: "إجمالي المبيعات",
+            value: summary.total_sales.toLocaleString(),
+            icon: <TrendingUp size={18} />,
+            color: "error" as const,
+          },
+          {
+            label: "إجمالي الدفعات",
+            value: summary.total_payments.toLocaleString(),
+            icon: <TrendingDown size={18} />,
+            color: "success" as const,
+          },
+          {
+            label: "الرصيد",
+            value: summary.balance.toLocaleString(),
+            icon: <DollarSign size={18} />,
+            color: summary.balance > 0 ? ("error" as const) : ("success" as const),
+          },
+        ].map(({ label, value, icon, color }) => (
+          <Card key={label} variant="outlined" sx={{ borderRadius: 2 }}>
+            <CardContent sx={{ p: "12px !important" }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <Box
+                  sx={{
+                    p: 1,
+                    borderRadius: 1.5,
+                    bgcolor: `${color}.50`,
+                    color: `${color}.main`,
+                    display: "flex",
+                  }}
                 >
-                  {ledger.summary.balance.toLocaleString()}
-                </Typography>
+                  {icon}
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    {label}
+                  </Typography>
+                  <Typography variant="subtitle1" fontWeight={700} color={`${color}.main`} lineHeight={1.2}>
+                    {value}
+                  </Typography>
+                </Box>
               </Box>
-            </Box>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ))}
       </Box>
 
       {/* Ledger Table */}
       <Card
+        variant="outlined"
         sx={{
-          height: "calc(100vh - 120px)",
+          borderRadius: 2,
+          flex: 1,
           display: "flex",
           flexDirection: "column",
+          minHeight: 0,
+          maxHeight: "calc(100vh - 260px)",
         }}
       >
         <CardContent
           sx={{
+            p: "12px !important",
             flex: 1,
-            overflow: "hidden",
             display: "flex",
             flexDirection: "column",
+            overflow: "hidden",
           }}
         >
-          <Typography variant="h6" fontWeight="bold" gutterBottom>
-            حركات الحساب
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1, flexWrap: "wrap" }}>
+            <Typography variant="subtitle2" fontWeight={700}>
+               المبيعات
+            </Typography>
+            <Chip
+              label={selectedProduct ? `${filteredEntries.length} / ${ledger_entries.length}` : ledger_entries.length}
+              size="small"
+              color={selectedProduct ? "primary" : "default"}
+              sx={{ height: 20, fontSize: "0.7rem" }}
+            />
+            <Box sx={{ flex: 1, minWidth: 160 }}>
+              <Autocomplete
+                size="small"
+                options={productOptions}
+                getOptionLabel={(o) => o.product_name}
+                isOptionEqualToValue={(a, b) => a.product_id === b.product_id}
+                value={selectedProduct}
+                onChange={(_, v) => setSelectedProduct(v)}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder="فلترة حسب المنتج..."
+                    inputProps={{ ...params.inputProps, style: { fontSize: "0.78rem" } }}
+                  />
+                )}
+                noOptionsText="لا توجد منتجات"
+                clearOnEscape
+                sx={{ "& .MuiInputBase-root": { py: "1px" } }}
+              />
+            </Box>
+          </Box>
+          <Divider sx={{ mb: 1 }} />
 
           <Box sx={{ flex: 1, overflow: "auto" }}>
-            <Table stickyHeader>
+            <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell align="center">التاريخ</TableCell>
-                  <TableCell align="center">النوع</TableCell>
-                  <TableCell align="center">الوصف</TableCell>
-                  <TableCell align="center">مدين</TableCell>
-                  <TableCell align="center">دائن</TableCell>
-                  <TableCell align="center">الرصيد</TableCell>
-                  <TableCell align="center">المرجع</TableCell>
-                  <TableCell align="center">ملاحظات</TableCell>
-                  <TableCell align="center">إجراءات</TableCell>
+                  <TableCell sx={{ fontWeight: 700, width: 36 }}>م</TableCell>
+                  <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>تاريخ البيع / الإنشاء</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>#</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }} align="center">الأصناف</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }} align="right">الإجمالي</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }} align="right">المدفوع</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }} align="right">المتبقي</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }} align="center">إجراءات</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {ledger.ledger_entries.map((entry, index) => (
-                  <TableRow
-                    key={entry.id}
-                    sx={{
-                      "&:hover": {
-                        bgcolor: "action.hover",
-                      },
-                      bgcolor:
-                        index % 2 === 0 ? "background.paper" : "action.hover",
-                    }}
-                  >
-                    <TableCell align="center">
-                      {format(new Date(entry.date), "yyyy-MM-dd")}
+                {filteredEntries.map((entry, index) => (
+                  <TableRow key={entry.id} hover sx={{ "&:last-child td": { border: 0 } }}>
+
+                    <TableCell sx={{ fontSize: "0.75rem", color: "text.disabled", textAlign: "center" }}>
+                      {index + 1}
                     </TableCell>
-                    <TableCell align="center">
-                      <Chip
-                        label={getTypeLabel(entry.type)}
-                        color={getTypeColor(entry.type)}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell align="center">{entry.description}</TableCell>
-                    <TableCell align="center" dir="ltr">
-                      {entry.debit > 0 ? entry.debit.toLocaleString() : "-"}
-                    </TableCell>
-                    <TableCell align="center" dir="ltr">
-                      {entry.credit > 0 ? entry.credit.toLocaleString() : "-"}
-                    </TableCell>
-                    <TableCell align="center" dir="ltr">
-                      <Typography
-                        fontWeight="bold"
-                        color={
-                          entry.balance > 0 ? "error.main" : "success.main"
-                        }
-                      >
-                        {entry.balance.toLocaleString()}
+
+                    <TableCell sx={{ whiteSpace: "nowrap" }}>
+                      <Typography variant="body2" fontSize="0.8rem">
+                        {format(new Date(entry.date), "yyyy-MM-dd")}
                       </Typography>
-                    </TableCell>
-                    <TableCell align="center">
-                      {entry.reference || "-"}
-                    </TableCell>
-                    <TableCell align="center">{entry.notes || "-"}</TableCell>
-                    <TableCell align="center">
-                      {entry.type === "sale" && entry.sale_id ? (
-                        <Box
-                          sx={{
-                            display: "flex",
-                            gap: 1,
-                            justifyContent: "center",
-                          }}
-                        >
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            onClick={() => handleSaleClick(entry)}
-                            disabled={fetchingSaleId !== null}
-                            startIcon={
-                              fetchingSaleId === entry.sale_id ? (
-                                <CircularProgress size={16} />
-                              ) : (
-                                <Receipt size={16} />
-                              )
-                            }
-                            sx={{ minWidth: "fit-content" }}
-                          >
-                            {fetchingSaleId === entry.sale_id
-                              ? "جاري التحميل..."
-                              : "طباعه الفاتوره"}
-                          </Button>
-                          <Button
-                            variant="outlined"
-                            color="secondary"
-                            size="small"
-                            onClick={() => handleEditSaleClick(entry.sale_id!)}
-                            startIcon={<Edit size={16} />}
-                            sx={{ minWidth: "fit-content" }}
-                          >
-                            تعديل
-                          </Button>
-                        </Box>
-                      ) : (
-                        "-"
+                      {entry.created_at && (
+                        <Typography variant="caption" color="text.disabled" display="block" fontSize="0.7rem">
+                          {format(new Date(entry.created_at), "yyyy-MM-dd HH:mm")}
+                        </Typography>
                       )}
                     </TableCell>
+
+                    <TableCell sx={{ fontSize: "0.8rem", color: "text.secondary" }}>
+                      {entry.sale_id}
+                    </TableCell>
+
+                    <TableCell align="center">
+                      {entry.items_count != null
+                        ? <Chip label={entry.items_count} size="small" variant="outlined" sx={{ height: 18, fontSize: "0.7rem" }} />
+                        : "—"}
+                    </TableCell>
+
+                    <TableCell align="right" dir="ltr" sx={{ fontSize: "0.82rem", fontWeight: 600 }}>
+                      {entry.total.toLocaleString()}
+                    </TableCell>
+
+                    <TableCell align="right" dir="ltr" sx={{ fontSize: "0.82rem", fontWeight: 600, color: entry.paid > 0 ? "success.main" : "text.disabled" }}>
+                      {entry.paid > 0 ? entry.paid.toLocaleString() : "—"}
+                    </TableCell>
+
+                    <TableCell align="right" dir="ltr">
+                      <Typography variant="body2" fontWeight={700} color={entry.due > 0 ? "error.main" : "success.main"}>
+                        {entry.due > 0 ? entry.due.toLocaleString() : "✓"}
+                      </Typography>
+                    </TableCell>
+
+                    <TableCell align="center">
+                      <Stack direction="row" spacing={0.5} justifyContent="center">
+                        <Tooltip title="طباعة الفاتورة">
+                          <span>
+                            <Button size="small" onClick={() => handleSaleClick(entry)}
+                              disabled={fetchingSaleId !== null} color="primary">
+                              {fetchingSaleId === entry.sale_id
+                                ? <CircularProgress size={14} />
+                                : 'طباعه فاتوره'}
+                            </Button>
+                          </span>
+                        </Tooltip>
+                        <Tooltip title="تعديل الفاتورة">
+                          <IconButton size="small" color="secondary"
+                            onClick={() => { setEditingSaleId(entry.sale_id); setEditorOpen(true); }}>
+                            <Edit size={15} />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                    </TableCell>
+
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
 
-            {ledger.ledger_entries.length === 0 && (
-              <Box
-                sx={{
-                  textAlign: "center",
-                  py: 8,
-                  color: "text.secondary",
-                }}
-              >
-                <Typography>لا توجد حركات في كشف الحساب.</Typography>
+            {filteredEntries.length === 0 && (
+              <Box sx={{ textAlign: "center", py: 6, color: "text.secondary" }}>
+                <Typography variant="body2">
+                  {selectedProduct ? `لا توجد مبيعات تحتوي على "${selectedProduct.product_name}".` : "لا توجد حركات في كشف الحساب."}
+                </Typography>
               </Box>
             )}
           </Box>
@@ -600,25 +439,24 @@ const ClientLedgerPage: React.FC = () => {
         onClose={() => setPdfDialogOpen(false)}
         maxWidth="lg"
         fullWidth
-        PaperProps={{
-          sx: { height: "90vh", display: "flex", flexDirection: "column" },
-        }}
+        PaperProps={{ sx: { height: "90vh", display: "flex", flexDirection: "column" } }}
       >
         <Box
           sx={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            p: 2,
+            px: 2,
+            py: 1.5,
             borderBottom: 1,
             borderColor: "divider",
           }}
         >
-          <Typography variant="h6" fontWeight="bold">
+          <Typography variant="subtitle1" fontWeight={700}>
             معاينة الفاتورة
           </Typography>
           <IconButton onClick={() => setPdfDialogOpen(false)} size="small">
-            <X size={20} />
+            <X size={18} />
           </IconButton>
         </Box>
         <DialogContent sx={{ p: 0, flex: 1, overflow: "hidden" }}>
@@ -632,150 +470,6 @@ const ClientLedgerPage: React.FC = () => {
             />
           )}
         </DialogContent>
-      </Dialog>
-
-      {/* Settle Debt Dialog */}
-      <Dialog
-        open={settleDialogOpen}
-        onClose={() => setSettleDialogOpen(false)}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle>تسوية دين العميل</DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={2.5} sx={{ pt: 1 }}>
-            <TextField
-              label="المبلغ"
-              type="number"
-              fullWidth
-              inputProps={{ min: 0, step: 0.01 }}
-              value={settleAmount}
-              onChange={(e) => setSettleAmount(e.target.value)}
-              placeholder="أدخل المبلغ المدفوع"
-            />
-            <TextField
-              label="تاريخ الدفع"
-              type="date"
-              fullWidth
-              value={settleDate}
-              onChange={(e) => setSettleDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-            />
-            <FormControl fullWidth>
-              <InputLabel>طريقة الدفع</InputLabel>
-              <Select
-                value={settleMethod}
-                label="طريقة الدفع"
-                onChange={(e) => setSettleMethod(e.target.value as string)}
-              >
-                <MenuItem value="cash">كاش</MenuItem>
-                <MenuItem value="bankak">بنكك</MenuItem>
-                <MenuItem value="fawry">فوري</MenuItem>
-                <MenuItem value="ocash">أوكاش</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField
-              label="المرجع (اختياري)"
-              fullWidth
-              value={reference}
-              onChange={(e) => setReference(e.target.value)}
-              placeholder="رقم الشيك، رقم العملية، إلخ"
-            />
-            <TextField
-              label="ملاحظات (اختياري)"
-              fullWidth
-              multiline
-              minRows={2}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="أي ملاحظات إضافية"
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button
-            variant="outlined"
-            onClick={() => setSettleDialogOpen(false)}
-            disabled={isSubmitting}
-          >
-            إلغاء
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleSettle}
-            disabled={isSubmitting}
-            startIcon={isSubmitting ? <CircularProgress size={16} /> : null}
-          >
-            {isSubmitting ? "جاري التسوية..." : "تأكيد التسوية"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Add Sale Payment Dialog */}
-      <Dialog
-        open={salePaymentOpen}
-        onClose={() => setSalePaymentOpen(false)}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>إضافة دفعة للفاتورة #{payingSaleId}</DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={2.5} sx={{ pt: 1 }}>
-            <TextField
-              label="المبلغ"
-              type="number"
-              fullWidth
-              inputProps={{ min: 0, step: 0.01 }}
-              value={salePaymentAmount}
-              onChange={(e) => setSalePaymentAmount(e.target.value)}
-              placeholder="أدخل المبلغ المدفوع"
-            />
-            <FormControl fullWidth>
-              <InputLabel>طريقة الدفع</InputLabel>
-              <Select
-                value={salePaymentMethod}
-                label="طريقة الدفع"
-                onChange={(e) => setSalePaymentMethod(e.target.value as string)}
-              >
-                <MenuItem value="cash">كاش</MenuItem>
-                <MenuItem value="bankak">بنكك</MenuItem>
-                <MenuItem value="fawry">فوري</MenuItem>
-                <MenuItem value="ocash">أوكاش</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField
-              label="المرجع (اختياري)"
-              fullWidth
-              value={salePaymentReference}
-              onChange={(e) => setSalePaymentReference(e.target.value)}
-              placeholder="رقم المعاملة البنكية..."
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button
-            variant="outlined"
-            onClick={() => setSalePaymentOpen(false)}
-            disabled={isSubmittingSalePayment}
-          >
-            إلغاء
-          </Button>
-          <Button
-            variant="contained"
-            color="success"
-            onClick={handleAddSalePayment}
-            disabled={isSubmittingSalePayment}
-            startIcon={
-              isSubmittingSalePayment ? (
-                <CircularProgress size={16} />
-              ) : (
-                <CreditCard size={16} />
-              )
-            }
-          >
-            {isSubmittingSalePayment ? "جاري الدفع..." : "تأكيد الدفع"}
-          </Button>
-        </DialogActions>
       </Dialog>
 
       {/* Sale Editor Dialog */}

@@ -3,17 +3,14 @@ import apiClient from "../lib/axios";
 
 export interface ClientLedgerEntry {
   id: string;
-  sale_id?: number;
+  sale_id: number;
   date: string;
-  type: "sale" | "payment";
-  description: string;
-  debit: number; // Amount client owes (e.g., sale)
-  credit: number; // Amount received from client (payment)
-  balance: number;
-  reference?: string;
-  notes?: string;
+  total: number;
+  paid: number;
+  due: number;
+  items_count?: number;
   created_at?: string;
-  user?: string;
+  items?: { product_id: number; product_name: string }[];
 }
 
 export interface ClientLedger {
