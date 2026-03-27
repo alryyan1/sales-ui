@@ -16,7 +16,6 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -57,7 +56,6 @@ const paymentSchema = z.object({
     required_error: "تاريخ الدفع مطلوب",
   }),
   reference_number: z.string().optional(),
-  notes: z.string().optional(),
 });
 
 type PaymentFormValues = z.infer<typeof paymentSchema>;
@@ -81,14 +79,12 @@ export function PurchaseLedgerDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
 
-  // Use values provided by the resource if available, or calculate locally
   const totalAmount = parseFloat(purchase?.total_amount || "0");
   const fallbackTotalPaid = payments.reduce(
     (sum, p) => sum + parseFloat(p.amount),
     0,
   );
 
-  // Try to use the total_paid from resource but fall back to local calculation
   const totalPaid =
     purchase?.total_paid !== undefined
       ? parseFloat(purchase.total_paid.toString())
@@ -110,7 +106,6 @@ export function PurchaseLedgerDialog({
       method: "cash",
       payment_date: new Date(),
       reference_number: "",
-      notes: "",
     },
   });
 
@@ -131,7 +126,6 @@ export function PurchaseLedgerDialog({
   useEffect(() => {
     if (open && purchase) {
       fetchPayments(purchase.id);
-      // Set default payment amount to the remaining balance
       setValue(
         "amount",
         totalAmount -
@@ -155,14 +149,13 @@ export function PurchaseLedgerDialog({
         method: values.method,
         payment_date: format(values.payment_date, "yyyy-MM-dd"),
         reference_number: values.reference_number || null,
-        notes: values.notes || null,
       });
 
       toast.success("تم إضافة الدفعة بنجاح");
       setShowAddForm(false);
       reset();
-      fetchPayments(purchase.id); // Refresh local list
-      onUpdate(); // Refresh parent list
+      fetchPayments(purchase.id); 
+      onUpdate();
     } catch (error: any) {
       toast.error(error.message || "فشل في إضافة الدفعة");
     } finally {
@@ -192,7 +185,6 @@ export function PurchaseLedgerDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Ledger Summary */}
         <div className="grid grid-cols-3 gap-4 my-4">
           <div className="bg-slate-50 p-4 rounded-xl border flex flex-col items-center justify-center">
             <p className="text-sm text-slate-500 mb-1">إجمالي الفاتورة</p>
@@ -212,7 +204,6 @@ export function PurchaseLedgerDialog({
           </div>
         </div>
 
-        {/* Payments Table */}
         <div className="border rounded-md mt-4">
           <Table>
             <TableHeader className="bg-slate-50">
@@ -222,13 +213,12 @@ export function PurchaseLedgerDialog({
                 <TableHead>الطريقة</TableHead>
                 <TableHead>رقم المرجع</TableHead>
                 <TableHead>بواسطة</TableHead>
-                <TableHead>ملاحظات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={5} className="text-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
                     <p className="text-sm text-muted-foreground mt-2">
                       جاري التحميل...
@@ -238,7 +228,7 @@ export function PurchaseLedgerDialog({
               ) : payments.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={5}
                     className="text-center py-8 text-muted-foreground"
                   >
                     لا توجد مدفوعات مسجلة لهذه الفاتورة
@@ -258,12 +248,6 @@ export function PurchaseLedgerDialog({
                     <TableCell>{translateMethod(payment.method)}</TableCell>
                     <TableCell>{payment.reference_number || "-"}</TableCell>
                     <TableCell>{payment.user?.name || "-"}</TableCell>
-                    <TableCell
-                      className="max-w-[200px] truncate"
-                      title={payment.notes || ""}
-                    >
-                      {payment.notes || "-"}
-                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -271,7 +255,6 @@ export function PurchaseLedgerDialog({
           </Table>
         </div>
 
-        {/* Action / Add Payment Form */}
         <div className="mt-6 border-t pt-4">
           {!showAddForm ? (
             <div className="flex justify-between items-center">
@@ -390,14 +373,6 @@ export function PurchaseLedgerDialog({
                   <Input
                     {...register("reference_number")}
                     placeholder="رقم الشيك أو الحوالة"
-                  />
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <Label>ملاحظات (اختياري)</Label>
-                  <Textarea
-                    {...register("notes")}
-                    placeholder="أي ملاحظات إضافية بخصوص الدفعة..."
                   />
                 </div>
               </div>

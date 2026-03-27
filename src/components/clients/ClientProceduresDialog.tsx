@@ -101,107 +101,9 @@ const ClientProceduresDialog: React.FC<ClientProceduresDialogProps> = ({
       </Box>
 
       <DialogContent>
-        {/* Client Summary Card */}
-        <Paper
-          elevation={0}
-          sx={{
-            p: 2,
-            mb: 3,
-            bgcolor: "grey.50",
-            borderRadius: 2,
-            border: "1px solid",
-            borderColor: "divider",
-          }}
-        >
-          <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-            <Box
-              sx={{
-                width: 48,
-                height: 48,
-                borderRadius: "50%",
-                bgcolor: "primary.main",
-                color: "white",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                mr: 2,
-                fontSize: "1.2rem",
-                fontWeight: "bold",
-              }}
-            >
-              {client.name.charAt(0)}
-            </Box>
-            <Box>
-              <Typography variant="h6" fontWeight="bold">
-                {client.name}
-              </Typography>
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: 1,
-                  alignItems: "center",
-                  color: "text.secondary",
-                  fontSize: "0.875rem",
-                }}
-              >
-                <Typography
-                  variant="caption"
-                  sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
-                >
-                  <Phone size={14} /> {client.phone || "---"}
-                </Typography>
-              </Box>
-            </Box>
-          </Box>
+       
 
-          <Divider sx={{ my: 1.5 }} />
 
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                الرصيد الحالي
-              </Typography>
-              <Typography
-                variant="h6"
-                fontWeight="bold"
-                color={
-                  (client.balance || 0) > 0 ? "error.main" : "success.main"
-                }
-                sx={{ display: "flex", alignItems: "center", gap: 1 }}
-              >
-                <Wallet size={18} />
-                {(client.balance || 0).toLocaleString()}
-              </Typography>
-            </Box>
-            <Box sx={{ textAlign: "left" }}>
-              <Typography variant="caption" color="text.secondary">
-                إجمالي المديونية
-              </Typography>
-              <Typography variant="body2" fontWeight="medium">
-                {(client.total_debit || 0).toLocaleString()}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                إجمالي المدفوعات
-              </Typography>
-              <Typography variant="body2" fontWeight="medium">
-                {(client.total_credit || 0).toLocaleString()}
-              </Typography>
-            </Box>
-          </Box>
-        </Paper>
-
-        {/* Actions Grid - Using standard div/CSS grid instead of MUI Grid to avoid version conflicts */}
-        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
-          اختر إجراء:
-        </Typography>
-
-        <div className="grid grid-cols-2 gap-3 pb-2">
           <div className="col-span-1">
             <Button
               variant="outlined"
@@ -360,32 +262,7 @@ const ClientProceduresDialog: React.FC<ClientProceduresDialogProps> = ({
             )}
           </div>
 
-          <div className="col-span-2">
-            <Button
-              variant="outlined"
-              fullWidth
-              color="error"
-              startIcon={<Trash2 size={18} />}
-              onClick={() => {
-                onDelete(client.id);
-                onClose();
-              }}
-              sx={{
-                height: 50,
-                justifyContent: "flex-start",
-                borderColor: "error.light",
-                color: "error.main",
-                "&:hover": { borderColor: "error.main", bgcolor: "error.50" },
-              }}
-            >
-              <Box sx={{ textAlign: "right" }}>
-                <Typography variant="button" display="block">
-                  حذف العميل
-                </Typography>
-              </Box>
-            </Button>
-          </div>
-        </div>
+       
       </DialogContent>
     </Dialog>
   );

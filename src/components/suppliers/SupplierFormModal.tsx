@@ -191,6 +191,7 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
             <Box sx={{ gridColumn: { xs: "span 1", sm: "span 2" } }}>
               <TextField
                 label="اسم المورد"
+                autoFocus={true}
                 fullWidth
                 required
                 placeholder="أدخل اسم المورد"

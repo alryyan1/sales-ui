@@ -1,96 +1,69 @@
 // src/pages/PurchasesListPage.tsx
-// Premium UI using shadcn/ui + MUI + Tailwind + Lucide
 import React, { useState, useEffect, useCallback } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 
-// shadcn/ui Components
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
+  Box,
+  Button,
+  Chip,
+  Collapse,
+  Divider,
+  FormControl,
+  IconButton,
+  InputLabel,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Paper,
+  Select,
+  Skeleton,
+  Stack,
   Table,
   TableBody,
   TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  TableContainer,
   TableFooter,
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-
-// MUI Components (for complex interactions)
-import {
-  Autocomplete,
+  TableHead,
+  TableRow,
   TextField,
-  Menu,
-  MenuItem,
-  IconButton,
-  ListItemIcon,
-  ListItemText,
-  Divider,
+  Tooltip,
+  Typography,
+  Autocomplete,
+  Alert,
 } from "@mui/material";
-import {
-  Plus,
-  Filter,
-  X,
-  FileSpreadsheet,
-  FileText,
-  Package,
-  History,
-  Calendar,
-  User,
-  Hash,
-  Search,
-  ShoppingCart,
-  CheckCircle,
-  Clock,
-  Truck,
-  RefreshCw,
-  MoreHorizontal,
-  ChevronUp,
-} from "lucide-react";
 
-// Services and Types
+import AddIcon from "@mui/icons-material/Add";
+import FilterListIcon from "@mui/icons-material/FilterList";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import TableViewIcon from "@mui/icons-material/TableView";
+import DescriptionIcon from "@mui/icons-material/Description";
+import InventoryIcon from "@mui/icons-material/Inventory";
+import HistoryIcon from "@mui/icons-material/History";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
+import PersonIcon from "@mui/icons-material/Person";
+import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import ClearAllIcon from "@mui/icons-material/ClearAll";
+import CloseIcon from "@mui/icons-material/Close";
+
 import purchaseService from "../../services/purchaseService";
 import supplierService, { Supplier } from "../../services/supplierService";
 import productService, { Product } from "../../services/productService";
 import exportService from "../../services/exportService";
 import dayjs from "dayjs";
-import { formatCurrency } from "@/constants";
 import { PurchaseItemDetailsDialog } from "@/components/purchases/PurchaseItemDetailsDialog";
-import { cn } from "@/lib/utils";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
 import { toast } from "sonner";
-import { Trash2, Edit2, Wallet } from "lucide-react";
 import { EditPurchaseDialog } from "@/components/purchases/EditPurchaseDialog";
 import { PurchaseLedgerDialog } from "@/components/purchases/PurchaseLedgerDialog";
 
-// Filter interface
 interface PurchaseFilters {
   supplier_id?: number;
   reference_number?: string;
@@ -100,16 +73,20 @@ interface PurchaseFilters {
   product_id?: number;
 }
 
+const STATUS_CONFIG = {
+  pending:  { label: "قيد الانتظار", color: "warning"  as const, Icon: AccessTimeIcon },
+  ordered:  { label: "تم الطلب",     color: "info"     as const, Icon: LocalShippingIcon },
+  received: { label: "تم الاستلام",  color: "success"  as const, Icon: CheckCircleIcon },
+};
+
 const PurchasesListPage: React.FC = () => {
   const navigate = useNavigate();
 
-  // --- State ---
   const [purchasesResponse, setPurchasesResponse] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Filter states
   const [filters, setFilters] = useState<PurchaseFilters>({});
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState(false);
@@ -117,169 +94,93 @@ const PurchasesListPage: React.FC = () => {
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [showFilters, setShowFilters] = useState(true);
 
-  // Product history dialog states
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productPurchases, setProductPurchases] = useState<any[]>([]);
   const [loadingProductPurchases, setLoadingProductPurchases] = useState(false);
-  const [productHistoryDialogOpen, setProductHistoryDialogOpen] =
-    useState(false);
+  const [productHistoryDialogOpen, setProductHistoryDialogOpen] = useState(false);
 
-  // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [purchaseToDelete, setPurchaseToDelete] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Edit dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [purchaseToEdit, setPurchaseToEdit] = useState<any | null>(null);
 
-  // Ledger dialog state
   const [ledgerDialogOpen, setLedgerDialogOpen] = useState(false);
   const [purchaseForLedger, setPurchaseForLedger] = useState<any | null>(null);
 
-  // MUI Menu state
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [activeMenuPurchase, setActiveMenuPurchase] = useState<any | null>(
-    null,
-  );
+  const [activeMenuPurchase, setActiveMenuPurchase] = useState<any | null>(null);
 
-  const handleMenuOpen = (
-    event: React.MouseEvent<HTMLElement>,
-    purchase: any,
-  ) => {
-    event.stopPropagation();
-    setAnchorEl(event.currentTarget);
+  const handleMenuOpen = (e: React.MouseEvent<HTMLElement>, purchase: any) => {
+    e.stopPropagation();
+    setAnchorEl(e.currentTarget);
     setActiveMenuPurchase(purchase);
   };
 
-  const handleMenuClose = (event?: React.MouseEvent<HTMLElement>) => {
-    if (event) event.stopPropagation();
+  const handleMenuClose = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setAnchorEl(null);
     setActiveMenuPurchase(null);
   };
 
-  // Status configuration
-  const statusConfig = {
-    pending: {
-      label: "قيد الانتظار",
-      icon: Clock,
-      variant: "warning" as const,
-      color: "text-amber-600 bg-amber-50 border-amber-200",
-    },
-    ordered: {
-      label: "تم الطلب",
-      icon: Truck,
-      variant: "secondary" as const,
-      color: "text-blue-600 bg-blue-50 border-blue-200",
-    },
-    received: {
-      label: "تم الاستلام",
-      icon: CheckCircle,
-      variant: "success" as const,
-      color: "text-emerald-600 bg-emerald-50 border-emerald-200",
-    },
-  };
+  // ── Data fetching ──────────────────────────────────────────────────────────
 
-  // --- Data Fetching ---
   const fetchSuppliers = useCallback(async () => {
     setLoadingSuppliers(true);
     try {
-      const response = await supplierService.getSuppliers(1, "");
-      setSuppliers(response.data || []);
-    } catch (error) {
-      console.error("Failed to fetch suppliers:", error);
-    } finally {
-      setLoadingSuppliers(false);
-    }
+      const res = await supplierService.getSuppliers(1, "");
+      setSuppliers(res.data || []);
+    } catch { /* ignore */ } finally { setLoadingSuppliers(false); }
   }, []);
 
   const fetchProducts = useCallback(async () => {
     setLoadingProducts(true);
     try {
-      const response = await productService.getProducts(
-        1,
-        "",
-        "name",
-        "asc",
-        1000,
-      );
-      setProducts(response.data || []);
-    } catch (error) {
-      console.error("Failed to fetch products:", error);
+      const res = await productService.getProducts(1, "", "name", "asc", 1000);
+      setProducts(res.data || []);
+    } catch { /* ignore */ } finally { setLoadingProducts(false); }
+  }, []);
+
+  const fetchPurchases = useCallback(async (page: number, f: PurchaseFilters = {}) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams();
+      params.append("page", page.toString());
+      params.append("per_page", "1000000");
+      if (f.supplier_id)      params.append("supplier_id",      f.supplier_id.toString());
+      if (f.reference_number) params.append("reference_number", f.reference_number);
+      if (f.purchase_date)    params.append("purchase_date",    f.purchase_date);
+      if (f.created_at)       params.append("created_at",       f.created_at);
+      if (f.status)           params.append("status",           f.status);
+      if (f.product_id)       params.append("product_id",       f.product_id.toString());
+      const data = await purchaseService.getPurchases(page, params.toString());
+      setPurchasesResponse(data);
+    } catch (err) {
+      setError(purchaseService.getErrorMessage(err));
     } finally {
-      setLoadingProducts(false);
+      setIsLoading(false);
     }
   }, []);
 
-  const fetchPurchases = useCallback(
-    async (page: number, filters: PurchaseFilters = {}) => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const params = new URLSearchParams();
-        params.append("page", page.toString());
-        params.append("per_page", "1000000"); // Fetch all without pagination
+  useEffect(() => { fetchPurchases(currentPage, filters); }, [fetchPurchases, currentPage, filters]);
+  useEffect(() => { fetchSuppliers(); fetchProducts(); }, [fetchSuppliers, fetchProducts]);
 
-        if (filters.supplier_id)
-          params.append("supplier_id", filters.supplier_id.toString());
-        if (filters.reference_number)
-          params.append("reference_number", filters.reference_number);
-        if (filters.purchase_date)
-          params.append("purchase_date", filters.purchase_date);
-        if (filters.created_at) params.append("created_at", filters.created_at);
-        if (filters.status) params.append("status", filters.status);
-        if (filters.product_id)
-          params.append("product_id", filters.product_id.toString());
+  // ── Handlers ──────────────────────────────────────────────────────────────
 
-        const data = await purchaseService.getPurchases(
-          page,
-          params.toString(),
-        );
-        setPurchasesResponse(data);
-      } catch (err) {
-        setError(purchaseService.getErrorMessage(err));
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [],
-  );
-
-  useEffect(() => {
-    fetchPurchases(currentPage, filters);
-  }, [fetchPurchases, currentPage, filters]);
-
-  useEffect(() => {
-    fetchSuppliers();
-    fetchProducts();
-  }, [fetchSuppliers, fetchProducts]);
-
-  // --- Handlers ---
-  const handleFilterChange = (
-    key: keyof PurchaseFilters,
-    value: string | number | undefined,
-  ) => {
+  const handleFilterChange = (key: keyof PurchaseFilters, value: string | number | undefined) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
     setCurrentPage(1);
   };
 
-  const clearFilters = () => {
-    setFilters({});
-    setCurrentPage(1);
-  };
+  const clearFilters = () => { setFilters({}); setCurrentPage(1); };
 
-  const hasActiveFilters = Object.values(filters).some(
-    (value) => value !== undefined && value !== null && value !== "",
-  );
-
+  const hasActiveFilters = Object.values(filters).some((v) => v !== undefined && v !== null && v !== "");
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
   const handleViewPdfReport = async (id: number) => {
-    try {
-      await exportService.exportPurchasePdf(id);
-    } catch (error) {
-      console.error("Failed to generate PDF report:", error);
-    }
+    try { await exportService.exportPurchasePdf(id); } catch (e) { console.error(e); }
   };
 
   const handleViewProductHistory = async (product: Product) => {
@@ -287,660 +188,343 @@ const PurchasesListPage: React.FC = () => {
     setProductHistoryDialogOpen(true);
     setLoadingProductPurchases(true);
     try {
-      const purchases = await purchaseService.getPurchasesForProduct(
-        product.id,
-      );
-      setProductPurchases(purchases);
-    } catch (error) {
-      console.error("Failed to fetch product purchases:", error);
-      setProductPurchases([]);
-    } finally {
-      setLoadingProductPurchases(false);
-    }
-  };
-
-  const handleCloseProductHistory = () => {
-    setProductHistoryDialogOpen(false);
-    setSelectedProduct(null);
-    setProductPurchases([]);
+      setProductPurchases(await purchaseService.getPurchasesForProduct(product.id));
+    } catch { setProductPurchases([]); } finally { setLoadingProductPurchases(false); }
   };
 
   const handleExportExcel = async () => {
-    try {
-      await exportService.exportPurchasesExcel(filters);
-    } catch (error) {
-      console.error("Failed to export Excel:", error);
-    }
-  };
-
-  const handleDeleteClick = (id: number) => {
-    setPurchaseToDelete(id);
-    setDeleteDialogOpen(true);
+    try { await exportService.exportPurchasesExcel(filters); } catch (e) { console.error(e); }
   };
 
   const handleConfirmDelete = async () => {
     if (!purchaseToDelete) return;
-
     setIsDeleting(true);
     try {
       await purchaseService.deletePurchase(purchaseToDelete);
       toast.success("تم حذف الشراء بنجاح");
       setDeleteDialogOpen(false);
       setPurchaseToDelete(null);
-      // Refresh the list
       fetchPurchases(currentPage, filters);
-    } catch (error) {
-      console.error("Failed to delete purchase:", error);
-      toast.error("فشل حذف الشراء", {
-        description: purchaseService.getErrorMessage(error),
-      });
-    } finally {
-      setIsDeleting(false);
-    }
+    } catch (err) {
+      toast.error("فشل حذف الشراء", { description: purchaseService.getErrorMessage(err) });
+    } finally { setIsDeleting(false); }
   };
 
-  // Stats calculation
-  // const stats = {
-  //   total: purchasesResponse?.meta?.total || 0,
-  //   received:
-  //     purchasesResponse?.data?.filter((p: any) => p.status === "received")
-  //       .length || 0,
-  //   pending:
-  //     purchasesResponse?.data?.filter((p: any) => p.status === "pending")
-  //       .length || 0,
-  //   totalAmount:
-  //     purchasesResponse?.data?.reduce(
-  //       (sum: number, p: any) => sum + Number(p.total_amount || 0),
-  //       0,
-  //     ) || 0,
-  // };
+  // ── Derived totals ─────────────────────────────────────────────────────────
+
+  const rows: any[] = purchasesResponse?.data ?? [];
+  const totalItems = rows.reduce((s: number, p: any) => s + Number(p.items_count ?? p.items?.length ?? 0), 0);
+
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <TooltipProvider>
-      <div
-        className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 p-4 md:p-6"
-        dir="rtl"
-      >
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            {/* Title Section */}
-            <div className="flex items-center gap-4">
-              <div className="p-2 bg-white/30 backdrop-blur-sm rounded-lg">
-                <ShoppingCart className="h-6 w-6 " />
-              </div>
-              <div>
-                <h1 className="text-xl md:text-2xl font-bold ">المشتريات</h1>
-                <p className=" text-xs">إدارة عمليات الشراء والمخزون</p>
-              </div>
-            </div>
+    <Box dir="rtl" sx={{ minHeight: "100vh", bgcolor: "grey.50", p: { xs: 2, md: 3 } }}>
 
-            {/* Action Buttons */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowFilters(!showFilters)}
-                className="bg-white/10 border-white/20  hover:bg-white/20"
-              >
-                {showFilters ? (
-                  <ChevronUp className="h-4 w-4 ml-2" />
-                ) : (
-                  <Filter className="h-4 w-4 ml-2" />
-                )}
-                الفلاتر
-                {activeFilterCount > 0 && (
-                  <Badge className="mr-2  text-blue-600 hover:">
-                    {activeFilterCount}
-                  </Badge>
-                )}
+      {/* ── Page header ── */}
+      <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2} mb={2}>
+        <Stack direction="row" alignItems="center" gap={1.5}>
+          <Box sx={{ p: 1, bgcolor: "primary.main", borderRadius: 1.5, display: "flex" }}>
+            <ShoppingCartIcon sx={{ color: "white", fontSize: 22 }} />
+          </Box>
+          <Box>
+            <Typography variant="h6" fontWeight={700} lineHeight={1.2}>المشتريات</Typography>
+            <Typography variant="caption" color="text.secondary">إدارة عمليات الشراء والمخزون</Typography>
+          </Box>
+        </Stack>
+
+        <Stack direction="row" gap={1} flexWrap="wrap">
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={showFilters ? <ExpandLessIcon /> : <FilterListIcon />}
+            onClick={() => setShowFilters(!showFilters)}
+            endIcon={activeFilterCount > 0 ? <Chip label={activeFilterCount} size="small" color="primary" sx={{ height: 18, fontSize: "0.65rem" }} /> : undefined}
+          >
+            الفلاتر
+          </Button>
+          <Button variant="outlined" size="small" startIcon={<TableViewIcon />} onClick={handleExportExcel}>
+            تصدير
+          </Button>
+          <Button variant="contained" size="small" startIcon={<AddIcon />} component={RouterLink} to="/purchases/add">
+            فاتوره شراء
+          </Button>
+        </Stack>
+      </Stack>
+
+      {/* ── Filters ── */}
+      <Collapse in={showFilters}>
+        <Paper variant="outlined" sx={{ p: 2, mb: 2, borderRadius: 2 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
+            <Typography variant="subtitle2" fontWeight={700}>بحث وفلترة</Typography>
+            {hasActiveFilters && (
+              <Button size="small" color="error" startIcon={<ClearAllIcon />} onClick={clearFilters}>
+                مسح الكل
               </Button>
+            )}
+          </Stack>
+          <Stack direction="row" flexWrap="wrap" gap={2}>
+            {/* Supplier */}
+            <Autocomplete
+              options={suppliers}
+              getOptionLabel={(o) => o.name}
+              value={suppliers.find((s) => s.id === filters.supplier_id) || null}
+              onChange={(_, v) => handleFilterChange("supplier_id", v?.id)}
+              loading={loadingSuppliers}
+              size="small"
+              sx={{ minWidth: 180 }}
+              renderInput={(params) => <TextField {...params} label="المورد" />}
+            />
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportExcel}
-                className="/10 border-white/20  hover:/20"
+            {/* Product */}
+            <Autocomplete
+              options={products}
+              getOptionLabel={(o) => `${o.name}${o.sku ? ` (${o.sku})` : ""}`}
+              value={products.find((p) => p.id === filters.product_id) || null}
+              onChange={(_, v) => handleFilterChange("product_id", v?.id)}
+              loading={loadingProducts}
+              size="small"
+              sx={{ minWidth: 200 }}
+              renderInput={(params) => <TextField {...params} label="المنتج" />}
+            />
+
+            {/* Status */}
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <InputLabel>الحالة</InputLabel>
+              <Select
+                value={filters.status || ""}
+                label="الحالة"
+                onChange={(e) => handleFilterChange("status", e.target.value || undefined)}
               >
-                <FileSpreadsheet className="h-4 w-4 ml-2" />
-                تصدير
-              </Button>
+                <MenuItem value="">الكل</MenuItem>
+                <MenuItem value="pending">قيد الانتظار</MenuItem>
+                <MenuItem value="ordered">تم الطلب</MenuItem>
+                <MenuItem value="received">تم الاستلام</MenuItem>
+              </Select>
+            </FormControl>
 
-              <Button
-                size="sm"
-                // className=" text-sky-600 hover:bg-sky-50 shadow-md"
-                asChild
-              >
-                <RouterLink to="/purchases/add">
-                  <Plus className="h-4 w-4 ml-2" />
-                  إضافة شراء
-                </RouterLink>
-              </Button>
-            </div>
-          </div>
+            {/* Purchase date */}
+            <TextField
+              size="small"
+              label="تاريخ الشراء"
+              type="date"
+              value={filters.purchase_date || ""}
+              onChange={(e) => handleFilterChange("purchase_date", e.target.value)}
+              inputProps={{ max: dayjs().format("YYYY-MM-DD") }}
+              InputLabelProps={{ shrink: true }}
+              sx={{ minWidth: 160 }}
+            />
 
-          {/* Stats Cards */}
-          {/* <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
-                <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <Boxes className="h-4 w-4 /80" />
-                    <ArrowUpRight className="h-3 w-3 text-emerald-200" />
-                  </div>
-                  <p className="text-xl font-bold  mt-1">
-                    {stats.total}
-                  </p>
-                  <p className=" text-xs">إجمالي العمليات</p>
-                </div>
-                <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <CheckCircle className="h-4 w-4 text-emerald-200" />
-                    <span className="text-xs text-emerald-200">✓</span>
-                  </div>
-                  <p className="text-xl font-bold  mt-1">
-                    {stats.received}
-                  </p>
-                  <p className=" text-xs">تم الاستلام</p>
-                </div>
-                <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <Clock className="h-4 w-4 text-amber-200" />
-                    <span className="text-xs text-amber-200">⏳</span>
-                  </div>
-                  <p className="text-xl font-bold  mt-1">
-                    {stats.pending}
-                  </p>
-                  <p className=" text-xs">قيد الانتظار</p>
-                </div>
-                <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <DollarSign className="h-4 w-4 /80" />
-                    <TrendingUp className="h-3 w-3 text-emerald-200" />
-                  </div>
-                  <p className="text-lg font-bold  mt-1">
-                    {formatCurrency(stats.totalAmount)}
-                  </p>
-                  <p className=" text-xs">إجمالي المبلغ</p>
-                </div>
-              </div> */}
-        </div>
+            {/* Created at */}
+            <TextField
+              size="small"
+              label="تاريخ الإنشاء"
+              type="date"
+              value={filters.created_at || ""}
+              onChange={(e) => handleFilterChange("created_at", e.target.value)}
+              inputProps={{ max: dayjs().format("YYYY-MM-DD") }}
+              InputLabelProps={{ shrink: true }}
+              sx={{ minWidth: 160 }}
+            />
+          </Stack>
+        </Paper>
+      </Collapse>
 
-        {/* Filters */}
-        <Collapsible open={showFilters} onOpenChange={setShowFilters}>
-          <CollapsibleContent>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Search className="h-5 w-5 text-muted-foreground" />
-                <CardTitle className="text-lg">بحث وفلترة</CardTitle>
-              </div>
-              {hasActiveFilters && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearFilters}
-                  className="text-destructive"
-                >
-                  <X className="h-4 w-4 ml-1" />
-                  مسح الكل
-                </Button>
-              )}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-              {/* Supplier Filter */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center gap-1">
-                  <User className="h-4 w-4" />
-                  المورد
-                </label>
-                <Autocomplete
-                  options={suppliers}
-                  getOptionLabel={(option) => option.name}
-                  value={
-                    suppliers.find((s) => s.id === filters.supplier_id) || null
-                  }
-                  onChange={(_, newValue) =>
-                    handleFilterChange("supplier_id", newValue?.id)
-                  }
-                  loading={loadingSuppliers}
-                  size="small"
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      placeholder="اختر المورد"
-                      size="small"
-                    />
-                  )}
-                />
-              </div>
+      {/* ── Loading ── */}
+      {isLoading && (
+        <Paper variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Stack key={i} direction="row" alignItems="center" gap={2} mb={2}>
+              <Skeleton variant="rounded" width={44} height={44} />
+              <Box flex={1}>
+                <Skeleton width="35%" height={16} />
+                <Skeleton width="20%" height={12} sx={{ mt: 0.5 }} />
+              </Box>
+              <Skeleton variant="rounded" width={80} height={28} />
+            </Stack>
+          ))}
+        </Paper>
+      )}
 
-              {/* Product Filter */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center gap-1">
-                  <Package className="h-4 w-4" />
-                  المنتج
-                </label>
-                <Autocomplete
-                  options={products}
-                  getOptionLabel={(option) =>
-                    `${option.name}${option.sku ? ` (${option.sku})` : ""}`
-                  }
-                  value={
-                    products.find((p) => p.id === filters.product_id) || null
-                  }
-                  onChange={(_, newValue) =>
-                    handleFilterChange("product_id", newValue?.id)
-                  }
-                  loading={loadingProducts}
-                  size="small"
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      placeholder="اختر المنتج"
-                      size="small"
-                    />
-                  )}
-                />
-              </div>
+      {/* ── Error ── */}
+      {!isLoading && error && (
+        <Alert
+          severity="error"
+          action={
+            <Button size="small" startIcon={<RefreshIcon />} onClick={() => fetchPurchases(currentPage, filters)}>
+              إعادة المحاولة
+            </Button>
+          }
+          sx={{ borderRadius: 2 }}
+        >
+          {error}
+        </Alert>
+      )}
 
-           
+      {/* ── Table ── */}
+      {!isLoading && !error && purchasesResponse && (
+        <Paper variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ bgcolor: "grey.100" }}>
+                  {["#", "التاريخ", "المورد", "الحالة", "عدد الأصناف", ""].map((h, i) => (
+                    <TableCell key={i} align="center" sx={{ fontWeight: 700, whiteSpace: "nowrap", py: 1.25 }}>
+                      {h}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
 
-              {/* Status */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">الحالة</label>
-                <Select
-                  value={filters.status || ""}
-                  onValueChange={(value) =>
-                    handleFilterChange("status", value || undefined)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر الحالة" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">قيد الانتظار</SelectItem>
-                    <SelectItem value="ordered">تم الطلب</SelectItem>
-                    <SelectItem value="received">تم الاستلام</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Purchase Date */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  تاريخ الشراء
-                </label>
-                <Input
-                  type="date"
-                  value={filters.purchase_date || ""}
-                  onChange={(e) =>
-                    handleFilterChange("purchase_date", e.target.value)
-                  }
-                  max={dayjs().format("YYYY-MM-DD")}
-                />
-              </div>
-
-              {/* Created At */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">تاريخ الإنشاء</label>
-                <Input
-                  type="date"
-                  value={filters.created_at || ""}
-                  onChange={(e) =>
-                    handleFilterChange("created_at", e.target.value)
-                  }
-                  max={dayjs().format("YYYY-MM-DD")}
-                />
-              </div>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-
-        {/* Main Content */}
-        {/* Loading State */}
-        {isLoading && (
-          <CardContent className="p-8">
-            <div className="space-y-4">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <Skeleton className="h-12 w-12 rounded-lg" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-1/3" />
-                    <Skeleton className="h-3 w-1/4" />
-                  </div>
-                  <Skeleton className="h-8 w-24" />
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        )}
-
-        {/* Error State */}
-        {!isLoading && error && (
-          <CardContent className="p-8">
-            <div className="flex flex-col items-center justify-center text-center">
-              <div className="p-4 bg-destructive/10 rounded-full mb-4">
-                <X className="h-8 w-8 text-destructive" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">حدث خطأ</h3>
-              <p className="text-muted-foreground mb-4">{error}</p>
-              <Button
-                onClick={() => fetchPurchases(currentPage, filters)}
-                variant="outline"
-              >
-                <RefreshCw className="h-4 w-4 ml-2" />
-                إعادة المحاولة
-              </Button>
-            </div>
-          </CardContent>
-        )}
-
-        {/* Table */}
-        {!isLoading && !error && purchasesResponse && (
-          <>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="text-center font-bold">#</TableHead>
-                    <TableHead className="text-center font-bold">
-                      التاريخ
-                    </TableHead>
-                    <TableHead className="text-center font-bold">
-                      المورد
-                    </TableHead>
-           
-                    {/* <TableHead className="text-center font-bold">
-                        رقم المرجع
-                      </TableHead> */}
-                
-                    <TableHead className="text-center font-bold">
-                      الحالة
-                    </TableHead>
-                    <TableHead className="text-center font-bold">
-                      إجمالي مدين
-                    </TableHead>
-                    <TableHead className="text-center font-bold">
-                      إجمالي دائن
-                    </TableHead>
-                    <TableHead className="text-center font-bold">
-                      الرصيد
-                    </TableHead>
-                    <TableHead className="text-center font-bold">
-                      إجراءات
-                    </TableHead>
+              <TableBody>
+                {rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                      <Stack alignItems="center" gap={1}>
+                        <ShoppingCartIcon sx={{ fontSize: 48, color: "grey.300" }} />
+                        <Typography variant="body2" color="text.secondary">لا توجد عمليات شراء</Typography>
+                        <Button variant="contained" size="small" startIcon={<AddIcon />} component={RouterLink} to="/purchases/add">
+                          إضافة شراء
+                        </Button>
+                      </Stack>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {purchasesResponse.data.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={11} className="h-48 text-center">
-                        <div className="flex flex-col items-center justify-center">
-                          <div className="p-4 bg-muted rounded-full mb-4">
-                            <ShoppingCart className="h-12 w-12 text-muted-foreground" />
-                          </div>
-                          <h3 className="text-lg font-semibold mb-2">
-                            لا توجد عمليات شراء
-                          </h3>
-                          <p className="text-muted-foreground mb-4">
-                            ابدأ بإضافة أول عملية شراء
-                          </p>
-                          <Button asChild>
-                            <RouterLink to="/purchases/add">
-                              <Plus className="h-4 w-4 ml-2" />
-                              إضافة شراء
-                            </RouterLink>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    purchasesResponse.data.map((purchase: any) => {
-                      const status =
-                        statusConfig[
-                          purchase.status as keyof typeof statusConfig
-                        ] || statusConfig.pending;
-                      const StatusIcon = status.icon;
+                ) : (
+                  rows.map((purchase: any) => {
+                    const cfg = STATUS_CONFIG[purchase.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.pending;
+                    const itemsCount = purchase.items_count ?? purchase.items?.length ?? 0;
 
-                      return (
-                        <TableRow
-                          key={purchase.id}
-                          className="cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() =>
-                            navigate(`/purchases/${purchase.id}/manage-items`)
-                          }
-                        >
-                          <TableCell className="text-center">
-                            <Badge variant="outline" className="font-mono">
-                              {purchase.id}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              <Calendar className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium">
-                                {dayjs(purchase.purchase_date).format(
-                                  "YYYY-MM-DD",
-                                )}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <span className="font-semibold">
-                              {purchase.supplier_name || "—"}
-                            </span>
-                          </TableCell>
-                        
-                          {/* <TableCell className="text-center">
-                              <code className="text-sm text-muted-foreground">
-                                {purchase.reference_number || "—"}
-                              </code>
-                            </TableCell> */}
-                       
-                          <TableCell className="text-center">
-                            <Badge className={cn("gap-1 border", status.color)}>
-                              <StatusIcon className="h-3 w-3" />
-                              {status.label}
-                            </Badge>
-                          </TableCell>
+                    return (
+                      <TableRow
+                        key={purchase.id}
+                        hover
+                        sx={{ cursor: "pointer" }}
+                        onClick={() => navigate(`/purchases/${purchase.id}/manage-items`)}
+                      >
+                        <TableCell align="center">
+                          <Chip label={purchase.id} size="small" variant="outlined" sx={{ fontFamily: "monospace", height: 22 }} />
+                        </TableCell>
 
-                          <TableCell className="text-center">
-                            <span className="font-bold text-destructive">
-                              {formatCurrency(purchase.total_amount || 0)}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <span className="font-bold text-emerald-600">
-                              {formatCurrency(purchase.total_paid || 0)}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <span className="font-bold text-primary">
-                              {formatCurrency(
-                                (Number(purchase.total_amount) || 0) -
-                                  (Number(purchase.total_paid) || 0),
-                              )}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <IconButton
-                              size="small"
-                              onClick={(e) => handleMenuOpen(e, purchase)}
-                            >
-                              <MoreHorizontal className="h-5 w-5" />
+                        <TableCell align="center">
+                          <Stack direction="row" alignItems="center" justifyContent="center" gap={0.5}>
+                            <CalendarMonthIcon sx={{ fontSize: 14, color: "text.secondary" }} />
+                            <Typography variant="body2">{dayjs(purchase.purchase_date).format("YYYY-MM-DD")}</Typography>
+                          </Stack>
+                        </TableCell>
+
+                        <TableCell align="center">
+                          <Typography variant="body2" fontWeight={600}>{purchase.supplier_name || "—"}</Typography>
+                        </TableCell>
+
+                        <TableCell align="center">
+                          <Chip
+                            icon={<cfg.Icon sx={{ fontSize: "14px !important" }} />}
+                            label={cfg.label}
+                            size="small"
+                            color={cfg.color}
+                            variant="outlined"
+                          />
+                        </TableCell>
+
+                        <TableCell align="center">
+                          <Chip label={itemsCount} size="small" variant="outlined" color="primary" sx={{ fontWeight: 700, height: 22 }} />
+                        </TableCell>
+
+                        <TableCell align="center" onClick={(e) => e.stopPropagation()}>
+                          <Tooltip title="الإجراءات">
+                            <IconButton size="small" onClick={(e) => handleMenuOpen(e, purchase)}>
+                              <MoreHorizIcon fontSize="small" />
                             </IconButton>
-                            <Menu
-                              anchorEl={anchorEl}
-                              open={
-                                Boolean(anchorEl) &&
-                                activeMenuPurchase?.id === purchase.id
-                              }
-                              onClose={() => handleMenuClose()}
-                              onClick={(e) => e.stopPropagation()}
-                              PaperProps={{
-                                elevation: 2,
-                                sx: { minWidth: 200 },
-                              }}
+                          </Tooltip>
+
+                          <Menu
+                            anchorEl={anchorEl}
+                            open={Boolean(anchorEl) && activeMenuPurchase?.id === purchase.id}
+                            onClose={() => handleMenuClose()}
+                            onClick={(e) => e.stopPropagation()}
+                            PaperProps={{ elevation: 2, sx: { minWidth: 200 } }}
+                          >
+                            <MenuItem disabled sx={{ opacity: "1 !important" }}>
+                              <ListItemText primaryTypographyProps={{ fontWeight: 700, fontSize: "0.8rem" }} primary="الإجراءات" />
+                            </MenuItem>
+                            <Divider />
+
+                            <MenuItem onClick={(e) => { handleMenuClose(e); setPurchaseForLedger(purchase); setLedgerDialogOpen(true); }}>
+                              <ListItemIcon><AccountBalanceWalletIcon fontSize="small" /></ListItemIcon>
+                              <ListItemText primary="دفتر الأستاذ" />
+                            </MenuItem>
+
+                            <MenuItem onClick={(e) => { handleMenuClose(e); navigate(`/purchases/${purchase.id}/manage-items`); }}>
+                              <ListItemIcon><InventoryIcon fontSize="small" /></ListItemIcon>
+                              <ListItemText primary="إدارة البنود" />
+                            </MenuItem>
+
+                            <MenuItem onClick={(e) => { handleMenuClose(e); handleViewPdfReport(purchase.id); }}>
+                              <ListItemIcon><DescriptionIcon fontSize="small" /></ListItemIcon>
+                              <ListItemText primary="عرض PDF" />
+                            </MenuItem>
+
+                            {filters.product_id && (
+                              <MenuItem onClick={(e) => {
+                                handleMenuClose(e);
+                                const p = products.find((p) => p.id === filters.product_id);
+                                if (p) handleViewProductHistory(p);
+                              }}>
+                                <ListItemIcon><HistoryIcon fontSize="small" /></ListItemIcon>
+                                <ListItemText primary="سجل المنتج" />
+                              </MenuItem>
+                            )}
+
+                            <Divider />
+
+                            <MenuItem
+                              onClick={(e) => { handleMenuClose(e); setPurchaseToDelete(purchase.id); setDeleteDialogOpen(true); }}
+                              disabled={purchase.status === "received"}
+                              sx={{ color: "error.main" }}
                             >
-                              <MenuItem disabled className="opacity-70">
-                                <ListItemText
-                                  primary="الإجراءات"
-                                  primaryTypographyProps={{
-                                    fontWeight: "bold",
-                                  }}
-                                />
-                              </MenuItem>
-                              <Divider />
-
-                           
-                              <MenuItem
-                                onClick={(e) => {
-                                  handleMenuClose(e);
-                                  setPurchaseForLedger(purchase);
-                                  setLedgerDialogOpen(true);
-                                }}
-                              >
-                                <ListItemIcon>
-                                  <Wallet className="h-4 w-4" />
-                                </ListItemIcon>
-                                <ListItemText primary="دفتر الأستاذ (المدفوعات)" />
-                              </MenuItem>
-
-                              <MenuItem
-                                onClick={(e) => {
-                                  handleMenuClose(e);
-                                  navigate(
-                                    `/purchases/${purchase.id}/manage-items`,
-                                  );
-                                }}
-                              >
-                                <ListItemIcon>
-                                  <Package className="h-4 w-4" />
-                                </ListItemIcon>
-                                <ListItemText primary="إدارة البنود" />
-                              </MenuItem>
-
-                              <MenuItem
-                                onClick={(e) => {
-                                  handleMenuClose(e);
-                                  handleViewPdfReport(purchase.id);
-                                }}
-                              >
-                                <ListItemIcon>
-                                  <FileText className="h-4 w-4" />
-                                </ListItemIcon>
-                                <ListItemText primary="عرض PDF" />
-                              </MenuItem>
-
-                              {filters.product_id && (
-                                <MenuItem
-                                  onClick={(e) => {
-                                    handleMenuClose(e);
-                                    const product = products.find(
-                                      (p) => p.id === filters.product_id,
-                                    );
-                                    if (product)
-                                      handleViewProductHistory(product);
-                                  }}
-                                >
-                                  <ListItemIcon>
-                                    <History className="h-4 w-4" />
-                                  </ListItemIcon>
-                                  <ListItemText primary="سجل المنتج" />
-                                </MenuItem>
-                              )}
-
-                              <Divider />
-
-                              <MenuItem
-                                onClick={(e) => {
-                                  handleMenuClose(e);
-                                  handleDeleteClick(purchase.id);
-                                }}
-                                sx={{ color: "error.main" }}
-                                disabled={purchase.status === "received"}
-                              >
-                                <ListItemIcon sx={{ color: "inherit" }}>
-                                  <Trash2 className="h-4 w-4" />
-                                </ListItemIcon>
-                                <ListItemText
-                                  primary="حذف"
-                                  secondary={
-                                    purchase.status === "received"
-                                      ? "لا يمكن حذف مشتريات تم استلامها"
-                                      : undefined
-                                  }
-                                />
-                              </MenuItem>
-                            </Menu>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-                {purchasesResponse.data.length > 0 && (
-                  <TableFooter className="bg-muted/50 font-bold">
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-lg">
-                        الإجمالي الكلي
-                      </TableCell>
-                      <TableCell className="text-center text-destructive text-lg">
-                        {formatCurrency(
-                          purchasesResponse.data.reduce(
-                            (sum: number, p: any) =>
-                              sum + Number(p.total_amount || 0),
-                            0,
-                          ),
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center text-emerald-600 text-lg">
-                        {formatCurrency(
-                          purchasesResponse.data.reduce(
-                            (sum: number, p: any) =>
-                              sum + Number(p.total_paid || 0),
-                            0,
-                          ),
-                        )}
-                      </TableCell>
-
-                      <TableCell className="text-center text-primary text-lg">
-                        {formatCurrency(
-                          purchasesResponse.data.reduce(
-                            (sum: number, p: any) =>
-                              sum +
-                              (Number(p.total_amount || 0) -
-                                Number(p.total_paid || 0)),
-                            0,
-                          ),
-                        )}
-                      </TableCell>
-                      <TableCell></TableCell>
-                    </TableRow>
-                  </TableFooter>
+                              <ListItemIcon sx={{ color: "inherit" }}><DeleteOutlineIcon fontSize="small" /></ListItemIcon>
+                              <ListItemText
+                                primary="حذف"
+                                secondary={purchase.status === "received" ? "لا يمكن حذف مشتريات تم استلامها" : undefined}
+                              />
+                            </MenuItem>
+                          </Menu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
-              </Table>
-            </div>
-          </>
-        )}
+              </TableBody>
 
-        {/* Product History Dialog */}
-        <PurchaseItemDetailsDialog
-          open={productHistoryDialogOpen}
-          onClose={handleCloseProductHistory}
-          product={selectedProduct}
-          purchases={productPurchases}
-          isLoading={loadingProductPurchases}
-        />
-      </div>
-      {/* Delete Confirmation Dialog */}
+              {rows.length > 0 && (
+                <TableFooter>
+                  <TableRow sx={{ bgcolor: "grey.100" }}>
+                    <TableCell colSpan={4} align="center">
+                      <Typography variant="body2" fontWeight={700}>الإجمالي</Typography>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Chip label={totalItems} size="small" color="primary" sx={{ fontWeight: 700, height: 22 }} />
+                    </TableCell>
+                    <TableCell />
+                  </TableRow>
+                </TableFooter>
+              )}
+            </Table>
+          </TableContainer>
+        </Paper>
+      )}
+
+      {/* ── Dialogs ── */}
+      <PurchaseItemDetailsDialog
+        open={productHistoryDialogOpen}
+        onClose={() => { setProductHistoryDialogOpen(false); setSelectedProduct(null); setProductPurchases([]); }}
+        product={selectedProduct}
+        purchases={productPurchases}
+        isLoading={loadingProductPurchases}
+      />
+
       <ConfirmationDialog
         open={deleteDialogOpen}
-        onClose={() => {
-          if (!isDeleting) {
-            setDeleteDialogOpen(false);
-            setPurchaseToDelete(null);
-          }
-        }}
+        onClose={() => { if (!isDeleting) { setDeleteDialogOpen(false); setPurchaseToDelete(null); } }}
         onConfirm={handleConfirmDelete}
         title="⚠️ تأكيد حذف الشراء"
         message="هل أنت متأكد من حذف هذا الشراء؟ سيتم حذف جميع بنوده بشكل نهائي ولا يمكن التراجع عن هذه العملية."
@@ -949,29 +533,22 @@ const PurchasesListPage: React.FC = () => {
         confirmVariant="destructive"
         isLoading={isDeleting}
       />
-      {/* Edit Purchase Dialog */}
+
       <EditPurchaseDialog
         open={editDialogOpen}
-        onClose={() => {
-          setEditDialogOpen(false);
-          setPurchaseToEdit(null);
-        }}
+        onClose={() => { setEditDialogOpen(false); setPurchaseToEdit(null); }}
         purchase={purchaseToEdit}
         suppliers={suppliers}
         onUpdate={() => fetchPurchases(currentPage, filters)}
       />
 
-      {/* Purchase Ledger Dialog */}
       <PurchaseLedgerDialog
         open={ledgerDialogOpen}
-        onClose={() => {
-          setLedgerDialogOpen(false);
-          setPurchaseForLedger(null);
-        }}
+        onClose={() => { setLedgerDialogOpen(false); setPurchaseForLedger(null); }}
         purchase={purchaseForLedger}
         onUpdate={() => fetchPurchases(currentPage, filters)}
       />
-    </TooltipProvider>
+    </Box>
   );
 };
 

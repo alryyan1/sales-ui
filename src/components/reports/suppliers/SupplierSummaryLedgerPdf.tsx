@@ -13,179 +13,246 @@ import { formatNumber } from "@/constants";
 import { format } from "date-fns";
 import { getPdfFont } from "@/utils/pdfFontRegistry";
 
+// ── Color palette ────────────────────────────────────────────────────────────
+const C = {
+  accent:     "#1e40af",   // blue-800
+  accentLight:"#eff6ff",   // blue-50
+  headerBg:   "#1e3a5f",   // dark navy
+  headerText: "#ffffff",
+  rowOdd:     "#f8fafc",   // slate-50
+  rowEven:    "#ffffff",
+  border:     "#e2e8f0",   // slate-200
+  text:       "#1e293b",   // slate-800
+  muted:      "#64748b",   // slate-500
+  red:        "#dc2626",
+  green:      "#16a34a",
+  totalsRow:  "#f1f5f9",   // slate-100
+};
+
 const styles = StyleSheet.create({
   page: {
-    padding: 30,
-    fontSize: 10,
+    paddingHorizontal: 28,
+    paddingTop: 28,
+    paddingBottom: 40,
+    fontSize: 9,
     flexDirection: "column",
+    backgroundColor: "#ffffff",
   },
+
+  // ── Accent stripe ─────────────────────────────────────────────────────────
+  accentBar: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 5,
+    backgroundColor: C.accent,
+  },
+
+  // ── Header ────────────────────────────────────────────────────────────────
   header: {
-    marginBottom: 20,
     flexDirection: "row-reverse",
     justifyContent: "space-between",
     alignItems: "flex-start",
+    marginBottom: 18,
+    paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    paddingBottom: 20,
+    borderBottomColor: C.border,
   },
   companyInfo: {
     alignItems: "flex-end",
-    width: "60%",
-  },
-  logoContainer: {
-    width: "30%",
-    alignItems: "flex-start",
-  },
-  logo: {
-    width: 60,
-    height: 60,
-    objectFit: "contain",
   },
   companyName: {
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: "bold",
-    marginBottom: 5,
-    color: "#1a1a1a",
+    color: C.headerBg,
+    marginBottom: 3,
   },
   companyDetail: {
-    fontSize: 9,
-    color: "#555",
+    fontSize: 8,
+    color: C.muted,
     marginBottom: 2,
+    textAlign: "right",
   },
-  title: {
-    fontSize: 16,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 15,
-    textDecoration: "underline",
-    color: "#333",
+  logo: {
+    objectFit: "contain",
   },
-  metaSection: {
+
+  // ── Title block ───────────────────────────────────────────────────────────
+  titleBlock: {
+    backgroundColor: C.accentLight,
+    borderRadius: 4,
+    padding: 10,
+    marginBottom: 14,
     flexDirection: "row-reverse",
     justifyContent: "space-between",
-    marginBottom: 15,
-    backgroundColor: "#f9fafb",
-    padding: 10,
-    borderRadius: 4,
+    alignItems: "center",
   },
-  metaRow: {
-    flexDirection: "row-reverse",
-    marginBottom: 4,
-    width: "100%",
-    justifyContent: "flex-start",
+  title: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: C.accent,
+  },
+  titleMeta: {
+    alignItems: "flex-start",
+    gap: 2,
+  },
+  titleMetaRow: {
+    flexDirection: "row",
+    gap: 4,
   },
   metaLabel: {
-    fontWeight: "bold",
-    width: 100,
-    textAlign: "right",
-    marginLeft: 10,
-    fontSize: 9,
-    color: "#666",
+    fontSize: 8,
+    color: C.muted,
   },
   metaValue: {
-    flex: 1,
-    textAlign: "right",
-    fontSize: 10,
+    fontSize: 8,
+    fontWeight: "bold",
+    color: C.text,
   },
+
+  // ── Summary cards ─────────────────────────────────────────────────────────
+  cardsRow: {
+    flexDirection: "row-reverse",
+    gap: 8,
+    marginBottom: 16,
+  },
+  card: {
+    flex: 1,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: C.border,
+    padding: 8,
+    alignItems: "flex-end",
+  },
+  cardLabel: {
+    fontSize: 8,
+    color: C.muted,
+    marginBottom: 3,
+  },
+  cardValue: {
+    fontSize: 11,
+    fontWeight: "bold",
+  },
+
+  // ── Table ─────────────────────────────────────────────────────────────────
   table: {
     width: "100%",
-    marginTop: 10,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: C.border,
+    borderRadius: 4,
+    overflow: "hidden",
   },
-  tableHeader: {
+  tableHead: {
     flexDirection: "row-reverse",
-    backgroundColor: "#f3f4f6",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
-    padding: 8,
-    fontWeight: "bold",
-    fontSize: 9,
+    backgroundColor: C.headerBg,
+    paddingVertical: 7,
+    paddingHorizontal: 6,
   },
   tableRow: {
     flexDirection: "row-reverse",
+    paddingVertical: 6,
+    paddingHorizontal: 6,
     borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6",
-    padding: 8,
-    fontSize: 9,
+    borderBottomColor: C.border,
   },
-  colName: { width: "35%", textAlign: "right" },
-  colDebit: { width: "20%", textAlign: "left" },
-  colCredit: { width: "20%", textAlign: "left" },
-  colBalance: { width: "25%", textAlign: "left" },
-  summarySection: {
-    marginTop: 20,
-    flexDirection: "row",
-    justifyContent: "flex-end",
-  },
-  summaryBox: {
-    width: "50%",
-    borderTopWidth: 2,
-    borderTopColor: "#e5e7eb",
-    paddingTop: 10,
-  },
-  summaryRow: {
+  totalsRow: {
     flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    paddingVertical: 4,
+    paddingVertical: 7,
+    paddingHorizontal: 6,
+    backgroundColor: C.totalsRow,
+    borderTopWidth: 1.5,
+    borderTopColor: C.accent,
   },
-  summaryLabel: {
-    textAlign: "right",
+  thNo:     { width: "6%",  textAlign: "center" },
+  thName:   { width: "40%", textAlign: "right", paddingLeft: 12 },
+  thDebit:  { width: "18%", textAlign: "center" },
+  thCredit: { width: "18%", textAlign: "center" },
+  thBal:    { width: "18%", textAlign: "center" },
+  headText: {
+    fontSize: 8.5,
     fontWeight: "bold",
-    color: "#4b5563",
-    fontSize: 10,
+    color: C.headerText,
   },
-  summaryValue: {
-    textAlign: "left",
-    fontWeight: "bold",
-    fontSize: 10,
-  },
-  footer: {
-    position: "absolute",
-    bottom: 30,
-    left: 30,
-    right: 30,
+  cellNo: {
+    width: "6%",
     textAlign: "center",
     fontSize: 8,
-    color: "#9ca3af",
+    color: C.muted,
+  },
+  cellName: {
+    width: "40%",
+    textAlign: "right",
+    fontSize: 9,
+    color: C.text,
+    paddingLeft: 12,
+  },
+  cellNum: {
+    width: "18%",
+    textAlign: "center",
+    fontSize: 9,
+  },
+  totalLabel: {
+    width: "46%",
+    textAlign: "right",
+    fontSize: 9.5,
+    fontWeight: "bold",
+    color: C.text,
+    paddingLeft: 12,
+  },
+
+  // ── Footer ────────────────────────────────────────────────────────────────
+  footer: {
+    position: "absolute",
+    bottom: 18,
+    left: 28,
+    right: 28,
     borderTopWidth: 1,
-    borderTopColor: "#f3f4f6",
-    paddingTop: 10,
+    borderTopColor: C.border,
+    paddingTop: 6,
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+  },
+  footerText: {
+    fontSize: 7.5,
+    color: C.muted,
   },
 });
 
-interface SupplierSummaryLedgerPdfProps {
+interface Props {
   suppliers: SupplierSummary[];
   settings?: AppSettings | null;
 }
 
-const currencySymbol = "SDG";
+const currency = "SDG";
+const fmt = (n: number) => `${formatNumber(n)} ${currency}`;
 
-export const SupplierSummaryLedgerPdf: React.FC<
-  SupplierSummaryLedgerPdfProps
-> = ({ suppliers, settings }) => {
+export const SupplierSummaryLedgerPdf: React.FC<Props> = ({ suppliers, settings }) => {
   const totals = suppliers.reduce(
-    (acc, supplier) => ({
-      totalDebit: acc.totalDebit + supplier.total_debit,
-      totalCredit: acc.totalCredit + supplier.total_credit,
-      totalBalance: acc.totalBalance + supplier.balance,
+    (acc, s) => ({
+      debit:   acc.debit   + s.total_debit,
+      credit:  acc.credit  + s.total_credit,
+      balance: acc.balance + s.balance,
     }),
-    { totalDebit: 0, totalCredit: 0, totalBalance: 0 }
+    { debit: 0, credit: 0, balance: 0 }
   );
+
+  const printDate = format(new Date(), "yyyy-MM-dd");
+  const useHeaderImage =
+    settings?.invoice_branding_type === "header" && settings?.company_header_url;
 
   return (
     <Document>
-      <Page
-        size="A4"
-        style={[styles.page, { fontFamily: getPdfFont(settings) }]}
-      >
-        {/* Header */}
-        {settings?.invoice_branding_type === "header" &&
-        settings?.company_header_url ? (
-          <View style={{ marginBottom: 20 }}>
+      <Page size="A4" style={[styles.page, { fontFamily: getPdfFont(settings) }]}>
+        {/* Top accent stripe */}
+        <View style={styles.accentBar} fixed />
+
+        {/* ── Company Header ── */}
+        {useHeaderImage ? (
+          <View style={{ marginBottom: 16 }}>
             <PdfImage
-              src={settings.company_header_url}
-              style={{ width: "100%", height: 100, objectFit: "cover" }}
+              src={settings!.company_header_url!}
+              style={{ width: "100%", height: 90, objectFit: "cover" }}
             />
           </View>
         ) : (
@@ -200,33 +267,27 @@ export const SupplierSummaryLedgerPdf: React.FC<
               },
             ]}
           >
-            <View style={styles.logoContainer}>
-              {settings?.company_logo_url ? (
-                <PdfImage
-                  src={settings.company_logo_url}
-                  style={[
-                    styles.logo,
-                    {
-                      width: settings.logo_width || 60,
-                      height: settings.logo_height || 60,
-                    },
-                  ]}
-                />
-              ) : null}
-            </View>
+            {settings?.company_logo_url && (
+              <PdfImage
+                src={settings.company_logo_url}
+                style={[
+                  styles.logo,
+                  {
+                    width:  settings.logo_width  || 55,
+                    height: settings.logo_height || 55,
+                  },
+                ]}
+              />
+            )}
             <View style={styles.companyInfo}>
               <Text style={styles.companyName}>
                 {settings?.company_name || "اسم الشركة"}
               </Text>
               {settings?.company_address && (
-                <Text style={styles.companyDetail}>
-                  {settings.company_address}
-                </Text>
+                <Text style={styles.companyDetail}>{settings.company_address}</Text>
               )}
               {settings?.company_phone && (
-                <Text style={styles.companyDetail}>
-                  هاتف: {settings.company_phone}
-                </Text>
+                <Text style={styles.companyDetail}>هاتف: {settings.company_phone}</Text>
               )}
               {settings?.tax_number && (
                 <Text style={styles.companyDetail}>
@@ -237,104 +298,126 @@ export const SupplierSummaryLedgerPdf: React.FC<
           </View>
         )}
 
-        <Text style={styles.title}>
-          ملخص كشف حساب الموردين / Suppliers Summary Ledger
-        </Text>
-
-        {/* Meta */}
-        <View style={styles.metaSection}>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaValue}>
-              {format(new Date(), "yyyy-MM-dd")}
-            </Text>
-            <Text style={styles.metaLabel}>تاريخ الطباعة:</Text>
-          </View>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaValue}>{suppliers.length}</Text>
-            <Text style={styles.metaLabel}>عدد الموردين:</Text>
+        {/* ── Title Block ── */}
+        <View style={styles.titleBlock}>
+          <Text style={styles.title}>كشف حساب الموردين</Text>
+          <View style={styles.titleMeta}>
+            <View style={styles.titleMetaRow}>
+              <Text style={styles.metaValue}>{printDate}</Text>
+              <Text style={styles.metaLabel}>  تاريخ الطباعة:</Text>
+            </View>
+            <View style={styles.titleMetaRow}>
+              <Text style={styles.metaValue}>{suppliers.length}</Text>
+              <Text style={styles.metaLabel}>  عدد الموردين:</Text>
+            </View>
           </View>
         </View>
 
-        {/* Table */}
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text style={styles.colBalance}>الرصيد</Text>
-            <Text style={styles.colCredit}>إجمالي الدائن</Text>
-            <Text style={styles.colDebit}>إجمالي المدين</Text>
-            <Text style={styles.colName}>اسم المورد</Text>
+        {/* ── Summary Cards ── */}
+        <View style={styles.cardsRow}>
+          <View style={[styles.card, { borderColor: "#fecaca" }]}>
+            <Text style={styles.cardLabel}>إجمالي المدين</Text>
+            <Text style={[styles.cardValue, { color: C.red }]}>{fmt(totals.debit)}</Text>
           </View>
-          {suppliers.map((supplier, index) => (
-            <View key={supplier.id || index} style={styles.tableRow}>
-              <Text
-                style={[
-                  styles.colBalance,
-                  {
-                    color: supplier.balance > 0 ? "#dc2626" : "#16a34a",
-                    fontWeight: supplier.balance !== 0 ? "bold" : "normal",
-                  },
-                ]}
-              >
-                {formatNumber(supplier.balance)} {currencySymbol}
-              </Text>
-              <Text style={styles.colCredit}>
-                {formatNumber(supplier.total_credit)} {currencySymbol}
-              </Text>
-              <Text style={styles.colDebit}>
-                {formatNumber(supplier.total_debit)} {currencySymbol}
-              </Text>
-              <Text style={styles.colName}>{supplier.name}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Summary */}
-        <View style={styles.summarySection}>
-          <View style={{ flex: 1 }} />
-          <View style={styles.summaryBox}>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryValue}>
-                {formatNumber(totals.totalDebit)} {currencySymbol}
-              </Text>
-              <Text style={styles.summaryLabel}>إجمالي المدين:</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryValue}>
-                {formatNumber(totals.totalCredit)} {currencySymbol}
-              </Text>
-              <Text style={styles.summaryLabel}>إجمالي الدائن:</Text>
-            </View>
-            <View
+          <View style={[styles.card, { borderColor: "#bbf7d0" }]}>
+            <Text style={styles.cardLabel}>إجمالي الدائن</Text>
+            <Text style={[styles.cardValue, { color: C.green }]}>{fmt(totals.credit)}</Text>
+          </View>
+          <View style={[styles.card, { borderColor: "#bfdbfe" }]}>
+            <Text style={styles.cardLabel}>صافي الرصيد</Text>
+            <Text
               style={[
-                styles.summaryRow,
-                {
-                  borderTopWidth: 1,
-                  borderTopColor: "#eee",
-                  marginTop: 4,
-                  paddingTop: 4,
-                },
+                styles.cardValue,
+                { color: totals.balance > 0 ? C.red : totals.balance < 0 ? C.green : C.muted },
               ]}
+            >
+              {fmt(totals.balance)}
+            </Text>
+          </View>
+        </View>
+
+        {/* ── Table ── */}
+        <View style={styles.table}>
+          {/* Header */}
+          <View style={styles.tableHead} fixed>
+            <Text style={[styles.headText, styles.thBal]}>الرصيد</Text>
+            <Text style={[styles.headText, styles.thCredit]}>الدائن</Text>
+            <Text style={[styles.headText, styles.thDebit]}>المدين</Text>
+            <Text style={[styles.headText, styles.thName]}>المورد</Text>
+            <Text style={[styles.headText, styles.thNo]}>#</Text>
+          </View>
+
+          {/* Rows */}
+          {suppliers.map((s, i) => (
+            <View
+              key={s.id}
+              style={[
+                styles.tableRow,
+                { backgroundColor: i % 2 === 0 ? C.rowEven : C.rowOdd },
+              ]}
+              wrap={false}
             >
               <Text
                 style={[
-                  styles.summaryValue,
+                  styles.cellNum,
                   {
-                    fontSize: 12,
-                    color: totals.totalBalance > 0 ? "#dc2626" : "#16a34a",
+                    color:
+                      s.balance > 0 ? C.red : s.balance < 0 ? C.green : C.muted,
+                    fontWeight: s.balance !== 0 ? "bold" : "normal",
                   },
                 ]}
               >
-                {formatNumber(totals.totalBalance)} {currencySymbol}
+                {fmt(s.balance)}
               </Text>
-              <Text style={styles.summaryLabel}>إجمالي الرصيد:</Text>
+              <Text style={[styles.cellNum, { color: C.green }]}>
+                {fmt(s.total_credit)}
+              </Text>
+              <Text style={[styles.cellNum, { color: C.red }]}>
+                {fmt(s.total_debit)}
+              </Text>
+              <Text style={styles.cellName}>{s.name}</Text>
+              <Text style={styles.cellNo}>{i + 1}</Text>
             </View>
+          ))}
+
+          {/* Totals row */}
+          <View style={styles.totalsRow} wrap={false}>
+            <Text
+              style={[
+                styles.cellNum,
+                {
+                  fontWeight: "bold",
+                  fontSize: 9.5,
+                  color: totals.balance > 0 ? C.red : totals.balance < 0 ? C.green : C.muted,
+                },
+              ]}
+            >
+              {fmt(totals.balance)}
+            </Text>
+            <Text style={[styles.cellNum, { fontWeight: "bold", fontSize: 9.5, color: C.green }]}>
+              {fmt(totals.credit)}
+            </Text>
+            <Text style={[styles.cellNum, { fontWeight: "bold", fontSize: 9.5, color: C.red }]}>
+              {fmt(totals.debit)}
+            </Text>
+            <Text style={[styles.totalLabel]}>الإجمالي</Text>
+            <Text style={[styles.cellNo]} />
           </View>
         </View>
 
-        <View style={styles.footer}>
-          <Text>نسخة إلكترونية - تم إصدارها بواسطة النظام</Text>
+        {/* ── Footer ── */}
+        <View style={styles.footer} fixed>
+          <Text style={styles.footerText}>
+            {settings?.company_name || "نظام إدارة المبيعات"} · طُبع: {printDate}
+          </Text>
+          <Text
+            style={styles.footerText}
+            render={({ pageNumber, totalPages }) =>
+              `صفحة ${pageNumber} / ${totalPages}`
+            }
+          />
         </View>
       </Page>
     </Document>
   );
 };
-

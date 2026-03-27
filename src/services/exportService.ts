@@ -158,6 +158,26 @@ const exportService = {
       throw new Error('Failed to open Excel. Please try again.');
     }
   },
+
+  /**
+   * Export supplier ledger to PDF and open in new tab
+   * @param supplierId The ID of the supplier to export
+   * @returns Promise that resolves when PDF is opened
+   */
+  exportSupplierLedgerPdf: async (supplierId: number): Promise<void> => {
+    try {
+      // Create the URL for the web PDF endpoint (not API)
+      const baseUrl = apiClient.defaults.baseURL?.replace('/api', '') || '';
+      const pdfUrl = `${baseUrl}/suppliers/${supplierId}/ledger/pdf`;
+      
+      // Open PDF in new tab
+      window.open(pdfUrl, '_blank');
+      
+    } catch (error) {
+      console.error('Error opening PDF:', error);
+      throw new Error('Failed to open PDF. Please try again.');
+    }
+  },
 };
 
 /**

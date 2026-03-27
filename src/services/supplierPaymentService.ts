@@ -4,12 +4,11 @@ import apiClient from "../lib/axios";
 export interface SupplierPayment {
   id: number;
   supplier_id: number;
+  purchase_id?: number | null;
   user_id: number;
   amount: number;
-  type: 'payment' | 'credit' | 'adjustment';
-  method: 'cash' | 'bank_transfer' | 'check' | 'credit_card' | 'other';
+  method: 'cash' | 'bank_transfer' | 'visa' | 'mastercard' | 'mada' | 'bankak' | 'fawry' | 'ocash' | 'refund' | 'other';
   reference_number?: string;
-  notes?: string;
   payment_date: string;
   created_at: string;
   updated_at: string;
@@ -21,11 +20,10 @@ export interface SupplierPayment {
 
 export interface CreatePaymentData {
   amount: number;
-  type: 'payment' | 'credit' | 'adjustment';
-  method: 'cash' | 'bank_transfer' | 'check' | 'credit_card' | 'other';
+  method: 'cash' | 'bank_transfer' | 'visa' | 'mastercard' | 'mada' | 'bankak' | 'fawry' | 'ocash' | 'refund' | 'other';
   reference_number?: string;
-  notes?: string;
   payment_date: string;
+  purchase_id?: number | string | null;
 }
 
 export interface UpdatePaymentData extends CreatePaymentData {
@@ -34,6 +32,7 @@ export interface UpdatePaymentData extends CreatePaymentData {
 
 export interface LedgerEntry {
   id: string;
+  purchase_id?: number | string;
   date: string;
   type: 'purchase' | 'payment';
   description: string;
@@ -41,9 +40,9 @@ export interface LedgerEntry {
   credit: number;
   balance: number;
   reference?: string;
-  notes?: string;
   created_at: string;
   user?: string;
+  payments?: SupplierPayment[];
 }
 
 export interface SupplierLedger {
@@ -147,4 +146,4 @@ const supplierPaymentService = {
   },
 };
 
-export default supplierPaymentService; 
+export default supplierPaymentService;

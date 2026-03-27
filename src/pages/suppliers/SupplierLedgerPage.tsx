@@ -1,85 +1,118 @@
-// src/pages/suppliers/SupplierLedgerPage.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+
+// MUI
+import Box from "@mui/material/Box";
+import Paper from "@mui/material/Paper";
+import Typography from "@mui/material/Typography";
+import Button from "@mui/material/Button";
+import IconButton from "@mui/material/IconButton";
+import Breadcrumbs from "@mui/material/Breadcrumbs";
+import Chip from "@mui/material/Chip";
+import Divider from "@mui/material/Divider";
+import Stack from "@mui/material/Stack";
+import Grid from "@mui/material/Grid";
+import Skeleton from "@mui/material/Skeleton";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableFooter from "@mui/material/TableFooter";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import CircularProgress from "@mui/material/CircularProgress";
+import Alert from "@mui/material/Alert";
+
+// Lucide icons
 import {
   ArrowLeft,
-  Plus,
-  Edit,
-  Trash2,
-  TrendingDown,
   TrendingUp,
+  TrendingDown,
   Wallet,
   AlertCircle,
-  Building,
-  Mail,
+  Building2,
   Phone,
-  User,
-  MoreHorizontal,
   FileText,
+  Printer,
+  CreditCard,
+  BarChart3,
+  CheckCircle2,
+  User2,
 } from "lucide-react";
 
-// Shadcn UI Components
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
-// Services and Types
 import supplierPaymentService, {
   SupplierLedger,
-  SupplierPayment,
-  PaymentMethod,
-  PaymentType,
+  LedgerEntry,
 } from "@/services/supplierPaymentService";
+import exportService from "@/services/exportService";
 import { useFormatCurrency } from "@/hooks/useFormatCurrency";
-import PaymentFormModal from "@/components/suppliers/PaymentFormModal";
-import ConfirmationDialog from "@/components/common/ConfirmationDialog";
-import { SupplierLedgerPdfDialog } from "@/components/suppliers/SupplierLedgerPdfDialog";
+import { PurchasePaymentsDialog } from "@/components/suppliers/PurchasePaymentsDialog";
+import { toast } from "sonner";
+
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+
+interface StatCardProps {
+  label: string;
+  value: string;
+  icon: React.ReactNode;
+  iconColor: string;
+  valueColor?: string;
+  sub?: React.ReactNode;
+}
+
+const StatCard: React.FC<StatCardProps> = ({ label, value, icon, iconColor, valueColor = "text.primary", sub }) => (
+  <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2 }}>
+    <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={2}>
+      <Box flex={1} minWidth={0}>
+        <Typography variant="caption" color="text.secondary" fontWeight={500} display="block" mb={0.5}>
+          {label}
+        </Typography>
+        <Typography variant="h6" fontWeight={700} color={valueColor} lineHeight={1}>
+          {value}
+        </Typography>
+      </Box>
+      <Box
+        sx={{
+          width: 40,
+          height: 40,
+          borderRadius: 1.5,
+          bgcolor: iconColor,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}
+      >
+        {icon}
+      </Box>
+    </Stack>
+  </Paper>
+);
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 const SupplierLedgerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const supplierId = Number(id);
   const formatCurrency = useFormatCurrency();
+  const supplierId = Number(id);
 
-  // State
   const [ledger, setLedger] = useState<SupplierLedger | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-  const [paymentTypes, setPaymentTypes] = useState<PaymentType[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
 
-  // Modal states
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [editingPayment, setEditingPayment] = useState<SupplierPayment | null>(
-    null
+  const [isPaymentsDialogOpen, setIsPaymentsDialogOpen] = useState(false);
+  const [selectedPurchaseId, setSelectedPurchaseId] = useState<string | number>("");
+
+  const selectedEntry = ledger?.ledger_entries.find(
+    (e) => (e.purchase_id || e.id) === selectedPurchaseId
   );
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [paymentToDelete, setPaymentToDelete] =
-    useState<SupplierPayment | null>(null);
+  const selectedPurchasePayments = selectedEntry?.payments ?? [];
+  const selectedPurchaseAmount = selectedEntry?.debit ?? 0;
 
-  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
-
-  // Fetch ledger data
-  const fetchLedger = async () => {
-    if (!supplierId) return;
-
+  const fetchLedger = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -90,473 +123,348 @@ const SupplierLedgerPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Fetch payment options
-  const fetchPaymentOptions = async () => {
-    try {
-      const [methods, types] = await Promise.all([
-        supplierPaymentService.getPaymentMethods(),
-        supplierPaymentService.getPaymentTypes(),
-      ]);
-      setPaymentMethods(methods);
-      setPaymentTypes(types);
-    } catch (err) {
-      console.error("Failed to fetch payment options:", err);
-    }
-  };
-
-  useEffect(() => {
-    fetchLedger();
-    fetchPaymentOptions();
   }, [supplierId]);
 
-  // Payment handlers
-  const handleAddPayment = () => {
-    setEditingPayment(null);
-    setIsPaymentModalOpen(true);
+  useEffect(() => {
+    if (supplierId) fetchLedger();
+  }, [supplierId, fetchLedger]);
+
+  const handleViewPayments = (entry: LedgerEntry) => {
+    setSelectedPurchaseId(entry.purchase_id || entry.id);
+    setIsPaymentsDialogOpen(true);
   };
 
-  const handleEditPayment = (payment: SupplierPayment) => {
-    setEditingPayment(payment);
-    setIsPaymentModalOpen(true);
-  };
-
-  const handleDeletePayment = (payment: SupplierPayment) => {
-    setPaymentToDelete(payment);
-    setIsConfirmOpen(true);
-  };
-
-  const handlePaymentSuccess = () => {
-    setIsPaymentModalOpen(false);
-    fetchLedger(); // Refresh ledger
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!paymentToDelete) return;
-
+  const handleExportPdf = async () => {
+    setIsExporting(true);
     try {
-      await supplierPaymentService.deletePayment(paymentToDelete.id);
-      setIsConfirmOpen(false);
-      setPaymentToDelete(null);
-      fetchLedger(); // Refresh ledger
-    } catch (err) {
-      console.error("Failed to delete payment:", err);
+      await exportService.exportSupplierLedgerPdf(supplierId);
+      toast.success("جاري تصدير كشف الحساب...");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "فشل تصدير كشف الحساب";
+      toast.error(msg);
+    } finally {
+      setIsExporting(false);
     }
   };
 
-  const getTypeBadgeVariant = (type: string) => {
-    switch (type) {
-      case "purchase":
-        return "destructive"; // Shadcn variant for red
-      case "payment":
-        return "default"; // Shadcn variant for primary/blue (or utilize a custom class)
-      default:
-        return "secondary";
-    }
-  };
-
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case "purchase":
-        return "شراء";
-      case "payment":
-        return "دفعة";
-      default:
-        return type;
-    }
-  };
-
+  // ── Loading ──────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="p-6 space-y-6" dir="rtl">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-10 w-48" />
-          <Skeleton className="h-10 w-32" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-32 w-full" />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-4">
-            <Skeleton className="h-96 w-full" />
-          </div>
-          <div>
-            <Skeleton className="h-64 w-full" />
-          </div>
-        </div>
-      </div>
+      <Box sx={{  bgcolor: "grey.50", p: 3 }} dir="rtl">
+        <Stack direction="row" justifyContent="space-between" mb={3}>
+          <Skeleton variant="rounded" width={260} height={36} />
+          <Skeleton variant="rounded" width={120} height={36} />
+        </Stack>
+        <Grid container spacing={2} mb={3}>
+          {[...Array(4)].map((_, i) => (
+            <Grid item xs={6} lg={3} key={i}>
+              <Skeleton variant="rounded" height={100} />
+            </Grid>
+          ))}
+        </Grid>
+        <Skeleton variant="rounded" height={400} />
+      </Box>
     );
   }
 
-  if (error) {
+  // ── Error ────────────────────────────────────────────────────────────────
+  if (error || !ledger) {
     return (
-      <div className="p-6" dir="rtl">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>خطأ</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      </div>
+      <Box sx={{  bgcolor: "grey.50", display: "flex", alignItems: "center", justifyContent: "center", p: 3 }} dir="rtl">
+        <Paper variant="outlined" sx={{ maxWidth: 380, width: "100%", p: 4, borderRadius: 3, textAlign: "center" }}>
+          <Box sx={{ width: 56, height: 56, borderRadius: "50%", bgcolor: "error.50", display: "flex", alignItems: "center", justifyContent: "center", mx: "auto", mb: 2 }}>
+            <AlertCircle size={28} color="#ef4444" />
+          </Box>
+          <Typography variant="subtitle1" fontWeight={700} mb={0.5}>تعذّر تحميل البيانات</Typography>
+          <Typography variant="body2" color="text.secondary" mb={3}>{error || "فشل تحميل سجل المورد"}</Typography>
+          <Button variant="contained" fullWidth onClick={() => navigate("/suppliers")} disableElevation sx={{ borderRadius: 2 }}>
+            العودة إلى قائمة الموردين
+          </Button>
+        </Paper>
+      </Box>
     );
   }
 
-  if (!ledger) {
-    return (
-      <div className="p-6" dir="rtl">
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>تنبيه</AlertTitle>
-          <AlertDescription>كشف حساب هذا المورد غير متوفر.</AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
+  const { supplier, summary, ledger_entries } = ledger;
+  const isInDebt = summary.balance > 0;
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 md:p-8" dir="rtl">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => navigate("/suppliers")}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              كشف حساب المورد
-            </h1>
-          </div>
-          <p className="text-slate-500 mr-11">{ledger.supplier.name}</p>
-        </div>
+    <Box sx={{  bgcolor: "grey.50" }} dir="rtl">
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setPdfDialogOpen(true)}
-            className="flex items-center"
-          >
-            <FileText className="mr-2 h-4 w-4" /> تحميل PDF
-          </Button>
-          <Button
-            onClick={handleAddPayment}
-            className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200"
-          >
-            <Plus className="ml-2 h-4 w-4" />
-            إضافة دفعة
-          </Button>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card className="border-0 shadow-sm bg-white overflow-hidden relative">
-          <div className="absolute top-0 right-0 w-1 h-full bg-red-500" />
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500 mb-1">
-                  إجمالي المشتريات
-                </p>
-                <h3 className="text-2xl font-bold text-slate-900">
-                  {formatCurrency(ledger.summary.total_purchases)}
-                </h3>
-              </div>
-              <div className="bg-red-50 p-3 rounded-full">
-                <TrendingDown className="h-6 w-6 text-red-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-sm bg-white overflow-hidden relative">
-          <div className="absolute top-0 right-0 w-1 h-full bg-emerald-500" />
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500 mb-1">
-                  إجمالي المدفوعات
-                </p>
-                <h3 className="text-2xl font-bold text-slate-900">
-                  {formatCurrency(ledger.summary.total_payments)}
-                </h3>
-              </div>
-              <div className="bg-emerald-50 p-3 rounded-full">
-                <TrendingUp className="h-6 w-6 text-emerald-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-sm bg-white overflow-hidden relative">
-          <div
-            className={`absolute top-0 right-0 w-1 h-full ${
-              ledger.summary.balance > 0 ? "bg-red-500" : "bg-green-500"
-            }`}
-          />
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500 mb-1">
-                  الرصيد الحالي
-                </p>
-                <h3
-                  className={`text-2xl font-bold ${
-                    ledger.summary.balance > 0
-                      ? "text-red-600"
-                      : "text-green-600"
-                  }`}
+      {/* ── Sticky Header ─────────────────────────────────────────────── */}
+      <Paper
+        elevation={0}
+        square
+        sx={{ borderBottom: 1, borderColor: "divider", position: "sticky", top: 0, zIndex: 30, bgcolor: "background.paper" }}
+      >
+        <Box sx={{ maxWidth: 1200, mx: "auto", px: { xs: 2, lg: 3 } }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" height={56}>
+            {/* Breadcrumb */}
+            <Stack direction="row" alignItems="center" gap={1}>
+              <IconButton size="small" onClick={() => navigate("/suppliers")} sx={{ mr: 0.5 }}>
+                <ArrowLeft size={18} />
+              </IconButton>
+              <Breadcrumbs separator="›" sx={{ fontSize: 14 }}>
+                <Typography
+                  component="span"
+                  fontSize={14}
+                  color="text.secondary"
+                  sx={{ cursor: "pointer", "&:hover": { color: "text.primary" } }}
+                  onClick={() => navigate("/suppliers")}
                 >
-                  {formatCurrency(ledger.summary.balance)}
-                </h3>
-              </div>
-              <div className="bg-blue-50 p-3 rounded-full">
-                <Wallet className="h-6 w-6 text-blue-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                  الموردون
+                </Typography>
+                <Typography component="span" fontSize={14} fontWeight={600} color="text.primary">
+                  {supplier.name}
+                </Typography>
+                <Typography component="span" fontSize={14} color="text.secondary">
+                  كشف الحساب
+                </Typography>
+              </Breadcrumbs>
+            </Stack>
 
-      {/* Two Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column - Table */}
-        <div className="lg:col-span-2">
-          {/* Ledger Table */}
-          <Card className="border-0 shadow-sm bg-white">
-            <CardHeader>
-              <CardTitle className="text-xl flex items-center gap-2">
-                <Building className="h-5 w-5 text-blue-500" />
-                حركات الحساب
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-slate-50 hover:bg-slate-50">
-                      <TableHead className="text-center font-semibold">
-                        التاريخ
-                      </TableHead>
-                      <TableHead className="text-center font-semibold">
-                        النوع
-                      </TableHead>
-                      <TableHead className="text-center font-semibold">
-                        الوصف
-                      </TableHead>
-                      <TableHead className="text-center font-semibold">
-                        مدين
-                      </TableHead>
-                      <TableHead className="text-center font-semibold">
-                        دائن
-                      </TableHead>
-                      <TableHead className="text-center font-semibold">
-                        الرصيد
-                      </TableHead>
-                      <TableHead className="text-center font-semibold">
-                        المرجع
-                      </TableHead>
-                      <TableHead className="text-center font-semibold text-muted-foreground w-[50px]"></TableHead>
+            {/* Export Button */}
+            <Button
+              variant="contained"
+              size="small"
+              disableElevation
+              disabled={isExporting}
+              onClick={handleExportPdf}
+              startIcon={isExporting ? <CircularProgress size={14} color="inherit" /> : <Printer size={14} />}
+              sx={{ borderRadius: 1.5, textTransform: "none", fontWeight: 600 }}
+            >
+              تصدير PDF
+            </Button>
+          </Stack>
+        </Box>
+      </Paper>
+
+      <Box sx={{ maxWidth: 1200, mx: "auto", px: { xs: 2, lg: 3 }, py: 3 }}>
+        <Stack spacing={3}>
+
+          {/* ── Supplier Info ──────────────────────────────────────────── */}
+          {/* <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2 }}>
+            <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ sm: "center" }} gap={2}>
+              <Box
+                sx={{
+                  width: 56, height: 56, borderRadius: 2,
+                  bgcolor: "indigo.50", border: "1px solid",
+                  borderColor: "indigo.100",
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  bgcolor: "#eef2ff",
+                }}
+              >
+                <Building2 size={26} color="#6366f1" />
+              </Box>
+
+              <Box flex={1} minWidth={0}>
+                <Stack direction="row" alignItems="center" gap={1} mb={0.5}>
+                  <Typography variant="subtitle1" fontWeight={700} noWrap>{supplier.name}</Typography>
+                  <Chip
+                    label="نشط"
+                    size="small"
+                    icon={<CheckCircle2 size={12} />}
+                    sx={{ bgcolor: "#f0fdf4", color: "#15803d", fontWeight: 600, fontSize: 11, height: 22, "& .MuiChip-icon": { color: "#16a34a" } }}
+                  />
+                </Stack>
+                <Stack direction="row" flexWrap="wrap" gap={2}>
+                  {supplier.contact_person && (
+                    <Stack direction="row" alignItems="center" gap={0.5}>
+                      <User2 size={14} color="#94a3b8" />
+                      <Typography variant="body2" color="text.secondary">{supplier.contact_person}</Typography>
+                    </Stack>
+                  )}
+                  {supplier.phone && (
+                    <Stack direction="row" alignItems="center" gap={0.5}>
+                      <Phone size={14} color="#94a3b8" />
+                      <Typography variant="body2" color="text.secondary">{supplier.phone}</Typography>
+                    </Stack>
+                  )}
+                </Stack>
+              </Box>
+
+              <Box textAlign="right" flexShrink={0}>
+                <Typography variant="caption" color="text.disabled" display="block">كشف حساب مورد</Typography>
+                <Typography variant="caption" color="text.secondary" fontFamily="monospace">
+                  #{String(supplierId).padStart(5, "0")}
+                </Typography>
+              </Box>
+            </Stack>
+          </Paper> */}
+
+          {/* ── Summary Cards ──────────────────────────────────────────── */}
+          <Grid container spacing={2}>
+            <Grid item xs={6} lg={3}>
+              <StatCard
+                label="إجمالي المشتريات"
+                value={formatCurrency(summary.total_purchases)}
+                icon={<TrendingUp size={20} color="#4f46e5" />}
+                iconColor="#eef2ff"
+              />
+            </Grid>
+            <Grid item xs={6} lg={3}>
+              <StatCard
+                label="إجمالي المدفوعات"
+                value={formatCurrency(summary.total_payments)}
+                icon={<TrendingDown size={20} color="#16a34a" />}
+                iconColor="#f0fdf4"
+                valueColor="success.dark"
+              />
+            </Grid>
+            <Grid item xs={6} lg={3}>
+              <StatCard
+                label="الرصيد المستحق"
+                value={formatCurrency(summary.balance)}
+                icon={<CreditCard size={20} color={isInDebt ? "#dc2626" : "#16a34a"} />}
+                iconColor={isInDebt ? "#fef2f2" : "#f0fdf4"}
+                valueColor={isInDebt ? "error.main" : "success.dark"}
+                sub={
+                  <Typography variant="caption" color={isInDebt ? "error.main" : "success.dark"} fontWeight={500}>
+                    {isInDebt ? "مبالغ مستحقة" : "لا توجد مستحقات"}
+                  </Typography>
+                }
+              />
+            </Grid>
+            
+          </Grid>
+
+          {/* ── Ledger Table ───────────────────────────────────────────── */}
+          <Paper variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>
+            {/* Table Toolbar */}
+            <Stack direction="row" alignItems="center" gap={1} px={2.5} py={1.75} borderBottom="1px solid" borderColor="divider">
+              <FileText size={16} color="#94a3b8" />
+              <Typography variant="body2" fontWeight={600} color="text.primary"> الفواتير</Typography>
+              {ledger_entries.length > 0 && (
+                <Chip label={ledger_entries.length} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600 }} />
+              )}
+            </Stack>
+
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: "grey.50" }}>
+                    <TableCell>كود</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>التاريخ</TableCell>
+                    <TableCell align="left" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>مدين</TableCell>
+                    <TableCell align="left" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>دائن</TableCell>
+                    <TableCell align="left" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>الرصيد</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>المدفوعات</TableCell>
+                  </TableRow>
+                </TableHead>
+
+                <TableBody>
+                  {ledger_entries.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center" sx={{ py: 10 }}>
+                        <Stack alignItems="center" gap={1.5} color="text.disabled">
+                          <FileText size={40} color="#e2e8f0" />
+                          <Typography variant="body2" fontWeight={500}>لا توجد معاملات مسجّلة</Typography>
+                        </Stack>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {ledger.ledger_entries.length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={8}
-                          className="h-48 text-center text-slate-500"
-                        >
-                          لا توجد حركات في كشف الحساب لهذا المورد.
+                  ) : (
+                    ledger_entries.map((entry) => (
+                      <TableRow
+                        key={entry.id}
+                        hover
+                        sx={{ "&:last-child td": { borderBottom: 0 } }}
+                      >
+                        <TableCell>{entry.id}</TableCell>
+                        {/* Date */}
+                        <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+                          <Typography variant="caption" fontWeight={600} display="block" color="text.primary">
+                            {format(new Date(entry.date), "dd/MM/yyyy")}
+                          </Typography>
+                        
+                        </TableCell>
+
+
+                        {/* Debit */}
+                        <TableCell align="left" sx={{ whiteSpace: "nowrap" }}>
+                          {entry.debit > 0 ? (
+                            <Typography variant="body2" fontWeight={600} color="text.primary">
+                              {formatCurrency(entry.debit)}
+                            </Typography>
+                          ) : (
+                            <Typography variant="body2" color="text.disabled">—</Typography>
+                          )}
+                        </TableCell>
+
+                        {/* Credit */}
+                        <TableCell align="left" sx={{ whiteSpace: "nowrap" }}>
+                          {entry.credit > 0 ? (
+                            <Typography variant="body2" fontWeight={600} color="success.dark">
+                              {formatCurrency(entry.credit)}
+                            </Typography>
+                          ) : (
+                            <Typography variant="body2" color="text.disabled">—</Typography>
+                          )}
+                        </TableCell>
+
+                        {/* Balance */}
+                        <TableCell align="left" sx={{ whiteSpace: "nowrap" }}>
+                          <Typography
+                            variant="body2"
+                            fontWeight={700}
+                            color={entry.balance > 0 ? "error.main" : "success.dark"}
+                          >
+                            {formatCurrency(entry.balance)}
+                          </Typography>
+                        </TableCell>
+
+                        {/* Action */}
+                        <TableCell align="center">
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => handleViewPayments(entry)}
+                            startIcon={<Wallet size={13} />}
+                            sx={{
+                              borderRadius: 1.5,
+                              textTransform: "none",
+                              fontSize: 12,
+                              fontWeight: 600,
+                              py: 0.3,
+                              minWidth: 0,
+                            }}
+                          >
+                            كشف حساب
+                          </Button>
                         </TableCell>
                       </TableRow>
-                    ) : (
-                      ledger.ledger_entries.map((entry) => (
-                        <TableRow
-                          key={entry.id}
-                          className="hover:bg-slate-50/50"
-                        >
-                          <TableCell className="text-center font-medium text-slate-700">
-                            {format(new Date(entry.date), "yyyy-MM-dd")}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge
-                              variant={getTypeBadgeVariant(entry.type)}
-                              className={
-                                entry.type === "payment"
-                                  ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-emerald-200"
-                                  : ""
-                              }
-                            >
-                              {getTypeLabel(entry.type)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell
-                            className="text-center text-slate-600 max-w-[200px] truncate"
-                            title={entry.description}
-                          >
-                            {entry.description}
-                          </TableCell>
-                          <TableCell className="text-center text-red-600 font-medium">
-                            {entry.debit > 0
-                              ? formatCurrency(entry.debit)
-                              : "-"}
-                          </TableCell>
-                          <TableCell className="text-center text-emerald-600 font-medium">
-                            {entry.credit > 0
-                              ? formatCurrency(entry.credit)
-                              : "-"}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <span
-                              className={`font-bold ${
-                                entry.balance > 0
-                                  ? "text-red-600"
-                                  : "text-green-600"
-                              }`}
-                            >
-                              {formatCurrency(entry.balance)}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-center text-slate-500 text-sm">
-                            {entry.reference || "-"}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {entry.type === "payment" && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-slate-400 hover:text-slate-600"
-                                  >
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      handleEditPayment(
-                                        entry as unknown as SupplierPayment
-                                      )
-                                    }
-                                  >
-                                    <Edit className="h-4 w-4 ml-2 text-amber-500" />
-                                    تعديل
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      handleDeletePayment(
-                                        entry as unknown as SupplierPayment
-                                      )
-                                    }
-                                    className="text-red-600 focus:text-red-700 focus:bg-red-50"
-                                  >
-                                    <Trash2 className="h-4 w-4 ml-2" />
-                                    حذف
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                    ))
+                  )}
+                </TableBody>
 
-        {/* Right Column - Cards */}
-        <div className="space-y-6">
-          {/* Supplier Info */}
-          <Card className="border-0 shadow-sm bg-white">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <User className="h-5 w-5 text-blue-500" />
-                بيانات المورد
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-slate-50">
-                  <User className="h-5 w-5 text-slate-400 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">
-                      مسؤول التواصل
-                    </p>
-                    <p className="font-medium text-slate-900">
-                      {ledger.supplier.contact_person || "-"}
-                    </p>
-                  </div>
-                </div>
+                {/* Footer totals */}
+                {ledger_entries.length > 0 && (
+                  <TableFooter>
+                    <TableRow sx={{ bgcolor: "grey.50", "& td": { borderTop: "2px solid", borderTopColor: "divider", fontWeight: 700, py: 1.5 } }}>
+                      <TableCell align="right" colSpan={2} sx={{ fontSize: 12, color: "text.secondary" }}>الإجمالي</TableCell>
+                      <TableCell align="left" sx={{ fontSize: 13, color: "text.primary" }}>{formatCurrency(summary.total_purchases)}</TableCell>
+                      <TableCell align="left" sx={{ fontSize: 13, color: "success.dark" }}>{formatCurrency(summary.total_payments)}</TableCell>
+                      <TableCell align="left" sx={{ fontSize: 13, color: isInDebt ? "error.main" : "success.dark" }}>{formatCurrency(summary.balance)}</TableCell>
+                      <TableCell />
+                    </TableRow>
+                  </TableFooter>
+                )}
+              </Table>
+            </TableContainer>
+          </Paper>
 
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-slate-50">
-                  <Mail className="h-5 w-5 text-slate-400 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">
-                      البريد الإلكتروني
-                    </p>
-                    <p className="font-medium text-slate-900 break-all">
-                      {ledger.supplier.email || "-"}
-                    </p>
-                  </div>
-                </div>
+        </Stack>
+      </Box>
 
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-slate-50">
-                  <Phone className="h-5 w-5 text-slate-400 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">
-                      رقم الهاتف
-                    </p>
-                    <p className="font-medium text-slate-900" dir="ltr">
-                      {ledger.supplier.phone || "-"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Payment Form Modal */}
-      <PaymentFormModal
-        isOpen={isPaymentModalOpen}
-        onClose={() => setIsPaymentModalOpen(false)}
-        onSuccess={handlePaymentSuccess}
+      <PurchasePaymentsDialog
+        open={isPaymentsDialogOpen}
+        onClose={() => setIsPaymentsDialogOpen(false)}
+        purchaseId={selectedPurchaseId}
+        payments={selectedPurchasePayments}
+        purchaseAmount={selectedPurchaseAmount}
         supplierId={supplierId}
-        paymentToEdit={editingPayment}
-        paymentMethods={paymentMethods}
-        paymentTypes={paymentTypes}
+        onSuccess={fetchLedger}
       />
-
-      {/* Confirmation Dialog */}
-      <ConfirmationDialog
-        open={isConfirmOpen}
-        onClose={() => setIsConfirmOpen(false)}
-        onConfirm={handleConfirmDelete}
-        title="تأكيد الحذف"
-        message="هل أنت متأكد من حذف هذه الدفعة؟ لا يمكن التراجع عن هذه العملية."
-        confirmText="حذف"
-        cancelText="إلغاء"
-        confirmVariant="destructive"
-      />
-
-      {/* PDF Dialog */}
-      <SupplierLedgerPdfDialog
-        open={pdfDialogOpen}
-        onClose={() => setPdfDialogOpen(false)}
-        ledger={ledger}
-      />
-    </div>
+    </Box>
   );
 };
 

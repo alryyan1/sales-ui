@@ -528,77 +528,7 @@ const DashboardPage: React.FC = () => {
           </div>{" "}
           {/* End Summary Cards Grid */}
           {/* --- Low Stock Sample Display (If any) --- */}
-          {summaryData.inventory.low_stock_count > 0 &&
-            summaryData.inventory.low_stock_sample && (
-              <Card className="mt-6 dark:bg-gray-900 dark:border-gray-700">
-                <CardHeader>
-                  <CardTitle className="text-md font-semibold flex items-center gap-2 text-gray-800 dark:text-gray-100">
-                    <ListChecks className="h-5 w-5 text-orange-500 dark:text-orange-400" />
-                    تنبيهات المخزون المنخفض
-                  </CardTitle>
-                  <CardDescription className="dark:text-gray-400">
-                    المنتجات التي وصلت للحد الأدنى للمخزون
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {Array.isArray(summaryData.inventory.low_stock_sample) &&
-                  summaryData.inventory.low_stock_sample.length > 0 ? (
-                    <ul className="list-disc ps-5 text-sm text-muted-foreground dark:text-gray-300 space-y-1">
-                      {summaryData.inventory.low_stock_sample.map((item) => (
-                        <li
-                          key={item.id || item.name}
-                          className="hover:text-primary"
-                        >
-                          <RouterLink to={`/products/${item.id}/edit`}>
-                            {" "}
-                            {/* Link to product edit or view */}
-                            {item.name} (
-                            {`المتبقي: ${formatNumber(item.stock_quantity)}`})
-                          </RouterLink>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-muted-foreground dark:text-gray-400">
-                      لا توجد بيانات
-                    </p>
-                  )}
-
-                  {summaryData.inventory.low_stock_count >
-                    (summaryData.inventory.low_stock_sample?.length || 0) && (
-                    <Button
-                      variant="link"
-                      asChild
-                      className="ps-0 h-auto pt-3 text-xs"
-                    >
-                      <RouterLink to="/products?low_stock=true">
-                        عرض كل المنتجات المنخفضة
-                      </RouterLink>
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-          {/* --- Charts section (lazy loaded) --- */}
-          {!showCharts && (
-            <Card className="mt-6 dark:bg-gray-900 dark:border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-md font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-muted-foreground dark:text-gray-400" />
-                  الرسوم البيانية
-                </CardTitle>
-                <CardDescription className="dark:text-gray-400">
-                  لتحسين سرعة تحميل الصفحة، اضغط على الزر بالأسفل لعرض الرسوم
-                  البيانية.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex justify-center">
-                <Button onClick={() => setShowCharts(true)}>
-                  إظهار الرسوم البيانية
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+        
           {showCharts && (
             <>
               {/* --- Sales by Month Chart --- */}
