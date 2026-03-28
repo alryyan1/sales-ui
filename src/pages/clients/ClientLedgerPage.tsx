@@ -422,7 +422,7 @@ const ClientLedgerPage: React.FC = () => {
                   <TableRow key={entry.id} hover sx={{ "&:last-child td": { border: 0 } }}>
 
                     <TableCell sx={{ fontSize: "0.75rem", color: "text.disabled", textAlign: "center" }}>
-                      {index + 1}
+                      {(filteredEntries.length - index)}
                     </TableCell>
 
                     <TableCell sx={{ whiteSpace: "nowrap" }}>

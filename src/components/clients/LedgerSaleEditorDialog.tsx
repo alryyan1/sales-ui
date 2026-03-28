@@ -22,6 +22,7 @@ import {
   TableRow,
   Chip,
   Tooltip,
+  Avatar,
 } from "@mui/material";
 import { X, Search as SearchIcon, Trash2, Plus, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -63,6 +64,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [paymentReference, setPaymentReference] = useState("");
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
 
   const fetchSale = useCallback(async () => {
     if (!saleId) return;
@@ -250,6 +252,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
       onSaleUpdated();
       setPaymentAmount("");
       setPaymentReference("");
+      setIsAddPaymentOpen(false);
       toast.success("تمت إضافة الدفعة");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "فشل إضافة الدفعة");
@@ -355,8 +358,9 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
 
             {/* Summary strip */}
             <Box sx={{ display: "flex", alignItems: "center", gap: 3, px: 2, py: 1, bgcolor: "grey.50", borderBottom: 1, borderColor: "divider", flexWrap: "wrap" }}>
-              <Box>
-                <Typography variant="caption" color="text.secondary">العميل</Typography>
+              <Box sx={{display:'flex',alignItems:'center',gap:1}}>
+                <Avatar/>
+                {/* <Typography variant="caption" color="text.secondary">العميل</Typography> */}
                 <Typography variant="body2" fontWeight={600}>
                   {sale.client_name ?? sale.client?.name ?? "عميل نقدي"}
                 </Typography>
@@ -381,6 +385,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
 
               {/* Product search */}
               <Autocomplete
+              sx={{width:400}}
                 freeSolo
                 value={selectedProduct}
                 inputValue={productInputValue}
@@ -507,51 +512,35 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
 
                 {/* Payments */}
                 <Box>
-                  <Typography variant="caption" fontWeight={700} color="text.secondary"
-                    sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 0.75 }}>
-                    المدفوعات
-                  </Typography>
-                  <Box sx={{ p: 1.5, border: 1, borderColor: "divider", borderRadius: 1.5, display: "flex", flexDirection: "column", gap: 1 }}>
-                    {/* Add payment row — hidden when fully paid */}
-                    {!isFullyPaid && <Box sx={{ display: "flex", gap: 0.75, alignItems: "center" }}>
-                      <TextField
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 0.75 }}>
+                    <Typography variant="caption" fontWeight={700} color="text.secondary"
+                      sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}>
+                      المدفوعات
+                    </Typography>
+                    {!isFullyPaid && (
+                      <Button
                         size="small"
-                        type="number"
-                        placeholder="المبلغ"
-                        value={paymentAmount}
-                        onChange={(e) => setPaymentAmount(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddPayment(); } }}
-                        sx={{ width: 200 }}
-                      />
-                      <FormControl size="small" sx={{ minWidth: 85 }}>
-                        <Select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} displayEmpty>
-                          <MenuItem value="cash">كاش</MenuItem>
-                          <MenuItem value="bankak">بنكك</MenuItem>
-                          <MenuItem value="fawry">فوري</MenuItem>
-                          <MenuItem value="ocash">أوكاش</MenuItem>
-                        </Select>
-                      </FormControl>
-                      <TextField
-                        size="small"
-                        placeholder="مرجع"
-                        value={paymentReference}
-                        onChange={(e) => setPaymentReference(e.target.value)}
-                        sx={{ flex: 1 }}
-                      />
-                      <Tooltip title="إضافة دفعة">
-                        <span>
-                          <IconButton size="small" color="primary" onClick={handleAddPayment}
-                            disabled={paymentLoading || !paymentAmount}>
-                            {paymentLoading ? <CircularProgress size={15} /> : <Plus size={16} />}
-                          </IconButton>
-                        </span>
-                      </Tooltip>
-                    </Box>}
-
+                        variant="outlined"
+                        color="primary"
+                        startIcon={<Plus size={13} />}
+                        onClick={() => {
+                          const due = Number(sale.due_amount ?? 0);
+                          setPaymentAmount(due > 0 ? String(due) : "");
+                          setPaymentReference("");
+                          setPaymentMethod("cash");
+                          setIsAddPaymentOpen(true);
+                        }}
+                        sx={{ textTransform: "none", fontSize: "0.75rem", py: 0.25, "& .MuiButton-startIcon": { ml: "4px" } }}
+                      >
+                        إضافة دفعة
+                      </Button>
+                    )}
+                  </Box>
+                  <Box sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, overflow: "hidden",maxWidth:'400px' }}>
                     {sale.payments && sale.payments.length > 0 ? (
                       <Table size="small">
                         <TableHead>
-                          <TableRow>
+                          <TableRow sx={{ bgcolor: "grey.50" }}>
                             <TableCell sx={{ py: 0.4, fontSize: "0.74rem" }}>التاريخ</TableCell>
                             <TableCell sx={{ py: 0.4, fontSize: "0.74rem" }}>الطريقة</TableCell>
                             <TableCell sx={{ py: 0.4, fontSize: "0.74rem" }} align="right">المبلغ</TableCell>
@@ -580,7 +569,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
                       </Table>
                     ) : (
                       <Typography variant="caption" color="text.secondary"
-                        sx={{ textAlign: "center", display: "block", py: 1 }}>
+                        sx={{ textAlign: "center", display: "block", py: 1.5 }}>
                         لا توجد مدفوعات
                       </Typography>
                     )}
@@ -595,6 +584,76 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
       <DialogActions sx={{ px: 2, py: 1.25, borderTop: 1, borderColor: "divider" }}>
         <Button onClick={onClose} variant="contained" size="small">إغلاق</Button>
       </DialogActions>
+
+      {/* ── Add Payment Sub-Dialog ─────────────────────────────────── */}
+      <Dialog
+        open={isAddPaymentOpen}
+        onClose={() => !paymentLoading && setIsAddPaymentOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <Box sx={{ display: "flex", alignItems: "center", px: 2, py: 1.25, borderBottom: 1, borderColor: "divider" }}>
+          <Typography variant="subtitle2" fontWeight={700} sx={{ flex: 1 }}>إضافة دفعة</Typography>
+          <IconButton size="small" onClick={() => setIsAddPaymentOpen(false)} disabled={paymentLoading}>
+            <X size={16} />
+          </IconButton>
+        </Box>
+        <DialogContent sx={{ pt: 2, pb: 1 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+            <TextField
+              label="المبلغ"
+              size="small"
+              type="number"
+              fullWidth
+              autoFocus
+              value={paymentAmount}
+              onChange={(e) => setPaymentAmount(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddPayment(); } }}
+              inputProps={{ min: 0 }}
+            />
+            <FormControl size="small" fullWidth>
+              <InputLabel>طريقة الدفع</InputLabel>
+              <Select
+                label="طريقة الدفع"
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+              >
+                <MenuItem value="cash">كاش</MenuItem>
+                <MenuItem value="bankak">بنكك</MenuItem>
+                <MenuItem value="fawry">فوري</MenuItem>
+                <MenuItem value="ocash">أوكاش</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              label="رقم المرجع (اختياري)"
+              size="small"
+              fullWidth
+              value={paymentReference}
+              onChange={(e) => setPaymentReference(e.target.value)}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 2, py: 1.25, borderTop: 1, borderColor: "divider", gap: 1 }}>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => setIsAddPaymentOpen(false)}
+            disabled={paymentLoading}
+          >
+            إلغاء
+          </Button>
+          <Button
+            size="small"
+            variant="contained"
+            color="primary"
+            onClick={handleAddPayment}
+            disabled={paymentLoading || !paymentAmount || Number(paymentAmount) <= 0}
+            startIcon={paymentLoading ? <CircularProgress size={14} color="inherit" /> : null}
+          >
+            تأكيد
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 };

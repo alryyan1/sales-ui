@@ -49,17 +49,16 @@ const clientService = {
    * @param {number} page - رقم الصفحة المطلوب (افتراضيًا 1).
    * @returns {Promise<PaginatedResponse<Client>>} وعد يحتوي على بيانات العملاء المقسمة.
    */
-  getClients: async (page: number = 1): Promise<PaginatedResponse<Client>> => {
+  getClients: async (page: number = 1, search: string = ''): Promise<PaginatedResponse<Client>> => {
     try {
-      // استخدام apiClient لإرسال طلب GET مع رقم الصفحة كـ query parameter
-      const response = await apiClient.get<PaginatedResponse<Client>>(
-        `/clients?page=${page}`,
-      );
-      console.log("getClients response:", response.data); // للمساعدة في التصحيح
-      return response.data; // إرجاع بيانات الاستجابة
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
+      if (search) params.append('search', search);
+      const response = await apiClient.get<PaginatedResponse<Client>>(`/clients?${params.toString()}`);
+      return response.data;
     } catch (error) {
       console.error("Error fetching clients:", error);
-      throw error; // إعادة رمي الخطأ ليتم التعامل معه في المكون الذي استدعى الدالة
+      throw error;
     }
   },
 

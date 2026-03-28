@@ -1,77 +1,139 @@
 // src/pages/ClientsPage.tsx
 import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 
-// MUI Components
-import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
-import Alert from "@mui/material/Alert";
-import Pagination from "@mui/material/Pagination";
-import Button from "@mui/material/Button";
 import { CircularProgress } from "@mui/material";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 
-// Services and Types
 import clientService, {
   Client,
   PaginatedResponse,
 } from "../services/clientService";
 
-// Custom Components
 import ClientsTable from "../components/clients/ClientsTable";
 import ClientFormModal from "../components/clients/ClientFormModal";
 import ConfirmationDialog from "../components/common/ConfirmationDialog";
 import ClientProceduresDialog from "../components/clients/ClientProceduresDialog";
-import { PlusIcon, CloudUpload } from "lucide-react";
+import {
+  PlusIcon,
+  CloudUpload,
+  Search,
+  Users,
+  ChevronRight,
+  ChevronLeft,
+  RefreshCw,
+} from "lucide-react";
 import { useSettings } from "../context/SettingsContext";
 import { uploadClientsToFirestore } from "../services/firebaseStore";
 import apiClient from "../lib/axios";
 import { toast } from "sonner";
 
 const ClientsPage: React.FC = () => {
-  // --- State Management ---
-  const [clientsResponse, setClientsResponse] =
-    useState<PaginatedResponse<Client> | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Loading client list
-  const [error, setError] = useState<string | null>(null); // Error fetching list
-  const [currentPage, setCurrentPage] = useState(1); // Pagination
-
-  // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingClient, setEditingClient] = useState<Client | null>(null); // Client for editing
-
-  // Deletion State
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false); // Confirm dialog visibility
-  const [clientToDeleteId, setClientToDeleteId] = useState<number | null>(null); // ID of client to delete
-  const [isDeleting, setIsDeleting] = useState(false); // Loading state for delete operation
-
-  // Procedures Dialog State
-  const [selectedClientForProcedures, setSelectedClientForProcedures] =
-    useState<Client | null>(null);
-  const [isProceduresOpen, setIsProceduresOpen] = useState(false);
-
-  // Settings for Company Name
+  const navigate = useNavigate();
   const { getSetting } = useSettings();
   const companyName = getSetting("company_name", "اسم الشركة") as string;
   const firebaseCollectionName = getSetting("firebase_collection_name", "none") as string;
 
-  // Firebase sync state
+  const [clientsResponse, setClientsResponse] = useState<PaginatedResponse<Client> | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [clientToDeleteId, setClientToDeleteId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const [selectedClientForProcedures, setSelectedClientForProcedures] = useState<Client | null>(null);
+  const [isProceduresOpen, setIsProceduresOpen] = useState(false);
+
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  const fetchClients = useCallback(async (page: number, search: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await clientService.getClients(page, search);
+      setClientsResponse(data);
+    } catch (err) {
+      setError(clientService.getErrorMessage(err));
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchClients(currentPage, debouncedSearch);
+  }, [fetchClients, currentPage, debouncedSearch]);
+
+  const openModal = (client: Client | null = null) => {
+    setEditingClient(client);
+    setIsModalOpen(true);
+  };
+
+  const handleSaveSuccess = () => {
+    setIsModalOpen(false);
+    fetchClients(editingClient ? currentPage : 1, debouncedSearch);
+    if (!editingClient) setCurrentPage(1);
+  };
+
+  const openConfirmDialog = (id: number) => {
+    setClientToDeleteId(id);
+    setIsConfirmOpen(true);
+  };
+
+  const closeConfirmDialog = () => {
+    if (isDeleting) return;
+    setIsConfirmOpen(false);
+    setTimeout(() => setClientToDeleteId(null), 300);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!clientToDeleteId) return;
+    setIsDeleting(true);
+    try {
+      await clientService.deleteClient(clientToDeleteId);
+      closeConfirmDialog();
+      if (clientsResponse && clientsResponse.data.length === 1 && currentPage > 1) {
+        setCurrentPage((p) => p - 1);
+      } else {
+        fetchClients(currentPage, debouncedSearch);
+      }
+    } catch {
+      closeConfirmDialog();
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const handleSyncToFirebase = async () => {
     setIsSyncing(true);
     try {
-      // Fetch all clients by looping pages
       const allClients: Client[] = [];
       let page = 1;
       let lastPage = 1;
       do {
-        const res = await apiClient.get<{ data: Client[]; last_page: number }>(
-          `/clients?page=${page}&per_page=500`,
-        );
+        const res = await apiClient.get<{ data: Client[]; last_page: number }>(`/clients?page=${page}&per_page=500`);
         allClients.push(...res.data.data);
         lastPage = res.data.last_page;
         page++;
       } while (page <= lastPage);
-
       await uploadClientsToFirestore(allClients, firebaseCollectionName);
       toast.success(`تم رفع ${allClients.length} عميل إلى Firebase`);
     } catch {
@@ -81,191 +143,129 @@ const ClientsPage: React.FC = () => {
     }
   };
 
-  // --- Data Fetching ---
-  const fetchClients = useCallback(async (page: number) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await clientService.getClients(page);
-      setClientsResponse(data);
-    } catch (err) {
-      setError(clientService.getErrorMessage(err));
-    } finally {
-      setIsLoading(false);
-    }
-  }, []); // Dependency array is empty
+  const clients = clientsResponse?.data ?? [];
+  const totalPages = clientsResponse?.last_page ?? 1;
+  const total = clientsResponse?.total ?? 0;
 
-  // Effect to fetch data on mount and when page changes
-  useEffect(() => {
-    fetchClients(currentPage);
-  }, [fetchClients, currentPage]);
-
-  // --- Modal Handlers ---
-  const openModal = (client: Client | null = null) => {
-    setEditingClient(client);
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    // editingClient is reset inside the modal's useEffect now
-  };
-
-  const handleSaveSuccess = () => {
-    closeModal();
-    const pageToFetch = editingClient ? currentPage : 1;
-    fetchClients(pageToFetch);
-    if (!editingClient) setCurrentPage(1);
-  };
-
-  // --- Deletion Handlers ---
-  const openConfirmDialog = (id: number) => {
-    setClientToDeleteId(id);
-    setIsConfirmOpen(true);
-  };
-
-  const closeConfirmDialog = () => {
-    if (isDeleting) return; // Prevent closing while processing
-    setIsConfirmOpen(false);
-    // Delay clearing ID slightly so dialog can fade out if needed
-    setTimeout(() => setClientToDeleteId(null), 300);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!clientToDeleteId) return;
-    setIsDeleting(true);
-
-    try {
-      await clientService.deleteClient(clientToDeleteId);
-      closeConfirmDialog(); // Close confirmation dialog on success
-
-      // Smart refetch/pagination adjustment
-      if (
-        clientsResponse &&
-        clientsResponse.data.length === 1 &&
-        currentPage > 1
-      ) {
-        setCurrentPage((prev) => prev - 1);
-      } else {
-        fetchClients(currentPage);
-      }
-    } catch {
-      // Keep dialog open on error? Or close? Closing for now.
-      closeConfirmDialog();
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  // --- Pagination Handler (for MUI Pagination) ---
-  const handlePageChange = (_: React.ChangeEvent<unknown>, value: number) => {
-    setCurrentPage(value);
-  };
-
-  // --- Render Component ---
   return (
-    <Box
-      sx={{ p: { xs: 1, sm: 2, md: 3 } }}
-      className="dark:bg-gray-900 min-h-screen"
-    >
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: { xs: "column", sm: "row" },
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 3,
-          gap: 2,
-        }}
-      >
-        <Typography
-          variant="h4"
-          className="text-gray-800 dark:text-gray-100"
-          sx={{ fontWeight: 700 }}
-        >
-          العملاء
-        </Typography>
-        <Box sx={{ display: "flex", gap: 1 }}>
+    <div className="p-4 space-y-3" dir="rtl">
+
+      {/* ── Header ───────────────────────────────────────────── */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Users className="h-5 w-5 text-slate-500" />
+          <h1 className="text-lg font-semibold text-slate-800">العملاء</h1>
+          {!isLoading && (
+            <span className="text-xs text-slate-400 font-normal">({total})</span>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5">
           <Button
+            variant="outline"
+            size="sm"
             onClick={handleSyncToFirebase}
-            variant="outlined"
-            color="success"
-            startIcon={isSyncing ? <CircularProgress size={16} color="inherit" /> : <CloudUpload size={18} />}
             disabled={isSyncing}
-            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}
+            className="h-8 gap-1.5 text-xs text-emerald-600 border-emerald-200 hover:bg-emerald-50"
           >
-            {isSyncing ? "جاري الرفع..." : "رفع إلى Firebase"}
+            {isSyncing
+              ? <CircularProgress size={12} color="inherit" />
+              : <CloudUpload className="h-3.5 w-3.5" />}
+            Firebase
           </Button>
           <Button
+            size="sm"
             onClick={() => openModal()}
-            variant="contained"
-            color="primary"
-            startIcon={<PlusIcon className="h-5 w-5" />}
-            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}
+            className="h-8 gap-1.5 text-xs"
           >
+            <PlusIcon className="h-3.5 w-3.5" />
             إضافة عميل
           </Button>
-        </Box>
-      </Box>
+        </div>
+      </div>
 
-      {isLoading && (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
-          <CircularProgress />
-          <Typography
-            sx={{ ml: 2 }}
-            className="text-gray-600 dark:text-gray-400"
-          >
-            جاري التحميل...
-          </Typography>
-        </Box>
-      )}
+      {/* ── Search ───────────────────────────────────────────── */}
+      <div className="relative max-w-sm">
+        <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+        <Input
+          placeholder="بحث بالاسم أو الهاتف أو البريد..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="h-8 pr-8 text-sm"
+        />
+      </div>
 
+      {/* ── Error ────────────────────────────────────────────── */}
       {!isLoading && error && (
-        <Alert severity="error" sx={{ my: 2 }}>
+        <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
           {error}
-        </Alert>
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs ml-auto" onClick={() => fetchClients(currentPage, debouncedSearch)}>
+            <RefreshCw className="h-3 w-3 ml-1" /> إعادة المحاولة
+          </Button>
+        </div>
       )}
 
-      {!isLoading && !error && clientsResponse && (
-        <Box sx={{ mt: 2 }}>
-          <ClientsTable
-            clients={clientsResponse.data}
-            onClientClick={(client) => {
-              setSelectedClientForProcedures(client);
-              setIsProceduresOpen(true);
-            }}
-            isLoading={isDeleting}
-          />
+      {/* ── Table ────────────────────────────────────────────── */}
+      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+        <ClientsTable
+          clients={clients}
+          isLoading={isLoading}
+          onClientClick={(client) => {
+            setSelectedClientForProcedures(client);
+            setIsProceduresOpen(true);
+          }}
+          onEdit={openModal}
+          onDelete={openConfirmDialog}
+          onViewLedger={(id) => navigate(`/clients/${id}/ledger`)}
+        />
 
-          {clientsResponse.last_page > 1 && (
-            <Box
-              sx={{ display: "flex", justifyContent: "center", p: 2, mt: 3 }}
-            >
-              <Pagination
-                count={clientsResponse.last_page}
-                page={currentPage}
-                onChange={handlePageChange}
-                color="primary"
-                shape="rounded"
-                showFirstButton
-                showLastButton
-              />
-            </Box>
-          )}
-          {clientsResponse.data.length === 0 && (
-            <Typography
-              sx={{ textAlign: "center", py: 5 }}
-              className="text-gray-500 dark:text-gray-400"
-            >
-              لا يوجد عملاء حاليًا
-            </Typography>
-          )}
-        </Box>
-      )}
+        {/* ── Pagination ───────────────────────────────────── */}
+        {!isLoading && totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-2.5 border-t border-slate-100 bg-slate-50/50">
+            <p className="text-xs text-slate-500">
+              صفحة {currentPage} من {totalPages}
+            </p>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const page = i + Math.max(1, Math.min(currentPage - 2, totalPages - 4));
+                return (
+                  <Button
+                    key={page}
+                    variant={page === currentPage ? "default" : "outline"}
+                    size="icon"
+                    className="h-7 w-7 text-xs"
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </Button>
+                );
+              })}
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
 
+      {/* ── Modals ───────────────────────────────────────────── */}
       <ClientFormModal
         isOpen={isModalOpen}
-        onClose={closeModal}
+        onClose={() => setIsModalOpen(false)}
         clientToEdit={editingClient}
         onSaveSuccess={handleSaveSuccess}
       />
@@ -287,11 +287,11 @@ const ClientsPage: React.FC = () => {
         client={selectedClientForProcedures}
         onEdit={openModal}
         onDelete={openConfirmDialog}
-        onViewLedger={(id) => (window.location.hash = `#/clients/${id}/ledger`)}
+        onViewLedger={(id) => navigate(`/clients/${id}/ledger`)}
         onNewSale={(_) => (window.location.hash = `#/sales/pos-blank`)}
         companyName={companyName}
       />
-    </Box>
+    </div>
   );
 };
 
