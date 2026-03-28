@@ -52,6 +52,8 @@ export interface SupplierLedger {
     contact_person?: string;
     email?: string;
     phone?: string;
+    client_id?: number | null;
+    is_client?: boolean;
   };
   summary: {
     total_purchases: number;

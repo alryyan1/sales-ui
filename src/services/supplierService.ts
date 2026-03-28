@@ -12,8 +12,8 @@ export interface Supplier {
     email: string | null;
     phone: string | null;
     address: string | null;
-    // website?: string | null; // Add if included in backend
-    // notes?: string | null;   // Add if included in backend
+    client_id: number | null;
+    is_client: boolean;
     created_at: string;
     updated_at: string;
 }
@@ -28,7 +28,7 @@ export interface SupplierSummary {
 }
 
 // Data type for creating/updating (excluding system-generated fields)
-export type SupplierFormData = Omit<Supplier, 'id' | 'created_at' | 'updated_at'>;
+export type SupplierFormData = Omit<Supplier, 'id' | 'created_at' | 'updated_at' | 'is_client'> & { is_client?: boolean };
 
 // Re-use PaginatedResponse type (or define it here if not exported globally)
 // Assuming PaginatedResponse is exported from clientService or a shared types file

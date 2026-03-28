@@ -13,6 +13,10 @@ import {
   Button,
   Box,
   Alert,
+  Divider,
+  FormControlLabel,
+  Switch,
+  Typography,
 } from "@mui/material";
 import { Loader2 } from "lucide-react";
 
@@ -34,6 +38,7 @@ const supplierFormSchema = z.object({
     .optional(),
   phone: z.string().nullable().optional(),
   address: z.string().nullable().optional(),
+  is_client: z.boolean().optional(),
 });
 
 type SupplierFormValues = z.infer<typeof supplierFormSchema>;
@@ -72,6 +77,8 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
     handleSubmit,
     reset,
     register,
+    watch,
+    setValue,
     formState: { isSubmitting, errors },
     setError,
   } = form;
@@ -87,6 +94,7 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
           email: supplierToEdit.email || "",
           phone: supplierToEdit.phone || "",
           address: supplierToEdit.address || "",
+          is_client: supplierToEdit.is_client ?? false,
         });
       } else {
         reset({
@@ -95,6 +103,7 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
           email: "",
           phone: "",
           address: "",
+          is_client: false,
         }); // Reset to defaults for adding
       }
     }
@@ -246,6 +255,35 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
                 error={!!errors.address}
                 helperText={errors.address?.message}
               />
+            </Box>
+
+            <Box sx={{ gridColumn: { xs: "span 1", sm: "span 2" } }}>
+              <Divider sx={{ mb: 2 }} />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={watch("is_client") ?? false}
+                    onChange={(e) => setValue("is_client", e.target.checked)}
+                    disabled={isSubmitting}
+                    color="primary"
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body2" fontWeight={600}>
+                      هذا المورد عميل أيضاً
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      سيتم إنشاء سجل عميل مرتبط لتتبع المبيعات
+                    </Typography>
+                  </Box>
+                }
+              />
+              {isEditMode && supplierToEdit?.is_client && (
+                <Alert severity="info" sx={{ mt: 1.5 }} icon={false}>
+                  مرتبط بحساب عميل — يمكن عرض كشف مبيعاته من صفحة المورد
+                </Alert>
+              )}
             </Box>
           </Box>
 

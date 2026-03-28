@@ -39,6 +39,8 @@ import {
   BarChart3,
   CheckCircle2,
   User2,
+  ShoppingCart,
+  ExternalLink,
 } from "lucide-react";
 
 import supplierPaymentService, {
@@ -325,8 +327,36 @@ const SupplierLedgerPage: React.FC = () => {
                 }
               />
             </Grid>
-            
+
           </Grid>
+
+          {/* ── Also a Client Banner ───────────────────────────────────── */}
+          {supplier.is_client && supplier.client_id && (
+            <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, borderColor: "primary.light", bgcolor: "#eff6ff" }}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
+                <Stack direction="row" alignItems="center" gap={1.5}>
+                  <ShoppingCart size={18} color="#2563eb" />
+                  <Box>
+                    <Typography variant="body2" fontWeight={600} color="primary.main">
+                      هذا المورد عميل أيضاً
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      يمكنك عرض كشف حساب مبيعاته
+                    </Typography>
+                  </Box>
+                </Stack>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => navigate(`/clients/${supplier.client_id}/ledger`)}
+                  startIcon={<ExternalLink size={14} />}
+                  sx={{ borderRadius: 1.5, textTransform: "none", fontWeight: 600, flexShrink: 0 }}
+                >
+                  كشف حساب المبيعات
+                </Button>
+              </Stack>
+            </Paper>
+          )}
 
           {/* ── Ledger Table ───────────────────────────────────────────── */}
           <Paper variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>

@@ -57,6 +57,7 @@ import {
   Wallet,
   FileDown,
   CloudUpload,
+  ShoppingCart,
 } from "lucide-react";
 
 import supplierService, { Supplier, SupplierSummary } from "../services/supplierService";
@@ -408,7 +409,14 @@ const SuppliersPage: React.FC = () => {
                       <div className="flex items-center gap-2">
                         
                         <div>
-                          <p className="text-sm font-medium leading-tight">{supplier.name}</p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-medium leading-tight">{supplier.name}</p>
+                            {supplier.is_client && (
+                              <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-600 ring-1 ring-inset ring-blue-200">
+                                عميل
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </TableCell>
@@ -502,6 +510,15 @@ const SuppliersPage: React.FC = () => {
                               <FileText className="h-3.5 w-3.5 text-blue-500" />
                               كشف الحساب
                             </DropdownMenuItem>
+                            {supplier.is_client && supplier.client_id && (
+                              <DropdownMenuItem
+                                onClick={(e) => { e.stopPropagation(); navigate(`/clients/${supplier.client_id}/ledger`); }}
+                                className="gap-2"
+                              >
+                                <ShoppingCart className="h-3.5 w-3.5 text-blue-500" />
+                                كشف مبيعاته
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem
                               onClick={(e) => { e.stopPropagation(); handleOpenModal(supplier); }}
                               className="gap-2"
