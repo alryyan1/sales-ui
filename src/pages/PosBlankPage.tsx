@@ -32,7 +32,8 @@ import saleService, {
   type Payment,
 } from "@/services/saleService";
 import productService, { Product } from "@/services/productService";
-import clientService, { Client } from "@/services/clientService";
+import { Client } from "@/services/clientService";
+import { useClients } from "@/hooks/useClients";
 import reportService from "@/services/reportService";
 import { formatNumber, url as apiBaseUrl } from "@/constants";
 import { SaleItemsTable } from "@/components/sales/SaleItemsTable";
@@ -166,8 +167,9 @@ const PosBlankPage: React.FC = () => {
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
 
   // Client Autocomplete State
-  const [clientOptions, setClientOptions] = useState<Client[]>([]);
-  const [clientSearchLoading, setClientSearchLoading] = useState(false);
+  const { data: clientsData } = useClients();
+  const clientOptions = clientsData?.data ?? [];
+  const clientSearchLoading = false;
   const [clientInputValue, setClientInputValue] = useState("");
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [initialClientName, setInitialClientName] = useState("");
@@ -324,23 +326,6 @@ const PosBlankPage: React.FC = () => {
     return () => clearTimeout(t);
   }, [productInputValue, user?.warehouse_id, getSetting]);
 
-  // Handle Client Search
-  useEffect(() => {
-    const term = clientInputValue.trim();
-    if (!term) {
-      setClientOptions([]);
-      return;
-    }
-    const t = setTimeout(() => {
-      setClientSearchLoading(true);
-      clientService
-        .autocompleteClients(term)
-        .then(setClientOptions)
-        .catch(() => setClientOptions([]))
-        .finally(() => setClientSearchLoading(false));
-    }, 300);
-    return () => clearTimeout(t);
-  }, [clientInputValue]);
 
   const handleClientChange = useCallback(
     async (client: Client | null) => {

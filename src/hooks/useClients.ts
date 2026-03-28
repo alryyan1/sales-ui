@@ -4,7 +4,7 @@ import clientService, { Client, PaginatedResponse } from "../services/clientServ
 export function useClients() {
     return useQuery<PaginatedResponse<Client>>({
         queryKey: ["clients", "all"],
-        queryFn: () => clientService.getClients(1), // Fetch first page/all
+        queryFn: () => clientService.getClients(1, '', 10000),
         staleTime: 5 * 60 * 1000, // 5 minutes
     });
 }

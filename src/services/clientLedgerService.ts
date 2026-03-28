@@ -1,6 +1,22 @@
 // src/services/clientLedgerService.ts
 import apiClient from "../lib/axios";
 
+export interface ClientPayment {
+  id: number;
+  sale_id: number;
+  sale_date: string | null;
+  payment_date: string;
+  method: string;
+  amount: number;
+  reference_number: string | null;
+}
+
+export interface ClientPaymentsResponse {
+  payments: ClientPayment[];
+  total: number;
+  count: number;
+}
+
 export interface ClientLedgerEntry {
   id: string;
   sale_id: number;
@@ -45,6 +61,14 @@ const clientLedgerService = {
     window.open(url, "_blank");
     // Revoke URL later to keep tab working
     setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
+  },
+
+  getPayments: async (clientId: number, dateFrom?: string, dateTo?: string): Promise<ClientPaymentsResponse> => {
+    const params = new URLSearchParams();
+    if (dateFrom) params.append('date_from', dateFrom);
+    if (dateTo) params.append('date_to', dateTo);
+    const response = await apiClient.get(`/clients/${clientId}/payments?${params.toString()}`);
+    return response.data;
   },
 
   settleDebt: async (

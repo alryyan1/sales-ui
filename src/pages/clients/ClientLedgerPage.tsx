@@ -35,6 +35,7 @@ import {
   Receipt,
   Edit,
   X,
+  CreditCard,
 } from "lucide-react";
 
 import clientLedgerService, {
@@ -42,6 +43,7 @@ import clientLedgerService, {
   ClientLedgerEntry,
 } from "@/services/clientLedgerService";
 import { LedgerSaleEditorDialog } from "@/components/clients/LedgerSaleEditorDialog";
+import { ClientPaymentsDialog } from "@/components/clients/ClientPaymentsDialog";
 import { useSettings } from "@/context/SettingsContext";
 import { uploadFileToFirebase } from "@/services/firebaseStorage";
 import { toast } from "sonner";
@@ -67,6 +69,7 @@ const ClientLedgerPage: React.FC = () => {
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingSaleId, setEditingSaleId] = useState<number | null>(null);
+  const [paymentsDialogOpen, setPaymentsDialogOpen] = useState(false);
 
   const [selectedProduct, setSelectedProduct] = useState<{ product_id: number; product_name: string } | null>(null);
 
@@ -270,6 +273,15 @@ const ClientLedgerPage: React.FC = () => {
           )}
         </Box>
 
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<CreditCard size={15} />}
+          onClick={() => setPaymentsDialogOpen(true)}
+          sx={{ textTransform: "none", "& .MuiButton-startIcon": { ml: "6px" } }}
+        >
+          المدفوعات
+        </Button>
         <Button
           variant="outlined"
           size="small"
@@ -546,6 +558,16 @@ const ClientLedgerPage: React.FC = () => {
         saleId={editingSaleId}
         onSaleUpdated={fetchLedger}
       />
+
+      {/* Payments Dialog */}
+      {ledger && (
+        <ClientPaymentsDialog
+          open={paymentsDialogOpen}
+          onClose={() => setPaymentsDialogOpen(false)}
+          clientId={clientId}
+          clientName={client.name}
+        />
+      )}
     </Box>
   );
 };

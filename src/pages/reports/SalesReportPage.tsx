@@ -1,66 +1,32 @@
-// src/pages/reports/SalesReportPage.tsx
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { format } from "date-fns";
-
-// MUI Components
-import {
-  Box,
-  Button,
-  Typography,
-  Stack,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-} from "@mui/material";
-import IconButton from "@mui/material/IconButton";
-
-// Lucide Icons
-import { ArrowLeft, Download, FileText, X } from "lucide-react";
+import { ArrowLeft, FileText } from "lucide-react";
 
 import apiClient from "@/lib/axios";
-// Services and Types
-import saleService, { Sale } from "@/services/saleService";
 import { useSettings } from "@/context/SettingsContext";
 import { webUrl } from "@/constants";
-
-// React Query Hooks
 import { useQuery } from "@tanstack/react-query";
 import { useClients } from "@/hooks/useClients";
 import { useProducts } from "@/hooks/useProducts";
 import { useShifts } from "@/hooks/useShifts";
-import { useSalesReport } from "@/hooks/useSalesReport";
 
-// New Sub-components
-import ReportFilters, {
-  ReportFilterValues,
-} from "@/components/reports/sales/ReportFilters";
+import ReportFilters, { ReportFilterValues } from "@/components/reports/sales/ReportFilters";
 import { ReportStats } from "@/components/reports/sales/ReportStats";
-import { SalesTable } from "@/components/reports/sales/SalesTable";
-import SaleDetailsDialog from "@/components/reports/sales/SaleDetailsDialog";
+import { PaymentsTable } from "@/components/reports/sales/PaymentsTable";
+import { LedgerSaleEditorDialog } from "@/components/clients/LedgerSaleEditorDialog";
 
-// --- Component ---
 const SalesReportPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // --- State for Dialogs ---
-  const [saleDetailsDialogOpen, setSaleDetailsDialogOpen] = useState(false);
-  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
-  const [loadingSaleDetails, setLoadingSaleDetails] = useState(false);
-  const [shiftReportDialogOpen, setShiftReportDialogOpen] = useState(false);
-  const [selectedShift, setSelectedShift] = useState<{
-    id: number;
-    opened_at: string | null;
-    closed_at: string | null;
-    is_open: boolean;
-  } | null>(null);
+  const [selectedSaleId, setSelectedSaleId] = useState<number | null>(null);
+  const [saleDialogOpen, setSaleDialogOpen] = useState(false);
 
   const { getSetting } = useSettings();
   const posMode = getSetting("pos_mode", "shift") as "shift" | "days";
 
-  // --- Current Filters and Page (respect posMode: shift only when posMode === "shift") ---
   const currentFilters = useMemo(() => {
     const today = format(new Date(), "yyyy-MM-dd");
     return {
@@ -73,21 +39,15 @@ const SalesReportPage: React.FC = () => {
     };
   }, [searchParams, posMode]);
 
-  const initialFilterValues: ReportFilterValues = currentFilters;
-
   const currentPage = useMemo(
     () => Number(searchParams.get("page") || "1"),
-    [searchParams],
+    [searchParams]
   );
 
-  // --- React Query Hooks (for shift report PDF data) ---
   const { data: clientsData, isLoading: loadingClients } = useClients();
   const clients = clientsData?.data || [];
 
-  const { data: productsData, isLoading: loadingProducts } = useProducts({
-    page: 1,
-    perPage: 1000,
-  });
+  const { data: productsData, isLoading: loadingProducts } = useProducts({ page: 1, perPage: 1000 });
   const products = productsData?.data || [];
 
   const { data: shifts = [], isLoading: loadingShifts } = useShifts();
@@ -95,45 +55,21 @@ const SalesReportPage: React.FC = () => {
   const { data: usersData, isLoading: loadingUsers } = useQuery({
     queryKey: ["users-list-filters"],
     queryFn: async () => {
-      const res = await apiClient.get<{ data: { id: number; name: string }[] }>(
-        "/users/list",
-      );
+      const res = await apiClient.get<{ data: { id: number; name: string }[] }>("/users/list");
       return res.data?.data ?? [];
     },
   });
   const users = usersData ?? [];
 
-  const { data: reportData } = useSalesReport({
-    page: currentPage,
-    startDate: currentFilters.startDate,
-    endDate: currentFilters.endDate,
-    clientId: currentFilters.clientId ? Number(currentFilters.clientId) : null,
-    userId: currentFilters.userId ? Number(currentFilters.userId) : null,
-    shiftId: currentFilters.shiftId ? Number(currentFilters.shiftId) : null,
-    productId: currentFilters.productId
-      ? Number(currentFilters.productId)
-      : null,
-    limit: 25,
-    posMode,
-  });
+  const loadingFilters = loadingClients || loadingProducts || loadingShifts || loadingUsers;
 
-  const loadingFilters =
-    loadingClients || loadingProducts || loadingShifts || loadingUsers;
-
-  // --- Auto-select last shift on first load ---
-  // Removed per user request: "i dont want to autoselect shift by default it should not be set to any shift"
-  // useEffect(() => { ... }, []);
-
-  // --- Filter Handlers (respect posMode) ---
   const onFilterSubmit = (data: ReportFilterValues) => {
     const newParams = new URLSearchParams();
     if (data.startDate) newParams.set("startDate", data.startDate);
     if (data.endDate) newParams.set("endDate", data.endDate);
     if (data.clientId) newParams.set("clientId", data.clientId);
     if (data.userId) newParams.set("userId", data.userId);
-    if (posMode === "shift" && data.shiftId) {
-      newParams.set("shiftId", data.shiftId);
-    }
+    if (posMode === "shift" && data.shiftId) newParams.set("shiftId", data.shiftId);
     if (data.productId) newParams.set("productId", data.productId);
     newParams.set("page", "1");
     setSearchParams(newParams);
@@ -141,11 +77,7 @@ const SalesReportPage: React.FC = () => {
 
   const clearFilters = () => {
     const today = format(new Date(), "yyyy-MM-dd");
-    setSearchParams({
-      page: "1",
-      startDate: today,
-      endDate: today,
-    });
+    setSearchParams({ page: "1", startDate: today, endDate: today });
   };
 
   const handlePageChange = (newPage: number) => {
@@ -154,159 +86,49 @@ const SalesReportPage: React.FC = () => {
     setSearchParams(newParams);
   };
 
-  // --- Download PDF ---
-  const handleDownloadPdf = async () => {
-    if (currentFilters.shiftId) {
-      try {
-        const shiftId = Number(currentFilters.shiftId);
-        const shiftFromList = shifts.find((s) => s.id === shiftId);
+  const handleViewSale = useCallback((saleId: number) => {
+    setSelectedSaleId(saleId);
+    setSaleDialogOpen(true);
+  }, []);
 
-        if (shiftFromList) {
-          const currentShiftResponse = await apiClient
-            .get("/shifts/current")
-            .catch(() => ({ data: null }));
-          const currentShift =
-            currentShiftResponse.data?.data || currentShiftResponse.data;
-
-          if (currentShift && currentShift.id === shiftId) {
-            setSelectedShift({
-              id: currentShift.id,
-              opened_at: currentShift.opened_at,
-              closed_at: currentShift.closed_at,
-              is_open: currentShift.is_open || !currentShift.closed_at,
-            });
-          } else {
-            setSelectedShift({
-              id: shiftFromList.id,
-              opened_at: shiftFromList.shift_date
-                ? `${shiftFromList.shift_date}T00:00:00`
-                : null,
-              closed_at: null,
-              is_open: true,
-            });
-          }
-          setShiftReportDialogOpen(true);
-        } else {
-          handleBackendPdf();
-        }
-      } catch (error) {
-        console.error("Error fetching shift:", error);
-        handleBackendPdf();
-      }
-    } else {
-      handleBackendPdf();
-    }
-  };
-
-  const handleBackendPdf = () => {
+  const handleDownloadPdf = () => {
     const params = new URLSearchParams();
-    if (currentFilters.startDate)
-      params.append("start_date", currentFilters.startDate);
-    if (currentFilters.endDate)
-      params.append("end_date", currentFilters.endDate);
-    if (currentFilters.clientId)
-      params.append("client_id", String(currentFilters.clientId));
-    if (currentFilters.userId)
-      params.append("user_id", String(currentFilters.userId));
-    if (currentFilters.shiftId)
-      params.append("shift_id", String(currentFilters.shiftId));
-
-    const pdfUrl = `${webUrl}/reports/sales/pdf?${params.toString()}`;
-    window.open(pdfUrl, "_blank");
+    if (currentFilters.startDate) params.append("start_date", currentFilters.startDate);
+    if (currentFilters.endDate) params.append("end_date", currentFilters.endDate);
+    if (currentFilters.clientId) params.append("client_id", String(currentFilters.clientId));
+    if (currentFilters.userId) params.append("user_id", String(currentFilters.userId));
+    if (currentFilters.shiftId) params.append("shift_id", String(currentFilters.shiftId));
+    window.open(`${webUrl}/reports/sales/pdf?${params.toString()}`, "_blank");
     toast.info("جاري فتح PDF في تبويب جديد...");
   };
 
   return (
-    <Box sx={{ minHeight: "100vh" }}>
+    <div className="min-h-screen bg-background" dir="rtl">
       {/* Header */}
-      <Box
-        sx={{
-          borderBottom: "1px solid",
-          borderColor: "divider",
-          bgcolor: "background.paper",
-        }}
-      >
-        <Box sx={{ maxWidth: "100%", px: { xs: 2, sm: 3, lg: 4 }, py: 2.5 }}>
-          <Stack direction="column" spacing={3}>
-            {/* Top Bar: Title & Actions */}
-            <Stack
-              direction="row"
-              alignItems="center"
-              justifyContent="space-between"
-              flexWrap="wrap"
-              gap={2}
-            >
-              <Stack direction="row" alignItems="center" spacing={2}>
-                <IconButton
+      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
+        <div className="px-4 sm:px-6 lg:px-8 py-2.5">
+          <div className="flex flex-col gap-2.5">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <button
                   onClick={() => navigate("/dashboard")}
-                  size="small"
-                  sx={{
-                    border: "1px solid",
-                    borderColor: "divider",
-                    borderRadius: 2,
-                    transition: "all 0.15s ease",
-                    "&:hover": { bgcolor: "action.hover" },
-                  }}
+                  className="p-1.5 rounded-lg border hover:bg-muted transition-colors"
                 >
-                  <ArrowLeft size={18} />
-                </IconButton>
-                <Box>
-                  <Typography
-                    variant="h6"
-                    component="h1"
-                    sx={{ fontWeight: 600, lineHeight: 1.3 }}
-                  >
-                    تقرير المبيعات
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mt: 0.25 }}
-                  >
-                    عرض وتصدير تقارير المبيعات
-                  </Typography>
-                </Box>
-              </Stack>
+                  <ArrowLeft size={16} />
+                </button>
+                <h1 className="text-base font-bold">تقرير المبيعات</h1>
+              </div>
+              <button
+                onClick={handleDownloadPdf}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium hover:bg-muted transition-colors"
+              >
+                <FileText size={13} />
+                PDF
+              </button>
+            </div>
 
-              <Stack direction="row" gap={1} spacing={2}>
-                <Button
-                  onClick={handleBackendPdf}
-                  variant="outlined"
-                  size="small"
-                  startIcon={<FileText size={16} />}
-                  sx={{
-                    borderRadius: 2,
-                    textTransform: "none",
-                    px: 2.5,
-                    py: 1,
-                    fontWeight: 500,
-                  }}
-                >
-                  تصدير تقرير مفصل
-                </Button>
-                <Button
-                  onClick={handleDownloadPdf}
-                  variant="contained"
-                  size="small"
-                  startIcon={<Download size={16} />}
-                  sx={{
-                    borderRadius: 2,
-                    textTransform: "none",
-                    px: 2.5,
-                    py: 1,
-                    fontWeight: 500,
-                    boxShadow: "none",
-                    "&:hover": { boxShadow: "0 2px 8px rgba(0,0,0,0.15)" },
-                  }}
-                >
-                  تصدير PDF
-                </Button>
-              </Stack>
-            </Stack>
-
-            {/* Filters component */}
             <ReportFilters
-              initialValues={initialFilterValues}
+              initialValues={currentFilters}
               onFilterSubmit={onFilterSubmit}
               onClearFilters={clearFilters}
               clients={clients}
@@ -316,82 +138,29 @@ const SalesReportPage: React.FC = () => {
               loadingFilters={loadingFilters}
               posMode={posMode}
             />
-          </Stack>
-        </Box>
-      </Box>
+          </div>
+        </div>
+      </div>
 
-      <Box
-        sx={{
-          maxWidth: "1400px",
-          mx: "auto",
-          px: { xs: 2, sm: 3, lg: 4 },
-          py: 3,
-        }}
-      >
-        {/* Stats Component */}
+      {/* Body */}
+      <div className="px-4 sm:px-6 lg:px-8 py-4 max-w-screen-2xl mx-auto">
         <ReportStats filterValues={currentFilters} />
 
-        {/* Sales Table Component */}
-        <SalesTable
+        <PaymentsTable
           filterValues={currentFilters}
           currentPage={currentPage}
           onPageChange={handlePageChange}
-          onRowClick={async (id) => {
-            setLoadingSaleDetails(true);
-            setSaleDetailsDialogOpen(true);
-            try {
-              const fullSale = await saleService.getSale(id);
-              setSelectedSale(fullSale);
-            } catch (err) {
-              console.error("Failed to fetch sale details:", err);
-              toast.error("خطأ في تحميل تفاصيل العملية");
-              setSaleDetailsDialogOpen(false);
-            } finally {
-              setLoadingSaleDetails(false);
-            }
-          }}
+          onViewSale={handleViewSale}
         />
-      </Box>
+      </div>
 
-      {/* Sale Details Dialog */}
-      <SaleDetailsDialog
-        open={saleDetailsDialogOpen}
-        onClose={() => {
-          setSaleDetailsDialogOpen(false);
-          setSelectedSale(null);
-        }}
-        sale={selectedSale}
-        loading={loadingSaleDetails}
+      <LedgerSaleEditorDialog
+        open={saleDialogOpen}
+        onClose={() => { setSaleDialogOpen(false); setSelectedSaleId(null); }}
+        saleId={selectedSaleId}
+        onSaleUpdated={() => {}}
       />
-
-      {/* Shift Report Dialog */}
-      <Dialog
-        open={shiftReportDialogOpen}
-        onClose={() => setShiftReportDialogOpen(false)}
-        maxWidth="lg"
-        fullWidth
-      >
-        <DialogTitle
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Typography variant="h6">تقرير الوردية</Typography>
-          <IconButton onClick={() => setShiftReportDialogOpen(false)}>
-            <X size={18} />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ height: "80vh", p: 2 }}>
-          {selectedShift && reportData && (
-            <Typography color="text.secondary">
-              تقرير الوردية PDF غير متاح حالياً
-            </Typography>
-          )}
-        </DialogContent>
-      </Dialog>
-    </Box>
+    </div>
   );
 };
 

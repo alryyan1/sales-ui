@@ -49,11 +49,12 @@ const clientService = {
    * @param {number} page - رقم الصفحة المطلوب (افتراضيًا 1).
    * @returns {Promise<PaginatedResponse<Client>>} وعد يحتوي على بيانات العملاء المقسمة.
    */
-  getClients: async (page: number = 1, search: string = ''): Promise<PaginatedResponse<Client>> => {
+  getClients: async (page: number = 1, search: string = '', perPage?: number): Promise<PaginatedResponse<Client>> => {
     try {
       const params = new URLSearchParams();
       params.append('page', page.toString());
       if (search) params.append('search', search);
+      if (perPage) params.append('per_page', perPage.toString());
       const response = await apiClient.get<PaginatedResponse<Client>>(`/clients?${params.toString()}`);
       return response.data;
     } catch (error) {
