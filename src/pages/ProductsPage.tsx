@@ -35,6 +35,7 @@ import {
   CloudUpload,
   Columns3,
   RefreshCcw,
+  Percent,
 } from "lucide-react";
 import Popover from "@mui/material/Popover";
 import Checkbox from "@mui/material/Checkbox";
@@ -53,6 +54,7 @@ import { uploadProductsToFirestore } from "../services/firebaseStore"; // Import
 import { ProductsTable } from "../components/products/ProductsTable"; // Use ProductsTable named export
 import ProductFormModal from "../components/products/ProductFormModal"; // Use ProductFormModal
 import ProductImportDialog from "../components/products/ProductImportDialog"; // Import dialog
+import BarcodeLabelPdfDialog from "../components/products/BarcodeLabelPdfDialog";
 import UnitsPage from "../pages/UnitsPage"; // Import UnitsPage
 import { Button } from "@mui/material";
 
@@ -86,6 +88,12 @@ const ProductsPage: React.FC = () => {
   const [isBulkUpdateDialogOpen, setIsBulkUpdateDialogOpen] = useState(false);
   const [selectedBulkUnit, setSelectedBulkUnit] = useState<number | "">("");
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+
+  const [isBulkSalePriceDialogOpen, setIsBulkSalePriceDialogOpen] = useState(false);
+  const [bulkSalePricePercentage, setBulkSalePricePercentage] = useState<string>("");
+  const [isBulkSalePriceUpdating, setIsBulkSalePriceUpdating] = useState(false);
+
+  const [barcodeLabelProduct, setBarcodeLabelProduct] = useState<{ name: string; sku: string | null } | null>(null);
 
   // Column Visibility
   const COLUMN_KEYS = ["sku", "name", "scientific_name", "category", "sellable_unit", "stocking_unit", "units_per_stocking", "stock", "cost", "sale_price", "expire_date"] as const;
@@ -400,6 +408,28 @@ const ProductsPage: React.FC = () => {
     }
   };
 
+  const handleBulkUpdateSalePrice = async () => {
+    const pct = parseFloat(bulkSalePricePercentage);
+    if (isNaN(pct) || pct <= 0) return;
+
+    if (!window.confirm(`هل أنت متأكد من رفع سعر البيع لجميع المنتجات بنسبة ${pct}%؟`)) {
+      return;
+    }
+
+    try {
+      setIsBulkSalePriceUpdating(true);
+      const result = await productService.bulkUpdateSalePrice(pct);
+      showSnackbar(result.message, "success");
+      setIsBulkSalePriceDialogOpen(false);
+      setBulkSalePricePercentage("");
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    } catch (err) {
+      showSnackbar(err instanceof Error ? err.message : "فشل تحديث أسعار البيع", "error");
+    } finally {
+      setIsBulkSalePriceUpdating(false);
+    }
+  };
+
   // --- Render ---
   return (
     <>
@@ -613,6 +643,25 @@ const ProductsPage: React.FC = () => {
               </Tooltip>
               <Typography variant="caption">تحديث جماعي</Typography>
             </Box>
+
+            {/* Bulk Update Sale Price */}
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+              }}
+            >
+              <Tooltip title="رفع أسعار البيع بنسبة مئوية">
+                <IconButton
+                  onClick={() => setIsBulkSalePriceDialogOpen(true)}
+                  color="success"
+                >
+                  <Percent className="h-5 w-5" />
+                </IconButton>
+              </Tooltip>
+              <Typography variant="caption">رفع الأسعار</Typography>
+            </Box>
           </Box>
         </Box>
         {/* Search and Filters */}
@@ -700,6 +749,7 @@ const ProductsPage: React.FC = () => {
             <ProductsTable
               products={(products as Product[]) || []}
               onEdit={(product) => openModal(product as Product)}
+              onBarcodeLabel={(product) => setBarcodeLabelProduct({ name: product.name, sku: product.sku ?? null })}
               isLoading={isLoadingData}
               // Infinite Scroll
               onLoadMore={fetchNextPage}
@@ -797,6 +847,61 @@ const ProductsPage: React.FC = () => {
             </Box>
           </DialogContent>
         </Dialog>
+        {/* Barcode Label PDF Dialog */}
+        <BarcodeLabelPdfDialog
+          open={barcodeLabelProduct !== null}
+          onClose={() => setBarcodeLabelProduct(null)}
+          product={barcodeLabelProduct}
+        />
+
+        {/* Bulk Update Sale Price Dialog */}
+        <Dialog
+          open={isBulkSalePriceDialogOpen}
+          onClose={() => !isBulkSalePriceUpdating && setIsBulkSalePriceDialogOpen(false)}
+          maxWidth="xs"
+          fullWidth
+        >
+          <DialogTitle sx={{ fontWeight: 600 }}>رفع أسعار البيع بنسبة مئوية</DialogTitle>
+          <DialogContent>
+            <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 3 }}>
+              <Typography variant="body2" color="text.secondary">
+                سيتم رفع سعر البيع لجميع المنتجات بناءً على آخر سعر بيع مسجل مضروباً في النسبة المدخلة.
+              </Typography>
+
+              <TextField
+                fullWidth
+                label="نسبة الزيادة (%)"
+                type="number"
+                value={bulkSalePricePercentage}
+                onChange={(e) => setBulkSalePricePercentage(e.target.value)}
+                disabled={isBulkSalePriceUpdating}
+                inputProps={{ min: 0, step: 0.1 }}
+                InputProps={{
+                  endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                }}
+              />
+
+              <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end", mt: 1 }}>
+                <Button
+                  onClick={() => setIsBulkSalePriceDialogOpen(false)}
+                  disabled={isBulkSalePriceUpdating}
+                >
+                  إلغاء
+                </Button>
+                <Button
+                  variant="contained"
+                  color="success"
+                  onClick={handleBulkUpdateSalePrice}
+                  disabled={!bulkSalePricePercentage || parseFloat(bulkSalePricePercentage) <= 0 || isBulkSalePriceUpdating}
+                  startIcon={isBulkSalePriceUpdating && <RefreshCcw className="h-4 w-4 animate-spin" />}
+                >
+                  {isBulkSalePriceUpdating ? "جاري التحديث..." : "تطبيق"}
+                </Button>
+              </Box>
+            </Box>
+          </DialogContent>
+        </Dialog>
+
         {/* Add deleteConfirm key */}
       </Box>
     </>

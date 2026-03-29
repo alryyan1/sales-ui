@@ -29,6 +29,8 @@ import {
   X,
   Save,
   Sparkles,
+  Tag,
+  Barcode,
 } from "lucide-react";
 
 // Types
@@ -56,6 +58,7 @@ interface ProductsTableProps {
   products: ProductWithOptionalBatches[];
   isLoading?: boolean;
   onEdit: (product: ProductWithOptionalBatches) => void;
+  onBarcodeLabel: (product: ProductWithOptionalBatches) => void;
   // Inline Creation Props
   categories: Category[];
   stockingUnits: Unit[];
@@ -76,6 +79,7 @@ interface ProductsTableProps {
 interface ProductRowProps {
   product: ProductWithOptionalBatches;
   onEdit: (product: ProductWithOptionalBatches) => void;
+  onBarcodeLabel: (product: ProductWithOptionalBatches) => void;
   copyToClipboard: (sku: string) => void;
   copiedSku: string | null;
   isLoading: boolean;
@@ -85,6 +89,7 @@ interface ProductRowProps {
 const ProductRow: React.FC<ProductRowProps> = ({
   product,
   onEdit,
+  onBarcodeLabel,
   copyToClipboard,
   copiedSku,
   isLoading,
@@ -176,7 +181,18 @@ const ProductRow: React.FC<ProductRowProps> = ({
       )}
       {vis.name !== false && (
         <TableCell align="center">
-          <Typography variant="body2" fontWeight={600}>{product.name}</Typography>
+          <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center">
+            <Typography variant="body2" fontWeight={600}>{product.name}</Typography>
+            <Tooltip title="طباعة باركود">
+              <IconButton
+                size="small"
+                onClick={(e) => { e.stopPropagation(); onBarcodeLabel(product); }}
+                sx={{ width: 20, height: 20, p: 0, opacity: 0.4, "&:hover": { opacity: 1 } }}
+              >
+                <Barcode style={{ width: 14, height: 14 }} />
+              </IconButton>
+            </Tooltip>
+          </Stack>
         </TableCell>
       )}
       {vis.scientific_name !== false && (
@@ -213,8 +229,21 @@ const ProductRow: React.FC<ProductRowProps> = ({
       )}
       {vis.sale_price !== false && (
         <TableCell align="center">
-          {product.last_sale_price_per_sellable_unit
-            ? formatCurrency(Number(product.last_sale_price_per_sellable_unit)) : "---"}
+          {product.last_sale_price_per_sellable_unit ? (
+            <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center">
+              <Typography
+                variant="body2"
+                sx={{ color: product.sale_price != null ? "primary.main" : "text.primary", fontWeight: product.sale_price != null ? 700 : 400 }}
+              >
+                {formatCurrency(Number(product.last_sale_price_per_sellable_unit))}
+              </Typography>
+              {product.sale_price != null && (
+                <Tooltip title="سعر البيع مُحدد يدوياً على المنتج">
+                  <Tag style={{ width: 13, height: 13, color: "var(--mui-palette-primary-main)" }} />
+                </Tooltip>
+              )}
+            </Stack>
+          ) : "---"}
         </TableCell>
       )}
       {vis.expire_date !== false && (
@@ -501,6 +530,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
   products,
   isLoading = false,
   onEdit,
+  onBarcodeLabel,
   categories,
   stockingUnits,
   sellableUnits,
@@ -682,6 +712,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                   key={product.id}
                   product={product}
                   onEdit={onEdit}
+                  onBarcodeLabel={onBarcodeLabel}
                   copyToClipboard={copyToClipboard}
                   copiedSku={copiedSku}
                   isLoading={isLoading}

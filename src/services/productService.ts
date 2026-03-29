@@ -471,6 +471,19 @@ const productService = {
     }
   },
 
+  bulkUpdateSalePrice: async (percentage: number): Promise<{ message: string; updated_count: number }> => {
+    try {
+      const response = await apiClient.post<{ message: string; updated_count: number }>(
+        "/products/bulk-update-sale-price",
+        { percentage },
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error bulk updating sale prices:", error);
+      throw error;
+    }
+  },
+
   // --- Error Helpers (Imported from axios.ts) ---
   getValidationErrors,
   getErrorMessage,
