@@ -252,7 +252,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                 }}
               />
               {!isFullyPaid && (
-                <Tooltip title={reminderDate ? `تذكير بتاريخ ${reminderDate}` : "تعيين تذكير دفع"}>
+                <Tooltip title={reminderDate ? `تذكير بتاريخ ${dayjs(reminderDate).format("YYYY-MM-DD")}` : "تعيين تذكير دفع"}>
                   <IconButton
                     size="small"
                     onClick={(e) => setBellAnchor(e.currentTarget)}
@@ -281,7 +281,16 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
               size="small"
               type="number"
               fullWidth
+              onFocus={(e) => e.target.select()}
               autoFocus
+              onKeyDown={async (e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  await onSetReminder(Number(daysInput));
+                  setBellAnchor(null);
+                  // Trigger the save action or any other desired behavior
+                }
+              }}
               value={daysInput}
               onChange={(e) => setDaysInput(e.target.value)}
               slotProps={{ htmlInput: { min: 1, max: 365 } }}
@@ -324,7 +333,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
           <Stack direction="row" alignItems="center" justifyContent="space-between" mt={0.5}>
             <Stack direction="row" alignItems="center" gap={0.4}>
               <PersonOutlineIcon sx={{ fontSize: 11, color: "rgba(255,255,255,0.55)" }} />
-              <Typography sx={{ fontSize: "0.68rem" }} color="rgba(255,255,255,0.75)">
+              <Typography sx={{ fontSize: "0.68rem" }} color="white">
                 {selectedSale.user_name || selectedSale.user?.name || "—"}
               </Typography>
             </Stack>
@@ -420,7 +429,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
             }}
             renderOption={(props, option) => {
               const { key, ...rest } = props;
-              return <li key={key} {...rest}>{option.name}</li>;
+              return <li key={key} {...rest}>{`${option.is_supplier ? "مورد" : "عميل"}: ${option.name}`}</li>;
             }}
             isOptionEqualToValue={(option, value) => option.id === value.id}
             loading={clientSearchLoading}
@@ -469,7 +478,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
               bg={isFullyPaid ? "#f0fdf4" : "#fff5f5"}
             />
           </Box>
-          {!selectedSale?.payments?.length > 0  && <Stack direction="row" alignItems="center" gap={0.5}>
+          {!selectedSale?.payments?.length > 0 && <Stack direction="row" alignItems="center" gap={0.5}>
             <FormControl size="small" sx={{ minWidth: 80 }}>
               <InputLabel sx={{ fontSize: "0.75rem" }}>الخصم</InputLabel>
               <Select

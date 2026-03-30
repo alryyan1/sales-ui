@@ -1226,7 +1226,7 @@ const PosBlankPage: React.FC = () => {
       toast.loading("جاري إرسال الواتساب...", { id: toastId });
       await apiClient.post("/admin/whatsapp-cloud/send-template", {
         to: phone,
-        template_name: "client_invoice",
+        template_name: "invoice_ar",
         language_code: "ar",
         components: [
           {

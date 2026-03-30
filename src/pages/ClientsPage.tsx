@@ -16,6 +16,7 @@ import ClientsTable from "../components/clients/ClientsTable";
 import ClientFormModal from "../components/clients/ClientFormModal";
 import ConfirmationDialog from "../components/common/ConfirmationDialog";
 import ClientProceduresDialog from "../components/clients/ClientProceduresDialog";
+import WhatsAppBulkDialog from "../components/clients/WhatsAppBulkDialog";
 import {
   PlusIcon,
   CloudUpload,
@@ -24,7 +25,10 @@ import {
   ChevronRight,
   ChevronLeft,
   RefreshCw,
+  CheckSquare,
+  X,
 } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { useSettings } from "../context/SettingsContext";
 import { uploadClientsToFirestore } from "../services/firebaseStore";
 import apiClient from "../lib/axios";
@@ -55,6 +59,11 @@ const ClientsPage: React.FC = () => {
   const [isProceduresOpen, setIsProceduresOpen] = useState(false);
 
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // ── Selection state ──────────────────────────────────────────────────────
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [isBulkWaOpen, setIsBulkWaOpen] = useState(false);
 
   // Debounce search
   useEffect(() => {
@@ -143,9 +152,39 @@ const ClientsPage: React.FC = () => {
     }
   };
 
+  // ── Selection handlers ───────────────────────────────────────────────────
+  const exitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleToggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const handleToggleAll = (visibleClients: Client[]) => {
+    const allVisible = visibleClients.every((c) => selectedIds.has(c.id));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allVisible) {
+        visibleClients.forEach((c) => next.delete(c.id));
+      } else {
+        visibleClients.forEach((c) => next.add(c.id));
+      }
+      return next;
+    });
+  };
+
   const clients = clientsResponse?.data ?? [];
   const totalPages = clientsResponse?.last_page ?? 1;
   const total = clientsResponse?.total ?? 0;
+
+  // Clients that are selected AND currently visible (for the dialog)
+  const selectedClients = clients.filter((c) => selectedIds.has(c.id));
 
   return (
     <div className="p-4 space-y-3" dir="rtl">
@@ -172,6 +211,18 @@ const ClientsPage: React.FC = () => {
               : <CloudUpload className="h-3.5 w-3.5" />}
             Firebase
           </Button>
+
+          {/* Toggle selection mode */}
+          <Button
+            variant={selectionMode ? "default" : "outline"}
+            size="sm"
+            onClick={() => selectionMode ? exitSelectionMode() : setSelectionMode(true)}
+            className={`h-8 gap-1.5 text-xs ${selectionMode ? "" : "text-blue-600 border-blue-200 hover:bg-blue-50"}`}
+          >
+            <CheckSquare className="h-3.5 w-3.5" />
+            {selectionMode ? "إلغاء التحديد" : "تحديد متعدد"}
+          </Button>
+
           <Button
             size="sm"
             onClick={() => openModal()}
@@ -194,6 +245,36 @@ const ClientsPage: React.FC = () => {
         />
       </div>
 
+      {/* ── Selection toolbar (visible when selectionMode active) ── */}
+      {selectionMode && (
+        <div className="flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2">
+          <span className="text-xs font-semibold text-blue-700">
+            تم تحديد {selectedIds.size} عميل
+          </span>
+
+          <div className="flex items-center gap-1.5 mr-auto">
+            {selectedIds.size > 0 && (
+              <Button
+                size="sm"
+                className="h-7 gap-1.5 text-xs bg-[#25D366] hover:bg-[#1ebe59] text-white border-0"
+                onClick={() => setIsBulkWaOpen(true)}
+              >
+                <MessageSquare className="h-3.5 w-3.5" />
+                إرسال واتساب ({selectedIds.size})
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs text-slate-500"
+              onClick={exitSelectionMode}
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* ── Error ────────────────────────────────────────────── */}
       {!isLoading && error && (
         <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
@@ -209,6 +290,10 @@ const ClientsPage: React.FC = () => {
         <ClientsTable
           clients={clients}
           isLoading={isLoading}
+          selectionMode={selectionMode}
+          selectedIds={selectedIds}
+          onToggleSelect={handleToggleSelect}
+          onToggleAll={handleToggleAll}
           onClientClick={(client) => {
             setSelectedClientForProcedures(client);
             setIsProceduresOpen(true);
@@ -290,6 +375,15 @@ const ClientsPage: React.FC = () => {
         onViewLedger={(id) => navigate(`/clients/${id}/ledger`)}
         onNewSale={(_) => (window.location.hash = `#/sales/pos-blank`)}
         companyName={companyName}
+      />
+
+      <WhatsAppBulkDialog
+        open={isBulkWaOpen}
+        onClose={() => {
+          setIsBulkWaOpen(false);
+          exitSelectionMode();
+        }}
+        clients={selectedClients}
       />
     </div>
   );

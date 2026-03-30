@@ -104,7 +104,7 @@ const ClientProceduresDialog: React.FC<ClientProceduresDialogProps> = ({
        
 
 
-          <div className="col-span-1">
+          <div className="col-span-1 flex flex-row gap-2">
             <Button
               variant="outlined"
               fullWidth
@@ -141,10 +141,8 @@ const ClientProceduresDialog: React.FC<ClientProceduresDialogProps> = ({
                 </Typography>
               </Box>
             </Button>
-          </div>
 
        
-          <div className="col-span-1">
             <Button
               variant="outlined"
               fullWidth
@@ -180,87 +178,7 @@ const ClientProceduresDialog: React.FC<ClientProceduresDialogProps> = ({
             </Button>
           </div>
 
-          <div className="col-span-1">
-            {/* PDF Generation Logic */}
-            {!readyToDownload || !ledger ? (
-              <Button
-                variant="outlined"
-                fullWidth
-                startIcon={
-                  isGeneratingPdf ? (
-                    <CircularProgress size={18} />
-                  ) : (
-                    <Printer size={18} />
-                  )
-                }
-                onClick={handlePreparePdf}
-                disabled={isGeneratingPdf}
-                sx={{
-                  height: 60,
-                  justifyContent: "flex-start",
-                  borderColor: "divider",
-                  color: "text.primary",
-                  "&:hover": {
-                    borderColor: "secondary.main",
-                    bgcolor: "secondary.50",
-                  },
-                }}
-              >
-                <Box sx={{ textAlign: "right" }}>
-                  <Typography
-                    variant="button"
-                    display="block"
-                    sx={{ lineHeight: 1.2 }}
-                  >
-                    تحميل كشف PDF
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ textTransform: "none" }}
-                  >
-                    تصدير كملف للطباعة
-                  </Typography>
-                </Box>
-              </Button>
-            ) : (
-              <PDFDownloadLink
-                document={
-                  <ClientLedgerPdf ledger={ledger} companyName={companyName} />
-                }
-                fileName={`ledger_${client.name}_${
-                  new Date().toISOString().split("T")[0]
-                }.pdf`}
-                style={{ textDecoration: "none", width: "100%" }}
-              >
-                {({ loading }) => (
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    fullWidth
-                    startIcon={<Printer size={18} />}
-                    sx={{ height: 60, justifyContent: "flex-start" }}
-                  >
-                    <Box sx={{ textAlign: "right" }}>
-                      <Typography
-                        variant="button"
-                        display="block"
-                        sx={{ lineHeight: 1.2 }}
-                      >
-                        {loading ? "جاري التحضير..." : "اضغط للتحميل"}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        sx={{ textTransform: "none", color: "white" }}
-                      >
-                        تم تجهيز الملف
-                      </Typography>
-                    </Box>
-                  </Button>
-                )}
-              </PDFDownloadLink>
-            )}
-          </div>
+     
 
        
       </DialogContent>

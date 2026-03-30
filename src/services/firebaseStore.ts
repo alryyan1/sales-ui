@@ -344,3 +344,29 @@ export const saveSaleToFirestore = async (
     throw e;
   }
 };
+
+
+export const saveClientLedgerUrl = async (
+  clientId: number,
+  clientName: string,
+  downloadUrl: string,
+  collectionName: string,
+): Promise<void> => {
+  const docRef = doc(
+    db,
+    "pharmacies",
+    collectionName,
+    "client_ledgers",
+    `${clientId}`,
+  );
+  await setDoc(
+    docRef,
+    {
+      client_id: clientId,
+      client_name: clientName,
+      download_url: downloadUrl,
+      updated_at: serverTimestamp(),
+    },
+    { merge: true },
+  );
+};

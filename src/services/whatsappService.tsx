@@ -1,6 +1,5 @@
 // src/services/whatsappService.ts
-import apiClient, { getValidationErrors, getErrorMessage, ApiErrorResponse } from '../lib/axios';
-import { AxiosError } from 'axios';
+import apiClient, { getValidationErrors, getErrorMessage } from '../lib/axios';
 
 // WhatsApp API Types
 export interface WhatsAppMessageRequest {
@@ -152,14 +151,31 @@ Thank you for choosing us!`;
     }
   },
 
+  /**
+   * Send a WhatsApp Cloud API template message
+   */
+  sendTemplate: async (
+    to: string,
+    templateName: string,
+    languageCode: string,
+    components: any[],
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const response = await apiClient.post<{ success: boolean; error?: string }>(
+        '/admin/whatsapp-cloud/send-template',
+        { to, template_name: templateName, language_code: languageCode, components },
+      );
+      return response.data;
+    } catch (error: any) {
+      const msg = error?.response?.data?.error || error?.message || 'فشل الإرسال';
+      return { success: false, error: msg };
+    }
+  },
+
   // --- Error Helpers ---
   getValidationErrors,
   getErrorMessage,
 };
 
-// Re-usable Axios error check function
-function isAxiosError(error: unknown): error is AxiosError<ApiErrorResponse> {
-  return (error as AxiosError).isAxiosError === true;
-}
 
 export default whatsappService; 

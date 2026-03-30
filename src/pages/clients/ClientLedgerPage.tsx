@@ -55,6 +55,7 @@ import { LedgerSaleEditorDialog } from "@/components/clients/LedgerSaleEditorDia
 import { ClientPaymentsDialog } from "@/components/clients/ClientPaymentsDialog";
 import { useSettings } from "@/context/SettingsContext";
 import { uploadFileToFirebase } from "@/services/firebaseStorage";
+import { saveClientLedgerUrl } from "@/services/firebaseStore";
 import { toast } from "sonner";
 import apiClient from "@/lib/axios";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
@@ -182,37 +183,41 @@ const ClientLedgerPage: React.FC = () => {
     setIsSendingWhatsApp(true);
     const toastId = `ledger-wa-${clientId}`;
     try {
-      const filename = `ledger_${clientId}.pdf`;
-
+      // 1. Generate PDF blob
       toast.loading("جاري تحميل كشف الحساب...", { id: toastId });
       const pdfResponse = await apiClient.get(`/clients/${clientId}/ledger/pdf`, {
         responseType: "blob",
       });
       const pdfBlob = new Blob([pdfResponse.data], { type: "application/pdf" });
 
-      toast.loading("جاري رفع الملف إلى Firebase...", { id: toastId });
-      const storagePath = `ledgers/${firebaseCollectionName}/${filename}`;
+      // 2. Upload to Firebase Storage
+      toast.loading("جاري رفع الملف...", { id: toastId });
+      const storagePath = `ledgers/${firebaseCollectionName}/ledger_${clientId}.pdf`;
       const downloadUrl = await uploadFileToFirebase(pdfBlob, storagePath);
 
+      // 3. Store download URL in Firestore keyed by client_id for webhook lookup
+      await saveClientLedgerUrl(clientId, ledger.client.name, downloadUrl, firebaseCollectionName);
+
+      // 4. Send template — payload embeds client_id + collection so webhook can find the URL
       toast.loading("جاري إرسال الواتساب...", { id: toastId });
       await apiClient.post("/admin/whatsapp-cloud/send-template", {
         to: phone,
-        template_name: "client_ledger",
+        template_name: "cleint_ledger",
         language_code: "ar",
         components: [
           {
-            type: "header",
-            parameters: [
-              {
-                type: "document",
-                document: { link: downloadUrl, filename },
-              },
-            ],
+            type: "body",
+            parameters: [{ type: "text", text: ledger.client.name }],
           },
           {
-            type: "body",
+            type: "button",
+            sub_type: "quick_reply",
+            index: "0",
             parameters: [
-              { type: "text", text: ledger.client.name },
+              {
+                type: "payload",
+                payload: `DOWNLOAD_LEDGER|client_id:${clientId}|collection:${firebaseCollectionName}`,
+              },
             ],
           },
         ],
@@ -390,7 +395,7 @@ const ClientLedgerPage: React.FC = () => {
           disabled={isGeneratingPdf}
           sx={{ textTransform: "none", "& .MuiButton-startIcon": { ml: "6px" } }}
         >
-          {isGeneratingPdf ? "جاري الإنشاء..." : "PDF"}
+          {isGeneratingPdf ? "جاري الإنشاء..." : "كشف حساب PDF"}
         </Button>
         <Button
           variant="outlined"
@@ -400,7 +405,7 @@ const ClientLedgerPage: React.FC = () => {
           disabled={isSendingWhatsApp || !ledger?.client.phone}
           sx={{ textTransform: "none", color: "success.main", borderColor: "success.main", "&:hover": { borderColor: "success.dark", bgcolor: "success.50" }, "& .MuiButton-startIcon": { ml: "6px" } }}
         >
-          {isSendingWhatsApp ? "جاري الإرسال..." : "واتساب"}
+          {isSendingWhatsApp ? "جاري الإرسال..." : "ارسال كشف الحساب"}
         </Button>
       </Box>
 
