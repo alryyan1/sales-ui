@@ -83,6 +83,19 @@ const supplierPaymentService = {
   },
 
   /**
+   * Settle supplier debt across unpaid purchases (FIFO)
+   */
+  settleDebt: async (supplierId: number, data: {
+    amount: number;
+    method: string;
+    payment_date: string;
+    reference_number?: string;
+  }): Promise<{ message: string; result: { payments_created: number; total_applied: number; remaining_unapplied: number; affected_purchases: number[] } }> => {
+    const response = await apiClient.post(`/suppliers/${supplierId}/settle-debt`, data);
+    return response.data;
+  },
+
+  /**
    * Create a new payment
    */
   createPayment: async (supplierId: number, data: CreatePaymentData): Promise<SupplierPayment> => {

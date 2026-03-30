@@ -36,6 +36,9 @@ export interface ClientLedger {
     email?: string | null;
     phone?: string | null;
     address?: string | null;
+    is_supplier?: boolean;
+    supplier_id?: number | null;
+    supplier_name?: string | null;
   };
   summary: {
     total_sales: number;

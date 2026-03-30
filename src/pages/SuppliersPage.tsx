@@ -69,6 +69,7 @@ import { downloadPdf } from "@/utils/pdfDownload";
 import { registerPdfFonts } from "@/utils/pdfFontRegistry";
 import SupplierFormModal from "../components/suppliers/SupplierFormModal";
 import ConfirmationDialog from "../components/common/ConfirmationDialog";
+import { formatNumber } from "@/constants";
 
 const SuppliersPage: React.FC = () => {
   const navigate = useNavigate();
@@ -235,6 +236,45 @@ const SuppliersPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <div className="px-6 py-3 bg-white border-b border-slate-200">
+        <div className="grid grid-cols-3 gap-3">
+          <div className="flex items-center gap-3 bg-red-50 border border-red-100 rounded-lg justify-center px-4 py-2.5">
+            
+            <div>
+              <p className="text-[11px] text-red-500 font-medium">إجمالي المدين</p>
+              {isSummaryLoading ? (
+                <Skeleton className="h-4 w-24 mt-0.5" />
+              ) : (
+                <p className="text-sm font-semibold text-red-700">{formatNumber(overallTotals.debit)}</p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center bg-emerald-50 border border-emerald-100 rounded-lg justify-center px-4 py-2.5 gap-3">
+           
+            <div>
+              <p className="text-[11px] text-emerald-500 font-medium">إجمالي الدائن</p>
+              {isSummaryLoading ? (
+                <Skeleton className="h-4 w-24 mt-0.5" />
+              ) : (
+                <p className="text-sm font-semibold text-emerald-700">{formatNumber(overallTotals.credit)}</p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-lg px-4 py-2.5">
+            
+            <div>
+              <p className="text-[11px] text-blue-500 font-medium">صافي الرصيد</p>
+              {isSummaryLoading ? (
+                <Skeleton className="h-4 w-24 mt-0.5" />
+              ) : (
+                <p className={`text-sm font-semibold ${overallTotals.balance > 0 ? "text-red-700" : overallTotals.balance < 0 ? "text-emerald-700" : "text-blue-700"}`}>
+                  {formatNumber(overallTotals.balance)}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
             <div className="relative w-60">
               <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <Input
@@ -289,51 +329,7 @@ const SuppliersPage: React.FC = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="px-6 py-3 bg-white border-b border-slate-200">
-        <div className="grid grid-cols-3 gap-3">
-          <div className="flex items-center gap-3 bg-red-50 border border-red-100 rounded-lg px-4 py-2.5">
-            <div className="p-1.5 bg-red-100 rounded-md">
-              <TrendingUp className="h-4 w-4 text-red-600" />
-            </div>
-            <div>
-              <p className="text-[11px] text-red-500 font-medium">إجمالي المدين</p>
-              {isSummaryLoading ? (
-                <Skeleton className="h-4 w-24 mt-0.5" />
-              ) : (
-                <p className="text-sm font-semibold text-red-700">{fmt(overallTotals.debit)}</p>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-100 rounded-lg px-4 py-2.5">
-            <div className="p-1.5 bg-emerald-100 rounded-md">
-              <TrendingDown className="h-4 w-4 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-[11px] text-emerald-500 font-medium">إجمالي الدائن</p>
-              {isSummaryLoading ? (
-                <Skeleton className="h-4 w-24 mt-0.5" />
-              ) : (
-                <p className="text-sm font-semibold text-emerald-700">{fmt(overallTotals.credit)}</p>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-lg px-4 py-2.5">
-            <div className="p-1.5 bg-blue-100 rounded-md">
-              <Wallet className="h-4 w-4 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-[11px] text-blue-500 font-medium">صافي الرصيد</p>
-              {isSummaryLoading ? (
-                <Skeleton className="h-4 w-24 mt-0.5" />
-              ) : (
-                <p className={`text-sm font-semibold ${overallTotals.balance > 0 ? "text-red-700" : overallTotals.balance < 0 ? "text-emerald-700" : "text-blue-700"}`}>
-                  {fmt(overallTotals.balance)}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      
 
       {/* Main Content */}
       <div className="p-4">
@@ -355,9 +351,7 @@ const SuppliersPage: React.FC = () => {
             <TableHeader>
               <TableRow className="bg-slate-50 hover:bg-slate-50 border-b border-slate-200">
                 <TableHead className="text-right text-xs font-semibold text-slate-600 h-9 px-4">المورد</TableHead>
-                <TableHead className="text-right text-xs font-semibold text-slate-600 h-9 px-4">المسؤول</TableHead>
                 <TableHead className="text-right text-xs font-semibold text-slate-600 h-9 px-4">معلومات الاتصال</TableHead>
-                <TableHead className="text-right text-xs font-semibold text-slate-600 h-9 px-4 hidden md:table-cell">العنوان</TableHead>
                 <TableHead className="text-right text-xs font-semibold text-red-500 h-9 px-4">المدين</TableHead>
                 <TableHead className="text-right text-xs font-semibold text-emerald-600 h-9 px-4">الدائن</TableHead>
                 <TableHead className="text-right text-xs font-semibold text-blue-600 h-9 px-4">الرصيد</TableHead>
@@ -402,7 +396,7 @@ const SuppliersPage: React.FC = () => {
                 suppliers.map((supplier) => (
                   <TableRow
                     key={supplier.id}
-                    className="hover:bg-blue-50/30 cursor-pointer transition-colors border-b border-slate-100 last:border-0"
+                    className={`cursor-pointer transition-colors border-b border-slate-100 last:border-0 ${supplier.is_client ? "bg-blue-50/40 hover:bg-blue-50/70" : "hover:bg-blue-50/30"}`}
                     onClick={() => handleRowClick(supplier)}
                   >
                     <TableCell className="px-4 py-2.5">
@@ -420,16 +414,7 @@ const SuppliersPage: React.FC = () => {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="px-4 py-2.5">
-                      {supplier.contact_person ? (
-                        <div className="flex items-center gap-1.5 text-slate-600">
-                          <User className="h-3 w-3 text-slate-400" />
-                          <span className="text-xs">{supplier.contact_person}</span>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-slate-300">—</span>
-                      )}
-                    </TableCell>
+    
                     <TableCell className="px-4 py-2.5">
                       <div className="flex flex-col gap-0.5">
                         {supplier.phone && (
@@ -449,16 +434,7 @@ const SuppliersPage: React.FC = () => {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="px-4 py-2.5 hidden md:table-cell">
-                      {supplier.address ? (
-                        <div className="flex items-center gap-1.5 text-xs text-slate-500 max-w-[180px]" title={supplier.address}>
-                          <MapPin className="h-3 w-3 text-rose-400 flex-shrink-0" />
-                          <span className="truncate">{supplier.address}</span>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-slate-300">—</span>
-                      )}
-                    </TableCell>
+                   
                     <TableCell className="px-4 py-2.5">
                       {isSummaryLoading ? (
                         <Skeleton className="h-3 w-16" />

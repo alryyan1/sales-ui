@@ -444,7 +444,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
           }
         }}
         inputProps={{ min: 0, step: 0.01 }}
-        sx={{ width: 100 }}
+        sx={{ width: 150 }}
       />
 
       {/* Sale Price (Retail) - 5 */}
@@ -466,7 +466,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
           }
         }}
         inputProps={{ min: 0, step: 0.01 }}
-        sx={{ width: 100 }}
+        sx={{ width: 150 }}
       />
 
       {/* Quantity - 6 */}

@@ -17,6 +17,8 @@ export interface Client {
   total_debit?: number;
   total_credit?: number;
   balance?: number;
+  is_supplier?: boolean;
+  supplier_id?: number | null;
 }
 
 // 2. نوع بيانات فورم العميل (Client Form Data Type)

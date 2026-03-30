@@ -23,6 +23,15 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import TextField from "@mui/material/TextField";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
 
 // Lucide icons
 import {
@@ -41,6 +50,7 @@ import {
   User2,
   ShoppingCart,
   ExternalLink,
+  DollarSign,
 } from "lucide-react";
 
 import supplierPaymentService, {
@@ -108,6 +118,13 @@ const SupplierLedgerPage: React.FC = () => {
   const [isPaymentsDialogOpen, setIsPaymentsDialogOpen] = useState(false);
   const [selectedPurchaseId, setSelectedPurchaseId] = useState<string | number>("");
 
+  const [bulkPayOpen, setBulkPayOpen] = useState(false);
+  const [bulkAmount, setBulkAmount] = useState("");
+  const [bulkMethod, setBulkMethod] = useState("cash");
+  const [bulkDate, setBulkDate] = useState("");
+  const [bulkRef, setBulkRef] = useState("");
+  const [bulkLoading, setBulkLoading] = useState(false);
+
   const selectedEntry = ledger?.ledger_entries.find(
     (e) => (e.purchase_id || e.id) === selectedPurchaseId
   );
@@ -146,6 +163,39 @@ const SupplierLedgerPage: React.FC = () => {
       toast.error(msg);
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const openBulkPay = () => {
+    setBulkAmount(ledger ? String(ledger.summary.balance) : "");
+    setBulkMethod("cash");
+    setBulkDate(format(new Date(), "yyyy-MM-dd"));
+    setBulkRef("");
+    setBulkPayOpen(true);
+  };
+
+  const handleBulkPay = async () => {
+    const amount = parseFloat(bulkAmount);
+    if (!bulkDate || isNaN(amount) || amount <= 0) return;
+    setBulkLoading(true);
+    try {
+      const res = await supplierPaymentService.settleDebt(supplierId, {
+        amount,
+        method: bulkMethod,
+        payment_date: bulkDate,
+        reference_number: bulkRef || undefined,
+      });
+      const { payments_created, total_applied, remaining_unapplied } = res.result;
+      toast.success(
+        `تم توزيع ${payments_created} دفعة على المشتريات — المدفوع: ${total_applied.toLocaleString()}` +
+        (remaining_unapplied > 0 ? ` — متبقي غير مطبق: ${remaining_unapplied.toLocaleString()}` : "")
+      );
+      setBulkPayOpen(false);
+      fetchLedger();
+    } catch (err) {
+      toast.error(supplierPaymentService.getErrorMessage(err));
+    } finally {
+      setBulkLoading(false);
     }
   };
 
@@ -225,18 +275,31 @@ const SupplierLedgerPage: React.FC = () => {
               </Breadcrumbs>
             </Stack>
 
-            {/* Export Button */}
-            <Button
-              variant="contained"
-              size="small"
-              disableElevation
-              disabled={isExporting}
-              onClick={handleExportPdf}
-              startIcon={isExporting ? <CircularProgress size={14} color="inherit" /> : <Printer size={14} />}
-              sx={{ borderRadius: 1.5, textTransform: "none", fontWeight: 600 }}
-            >
-              تصدير PDF
-            </Button>
+            {/* Header Buttons */}
+            <Stack direction="row" gap={1}>
+              <Button
+                variant="contained"
+                color="error"
+                size="small"
+                disableElevation
+                onClick={openBulkPay}
+                startIcon={<DollarSign size={14} />}
+                sx={{ borderRadius: 1.5, textTransform: "none", fontWeight: 600 }}
+              >
+                سداد الكل
+              </Button>
+              <Button
+                variant="contained"
+                size="small"
+                disableElevation
+                disabled={isExporting}
+                onClick={handleExportPdf}
+                startIcon={isExporting ? <CircularProgress size={14} color="inherit" /> : <Printer size={14} />}
+                sx={{ borderRadius: 1.5, textTransform: "none", fontWeight: 600 }}
+              >
+                تصدير PDF
+              </Button>
+            </Stack>
           </Stack>
         </Box>
       </Paper>
@@ -361,129 +424,219 @@ const SupplierLedgerPage: React.FC = () => {
           {/* ── Ledger Table ───────────────────────────────────────────── */}
           <Paper variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>
             {/* Table Toolbar */}
-            <Stack direction="row" alignItems="center" gap={1} px={2.5} py={1.75} borderBottom="1px solid" borderColor="divider">
-              <FileText size={16} color="#94a3b8" />
-              <Typography variant="body2" fontWeight={600} color="text.primary"> الفواتير</Typography>
-              {ledger_entries.length > 0 && (
-                <Chip label={ledger_entries.length} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600 }} />
-              )}
-            </Stack>
+            {(() => {
+              const purchaseEntries = ledger_entries.filter((e) => e.type === "purchase");
+              return (
+                <>
+                  <Stack direction="row" alignItems="center" gap={1} px={2.5} py={1.75} borderBottom="1px solid" borderColor="divider">
+                    <FileText size={16} color="#94a3b8" />
+                    <Typography variant="body2" fontWeight={600} color="text.primary">الفواتير</Typography>
+                    {purchaseEntries.length > 0 && (
+                      <Chip label={purchaseEntries.length} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600 }} />
+                    )}
+                  </Stack>
 
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
-                  <TableRow sx={{ bgcolor: "grey.50" }}>
-                    <TableCell>كود</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>التاريخ</TableCell>
-                    <TableCell align="left" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>مدين</TableCell>
-                    <TableCell align="left" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>دائن</TableCell>
-                    <TableCell align="left" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>الرصيد</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>المدفوعات</TableCell>
-                  </TableRow>
-                </TableHead>
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow sx={{ bgcolor: "grey.50" }}>
+                          <TableCell sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary" }}>كود</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>التاريخ</TableCell>
+                          <TableCell align="left" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>إجمالي الفاتورة</TableCell>
+                          <TableCell align="left" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>إجمالي المدفوع</TableCell>
+                          <TableCell align="left" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>الرصيد</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>الدفعات</TableCell>
+                        </TableRow>
+                      </TableHead>
 
-                <TableBody>
-                  {ledger_entries.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} align="center" sx={{ py: 10 }}>
-                        <Stack alignItems="center" gap={1.5} color="text.disabled">
-                          <FileText size={40} color="#e2e8f0" />
-                          <Typography variant="body2" fontWeight={500}>لا توجد معاملات مسجّلة</Typography>
-                        </Stack>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    ledger_entries.map((entry) => (
-                      <TableRow
-                        key={entry.id}
-                        hover
-                        sx={{ "&:last-child td": { borderBottom: 0 } }}
-                      >
-                        <TableCell>{entry.id}</TableCell>
-                        {/* Date */}
-                        <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
-                          <Typography variant="caption" fontWeight={600} display="block" color="text.primary">
-                            {format(new Date(entry.date), "dd/MM/yyyy")}
-                          </Typography>
-                        
-                        </TableCell>
+                      <TableBody>
+                        {purchaseEntries.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} align="center" sx={{ py: 10 }}>
+                              <Stack alignItems="center" gap={1.5} color="text.disabled">
+                                <FileText size={40} color="#e2e8f0" />
+                                <Typography variant="body2" fontWeight={500}>لا توجد معاملات مسجّلة</Typography>
+                              </Stack>
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          purchaseEntries.map((entry) => {
+                            const due = entry.debit - entry.credit;
+                            return (
+                              <TableRow
+                                key={entry.id}
+                                hover
+                                sx={{ "&:last-child td": { borderBottom: 0 } }}
+                              >
+                                <TableCell>
+                                  <Typography variant="caption" fontFamily="monospace" color="text.secondary">
+                                    #{entry.purchase_id}
+                                  </Typography>
+                                </TableCell>
 
+                                {/* Date */}
+                                <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+                                  <Typography variant="caption" fontWeight={600} display="block" color="text.primary">
+                                    {format(new Date(entry.date), "dd/MM/yyyy")}
+                                  </Typography>
+                                </TableCell>
 
-                        {/* Debit */}
-                        <TableCell align="left" sx={{ whiteSpace: "nowrap" }}>
-                          {entry.debit > 0 ? (
-                            <Typography variant="body2" fontWeight={600} color="text.primary">
-                              {formatCurrency(entry.debit)}
-                            </Typography>
-                          ) : (
-                            <Typography variant="body2" color="text.disabled">—</Typography>
-                          )}
-                        </TableCell>
+                                {/* Debit — purchase total */}
+                                <TableCell align="left" sx={{ whiteSpace: "nowrap" }}>
+                                  <Typography variant="body2" fontWeight={600} color="text.primary">
+                                    {formatCurrency(entry.debit)}
+                                  </Typography>
+                                </TableCell>
 
-                        {/* Credit */}
-                        <TableCell align="left" sx={{ whiteSpace: "nowrap" }}>
-                          {entry.credit > 0 ? (
-                            <Typography variant="body2" fontWeight={600} color="success.dark">
-                              {formatCurrency(entry.credit)}
-                            </Typography>
-                          ) : (
-                            <Typography variant="body2" color="text.disabled">—</Typography>
-                          )}
-                        </TableCell>
+                                {/* Credit — total paid for this purchase */}
+                                <TableCell align="left" sx={{ whiteSpace: "nowrap" }}>
+                                  {entry.credit > 0 ? (
+                                    <Typography variant="body2" fontWeight={600} color="success.dark">
+                                      {formatCurrency(entry.credit)}
+                                    </Typography>
+                                  ) : (
+                                    <Typography variant="body2" color="text.disabled">—</Typography>
+                                  )}
+                                </TableCell>
 
-                        {/* Balance */}
-                        <TableCell align="left" sx={{ whiteSpace: "nowrap" }}>
-                          <Typography
-                            variant="body2"
-                            fontWeight={700}
-                            color={entry.balance > 0 ? "error.main" : "success.dark"}
-                          >
-                            {formatCurrency(entry.balance)}
-                          </Typography>
-                        </TableCell>
+                                {/* Balance — remaining due for this purchase */}
+                                <TableCell align="left" sx={{ whiteSpace: "nowrap" }}>
+                                  <Typography
+                                    variant="body2"
+                                    fontWeight={700}
+                                    color={due > 0 ? "error.main" : "success.dark"}
+                                  >
+                                    {formatCurrency(due)}
+                                  </Typography>
+                                </TableCell>
 
-                        {/* Action */}
-                        <TableCell align="center">
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            onClick={() => handleViewPayments(entry)}
-                            startIcon={<Wallet size={13} />}
-                            sx={{
-                              borderRadius: 1.5,
-                              textTransform: "none",
-                              fontSize: 12,
-                              fontWeight: 600,
-                              py: 0.3,
-                              minWidth: 0,
-                            }}
-                          >
-                            كشف حساب
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
+                                {/* Action */}
+                                <TableCell align="center">
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() => handleViewPayments(entry)}
+                                    startIcon={<Wallet size={13} />}
+                                    sx={{ borderRadius: 1.5, textTransform: "none", fontSize: 12, fontWeight: 600, py: 0.3, minWidth: 0 }}
+                                  >
+                                    الدفعات
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                        )}
+                      </TableBody>
 
-                {/* Footer totals */}
-                {ledger_entries.length > 0 && (
-                  <TableFooter>
-                    <TableRow sx={{ bgcolor: "grey.50", "& td": { borderTop: "2px solid", borderTopColor: "divider", fontWeight: 700, py: 1.5 } }}>
-                      <TableCell align="right" colSpan={2} sx={{ fontSize: 12, color: "text.secondary" }}>الإجمالي</TableCell>
-                      <TableCell align="left" sx={{ fontSize: 13, color: "text.primary" }}>{formatCurrency(summary.total_purchases)}</TableCell>
-                      <TableCell align="left" sx={{ fontSize: 13, color: "success.dark" }}>{formatCurrency(summary.total_payments)}</TableCell>
-                      <TableCell align="left" sx={{ fontSize: 13, color: isInDebt ? "error.main" : "success.dark" }}>{formatCurrency(summary.balance)}</TableCell>
-                      <TableCell />
-                    </TableRow>
-                  </TableFooter>
-                )}
-              </Table>
-            </TableContainer>
+                      {/* Footer totals */}
+                      {purchaseEntries.length > 0 && (
+                        <TableFooter>
+                          <TableRow sx={{ bgcolor: "grey.50", "& td": { borderTop: "2px solid", borderTopColor: "divider", fontWeight: 700, py: 1.5 } }}>
+                            <TableCell align="right" colSpan={2} sx={{ fontSize: 12, color: "text.secondary" }}>الإجمالي</TableCell>
+                            <TableCell align="left" sx={{ fontSize: 13, color: "text.primary" }}>{formatCurrency(summary.total_purchases)}</TableCell>
+                            <TableCell align="left" sx={{ fontSize: 13, color: "success.dark" }}>{formatCurrency(summary.total_payments)}</TableCell>
+                            <TableCell align="left" sx={{ fontSize: 13, color: isInDebt ? "error.main" : "success.dark" }}>{formatCurrency(summary.balance)}</TableCell>
+                            <TableCell />
+                          </TableRow>
+                        </TableFooter>
+                      )}
+                    </Table>
+                  </TableContainer>
+                </>
+              );
+            })()}
           </Paper>
 
         </Stack>
       </Box>
+
+      {/* ── Bulk Payment Dialog ───────────────────────────────────────── */}
+      <Dialog open={bulkPayOpen} onClose={() => !bulkLoading && setBulkPayOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, fontSize: 16 }}>
+          <Stack direction="row" alignItems="center" gap={1}>
+            <DollarSign size={18} />
+            سداد دفعة شاملة
+          </Stack>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2.5} pt={0.5}>
+            {ledger && (
+              <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: "error.50", border: "1px solid", borderColor: "error.light" }}>
+                <Typography variant="caption" color="text.secondary" display="block">الرصيد المستحق</Typography>
+                <Typography variant="subtitle1" fontWeight={700} color="error.main">
+                  {formatCurrency(ledger.summary.balance)}
+                </Typography>
+              </Box>
+            )}
+            <TextField
+              label="المبلغ"
+              type="number"
+              size="small"
+              fullWidth
+              required
+              value={bulkAmount}
+              onChange={(e) => setBulkAmount(e.target.value)}
+              inputProps={{ min: 0.01, step: "0.01" }}
+            />
+            <FormControl size="small" fullWidth required>
+              <InputLabel>طريقة الدفع</InputLabel>
+              <Select
+                value={bulkMethod}
+                label="طريقة الدفع"
+                onChange={(e) => setBulkMethod(e.target.value)}
+              >
+                <MenuItem value="cash">كاش</MenuItem>
+                <MenuItem value="bankak">بنكك</MenuItem>
+                <MenuItem value="fawry">فوري</MenuItem>
+                <MenuItem value="ocash">أوكاش</MenuItem>
+                <MenuItem value="bank_transfer">تحويل بنكي</MenuItem>
+                <MenuItem value="other">أخرى</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              label="تاريخ الدفع"
+              type="date"
+              size="small"
+              fullWidth
+              required
+              value={bulkDate}
+              onChange={(e) => setBulkDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              label="رقم المرجع (اختياري)"
+              size="small"
+              fullWidth
+              value={bulkRef}
+              onChange={(e) => setBulkRef(e.target.value)}
+              placeholder="رقم الشيك أو الحوالة"
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2, gap: 1 }}>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => setBulkPayOpen(false)}
+            disabled={bulkLoading}
+            sx={{ borderRadius: 1.5, textTransform: "none" }}
+          >
+            إلغاء
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            size="small"
+            disableElevation
+            disabled={bulkLoading || !bulkAmount || !bulkDate}
+            onClick={handleBulkPay}
+            startIcon={bulkLoading ? <CircularProgress size={14} color="inherit" /> : <DollarSign size={14} />}
+            sx={{ borderRadius: 1.5, textTransform: "none", fontWeight: 600, minWidth: 110 }}
+          >
+            {bulkLoading ? "جاري الحفظ..." : "تأكيد الدفع"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <PurchasePaymentsDialog
         open={isPaymentsDialogOpen}

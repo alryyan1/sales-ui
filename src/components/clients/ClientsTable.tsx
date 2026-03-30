@@ -28,6 +28,7 @@ import {
   FileText,
   Pencil,
   Trash2,
+  Truck,
 } from "lucide-react";
 
 import { Client } from "../../services/clientService";
@@ -96,14 +97,17 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
             return (
               <TableRow
                 key={client.id}
-                className="hover:bg-blue-50/30 cursor-pointer transition-colors border-b border-slate-100 last:border-0"
+                className={`cursor-pointer transition-colors border-b border-slate-100 last:border-0 ${client.is_supplier ? "bg-amber-50/40 hover:bg-amber-50/70" : "hover:bg-blue-50/30"}`}
                 onClick={() => onClientClick?.(client)}
               >
                 {/* Name */}
                 <TableCell className="px-4 py-2.5">
                   <div className="flex items-center gap-2">
-                    <div className="h-7 w-7 rounded-md bg-slate-100 flex items-center justify-center flex-shrink-0">
-                      <Users className="h-3.5 w-3.5 text-slate-500" />
+                    <div className={`h-7 w-7 rounded-md flex items-center justify-center flex-shrink-0 ${client.is_supplier ? "bg-amber-100" : "bg-slate-100"}`}>
+                      {client.is_supplier
+                        ? <Truck className="h-3.5 w-3.5 text-amber-600" />
+                        : <Users className="h-3.5 w-3.5 text-slate-500" />
+                      }
                     </div>
                     <p className="text-sm font-medium leading-tight">{client.name}</p>
                   </div>

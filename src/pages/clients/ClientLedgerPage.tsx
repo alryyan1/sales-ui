@@ -26,6 +26,7 @@ import {
   Stack,
   Divider,
   CircularProgress,
+  Paper,
   IconButton,
   Tooltip,
   Autocomplete,
@@ -41,12 +42,15 @@ import {
   Edit,
   X,
   CreditCard,
+  Truck,
+  ExternalLink,
 } from "lucide-react";
 
 import clientLedgerService, {
   ClientLedger,
   ClientLedgerEntry,
 } from "@/services/clientLedgerService";
+import supplierPaymentService from "@/services/supplierPaymentService";
 import { LedgerSaleEditorDialog } from "@/components/clients/LedgerSaleEditorDialog";
 import { ClientPaymentsDialog } from "@/components/clients/ClientPaymentsDialog";
 import { useSettings } from "@/context/SettingsContext";
@@ -84,6 +88,13 @@ const ClientLedgerPage: React.FC = () => {
   const [payAllDate, setPayAllDate]         = useState("");
   const [payAllRef, setPayAllRef]           = useState("");
   const [payAllLoading, setPayAllLoading]   = useState(false);
+
+  const [supplierSummary, setSupplierSummary] = useState<{
+    total_purchases: number;
+    total_payments: number;
+    balance: number;
+  } | null>(null);
+  const [isLoadingSupplierSummary, setIsLoadingSupplierSummary] = useState(false);
 
   const productOptions = useMemo(() => {
     const map = new Map<number, string>();
@@ -128,6 +139,19 @@ const ClientLedgerPage: React.FC = () => {
       }
     };
   }, [pdfUrl]);
+
+  useEffect(() => {
+    if (!ledger?.client?.is_supplier || !ledger?.client?.supplier_id) {
+      setSupplierSummary(null);
+      return;
+    }
+    setIsLoadingSupplierSummary(true);
+    supplierPaymentService
+      .getLedger(ledger.client.supplier_id)
+      .then((data) => setSupplierSummary(data.summary))
+      .catch(() => setSupplierSummary(null))
+      .finally(() => setIsLoadingSupplierSummary(false));
+  }, [ledger?.client?.is_supplier, ledger?.client?.supplier_id]);
 
   const handleDownloadPdf = async () => {
     if (!ledger) return;
@@ -304,7 +328,34 @@ const ClientLedgerPage: React.FC = () => {
             </Typography>
           )}
         </Box>
-
+ {/* Also a Supplier Banner */}
+      {client.is_supplier && client.supplier_id && (
+        <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, borderColor: "warning.light", bgcolor: "#fffbeb" }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
+            <Stack direction="row" alignItems="center" gap={1.5}>
+              <Truck size={18} color="#d97706" />
+              <Box>
+                <Typography variant="body2" fontWeight={600} color="warning.dark">
+                  هذا العميل مورد أيضاً
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  يمكنك عرض كشف حساب مشترياته
+                </Typography>
+              </Box>
+            </Stack>
+            <Button
+              variant="outlined"
+              size="small"
+              color="warning"
+              onClick={() => navigate(`/suppliers/${client.supplier_id}/ledger`)}
+              startIcon={<ExternalLink size={14} />}
+              sx={{ borderRadius: 1.5, textTransform: "none", fontWeight: 600, flexShrink: 0 }}
+            >
+              كشف حساب المشتريات
+            </Button>
+          </Stack>
+        </Paper>
+      )}
         <Button
           variant="contained"
           color="error"
@@ -353,8 +404,50 @@ const ClientLedgerPage: React.FC = () => {
         </Button>
       </Box>
 
-      {/* Summary Strip */}
-      <Box
+     
+
+      {/* Net Balance Panel */}
+      {client.is_supplier && client.supplier_id && (
+        <Box>
+          <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
+            الرصيد الصافي (عميل + مورد)
+          </Typography>
+          {isLoadingSupplierSummary ? (
+            <Stack direction="row" alignItems="center" gap={1}>
+              <CircularProgress size={16} />
+              <Typography variant="caption" color="text.secondary">جاري تحميل بيانات المورد...</Typography>
+            </Stack>
+          ) : (
+            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1.5,width:'600px' }}>
+              <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: summary.balance > 0 ? "#fef2f2" : "#f0fdf4", border: "1px solid", borderColor: summary.balance > 0 ? "error.light" : "success.light" }}>
+                <Typography variant="caption" color="text.secondary" display="block">رصيد المبيعات (يدين لنا)</Typography>
+                <Typography variant="subtitle2" fontWeight={700} color={summary.balance > 0 ? "error.main" : "success.main"}>
+                  {summary.balance.toLocaleString()}
+                </Typography>
+              </Box>
+              <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: (supplierSummary?.balance ?? 0) > 0 ? "#fef2f2" : "#f0fdf4", border: "1px solid", borderColor: (supplierSummary?.balance ?? 0) > 0 ? "error.light" : "success.light" }}>
+                <Typography variant="caption" color="text.secondary" display="block">رصيد المشتريات (ندين له)</Typography>
+                <Typography variant="subtitle2" fontWeight={700} color={(supplierSummary?.balance ?? 0) > 0 ? "error.main" : "success.main"}>
+                  {supplierSummary ? supplierSummary.balance.toLocaleString() : "—"}
+                </Typography>
+              </Box>
+              {supplierSummary && (() => {
+                const net = summary.balance - supplierSummary.balance;
+                return (
+                  <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: net > 0 ? "#fef2f2" : net < 0 ? "#f0fdf4" : "#f8fafc", border: "1px solid", borderColor: net > 0 ? "error.light" : net < 0 ? "success.light" : "divider" }}>
+                    <Typography variant="caption" color="text.secondary" display="block">الصافي</Typography>
+                    <Typography variant="subtitle2" fontWeight={700} color={net > 0 ? "error.main" : net < 0 ? "success.main" : "text.secondary"}>
+                      {net > 0 ? `+${net.toLocaleString()}` : net < 0 ? net.toLocaleString() : "متوازن"}
+                    </Typography>
+                  </Box>
+                );
+              })()}
+            </Box>
+          )}
+        </Box>
+      )}
+
+      {!client.is_supplier && <Box
         sx={{
           display: "grid",
           gridTemplateColumns: "200px 200px 200px",
@@ -407,7 +500,9 @@ const ClientLedgerPage: React.FC = () => {
             </CardContent>
           </Card>
         ))}
-      </Box>
+      </Box> }
+      {/* Summary Strip */}
+     
 
       {/* Ledger Table */}
       <Card
