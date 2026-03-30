@@ -2,45 +2,38 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
+import { useQuery } from "@tanstack/react-query";
+
+import Box from "@mui/material/Box";
+import Paper from "@mui/material/Paper";
+import Typography from "@mui/material/Typography";
+import Button from "@mui/material/Button";
+import IconButton from "@mui/material/IconButton";
+import TextField from "@mui/material/TextField";
+import InputAdornment from "@mui/material/InputAdornment";
+import Chip from "@mui/material/Chip";
+import Alert from "@mui/material/Alert";
+import Tooltip from "@mui/material/Tooltip";
+import Skeleton from "@mui/material/Skeleton";
+import Pagination from "@mui/material/Pagination";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import Avatar from "@mui/material/Avatar";
+
 import {
   Search,
-  Plus,
+  Clear,
+  Add,
   Edit,
-  Users,
-  Store,
-  X,
-  AlertCircle,
-} from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+  PeopleOutline,
+  WarehouseOutlined,
+  ManageAccountsOutlined,
+  ErrorOutline,
+} from "@mui/icons-material";
 
 // Services and Types
 import { useAuthorization } from "@/hooks/useAuthorization";
@@ -50,11 +43,30 @@ import userService from "@/services/userService";
 // Custom Components
 import UserFormModal from "./UserFormModal";
 
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
+function stringToColor(str: string) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const h = Math.abs(hash) % 360;
+  return `hsl(${h}, 45%, 48%)`;
+}
+
+const COLS = ["المستخدم", "اسم الدخول", "الأدوار", "المستودع", "إجراء"];
+
 const UsersListPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user: currentUser } = useAuthorization();
 
-  // --- Search & Pagination State ---
   const initialSearch = searchParams.get("search") || "";
   const initialPage = Number(searchParams.get("page") || "1");
 
@@ -62,7 +74,6 @@ const UsersListPage: React.FC = () => {
   const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
   const [page, setPage] = useState(initialPage);
 
-  // Debounce logic
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(searchTerm);
@@ -79,7 +90,7 @@ const UsersListPage: React.FC = () => {
     return () => clearTimeout(handler);
   }, [searchTerm, setSearchParams, initialSearch]);
 
-  const handlePageChange = (newPage: number) => {
+  const handlePageChange = (_: React.ChangeEvent<unknown>, newPage: number) => {
     setPage(newPage);
     setSearchParams((prev) => {
       prev.set("page", newPage.toString());
@@ -87,7 +98,6 @@ const UsersListPage: React.FC = () => {
     });
   };
 
-  // --- React Query for Users ---
   const {
     data: usersResponse,
     isLoading,
@@ -97,21 +107,18 @@ const UsersListPage: React.FC = () => {
   } = useQuery({
     queryKey: ["users", page, debouncedSearch],
     queryFn: () => userService.getUsers(page, debouncedSearch),
-    placeholderData: (previousData) => previousData,
+    placeholderData: (prev) => prev,
   });
 
-  // --- React Query for Roles ---
   const { data: availableRoles = [] } = useQuery({
     queryKey: ["roles-list"],
     queryFn: userService.getRoles,
     staleTime: 5 * 60 * 1000,
   });
 
-  // --- Modal & Action State ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
 
-  // --- Handlers ---
   const openModal = (user: User | null = null) => {
     setEditingUser(user);
     setIsModalOpen(true);
@@ -129,274 +136,326 @@ const UsersListPage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto max-w-7xl p-6" dir="rtl">
-      {/* Header Section */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">إدارة المستخدمين</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            إدارة حسابات المستخدمين، الصلاحيات، والمستودعات المرتبطة بهم
-          </p>
-        </div>
+    <Box sx={{ p: 3, maxWidth: 1400, mx: "auto" }} dir="rtl">
+      {/* ── Page Header ── */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          mb: 2.5,
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap:3 }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 40,
+              height: 40,
+              borderRadius: 2,
+              bgcolor: "primary.main",
+              color: "white",
 
-        <Button onClick={() => openModal()}>
-          <Plus className="mr-2 h-4 w-4" />
+            }}
+          >
+            <ManageAccountsOutlined fontSize="small" />
+          </Box>
+          <Box>
+            <Typography variant="h6" fontWeight={700} lineHeight={1.2}>
+              إدارة المستخدمين
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              إدارة الحسابات والصلاحيات والمستودعات
+            </Typography>
+          </Box>
+        </Box>
+    <TextField
+          size="small"
+          placeholder="ابحث بالاسم أو اسم الدخول..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          sx={{ flex: 1, maxWidth: 300 }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <Search fontSize="small" sx={{ color: "text.disabled" }} />
+              </InputAdornment>
+            ),
+            endAdornment: searchTerm ? (
+              <InputAdornment position="end">
+                <IconButton size="small" onClick={() => setSearchTerm("")}>
+                  <Clear fontSize="small" />
+                </IconButton>
+              </InputAdornment>
+            ) : undefined,
+          }}
+        />
+   
+        <Button
+          variant="contained"
+          size="small"
+          startIcon={<Add />}
+          onClick={() => openModal()}
+        >
           مستخدم جديد
         </Button>
-      </div>
+      </Box>
 
-      {/* Search & Filter Card */}
-      <Card className="mb-6">
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="ابحث عن مستخدم بالاسم أو اسم المستخدم..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pr-10"
-              />
-              {searchTerm && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute left-1 top-1/2 h-6 w-6 -translate-y-1/2"
-                  onClick={() => setSearchTerm("")}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-            {usersResponse && (
-              <Badge variant="secondary" className="text-sm">
-                {usersResponse.total} مستخدم
-              </Badge>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {/* ── Toolbar: Search + count ── */}
 
-      {/* Loading State */}
-      {isLoading && (
-        <Card>
-          <CardContent className="pt-6">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <TableHead key={i} className="text-center">
-                      <Skeleton className="h-5 w-24" />
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {[1, 2, 3, 4, 5].map((i) => (
+    
+
+      {/* ── Error ── */}
+      {isError && (
+        <Alert
+          severity="error"
+          icon={<ErrorOutline />}
+          sx={{ mb: 1.5, borderRadius: 2 }}
+        >
+          {error instanceof Error
+            ? error.message
+            : "حدث خطأ غير متوقع أثناء الاتصال بالخادم."}
+        </Alert>
+      )}
+
+      {/* ── Table ── */}
+      <Paper variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>
+        <TableContainer>
+          <Table size="small">
+            <TableHead>
+              <TableRow sx={{ bgcolor: "grey.50" }}>
+                {COLS.map((col) => (
+                  <TableCell
+                    key={col}
+                    align="center"
+                    sx={{
+                      fontWeight: 700,
+                      fontSize: "0.78rem",
+                      py: 1,
+                      color: "text.secondary",
+                      whiteSpace: "nowrap",
+                      borderBottom: "2px solid",
+                      borderColor: "divider",
+                    }}
+                  >
+                    {col}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+
+            <TableBody>
+              {/* Loading skeleton */}
+              {isLoading &&
+                Array.from({ length: 6 }).map((_, i) => (
                   <TableRow key={i}>
-                    {[1, 2, 3, 4, 5].map((j) => (
-                      <TableCell key={j} className="text-center">
-                        <Skeleton className="h-5 w-full" />
+                    {COLS.map((col) => (
+                      <TableCell key={col} align="center" sx={{ py: 1 }}>
+                        <Skeleton
+                          variant="rounded"
+                          height={24}
+                          sx={{ mx: "auto", maxWidth: col === "الأدوار" ? 120 : 80 }}
+                        />
                       </TableCell>
                     ))}
                   </TableRow>
                 ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Error State */}
-      {isError && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>خطأ في تحميل البيانات</AlertTitle>
-          <AlertDescription>
-            {error instanceof Error
-              ? error.message
-              : "حدث خطأ غير متوقع أثناء الاتصال بالخادم."}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Data Table */}
-      {!isLoading && !isError && usersResponse && (
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-center">المستخدم</TableHead>
-                  <TableHead className="text-center">اسم الدخول</TableHead>
-                  <TableHead className="text-center">الأدوار</TableHead>
-                  <TableHead className="text-center">المستودع</TableHead>
-                  <TableHead className="text-center">الإجراءات</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {usersResponse.data.length === 0 ? (
+              {/* Empty state */}
+              {!isLoading &&
+                !isError &&
+                usersResponse?.data.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">
-                      <div className="flex flex-col items-center justify-center gap-4 py-8">
-                        <Users className="h-12 w-12 text-muted-foreground" />
-                        <div className="text-center">
-                          <h3 className="text-lg font-semibold text-muted-foreground">
-                            لا توجد نتائج مطابقة
-                          </h3>
-                          <p className="text-sm text-muted-foreground">
-                            حاول ضبط مصطلحات البحث الخاصة بك
-                          </p>
-                        </div>
-                      </div>
+                    <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
+                      <PeopleOutline
+                        sx={{ fontSize: 48, color: "text.disabled", mb: 1 }}
+                      />
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        fontWeight={600}
+                      >
+                        لا توجد نتائج مطابقة
+                      </Typography>
+                      <Typography variant="caption" color="text.disabled">
+                        حاول ضبط مصطلحات البحث
+                      </Typography>
                     </TableCell>
                   </TableRow>
-                ) : (
-                  usersResponse.data.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="text-center">
-                        <div className="flex flex-col items-center gap-1">
-                          <span className="font-medium">{user.name}</span>
-                          {user.id === currentUser?.id && (
-                            <Badge variant="default" className="text-xs">
-                              أنت
-                            </Badge>
-                          )}
-                        </div>
+                )}
+
+              {/* Data rows */}
+              {!isLoading &&
+                !isError &&
+                usersResponse?.data.map((user) => {
+                  const isSelf = user.id === currentUser?.id;
+                  return (
+                    <TableRow
+                      key={user.id}
+                      hover
+                      sx={{
+                        "&:last-child td": { border: 0 },
+                        bgcolor: isSelf ? "primary.50" : "inherit",
+                      }}
+                    >
+                      {/* Name + avatar */}
+                      <TableCell align="center" sx={{ py: 0.75 }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1,
+                            justifyContent: "center",
+                          }}
+                        >
+                          <Avatar
+                            sx={{
+                              width: 30,
+                              height: 30,
+                              fontSize: "0.7rem",
+                              bgcolor: stringToColor(user.name),
+                            }}
+                          >
+                            {getInitials(user.name)}
+                          </Avatar>
+                          <Box sx={{ textAlign: "right" }}>
+                            <Typography
+                              variant="body2"
+                              fontWeight={600}
+                              lineHeight={1.2}
+                            >
+                              {user.name}
+                            </Typography>
+                            {isSelf && (
+                              <Chip
+                                label="أنت"
+                                size="small"
+                                color="primary"
+                                sx={{ height: 16, fontSize: "0.65rem", mt: 0.25 }}
+                              />
+                            )}
+                          </Box>
+                        </Box>
                       </TableCell>
-                      <TableCell className="text-center">
-                        <span className="font-mono text-sm">@{user.username}</span>
+
+                      {/* Username */}
+                      <TableCell align="center" sx={{ py: 0.75 }}>
+                        <Typography
+                          variant="body2"
+                          fontFamily="monospace"
+                          color="text.secondary"
+                        >
+                          @{user.username}
+                        </Typography>
                       </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex flex-wrap items-center justify-center gap-1">
+
+                      {/* Roles */}
+                      <TableCell align="center" sx={{ py: 0.75 }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: 0.5,
+                            justifyContent: "center",
+                          }}
+                        >
                           {(user.roles ?? []).map((roleName) => {
                             const isAdmin =
                               roleName === "admin" || roleName === "ادمن";
                             return (
-                              <Badge
+                              <Chip
                                 key={roleName}
-                                variant={isAdmin ? "default" : "outline"}
-                                className="text-xs"
-                              >
-                                {roleName}
-                              </Badge>
+                                label={roleName}
+                                size="small"
+                                color={isAdmin ? "primary" : "default"}
+                                variant={isAdmin ? "filled" : "outlined"}
+                                sx={{ height: 20, fontSize: "0.7rem" }}
+                              />
                             );
                           })}
-                        </div>
+                        </Box>
                       </TableCell>
-                      <TableCell className="text-center">
+
+                      {/* Warehouse */}
+                      <TableCell align="center" sx={{ py: 0.75 }}>
                         {user.warehouse ? (
-                          <div className="flex items-center justify-center gap-2">
-                            <Store className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">{user.warehouse.name}</span>
-                          </div>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 0.5,
+                              justifyContent: "center",
+                            }}
+                          >
+                            <WarehouseOutlined
+                              sx={{ fontSize: 14, color: "text.disabled" }}
+                            />
+                            <Typography variant="body2">
+                              {user.warehouse.name}
+                            </Typography>
+                          </Box>
                         ) : (
-                          <span className="text-xs text-muted-foreground">
-                            غير محدد
-                          </span>
+                          <Typography variant="caption" color="text.disabled">
+                            —
+                          </Typography>
                         )}
                       </TableCell>
-                      <TableCell className="text-center">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => openModal(user)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>تعديل البيانات</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+
+                      {/* Actions */}
+                      <TableCell align="center" sx={{ py: 0.75 }}>
+                        <Tooltip title="تعديل البيانات" placement="right">
+                          <IconButton
+                            size="small"
+                            onClick={() => openModal(user)}
+                            color="primary"
+                          >
+                            <Edit fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+                  );
+                })}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-      {/* Pagination */}
-      {!isLoading &&
-        !isError &&
-        usersResponse &&
-        usersResponse.last_page > 1 && (
-          <div className="mt-6 flex justify-center">
-            <Pagination>
-              <PaginationContent>
-                {page > 1 && (
-                  <PaginationItem>
-                    <PaginationPrevious
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handlePageChange(page - 1);
-                      }}
-                    />
-                  </PaginationItem>
-                )}
+        {/* ── Pagination (inside the paper, bottom strip) ── */}
+        {!isLoading &&
+          !isError &&
+          usersResponse &&
+          usersResponse.last_page > 1 && (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                px: 2,
+                py: 1,
+                borderTop: "1px solid",
+                borderColor: "divider",
+                bgcolor: "grey.50",
+              }}
+            >
+              <Typography variant="caption" color="text.secondary">
+                صفحة {page} من {usersResponse.last_page} —{" "}
+                {usersResponse.total} مستخدم
+              </Typography>
+              <Pagination
+                count={usersResponse.last_page}
+                page={page}
+                onChange={handlePageChange}
+                size="small"
+                shape="rounded"
+                color="primary"
+              />
+            </Box>
+          )}
+      </Paper>
 
-                {Array.from({ length: usersResponse.last_page }, (_, i) => i + 1)
-                  .filter((p) => {
-                    // Show first page, last page, current page, and pages around current
-                    return (
-                      p === 1 ||
-                      p === usersResponse.last_page ||
-                      (p >= page - 1 && p <= page + 1)
-                    );
-                  })
-                  .map((p, index, array) => {
-                    // Add ellipsis if there's a gap
-                    const prevPage = array[index - 1];
-                    const showEllipsis = prevPage && p - prevPage > 1;
-
-                    return (
-                      <React.Fragment key={p}>
-                        {showEllipsis && (
-                          <PaginationItem>
-                            <PaginationEllipsis />
-                          </PaginationItem>
-                        )}
-                        <PaginationItem>
-                          <PaginationLink
-                            href="#"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handlePageChange(p);
-                            }}
-                            isActive={p === page}
-                          >
-                            {p}
-                          </PaginationLink>
-                        </PaginationItem>
-                      </React.Fragment>
-                    );
-                  })}
-
-                {page < usersResponse.last_page && (
-                  <PaginationItem>
-                    <PaginationNext
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handlePageChange(page + 1);
-                      }}
-                    />
-                  </PaginationItem>
-                )}
-              </PaginationContent>
-            </Pagination>
-          </div>
-        )}
-
-      {/* Modals */}
+      {/* ── Modal ── */}
       <UserFormModal
         isOpen={isModalOpen}
         onClose={closeModal}
@@ -404,7 +463,7 @@ const UsersListPage: React.FC = () => {
         onSaveSuccess={handleSaveSuccess}
         availableRoles={availableRoles}
       />
-    </div>
+    </Box>
   );
 };
 
