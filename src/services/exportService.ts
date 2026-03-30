@@ -63,6 +63,14 @@ const exportService = {
   },
 
   /**
+   * Open price list PDF report in new tab
+   */
+  exportPriceListPdf: async (): Promise<void> => {
+    const baseUrl = apiClient.defaults.baseURL?.replace('/api', '') || '';
+    window.open(`${baseUrl}/products/pricelist/pdf`, '_blank');
+  },
+
+  /**
    * Export products to Excel and open in new tab
    * @param filters Optional filters to apply to the export
    * @returns Promise that resolves when Excel is opened

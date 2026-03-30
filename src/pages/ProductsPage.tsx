@@ -29,6 +29,7 @@ import {
   Plus,
   Printer,
   FileSpreadsheet,
+  FileText,
   Upload,
   Search,
   Layers,
@@ -526,6 +527,25 @@ const ProductsPage: React.FC = () => {
                 </IconButton>
               </Tooltip>
               <Typography variant="caption">طباعة</Typography>
+            </Box>
+
+            {/* Price List PDF */}
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+              }}
+            >
+              <Tooltip title="قائمة الأسعار PDF">
+                <IconButton
+                  onClick={() => exportService.exportPriceListPdf()}
+                  color="default"
+                >
+                  <FileText className="h-5 w-5" />
+                </IconButton>
+              </Tooltip>
+              <Typography variant="caption">قائمة الأسعار</Typography>
             </Box>
 
             {/* Export to Excel */}
