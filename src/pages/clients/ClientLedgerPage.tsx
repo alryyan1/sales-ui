@@ -18,6 +18,11 @@ import {
   AlertTitle,
   Dialog,
   DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
   Stack,
   Divider,
   CircularProgress,
@@ -72,6 +77,13 @@ const ClientLedgerPage: React.FC = () => {
   const [paymentsDialogOpen, setPaymentsDialogOpen] = useState(false);
 
   const [selectedProduct, setSelectedProduct] = useState<{ product_id: number; product_name: string } | null>(null);
+
+  const [payAllOpen, setPayAllOpen]         = useState(false);
+  const [payAllAmount, setPayAllAmount]     = useState("");
+  const [payAllMethod, setPayAllMethod]     = useState("cash");
+  const [payAllDate, setPayAllDate]         = useState("");
+  const [payAllRef, setPayAllRef]           = useState("");
+  const [payAllLoading, setPayAllLoading]   = useState(false);
 
   const productOptions = useMemo(() => {
     const map = new Map<number, string>();
@@ -191,6 +203,26 @@ const ClientLedgerPage: React.FC = () => {
     }
   };
 
+  const handlePayAll = async () => {
+    if (!clientId) return;
+    setPayAllLoading(true);
+    try {
+      await clientLedgerService.settleDebt(clientId, {
+        amount: Number(payAllAmount),
+        payment_date: payAllDate,
+        method: payAllMethod,
+        reference_number: payAllRef || undefined,
+      });
+      toast.success("تم سداد جميع المبيعات بنجاح");
+      setPayAllOpen(false);
+      fetchLedger();
+    } catch (err) {
+      toast.error(clientLedgerService.getErrorMessage(err));
+    } finally {
+      setPayAllLoading(false);
+    }
+  };
+
   const handleSaleClick = async (entry: ClientLedgerEntry) => {
     if (!entry.sale_id) return;
     setFetchingSaleId(entry.sale_id);
@@ -273,6 +305,23 @@ const ClientLedgerPage: React.FC = () => {
           )}
         </Box>
 
+        <Button
+          variant="contained"
+          color="error"
+          size="small"
+          startIcon={<DollarSign size={15} />}
+          disabled={summary.balance <= 0}
+          onClick={() => {
+            setPayAllAmount(String(ledger.summary.balance));
+            setPayAllDate(format(new Date(), "yyyy-MM-dd"));
+            setPayAllMethod("cash");
+            setPayAllRef("");
+            setPayAllOpen(true);
+          }}
+          sx={{ textTransform: "none", "& .MuiButton-startIcon": { ml: "6px" } }}
+        >
+          سداد الكل
+        </Button>
         <Button
           variant="outlined"
           size="small"
@@ -568,6 +617,88 @@ const ClientLedgerPage: React.FC = () => {
           clientName={client.name}
         />
       )}
+
+      {/* Pay All Dialog */}
+      <Dialog
+        open={payAllOpen}
+        onClose={() => !payAllLoading && setPayAllOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <Box sx={{ display: "flex", alignItems: "center", px: 2, py: 1.25, borderBottom: 1, borderColor: "divider" }}>
+          <Typography variant="subtitle1" fontWeight={700} sx={{ flex: 1 }}>
+            سداد جميع المبيعات
+          </Typography>
+          <IconButton size="small" onClick={() => setPayAllOpen(false)} disabled={payAllLoading}>
+            <X size={16} />
+          </IconButton>
+        </Box>
+
+        <DialogContent sx={{ pt: 2, pb: 1 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+            <TextField
+              label="المبلغ"
+              size="small"
+              type="number"
+              fullWidth
+              autoFocus
+              value={payAllAmount}
+              onChange={(e) => setPayAllAmount(e.target.value)}
+              slotProps={{ htmlInput: { min: 0 } }}
+            />
+            <FormControl size="small" fullWidth>
+              <InputLabel>طريقة الدفع</InputLabel>
+              <Select
+                label="طريقة الدفع"
+                value={payAllMethod}
+                onChange={(e) => setPayAllMethod(e.target.value)}
+              >
+                <MenuItem value="cash">كاش</MenuItem>
+                <MenuItem value="bankak">بنكك</MenuItem>
+                <MenuItem value="fawry">فوري</MenuItem>
+                <MenuItem value="ocash">أوكاش</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              label="تاريخ الدفع"
+              size="small"
+              type="date"
+              fullWidth
+              value={payAllDate}
+              onChange={(e) => setPayAllDate(e.target.value)}
+              slotProps={{ inputLabel: { shrink: true } }}
+            />
+            <TextField
+              label="رقم المرجع (اختياري)"
+              size="small"
+              fullWidth
+              value={payAllRef}
+              onChange={(e) => setPayAllRef(e.target.value)}
+            />
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 2, py: 1.25, borderTop: 1, borderColor: "divider", gap: 1 }}>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => setPayAllOpen(false)}
+            disabled={payAllLoading}
+          >
+            إلغاء
+          </Button>
+          <Button
+            size="small"
+            variant="contained"
+            color="primary"
+            onClick={handlePayAll}
+            disabled={payAllLoading || !payAllAmount || Number(payAllAmount) <= 0}
+            startIcon={payAllLoading ? <CircularProgress size={14} color="inherit" /> : null}
+          >
+            تأكيد السداد
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

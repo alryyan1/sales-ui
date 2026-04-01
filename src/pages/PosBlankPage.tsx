@@ -55,6 +55,8 @@ import {
 import { useSettings } from "@/context/SettingsContext";
 import ClientFormModal from "@/components/clients/ClientFormModal";
 import { SaleSummaryPanel } from "@/components/pos/SaleSummaryPanel";
+import { DueRemindersDialog } from "@/components/pos/DueRemindersDialog";
+import saleReminderService, { DueReminder } from "@/services/saleReminderService";
 import axios from "axios";
 
 
@@ -1121,6 +1123,63 @@ const PosBlankPage: React.FC = () => {
 
   const [whatsAppLoading, setWhatsAppLoading] = useState(false);
 
+  // ── Sale Reminders ──
+  const [reminderDate, setReminderDate] = useState<string | null>(null);
+  const [reminderLoading, setReminderLoading] = useState(false);
+  const [dueReminders, setDueReminders] = useState<DueReminder[]>([]);
+  const [dueDialogOpen, setDueDialogOpen] = useState(false);
+
+  // Fetch active reminder whenever selected sale changes
+  useEffect(() => {
+    if (!selectedSale?.id) { setReminderDate(null); return; }
+    saleReminderService.getReminder(selectedSale.id)
+      .then((r) => setReminderDate(r?.remind_at ?? null))
+      .catch(() => setReminderDate(null));
+  }, [selectedSale?.id]);
+
+  // Check for due reminders on mount
+  useEffect(() => {
+    saleReminderService.getDueReminders()
+      .then((list) => { if (list.length > 0) { setDueReminders(list); setDueDialogOpen(true); } })
+      .catch(() => { /* silent fail */ });
+  }, []);
+
+  const handleSetReminder = async (days: number) => {
+    if (!selectedSale?.id) return;
+    setReminderLoading(true);
+    try {
+      const r = await saleReminderService.setReminder(selectedSale.id, days);
+      setReminderDate(r.remind_at);
+      toast.success(`تم تعيين التذكير بعد ${days} أيام`);
+    } catch {
+      toast.error("فشل في تعيين التذكير");
+    } finally {
+      setReminderLoading(false);
+    }
+  };
+
+  const handleRemoveReminder = async () => {
+    if (!selectedSale?.id) return;
+    setReminderLoading(true);
+    try {
+      await saleReminderService.removeReminder(selectedSale.id);
+      setReminderDate(null);
+      toast.success("تم إلغاء التذكير");
+    } catch {
+      toast.error("فشل في إلغاء التذكير");
+    } finally {
+      setReminderLoading(false);
+    }
+  };
+
+  const handleDismissReminder = (id: number) => {
+    setDueReminders((prev) => {
+      const updated = prev.filter((r) => r.id !== id);
+      if (updated.length === 0) setDueDialogOpen(false);
+      return updated;
+    });
+  };
+
   const handleSendWhatsApp = useCallback(async () => {
     if (!selectedSale?.id || !selectedSale.client_id) return;
 
@@ -2036,9 +2095,21 @@ const PosBlankPage: React.FC = () => {
             saleDateLoading={saleDateLoading}
             whatsAppLoading={whatsAppLoading}
             handleSendWhatsApp={handleSendWhatsApp}
+            reminderDate={reminderDate}
+            onSetReminder={handleSetReminder}
+            onRemoveReminder={handleRemoveReminder}
+            reminderLoading={reminderLoading}
           />
         </Box>
       </Box>
+
+      {/* Due Reminders Dialog */}
+      <DueRemindersDialog
+        open={dueDialogOpen}
+        reminders={dueReminders}
+        onDismiss={handleDismissReminder}
+        onClose={() => setDueDialogOpen(false)}
+      />
 
       {/* Sales return dialog */}
       <SalesReturnDialog

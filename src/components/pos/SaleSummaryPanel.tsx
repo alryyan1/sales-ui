@@ -16,7 +16,10 @@ import {
   createFilterOptions,
   Divider,
   Chip,
+  Popover,
+  Tooltip,
 } from "@mui/material";
+import { Bell } from "lucide-react";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import CheckIcon from "@mui/icons-material/Check";
@@ -76,6 +79,10 @@ interface SaleSummaryPanelProps {
   saleDateLoading?: boolean;
   whatsAppLoading: boolean;
   handleSendWhatsApp: () => void;
+  reminderDate: string | null;
+  onSetReminder: (days: number) => Promise<void>;
+  onRemoveReminder: () => Promise<void>;
+  reminderLoading: boolean;
 }
 
 const METHOD_LABELS: Record<string, string> = {
@@ -149,12 +156,18 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
   saleDateLoading,
   whatsAppLoading,
   handleSendWhatsApp,
+  reminderDate,
+  onSetReminder,
+  onRemoveReminder,
+  reminderLoading,
   canPayment = true,
   canCancelPayment = true,
   canDiscount = true,
 }) => {
   const [dateEditing, setDateEditing] = useState(false);
   const [tempDate, setTempDate] = useState("");
+  const [bellAnchor, setBellAnchor] = useState<HTMLButtonElement | null>(null);
+  const [daysInput, setDaysInput] = useState("3");
 
   useEffect(() => {
     setTempDate(selectedSale?.sale_date ?? "");
@@ -226,18 +239,87 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
             <Typography sx={{ fontSize: "0.8rem" }} fontWeight={700} color="white">
               فاتورة #{selectedSale.id}
             </Typography>
-            <Chip
-              label={isFullyPaid ? "مسددة" : "غير مسددة"}
-              size="small"
-              sx={{
-                height: 18,
-                fontSize: "0.6rem",
-                fontWeight: 700,
-                bgcolor: isFullyPaid ? "success.main" : "warning.main",
-                color: "white",
-              }}
-            />
+            <Stack direction="row" alignItems="center" gap={0.5}>
+              <Chip
+                label={isFullyPaid ? "مسددة" : "غير مسددة"}
+                size="small"
+                sx={{
+                  height: 18,
+                  fontSize: "0.6rem",
+                  fontWeight: 700,
+                  bgcolor: isFullyPaid ? "success.main" : "warning.main",
+                  color: "white",
+                }}
+              />
+              {!isFullyPaid && (
+                <Tooltip title={reminderDate ? `تذكير بتاريخ ${reminderDate}` : "تعيين تذكير دفع"}>
+                  <IconButton
+                    size="small"
+                    onClick={(e) => setBellAnchor(e.currentTarget)}
+                    sx={{ p: 0.25, color: reminderDate ? "warning.light" : "rgba(255,255,255,0.5)", "&:hover": { color: "white" } }}
+                  >
+                    <Bell size={15} fill={reminderDate ? "currentColor" : "none"} />
+                  </IconButton>
+                </Tooltip>
+              )}
+            </Stack>
           </Stack>
+
+          {/* Bell Popover */}
+          <Popover
+            open={Boolean(bellAnchor)}
+            anchorEl={bellAnchor}
+            onClose={() => setBellAnchor(null)}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+            slotProps={{ paper: { sx: { p: 1.5, width: 200 } } }}
+          >
+            <Typography variant="caption" fontWeight={700} display="block" mb={1}>
+              تذكير بعد (أيام)
+            </Typography>
+            <TextField
+              size="small"
+              type="number"
+              fullWidth
+              autoFocus
+              value={daysInput}
+              onChange={(e) => setDaysInput(e.target.value)}
+              slotProps={{ htmlInput: { min: 1, max: 365 } }}
+              sx={{ mb: 1 }}
+            />
+            <Stack direction="row" spacing={0.75}>
+              <Button
+                size="small"
+                variant="contained"
+                fullWidth
+                disabled={reminderLoading || !daysInput || Number(daysInput) < 1}
+                startIcon={reminderLoading ? <CircularProgress size={12} color="inherit" /> : null}
+                onClick={async () => {
+                  await onSetReminder(Number(daysInput));
+                  setBellAnchor(null);
+                }}
+                sx={{ textTransform: "none", fontSize: "0.75rem" }}
+              >
+                حفظ
+              </Button>
+              {reminderDate && (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="error"
+                  fullWidth
+                  disabled={reminderLoading}
+                  onClick={async () => {
+                    await onRemoveReminder();
+                    setBellAnchor(null);
+                  }}
+                  sx={{ textTransform: "none", fontSize: "0.75rem" }}
+                >
+                  إلغاء
+                </Button>
+              )}
+            </Stack>
+          </Popover>
 
           <Stack direction="row" alignItems="center" justifyContent="space-between" mt={0.5}>
             <Stack direction="row" alignItems="center" gap={0.4}>

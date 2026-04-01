@@ -23,6 +23,7 @@ import {
   CalendarDays,
   TrendingUp,
   FileWarning as FileWarningIcon,
+  Bell,
 } from "lucide-react";
 import ErrorIcon from "@mui/icons-material/Error";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -37,6 +38,8 @@ import { dbService, STORES } from "../../services/db";
 import { offlineSaleService } from "../../services/offlineSaleService";
 import { toast } from "sonner";
 import { KeyboardShortcutsDialog } from "../common/KeyboardShortcutsDialog";
+import { DueRemindersDialog } from "../pos/DueRemindersDialog";
+import saleReminderService, { DueReminder } from "@/services/saleReminderService";
 import { db } from "@/firebase";
 import { collection, query, limit, onSnapshot } from "firebase/firestore";
 
@@ -62,6 +65,14 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
     nearExpiringCount: 0,
     expiredCount: 0,
   });
+  const [dueReminders, setDueReminders] = React.useState<DueReminder[]>([]);
+  const [remindersDialogOpen, setRemindersDialogOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    saleReminderService.getDueReminders()
+      .then((list) => setDueReminders(list))
+      .catch(() => { /* silent fail */ });
+  }, []);
   const [firebaseConnected, setFirebaseConnected] = React.useState(false);
   const firebaseCollectionName = getSetting("firebase_collection_name", "none") as string;
 
@@ -306,11 +317,22 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
 
           {/* <ThemeToggle /> */}
 
-          {/* USD to SDG Factor */}
-    
-
-
-    
+          {/* Due Reminders Bell */}
+          <Tooltip title="تذكيرات الدفع">
+            <IconButton
+              size="small"
+              color={dueReminders.length > 0 ? "warning" : "default"}
+              onClick={() => setRemindersDialogOpen(true)}
+              sx={{
+                bgcolor: dueReminders.length > 0 ? "warning.lighter" : undefined,
+                "&:hover": { bgcolor: dueReminders.length > 0 ? "warning.light" : undefined },
+              }}
+            >
+              <Badge badgeContent={dueReminders.length} color="warning" max={99}>
+                <Bell size={20} fill={dueReminders.length > 0 ? "currentColor" : "none"} />
+              </Badge>
+            </IconButton>
+          </Tooltip>
 
           {user && (
             <ButtonBase
@@ -341,6 +363,13 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
           )}
         </Box>
       </Toolbar>
+
+      <DueRemindersDialog
+        open={remindersDialogOpen}
+        reminders={dueReminders}
+        onDismiss={(id) => setDueReminders((prev) => prev.filter((r) => r.id !== id))}
+        onClose={() => setRemindersDialogOpen(false)}
+      />
 
       <KeyboardShortcutsDialog
         open={shortcutsDialogOpen}
