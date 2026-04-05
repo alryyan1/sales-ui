@@ -8,7 +8,7 @@ const hostname = window.location.hostname;
 const parts = hostname.split('.')
 parts[0] = `${parts[0]}-backend`
 export const host = parts.join('.')
-// console.log(host, 'host')
+console.log(host, 'host')
 export const projectFolder = "sales-api";
 // export const host = 'server1'مركز النعيم
 export function blurForNoramlUsers() {
