@@ -2,6 +2,7 @@ import React from "react";
 import { Badge, Box, Paper, Stack, CircularProgress } from "@mui/material";
 import PersonIcon from "@mui/icons-material/Person";
 import ReplayIcon from "@mui/icons-material/Replay";
+import RequestQuoteIcon from "@mui/icons-material/RequestQuote";
 import type { Sale } from "@/services/saleService";
 
 export interface PosSalesColumnProps {
@@ -42,6 +43,7 @@ export const PosSalesColumn: React.FC<PosSalesColumnProps> = ({
             const hasNoPayments = (sale.payments?.length ?? 0) === 0;
             console.log(sale,'sale')
             const hasReturn = sale.is_returned === true;
+            const isQuote = sale.is_quote === true;
             const badgeColor = hasNoPayments ? "error" : isActive ? "secondary" : "primary";
             return (
               <Stack direction="row" gap={1} key={sale.id}>
@@ -68,8 +70,8 @@ export const PosSalesColumn: React.FC<PosSalesColumnProps> = ({
                       height: 60,
                       borderRadius: 1.5,
                       border: "2px solid",
-                      borderColor: isActive ? "primary.main" : hasReturn ? "warning.main" : "divider",
-                      bgcolor: isActive ? "primary.main" : "transparent",
+                      borderColor: isActive ? "primary.main" : isQuote ? "warning.main" : hasReturn ? "error.main" : "divider",
+                      bgcolor: isActive ? "primary.main" : isQuote ? "warning.light" : "transparent",
                       color: isActive ? "primary.contrastText" : "text.primary",
                       p: 1,
                       cursor: "pointer",
@@ -99,11 +101,24 @@ export const PosSalesColumn: React.FC<PosSalesColumnProps> = ({
                           position: "absolute",
                           bottom: 3,
                           right: 3,
-                          color: isActive ? "primary.contrastText" : "warning.main",
+                          color: isActive ? "primary.contrastText" : "error.main",
                           display: "flex",
                         }}
                       >
                         <ReplayIcon sx={{ fontSize: 13 }} />
+                      </Box>
+                    )}
+                    {isQuote && (
+                      <Box
+                        sx={{
+                          position: "absolute",
+                          bottom: 3,
+                          left: 4,
+                          color: isActive ? "primary.contrastText" : "warning.dark",
+                          display: "flex",
+                        }}
+                      >
+                        <RequestQuoteIcon sx={{ fontSize: 13 }} />
                       </Box>
                     )}
                     <Box component="span" sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>

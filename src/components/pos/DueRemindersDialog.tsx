@@ -42,12 +42,20 @@ export const DueRemindersDialog: React.FC<Props> = ({ open, reminders, onDismiss
     setSendingId(reminder.id);
     try {
       const clientName = reminder.sale?.client?.name ?? "العميل";
-      const dueAmount = reminder.sale.due_amount.toLocaleString();
-      const saleId = reminder.sale_id;
 
-      const text = `عزيزي ${clientName}، نود تذكيركم بوجود مبلغ مستحق قدره ${dueAmount} على الفاتورة رقم ${saleId}. الرجاء التواصل معنا لتسوية المبلغ.`;
-
-      await apiClient.post("/admin/whatsapp-cloud/send-text", { to: phone, text });
+      await apiClient.post("/admin/whatsapp-cloud/send-template", {
+        to: phone,
+        template_name: "pay_notification",
+        language_code: "ar",
+        components: [
+          {
+            type: "body",
+            parameters: [
+              { type: "text", text: clientName },
+            ],
+          },
+        ],
+      });
       toast.success("تم إرسال رسالة التذكير عبر واتساب");
     } catch {
       toast.error("فشل إرسال رسالة الواتساب");
@@ -91,11 +99,7 @@ export const DueRemindersDialog: React.FC<Props> = ({ open, reminders, onDismiss
       </Box>
 
       <DialogContent sx={{ p: 0 }}>
-        <Box sx={{ px: 2, py: 1.5 }}>
-          <Typography variant="body2" color="text.secondary">
-            الفواتير التالية لم يتم سداد مبالغها وقد حان موعد تذكيرها.
-          </Typography>
-        </Box>
+    
         <Divider />
         <Table size="small">
           <TableHead>
@@ -126,7 +130,7 @@ export const DueRemindersDialog: React.FC<Props> = ({ open, reminders, onDismiss
                   {reminder.remind_at}
                 </TableCell>
                 <TableCell align="center">
-                  <Stack direction="row" spacing={0.5} justifyContent="center">
+                  <Stack direction="row" gap={0.5} justifyContent="center">
                     <Tooltip title="إرسال تذكير واتساب">
                       <span>
                         <Button
@@ -142,7 +146,7 @@ export const DueRemindersDialog: React.FC<Props> = ({ open, reminders, onDismiss
                           }
                           sx={{ textTransform: "none", fontSize: "0.75rem", "& .MuiButton-startIcon": { ml: "4px" } }}
                         >
-                          واتساب
+                          تذكير واتساب
                         </Button>
                       </span>
                     </Tooltip>
@@ -157,7 +161,7 @@ export const DueRemindersDialog: React.FC<Props> = ({ open, reminders, onDismiss
                           startIcon={dismissingId === reminder.id ? <CircularProgress size={13} color="inherit" /> : null}
                           sx={{ textTransform: "none", fontSize: "0.75rem" }}
                         >
-                          رفض
+                          الغاء التذكير
                         </Button>
                       </span>
                     </Tooltip>

@@ -19,10 +19,13 @@ import {
   FormControl,
   Popover,
   Stack,
+  Tooltip,
+  Chip,
 } from "@mui/material";
 import { CloudUploadIcon, FileText, SearchIcon } from "lucide-react";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
+import RequestQuoteIcon from "@mui/icons-material/RequestQuote";
 
 import apiClient from "@/lib/axios";
 import { toast } from "sonner";
@@ -306,10 +309,13 @@ const PosBlankPage: React.FC = () => {
           const showExpired = getSetting("pos_show_expired_products", false);
           const showOutOfStock = getSetting("pos_show_out_of_stock_products", false);
 
+          const isQuoteMode = selectedSale?.is_quote ?? false;
+          // alert('d')
+          console.log(isQuoteMode,'isQuoteMode')
           const filtered = raw.filter((p) => {
             // Stock quantity returned from server will be warehouse-specific if warehouse_id was passed
             const stock = p.current_stock_quantity ?? p.stock_quantity ?? 0;
-            if (!showOutOfStock && stock <= 0) return false;
+            if (!isQuoteMode && !showOutOfStock && stock <= 0) return false;
 
             // Check expiry if available
             if (p.earliest_expiry_date) {
@@ -984,6 +990,18 @@ const PosBlankPage: React.FC = () => {
     },
     [expiryDialogType, fetchExpiryProducts, fetchExpiryCounts],
   );
+
+  const handleToggleQuote = useCallback(async () => {
+    if (!selectedSale) return;
+    try {
+      const updated = await saleService.toggleQuote(selectedSale.id);
+      setSelectedSale(updated);
+      setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+      toast.success(updated.is_quote ? "تم التحويل لوضع التسعيره" : "تم التحويل لفاتورة عادية");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "فشل تغيير وضع التسعيره");
+    }
+  }, [selectedSale]);
 
   const handleCreateNewSale = useCallback(async () => {
     try {
@@ -1875,6 +1893,24 @@ const PosBlankPage: React.FC = () => {
               sx={{ width: "100%" }}
             />
           </Box>
+
+          {/* Quote mode toggle */}
+          {selectedSale && (
+            <Tooltip title={selectedSale.is_quote ? "تحويل لفاتورة عادية" : "تحويل لتسعيره"}>
+              <span>
+                <IconButton
+                  onClick={handleToggleQuote}
+                  color={selectedSale.is_quote ? "warning" : "default"}
+                  sx={{ borderRadius: 2 }}
+                >
+                  <RequestQuoteIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+          {selectedSale?.is_quote && (
+            <Chip label="تسعيره" color="warning" size="small" sx={{ fontWeight: 700 }} />
+          )}
 
           {/* Create new sale */}
           <Button

@@ -87,6 +87,7 @@ export interface Sale {
   discount_amount?: string | number; // Discount stored as amount
   discount_type?: "percentage" | "fixed"; // UI-only; backend stores amount
   is_returned?: boolean; // Whether this sale has been returned
+  is_quote?: boolean; // Whether this is a quote (no inventory deduction)
 
   notes: string | null;
   created_at: string;
@@ -663,6 +664,14 @@ const saleService = {
       );
       throw error;
     }
+  },
+
+  /**
+   * Toggle the is_quote flag on a sale.
+   */
+  toggleQuote: async (saleId: number): Promise<Sale> => {
+    const response = await apiClient.post<Sale>(`/sales/${saleId}/toggle-quote`);
+    return response.data;
   },
 
   /**
