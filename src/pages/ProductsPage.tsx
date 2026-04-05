@@ -94,7 +94,7 @@ const ProductsPage: React.FC = () => {
   const [bulkSalePricePercentage, setBulkSalePricePercentage] = useState<string>("");
   const [isBulkSalePriceUpdating, setIsBulkSalePriceUpdating] = useState(false);
 
-  const [barcodeLabelProduct, setBarcodeLabelProduct] = useState<{ name: string; sku: string | null } | null>(null);
+  const [barcodeLabelProduct, setBarcodeLabelProduct] = useState<{ id: number; name: string; sku: string | null } | null>(null);
 
   // Column Visibility
   const COLUMN_KEYS = ["sku", "name", "scientific_name", "category", "sellable_unit", "stocking_unit", "units_per_stocking", "stock", "cost", "sale_price", "expire_date"] as const;
@@ -769,7 +769,7 @@ const ProductsPage: React.FC = () => {
             <ProductsTable
               products={(products as Product[]) || []}
               onEdit={(product) => openModal(product as Product)}
-              onBarcodeLabel={(product) => setBarcodeLabelProduct({ name: product.name, sku: product.sku ?? null })}
+              onBarcodeLabel={(product) => setBarcodeLabelProduct({ id: product.id, name: product.name, sku: product.sku ?? null })}
               isLoading={isLoadingData}
               // Infinite Scroll
               onLoadMore={fetchNextPage}

@@ -1,22 +1,21 @@
-import React, { useState, useEffect } from "react";
-import JsBarcode from "jsbarcode";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
   TextField,
   Box,
-  Alert,
   Typography,
   CircularProgress,
+  Alert,
+  Stack,
 } from "@mui/material";
-import { PDFViewer } from "@react-pdf/renderer";
-import BarcodeLabelPdf from "./BarcodeLabelPdf";
+import apiClient from "@/lib/axios";
 
 interface BarcodeLabelPdfDialogProps {
   open: boolean;
   onClose: () => void;
-  product: { name: string; sku: string | null } | null;
+  product: { id: number; name: string; sku: string | null } | null;
 }
 
 const BarcodeLabelPdfDialog: React.FC<BarcodeLabelPdfDialogProps> = ({
@@ -24,41 +23,67 @@ const BarcodeLabelPdfDialog: React.FC<BarcodeLabelPdfDialogProps> = ({
   onClose,
   product,
 }) => {
-  const [labelWidthMm, setLabelWidthMm] = useState(60);
+  const [labelWidthMm, setLabelWidthMm]   = useState(60);
   const [labelHeightMm, setLabelHeightMm] = useState(30);
-  const [barcodeDataUrl, setBarcodeDataUrl] = useState<string | null>(null);
-  const [barcodeError, setBarcodeError] = useState(false);
+  const [copies, setCopies]               = useState(1);
+  const [pdfUrl, setPdfUrl]               = useState<string | null>(null);
+  const [loading, setLoading]             = useState(false);
+  const [error, setError]                 = useState<string | null>(null);
+  const prevUrlRef = useRef<string | null>(null);
+
+  // Revoke previous object URL to avoid memory leaks
+  useEffect(() => {
+    return () => {
+      if (prevUrlRef.current) URL.revokeObjectURL(prevUrlRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!open || !product) {
-      setBarcodeDataUrl(null);
-      setBarcodeError(false);
+      setPdfUrl(null);
+      setError(null);
       return;
     }
 
-    const value = product.sku || product.name;
-    if (!value) {
-      setBarcodeError(true);
-      setBarcodeDataUrl(null);
-      return;
-    }
+    const controller = new AbortController();
 
-    try {
-      const canvas = document.createElement("canvas");
-      JsBarcode(canvas, value, {
-        format: "CODE128",
-        width: 2,
-        height: 80,
-        displayValue: false,
-        margin: 4,
-      });
-      setBarcodeDataUrl(canvas.toDataURL("image/png"));
-      setBarcodeError(false);
-    } catch {
-      setBarcodeError(true);
-      setBarcodeDataUrl(null);
-    }
-  }, [open, product, labelWidthMm, labelHeightMm]);
+    const fetchPdf = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await apiClient.get(
+          `/products/${product.id}/barcode-label-pdf`,
+          {
+            params: { width: labelWidthMm, height: labelHeightMm, copies },
+            responseType: "blob",
+            signal: controller.signal,
+          },
+        );
+
+        const blob = new Blob([response.data], { type: "application/pdf" });
+        const url  = URL.createObjectURL(blob);
+
+        // Revoke old URL
+        if (prevUrlRef.current) URL.revokeObjectURL(prevUrlRef.current);
+        prevUrlRef.current = url;
+        setPdfUrl(url);
+      } catch (err: any) {
+        if (err.name !== "CanceledError") {
+          setError("فشل توليد الباركود. تأكد من وجود SKU صالح للمنتج.");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Debounce 400 ms so rapid slider changes don't spam the server
+    const t = setTimeout(fetchPdf, 400);
+    return () => {
+      clearTimeout(t);
+      controller.abort();
+    };
+  }, [open, product, labelWidthMm, labelHeightMm, copies]);
 
   if (!product) return null;
 
@@ -68,58 +93,59 @@ const BarcodeLabelPdfDialog: React.FC<BarcodeLabelPdfDialogProps> = ({
         <Typography variant="subtitle1" fontWeight={600}>
           طباعة باركود: {product.name}
         </Typography>
-        <Box sx={{ display: "flex", gap: 2, mt: 1.5 }}>
+
+        <Stack direction="row" gap={2} mt={1.5} flexWrap="wrap">
           <TextField
             label="العرض (mm)"
             type="number"
             size="small"
             value={labelWidthMm}
-            onChange={(e) => {
-              const v = Math.max(20, Math.min(200, Number(e.target.value)));
-              setLabelWidthMm(v);
-            }}
+            onChange={(e) => setLabelWidthMm(Math.max(20, Math.min(200, Number(e.target.value))))}
             inputProps={{ min: 20, max: 200, step: 1 }}
-            sx={{ width: 130 }}
+            sx={{ width: 120 }}
           />
           <TextField
             label="الارتفاع (mm)"
             type="number"
             size="small"
             value={labelHeightMm}
-            onChange={(e) => {
-              const v = Math.max(15, Math.min(150, Number(e.target.value)));
-              setLabelHeightMm(v);
-            }}
-            inputProps={{ min: 15, max: 150, step: 1 }}
-            sx={{ width: 130 }}
+            onChange={(e) => setLabelHeightMm(Math.max(10, Math.min(200, Number(e.target.value))))}
+            inputProps={{ min: 10, max: 200, step: 1 }}
+            sx={{ width: 120 }}
           />
-        </Box>
+          <TextField
+            label="عدد النسخ"
+            type="number"
+            size="small"
+            value={copies}
+            onChange={(e) => setCopies(Math.max(1, Math.min(100, Number(e.target.value))))}
+            inputProps={{ min: 1, max: 100, step: 1 }}
+            sx={{ width: 110 }}
+          />
+        </Stack>
       </DialogTitle>
 
-      <DialogContent sx={{ height: "65vh", p: 0 }}>
-        {barcodeError && (
+      <DialogContent sx={{ height: "65vh", p: 0, position: "relative" }}>
+        {error && (
           <Box sx={{ p: 2 }}>
-            <Alert severity="warning">
-              لا يمكن توليد باركود لهذا المنتج — تأكد من وجود SKU صالح.
-            </Alert>
+            <Alert severity="warning">{error}</Alert>
           </Box>
         )}
 
-        {!barcodeError && !barcodeDataUrl && (
+        {loading && (
           <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
             <CircularProgress size={32} />
           </Box>
         )}
 
-        {!barcodeError && barcodeDataUrl && (
-          <PDFViewer width="100%" height="100%" showToolbar>
-            <BarcodeLabelPdf
-              product={product}
-              barcodeDataUrl={barcodeDataUrl}
-              labelWidthMm={labelWidthMm}
-              labelHeightMm={labelHeightMm}
-            />
-          </PDFViewer>
+        {!loading && !error && pdfUrl && (
+          <iframe
+            src={pdfUrl}
+            width="100%"
+            height="100%"
+            style={{ border: "none", display: "block" }}
+            title="barcode-label"
+          />
         )}
       </DialogContent>
     </Dialog>
