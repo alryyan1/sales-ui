@@ -82,7 +82,7 @@ const PurchaseFormPage: React.FC = () => {
       supplier_id: undefined as any,
       purchase_date: new Date(),
       status: "pending" as const, // Default "pending"
-      currency: "SDG" as "SDG" | "USD",
+      currency: "USD" as "SDG" | "USD",
       reference_number: "",
       notes: "",
     },
@@ -213,8 +213,8 @@ const PurchaseFormPage: React.FC = () => {
         const createdPurchase = await purchaseService.createPurchase(apiData);
         toast.success("نجح", { description: "تم إنشاء المشتريات بنجاح" });
 
-        if (createdPurchase?.purchase?.id) {
-          navigate(`/purchases/${createdPurchase.purchase.id}/manage-items`);
+        if (createdPurchase?.id) {
+          navigate(`/purchases/${createdPurchase.id}/manage-items`);
         } else {
           navigate("/purchases");
         }

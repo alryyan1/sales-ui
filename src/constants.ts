@@ -1,7 +1,9 @@
 // export const host = 'sahara-pharma.com'
 export const schema = 'https'; // local is usually http
 // export const host = "lifcaresd.com";
-export const host = 'backend.alsamar-laundry.com'; // use local
+export const host = 'backend.alsamar-laundry.com';
+//export const host = 'localhost';
+
 
 console.log(host, 'host')
 export const projectFolder = "sales-api";

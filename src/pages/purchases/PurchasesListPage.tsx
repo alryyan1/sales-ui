@@ -758,7 +758,7 @@ const PurchasesListPage: React.FC = () => {
                             </TableCell> */}
                           <TableCell className="text-center">
                             <Badge variant="secondary" className="font-mono">
-                              {purchase.currency || "SDG"}
+                              {"USD"}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-center">
@@ -770,12 +770,12 @@ const PurchasesListPage: React.FC = () => {
 
                           <TableCell className="text-center">
                             <span className="font-bold text-destructive">
-                              {formatCurrency(purchase.total_amount || 0)}
+                              {formatCurrency(purchase.total_amount || 0, undefined, "USD")}
                             </span>
                           </TableCell>
                           <TableCell className="text-center">
                             <span className="font-bold text-emerald-600">
-                              {formatCurrency(purchase.total_paid || 0)}
+                              {formatCurrency(purchase.total_paid || 0, undefined, "USD")}
                             </span>
                           </TableCell>
                           <TableCell className="text-center">
@@ -783,6 +783,8 @@ const PurchasesListPage: React.FC = () => {
                               {formatCurrency(
                                 (Number(purchase.total_amount) || 0) -
                                 (Number(purchase.total_paid) || 0),
+                                undefined,
+                                "USD",
                               )}
                             </span>
                           </TableCell>
@@ -921,6 +923,8 @@ const PurchasesListPage: React.FC = () => {
                               sum + Number(p.total_amount || 0),
                             0,
                           ),
+                          undefined,
+                          "USD",
                         )}
                       </TableCell>
                       <TableCell className="text-center text-emerald-600 text-lg">
@@ -930,6 +934,8 @@ const PurchasesListPage: React.FC = () => {
                               sum + Number(p.total_paid || 0),
                             0,
                           ),
+                          undefined,
+                          "USD",
                         )}
                       </TableCell>
 
@@ -942,6 +948,8 @@ const PurchasesListPage: React.FC = () => {
                                 Number(p.total_paid || 0)),
                             0,
                           ),
+                          undefined,
+                          "USD",
                         )}
                       </TableCell>
                       <TableCell></TableCell>

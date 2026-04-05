@@ -840,7 +840,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                           <TextField
                             {...field}
                             value={field.value ?? ""}
-                            label="سعر البيع (SDG)"
+                            label="سعر البيع (USD)"
                             type="number"
                             fullWidth
                             size="small"
@@ -1096,7 +1096,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                           {formatCurrency(
                             historyTab === 0 ? item.unit_cost : item.unit_price,
                             undefined,
-                            historyTab === 0 ? "USD" : "SDG"
+                            historyTab === 0 ? "USD" : "USD"
                           )}
                         </TableCell>
                         <TableCell align="center">
@@ -1105,7 +1105,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                               ? item.total_cost
                               : item.total_price,
                             undefined,
-                            historyTab === 0 ? "USD" : "SDG"
+                            historyTab === 0 ? "USD" : "USD"
                           )}
                         </TableCell>
                       </TableRow>

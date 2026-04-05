@@ -260,7 +260,7 @@ const ProductRow: React.FC<ProductRowProps> = ({
       </TableCell>
       <TableCell align="center">
         {product.last_sale_price_per_sellable_unit
-          ? formatCurrency(Number(product.last_sale_price_per_sellable_unit), undefined, "SDG")
+          ? formatCurrency(Number(product.last_sale_price_per_sellable_unit), undefined, "USD")
           : "---"}
       </TableCell>
       {/* <TableCell align="center">
@@ -294,248 +294,248 @@ const InlineCreateRow: React.FC<{
   onCancel,
   isLoading,
 }) => {
-  const [formData, setFormData] = useState<ProductFormData>({
-    name: "",
-    sku: "",
-    scientific_name: "",
-    category_id: "" as any,
-    stocking_unit_id: "" as any,
-    sellable_unit_id: "" as any,
-    units_per_stocking_unit: 1,
-    stock_alert_level: 10,
-    stock_quantity: 0,
-    description: "",
-    cost_price: "",
-    sale_price: "",
-    expire_date: "",
-  });
-
-  const handleChange = (field: keyof ProductFormData, value: any) => {
-    setFormData((prev) => {
-      const updates: any = { [field]: value };
-      // Sync scientific name with name if scientific name is empty or was same as name
-      if (field === "name") {
-        updates.scientific_name = value;
-      }
-      return { ...prev, ...updates };
+    const [formData, setFormData] = useState<ProductFormData>({
+      name: "",
+      sku: "",
+      scientific_name: "",
+      category_id: "" as any,
+      stocking_unit_id: "" as any,
+      sellable_unit_id: "" as any,
+      units_per_stocking_unit: 1,
+      stock_alert_level: 10,
+      stock_quantity: 0,
+      description: "",
+      cost_price: "",
+      sale_price: "",
+      expire_date: "",
     });
-  };
 
-  // Set default units and category on mount
-  useEffect(() => {
-    const defaultStockingUnit = stockingUnits.find((u) => u.is_default);
-    const defaultSellableUnit = sellableUnits.find((u) => u.is_default);
-    const defaultCategory = categories.find((c) => c.is_default);
+    const handleChange = (field: keyof ProductFormData, value: any) => {
+      setFormData((prev) => {
+        const updates: any = { [field]: value };
+        // Sync scientific name with name if scientific name is empty or was same as name
+        if (field === "name") {
+          updates.scientific_name = value;
+        }
+        return { ...prev, ...updates };
+      });
+    };
 
-    setFormData((prev) => ({
-      ...prev,
-      stocking_unit_id: defaultStockingUnit?.id || ("" as any),
-      sellable_unit_id: defaultSellableUnit?.id || ("" as any),
-      category_id: defaultCategory?.id || ("" as any),
-    }));
-  }, [stockingUnits, sellableUnits, categories]);
+    // Set default units and category on mount
+    useEffect(() => {
+      const defaultStockingUnit = stockingUnits.find((u) => u.is_default);
+      const defaultSellableUnit = sellableUnits.find((u) => u.is_default);
+      const defaultCategory = categories.find((c) => c.is_default);
 
-  const handleSave = () => {
-    // Basic validation
-    if (!formData.name) return; // Add better validation if needed
-    onSave(formData);
-  };
+      setFormData((prev) => ({
+        ...prev,
+        stocking_unit_id: defaultStockingUnit?.id || ("" as any),
+        sellable_unit_id: defaultSellableUnit?.id || ("" as any),
+        category_id: defaultCategory?.id || ("" as any),
+      }));
+    }, [stockingUnits, sellableUnits, categories]);
 
-  const generateSKU = () => {
-    // Generate a random SKU: PRD-XXXXXX (6 random alphanumeric characters)
-    const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
-    handleChange("sku", `PRD-${randomStr}`);
-  };
+    const handleSave = () => {
+      // Basic validation
+      if (!formData.name) return; // Add better validation if needed
+      onSave(formData);
+    };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleSave();
-    }
-  };
+    const generateSKU = () => {
+      // Generate a random SKU: PRD-XXXXXX (6 random alphanumeric characters)
+      const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
+      handleChange("sku", `PRD-${randomStr}`);
+    };
 
-  return (
-    <TableRow sx={{ bgcolor: "action.hover" }}>
-      <TableCell align="center">
-        <Stack direction="row" spacing={0.5} justifyContent="center">
-          <IconButton
-            size="small"
-            onClick={handleSave}
-            disabled={isLoading || !formData.name}
-            color="primary"
-          >
-            <Save size={18} />
-          </IconButton>
-          <IconButton size="small" onClick={onCancel} disabled={isLoading}>
-            <X size={18} color="red" />
-          </IconButton>
-        </Stack>
-      </TableCell>
-      <TableCell align="center" /> {/* Image Placeholder */}
-      <TableCell align="center">
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+
+    return (
+      <TableRow sx={{ bgcolor: "action.hover" }}>
+        <TableCell align="center">
+          <Stack direction="row" spacing={0.5} justifyContent="center">
+            <IconButton
+              size="small"
+              onClick={handleSave}
+              disabled={isLoading || !formData.name}
+              color="primary"
+            >
+              <Save size={18} />
+            </IconButton>
+            <IconButton size="small" onClick={onCancel} disabled={isLoading}>
+              <X size={18} color="red" />
+            </IconButton>
+          </Stack>
+        </TableCell>
+        <TableCell align="center" /> {/* Image Placeholder */}
+        <TableCell align="center">
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+            <TextField
+              size="small"
+              placeholder="SKU"
+              value={formData.sku || ""}
+              onChange={(e) => handleChange("sku", e.target.value)}
+              onKeyDown={handleKeyDown}
+              sx={{ minWidth: 80 }}
+            />
+            <Tooltip title="Generate SKU">
+              <IconButton size="small" onClick={generateSKU} color="secondary">
+                <Sparkles size={16} />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </TableCell>
+        <TableCell align="center">
           <TextField
             size="small"
-            placeholder="SKU"
-            value={formData.sku || ""}
-            onChange={(e) => handleChange("sku", e.target.value)}
+            placeholder="Product Name"
+            value={formData.name}
+            onChange={(e) => handleChange("name", e.target.value)}
             onKeyDown={handleKeyDown}
-            sx={{ minWidth: 80 }}
+            required
+            sx={{
+              minWidth: 120,
+              width: `${Math.max(12, formData.name.length + 2)}ch`,
+              transition: "width 0.2s ease",
+            }}
           />
-          <Tooltip title="Generate SKU">
-            <IconButton size="small" onClick={generateSKU} color="secondary">
-              <Sparkles size={16} />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      </TableCell>
-      <TableCell align="center">
-        <TextField
-          size="small"
-          placeholder="Product Name"
-          value={formData.name}
-          onChange={(e) => handleChange("name", e.target.value)}
-          onKeyDown={handleKeyDown}
-          required
-          sx={{
-            minWidth: 120,
-            width: `${Math.max(12, formData.name.length + 2)}ch`,
-            transition: "width 0.2s ease",
-          }}
-        />
-      </TableCell>
-      <TableCell align="center">
-        <TextField
-          size="small"
-          placeholder="Description"
-          value={formData.description || ""}
-          onChange={(e) => handleChange("description", e.target.value)}
-          onKeyDown={handleKeyDown}
-          sx={{
-            minWidth: 120,
-            width: `${Math.max(12, (formData.description || "").length + 2)}ch`,
-            transition: "width 0.2s ease",
-          }}
-        />
-      </TableCell>
-      <TableCell align="center">
-        <FormControl size="small" fullWidth sx={{ minWidth: 100 }}>
-          <Select
-            value={formData.category_id || ""}
-            displayEmpty
-            onChange={(e) => handleChange("category_id", e.target.value)}
-            renderValue={(selected) => {
-              if (!selected) return <em style={{ color: "#aaa" }}>Category</em>;
-              return categories.find((c) => c.id === selected)?.name;
+        </TableCell>
+        <TableCell align="center">
+          <TextField
+            size="small"
+            placeholder="Description"
+            value={formData.description || ""}
+            onChange={(e) => handleChange("description", e.target.value)}
+            onKeyDown={handleKeyDown}
+            sx={{
+              minWidth: 120,
+              width: `${Math.max(12, (formData.description || "").length + 2)}ch`,
+              transition: "width 0.2s ease",
             }}
-          >
-            <MenuItem value="" disabled>
-              <em>Select Category</em>
-            </MenuItem>
-            {categories.map((c) => (
-              <MenuItem key={c.id} value={c.id}>
-                {c.name}
+          />
+        </TableCell>
+        <TableCell align="center">
+          <FormControl size="small" fullWidth sx={{ minWidth: 100 }}>
+            <Select
+              value={formData.category_id || ""}
+              displayEmpty
+              onChange={(e) => handleChange("category_id", e.target.value)}
+              renderValue={(selected) => {
+                if (!selected) return <em style={{ color: "#aaa" }}>Category</em>;
+                return categories.find((c) => c.id === selected)?.name;
+              }}
+            >
+              <MenuItem value="" disabled>
+                <em>Select Category</em>
               </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </TableCell>
-      <TableCell align="center">
-        <FormControl size="small" fullWidth sx={{ minWidth: 80 }}>
-          <Select
-            value={formData.sellable_unit_id || ""}
-            displayEmpty
-            onChange={(e) => handleChange("sellable_unit_id", e.target.value)}
-            renderValue={(selected) => {
-              if (!selected) return <em style={{ color: "#aaa" }}>Unit</em>;
-              return sellableUnits.find((u) => u.id === selected)?.name;
-            }}
-          >
-            <MenuItem value="" disabled>
-              <em>Unit</em>
-            </MenuItem>
-            {sellableUnits.map((u) => (
-              <MenuItem key={u.id} value={u.id}>
-                {u.name}
+              {categories.map((c) => (
+                <MenuItem key={c.id} value={c.id}>
+                  {c.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </TableCell>
+        <TableCell align="center">
+          <FormControl size="small" fullWidth sx={{ minWidth: 80 }}>
+            <Select
+              value={formData.sellable_unit_id || ""}
+              displayEmpty
+              onChange={(e) => handleChange("sellable_unit_id", e.target.value)}
+              renderValue={(selected) => {
+                if (!selected) return <em style={{ color: "#aaa" }}>Unit</em>;
+                return sellableUnits.find((u) => u.id === selected)?.name;
+              }}
+            >
+              <MenuItem value="" disabled>
+                <em>Unit</em>
               </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </TableCell>
-      <TableCell align="center">
-        <FormControl size="small" fullWidth sx={{ minWidth: 80 }}>
-          <Select
-            value={formData.stocking_unit_id || ""}
-            displayEmpty
-            onChange={(e) => handleChange("stocking_unit_id", e.target.value)}
-            renderValue={(selected) => {
-              if (!selected) return <em style={{ color: "#aaa" }}>Pkg</em>;
-              return stockingUnits.find((u) => u.id === selected)?.name;
-            }}
-          >
-            <MenuItem value="" disabled>
-              <em>Package</em>
-            </MenuItem>
-            {stockingUnits.map((u) => (
-              <MenuItem key={u.id} value={u.id}>
-                {u.name}
+              {sellableUnits.map((u) => (
+                <MenuItem key={u.id} value={u.id}>
+                  {u.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </TableCell>
+        <TableCell align="center">
+          <FormControl size="small" fullWidth sx={{ minWidth: 80 }}>
+            <Select
+              value={formData.stocking_unit_id || ""}
+              displayEmpty
+              onChange={(e) => handleChange("stocking_unit_id", e.target.value)}
+              renderValue={(selected) => {
+                if (!selected) return <em style={{ color: "#aaa" }}>Pkg</em>;
+                return stockingUnits.find((u) => u.id === selected)?.name;
+              }}
+            >
+              <MenuItem value="" disabled>
+                <em>Package</em>
               </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </TableCell>
-      <TableCell align="center">
-        <TextField
-          type="number"
-          size="small"
-          placeholder="Qty"
-          value={formData.units_per_stocking_unit || ""}
-          onChange={(e) =>
-            handleChange("units_per_stocking_unit", e.target.value)
-          }
-          sx={{ width: 60 }}
-        />
-      </TableCell>
-      <TableCell align="center">
-        <TextField
-          type="number"
-          size="small"
-          placeholder="Alert"
-          value={formData.stock_alert_level || ""}
-          onChange={(e) => handleChange("stock_alert_level", e.target.value)}
-          sx={{ width: 60 }}
-        />
-      </TableCell>
-      <TableCell align="center">
-        <Typography variant="body2" color="text.secondary">
-          0
-        </Typography>
-      </TableCell>
-      {/* Latest Cost */}
-      <TableCell align="center">
-        <TextField
-          type="number"
-          size="small"
-          placeholder="Cost"
-          value={formData.cost_price || ""}
-          onChange={(e) => handleChange("cost_price", e.target.value)}
-          sx={{ width: 80 }}
-        />
-      </TableCell>
-      {/* Last Sale Price */}
-      <TableCell align="center">
-        <TextField
-          type="number"
-          size="small"
-          placeholder="Sale"
-          value={formData.sale_price || ""}
-          onChange={(e) => handleChange("sale_price", e.target.value)}
-          sx={{ width: 80 }}
-        />
-      </TableCell>
-    </TableRow>
-  );
-};
+              {stockingUnits.map((u) => (
+                <MenuItem key={u.id} value={u.id}>
+                  {u.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </TableCell>
+        <TableCell align="center">
+          <TextField
+            type="number"
+            size="small"
+            placeholder="Qty"
+            value={formData.units_per_stocking_unit || ""}
+            onChange={(e) =>
+              handleChange("units_per_stocking_unit", e.target.value)
+            }
+            sx={{ width: 60 }}
+          />
+        </TableCell>
+        <TableCell align="center">
+          <TextField
+            type="number"
+            size="small"
+            placeholder="Alert"
+            value={formData.stock_alert_level || ""}
+            onChange={(e) => handleChange("stock_alert_level", e.target.value)}
+            sx={{ width: 60 }}
+          />
+        </TableCell>
+        <TableCell align="center">
+          <Typography variant="body2" color="text.secondary">
+            0
+          </Typography>
+        </TableCell>
+        {/* Latest Cost */}
+        <TableCell align="center">
+          <TextField
+            type="number"
+            size="small"
+            placeholder="Cost"
+            value={formData.cost_price || ""}
+            onChange={(e) => handleChange("cost_price", e.target.value)}
+            sx={{ width: 80 }}
+          />
+        </TableCell>
+        {/* Last Sale Price */}
+        <TableCell align="center">
+          <TextField
+            type="number"
+            size="small"
+            placeholder="Sale"
+            value={formData.sale_price || ""}
+            onChange={(e) => handleChange("sale_price", e.target.value)}
+            sx={{ width: 80 }}
+          />
+        </TableCell>
+      </TableRow>
+    );
+  };
 
 export const ProductsTable: React.FC<ProductsTableProps> = ({
   products,
@@ -566,7 +566,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
   };
 
   // Intersection Observer for Infinite Scroll
-  const observer = useRef<IntersectionObserver>();
+  const observer = useRef<IntersectionObserver>(null!);
   const lastElementRef = useCallback(
     (node: HTMLTableRowElement) => {
       if (isLoading || isFetchingNextPage) return;
@@ -701,7 +701,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                 <TableCell align="center">تنبيه المخزون</TableCell>
                 <TableCell align="center">إجمالي المخزون</TableCell>
                 <TableCell align="center">أحدث تكلفة (USD)</TableCell>
-                <TableCell align="center">آخر سعر بيع (SDG)</TableCell>
+                <TableCell align="center">آخر سعر بيع (USD)</TableCell>
                 {/* <TableCell align="center">تاريخ الصلاحية</TableCell> */}
               </TableRow>
             </TableHead>

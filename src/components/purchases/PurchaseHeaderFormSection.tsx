@@ -386,35 +386,6 @@ export const PurchaseHeaderFormSection: React.FC<
               )}
             />
 
-            {/* Currency */}
-            <Controller
-              control={control}
-              name="currency"
-              render={({ field, fieldState }) => (
-                <Box>
-                  <FieldLabel required icon={<TagOutlinedIcon />}>
-                    العملة
-                  </FieldLabel>
-                  <Autocomplete
-                    options={["SDG", "USD"]}
-                    value={field.value || "SDG"}
-                    onChange={(_, newValue) => field.onChange(newValue)}
-                    disabled={isDisabled}
-                    size="small"
-                    disableClearable
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        error={!!fieldState.error}
-                        helperText={fieldState.error?.message}
-                        sx={inputStyles}
-                      />
-                    )}
-                  />
-                </Box>
-              )}
-            />
-
             {/* Reference Number */}
             <Controller
               control={control}
