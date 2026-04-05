@@ -23,8 +23,8 @@ const BarcodeLabelPdfDialog: React.FC<BarcodeLabelPdfDialogProps> = ({
   onClose,
   product,
 }) => {
-  const [labelWidthMm, setLabelWidthMm]   = useState(60);
-  const [labelHeightMm, setLabelHeightMm] = useState(30);
+  const [labelWidthMm, setLabelWidthMm]   = useState(39);
+  const [labelHeightMm, setLabelHeightMm] = useState(25);
   const [copies, setCopies]               = useState(1);
   const [pdfUrl, setPdfUrl]               = useState<string | null>(null);
   const [loading, setLoading]             = useState(false);
