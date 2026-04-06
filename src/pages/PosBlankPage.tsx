@@ -57,6 +57,7 @@ import {
 } from "@/components/sales/ShiftFinancialTable";
 import { useSettings } from "@/context/SettingsContext";
 import ClientFormModal from "@/components/clients/ClientFormModal";
+import { Package } from "@/services/packageService";
 import { SaleSummaryPanel } from "@/components/pos/SaleSummaryPanel";
 import { DueRemindersDialog } from "@/components/pos/DueRemindersDialog";
 import saleReminderService, { DueReminder } from "@/services/saleReminderService";
@@ -334,6 +335,68 @@ const PosBlankPage: React.FC = () => {
     return () => clearTimeout(t);
   }, [productInputValue, user?.warehouse_id, getSetting]);
 
+  // Handle Package addition from TopAppBar
+  const handleAddPackageToSale = useCallback(
+    async (pkg: Package) => {
+      if (!selectedSale) {
+        toast.error("اختر عملية بيع أولاً");
+        return;
+      }
+      if (!pkg.items || pkg.items.length === 0) {
+        toast.error("هذه المجموعة فارغة");
+        return;
+      }
+      try {
+        const usdFactor = getSetting("usd_to_sdg_factor", 1) as number;
+        for (const item of pkg.items) {
+          const unitPrice =
+            (Number(item.product?.last_sale_price_per_sellable_unit ?? item.product?.sale_price) || 0) *
+            usdFactor;
+          const res = await saleService.addSaleItem(selectedSale.id, {
+            product_id: item.product_id,
+            quantity: 1,
+            unit_price: unitPrice,
+          });
+          if (res.sale) {
+            setSelectedSale(res.sale);
+            setSales((prev) =>
+              prev.map((s) => (s.id === res.sale.id ? res.sale : s)),
+            );
+          }
+        }
+        toast.success(`تم إضافة مجموعة "${pkg.name}" بنجاح`);
+        window.dispatchEvent(
+          new CustomEvent("package-addition-status", {
+            detail: { isAdding: false, success: true },
+          }),
+        );
+      } catch (err: unknown) {
+        toast.error(saleService.getErrorMessage(err));
+        window.dispatchEvent(
+          new CustomEvent("package-addition-status", {
+            detail: { isAdding: false, success: false },
+          }),
+        );
+      }
+    },
+    [selectedSale, getSetting],
+  );
+
+  // Listen for package selection events from TopAppBar
+  useEffect(() => {
+    const handleAddPackage = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      window.dispatchEvent(
+        new CustomEvent("package-addition-status", {
+          detail: { isAdding: true, success: false },
+        }),
+      );
+      handleAddPackageToSale(customEvent.detail);
+    };
+    window.addEventListener("add-package-to-sale", handleAddPackage);
+    return () =>
+      window.removeEventListener("add-package-to-sale", handleAddPackage);
+  }, [handleAddPackageToSale]);
 
   const handleClientChange = useCallback(
     async (client: Client | null) => {
@@ -2044,7 +2107,30 @@ const PosBlankPage: React.FC = () => {
                       عناصر البيع #{selectedSale.id}
                     </Typography>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    
+                      {selectedSale.items && selectedSale.items.length > 0 && (
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mr: 1 }}>
+                          <TextField
+                            size="small"
+                            placeholder="الكمية للكل..."
+                            type="number"
+                            value={batchQuantity}
+                            onChange={(e) => setBatchQuantity(e.target.value)}
+                            sx={{ width: 120 }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleBatchQuantityUpdate();
+                            }}
+                            disabled={isBatchUpdating || (selectedSale.payments?.length ?? 0) > 0}
+                          />
+                          <Button
+                            size="small"
+                            variant="contained"
+                            onClick={handleBatchQuantityUpdate}
+                            disabled={isBatchUpdating || !batchQuantity || (selectedSale.payments?.length ?? 0) > 0}
+                          >
+                            {isBatchUpdating ? <CircularProgress size={20} color="inherit" /> : "تحديث الكل"}
+                          </Button>
+                        </Box>
+                      )}
                       {selectedSale.items && selectedSale.items.length > 0 && (
                         <Button
                           size="small"

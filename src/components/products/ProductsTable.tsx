@@ -21,6 +21,7 @@ import {
   MenuItem,
   FormControl,
 } from "@mui/material";
+import { ProductImage } from "./ProductImage";
 import {
   AlertTriangle,
   Copy,
@@ -31,6 +32,10 @@ import {
   Sparkles,
   Tag,
   Barcode,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Loader2,
 } from "lucide-react";
 
 // Types
@@ -74,6 +79,11 @@ interface ProductsTableProps {
     sellable_unit?: boolean; stocking_unit?: boolean; units_per_stocking?: boolean;
     stock?: boolean; cost?: boolean; sale_price?: boolean; expire_date?: boolean;
   };
+  // Sorting Props
+  sortBy?: string;
+  sortDirection?: "asc" | "desc";
+  onSort?: (column: string) => void;
+  sortingLoading?: boolean;
 }
 
 interface ProductRowProps {
@@ -161,6 +171,14 @@ const ProductRow: React.FC<ProductRowProps> = ({
       className={animationClass}
       onClick={() => onEdit(product)}
     >
+      <TableCell align="center" sx={{ width: 48, p: 0.5 }}>
+        <ProductImage
+          imageUrl={product.image_url}
+          productName={product.name}
+          size={36}
+          variant="rounded"
+        />
+      </TableCell>
       <TableCell align="center">{product.id}</TableCell>
       {vis.sku !== false && (
         <TableCell sx={{ maxWidth: 100 }} align="center">
@@ -539,6 +557,10 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
   hasNextPage,
   isFetchingNextPage,
   visibleColumns: vc = {},
+  sortBy,
+  sortDirection,
+  onSort,
+  sortingLoading,
 }) => {
   const vis = vc;
   const [copiedSku, setCopiedSku] = useState<string | null>(null);
@@ -556,6 +578,53 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
       setIsCreatingLoading(false);
     }
   };
+
+  // Helper function to render sort icon
+  const renderSortIcon = (column: string) => {
+    if (!onSort) return null;
+
+    const isActive = sortBy === column;
+    
+    // Show loading spinner if sorting and this is the active column
+    if (sortingLoading && isActive) {
+      return (
+        <Loader2
+          size={16}
+          style={{
+            marginLeft: 4,
+            animation: 'spin 1s linear infinite',
+            color: "#1976d2"
+          }}
+        />
+      );
+    }
+
+    const Icon = isActive
+      ? sortDirection === "asc"
+        ? ArrowUp
+        : ArrowDown
+      : ArrowUpDown;
+
+    return (
+      <Icon
+        size={16}
+        style={{
+          marginLeft: 4,
+          opacity: isActive ? 1 : 0.5,
+          color: isActive ? "#1976d2" : "#666"
+        }}
+      />
+    );
+  };
+
+  // Helper function to get sortable column styling
+  const getSortableColumnSx = (column?: string) => ({
+    cursor: sortingLoading ? 'not-allowed' : (onSort ? 'pointer' : 'default'),
+    userSelect: 'none',
+    opacity: sortingLoading && column !== sortBy ? 0.6 : 1,
+    pointerEvents: sortingLoading ? 'none' : 'auto',
+    '&:hover': onSort && !sortingLoading ? { bgcolor: 'rgba(25, 118, 210, 0.04)' } : {}
+  });
 
   // Intersection Observer for Infinite Scroll
   const observer = useRef<IntersectionObserver>();
@@ -637,7 +706,13 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
         dir="ltr"
       >
         <TableContainer>
-          <Table stickyHeader size="small" sx={{ minWidth: 650 }}>
+          <Table stickyHeader size="small" sx={{ 
+            minWidth: 650,
+            "@keyframes spin": {
+              "0%": { transform: "rotate(0deg)" },
+              "100%": { transform: "rotate(360deg)" }
+            }
+          }}>
             <TableHead>
               <TableRow>
                 <TableCell align="center">
@@ -671,18 +746,164 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                     </IconButton>
                   </Tooltip>
                 </TableCell>
-                {vis.sku !== false && <TableCell align="center"> (SKU)</TableCell>}
-                {vis.name !== false && <TableCell sx={{ minWidth: 300 }} align="center">اسم المنتج</TableCell>}
-                {vis.scientific_name !== false && <TableCell align="center">الاسم العلمي</TableCell>}
-                {vis.category !== false && <TableCell align="center">الفئة</TableCell>}
-                {vis.sellable_unit !== false && <TableCell align="center">وحدة البيع</TableCell>}
-                {vis.stocking_unit !== false && <TableCell align="center">وحدة التخزين</TableCell>}
-                {vis.units_per_stocking !== false && <TableCell align="center">عدد الوحدات</TableCell>}
+                <TableCell align="center" sx={{ width: 48 }} />
+                {vis.sku !== false && (
+                  <TableCell
+                    align="center"
+                    sx={getSortableColumnSx('sku')}
+                    onClick={() => !sortingLoading && onSort?.('sku')}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      SKU
+                      {renderSortIcon('sku')}
+                    </Box>
+                  </TableCell>
+                )}
+                {vis.name !== false && (
+                  <TableCell
+                    sx={{ minWidth: 300, cursor: onSort ? 'pointer' : 'default', userSelect: 'none' }}
+                    align="center"
+                    onClick={() => onSort?.('name')}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      اسم المنتج
+                      {renderSortIcon('name')}
+                    </Box>
+                  </TableCell>
+                )}
+                {vis.scientific_name !== false && (
+                  <TableCell
+                    align="center"
+                    sx={{
+                      cursor: onSort ? 'pointer' : 'default',
+                      userSelect: 'none',
+                      '&:hover': onSort ? { bgcolor: 'rgba(25, 118, 210, 0.04)' } : {}
+                    }}
+                    onClick={() => onSort?.('scientific_name')}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      الاسم العلمي
+                      {renderSortIcon('scientific_name')}
+                    </Box>
+                  </TableCell>
+                )}
+                {vis.category !== false && (
+                  <TableCell
+                    align="center"
+                    sx={{
+                      cursor: onSort ? 'pointer' : 'default',
+                      userSelect: 'none',
+                      '&:hover': onSort ? { bgcolor: 'rgba(25, 118, 210, 0.04)' } : {}
+                    }}
+                    onClick={() => onSort?.('category_name')}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      الفئة
+                      {renderSortIcon('category_name')}
+                    </Box>
+                  </TableCell>
+                )}
+                {vis.sellable_unit !== false && (
+                  <TableCell
+                    align="center"
+                    sx={{
+                      cursor: onSort ? 'pointer' : 'default',
+                      userSelect: 'none',
+                      '&:hover': onSort ? { bgcolor: 'rgba(25, 118, 210, 0.04)' } : {}
+                    }}
+                    onClick={() => onSort?.('sellable_unit_name')}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      وحدة البيع
+                      {renderSortIcon('sellable_unit_name')}
+                    </Box>
+                  </TableCell>
+                )}
+                {vis.stocking_unit !== false && (
+                  <TableCell
+                    align="center"
+                    sx={{
+                      cursor: onSort ? 'pointer' : 'default',
+                      userSelect: 'none',
+                      '&:hover': onSort ? { bgcolor: 'rgba(25, 118, 210, 0.04)' } : {}
+                    }}
+                    onClick={() => onSort?.('stocking_unit_name')}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      وحدة التخزين
+                      {renderSortIcon('stocking_unit_name')}
+                    </Box>
+                  </TableCell>
+                )}
+                {vis.units_per_stocking !== false && (
+                  <TableCell
+                    align="center"
+                    sx={{
+                      cursor: onSort ? 'pointer' : 'default',
+                      userSelect: 'none',
+                      '&:hover': onSort ? { bgcolor: 'rgba(25, 118, 210, 0.04)' } : {}
+                    }}
+                    onClick={() => onSort?.('units_per_stocking_unit')}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      عدد الوحدات
+                      {renderSortIcon('units_per_stocking_unit')}
+                    </Box>
+                  </TableCell>
+                )}
                 {/* <TableCell align="center">تنبيه المخزون</TableCell> */}
-                {vis.stock !== false && <TableCell align="center"> المخزون</TableCell>}
-                {vis.cost !== false && <TableCell align="center">تكلفة</TableCell>}
-                {vis.sale_price !== false && <TableCell align="center">سعر البيع</TableCell>}
-                {vis.expire_date !== false && <TableCell align="center"> الصلاحية</TableCell>}
+                {vis.stock !== false && (
+                  <TableCell
+                    align="center"
+                    sx={getSortableColumnSx('stock_quantity')}
+                    onClick={() => !sortingLoading && onSort?.('stock_quantity')}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      المخزون
+                      {renderSortIcon('stock_quantity')}
+                    </Box>
+                  </TableCell>
+                )}
+                {vis.cost !== false && (
+                  <TableCell
+                    align="center"
+                    sx={getSortableColumnSx('latest_cost_per_sellable_unit')}
+                    onClick={() => !sortingLoading && onSort?.('latest_cost_per_sellable_unit')}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      تكلفة
+                      {renderSortIcon('latest_cost_per_sellable_unit')}
+                    </Box>
+                  </TableCell>
+                )}
+                {vis.sale_price !== false && (
+                  <TableCell
+                    align="center"
+                    sx={getSortableColumnSx('suggested_sale_price_per_sellable_unit')}
+                    onClick={() => !sortingLoading && onSort?.('suggested_sale_price_per_sellable_unit')}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      سعر البيع
+                      {renderSortIcon('suggested_sale_price_per_sellable_unit')}
+                    </Box>
+                  </TableCell>
+                )}
+                {vis.expire_date !== false && (
+                  <TableCell
+                    align="center"
+                    sx={{
+                      cursor: onSort ? 'pointer' : 'default',
+                      userSelect: 'none',
+                      '&:hover': onSort ? { bgcolor: 'rgba(25, 118, 210, 0.04)' } : {}
+                    }}
+                    onClick={() => onSort?.('expire_date')}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      الصلاحية
+                      {renderSortIcon('expire_date')}
+                    </Box>
+                  </TableCell>
+                )}
               </TableRow>
             </TableHead>
             <TableBody>

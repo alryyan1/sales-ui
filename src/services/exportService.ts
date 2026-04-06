@@ -224,4 +224,81 @@ export const generateDailySalesPdf = async (filterParams?: string): Promise<void
   }
 };
 
+/**
+ * Export inventory audit PDF report with warehouse balance data
+ * @param filters - Optional filters (search, category_id)
+ * @returns Promise that resolves when PDF opens in new tab
+ */
+export const exportInventoryAuditPdf = async (filters: { search?: string; category_id?: number | null } = {}): Promise<void> => {
+  try {
+    // Build query parameters
+    const params = new URLSearchParams();
+    
+    if (filters.search) {
+      params.append('search', filters.search);
+    }
+    
+    if (filters.category_id) {
+      params.append('category_id', filters.category_id.toString());
+    }
+
+    const response = await apiClient.get(`/reports/inventory-audit-pdf?${params}`, {
+      responseType: 'blob',
+    });
+
+    // Create blob URL and open in new tab
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.click();
+    
+    // Clean up the blob URL
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Failed to generate inventory audit PDF:', error);
+    throw new Error('Failed to generate inventory audit report');
+  }
+};
+
+/**
+ * Export warehouse products list to PDF
+ * @param warehouseId - The warehouse ID to export products for
+ * @param filters - Additional filters like search term
+ * @returns Promise that resolves when PDF opens in new tab
+ */
+export const exportWarehouseProductsPdf = async (
+  warehouseId: number,
+  filters: { search?: string } = {}
+): Promise<void> => {
+  try {
+    // Build query parameters
+    const params = new URLSearchParams();
+    params.append('warehouse_id', warehouseId.toString());
+
+    if (filters.search) {
+      params.append('search', filters.search);
+    }
+
+    const response = await apiClient.get(`/reports/warehouse-products-pdf?${params}`, {
+      responseType: 'blob',
+    });
+
+    // Create blob URL and open in new tab
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.click();
+
+    // Clean up the blob URL
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Failed to generate warehouse products PDF:', error);
+    throw new Error('Failed to generate warehouse products report');
+  }
+};
+
 export default exportService; 

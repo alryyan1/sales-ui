@@ -25,6 +25,7 @@ import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
 import { formatNumber } from "@/constants";
 import type { SaleItem } from "@/services/saleService";
+import { ProductImage } from "@/components/products/ProductImage";
 
 export interface SaleItemsTableProps {
   items: SaleItem[] | undefined;
@@ -360,6 +361,12 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
             const isFullyReturned = returnedQty > 0 && returnedQty >= (item.quantity ?? 0);
             return (
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexWrap: "wrap" }}>
+                <ProductImage
+                  imageUrl={item.product?.image_url}
+                  productName={name}
+                  size={32}
+                  variant="rounded"
+                />
                 <Typography
                   component="span"
                   sx={{
@@ -510,10 +517,22 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
               : Number(item.product?.stock_quantity));
           const value =
             stock != null && !Number.isNaN(stock) ? formatNumber(stock) : "—";
+          const batch = item.batch_number_sold;
           return (
-            <Typography component="span" sx={{ fontSize: "0.8125rem" }}>
-              {value}
-            </Typography>
+            <Box sx={{ textAlign: "center" }}>
+              <Typography component="div" sx={{ fontSize: "0.8125rem" }}>
+                {value}
+              </Typography>
+              {batch && (
+                <Typography
+                  variant="caption"
+                  display="block"
+                  sx={{ color: "text.secondary", fontSize: "0.7rem" }}
+                >
+                  {batch}
+                </Typography>
+              )}
+            </Box>
           );
         },
         meta: { align: "center" },

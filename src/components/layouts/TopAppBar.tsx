@@ -17,31 +17,31 @@ import { useAuth } from "@/context/AuthContext";
 import {
   Menu as MenuIcon,
   Warehouse,
-  RefreshCcw,
-  Keyboard,
-  Clock,
-  CalendarDays,
   TrendingUp,
   FileWarning as FileWarningIcon,
   Bell,
+  DollarSign,
 } from "lucide-react";
 import ErrorIcon from "@mui/icons-material/Error";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Button,
   Badge,
+  Popover,
+  TextField,
+  CircularProgress,
+  Autocomplete,
 } from "@mui/material";
 import { useSettings } from "@/context/SettingsContext";
-import { ThemeToggle } from "../layout/ThemeToggle";
 import { DRAWER_WIDTH } from "./types";
-import { dbService, STORES } from "../../services/db";
-import { offlineSaleService } from "../../services/offlineSaleService";
 import { toast } from "sonner";
 import { KeyboardShortcutsDialog } from "../common/KeyboardShortcutsDialog";
 import { DueRemindersDialog } from "../pos/DueRemindersDialog";
 import saleReminderService, { DueReminder } from "@/services/saleReminderService";
 import { db } from "@/firebase";
 import { collection, query, limit, onSnapshot } from "firebase/firestore";
+import packageService, { Package } from "@/services/packageService";
+import { formatNumber } from "@/constants";
 
 const COLLAPSED_DRAWER_WIDTH = 72;
 
@@ -59,22 +59,104 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
   const navigate = useNavigate(); // Initialize useNavigate
   const location = useLocation();
   const { user } = useAuth();
-  const { getSetting } = useSettings();
+  const { getSetting, updateSettings } = useSettings();
   const [shortcutsDialogOpen, setShortcutsDialogOpen] = React.useState(false);
+  
+  // USD to SDG Factor state
+  const usdFactor = getSetting("usd_to_sdg_factor", 1) as number;
+  const [localFactor, setLocalFactor] = React.useState(String(usdFactor));
+  const [factorAnchorEl, setFactorAnchorEl] =
+    React.useState<HTMLDivElement | null>(null);
+  const [isUpdatingFactor, setIsUpdatingFactor] = React.useState(false);
+
+  // Packages state (Moved from POS)
+  const [packageOptions, setPackageOptions] = React.useState<Package[]>([]);
+  const [packageSearchLoading, setPackageSearchLoading] = React.useState(false);
+  const [packageInputValue, setPackageInputValue] = React.useState("");
+  const [isAddingPackage, setIsAddingPackage] = React.useState(false);
+  
   const [expiryCounts, setExpiryCounts] = React.useState({
     nearExpiringCount: 0,
     expiredCount: 0,
   });
   const [dueReminders, setDueReminders] = React.useState<DueReminder[]>([]);
   const [remindersDialogOpen, setRemindersDialogOpen] = React.useState(false);
+  const firebaseCollectionName = getSetting("firebase_collection_name", "none") as string;
+  const [firebaseConnected, setFirebaseConnected] = React.useState(false);
 
   React.useEffect(() => {
     saleReminderService.getDueReminders()
       .then((list) => setDueReminders(list))
       .catch(() => { /* silent fail */ });
   }, []);
-  const [firebaseConnected, setFirebaseConnected] = React.useState(false);
-  const firebaseCollectionName = getSetting("firebase_collection_name", "none") as string;
+
+  // Search Packages logic
+  React.useEffect(() => {
+    const term = packageInputValue.trim();
+    if (!term) {
+      setPackageOptions([]);
+      return;
+    }
+    const t = setTimeout(() => {
+      setPackageSearchLoading(true);
+      packageService
+        .getPackages()
+        .then((list) => {
+          const filtered = list.filter((p) =>
+            p.name.toLowerCase().includes(term.toLowerCase()),
+          );
+          setPackageOptions(filtered);
+        })
+        .catch(() => setPackageOptions([]))
+        .finally(() => setPackageSearchLoading(false));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [packageInputValue]);
+
+  // Listen for addition status from POS page
+  React.useEffect(() => {
+    const handleStatus = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setIsAddingPackage(customEvent.detail.isAdding);
+      if (customEvent.detail.success) {
+        setPackageInputValue("");
+      }
+    };
+    window.addEventListener("package-addition-status", handleStatus);
+    return () =>
+      window.removeEventListener("package-addition-status", handleStatus);
+  }, []);
+
+  React.useEffect(() => {
+    setLocalFactor(String(usdFactor));
+  }, [usdFactor]);
+
+  const handleFactorClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    setFactorAnchorEl(event.currentTarget);
+  };
+
+  const handleFactorClose = () => {
+    setFactorAnchorEl(null);
+  };
+
+  const handleSaveFactor = async () => {
+    const val = parseFloat(localFactor);
+    if (isNaN(val) || val <= 0) {
+      toast.error("يجب إدخال قيمة صحيحة موجبة");
+      return;
+    }
+    try {
+      setIsUpdatingFactor(true);
+      await updateSettings({ usd_to_sdg_factor: val });
+      handleFactorClose();
+      toast.success("تم حفظ سعر الصرف بنجاح");
+    } catch (err) {
+      console.error("Failed to update factor:", err);
+      toast.error("فشل حفظ سعر الصرف");
+    } finally {
+      setIsUpdatingFactor(false);
+    }
+  };
 
   React.useEffect(() => {
     const q = query(collection(db, "pharmacies", firebaseCollectionName, "shifts"), limit(1));
@@ -103,42 +185,6 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
     return () =>
       window.removeEventListener("update-expiry-counts", handleUpdateCounts);
   }, []);
-
-  // Get POS mode setting
-  const posMode = getSetting("pos_mode", "shift") as "shift" | "days";
-
-  // Get POS filters - use a safe wrapper to avoid hook errors when not on POS page
-  // We'll create a wrapper component for the filters section
-
-  const handleResetData = async () => {
-    if (
-      !confirm(
-        "Are you sure you want to refresh products and clients cache? Pending sales will be kept.",
-      )
-    ) {
-      return;
-    }
-
-    try {
-      toast.info("Clearing local data (keeping pending sales)...");
-      await dbService.clearStore(STORES.PRODUCTS);
-      await dbService.clearStore(STORES.CLIENTS);
-      // await dbService.clearStore(STORES.PENDING_SALES); // Kept as per request
-      // await dbService.clearStore(STORES.SYNC_QUEUE); // Kept as per request
-
-      toast.info("Re-fetching products...");
-      await offlineSaleService.initializeProducts(
-        user?.warehouse_id || undefined,
-      );
-      await offlineSaleService.initializeClients();
-
-      toast.success("Data reset and products re-fetched successfully!");
-      window.location.reload();
-    } catch (error) {
-      console.error("Failed to reset data:", error);
-      toast.error("Failed to reset data");
-    }
-  };
 
   const theme = useTheme();
   const width = isSidebarCollapsed
@@ -257,6 +303,131 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
         </Typography>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+
+          {/* Package Search - Only on POS Page */}
+          {location.pathname === "/sales/pos-blank" && (
+            <Box sx={{ minWidth: 320 }}>
+              <Autocomplete
+                options={packageOptions}
+                getOptionLabel={(option) => option.name}
+                loading={packageSearchLoading || isAddingPackage}
+                inputValue={packageInputValue}
+                onInputChange={(_, value) => setPackageInputValue(value)}
+                onChange={(_, value) => {
+                  if (value) {
+                    window.dispatchEvent(
+                      new CustomEvent("add-package-to-sale", { detail: value }),
+                    );
+                  }
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder="ابحث عن مجموعة"
+                    size="small"
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <React.Fragment>
+                          {packageSearchLoading || isAddingPackage ? (
+                            <CircularProgress color="inherit" size={20} />
+                          ) : null}
+                          {params.InputProps.endAdornment}
+                        </React.Fragment>
+                      ),
+                    }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        bgcolor: alpha(theme.palette.background.paper, 0.5),
+                        "& fieldset": {
+                          borderColor: alpha(theme.palette.divider, 0.1),
+                        },
+                      },
+                    }}
+                  />
+                )}
+                noOptionsText={
+                  packageInputValue.trim() ? "لا توجد مجموعات مطابقة" : "ابحث عن مجموعة"
+                }
+              />
+            </Box>
+          )}
+
+          {/* USD Conversion Factor Display */}
+          <Tooltip title={` SDG   ${formatNumber(usdFactor)} = 1 USD `}>
+            <Box
+              onClick={handleFactorClick}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                px: 1.5,
+                py: 0.5,
+                borderRadius: 1,
+                border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
+                cursor: "pointer",
+                height: 28,
+                "&:hover": {
+                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                },
+              }}
+            >
+              <DollarSign size={14} />
+              <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                {usdFactor.toFixed(2)}
+              </Typography>
+            </Box>
+          </Tooltip>
+
+          {/* USD Factor Popover */}
+          <Popover
+            open={Boolean(factorAnchorEl)}
+            anchorEl={factorAnchorEl}
+            onClose={handleFactorClose}
+            anchorOrigin={{
+              vertical: "bottom",
+              horizontal: "right",
+            }}
+            transformOrigin={{
+              vertical: "top",
+              horizontal: "right",
+            }}
+          >
+            <Box sx={{ p: 2, minWidth: 250 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                تحديث سعر الصرف USD
+              </Typography>
+              <TextField
+                fullWidth
+                type="number"
+                inputProps={{ step: 0.01, min: 0 }}
+                label="سعر الصرف"
+                value={localFactor}
+                onChange={(e) => setLocalFactor(e.target.value)}
+                size="small"
+                sx={{ mb: 2 }}
+              />
+              <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={handleFactorClose}
+                  disabled={isUpdatingFactor}
+                >
+                  إلغاء
+                </Button>
+                <Button
+                  size="small"
+                  variant="contained"
+                  onClick={handleSaveFactor}
+                  disabled={isUpdatingFactor}
+                  startIcon={isUpdatingFactor ? <CircularProgress size={16} /> : undefined}
+                >
+                  حفظ
+                </Button>
+              </Box>
+            </Box>
+          </Popover>
 
           {/* Firebase Connection Indicator */}
           <Tooltip title={`pharmacies/${firebaseCollectionName}/shifts`}>

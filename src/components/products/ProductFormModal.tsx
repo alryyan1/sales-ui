@@ -35,7 +35,9 @@ import {
   AlertCircle,
   RefreshCw,
   Plus,
+  Upload,
   X,
+  Image as ImageIcon,
   Trash2,
   Package,
   Tag,
@@ -58,6 +60,8 @@ import unitService, { Unit } from "@/services/UnitService";
 import { generateRandomSKU } from "@/lib/utils";
 import CategoryFormModal from "@/components/admin/users/categories/CategoryFormModal";
 import UnitFormModal from "@/components/admin/users/units/UnitFormModal";
+import { ProductImage } from "./ProductImage";
+import apiClient from "@/lib/axios";
 
 import { formatNumber, formatCurrency } from "@/constants";
 import { useSettings } from "@/context/SettingsContext";
@@ -75,6 +79,7 @@ type ProductFormValues = {
   sale_price: number | string;
   cost_price: number | string;
   expire_date: string;
+  image_url: string;
 };
 
 interface ProductFormModalProps {
@@ -151,6 +156,9 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
   const [isStockingUnitModalOpen, setIsStockingUnitModalOpen] = useState(false);
   const [isSellableUnitModalOpen, setIsSellableUnitModalOpen] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState(0);
   const [historyTab, setHistoryTab] = useState(0);
@@ -172,6 +180,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       sale_price: "",
       cost_price: "",
       expire_date: "",
+      image_url: "",
     },
   });
 
@@ -300,6 +309,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           sale_price: productToEdit.sale_price ?? "",
           cost_price: productToEdit.cost_price ?? "",
           expire_date: productToEdit.expire_date ?? "",
+          image_url: productToEdit.image_url ?? "",
         });
       } else {
         reset({
@@ -314,11 +324,14 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           sale_price: "",
           cost_price: "",
           expire_date: "",
+          image_url: "",
         });
       }
       setActiveTab(0);
       setHistoryTab(0);
       setHistoryData([]);
+      setSelectedImageFile(null);
+      setImagePreviewUrl(null);
     }
   }, [
     isOpen,
@@ -337,7 +350,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       scientific_name: data.scientific_name || null,
       sku: data.sku || null,
       description: null,
-      image_url: null,
+      image_url: data.image_url || null,
       stocking_unit_id: data.stocking_unit_id ? Number(data.stocking_unit_id) : null,
       sellable_unit_id: data.sellable_unit_id ? Number(data.sellable_unit_id) : null,
       units_per_stocking_unit: Number(data.units_per_stocking_unit) || 1,
@@ -355,6 +368,30 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
         savedProduct = await productService.updateProduct(productToEdit.id, dataToSend);
       } else {
         savedProduct = await productService.createProduct(dataToSend);
+
+        // Handle image upload for NEW products after creation
+        if (selectedImageFile) {
+          setUploadingImage(true);
+          try {
+            const formData = new FormData();
+            formData.append("image", selectedImageFile);
+            const uploadResponse = await apiClient.post(
+              `/products/${savedProduct.id}/image`,
+              formData,
+              { headers: { "Content-Type": "multipart/form-data" } },
+            );
+            if (uploadResponse.data?.product) {
+              savedProduct = uploadResponse.data.product;
+            }
+          } catch (uploadErr) {
+            console.error("Delayed image upload failed:", uploadErr);
+            toast.error("فشل رفع الصورة", {
+              description: "تم حفظ المنتج ولكن فشل رفع الصورة المحددة.",
+            });
+          } finally {
+            setUploadingImage(false);
+          }
+        }
       }
       toast.success(isEditMode ? "تم تحديث المنتج بنجاح" : "تم إنشاء المنتج بنجاح", {
         duration: 3000,
@@ -836,6 +873,101 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   )}
                 />
               </Box>
+            </Paper>
+
+            {/* ── Image Upload Section ── */}
+            <Paper variant="outlined" sx={{ p: 1.5, mb: 1, borderRadius: 2, bgcolor: "background.paper" }}>
+              <SectionHeader
+                icon={<ImageIcon size={18} />}
+                title="صورة المنتج"
+                subtitle="(اختياري)"
+              />
+              <Controller
+                control={control}
+                name="image_url"
+                render={({ field }) => (
+                  <Box sx={{ display: "flex", gap: 1.5, alignItems: "center" }}>
+                    {/* Image Preview */}
+                    <Box sx={{ flexShrink: 0 }}>
+                      <ProductImage
+                        imageUrl={imagePreviewUrl || field.value}
+                        productName={form.watch("name") || "Product"}
+                        size={80}
+                        variant="rounded"
+                      />
+                    </Box>
+
+                    {/* Upload Controls */}
+                    <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                      <input
+                        accept="image/*"
+                        style={{ display: "none" }}
+                        id="image-upload-main"
+                        type="file"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          if (isEditMode && productToEdit) {
+                            setUploadingImage(true);
+                            try {
+                              const formData = new FormData();
+                              formData.append("image", file);
+                              const res = await apiClient.post(
+                                `/products/${productToEdit.id}/image`,
+                                formData,
+                                { headers: { "Content-Type": "multipart/form-data" } },
+                              );
+                              console.log("Upload response:", res.data);
+                              const imageUrl = res.data?.image_url || res.data?.product?.image_url;
+                              if (imageUrl) {
+                                console.log("Setting image_url to:", imageUrl);
+                                field.onChange(imageUrl);
+                              } else {
+                                console.log("No image_url in response:", res.data);
+                              }
+                              toast.success("تم الرفع");
+                            } catch (error) {
+                              console.error("Upload error:", error);
+                              const errorMessage = error?.response?.data?.message || error?.message || "فشل الرفع";
+                              toast.error(`فشل الرفع: ${errorMessage}`);
+                            } finally {
+                              setUploadingImage(false);
+                            }
+                          } else {
+                            setSelectedImageFile(file);
+                            const reader = new FileReader();
+                            reader.onloadend = () => setImagePreviewUrl(reader.result as string);
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                      <label htmlFor="image-upload-main">
+                        <Button
+                          variant="outlined"
+                          component="span"
+                          disabled={uploadingImage}
+                          startIcon={uploadingImage ? <Loader2 className="animate-spin" /> : <Upload />}
+                          size="small"
+                        >
+                          {uploadingImage ? "جاري الرفع..." : "رفع صورة"}
+                        </Button>
+                      </label>
+
+                      {(field.value || imagePreviewUrl) && (
+                        <Tooltip title="إزالة الصورة">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => { field.onChange(""); setImagePreviewUrl(null); }}
+                          >
+                            <X size={16} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Box>
+                  </Box>
+                )}
+              />
             </Paper>
 
             {/* ── Actions ── */}

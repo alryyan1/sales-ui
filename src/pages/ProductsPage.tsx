@@ -1,7 +1,7 @@
 // src/pages/ProductsPage.tsx
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { useProducts } from "../hooks/useProducts";
 import { useSettings } from "../context/SettingsContext";
 
@@ -23,6 +23,12 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Switch from "@mui/material/Switch";
+import Tabs from "@mui/material/Tabs";
+import Tab from "@mui/material/Tab";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Grid from "@mui/material/Grid";
+import Skeleton from "@mui/material/Skeleton";
 
 // Lucide Icons (shadcn)
 import {
@@ -37,6 +43,10 @@ import {
   Columns3,
   RefreshCcw,
   Percent,
+  Package as PackageIcon,
+  Edit,
+  Trash2,
+  Sparkles,
 } from "lucide-react";
 import Popover from "@mui/material/Popover";
 import Checkbox from "@mui/material/Checkbox";
@@ -48,14 +58,18 @@ import productService, {
 } from "../services/productService"; // Use product service
 import unitService, { Unit } from "../services/UnitService"; // Import unit service
 import categoryService, { Category } from "../services/CategoryService"; // Import category service
-import exportService from "../services/exportService"; // Import export service
+import exportService, { exportInventoryAuditPdf } from "../services/exportService"; // Import export service
 import { uploadProductsToFirestore } from "../services/firebaseStore"; // Import Firestore service
+import { warehouseService, Warehouse } from "../services/warehouseService";
 
 // Custom Components
 import { ProductsTable } from "../components/products/ProductsTable"; // Use ProductsTable named export
 import ProductFormModal from "../components/products/ProductFormModal"; // Use ProductFormModal
 import ProductImportDialog from "../components/products/ProductImportDialog"; // Import dialog
 import BarcodeLabelPdfDialog from "../components/products/BarcodeLabelPdfDialog";
+import PackageFormModal from "../components/products/PackageFormModal";
+import packageService, { Package } from "../services/packageService";
+import { toast } from "sonner";
 import UnitsPage from "../pages/UnitsPage"; // Import UnitsPage
 import { Button } from "@mui/material";
 
@@ -73,15 +87,78 @@ const ProductsPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const rowsPerPage = 50;
   const [categories, setCategories] = useState<Category[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [stockingUnits, setStockingUnits] = useState<Unit[]>([]);
   const [sellableUnits, setSellableUnits] = useState<Unit[]>([]);
 
   const [loadingCategories, setLoadingCategories] = useState(false);
+  const [loadingWarehouses, setLoadingWarehouses] = useState(false);
+  const [selectedWarehouse, setSelectedWarehouse] = useState<number | "">("");
   const [syncLoading, setSyncLoading] = useState(false);
   const [showOnlyInStock, setShowOnlyInStock] = useState(false);
+  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
+  const [sortBy, setSortBy] = useState<string>("created_at");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [sortingLoading, setSortingLoading] = useState(false);
+
+  // Sorting handler
+  const handleSort = (column: string) => {
+    // Prevent sorting while already sorting
+    if (sortingLoading) return;
+    
+    setSortingLoading(true);
+    if (sortBy === column) {
+      // Toggle direction if same column
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // New column, default to ascending
+      setSortBy(column);
+      setSortDirection("asc");
+    }
+  };
+
   const navigate = useNavigate();
 
   // Modal State
+  // Tab State
+  const [activeTab, setActiveTab] = useState(0);
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
+  };
+
+  // Package State
+  const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
+  const [editingPackage, setEditingPackage] = useState<Package | null>(null);
+
+  const { data: packages, isLoading: isPackagesLoading } = useQuery({
+    queryKey: ["packages"],
+    queryFn: () => packageService.getPackages(),
+  });
+
+  const deletePackageMutation = useMutation({
+    mutationFn: (id: number) => packageService.deletePackage(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["packages"] });
+      toast.success("تم حذف المجموعة");
+    },
+  });
+
+  const handleDeletePackage = (id: number) => {
+    if (confirm("هل أنت متأكد من حذف هذه المجموعة؟")) {
+      deletePackageMutation.mutate(id);
+    }
+  };
+
+  const openPackageModal = (pkg: Package | null = null) => {
+    setEditingPackage(pkg);
+    setIsPackageModalOpen(true);
+  };
+
+  const closePackageModal = () => {
+    setIsPackageModalOpen(false);
+    setEditingPackage(null);
+  };
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null); // Use Product type directly
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -171,8 +248,12 @@ const ProductsPage: React.FC = () => {
     // page: currentPage, // Handled internally by infinite query
     perPage: rowsPerPage,
     search: debouncedSearchTerm,
+    sortBy,
+    sortDirection,
     categoryId: selectedCategory,
     inStockOnly: showOnlyInStock,
+    lowStockOnly: showLowStockOnly,
+    warehouseId: selectedWarehouse ? (selectedWarehouse as number) : undefined,
   });
 
   // Flatten pages into a single array of products
@@ -180,6 +261,25 @@ const ProductsPage: React.FC = () => {
 
   // Show loading when fetching initial data
   const isLoadingData = isLoading;
+
+  // Stop sorting loading when data finishes loading or changes
+  useEffect(() => {
+    if (!isLoading) {
+      setSortingLoading(false);
+    }
+  }, [isLoading, data]);
+
+  // Safety timeout: clear loading after 10 seconds to prevent hanging
+  useEffect(() => {
+    if (!sortingLoading) return;
+    
+    const timeout = setTimeout(() => {
+      setSortingLoading(false);
+      console.warn("Sort loading timed out - clearing loading state");
+    }, 10000); // 10 seconds
+
+    return () => clearTimeout(timeout);
+  }, [sortingLoading]);
 
   // Extract error message if query fails
   const error = isError
@@ -234,6 +334,22 @@ const ProductsPage: React.FC = () => {
     fetchUnits();
   }, []);
 
+  // --- Fetch Warehouses ---
+  useEffect(() => {
+    const fetchWarehouses = async () => {
+      setLoadingWarehouses(true);
+      try {
+        const data = await warehouseService.getAll();
+        setWarehouses(data);
+      } catch (err) {
+        console.error("Error fetching warehouses:", err);
+      } finally {
+        setLoadingWarehouses(false);
+      }
+    };
+    fetchWarehouses();
+  }, []);
+
   // --- Notification Handlers ---
   const showSnackbar = (message: string, type: "success" | "error") => {
     setSnackbar({
@@ -283,6 +399,9 @@ const ProductsPage: React.FC = () => {
     const categoryId = event.target.value as number | null;
     setSelectedCategory(categoryId);
   };
+  const handleWarehouseChange = (event: SelectChangeEvent<number | "">) => {
+    setSelectedWarehouse(event.target.value as number | "");
+  };
 
   const handlePrintProducts = async () => {
     try {
@@ -319,6 +438,21 @@ const ProductsPage: React.FC = () => {
     } catch (err) {
       showSnackbar(
         err instanceof Error ? err.message : "Failed to export Excel",
+        "error",
+      );
+    }
+  };
+
+  const handleExportAuditReport = async () => {
+    try {
+      await exportInventoryAuditPdf({
+        search: debouncedSearchTerm,
+        category_id: selectedCategory,
+      });
+      showSnackbar("جاري تصدير تقرير ارصده المخازن...", "success");
+    } catch (error) {
+      showSnackbar(
+        error instanceof Error ? error.message : "فشل تصدير تقرير ارصده المخازن",
         "error",
       );
     }
@@ -453,6 +587,16 @@ const ProductsPage: React.FC = () => {
           >
             إدارة المنتجات
           </Typography>
+          <Tabs
+            value={activeTab}
+            onChange={handleTabChange}
+            sx={{ mt: 1 }}
+            indicatorColor="primary"
+            textColor="primary"
+          >
+            <Tab label="المنتجات" id="products-tab" />
+            <Tab label="المجموعات (Packages)" id="packages-tab" />
+          </Tabs>
           <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
             {/* Columns Toggle */}
             <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -564,6 +708,25 @@ const ProductsPage: React.FC = () => {
               <Typography variant="caption">Excel</Typography>
             </Box>
 
+            {/* Export Inventory Audit PDF */}
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+              }}
+            >
+              <Tooltip title="تصدير تقرير ارصده المخازن">
+                <IconButton
+                  onClick={() => handleExportAuditReport()}
+                  color="secondary"
+                >
+                  <Sparkles className="h-5 w-5" />
+                </IconButton>
+              </Tooltip>
+              <Typography variant="caption">تقرير ارصده المخازن</Typography>
+            </Box>
+
             {/* Import from File */}
             <Box
               sx={{
@@ -591,9 +754,9 @@ const ProductsPage: React.FC = () => {
                 alignItems: "center",
               }}
             >
-              <Tooltip title="إضافة منتج جديد">
+              <Tooltip title={activeTab === 0 ? "إضافة منتج جديد" : "إضافة مجموعة جديدة"}>
                 <IconButton
-                  onClick={() => openModal()}
+                  onClick={activeTab === 0 ? () => openModal() : () => openPackageModal()}
                   color="primary"
                   sx={{
                     bgcolor: "primary.main",
@@ -740,6 +903,44 @@ const ProductsPage: React.FC = () => {
               </FormControl>
             </Box>
 
+            {/* Warehouse Filter */}
+            <Box sx={{ flex: { md: 1 } }}>
+              <FormControl fullWidth size="small">
+                <InputLabel className="dark:text-gray-300">تصفية حسب المخزن</InputLabel>
+                <Select
+                  value={selectedWarehouse}
+                  onChange={handleWarehouseChange}
+                  label="تصفية حسب المخزن"
+                  disabled={loadingWarehouses}
+                >
+                  <MenuItem value="">
+                    <em>كل المخازن</em>
+                  </MenuItem>
+                  {warehouses.map((warehouse) => (
+                    <MenuItem key={warehouse.id} value={warehouse.id}>
+                      {warehouse.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+
+            {/* Low Stock Toggle */}
+            {/* <Box
+              sx={{ flex: { md: 1 }, display: "flex", alignItems: "center" }}
+            >
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={showLowStockOnly}
+                    onChange={() => setShowLowStockOnly(!showLowStockOnly)}
+                    color="warning"
+                  />
+                }
+                label="المخزون المنخفض"
+              />
+            </Box> */}
+
             {/* Out of Stock Toggle */}
             <Box
               sx={{ flex: { md: 1 }, display: "flex", alignItems: "center" }}
@@ -764,7 +965,7 @@ const ProductsPage: React.FC = () => {
           </Alert>
         )}
         {/* Content Area */}
-        {!error && (
+        {!error && activeTab === 0 && (
           <Box sx={{ mt: 2, width: "100%", px: 2 }}>
             <ProductsTable
               products={(products as Product[]) || []}
@@ -781,7 +982,75 @@ const ProductsPage: React.FC = () => {
               sellableUnits={sellableUnits}
               onProductCreate={handleProductCreate}
               visibleColumns={visibleColumns}
+              // Sorting Props
+              sortBy={sortBy}
+              sortDirection={sortDirection}
+              onSort={handleSort}
+              sortingLoading={sortingLoading}
             />
+          </Box>
+        )}
+
+        {!error && activeTab === 1 && (
+          <Box sx={{ mt: 2, width: "100%", px: 2 }}>
+            {isPackagesLoading ? (
+              <Grid container spacing={2}>
+                {[1, 2, 3].map((i) => (
+                  <Grid item xs={12} sm={6} md={4} key={i}>
+                    <Skeleton variant="rectangular" height={150} />
+                  </Grid>
+                ))}
+              </Grid>
+            ) : (
+              <Grid container spacing={2}>
+                {packages?.map((pkg) => (
+                  <Grid item xs={12} sm={6} md={4} key={pkg.id}>
+                    <Card elevation={2} sx={{ height: "100%", display: "flex", flexDirection: "column", "&:hover": { boxShadow: 6 } }}>
+                      <CardContent>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                            <PackageIcon className="text-primary-main" />
+                            <Typography variant="h6" fontWeight="bold">{pkg.name}</Typography>
+                          </Box>
+                          <Box>
+                            <IconButton size="small" onClick={() => openPackageModal(pkg)}>
+                              <Edit size={18} />
+                            </IconButton>
+                            <IconButton size="small" color="error" onClick={() => handleDeletePackage(pkg.id!)}>
+                              <Trash2 size={18} />
+                            </IconButton>
+                          </Box>
+                        </Box>
+                        <Typography variant="subtitle2" fontWeight="bold" sx={{ mt: 1 }}>
+                          المنتجات ({pkg.items?.length || 0}):
+                        </Typography>
+                        <Box sx={{ mt: 1 }}>
+                          {pkg.items?.slice(0, 3).map((item) => (
+                            <Typography key={item.id} variant="caption" display="block">
+                              • {item.product?.name}
+                            </Typography>
+                          ))}
+                          {(pkg.items?.length || 0) > 3 && (
+                            <Typography variant="caption" color="text.secondary">... وغيرهم</Typography>
+                          )}
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+                {(!packages || packages.length === 0) && (
+                  <Box sx={{ width: "100%", textAlign: "center", py: 8 }}>
+                    <PackageIcon size={64} className="text-gray-300 mb-4 mx-auto" strokeWidth={1} />
+                    <Typography color="text.secondary" variant="h6" sx={{ mb: 3 }}>
+                      لا توجد مجموعات حالياً. انقر على الزر أدناه لإضافة واحدة.
+                    </Typography>
+                    <Button variant="contained" startIcon={<Plus size={20} />} onClick={() => openPackageModal()} sx={{ borderRadius: 2, px: 4, py: 1.5 }}>
+                      إنشاء مجموعة جديدة
+                    </Button>
+                  </Box>
+                )}
+              </Grid>
+            )}
           </Box>
         )}
         {/* Modals and Snackbar */}
@@ -796,6 +1065,11 @@ const ProductsPage: React.FC = () => {
           open={isImportDialogOpen}
           onClose={() => setIsImportDialogOpen(false)}
           onImportSuccess={handleImportSuccess}
+        />
+        <PackageFormModal
+          isOpen={isPackageModalOpen}
+          onClose={closePackageModal}
+          packageToEdit={editingPackage}
         />
         {/* Removed ConfirmationDialog */}
         {/* Snackbar for notifications */}

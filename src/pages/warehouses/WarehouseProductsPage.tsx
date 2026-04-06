@@ -24,24 +24,31 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  alpha,
+  useTheme,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
   Search as SearchIcon,
   Inventory as InventoryIcon,
   CloudDownload as CloudDownloadIcon,
+  Lock as LockIcon,
+  Print as PrintIcon,
 } from "@mui/icons-material";
 import productService, { Product } from "../../services/productService";
 import { warehouseService, Warehouse } from "../../services/warehouseService";
 import { formatNumber, formatCurrency } from "../../constants";
+import exportService, { exportWarehouseProductsPdf } from "../../services/exportService";
 
 const WarehouseProductsPage: React.FC = () => {
   const { warehouseId } = useParams<{ warehouseId: string }>();
   const navigate = useNavigate();
+  const theme = useTheme();
   const [warehouse, setWarehouse] = useState<Warehouse | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
@@ -50,6 +57,14 @@ const WarehouseProductsPage: React.FC = () => {
   const [password, setPassword] = useState("");
   const [importLoading, setImportLoading] = useState(false);
 
+  // Clear messages when dialog opens
+  useEffect(() => {
+    if (importDialogOpen) {
+      setError(null);
+      setSuccess(null);
+    }
+  }, [importDialogOpen]);
+
   // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -57,6 +72,12 @@ const WarehouseProductsPage: React.FC = () => {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
+
+  // Clear messages when search changes
+  useEffect(() => {
+    setError(null);
+    setSuccess(null);
+  }, [debouncedSearchTerm]);
 
   // Fetch warehouse details
   useEffect(() => {
@@ -127,171 +148,279 @@ const WarehouseProductsPage: React.FC = () => {
   }, [fetchProducts]);
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box display="flex" alignItems="center" gap={2} mb={3}>
-        <IconButton onClick={() => navigate("/admin/warehouses")}>
-          <ArrowBackIcon />
-        </IconButton>
-        <Box display="flex" alignItems="center" gap={1} flex={1}>
-          <InventoryIcon fontSize="large" color="primary" />
-          <Box>
-            <Typography variant="h4" component="h1">
-              منتجات المستودع
-            </Typography>
-            {warehouse && (
-              <Typography variant="subtitle1" color="text.secondary">
-                {warehouse.name}
-              </Typography>
-            )}
+    <Container maxWidth="xl" sx={{ py: 2 }}>
+      {/* Header Section */}
+      <Paper
+        elevation={1}
+        sx={{
+          p: 1.5,
+          mb: 2,
+          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+          color: 'white',
+          borderRadius: 2
+        }}
+      >
+        <Box display="flex" alignItems="center" justifyContent="space-between">
+          <Box display="flex" alignItems="center" gap={2}>
+            <IconButton
+              onClick={() => navigate("/admin/warehouses")}
+              sx={{ color: 'white', '&:hover': { bgcolor: alpha('#fff', 0.1) } }}
+            >
+              <ArrowBackIcon />
+            </IconButton>
+            <Box display="flex" alignItems="center" gap={1.5}>
+              <InventoryIcon />
+              <Box>
+                <Typography variant="h6" fontWeight={600}>
+                  منتجات المستودع
+                </Typography>
+                {warehouse && (
+                  <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                    {warehouse.name}
+                  </Typography>
+                )}
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Search Bar Inline */}
+          <Box sx={{ flex: 1, maxWidth: 300, mx: 2 }}>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="البحث في المنتجات..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: 'rgba(255,255,255,0.7)' }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  bgcolor: alpha('#fff', 0.15),
+                  color: 'white',
+                  '& fieldset': {
+                    borderColor: alpha('#fff', 0.3),
+                  },
+                  '&:hover fieldset': {
+                    borderColor: alpha('#fff', 0.5),
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: 'white',
+                  },
+                  '& .MuiInputBase-input::placeholder': {
+                    color: 'rgba(255,255,255,0.7)',
+                    opacity: 1,
+                  },
+                },
+                '& .MuiInputBase-input': {
+                  color: 'white',
+                }
+              }}
+            />
+          </Box>
+
+          <Box display="flex" alignItems="center" gap={1}>
+            <Button
+              variant="contained"
+              startIcon={<PrintIcon />}
+              onClick={async () => {
+                if (!warehouseId) return;
+                try {
+                  await exportWarehouseProductsPdf(Number(warehouseId), {
+                    search: debouncedSearchTerm
+                  });
+                } catch (error) {
+                  setError('فشل في إنشاء تقرير PDF');
+                  console.error('PDF export error:', error);
+                }
+              }}
+              sx={{
+                bgcolor: alpha('#fff', 0.15),
+                '&:hover': { bgcolor: alpha('#fff', 0.25) },
+                borderRadius: 2,
+                px: 2
+              }}
+            >
+              طباعة
+            </Button>
+
+            <Button
+              variant="contained"
+              startIcon={<CloudDownloadIcon />}
+              onClick={() => {
+                setImportDialogOpen(true);
+                setPassword("");
+                setError(null);
+                setSuccess(null);
+              }}
+              sx={{
+                bgcolor: alpha('#fff', 0.15),
+                '&:hover': { bgcolor: alpha('#fff', 0.25) },
+                borderRadius: 2,
+                px: 2
+              }}
+            >
+              استيراد النواقص
+            </Button>
           </Box>
         </Box>
+      </Paper>
 
-        <Button
-          variant="contained"
-          startIcon={<CloudDownloadIcon />}
-          onClick={() => {
-            setImportDialogOpen(true);
-            setPassword("");
-            setError(null);
-          }}
-        >
-          استيراد نواقص المنتجات
-        </Button>
-      </Box>
-
+      {/* Error Alert */}
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
           {error}
         </Alert>
       )}
 
-      <Box mb={2}>
-        <TextField
-          fullWidth
-          placeholder="البحث عن المنتجات..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Box>
+      {/* Success Alert */}
+      {success && (
+        <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
+          {success}
+        </Alert>
+      )}
 
-      <TableContainer component={Paper} elevation={2}>
-        <Table>
-          <TableHead>
-            <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
-              <TableCell>
-                <strong>المعرف</strong>
-              </TableCell>
-              <TableCell>
-                <strong>اسم المنتج</strong>
-              </TableCell>
-              <TableCell>
-                <strong>SKU</strong>
-              </TableCell>
-              <TableCell>
-                <strong>الفئة</strong>
-              </TableCell>
-              <TableCell align="right">
-                <strong>الكمية في المستودع</strong>
-              </TableCell>
-              <TableCell align="right">
-                <strong>سعر البيع المقترح</strong>
-              </TableCell>
-              <TableCell align="right">
-                <strong>تكلفة الوحدة</strong>
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={7} align="center">
-                  <CircularProgress />
+      {/* Products Table */}
+      <Paper elevation={1} sx={{ borderRadius: 2, overflow: 'hidden' }}>
+        <TableContainer>
+          <Table size="small">
+            <TableHead>
+              <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                  المعرف
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                  اسم المنتج
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                  SKU
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                  الفئة
+                </TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                  الكمية
+                </TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                  سعر البيع
+                </TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                  التكلفة
                 </TableCell>
               </TableRow>
-            ) : products.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} align="center">
-                  {debouncedSearchTerm
-                    ? "لا توجد منتجات تطابق البحث"
-                    : "لا توجد منتجات في هذا المستودع"}
-                </TableCell>
-              </TableRow>
-            ) : (
-              products.map((product) => (
-                <TableRow key={product.id} hover>
-                  <TableCell>{product.id}</TableCell>
-                  <TableCell>
-                    <Box>
-                      <Typography variant="body1" fontWeight="medium">
-                        {product.name}
-                      </Typography>
-                      {product.scientific_name && (
-                        <Typography variant="caption" color="text.secondary">
-                          {product.scientific_name}
-                        </Typography>
-                      )}
-                    </Box>
-                  </TableCell>
-                  <TableCell>{product.sku || "-"}</TableCell>
-                  <TableCell>{product.category_name || "-"}</TableCell>
-                  <TableCell align="right">
-                    <Chip
-                      label={formatNumber(
-                        (product as any).warehouse_quantity || 0
-                      )}
-                      color={
-                        (product as any).warehouse_quantity > 0
-                          ? "success"
-                          : "default"
-                      }
-                      size="small"
-                    />
-                    {product.sellable_unit_name && (
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ ml: 1 }}
-                      >
-                        {product.sellable_unit_name}
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell align="right">
-                    {formatCurrency(
-                      Number(
-                        product.suggested_sale_price_per_sellable_unit || 0
-                      )
-                    )}
-                  </TableCell>
-                  <TableCell align="right">
-                    {formatCurrency(
-                      Number(product.latest_cost_per_sellable_unit || 0)
-                    )}
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                    <CircularProgress size={32} />
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      جاري التحميل...
+                    </Typography>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              ) : products.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                    <InventoryIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
+                    <Typography variant="body1" color="text.secondary">
+                      {debouncedSearchTerm
+                        ? "لا توجد منتجات تطابق البحث"
+                        : "لا توجد منتجات في هذا المستودع"}
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                products.map((product) => (
+                  <TableRow
+                    key={product.id}
+                    hover
+                    sx={{
+                      '&:hover': {
+                        bgcolor: alpha(theme.palette.primary.main, 0.02)
+                      }
+                    }}
+                  >
+                    <TableCell sx={{ fontSize: '0.875rem' }}>
+                      <Typography variant="body2" fontFamily="monospace">
+                        #{product.id}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Box>
+                        <Typography variant="body2" fontWeight={500}>
+                          {product.name}
+                        </Typography>
+                        {product.scientific_name && (
+                          <Typography variant="caption" color="text.secondary">
+                            {product.scientific_name}
+                          </Typography>
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ fontSize: '0.875rem' }}>
+                      <Typography variant="body2" fontFamily="monospace">
+                        {product.sku || "—"}
+                      </Typography>
+                    </TableCell>
+                    <TableCell sx={{ fontSize: '0.875rem' }}>
+                      {product.category_name || "—"}
+                    </TableCell>
+                    <TableCell align="center">
+                      <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
+                        <Chip
+                          label={formatNumber((product as any).warehouse_quantity || 0)}
+                          color={(product as any).warehouse_quantity > 0 ? "success" : "default"}
+                          size="small"
+                          variant="outlined"
+                        />
+                        {product.sellable_unit_name && (
+                          <Typography variant="caption" color="text.secondary">
+                            {product.sellable_unit_name}
+                          </Typography>
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontSize: '0.875rem' }}>
+                      <Typography variant="body2" fontWeight={500}>
+                        {formatCurrency(Number(product.suggested_sale_price_per_sellable_unit || 0))}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontSize: '0.875rem' }}>
+                      <Typography variant="body2">
+                        {formatCurrency(Number(product.latest_cost_per_sellable_unit || 0))}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
 
-      {/* Password Dialog for Import */}
+      {/* Import Confirmation Dialog */}
       <Dialog
         open={importDialogOpen}
-        onClose={() => setImportDialogOpen(false)}
+        onClose={() => !importLoading && setImportDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 2 }
+        }}
       >
-        <DialogTitle>تأكيد الاستيراد</DialogTitle>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <LockIcon color="warning" />
+          تأكيد الاستيراد
+        </DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
-            سيقوم هذا الإجراء باستيراد جميع المنتجات غير الموجودة في هذا
-            المستودع مع كمياتها الحالية. يرجى إدخال كلمة المرور للمتابعة.
+            سيقوم هذا الإجراء باستيراد جميع المنتجات غير الموجودة في هذا المستودع مع كمياتها الحالية.
           </DialogContentText>
           <TextField
             autoFocus
@@ -300,32 +429,36 @@ const WarehouseProductsPage: React.FC = () => {
             type="password"
             fullWidth
             variant="outlined"
+            size="small"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            sx={{ mt: 1 }}
           />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setImportDialogOpen(false)}>إلغاء</Button>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setImportDialogOpen(false)}
+            disabled={importLoading}
+            sx={{ borderRadius: 2 }}
+          >
+            إلغاء
+          </Button>
           <Button
             onClick={async () => {
               if (password !== "alryyan1") {
                 setError("كلمة المرور غير صحيحة");
-                // Don't close, let them try again
                 return;
               }
 
               setImportLoading(true);
-              // setImportDialogOpen(false); // keep open while loading or close?
-              // better to show loading state inside dialog or close and show global loading.
-              // I'll keep it open but disabled
               try {
-                const res = await warehouseService.importMissingProducts(
-                  Number(warehouseId)
-                );
+                const res = await warehouseService.importMissingProducts(Number(warehouseId));
                 setImportDialogOpen(false);
-                fetchProducts(); // Refresh
+                fetchProducts();
                 setError(null);
-                alert(res.message); // Simple feedback
+                setSuccess(res.message || "تم الاستيراد بنجاح");
+                // Clear success message after 5 seconds
+                setTimeout(() => setSuccess(null), 5000);
               } catch (err) {
                 console.error(err);
                 setError("فشل الاستيراد");
@@ -335,7 +468,8 @@ const WarehouseProductsPage: React.FC = () => {
               }
             }}
             variant="contained"
-            disabled={importLoading}
+            disabled={importLoading || !password}
+            sx={{ borderRadius: 2, px: 3 }}
           >
             {importLoading ? "جاري الاستيراد..." : "تأكيد"}
           </Button>
