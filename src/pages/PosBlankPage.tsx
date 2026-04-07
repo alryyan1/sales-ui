@@ -349,9 +349,8 @@ const PosBlankPage: React.FC = () => {
       try {
         const usdFactor = getSetting("usd_to_sdg_factor", 1) as number;
         for (const item of pkg.items) {
-          const unitPrice =
-            (Number(item.product?.last_sale_price_per_sellable_unit ?? item.product?.sale_price) || 0) *
-            usdFactor;
+          const basePrice = Number(item.product?.last_sale_price_per_sellable_unit ?? item.product?.sale_price) || 0;
+          const unitPrice = item.product?.last_purchase_currency === "USD" ? basePrice * usdFactor : basePrice;
           const res = await saleService.addSaleItem(selectedSale.id, {
             product_id: item.product_id,
             quantity: 1,
@@ -711,8 +710,8 @@ const PosBlankPage: React.FC = () => {
       }
 
       const usdFactor = getSetting("usd_to_sdg_factor", 1) as number;
-      const unitPrice =
-        (Number(product.last_sale_price_per_sellable_unit ?? product.sale_price) || 0) * usdFactor;
+      const basePrice = Number(product.last_sale_price_per_sellable_unit ?? product.sale_price) || 0;
+      const unitPrice = product.last_purchase_currency === "USD" ? basePrice * usdFactor : basePrice;
       try {
         setAddProductLoading(true);
         const res = await saleService.addSaleItem(selectedSale.id, {

@@ -51,6 +51,8 @@ interface ReportState {
   logo_height: number | null;
   logo_width: number | null;
   show_watermark: boolean;
+  show_stamp: boolean;
+  show_signature: boolean;
   saving: boolean;
 }
 
@@ -72,6 +74,8 @@ function toReportState(s: PdfReportSetting): ReportState {
     logo_height: s.logo_height,
     logo_width: s.logo_width,
     show_watermark: s.show_watermark,
+    show_stamp: s.show_stamp ?? false,
+    show_signature: s.show_signature ?? false,
     saving: false,
   };
 }
@@ -93,10 +97,16 @@ export const PdfReportBrandingSettings: React.FC = () => {
   });
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [headerPreview, setHeaderPreview] = useState<string | null>(null);
+  const [stampPreview, setStampPreview] = useState<string | null>(null);
+  const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
   const [headerUploading, setHeaderUploading] = useState(false);
+  const [stampUploading, setStampUploading] = useState(false);
+  const [signatureUploading, setSignatureUploading] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const headerInputRef = useRef<HTMLInputElement>(null);
+  const stampInputRef = useRef<HTMLInputElement>(null);
+  const signatureInputRef = useRef<HTMLInputElement>(null);
 
   // ── Per-report state ─────────────────────────────────────────────────────
   const [reports, setReports] = useState<PdfReportSetting[]>([]);
@@ -116,6 +126,8 @@ export const PdfReportBrandingSettings: React.FC = () => {
     }));
     if (settings.company_logo_url) setLogoPreview(settings.company_logo_url);
     if (settings.company_header_url) setHeaderPreview(settings.company_header_url);
+    if (settings.company_stamp_url) setStampPreview(settings.company_stamp_url);
+    if (settings.company_signature_url) setSignaturePreview(settings.company_signature_url);
   }, [settings]);
 
   // Load per-report settings
@@ -171,6 +183,40 @@ export const PdfReportBrandingSettings: React.FC = () => {
     }
   };
 
+  const handleStampUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setStampUploading(true);
+    try {
+      const updated = await settingService.uploadStamp(file);
+      setStampPreview(updated.company_stamp_url ?? null);
+      await fetchSettings();
+      toast.success("تم رفع الختم بنجاح");
+    } catch {
+      toast.error("فشل رفع الختم");
+    } finally {
+      setStampUploading(false);
+      if (stampInputRef.current) stampInputRef.current.value = "";
+    }
+  };
+
+  const handleSignatureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSignatureUploading(true);
+    try {
+      const updated = await settingService.uploadSignature(file);
+      setSignaturePreview(updated.company_signature_url ?? null);
+      await fetchSettings();
+      toast.success("تم رفع التوقيع بنجاح");
+    } catch {
+      toast.error("فشل رفع التوقيع");
+    } finally {
+      setSignatureUploading(false);
+      if (signatureInputRef.current) signatureInputRef.current.value = "";
+    }
+  };
+
   const handleGlobalSave = async () => {
     patchGlobal({ saving: true });
     try {
@@ -206,6 +252,8 @@ export const PdfReportBrandingSettings: React.FC = () => {
         logo_height: s.logo_height ?? null,
         logo_width: s.logo_width ?? null,
         show_watermark: s.show_watermark,
+        show_stamp: s.show_stamp,
+        show_signature: s.show_signature,
       });
       toast.success("تم الحفظ");
     } catch {
@@ -349,6 +397,83 @@ export const PdfReportBrandingSettings: React.FC = () => {
                     accept="image/*"
                     hidden
                     onChange={handleHeaderUpload}
+                  />
+                </Box>
+              </Box>
+            </Stack>
+
+            {/* Stamp & Signature uploads */}
+            <Stack direction="row" spacing={2}>
+              {/* Stamp upload */}
+              <Box sx={{ flex: 1 }}>
+                <Typography fontSize={12} fontWeight={500} color="text.secondary" mb={0.75}>
+                  صورة الختم
+                </Typography>
+                <Box
+                  component="label"
+                  sx={uploadBoxSx}
+                  onClick={() => stampInputRef.current?.click()}
+                >
+                  {stampUploading ? (
+                    <CircularProgress size={20} />
+                  ) : stampPreview ? (
+                    <img
+                      src={stampPreview}
+                      alt="stamp"
+                      style={{ maxHeight: 56, maxWidth: "100%", objectFit: "contain" }}
+                    />
+                  ) : (
+                    <ImageIcon sx={{ fontSize: 32, color: "text.disabled" }} />
+                  )}
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <UploadIcon sx={{ fontSize: 14, color: "text.secondary" }} />
+                    <Typography fontSize={12} color="text.secondary">
+                      {stampPreview ? "تغيير الختم" : "رفع ختم"}
+                    </Typography>
+                  </Stack>
+                  <input
+                    ref={stampInputRef}
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={handleStampUpload}
+                  />
+                </Box>
+              </Box>
+
+              {/* Signature upload */}
+              <Box sx={{ flex: 1 }}>
+                <Typography fontSize={12} fontWeight={500} color="text.secondary" mb={0.75}>
+                  صورة التوقيع
+                </Typography>
+                <Box
+                  component="label"
+                  sx={uploadBoxSx}
+                  onClick={() => signatureInputRef.current?.click()}
+                >
+                  {signatureUploading ? (
+                    <CircularProgress size={20} />
+                  ) : signaturePreview ? (
+                    <img
+                      src={signaturePreview}
+                      alt="signature"
+                      style={{ maxHeight: 56, maxWidth: "100%", objectFit: "contain" }}
+                    />
+                  ) : (
+                    <ImageIcon sx={{ fontSize: 32, color: "text.disabled" }} />
+                  )}
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <UploadIcon sx={{ fontSize: 14, color: "text.secondary" }} />
+                    <Typography fontSize={12} color="text.secondary">
+                      {signaturePreview ? "تغيير التوقيع" : "رفع توقيع"}
+                    </Typography>
+                  </Stack>
+                  <input
+                    ref={signatureInputRef}
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={handleSignatureUpload}
                   />
                 </Box>
               </Box>
@@ -631,26 +756,58 @@ export const PdfReportBrandingSettings: React.FC = () => {
                       </Box>
                     )}
 
-                    {/* Watermark + Save row */}
-                    <Stack direction="row" alignItems="center" justifyContent="space-between">
-                      <FormControlLabel
-                        control={
-                          <Switch
-                            size="small"
-                            checked={s.show_watermark}
-                            onChange={(e) =>
-                              patchReport(report.report_key, {
-                                show_watermark: e.target.checked,
-                              })
-                            }
-                          />
-                        }
-                        label={
-                          <Typography fontSize={12} color="text.secondary">
-                            علامة مائية (يستخدم الشعار)
-                          </Typography>
-                        }
-                      />
+                    {/* Toggles + Save row */}
+                    <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
+                      <Stack direction="row" flexWrap="wrap" gap={0.5}>
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              size="small"
+                              checked={s.show_watermark}
+                              onChange={(e) =>
+                                patchReport(report.report_key, { show_watermark: e.target.checked })
+                              }
+                            />
+                          }
+                          label={
+                            <Typography fontSize={12} color="text.secondary">
+                              علامة مائية
+                            </Typography>
+                          }
+                        />
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              size="small"
+                              checked={s.show_stamp}
+                              onChange={(e) =>
+                                patchReport(report.report_key, { show_stamp: e.target.checked })
+                              }
+                            />
+                          }
+                          label={
+                            <Typography fontSize={12} color="text.secondary">
+                              ختم
+                            </Typography>
+                          }
+                        />
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              size="small"
+                              checked={s.show_signature}
+                              onChange={(e) =>
+                                patchReport(report.report_key, { show_signature: e.target.checked })
+                              }
+                            />
+                          }
+                          label={
+                            <Typography fontSize={12} color="text.secondary">
+                              توقيع
+                            </Typography>
+                          }
+                        />
+                      </Stack>
 
                       <Button
                         variant="outlined"

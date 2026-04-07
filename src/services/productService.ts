@@ -388,6 +388,10 @@ const productService = {
     }
   },
 
+  clearSalePrice: async (id: number): Promise<void> => {
+    await apiClient.post(`/products/${id}/clear-sale-price`);
+  },
+
   /**
    * Import products from Excel file - Step 1: Upload file and get headers
    * @param file Excel file to upload

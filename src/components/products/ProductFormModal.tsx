@@ -17,6 +17,7 @@ import {
   Autocomplete,
   Paper,
   IconButton,
+  InputAdornment,
   Tabs,
   Tab,
   Table,
@@ -838,7 +839,6 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       {...field}
                       label="سعر البيع"
                       type="number"
-                      
                       size="small"
                       inputProps={{ min: 0, step: "0.01" }}
                       disabled={isSubmitting}
@@ -847,6 +847,31 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       onChange={(e) => field.onChange(e.target.value)}
                       helperText={fieldState.error?.message}
                       error={!!fieldState.error}
+                      InputProps={field.value != null && field.value !== "" ? {
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <Tooltip title="إزالة السعر">
+                              <IconButton
+                                size="small"
+                                edge="end"
+                                onClick={async () => {
+                                  field.onChange(null);
+                                  if (isEditMode && productToEdit?.id) {
+                                    try {
+                                      await productService.clearSalePrice(productToEdit.id);
+                                      onSaveSuccess({ ...productToEdit, sale_price: null });
+                                    } catch {
+                                      // silently ignore — form submission will handle any retry
+                                    }
+                                  }
+                                }}
+                              >
+                                <span style={{ fontSize: 14, lineHeight: 1 }}>✕</span>
+                              </IconButton>
+                            </Tooltip>
+                          </InputAdornment>
+                        ),
+                      } : undefined}
                     />
                   )}
                 />

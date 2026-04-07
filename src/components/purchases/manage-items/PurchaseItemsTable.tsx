@@ -105,6 +105,13 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
                   item.product?.name ||
                   `Product #${item.product_id}`}
               </Typography>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                display="block"
+              >
+                Product ID: {item.product_id} · Item ID: {item.id}
+              </Typography>
               {(item.product_sku || item.product?.sku) && (
                 <Typography
                   variant="caption"

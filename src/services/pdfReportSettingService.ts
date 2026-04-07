@@ -10,6 +10,8 @@ export interface PdfReportSetting {
   logo_height: number | null; // null = use global
   logo_width: number | null;  // null = use global
   show_watermark: boolean;
+  show_stamp: boolean;
+  show_signature: boolean;
 }
 
 const pdfReportSettingService = {

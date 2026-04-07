@@ -186,6 +186,12 @@ export const navItems: NavItem[] = [
         permission: null,
         category: "التقارير",
       },
+      {
+        to: "/reports/templates",
+        label: "نماذج التقارير",
+        permission: null,
+        category: "التقارير",
+      },
     ],
   },
 

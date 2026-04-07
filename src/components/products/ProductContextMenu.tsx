@@ -23,6 +23,7 @@ import {
   CircularProgress,
   Pagination,
   Chip,
+  IconButton,
 } from "@mui/material";
 import {
   Edit,
@@ -33,11 +34,14 @@ import {
   Barcode,
   FileText,
   Star,
+  ArrowRight,
 } from "lucide-react";
 import { Product } from "../../services/productService";
 import productService from "../../services/productService";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 import { formatCurrency } from "@/constants";
+import dayjs from "dayjs";
 
 interface ProductContextMenuProps {
   anchorPosition: { left: number; top: number } | undefined;
@@ -70,12 +74,18 @@ export const ProductContextMenu: React.FC<ProductContextMenuProps> = ({
   onToggleFavorite,
   isFavorite = false,
 }) => {
+  const navigate = useNavigate();
   const [historyDialog, setHistoryDialog] = useState<HistoryDialog>(null);
   const [historyPage, setHistoryPage] = useState(1);
   const [historyData, setHistoryData] = useState<any>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
 
   if (!product) return null;
+
+  const openPurchaseDetails = (purchaseId: number) => {
+    navigate(`/purchases/${purchaseId}/manage-items`);
+    onClose();
+  };
 
   const handleAction = (action: () => void) => {
     action();
@@ -192,7 +202,7 @@ export const ProductContextMenu: React.FC<ProductContextMenuProps> = ({
       </Menu>
 
       {/* Purchase History Dialog */}
-      <Dialog open={historyDialog === "purchase"} onClose={closeHistory} maxWidth="md" fullWidth>
+      <Dialog open={historyDialog === "purchase"} onClose={closeHistory} maxWidth="lg" fullWidth>
         <DialogTitle>
           سجل المشتريات — {product.name}
         </DialogTitle>
@@ -211,6 +221,7 @@ export const ProductContextMenu: React.FC<ProductContextMenuProps> = ({
                 <Table size="small">
                   <TableHead>
                     <TableRow>
+                      <TableCell>رقم صنف الشراء</TableCell>
                       <TableCell>التاريخ</TableCell>
                       <TableCell>المورد</TableCell>
                       <TableCell align="right">الكمية</TableCell>
@@ -218,14 +229,16 @@ export const ProductContextMenu: React.FC<ProductContextMenuProps> = ({
                       <TableCell align="right">سعر البيع</TableCell>
                       <TableCell>رقم الدفعة</TableCell>
                       <TableCell>تاريخ الانتهاء</TableCell>
+                      <TableCell align="center">عرض الشراء</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {historyData?.data?.map((item: any) => (
                       <TableRow key={item.id} hover>
+                        <TableCell>{item.id}</TableCell>
                         <TableCell>
                           {item.purchase_date
-                            ? new Date(item.purchase_date).toLocaleDateString("ar-SA")
+                            ? dayjs(item.purchase_date).format("YYYY-MM-DD")
                             : "—"}
                         </TableCell>
                         <TableCell>{item.supplier_name || "—"}</TableCell>
@@ -251,6 +264,15 @@ export const ProductContextMenu: React.FC<ProductContextMenuProps> = ({
                               color={new Date(item.expiry_date) < new Date() ? "error" : "default"}
                             />
                           ) : "—"}
+                        </TableCell>
+                        <TableCell align="center">
+                          <IconButton
+                            size="small"
+                            onClick={() => openPurchaseDetails(item.purchase_id)}
+                            aria-label="عرض المشتريات"
+                          >
+                            <ArrowRight size={18} />
+                          </IconButton>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -313,7 +335,7 @@ export const ProductContextMenu: React.FC<ProductContextMenuProps> = ({
                       <TableRow key={item.id} hover>
                         <TableCell>
                           {item.sale?.sale_date
-                            ? new Date(item.sale.sale_date).toLocaleDateString("ar-SA")
+                            ? new Date(item.sale.sale_date).toLocaleDateString("en-US")
                             : "—"}
                         </TableCell>
                         <TableCell>{item.sale?.invoice_number || `#${item.sale_id}`}</TableCell>

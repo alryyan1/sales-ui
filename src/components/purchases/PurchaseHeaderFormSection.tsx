@@ -13,7 +13,6 @@ import {
   Typography,
   alpha,
   FormControl,
-  InputLabel,
   Select,
   MenuItem,
 } from "@mui/material";
@@ -49,7 +48,7 @@ const FieldLabel: React.FC<{
   required?: boolean;
   icon?: React.ReactNode;
 }> = ({ children, required, icon }) => (
-  <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 1 }}>
+  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.75 }}>
     {icon && (
       <Box
         sx={{
@@ -126,47 +125,47 @@ export const PurchaseHeaderFormSection: React.FC<
         borderColor: "divider",
         borderRadius: 3,
         overflow: "hidden",
-        mb: 3,
+        mb: 2,
       }}
     >
       {/* Header */}
       <Box
         sx={{
-          px: 3,
-          py: 2,
+          px: 2.5,
+          py: 1.5,
           borderBottom: "1px solid",
           borderColor: "divider",
-          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.03),
+          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.04),
         }}
       >
         <Typography
-          variant="subtitle1"
+          variant="subtitle2"
           sx={{
             fontWeight: 700,
             color: "text.primary",
             display: "flex",
             alignItems: "center",
-            gap: 1,
+            gap: 0.75,
           }}
         >
-          <InventoryOutlinedIcon sx={{ fontSize: 22, color: "primary.main" }} />
+          <InventoryOutlinedIcon sx={{ fontSize: 20, color: "primary.main" }} />
           معلومات الطلب
         </Typography>
       </Box>
 
-      <CardContent sx={{ p: 3 }}>
+      <CardContent sx={{ p: 2.5 }}>
         <Box
           sx={{
             display: "flex",
             flexWrap: "wrap",
-            gap: 3,
+            gap: 2,
             direction: "ltr",
             "& > *": {
               flex: {
                 xs: "1 1 100%",
-                md: "1 1 calc(33.333% - 16px)",
+                md: "1 1 calc(50% - 12px)",
               },
-              minWidth: { xs: "100%", sm: 200, md: 150 },
+              minWidth: { xs: "100%", sm: 260, md: 220 },
             },
           }}
         >
@@ -280,7 +279,7 @@ export const PurchaseHeaderFormSection: React.FC<
             render={({ field, fieldState }) => (
               <Box>
                 <FieldLabel required icon={<CalendarTodayOutlinedIcon />}>
-                  تاريخ الطلب
+                  تاريخ الفاتوره
                 </FieldLabel>
                 <DatePicker
                   value={field.value ?? null}
@@ -306,6 +305,7 @@ export const PurchaseHeaderFormSection: React.FC<
 
           {/* Currency */}
           <Controller
+          
             control={control}
             name="currency"
             render={({ field, fieldState }) => (
@@ -318,6 +318,7 @@ export const PurchaseHeaderFormSection: React.FC<
                     value={field.value ?? "SDG"}
                     onChange={field.onChange}
                     disabled={isDisabled}
+                    fullWidth
                     sx={inputStyles}
                   >
                     <MenuItem value="SDG">SDG — جنيه سوداني</MenuItem>

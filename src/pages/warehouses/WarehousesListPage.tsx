@@ -13,11 +13,12 @@ import {
   IconButton,
   Chip,
   Box,
+  Switch,
+  Tooltip,
 } from "@mui/material";
 import {
   Add as AddIcon,
   Edit as EditIcon,
-  Delete as DeleteIcon,
   Store as StoreIcon,
   Inventory as InventoryIcon,
 } from "@mui/icons-material";
@@ -37,7 +38,7 @@ const WarehousesListPage: React.FC = () => {
   const fetchWarehouses = async () => {
     setLoading(true);
     try {
-      const data = await warehouseService.getAll();
+      const data = await warehouseService.getAll(true);
       setWarehouses(data);
     } catch (error) {
       console.error("Error fetching warehouses:", error);
@@ -69,17 +70,12 @@ const WarehousesListPage: React.FC = () => {
     fetchWarehouses();
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm("هل أنت متأكد من حذف هذا المستودع؟")) {
-      try {
-        await warehouseService.delete(id);
-        fetchWarehouses();
-      } catch (error) {
-        console.error("Error deleting warehouse:", error);
-        alert(
-          "فشل حذف المستودع. قد يكون مرتبطاً بسجلات موجودة."
-        );
-      }
+  const handleToggleActive = async (warehouse: Warehouse) => {
+    try {
+      await warehouseService.toggleActive(warehouse.id, !warehouse.is_active);
+      fetchWarehouses();
+    } catch (error) {
+      console.error("Error toggling warehouse status:", error);
     }
   };
 
@@ -183,15 +179,14 @@ const WarehousesListPage: React.FC = () => {
                     >
                       <EditIcon />
                     </IconButton>
-                    <IconButton
-                      color="error"
-                      size="small"
-                      onClick={() => handleDelete(warehouse.id)}
-                      disabled={warehouse.id === 1} // Prevent deleting Main Warehouse (ID 1)
-                      title="حذف"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
+                    <Tooltip title={warehouse.is_active ? "تعطيل المستودع" : "تفعيل المستودع"}>
+                      <Switch
+                        size="small"
+                        checked={warehouse.is_active}
+                        onChange={() => handleToggleActive(warehouse)}
+                        disabled={warehouse.id === 1}
+                      />
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))

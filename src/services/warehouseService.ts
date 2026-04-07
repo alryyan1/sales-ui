@@ -13,9 +13,14 @@ export interface Warehouse {
 }
 
 export const warehouseService = {
-  getAll: async (): Promise<Warehouse[]> => {
-    const response = await apiClient.get("/warehouses");
+  getAll: async (includeInactive = false): Promise<Warehouse[]> => {
+    const response = await apiClient.get("/warehouses", { params: includeInactive ? { all: 1 } : {} });
     return response.data.data;
+  },
+
+  toggleActive: async (id: number, isActive: boolean): Promise<Warehouse> => {
+    const response = await apiClient.put(`/warehouses/${id}`, { is_active: isActive });
+    return response.data.data ?? response.data;
   },
 
   getById: async (id: number): Promise<Warehouse> => {

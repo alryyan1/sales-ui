@@ -7,17 +7,16 @@ import { format } from "date-fns";
 
 // Import Child Components
 import { PurchaseHeaderFormSection } from "../components/purchases/PurchaseHeaderFormSection";
+import PurchaseFormPageHeader from "@/components/purchases/PurchaseFormPageHeader";
 
 // MUI Components
 import {
   Button,
-  Card,
   CardContent,
   Alert,
   AlertTitle,
   Box,
   Typography,
-  IconButton,
   Paper,
   Container,
   Fade,
@@ -253,153 +252,34 @@ const PurchaseFormPage: React.FC = () => {
       <Container maxWidth="lg">
         {/* Header Section */}
         <Fade in timeout={300}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: { xs: 2.5, sm: 3, md: 4 },
-              mb: 3,
-              borderRadius: 3,
-              border: "1px solid",
-              borderColor: "grey.200",
-              background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
-            }}
-          >
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: { xs: "column", md: "row" },
-                alignItems: { xs: "stretch", md: "center" },
-                justifyContent: "space-between",
-                gap: 3,
-              }}
-            >
-              {/* Left Side: Back button and Title */}
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2.5 }}>
-                <IconButton
-                  onClick={() => navigate("/purchases")}
-                  sx={{
-                    bgcolor: "grey.100",
-                    border: "1px solid",
-                    borderColor: "grey.200",
-                    width: 44,
-                    height: 44,
-                    "&:hover": {
-                      bgcolor: "primary.50",
-                      borderColor: "primary.300",
-                      color: "primary.main",
-                    },
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  <ArrowRight size={20} />
-                </IconButton>
-
-                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                  <Box
-                    sx={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: 2,
-                      background:
-                        "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
-                    }}
-                  >
-                    <ShoppingCart size={24} color="white" />
-                  </Box>
-                  <Box>
-                    <Box
-                      sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
-                    >
-                      <Typography
-                        variant="h5"
-                        sx={{
-                          fontWeight: 700,
-                          color: "grey.800",
-                          letterSpacing: "-0.02em",
-                        }}
-                      >
-                        إضافة مشتريات جديدة
-                      </Typography>
-                    </Box>
-                    <Typography
-                      variant="body2"
-                      sx={{ color: "grey.500", mt: 0.5 }}
-                    >
-                      إنشاء عملية شراء جديدة للمخزون
-                    </Typography>
-                  </Box>
-                </Box>
-              </Box>
-
-              {/* Right Side: Action Buttons */}
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1.5,
-                  flexWrap: "wrap",
-                }}
-              >
-                <Button
-                  type="submit"
-                  variant="contained"
-                  disabled={isSubmitting}
-                  onClick={handleSubmit(onSubmit)}
-                  startIcon={
-                    isSubmitting ? (
-                      <Loader2 size={18} className="animate-spin" />
-                    ) : (
-                      <Save size={18} />
-                    )
-                  }
-                  sx={{
-                    borderRadius: 2,
-                    textTransform: "none",
-                    fontWeight: 600,
-                    px: 3,
-                    py: 1.25,
-                    background:
-                      "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
-                    boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
-                    "&:hover": {
-                      background:
-                        "linear-gradient(135deg, #2563eb 0%, #1e40af 100%)",
-                      boxShadow: "0 6px 16px rgba(59, 130, 246, 0.4)",
-                    },
-                    "&:disabled": {
-                      background: "grey.300",
-                      boxShadow: "none",
-                    },
-                  }}
-                >
-                  {isSubmitting ? "جاري الحفظ..." : "إنشاء"}
-                </Button>
-              </Box>
-            </Box>
-          </Paper>
+          <PurchaseFormPageHeader
+            onBack={() => navigate("/purchases")}
+            onSubmit={handleSubmit(onSubmit)}
+            isSubmitting={isSubmitting}
+          />
         </Fade>
 
         {/* Main Form Card */}
         <Fade in timeout={400}>
-          <Card
+          <Paper
+            elevation={0}
             sx={{
               bgcolor: "background.paper",
               borderRadius: 3,
               border: "1px solid",
               borderColor: "grey.200",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
               overflow: "hidden",
             }}
           >
             <FormProvider {...formMethods}>
               <form onSubmit={handleSubmit(onSubmit)} noValidate>
-                <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
-                  {/* Server Error Alert */}
-               =
+                <Box sx={{ p: { xs: 2.5, sm: 3 } }}>
+                  {serverError && (
+                    <Alert severity="error" sx={{ mb: 3 }}>
+                      <AlertTitle>خطأ</AlertTitle>
+                      {serverError}
+                    </Alert>
+                  )}
 
                   {/* Header Form Section */}
                   <PurchaseHeaderFormSection
@@ -415,10 +295,10 @@ const PurchaseFormPage: React.FC = () => {
                     loadingWarehouses={loadingWarehouses}
                     isEditMode={false}
                   />
-                </CardContent>
+                </Box>
               </form>
             </FormProvider>
-          </Card>
+          </Paper>
         </Fade>
       </Container>
     </Box>

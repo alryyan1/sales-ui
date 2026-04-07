@@ -145,7 +145,7 @@ const NotFoundPage: React.FC = () => {
 
         {/* Footer */}
         <p className="mt-12 text-slate-400 text-sm">
-          Al-Ryyan Management System &copy; {new Date().getFullYear()}
+          Sales Management System &copy; {new Date().getFullYear()}
         </p>
       </div>
     </div>

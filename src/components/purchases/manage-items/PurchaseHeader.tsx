@@ -1,6 +1,6 @@
 // src/components/purchases/manage-items/PurchaseHeader.tsx
 import React from "react";
-import { ArrowLeft, Plus, Receipt, Building2 } from "lucide-react";
+import { ArrowLeft, Plus, Receipt, Building2, CalendarDays } from "lucide-react";
 // Shadcn UI Components
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +15,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 // Custom Components & Utils
 import PurchaseSummaryDialog from "@/components/purchases/PurchaseSummaryDialog";
 import { useFormatCurrency } from "@/hooks/useFormatCurrency";
+import { formatDate } from "@/constants";
 import { Purchase } from "@/services/purchaseService";
 import { PurchaseSummary } from "./types";
 import { cn } from "@/lib/utils";
@@ -74,6 +75,17 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
               <Building2 className="h-3.5 w-3.5" />
               <span className="text-sm font-medium">
                 {purchase.supplier_name || "—"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-slate-500 mt-1">
+              <CalendarDays className="h-3.5 w-3.5" />
+              <span className="text-sm font-medium">
+                {formatDate(purchase.purchase_date, "en-US")}
+              </span>
+            </div>
+            <div className="mt-2">
+              <span className="text-lg font-bold text-slate-900">
+                {purchase.currency || "SDG"}
               </span>
             </div>
           </div>

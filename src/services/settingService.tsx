@@ -30,6 +30,8 @@ export interface AppSettings {
   sidebar_layout?: boolean;
   tax_number?: string;
   company_header_url?: string | null;
+  company_stamp_url?: string | null;
+  company_signature_url?: string | null;
   invoice_branding_type?: "logo" | "header";
   logo_position?: "left" | "right" | "both";
   logo_height?: number;
@@ -134,6 +136,34 @@ const settingService = {
       console.error("Error uploading header:", error);
       throw error;
     }
+  },
+
+  /**
+   * Upload company stamp image.
+   */
+  uploadStamp: async (file: File): Promise<AppSettings> => {
+    const form = new FormData();
+    form.append("stamp", file);
+    const response = await apiClient.post<{ message: string; url: string; data: AppSettings }>(
+      "/admin/settings/stamp",
+      form,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
+    return response.data.data;
+  },
+
+  /**
+   * Upload company signature image.
+   */
+  uploadSignature: async (file: File): Promise<AppSettings> => {
+    const form = new FormData();
+    form.append("signature", file);
+    const response = await apiClient.post<{ message: string; url: string; data: AppSettings }>(
+      "/admin/settings/signature",
+      form,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
+    return response.data.data;
   },
 
   // --- Error Helpers ---

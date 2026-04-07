@@ -74,6 +74,9 @@ export interface Sale {
   user_name?: string | null;
   user?: User; // Full user object if loaded
 
+  warehouse_id: number | null;
+  warehouse?: { id: number; name: string } | null;
+
   shift_id?: number | null; // Shift ID for the sale
 
   sale_date: string; // YYYY-MM-DD

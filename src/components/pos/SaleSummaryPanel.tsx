@@ -329,13 +329,21 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
               )}
             </Stack>
           </Popover>
-
           <Stack direction="row" alignItems="center" justifyContent="space-between" mt={0.5}>
-            <Stack direction="row" alignItems="center" gap={0.4}>
-              <PersonOutlineIcon sx={{ fontSize: 11, color: "rgba(255,255,255,0.55)" }} />
-              <Typography sx={{ fontSize: "0.68rem" }} color="white">
-                {selectedSale.user_name || selectedSale.user?.name || "—"}
-              </Typography>
+            <Stack direction="row" alignItems="center" gap={0.75}>
+              <Stack direction="row" alignItems="center" gap={0.4}>
+                <PersonOutlineIcon sx={{ fontSize: 11, color: "rgba(255,255,255,0.55)" }} />
+                <Typography sx={{ fontSize: "0.68rem" }} color="white">
+                  {selectedSale.user_name || selectedSale.user?.name || "—"}
+                </Typography>
+              </Stack>
+              {selectedSale.warehouse?.name && (
+                <Chip
+                  label={selectedSale.warehouse.name}
+                  size="small"
+                  sx={{ height: 16, fontSize: "0.6rem", fontWeight: 600, bgcolor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.85)", border: "none" }}
+                />
+              )}
             </Stack>
             <Stack direction="row" alignItems="center" gap={0.3}>
               <CalendarTodayIcon sx={{ fontSize: 11, color: "rgba(255,255,255,0.55)" }} />

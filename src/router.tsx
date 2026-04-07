@@ -47,6 +47,7 @@ import StagnantProductsPage from "./pages/reports/StagnantProductsPage";
 import LowStockProductsPage from "./pages/reports/LowStockProductsPage";
 import ShortagesPage from "./pages/reports/ShortagesPage";
 import MovedExpiredProductsPage from "./pages/reports/MovedExpiredProductsPage";
+import ReportTemplatesPage from "./pages/reports/ReportTemplatesPage";
 // Admin
 import ProfilePage from "./pages/ProfilePage";
 import UsersListPage from "./components/admin/users/UsersListPage";
@@ -386,6 +387,14 @@ const router = createHashRouter([
                 element: (
                   <PermissionGuard requiredPermission="view-reports">
                     <MovedExpiredProductsPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "templates",
+                element: (
+                  <PermissionGuard requiredPermission="view-reports">
+                    <ReportTemplatesPage />
                   </PermissionGuard>
                 ),
               },

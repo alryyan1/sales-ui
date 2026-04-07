@@ -13,13 +13,13 @@ import {
   TableHead,
   TableRow,
   Chip,
-  IconButton,
   TextField,
   MenuItem,
   Pagination,
   Typography,
-  Tooltip,
+  Stack,
 } from "@mui/material";
+
 import {
   Add,
   Edit,
@@ -315,79 +315,80 @@ const InventoryCountPage: React.FC = () => {
                   </TableCell>
                   <TableCell>{count.notes || "—"}</TableCell>
                   <TableCell align="center">
-                    <Tooltip title="عرض">
-                      <IconButton
+                    <Stack direction="row" spacing={0.5} justifyContent="center" flexWrap="wrap">
+                      <Button
                         size="small"
-                        onClick={() =>
-                          navigate(`/inventory/counts/${count.id}`)
-                        }
+                        variant="outlined"
+                        startIcon={<Visibility fontSize="small" />}
+                        onClick={() => navigate(`/inventory/counts/${count.id}`)}
+                        sx={{ fontSize: 11 }}
                       >
-                        <Visibility fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
+                        عرض
+                      </Button>
 
-                    {(count.status === "draft" ||
-                      count.status === "in_progress") && (
-                      <>
-                        <Tooltip title="استيراد جميع المنتجات">
-                          <IconButton
-                            size="small"
-                            color="primary"
-                            onClick={() => handleImportAllProducts(count)}
-                          >
-                            <FileUpload fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </>
-                    )}
+                      {(count.status === "draft" || count.status === "in_progress") && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="primary"
+                          startIcon={<FileUpload fontSize="small" />}
+                          onClick={() => handleImportAllProducts(count)}
+                          disabled={importAllProductsMutation.isPending}
+                          sx={{ fontSize: 11 }}
+                        >
+                          استيراد الكل
+                        </Button>
+                      )}
 
-                    {count.status === "draft" && (
-                      <>
-                        <Tooltip title="تعديل">
-                          <IconButton
+                      {count.status === "draft" && (
+                        <>
+                          <Button
                             size="small"
-                            onClick={() => {
-                              setEditingCount(count);
-                              setDialogOpen(true);
-                            }}
+                            variant="outlined"
+                            startIcon={<Edit fontSize="small" />}
+                            onClick={() => { setEditingCount(count); setDialogOpen(true); }}
+                            sx={{ fontSize: 11 }}
                           >
-                            <Edit fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="حذف">
-                          <IconButton
+                            تعديل
+                          </Button>
+                          <Button
                             size="small"
+                            variant="outlined"
                             color="error"
+                            startIcon={<Delete fontSize="small" />}
                             onClick={() => handleDelete(count)}
+                            sx={{ fontSize: 11 }}
                           >
-                            <Delete fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </>
-                    )}
+                            حذف
+                          </Button>
+                        </>
+                      )}
 
-                    {count.status === "completed" && (
-                      <>
-                        <Tooltip title="اعتماد">
-                          <IconButton
+                      {count.status === "completed" && (
+                        <>
+                          <Button
                             size="small"
+                            variant="contained"
                             color="success"
+                            startIcon={<CheckCircle fontSize="small" />}
                             onClick={() => handleApprove(count)}
+                            sx={{ fontSize: 11 }}
                           >
-                            <CheckCircle fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="رفض">
-                          <IconButton
+                            اعتماد
+                          </Button>
+                          <Button
                             size="small"
+                            variant="outlined"
                             color="error"
+                            startIcon={<Cancel fontSize="small" />}
                             onClick={() => handleReject(count)}
+                            sx={{ fontSize: 11 }}
                           >
-                            <Cancel fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </>
-                    )}
+                            رفض
+                          </Button>
+                        </>
+                      )}
+                    </Stack>
                   </TableCell>
                 </TableRow>
               ))

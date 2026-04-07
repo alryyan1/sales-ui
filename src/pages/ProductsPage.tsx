@@ -260,7 +260,7 @@ const ProductsPage: React.FC = () => {
   const products = data?.pages.flatMap((page) => page.data) || [];
 
   // Total product count from paginated response
-  const totalProducts = data?.pages?.[0]?.total ?? 0;
+  const totalProducts = data?.pages?.[0]?.meta?.total ?? 0;
 
   // Show loading when fetching initial data
   const isLoadingData = isLoading;
