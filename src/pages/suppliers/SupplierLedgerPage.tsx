@@ -61,6 +61,9 @@ import exportService from "@/services/exportService";
 import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 import { PurchasePaymentsDialog } from "@/components/suppliers/PurchasePaymentsDialog";
 import { toast } from "sonner";
+import { useSettings } from "@/context/SettingsContext";
+import { formatNumber } from "@/constants";
+import alpha from "@mui/material/styles/alpha";
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 
@@ -237,8 +240,12 @@ const SupplierLedgerPage: React.FC = () => {
     );
   }
 
+  const { getSetting } = useSettings();
+  const usdFactor = getSetting("usd_to_sdg_factor", 1) as number;
+
   const { supplier, summary, ledger_entries } = ledger;
   const isInDebt = summary.balance > 0;
+  const hasUSD = (summary.total_purchases_usd ?? 0) > 0;
 
   return (
     <Box sx={{  bgcolor: "grey.50" }} dir="rtl">
@@ -358,16 +365,43 @@ const SupplierLedgerPage: React.FC = () => {
           </Paper> */}
 
           {/* ── Summary Cards ──────────────────────────────────────────── */}
-          <Grid container spacing={2}>
-            <Grid item xs={6} lg={3}>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+            {/* SDG Purchases */}
+            <Box sx={{ flex: "1 1 180px", minWidth: 0 }}>
               <StatCard
-                label="إجمالي المشتريات"
-                value={formatCurrency(summary.total_purchases)}
+                label="إجمالي المشتريات (SDG)"
+                value={`${formatNumber((summary.total_purchases_sdg ?? 0).toFixed(2))} SDG`}
                 icon={<TrendingUp size={20} color="#4f46e5" />}
                 iconColor="#eef2ff"
               />
-            </Grid>
-            <Grid item xs={6} lg={3}>
+            </Box>
+
+            {/* USD Purchases — only shown when there are USD purchases */}
+            {hasUSD && (
+              <Box sx={{ flex: "1 1 180px", minWidth: 0 }}>
+                <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2, height: "100%" }}>
+                  <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={2}>
+                    <Box flex={1} minWidth={0}>
+                      <Typography variant="caption" color="text.secondary" fontWeight={500} display="block" mb={0.5}>
+                        إجمالي المشتريات (USD)
+                      </Typography>
+                      <Typography variant="h6" fontWeight={700} color="text.primary" lineHeight={1}>
+                        {formatNumber((summary.total_purchases_usd ?? 0).toFixed(2))} USD
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" mt={0.5} display="block">
+                        ≈ {formatNumber(((summary.total_purchases_usd ?? 0) * usdFactor).toFixed(2))} SDG
+                      </Typography>
+                    </Box>
+                    <Box sx={{ width: 40, height: 40, borderRadius: 1.5, bgcolor: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <DollarSign size={20} color="#16a34a" />
+                    </Box>
+                  </Stack>
+                </Paper>
+              </Box>
+            )}
+
+            {/* Total Payments */}
+            <Box sx={{ flex: "1 1 180px", minWidth: 0 }}>
               <StatCard
                 label="إجمالي المدفوعات"
                 value={formatCurrency(summary.total_payments)}
@@ -375,8 +409,10 @@ const SupplierLedgerPage: React.FC = () => {
                 iconColor="#f0fdf4"
                 valueColor="success.dark"
               />
-            </Grid>
-            <Grid item xs={6} lg={3}>
+            </Box>
+
+            {/* Balance */}
+            <Box sx={{ flex: "1 1 180px", minWidth: 0 }}>
               <StatCard
                 label="الرصيد المستحق"
                 value={formatCurrency(summary.balance)}
@@ -389,9 +425,8 @@ const SupplierLedgerPage: React.FC = () => {
                   </Typography>
                 }
               />
-            </Grid>
-
-          </Grid>
+            </Box>
+          </Box>
 
           {/* ── Also a Client Banner ───────────────────────────────────── */}
           {supplier.is_client && supplier.client_id && (
@@ -461,7 +496,7 @@ const SupplierLedgerPage: React.FC = () => {
                           </TableRow>
                         ) : (
                           purchaseEntries.map((entry) => {
-                            const due = entry.debit - entry.credit;
+                            const due = Number(entry.debit) - Number(entry.credit);
                             return (
                               <TableRow
                                 key={entry.id}
@@ -483,9 +518,25 @@ const SupplierLedgerPage: React.FC = () => {
 
                                 {/* Debit — purchase total */}
                                 <TableCell align="left" sx={{ whiteSpace: "nowrap" }}>
-                                  <Typography variant="body2" fontWeight={600} color="text.primary">
-                                    {formatCurrency(entry.debit)}
-                                  </Typography>
+                                  {entry.currency === "USD" ? (
+                                    <Stack spacing={0.3}>
+                                      <Stack direction="row" alignItems="center" spacing={0.5}>
+                                        <Typography variant="body2" fontWeight={600} color="text.primary">
+                                          {formatNumber(Number(entry.debit).toFixed(2))}
+                                        </Typography>
+                                        <Typography variant="caption" sx={{ fontWeight: 700, fontSize: "0.6rem", px: 0.5, py: 0.1, borderRadius: 0.75, bgcolor: "success.light", color: "success.dark" }}>
+                                          USD
+                                        </Typography>
+                                      </Stack>
+                                      <Typography variant="caption" color="text.secondary">
+                                        ≈ {formatNumber((Number(entry.debit) * usdFactor).toFixed(2))} SDG
+                                      </Typography>
+                                    </Stack>
+                                  ) : (
+                                    <Typography variant="body2" fontWeight={600} color="text.primary">
+                                      {formatCurrency(entry.debit)}
+                                    </Typography>
+                                  )}
                                 </TableCell>
 
                                 {/* Credit — total paid for this purchase */}
@@ -499,14 +550,10 @@ const SupplierLedgerPage: React.FC = () => {
                                   )}
                                 </TableCell>
 
-                                {/* Balance — remaining due for this purchase */}
+                                {/* Balance — remaining due for this purchase (always SDG) */}
                                 <TableCell align="left" sx={{ whiteSpace: "nowrap" }}>
-                                  <Typography
-                                    variant="body2"
-                                    fontWeight={700}
-                                    color={due > 0 ? "error.main" : "success.dark"}
-                                  >
-                                    {formatCurrency(due)}
+                                  <Typography variant="body2" fontWeight={700} color={due > 0 ? "error.main" : "success.dark"}>
+                                    {formatCurrency(entry.currency === "USD" ? due * usdFactor : due)}
                                   </Typography>
                                 </TableCell>
 
@@ -533,7 +580,16 @@ const SupplierLedgerPage: React.FC = () => {
                         <TableFooter>
                           <TableRow sx={{ bgcolor: "grey.50", "& td": { borderTop: "2px solid", borderTopColor: "divider", fontWeight: 700, py: 1.5 } }}>
                             <TableCell align="right" colSpan={2} sx={{ fontSize: 12, color: "text.secondary" }}>الإجمالي</TableCell>
-                            <TableCell align="left" sx={{ fontSize: 13, color: "text.primary" }}>{formatCurrency(summary.total_purchases)}</TableCell>
+                            <TableCell align="left" sx={{ fontSize: 13, color: "text.primary" }}>
+                              <Stack spacing={0.3}>
+                                <span>{formatNumber((summary.total_purchases_sdg ?? 0).toFixed(2))} SDG</span>
+                                {hasUSD && (
+                                  <Typography variant="caption" color="success.dark" fontWeight={700}>
+                                    {formatNumber((summary.total_purchases_usd ?? 0).toFixed(2))} USD
+                                  </Typography>
+                                )}
+                              </Stack>
+                            </TableCell>
                             <TableCell align="left" sx={{ fontSize: 13, color: "success.dark" }}>{formatCurrency(summary.total_payments)}</TableCell>
                             <TableCell align="left" sx={{ fontSize: 13, color: isInDebt ? "error.main" : "success.dark" }}>{formatCurrency(summary.balance)}</TableCell>
                             <TableCell />
@@ -644,6 +700,7 @@ const SupplierLedgerPage: React.FC = () => {
         purchaseId={selectedPurchaseId}
         payments={selectedPurchasePayments}
         purchaseAmount={selectedPurchaseAmount}
+        currency={selectedEntry?.currency}
         supplierId={supplierId}
         onSuccess={fetchLedger}
       />

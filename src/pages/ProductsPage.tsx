@@ -259,6 +259,9 @@ const ProductsPage: React.FC = () => {
   // Flatten pages into a single array of products
   const products = data?.pages.flatMap((page) => page.data) || [];
 
+  // Total product count from paginated response
+  const totalProducts = data?.pages?.[0]?.total ?? 0;
+
   // Show loading when fetching initial data
   const isLoadingData = isLoading;
 
@@ -389,6 +392,101 @@ const ProductsPage: React.FC = () => {
     showSnackbar("تم حذف المنتج بنجاح", "success");
     // Reset queries to force a hard refresh and show loading state
     queryClient.resetQueries({ queryKey: ["products"] });
+  };
+
+  // --- Context Menu Handlers ---
+  const handleDuplicateProduct = async (product: Product) => {
+    try {
+      const duplicatedData: ProductFormData = {
+        name: `${product.name} (نسخة)`,
+        scientific_name: product.scientific_name,
+        sku: null, // Will be auto-generated
+        description: product.description,
+        image_url: product.image_url,
+        stock_quantity: 0,
+        stock_alert_level: product.stock_alert_level,
+        category_id: product.category_id,
+        stocking_unit_id: product.stocking_unit_id,
+        sellable_unit_id: product.sellable_unit_id,
+        units_per_stocking_unit: product.units_per_stocking_unit,
+        cost_price: product.cost_price,
+        sale_price: product.last_sale_price_per_sellable_unit,
+        has_expiry_date: product.has_expiry_date,
+      };
+
+      await productService.createProduct(duplicatedData);
+      showSnackbar("تم نسخ المنتج بنجاح", "success");
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    } catch (error) {
+      console.error("Error duplicating product:", error);
+      showSnackbar("فشل في نسخ المنتج", "error");
+    }
+  };
+
+  const handleExportProduct = async (product: Product) => {
+    try {
+      // Export single product data
+      const exportData = {
+        id: product.id,
+        name: product.name,
+        scientific_name: product.scientific_name,
+        sku: product.sku,
+        category: product.category_name,
+        stock_quantity: product.current_stock_quantity || product.stock_quantity,
+        cost_price: product.latest_cost_per_sellable_unit,
+        sale_price: product.last_sale_price_per_sellable_unit,
+        sellable_unit: product.sellable_unit_name,
+        stocking_unit: product.stocking_unit_name,
+        units_per_stocking: product.units_per_stocking_unit,
+      };
+
+      // Create and download CSV
+      const headers = Object.keys(exportData);
+      const values = Object.values(exportData);
+      const csvContent = [headers.join(','), values.join(',')].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `product_${product.sku || product.id}.csv`;
+      link.click();
+
+      showSnackbar("تم تصدير بيانات المنتج بنجاح", "success");
+    } catch (error) {
+      console.error("Error exporting product:", error);
+      showSnackbar("فشل في تصدير بيانات المنتج", "error");
+    }
+  };
+
+  const handleDeleteProduct = (product: Product) => {
+    // This will trigger the delete confirmation in ProductFormModal
+    openModal(product);
+    // The modal will handle the delete confirmation
+  };
+
+  const handleCopyProductInfo = async (product: Product) => {
+    try {
+      const productInfo = `
+المنتج: ${product.name}
+${product.scientific_name ? `الاسم العلمي: ${product.scientific_name}` : ''}
+${product.sku ? `SKU: ${product.sku}` : ''}
+الفئة: ${product.category_name || 'غير محدد'}
+المخزون: ${product.current_stock_quantity || product.stock_quantity || 0} ${product.sellable_unit_name || ''}
+التكلفة: ${product.latest_cost_per_sellable_unit ? formatCurrency(Number(product.latest_cost_per_sellable_unit)) : 'غير محدد'}
+السعر: ${product.last_sale_price_per_sellable_unit ? formatCurrency(Number(product.last_sale_price_per_sellable_unit)) : 'غير محدد'}
+      `.trim();
+
+      await navigator.clipboard.writeText(productInfo);
+      showSnackbar("تم نسخ معلومات المنتج إلى الحافظة", "success");
+    } catch (error) {
+      console.error("Error copying product info:", error);
+      showSnackbar("فشل في نسخ معلومات المنتج", "error");
+    }
+  };
+
+  const handleToggleFavorite = (product: Product) => {
+    // TODO: Implement favorites functionality
+    showSnackbar(`${product.name} ${Math.random() > 0.5 ? 'تم إضافته للمفضلة' : 'تم إزالته من المفضلة'}`, "info");
   };
 
   // --- Search Handlers ---
@@ -581,12 +679,17 @@ const ProductsPage: React.FC = () => {
             px: 2, // Add some horizontal padding for the header
           }}
         >
-          <Typography
-            component="h1"
-            className="text-gray-800 dark:text-gray-100 font-semibold"
-          >
-            إدارة المنتجات
-          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            <Typography
+              component="h1"
+              className="text-gray-800 dark:text-gray-100 font-semibold"
+            >
+              إدارة المنتجات
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              إجمالي المنتجات: {totalProducts.toLocaleString()}
+            </Typography>
+          </Box>
           <Tabs
             value={activeTab}
             onChange={handleTabChange}
@@ -987,6 +1090,12 @@ const ProductsPage: React.FC = () => {
               sortDirection={sortDirection}
               onSort={handleSort}
               sortingLoading={sortingLoading}
+              // Context Menu Props
+              onDuplicate={handleDuplicateProduct}
+              onExport={handleExportProduct}
+              onDelete={handleDeleteProduct}
+              onCopyInfo={handleCopyProductInfo}
+              onToggleFavorite={handleToggleFavorite}
             />
           </Box>
         )}

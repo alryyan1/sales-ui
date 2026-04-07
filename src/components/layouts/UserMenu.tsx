@@ -8,7 +8,7 @@ import {
     ListItemText,
     Divider,
 } from '@mui/material';
-import { LogOut, UserCircle } from 'lucide-react';
+import { LogOut, UserCircle, Settings as SettingsIcon } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 interface UserMenuProps {
@@ -37,6 +37,12 @@ const UserMenu: React.FC<UserMenuProps> = ({ anchorEl, onClose }) => {
                     <UserCircle size={20} />
                 </ListItemIcon>
                 <ListItemText>الملف الشخصي</ListItemText>
+            </MenuItem>
+            <MenuItem component={RouterLink} to="/admin/settings" onClick={onClose}>
+                <ListItemIcon>
+                    <SettingsIcon size={20} />
+                </ListItemIcon>
+                <ListItemText>الإعدادات</ListItemText>
             </MenuItem>
             <Divider />
             <MenuItem onClick={handleLogoutClick} sx={{ color: 'error.main' }}>

@@ -26,7 +26,6 @@ import {
   Pagination,
   IconButton,
   Tooltip,
-  Grid,
 } from "@mui/material";
 import {
   Search as SearchIcon,
@@ -153,35 +152,42 @@ const ExpensesPage: React.FC = () => {
   return (
     <Box
       sx={{
-        height: "calc(100vh - 100px)",
         width: "100%",
-        p: 2,
+        maxWidth: 1200,
+        mx: "auto",
+        p: { xs: 2, md: 3 },
         direction: "rtl",
       }}
     >
-      <Stack
-        direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        sx={{ mb: 2 }}
-      >
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 600 }}>
-          المصروفات
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={openCreateModal}
+      <Paper variant="outlined" sx={{ p: { xs: 2, md: 2.5 }, mb: 2, borderRadius: 3 }}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "stretch", sm: "center" }}
+          spacing={2}
+          sx={{ mb: 2 }}
         >
-          إضافة مصروف
-        </Button>
-      </Stack>
+          <Box>
+            <Typography variant="h5" component="h1" sx={{ fontWeight: 700 }}>
+              المصروفات
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              شاشة مصروفات مدمجة وسريعة مع بحث فوري وتصفية احترافية
+            </Typography>
+          </Box>
 
-      {/* Filters */}
-      <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={12} md={6} lg={3}>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={openCreateModal}
+            sx={{ pt: 1, pb: 1, minWidth: 150 }}
+          >
+            إضافة مصروف
+          </Button>
+        </Stack>
+
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="flex-end">
           <TextField
-            fullWidth
             size="small"
             placeholder="بحث..."
             value={searchTerm}
@@ -196,10 +202,10 @@ const ExpensesPage: React.FC = () => {
                 </InputAdornment>
               ),
             }}
+            sx={{ flex: 1, minWidth: 200 }}
           />
-        </Grid>
-        <Grid item xs={12} md={6} lg={3}>
-          <FormControl size="small" fullWidth>
+
+          <FormControl size="small" sx={{ minWidth: 180, flex: 1 }}>
             <InputLabel>القسم</InputLabel>
             <Select
               label="القسم"
@@ -216,12 +222,10 @@ const ExpensesPage: React.FC = () => {
               ))}
             </Select>
           </FormControl>
-        </Grid>
-        <Grid item xs={12} md={6} lg={3}>
+
           <TextField
             type="date"
             size="small"
-            fullWidth
             label="من تاريخ"
             InputLabelProps={{ shrink: true }}
             value={dateFrom}
@@ -229,13 +233,12 @@ const ExpensesPage: React.FC = () => {
               setDateFrom(e.target.value);
               setCurrentPage(1);
             }}
+            sx={{ minWidth: 180, flex: 1 }}
           />
-        </Grid>
-        <Grid item xs={12} md={6} lg={3}>
+
           <TextField
             type="date"
             size="small"
-            fullWidth
             label="إلى تاريخ"
             InputLabelProps={{ shrink: true }}
             value={dateTo}
@@ -243,17 +246,20 @@ const ExpensesPage: React.FC = () => {
               setDateTo(e.target.value);
               setCurrentPage(1);
             }}
+            sx={{ minWidth: 180, flex: 1 }}
           />
-        </Grid>
-      </Grid>
+        </Stack>
+      </Paper>
 
       {isLoading && (
-        <Stack direction="row" spacing={2} alignItems="center" sx={{ py: 4 }}>
-          <CircularProgress size={20} />
-          <Typography variant="body2" color="text.secondary">
-            جاري التحميل...
-          </Typography>
-        </Stack>
+        <Paper variant="outlined" sx={{ p: 3, mb: 2, borderRadius: 3 }}>
+          <Stack direction="row" spacing={2} alignItems="center" sx={{ py: 1 }}>
+            <CircularProgress size={20} />
+            <Typography variant="body2" color="text.secondary">
+              جاري التحميل...
+            </Typography>
+          </Stack>
+        </Paper>
       )}
 
       {!isLoading && error && (
@@ -264,66 +270,70 @@ const ExpensesPage: React.FC = () => {
 
       {!isLoading && !error && response && (
         <>
-          <TableContainer component={Paper} sx={{ mb: 2 }}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>#</TableCell>
-                  <TableCell>التاريخ</TableCell>
-                  <TableCell>العنوان</TableCell>
-                  <TableCell>القسم</TableCell>
-                  <TableCell align="right">المبلغ</TableCell>
-                  <TableCell>المرجع</TableCell>
-                  <TableCell align="center">الإجراءات</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {response.data.map((exp) => (
-                  <TableRow key={exp.id} hover>
-                    <TableCell>{exp.id}</TableCell>
-                    <TableCell>{exp.expense_date}</TableCell>
-                    <TableCell>{exp.title}</TableCell>
-                    <TableCell>{exp.expense_category_name || "—"}</TableCell>
-                    <TableCell align="right">
-                      {Number(exp.amount).toFixed(2)}
-                    </TableCell>
-                    <TableCell>{exp.reference || "—"}</TableCell>
-                    <TableCell align="center">
-                      <Stack direction="row" spacing={1} justifyContent="center">
-                        <Tooltip title="تعديل">
-                          <IconButton
-                            size="small"
-                            color="primary"
-                            onClick={() => openEditModal(exp)}
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="حذف">
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => handleDelete(exp)}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Stack>
-                    </TableCell>
+          <Paper variant="outlined" sx={{ mb: 2, borderRadius: 3, overflow: "hidden" }}>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: "grey.100" }}>
+                    <TableCell sx={{ fontWeight: 700, py: 1 }}>#</TableCell>
+                    <TableCell sx={{ fontWeight: 700, py: 1 }}>التاريخ</TableCell>
+                    <TableCell sx={{ fontWeight: 700, py: 1 }}>العنوان</TableCell>
+                    <TableCell sx={{ fontWeight: 700, py: 1 }}>القسم</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700, py: 1 }}>المبلغ</TableCell>
+                    <TableCell sx={{ fontWeight: 700, py: 1 }}>المرجع</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, py: 1 }}>الإجراءات</TableCell>
                   </TableRow>
-                ))}
-                {response.data.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        لا توجد نتائج
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {response.data.map((exp) => (
+                    <TableRow key={exp.id} hover sx={{ '&:last-child td': { borderBottom: 0 } }}>
+                      <TableCell sx={{ py: 1 }}>{exp.id}</TableCell>
+                      <TableCell sx={{ py: 1 }}>{exp.expense_date}</TableCell>
+                      <TableCell sx={{ py: 1 }}>{exp.title}</TableCell>
+                      <TableCell sx={{ py: 1 }}>{exp.expense_category_name || "—"}</TableCell>
+                      <TableCell align="right" sx={{ py: 1 }}>
+                        {Number(exp.amount).toFixed(2)}
+                      </TableCell>
+                      <TableCell sx={{ py: 1 }}>{exp.reference || "—"}</TableCell>
+                      <TableCell align="center" sx={{ py: 1 }}>
+                        <Stack direction="row" spacing={0.5} justifyContent="center">
+                          <Tooltip title="تعديل">
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              onClick={() => openEditModal(exp)}
+                              sx={{ p: 0.75 }}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="حذف">
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => handleDelete(exp)}
+                              sx={{ p: 0.75 }}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {response.data.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          لا توجد نتائج
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
 
           {response.last_page > 1 && (
             <Box sx={{ display: "flex", justifyContent: "center", p: 2 }}>

@@ -22,6 +22,7 @@ import {
   FormControl,
 } from "@mui/material";
 import { ProductImage } from "./ProductImage";
+import { ProductContextMenu } from "./ProductContextMenu";
 import {
   AlertTriangle,
   Copy,
@@ -64,6 +65,12 @@ interface ProductsTableProps {
   isLoading?: boolean;
   onEdit: (product: ProductWithOptionalBatches) => void;
   onBarcodeLabel: (product: ProductWithOptionalBatches) => void;
+  // Context Menu Handlers
+  onDuplicate?: (product: ProductWithOptionalBatches) => void;
+  onExport?: (product: ProductWithOptionalBatches) => void;
+  onDelete?: (product: ProductWithOptionalBatches) => void;
+  onCopyInfo?: (product: ProductWithOptionalBatches) => void;
+  onToggleFavorite?: (product: ProductWithOptionalBatches) => void;
   // Inline Creation Props
   categories: Category[];
   stockingUnits: Unit[];
@@ -94,7 +101,47 @@ interface ProductRowProps {
   copiedSku: string | null;
   isLoading: boolean;
   vis: NonNullable<ProductsTableProps["visibleColumns"]>;
+  // Context Menu Props
+  onDuplicate: (product: ProductWithOptionalBatches) => void;
+  onExport: (product: ProductWithOptionalBatches) => void;
+  onDelete: (product: ProductWithOptionalBatches) => void;
+  onCopyInfo: (product: ProductWithOptionalBatches) => void;
+  onToggleFavorite: (product: ProductWithOptionalBatches) => void;
+  isFavorite?: boolean;
 }
+
+const PriceWithCurrency: React.FC<{
+  value: number;
+  currency: string;
+  highlight?: boolean;
+}> = ({ value, currency, highlight = false }) => {
+  const isUSD = currency === "USD";
+  return (
+    <Stack direction="row" spacing={0.4} alignItems="center" justifyContent="center">
+      <Typography
+        variant="body2"
+        sx={{ fontWeight: highlight ? 700 : 400, color: highlight ? "primary.main" : "text.primary" }}
+      >
+        {formatNumber(value.toFixed(2))}
+      </Typography>
+      <Typography
+        variant="caption"
+        sx={{
+          fontWeight: 700,
+          fontSize: "0.62rem",
+          px: 0.5,
+          py: 0.1,
+          borderRadius: 0.75,
+          lineHeight: 1.6,
+          bgcolor: isUSD ? "success.light" : "info.light",
+          color: isUSD ? "success.dark" : "info.dark",
+        }}
+      >
+        {currency}
+      </Typography>
+    </Stack>
+  );
+};
 
 const ProductRow: React.FC<ProductRowProps> = ({
   product,
@@ -104,6 +151,12 @@ const ProductRow: React.FC<ProductRowProps> = ({
   copiedSku,
   isLoading,
   vis,
+  onDuplicate,
+  onExport,
+  onDelete,
+  onCopyInfo,
+  onToggleFavorite,
+  isFavorite = false,
 }) => {
   const stockQty = Number(
     product.current_stock_quantity ?? product.stock_quantity ?? 0,
@@ -123,6 +176,12 @@ const ProductRow: React.FC<ProductRowProps> = ({
   const prevStockRef = useRef<number>(stockQty);
   const [animationClass, setAnimationClass] = useState("");
 
+  // Context Menu State
+  const [contextMenu, setContextMenu] = useState<{
+    mouseX: number;
+    mouseY: number;
+  } | null>(null);
+
   useEffect(() => {
     if (stockQty > prevStockRef.current) {
       setAnimationClass("animate-flash-green");
@@ -139,6 +198,23 @@ const ProductRow: React.FC<ProductRowProps> = ({
     }
   }, [stockQty]);
 
+  // Context Menu Handlers
+  const handleContextMenu = (event: React.MouseEvent) => {
+    event.preventDefault();
+    setContextMenu(
+      contextMenu === null
+        ? {
+            mouseX: event.clientX + 2,
+            mouseY: event.clientY - 6,
+          }
+        : null,
+    );
+  };
+
+  const handleContextMenuClose = () => {
+    setContextMenu(null);
+  };
+
   // Format expiry date
   const formatExpiryDate = (dateString: string | null) => {
     if (!dateString) return "---";
@@ -147,30 +223,32 @@ const ProductRow: React.FC<ProductRowProps> = ({
   };
 
   return (
-    <TableRow
-      hover
-      sx={{
-        cursor: "pointer",
-        bgcolor: colorHighlight
-          ? isExpired
-            ? "rgba(211, 47, 47, 0.08)"
-            : isOutOfStock
-              ? "rgba(237, 108, 2, 0.08)"
-              : "transparent"
-          : "transparent",
-        "&:hover": {
+    <>
+      <TableRow
+        hover
+        onContextMenu={handleContextMenu}
+        sx={{
+          cursor: "pointer",
           bgcolor: colorHighlight
             ? isExpired
-              ? "rgba(211, 47, 47, 0.12) !important"
+              ? "rgba(211, 47, 47, 0.08)"
               : isOutOfStock
-                ? "rgba(237, 108, 2, 0.12) !important"
-                : undefined
-            : undefined,
-        },
-      }}
-      className={animationClass}
-      onClick={() => onEdit(product)}
-    >
+                ? "rgba(237, 108, 2, 0.08)"
+                : "transparent"
+            : "transparent",
+          "&:hover": {
+            bgcolor: colorHighlight
+              ? isExpired
+                ? "rgba(211, 47, 47, 0.12) !important"
+                : isOutOfStock
+                  ? "rgba(237, 108, 2, 0.12) !important"
+                  : undefined
+              : undefined,
+          },
+        }}
+        className={animationClass}
+        onClick={() => onEdit(product)}
+      >
       <TableCell align="center" sx={{ width: 48, p: 0.5 }}>
         <ProductImage
           imageUrl={product.image_url}
@@ -242,19 +320,19 @@ const ProductRow: React.FC<ProductRowProps> = ({
       {vis.cost !== false && (
         <TableCell align="center">
           {product.latest_cost_per_sellable_unit
-            ? formatCurrency(Number(product.latest_cost_per_sellable_unit)) : "---"}
+            ? <PriceWithCurrency value={Number(product.latest_cost_per_sellable_unit)} currency={product.last_purchase_currency ?? "SDG"} />
+            : "---"}
         </TableCell>
       )}
       {vis.sale_price !== false && (
         <TableCell align="center">
           {product.last_sale_price_per_sellable_unit ? (
             <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center">
-              <Typography
-                variant="body2"
-                sx={{ color: product.sale_price != null ? "primary.main" : "text.primary", fontWeight: product.sale_price != null ? 700 : 400 }}
-              >
-                {formatCurrency(Number(product.last_sale_price_per_sellable_unit))}
-              </Typography>
+              <PriceWithCurrency
+                value={Number(product.last_sale_price_per_sellable_unit)}
+                currency={product.last_purchase_currency ?? "SDG"}
+                highlight={product.sale_price != null}
+              />
               {product.sale_price != null && (
                 <Tooltip title="سعر البيع مُحدد يدوياً على المنتج">
                   <Tag style={{ width: 13, height: 13, color: "var(--mui-palette-primary-main)" }} />
@@ -272,6 +350,23 @@ const ProductRow: React.FC<ProductRowProps> = ({
         </TableCell>
       )}
     </TableRow>
+
+    {/* Context Menu */}
+    <ProductContextMenu
+      anchorPosition={contextMenu ? { left: contextMenu.mouseX, top: contextMenu.mouseY } : undefined}
+      open={Boolean(contextMenu)}
+      onClose={handleContextMenuClose}
+      product={product}
+      onEdit={onEdit}
+      onBarcodeLabel={onBarcodeLabel}
+      onDuplicate={onDuplicate}
+      onExport={onExport}
+      onDelete={onDelete}
+      onCopyInfo={onCopyInfo}
+      onToggleFavorite={onToggleFavorite}
+      isFavorite={isFavorite}
+    />
+    </>
   );
 };
 
@@ -549,6 +644,11 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
   isLoading = false,
   onEdit,
   onBarcodeLabel,
+  onDuplicate = () => {},
+  onExport = () => {},
+  onDelete = () => {},
+  onCopyInfo = () => {},
+  onToggleFavorite = () => {},
   categories,
   stockingUnits,
   sellableUnits,
@@ -938,6 +1038,11 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                   copiedSku={copiedSku}
                   isLoading={isLoading}
                   vis={vis}
+                  onDuplicate={onDuplicate}
+                  onExport={onExport}
+                  onDelete={onDelete}
+                  onCopyInfo={onCopyInfo}
+                  onToggleFavorite={onToggleFavorite}
                 />
               ))}
 

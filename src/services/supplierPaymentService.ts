@@ -33,6 +33,7 @@ export interface UpdatePaymentData extends CreatePaymentData {
 export interface LedgerEntry {
   id: string;
   purchase_id?: number | string;
+  currency?: 'SDG' | 'USD';
   date: string;
   type: 'purchase' | 'payment';
   description: string;
@@ -57,6 +58,8 @@ export interface SupplierLedger {
   };
   summary: {
     total_purchases: number;
+    total_purchases_sdg: number;
+    total_purchases_usd: number;
     total_payments: number;
     balance: number;
   };

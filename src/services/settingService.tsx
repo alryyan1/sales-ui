@@ -50,6 +50,7 @@ export interface AppSettings {
   pos_show_out_of_stock_products?: boolean;
   purchase_use_batch_number?: boolean;
   purchase_use_expiry_date?: boolean;
+  default_purchase_currency?: "SDG" | "USD";
 }
 
 // Type for the update payload (can be partial)

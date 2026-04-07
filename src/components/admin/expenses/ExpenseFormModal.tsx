@@ -134,7 +134,7 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
       maxWidth="xs"
       fullWidth
       PaperProps={{
-        sx: { borderRadius: 3 },
+        sx: { borderRadius: 3, overflow: "hidden" },
       }}
     >
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -143,21 +143,23 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            pt: 2,
+            px: 2,
             pb: 1,
             borderBottom: "1px solid",
             borderColor: "divider",
           }}
         >
-          <Typography variant="h6" fontWeight="bold">
+          <Typography variant="h6" fontWeight={700}>
             {isEditMode ? "تعديل المصروف" : "إضافة مصروف"}
           </Typography>
           <IconButton onClick={onClose} size="small">
-            <X size={20} />
+            <X size={18} />
           </IconButton>
         </DialogTitle>
 
-        <DialogContent sx={{ mt: 2,pb:2,mb:2 }}>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2,p:2,mb:2 }}>
+        <DialogContent sx={{ px: 2, py: 2 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
             {serverError && <Alert severity="error">{serverError}</Alert>}
 
             <Controller
@@ -225,21 +227,23 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
           </Box>
         </DialogContent>
 
-        <DialogActions sx={{ p: 2, pt: 0 }}>
-          <Button onClick={onClose} disabled={isSubmitting} color="inherit">
+        <DialogActions sx={{ px: 2, py: 2, gap: 1 }}>
+          <Button onClick={onClose} disabled={isSubmitting} color="inherit" size="small">
             إلغاء
           </Button>
           <Button
             type="submit"
             variant="contained"
             disabled={isSubmitting}
+            size="small"
             startIcon={
               isSubmitting ? (
-                <CircularProgress size={20} color="inherit" />
+                <CircularProgress size={18} color="inherit" />
               ) : null
             }
+            sx={{ minWidth: 100 }}
           >
-            {isEditMode ? "تحديث" : "إنشاء"}
+            {isEditMode ? "تحديث" : "حفظ"}
           </Button>
         </DialogActions>
       </form>

@@ -120,6 +120,12 @@ const theme = createTheme(
           },
         },
       },
+      MuiAutocomplete: {
+        defaultProps: {
+          slotProps: { paper: { dir: "ltr" } as any },
+          ListboxProps: { dir: "ltr" } as any,
+        },
+      },
       MuiDialog: {
         styleOverrides: {
           paper: {

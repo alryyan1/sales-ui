@@ -38,6 +38,7 @@ export interface Product {
   // Optional accessors that might be added by backend ProductResource
   // --- Stock (always in sellable units) ---
   latest_purchase_cost?: string | number | null;
+  last_purchase_currency?: "SDG" | "USD" | null;
   suggested_sale_price?: string | number | null;
   latest_cost_per_sellable_unit?: number | null;
   suggested_sale_price_per_sellable_unit?: number | null;
@@ -305,7 +306,68 @@ const productService = {
   },
 
   /**
-   * Delete a product.
+   * Get purchase history for a product (paginated).
+   */
+  getProductPurchaseHistory: async (
+    productId: number,
+    page: number = 1,
+    perPage: number = 15,
+  ): Promise<{
+    data: {
+      id: number;
+      purchase_id: number;
+      purchase_date: string | null;
+      supplier_name: string | null;
+      batch_number: string | null;
+      quantity: number;
+      unit_cost: number | string;
+      cost_per_sellable_unit: number | string;
+      sale_price: number | string | null;
+      expiry_date: string | null;
+      created_at: string | null;
+    }[];
+    meta: { current_page: number; last_page: number; total: number; per_page: number };
+  }> => {
+    const response = await apiClient.get(
+      `/products/${productId}/purchase-history?page=${page}&per_page=${perPage}`,
+    );
+    return response.data;
+  },
+
+  /**
+   * Get sales history for a product (paginated).
+   */
+  getProductSalesHistory: async (
+    productId: number,
+    page: number = 1,
+    perPage: number = 15,
+  ): Promise<{
+    data: {
+      id: number;
+      sale_id: number;
+      sale: {
+        id: number;
+        sale_date: string;
+        invoice_number: string | null;
+        client_name?: string;
+        user_name?: string | null;
+      } | null;
+      quantity: number;
+      unit_price: number | string;
+      total_price: number | string;
+      batch_number_sold: string | null;
+      created_at: string | null;
+    }[];
+    meta: { current_page: number; last_page: number; total: number; per_page: number };
+  }> => {
+    const response = await apiClient.get(
+      `/products/${productId}/sales-history?page=${page}&per_page=${perPage}`,
+    );
+    return response.data;
+  },
+
+  /**
+   * Delete a product (soft delete).
    */
   deleteProduct: async (id: number): Promise<void> => {
     try {

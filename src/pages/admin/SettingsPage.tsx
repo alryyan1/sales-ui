@@ -15,18 +15,7 @@ import { PdfReportBrandingSettings } from "@/components/settings/PdfReportBrandi
 // shadcn/ui Components
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import {
-  Loader2,
-  Settings,
-  Building2,
-  Package,
-  Store,
-  FileText,
-  Save,
-  ShoppingCart,
-} from "lucide-react";
+import { Loader2, Settings, Save } from "lucide-react";
 
 // Form values type
 type SettingsFormValues = Partial<AppSettings>;
@@ -36,7 +25,6 @@ const SettingsPage: React.FC = () => {
   const { settings, isLoadingSettings, updateSettings, fetchSettings } =
     useSettings();
   const [serverError, setServerError] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState("0");
 
   const form = useForm<SettingsFormValues>({
     defaultValues: {
@@ -139,20 +127,15 @@ const SettingsPage: React.FC = () => {
     );
   }
 
-  const tabTriggerCls =
-    "h-18 rounded-none border-b-2 border-transparent px-4 py-4 data-[state=active]:border-primary data-[state=active]:bg-transparent";
-
   return (
     <div className="min-h-screen bg-background p-4 md:p-8" dir="rtl">
       <div className="mx-auto max-w-7xl">
         {/* Page Header */}
         <div className="mb-8 border-b pb-6">
           <div className="flex items-center gap-4">
-            <Avatar className="h-14 w-14 bg-primary shadow-md">
-              <AvatarFallback className="bg-primary text-primary-foreground">
-                <Settings className="h-7 w-7" />
-              </AvatarFallback>
-            </Avatar>
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-md">
+              <Settings className="h-7 w-7" />
+            </div>
             <div>
               <h1 className="text-3xl font-bold text-foreground">
                 إعدادات النظام
@@ -172,120 +155,44 @@ const SettingsPage: React.FC = () => {
             </Alert>
           )}
 
-          <Tabs
-            value={activeSection}
-            onValueChange={setActiveSection}
-            className="mb-6"
-          >
-            <TabsList className="h-auto w-full justify-start border-b bg-transparent p-0">
-              <TabsTrigger value="0" className={tabTriggerCls}>
-                <div className="flex items-center gap-2 text-right">
-                  <Building2 className="h-5 w-5" />
-                  <div>
-                    <div className="font-medium">بيانات الشركة</div>
-                    <div className="text-xs text-muted-foreground">
-                      الاسم، العنوان، وأرقام التواصل
-                    </div>
-                  </div>
-                </div>
-              </TabsTrigger>
+          <div className="space-y-6 pb-10">
+            <CompanyInfoSettings control={control} />
+            <BusinessRulesSettings control={control} />
+            <PosSettings control={control} />
+            <PurchaseSettings control={control} />
+          </div>
 
-              <TabsTrigger value="1" className={tabTriggerCls}>
-                <div className="flex items-center gap-2 text-right">
-                  <Package className="h-5 w-5" />
-                  <div>
-                    <div className="font-medium">قواعد العمل والمخزون</div>
-                    <div className="text-xs text-muted-foreground">
-                      العملة، التنبيهات، والضرائب
-                    </div>
-                  </div>
-                </div>
-              </TabsTrigger>
-
-              <TabsTrigger value="2" className={tabTriggerCls}>
-                <div className="flex items-center gap-2 text-right">
-                  <Store className="h-5 w-5" />
-                  <div>
-                    <div className="font-medium">نقاط البيع (POS)</div>
-                    <div className="text-xs text-muted-foreground">
-                      إعدادات الورديات وطرق البيع
-                    </div>
-                  </div>
-                </div>
-              </TabsTrigger>
-
-              <TabsTrigger value="5" className={tabTriggerCls}>
-                <div className="flex items-center gap-2 text-right">
-                  <ShoppingCart className="h-5 w-5" />
-                  <div>
-                    <div className="font-medium">المشتريات</div>
-                    <div className="text-xs text-muted-foreground">
-                      الباتش وتاريخ الانتهاء
-                    </div>
-                  </div>
-                </div>
-              </TabsTrigger>
-
-              <TabsTrigger value="6" className={tabTriggerCls}>
-                <div className="flex items-center gap-2 text-right">
-                  <FileText className="h-5 w-5" />
-                  <div>
-                    <div className="font-medium">تقارير PDF والهيدر</div>
-                    <div className="text-xs text-muted-foreground">
-                      الشعار، الهيدر، وتخصيص كل تقرير
-                    </div>
-                  </div>
-                </div>
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Content Area */}
-            <div className="space-y-6 pb-24">
-              <TabsContent value="0">
-                <CompanyInfoSettings control={control} />
-              </TabsContent>
-
-              <TabsContent value="1">
-                <BusinessRulesSettings control={control} />
-              </TabsContent>
-
-              <TabsContent value="2">
-                <PosSettings control={control} />
-              </TabsContent>
-
-              <TabsContent value="5">
-                <PurchaseSettings control={control} />
-              </TabsContent>
-
-              {/* PDF & Branding tab — self-contained MUI component */}
-              <TabsContent value="6">
-                <PdfReportBrandingSettings />
-              </TabsContent>
-            </div>
-          </Tabs>
-
-          {/* Floating Save Bar (only for tabs 0-2, 5) */}
-          {activeSection !== "6" && (
-            <div className="fixed bottom-6 left-1/2 z-50 flex min-w-[400px] max-w-[90%] -translate-x-1/2 items-center justify-between gap-4 rounded-lg border bg-card p-4 shadow-lg">
-              <p className="hidden text-sm font-medium text-muted-foreground sm:block">
-                هل قمت بإجراء تعديلات؟
-              </p>
-              <Button
-                type="submit"
-                size="lg"
-                disabled={isSubmitting || isLoadingSettings}
-                className="font-semibold"
-              >
-                {isSubmitting ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="mr-2 h-4 w-4" />
-                )}
-                حفظ التغييرات
-              </Button>
-            </div>
-          )}
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              size="lg"
+              disabled={isSubmitting || isLoadingSettings}
+              className="font-semibold"
+            >
+              {isSubmitting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              حفظ التغييرات
+            </Button>
+          </div>
         </form>
+
+        <div className="mt-8 space-y-4">
+          <div className="rounded-2xl border border-muted/20 bg-muted/50 p-4">
+            <div className="flex items-center gap-3">
+              <Settings className="h-5 w-5 text-primary" />
+              <div>
+                <p className="font-medium">إعدادات تقارير PDF والهيدر</p>
+                <p className="text-sm text-muted-foreground">
+                  التحكم بالشعار وهيدر التقارير من خلال هذا القسم.
+                </p>
+              </div>
+            </div>
+          </div>
+          <PdfReportBrandingSettings />
+        </div>
       </div>
     </div>
   );

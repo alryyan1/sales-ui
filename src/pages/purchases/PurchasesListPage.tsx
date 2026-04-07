@@ -6,7 +6,6 @@ import {
   Box,
   Button,
   Chip,
-  Collapse,
   Divider,
   FormControl,
   IconButton,
@@ -16,6 +15,7 @@ import {
   Menu,
   MenuItem,
   Paper,
+  Popover,
   Select,
   Skeleton,
   Stack,
@@ -31,27 +31,27 @@ import {
   Typography,
   Autocomplete,
   Alert,
+  alpha,
+  useTheme,
 } from "@mui/material";
 
 import AddIcon from "@mui/icons-material/Add";
 import FilterListIcon from "@mui/icons-material/FilterList";
-import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import TableViewIcon from "@mui/icons-material/TableView";
 import DescriptionIcon from "@mui/icons-material/Description";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import HistoryIcon from "@mui/icons-material/History";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
-import PersonIcon from "@mui/icons-material/Person";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
-import ClearAllIcon from "@mui/icons-material/ClearAll";
-import CloseIcon from "@mui/icons-material/Close";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import CurrencyExchangeIcon from "@mui/icons-material/CurrencyExchange";
 
 import purchaseService from "../../services/purchaseService";
 import supplierService, { Supplier } from "../../services/supplierService";
@@ -81,6 +81,7 @@ const STATUS_CONFIG = {
 
 const PurchasesListPage: React.FC = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
 
   const [purchasesResponse, setPurchasesResponse] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -92,7 +93,6 @@ const PurchasesListPage: React.FC = () => {
   const [loadingSuppliers, setLoadingSuppliers] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
-  const [showFilters, setShowFilters] = useState(true);
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productPurchases, setProductPurchases] = useState<any[]>([]);
@@ -111,6 +111,7 @@ const PurchasesListPage: React.FC = () => {
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [activeMenuPurchase, setActiveMenuPurchase] = useState<any | null>(null);
+  const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleMenuOpen = (e: React.MouseEvent<HTMLElement>, purchase: any) => {
     e.stopPropagation();
@@ -122,6 +123,15 @@ const PurchasesListPage: React.FC = () => {
     e?.stopPropagation();
     setAnchorEl(null);
     setActiveMenuPurchase(null);
+  };
+
+  const handleFilterToggle = (e: React.MouseEvent<HTMLElement>) => {
+    e.stopPropagation();
+    setFilterAnchorEl((prev) => (prev ? null : e.currentTarget));
+  };
+
+  const handleFilterClose = () => {
+    setFilterAnchorEl(null);
   };
 
   // ── Data fetching ──────────────────────────────────────────────────────────
@@ -214,6 +224,11 @@ const PurchasesListPage: React.FC = () => {
 
   const rows: any[] = purchasesResponse?.data ?? [];
   const totalItems = rows.reduce((s: number, p: any) => s + Number(p.items_count ?? p.items?.length ?? 0), 0);
+  const totalSDG = rows.filter((p: any) => !p.currency || p.currency === "SDG").reduce((s: number, p: any) => s + Number(p.total_amount ?? 0), 0);
+  const totalUSD = rows.filter((p: any) => p.currency === "USD").reduce((s: number, p: any) => s + Number(p.total_amount ?? 0), 0);
+
+  const fmtAmount = (n: number) =>
+    n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -236,8 +251,8 @@ const PurchasesListPage: React.FC = () => {
           <Button
             variant="outlined"
             size="small"
-            startIcon={showFilters ? <ExpandLessIcon /> : <FilterListIcon />}
-            onClick={() => setShowFilters(!showFilters)}
+            startIcon={<FilterListIcon />}
+            onClick={handleFilterToggle}
             endIcon={activeFilterCount > 0 ? <Chip label={activeFilterCount} size="small" color="primary" sx={{ height: 18, fontSize: "0.65rem" }} /> : undefined}
           >
             الفلاتر
@@ -251,83 +266,86 @@ const PurchasesListPage: React.FC = () => {
         </Stack>
       </Stack>
 
-      {/* ── Filters ── */}
-      <Collapse in={showFilters}>
-        <Paper variant="outlined" sx={{ p: 2, mb: 2, borderRadius: 2 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
+      <Popover
+        open={Boolean(filterAnchorEl)}
+        anchorEl={filterAnchorEl}
+        onClose={handleFilterClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+        transformOrigin={{ vertical: "top", horizontal: "left" }}
+        PaperProps={{ sx: { width: 420, maxWidth: "90vw", p: 2, borderRadius: 2, boxShadow: 8 } }}
+      >
+        <Stack direction="column" gap={2}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Typography variant="subtitle2" fontWeight={700}>بحث وفلترة</Typography>
-            {hasActiveFilters && (
-              <Button size="small" color="error" startIcon={<ClearAllIcon />} onClick={clearFilters}>
-                مسح الكل
-              </Button>
-            )}
+            <Button size="small" onClick={handleFilterClose}>إغلاق</Button>
           </Stack>
-          <Stack direction="row" flexWrap="wrap" gap={2}>
-            {/* Supplier */}
-            <Autocomplete
-              options={suppliers}
-              getOptionLabel={(o) => o.name}
-              value={suppliers.find((s) => s.id === filters.supplier_id) || null}
-              onChange={(_, v) => handleFilterChange("supplier_id", v?.id)}
-              loading={loadingSuppliers}
-              size="small"
-              sx={{ minWidth: 180 }}
-              renderInput={(params) => <TextField {...params} label="المورد" />}
-            />
 
-            {/* Product */}
-            <Autocomplete
-              options={products}
-              getOptionLabel={(o) => `${o.name}${o.sku ? ` (${o.sku})` : ""}`}
-              value={products.find((p) => p.id === filters.product_id) || null}
-              onChange={(_, v) => handleFilterChange("product_id", v?.id)}
-              loading={loadingProducts}
-              size="small"
-              sx={{ minWidth: 200 }}
-              renderInput={(params) => <TextField {...params} label="المنتج" />}
-            />
+          <Autocomplete
+            options={suppliers}
+            getOptionLabel={(o) => o.name}
+            value={suppliers.find((s) => s.id === filters.supplier_id) || null}
+            onChange={(_, v) => handleFilterChange("supplier_id", v?.id)}
+            loading={loadingSuppliers}
+            size="small"
+            renderInput={(params) => <TextField {...params} label="المورد" />}
+          />
 
-            {/* Status */}
-            <FormControl size="small" sx={{ minWidth: 140 }}>
-              <InputLabel>الحالة</InputLabel>
-              <Select
-                value={filters.status || ""}
-                label="الحالة"
-                onChange={(e) => handleFilterChange("status", e.target.value || undefined)}
-              >
-                <MenuItem value="">الكل</MenuItem>
-                <MenuItem value="pending">قيد الانتظار</MenuItem>
-                <MenuItem value="ordered">تم الطلب</MenuItem>
-                <MenuItem value="received">تم الاستلام</MenuItem>
-              </Select>
-            </FormControl>
+          <Autocomplete
+            options={products}
+            getOptionLabel={(o) => `${o.name}${o.sku ? ` (${o.sku})` : ""}`}
+            value={products.find((p) => p.id === filters.product_id) || null}
+            onChange={(_, v) => handleFilterChange("product_id", v?.id)}
+            loading={loadingProducts}
+            size="small"
+            renderInput={(params) => <TextField {...params} label="المنتج" />}
+          />
 
-            {/* Purchase date */}
-            <TextField
-              size="small"
-              label="تاريخ الشراء"
-              type="date"
-              value={filters.purchase_date || ""}
-              onChange={(e) => handleFilterChange("purchase_date", e.target.value)}
-              inputProps={{ max: dayjs().format("YYYY-MM-DD") }}
-              InputLabelProps={{ shrink: true }}
-              sx={{ minWidth: 160 }}
-            />
+          <FormControl size="small" fullWidth>
+            <InputLabel>الحالة</InputLabel>
+            <Select
+              value={filters.status || ""}
+              label="الحالة"
+              onChange={(e) => handleFilterChange("status", e.target.value || undefined)}
+            >
+              <MenuItem value="">الكل</MenuItem>
+              <MenuItem value="pending">قيد الانتظار</MenuItem>
+              <MenuItem value="ordered">تم الطلب</MenuItem>
+              <MenuItem value="received">تم الاستلام</MenuItem>
+            </Select>
+          </FormControl>
 
-            {/* Created at */}
-            <TextField
-              size="small"
-              label="تاريخ الإنشاء"
-              type="date"
-              value={filters.created_at || ""}
-              onChange={(e) => handleFilterChange("created_at", e.target.value)}
-              inputProps={{ max: dayjs().format("YYYY-MM-DD") }}
-              InputLabelProps={{ shrink: true }}
-              sx={{ minWidth: 160 }}
-            />
+          <TextField
+            size="small"
+            label="تاريخ الشراء"
+            type="date"
+            value={filters.purchase_date || ""}
+            onChange={(e) => handleFilterChange("purchase_date", e.target.value)}
+            inputProps={{ max: dayjs().format("YYYY-MM-DD") }}
+            InputLabelProps={{ shrink: true }}
+            fullWidth
+          />
+
+          <TextField
+            size="small"
+            label="تاريخ الإنشاء"
+            type="date"
+            value={filters.created_at || ""}
+            onChange={(e) => handleFilterChange("created_at", e.target.value)}
+            inputProps={{ max: dayjs().format("YYYY-MM-DD") }}
+            InputLabelProps={{ shrink: true }}
+            fullWidth
+          />
+
+          <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1} flexWrap="wrap">
+            <Button size="small" variant="outlined" color="error" onClick={clearFilters} disabled={!hasActiveFilters}>
+              مسح الكل
+            </Button>
+            <Button size="small" variant="contained" onClick={handleFilterClose}>
+              تطبيق
+            </Button>
           </Stack>
-        </Paper>
-      </Collapse>
+        </Stack>
+      </Popover>
 
       {/* ── Loading ── */}
       {isLoading && (
@@ -362,14 +380,51 @@ const PurchasesListPage: React.FC = () => {
 
       {/* ── Table ── */}
       {!isLoading && !error && purchasesResponse && (
-        <Paper variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>
+        <Paper
+          variant="outlined"
+          sx={{
+            borderRadius: 2,
+            overflow: "hidden",
+            border: `1px solid ${theme.palette.divider}`,
+          }}
+        >
           <TableContainer>
-            <Table size="small">
+            <Table size="small" sx={{ tableLayout: "fixed" }}>
               <TableHead>
-                <TableRow sx={{ bgcolor: "grey.100" }}>
-                  {["#", "التاريخ", "المورد", "الحالة", "عدد الأصناف", ""].map((h, i) => (
-                    <TableCell key={i} align="center" sx={{ fontWeight: 700, whiteSpace: "nowrap", py: 1.25 }}>
-                      {h}
+                <TableRow
+                  sx={{
+                    bgcolor: alpha(theme.palette.primary.main, 0.04),
+                    borderBottom: `2px solid ${alpha(theme.palette.primary.main, 0.12)}`,
+                  }}
+                >
+                  {[
+                    { label: "#",           width: 60  },
+                    { label: "التاريخ",      width: 120 },
+                    { label: "المورد",       width: "auto" },
+                    { label: "المرجع",       width: 130 },
+                    { label: "الحالة",       width: 130 },
+                    { label: "الأصناف",     width: 70  },
+                    { label: "العملة",       width: 70  },
+                    { label: "الإجمالي",    width: 120 },
+                    { label: "",            width: 48  },
+                  ].map(({ label, width }, i) => (
+                    <TableCell
+                      key={i}
+                      align="center"
+                      sx={{
+                        width,
+                        fontWeight: 700,
+                        fontSize: "0.75rem",
+                        color: "text.secondary",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        whiteSpace: "nowrap",
+                        py: 1.5,
+                        px: 1,
+                        borderBottom: "none",
+                      }}
+                    >
+                      {label}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -378,9 +433,11 @@ const PurchasesListPage: React.FC = () => {
               <TableBody>
                 {rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                      <Stack alignItems="center" gap={1}>
-                        <ShoppingCartIcon sx={{ fontSize: 48, color: "grey.300" }} />
+                    <TableCell colSpan={9} align="center" sx={{ py: 8, border: "none" }}>
+                      <Stack alignItems="center" gap={1.5}>
+                        <Box sx={{ p: 2, borderRadius: "50%", bgcolor: alpha(theme.palette.primary.main, 0.06) }}>
+                          <ShoppingCartIcon sx={{ fontSize: 40, color: alpha(theme.palette.primary.main, 0.3) }} />
+                        </Box>
                         <Typography variant="body2" color="text.secondary">لا توجد عمليات شراء</Typography>
                         <Button variant="contained" size="small" startIcon={<AddIcon />} component={RouterLink} to="/purchases/add">
                           إضافة شراء
@@ -389,50 +446,157 @@ const PurchasesListPage: React.FC = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  rows.map((purchase: any) => {
+                  rows.map((purchase: any, idx: number) => {
                     const cfg = STATUS_CONFIG[purchase.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.pending;
                     const itemsCount = purchase.items_count ?? purchase.items?.length ?? 0;
+                    const currency: "SDG" | "USD" = purchase.currency || "SDG";
+                    const totalAmt = Number(purchase.total_amount ?? 0);
+                    const isUSD = currency === "USD";
 
                     return (
                       <TableRow
                         key={purchase.id}
                         hover
-                        sx={{ cursor: "pointer" }}
+                        sx={{
+                          cursor: "pointer",
+                         
+                        }}
                         onClick={() => navigate(`/purchases/${purchase.id}/manage-items`)}
                       >
+                        {/* ID */}
                         <TableCell align="center">
-                          <Chip label={purchase.id} size="small" variant="outlined" sx={{ fontFamily: "monospace", height: 22 }} />
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              fontFamily: "monospace",
+                              fontWeight: 700,
+                              color: "text.disabled",
+                              letterSpacing: "-0.02em",
+                            }}
+                          >
+                            #{purchase.id}
+                          </Typography>
                         </TableCell>
 
+                        {/* Date */}
                         <TableCell align="center">
                           <Stack direction="row" alignItems="center" justifyContent="center" gap={0.5}>
-                            <CalendarMonthIcon sx={{ fontSize: 14, color: "text.secondary" }} />
-                            <Typography variant="body2">{dayjs(purchase.purchase_date).format("YYYY-MM-DD")}</Typography>
+                            <CalendarMonthIcon sx={{ fontSize: 13, color: "text.disabled" }} />
+                            <Typography variant="caption" fontWeight={500}>
+                              {dayjs(purchase.purchase_date).format("YYYY-MM-DD")}
+                            </Typography>
                           </Stack>
                         </TableCell>
 
+                        {/* Supplier */}
                         <TableCell align="center">
-                          <Typography variant="body2" fontWeight={600}>{purchase.supplier_name || "—"}</Typography>
+                          <Typography
+                            variant="body2"
+                            fontWeight={600}
+                            noWrap
+                            sx={{
+                              maxWidth: 200,
+                              textAlign: 'center',
+                              cursor: 'pointer',
+                              '&:hover': { color: 'primary.main' }
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (purchase.supplier_id) {
+                                navigate(`/suppliers/${purchase.supplier_id}/ledger`);
+                              }
+                            }}
+                          >
+                            {purchase.supplier_name || (
+                              <Typography component="span" variant="caption" color="text.disabled">—</Typography>
+                            )}
+                          </Typography>
                         </TableCell>
 
+                        {/* Reference */}
+                        <TableCell align="center">
+                          {purchase.reference_number ? (
+                            <Chip
+                              label={purchase.reference_number}
+                              size="small"
+                              variant="outlined"
+                              sx={{ height: 20, fontSize: "0.7rem", fontFamily: "monospace", maxWidth: 120 }}
+                            />
+                          ) : (
+                            <Typography variant="caption" color="text.disabled">—</Typography>
+                          )}
+                        </TableCell>
+
+                        {/* Status */}
                         <TableCell align="center">
                           <Chip
-                            icon={<cfg.Icon sx={{ fontSize: "14px !important" }} />}
-                            label={cfg.label}
+                            label={
+                              <Stack direction="row" alignItems="center" gap={0.5}>
+                                <cfg.Icon sx={{ fontSize: 13 }} />
+                                <span>{cfg.label}</span>
+                              </Stack>
+                            }
                             size="small"
                             color={cfg.color}
-                            variant="outlined"
+                            sx={{ height: 24, fontSize: "0.72rem", fontWeight: 600 }}
                           />
                         </TableCell>
 
+                        {/* Items count */}
                         <TableCell align="center">
-                          <Chip label={itemsCount} size="small" variant="outlined" color="primary" sx={{ fontWeight: 700, height: 22 }} />
+                          <Box
+                            sx={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              minWidth: 28,
+                              height: 22,
+                              borderRadius: 1,
+                              bgcolor: alpha(theme.palette.primary.main, 0.1),
+                              color: "primary.main",
+                              fontWeight: 700,
+                              fontSize: "0.72rem",
+                              px: 0.75,
+                            }}
+                          >
+                            {itemsCount}
+                          </Box>
                         </TableCell>
 
+                        {/* Currency badge */}
+                        <TableCell align="center">
+                       
+                          {purchase.currency }
+                        </TableCell>
+
+                        {/* Total amount */}
+                        <TableCell align="center">
+                          <Typography
+                            variant="body2"
+                            fontWeight={700}
+                            sx={{
+                              color: totalAmt > 0 ? "text.primary" : "text.disabled",
+                              fontFamily: "monospace",
+                              letterSpacing: "-0.02em",
+                            }}
+                          >
+                            {fmtAmount(totalAmt)}
+                          </Typography>
+                        </TableCell>
+
+                        {/* Actions */}
                         <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                          <Tooltip title="الإجراءات">
-                            <IconButton size="small" onClick={(e) => handleMenuOpen(e, purchase)}>
-                              <MoreHorizIcon fontSize="small" />
+                          <Tooltip title="الإجراءات" placement="left">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => handleMenuOpen(e, purchase)}
+                              sx={{
+                                width: 28,
+                                height: 28,
+                                "&:hover": { bgcolor: alpha(theme.palette.primary.main, 0.1) },
+                              }}
+                            >
+                              <MoreVertIcon sx={{ fontSize: 18 }} />
                             </IconButton>
                           </Tooltip>
 
@@ -441,16 +605,28 @@ const PurchasesListPage: React.FC = () => {
                             open={Boolean(anchorEl) && activeMenuPurchase?.id === purchase.id}
                             onClose={() => handleMenuClose()}
                             onClick={(e) => e.stopPropagation()}
-                            PaperProps={{ elevation: 2, sx: { minWidth: 200 } }}
+                            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                            transformOrigin={{ vertical: "top", horizontal: "right" }}
+                            PaperProps={{
+                              elevation: 3,
+                              sx: { minWidth: 200, borderRadius: 2, border: `1px solid ${theme.palette.divider}` },
+                            }}
                           >
-                            <MenuItem disabled sx={{ opacity: "1 !important" }}>
-                              <ListItemText primaryTypographyProps={{ fontWeight: 700, fontSize: "0.8rem" }} primary="الإجراءات" />
-                            </MenuItem>
+                            <Box sx={{ px: 2, py: 1 }}>
+                              <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                فاتورة #{purchase.id}
+                              </Typography>
+                            </Box>
                             <Divider />
 
                             <MenuItem onClick={(e) => { handleMenuClose(e); setPurchaseForLedger(purchase); setLedgerDialogOpen(true); }}>
                               <ListItemIcon><AccountBalanceWalletIcon fontSize="small" /></ListItemIcon>
                               <ListItemText primary="دفتر الأستاذ" />
+                            </MenuItem>
+
+                            <MenuItem onClick={(e) => { handleMenuClose(e); setPurchaseToEdit(purchase); setEditDialogOpen(true); }}>
+                              <ListItemIcon><EditOutlinedIcon fontSize="small" /></ListItemIcon>
+                              <ListItemText primary="تعديل" />
                             </MenuItem>
 
                             <MenuItem onClick={(e) => { handleMenuClose(e); navigate(`/purchases/${purchase.id}/manage-items`); }}>
@@ -485,6 +661,7 @@ const PurchasesListPage: React.FC = () => {
                               <ListItemText
                                 primary="حذف"
                                 secondary={purchase.status === "received" ? "لا يمكن حذف مشتريات تم استلامها" : undefined}
+                                secondaryTypographyProps={{ fontSize: "0.68rem" }}
                               />
                             </MenuItem>
                           </Menu>
@@ -497,14 +674,79 @@ const PurchasesListPage: React.FC = () => {
 
               {rows.length > 0 && (
                 <TableFooter>
-                  <TableRow sx={{ bgcolor: "grey.100" }}>
-                    <TableCell colSpan={4} align="center">
-                      <Typography variant="body2" fontWeight={700}>الإجمالي</Typography>
+                  <TableRow
+                    sx={{
+                      bgcolor: alpha(theme.palette.primary.main, 0.04),
+                      borderTop: `2px solid ${alpha(theme.palette.primary.main, 0.12)}`,
+                      "& td": { py: 1.25, px: 1 },
+                    }}
+                  >
+                    <TableCell colSpan={5} align="right" sx={{ border: "none" }}>
+                      <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                        الإجمالي — {rows.length} فاتورة
+                      </Typography>
                     </TableCell>
-                    <TableCell align="center">
-                      <Chip label={totalItems} size="small" color="primary" sx={{ fontWeight: 700, height: 22 }} />
+
+                    {/* Items total */}
+                    <TableCell align="center" sx={{ border: "none" }}>
+                      <Box
+                        sx={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          minWidth: 28,
+                          height: 22,
+                          borderRadius: 1,
+                          bgcolor: alpha(theme.palette.primary.main, 0.15),
+                          color: "primary.main",
+                          fontWeight: 700,
+                          fontSize: "0.72rem",
+                          px: 0.75,
+                        }}
+                      >
+                        {totalItems}
+                      </Box>
                     </TableCell>
-                    <TableCell />
+
+                    {/* Currency summary */}
+                    <TableCell align="center" colSpan={2} sx={{ border: "none" }}>
+                      <Stack direction="row" gap={1} justifyContent="center" flexWrap="wrap">
+                        {totalSDG > 0 && (
+                          <Stack direction="row" alignItems="center" gap={0.5}>
+                            <Chip
+                              label="SDG"
+                              size="small"
+                              sx={{
+                                height: 18, fontSize: "0.65rem", fontWeight: 700, fontFamily: "monospace",
+                                bgcolor: alpha(theme.palette.info.main, 0.1), color: "info.dark",
+                                border: `1px solid ${alpha(theme.palette.info.main, 0.3)}`,
+                              }}
+                            />
+                            <Typography variant="caption" fontWeight={700} sx={{ fontFamily: "monospace" }}>
+                              {fmtAmount(totalSDG)}
+                            </Typography>
+                          </Stack>
+                        )}
+                        {totalUSD > 0 && (
+                          <Stack direction="row" alignItems="center" gap={0.5}>
+                            <Chip
+                              label="USD"
+                              size="small"
+                              sx={{
+                                height: 18, fontSize: "0.65rem", fontWeight: 700, fontFamily: "monospace",
+                                bgcolor: alpha(theme.palette.success.main, 0.1), color: "success.dark",
+                                border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`,
+                              }}
+                            />
+                            <Typography variant="caption" fontWeight={700} sx={{ fontFamily: "monospace" }}>
+                              {fmtAmount(totalUSD)}
+                            </Typography>
+                          </Stack>
+                        )}
+                      </Stack>
+                    </TableCell>
+
+                    <TableCell sx={{ border: "none" }} />
                   </TableRow>
                 </TableFooter>
               )}

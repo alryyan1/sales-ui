@@ -1927,18 +1927,28 @@ const PosBlankPage: React.FC = () => {
                           alignItems: "center",
                         }}
                       >
-                        <Typography variant="caption" color="text.secondary">
-                          {[
-                            option.last_sale_price_per_sellable_unit != null &&
-                            `السعر: ${formatNumber(
-                              Number(
-                                option.last_sale_price_per_sellable_unit,
-                              ),
-                            )}`,
-                          ]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </Typography>
+                        {option.last_sale_price_per_sellable_unit != null ? (
+                          <Stack direction="row" spacing={0.4} alignItems="center">
+                            <Typography variant="caption" color="text.secondary">
+                              {`السعر: ${formatNumber(Number(option.last_sale_price_per_sellable_unit))}`}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                fontWeight: 700,
+                                fontSize: "0.6rem",
+                                px: 0.5,
+                                py: 0.1,
+                                borderRadius: 0.75,
+                                lineHeight: 1.6,
+                                bgcolor: option.last_purchase_currency === "USD" ? "success.light" : "info.light",
+                                color: option.last_purchase_currency === "USD" ? "success.dark" : "info.dark",
+                              }}
+                            >
+                              {option.last_purchase_currency ?? "SDG"}
+                            </Typography>
+                          </Stack>
+                        ) : null}
 
                         {option.earliest_expiry_date && (
                           <Typography variant="caption" color="warning.dark">
