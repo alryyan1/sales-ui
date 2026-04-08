@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback } from "react";
-// import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import {
   Table,
@@ -9,18 +8,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { CreateStockTransferDialog } from "@/components/inventory/CreateStockTransferDialog";
-import stockTransferService, {
-  StockTransfer,
-} from "@/services/stockTransferService";
-import { Loader2 } from "lucide-react";
+import stockTransferService, { StockTransfer } from "@/services/stockTransferService";
+import { Loader2, ArrowRightLeft } from "lucide-react";
 import { toast } from "sonner";
 import {
   Pagination,
@@ -32,7 +24,6 @@ import {
 } from "@/components/ui/pagination";
 
 export default function StockTransfersPage() {
-  // const { t } = useTranslation(["inventory", "common"]);
   const [transfers, setTransfers] = useState<StockTransfer[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -46,7 +37,6 @@ export default function StockTransfersPage() {
       setTransfers(data.data || []);
       setTotalPages(data.last_page || 1);
     } catch (error) {
-      console.error("Error loading stock transfers:", error);
       toast.error("فشل تحميل التحويلات");
       setTransfers([]);
       setTotalPages(1);
@@ -60,126 +50,118 @@ export default function StockTransfersPage() {
   }, [loadTransfers]);
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="container mx-auto py-4 px-4 space-y-3">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">تحويلات المخزون</h1>
-          <p className="text-muted-foreground">
-            إدارة حركة المخزون بين المستودعات.
-          </p>
+        <div className="flex items-center gap-2">
+          <ArrowRightLeft className="h-5 w-5 text-muted-foreground" />
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight">تحويلات المخزون</h1>
+            <p className="text-xs text-muted-foreground">إدارة حركة المخزون بين المستودعات</p>
+          </div>
         </div>
-        <CreateStockTransferDialog
-          onSuccess={() => {
-            setPage(1);
-            loadTransfers();
-          }}
-        />
+        <CreateStockTransferDialog onSuccess={() => { setPage(1); loadTransfers(); }} />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>سجل التحويلات</CardTitle>
-          <CardDescription>جميع حركات المخزون المسجلة.</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Card className="shadow-sm">
+        <CardContent className="p-0">
           {loading ? (
-            <div className="flex justify-center p-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="flex justify-center items-center h-48">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
             <>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                    <TableHead className="text-center text-xs font-semibold py-2 w-28">التاريخ</TableHead>
+                    <TableHead className="text-center text-xs font-semibold py-2">من المستودع</TableHead>
+                    <TableHead className="text-center text-xs font-semibold py-2">إلى المستودع</TableHead>
+                    <TableHead className="text-center text-xs font-semibold py-2">المنتجات</TableHead>
+                    <TableHead className="text-center text-xs font-semibold py-2">المستخدم</TableHead>
+                    <TableHead className="text-center text-xs font-semibold py-2">ملاحظات</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transfers.length === 0 ? (
                     <TableRow>
-                      <TableHead>التاريخ</TableHead>
-                      <TableHead>المنتج</TableHead>
-                      <TableHead>من</TableHead>
-                      <TableHead>إلى</TableHead>
-                      <TableHead className="text-right">الكمية</TableHead>
-                      <TableHead>المستخدم</TableHead>
+                      <TableCell colSpan={6} className="text-center h-32 text-sm text-muted-foreground">
+                        لا توجد تحويلات مسجلة.
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {transfers.length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={6}
-                          className="text-center h-24 text-muted-foreground"
-                        >
-                          لا توجد تحويلات.
+                  ) : (
+                    transfers.map((transfer) => (
+                      <TableRow key={transfer.id} className="hover:bg-muted/30 align-top">
+                        <TableCell className="text-center py-2 text-xs text-muted-foreground tabular-nums">
+                          {transfer.transfer_date
+                            ? format(new Date(transfer.transfer_date), "yyyy-MM-dd")
+                            : "-"}
+                        </TableCell>
+                        <TableCell className="text-center py-2">
+                          <Badge variant="outline" className="text-xs font-normal">
+                            {transfer.from_warehouse?.name ?? "-"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center py-2">
+                          <Badge variant="outline" className="text-xs font-normal">
+                            {transfer.to_warehouse?.name ?? "-"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center py-2">
+                          <div className="flex flex-col gap-1 items-center">
+                            {transfer.items?.length ? (
+                              transfer.items.map((item) => (
+                                <div key={item.id} className="flex items-center gap-1 text-xs">
+                                  <span className="font-medium">{item.product?.name ?? `#${item.product_id}`}</span>
+                                  <Badge className="tabular-nums text-xs px-1.5 py-0">
+                                    {typeof item.quantity === "number"
+                                      ? item.quantity.toLocaleString()
+                                      : item.quantity}
+                                  </Badge>
+                                </div>
+                              ))
+                            ) : (
+                              <span className="text-muted-foreground text-xs">-</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center py-2 text-xs text-muted-foreground">
+                          {transfer.user?.name || "-"}
+                        </TableCell>
+                        <TableCell className="text-center py-2 text-xs text-muted-foreground max-w-[150px] truncate">
+                          {transfer.notes || "-"}
                         </TableCell>
                       </TableRow>
-                    ) : (
-                      transfers.map((transfer) => (
-                        <TableRow key={transfer.id}>
-                          <TableCell>
-                            {transfer.transfer_date
-                              ? format(
-                                  new Date(transfer.transfer_date),
-                                  "yyyy-MM-dd"
-                                )
-                              : "-"}
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {transfer.product?.name}
-                            <div className="text-xs text-muted-foreground">
-                              {transfer.product?.sku}
-                            </div>
-                          </TableCell>
-                          <TableCell>{transfer.from_warehouse?.name}</TableCell>
-                          <TableCell>{transfer.to_warehouse?.name}</TableCell>
-                          <TableCell className="text-right font-bold">
-                            {typeof transfer.quantity === "number"
-                              ? transfer.quantity.toLocaleString()
-                              : transfer.quantity}
-                          </TableCell>
-                          <TableCell>{transfer.user?.name || "-"}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
 
-              {/* Pagination */}
               {totalPages > 1 && (
-                <div className="mt-4">
+                <div className="border-t px-4 py-2">
                   <Pagination>
                     <PaginationContent>
                       <PaginationItem>
                         <PaginationPrevious
                           href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            if (page > 1) setPage(page - 1);
-                          }}
+                          onClick={(e) => { e.preventDefault(); if (page > 1) setPage(page - 1); }}
                           isActive={page === 1}
                         />
                       </PaginationItem>
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                        (p) => (
-                          <PaginationItem key={p}>
-                            <PaginationLink
-                              href="#"
-                              isActive={page === p}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                setPage(p);
-                              }}
-                            >
-                              {p}
-                            </PaginationLink>
-                          </PaginationItem>
-                        )
-                      )}
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                        <PaginationItem key={p}>
+                          <PaginationLink
+                            href="#"
+                            isActive={page === p}
+                            onClick={(e) => { e.preventDefault(); setPage(p); }}
+                          >
+                            {p}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ))}
                       <PaginationItem>
                         <PaginationNext
                           href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            if (page < totalPages) setPage(page + 1);
-                          }}
+                          onClick={(e) => { e.preventDefault(); if (page < totalPages) setPage(page + 1); }}
                           isActive={page === totalPages}
                         />
                       </PaginationItem>

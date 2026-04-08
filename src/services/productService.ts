@@ -176,20 +176,23 @@ const productService = {
    * @returns Promise resolving to an array of products (only essential fields).
    */
   getProductsForAutocomplete: async (
-    search: string = "",
-    limit: number = 20,
+    search: string = "", limit: number = 20, warehouseId?: number,
   ): Promise<Product[]> => {
     // Returns flat array, not paginated
     try {
       const params = new URLSearchParams();
-      if (search) params.append("search", search);
+      if (search) {
+        params.append("search", search);
+      } else {
+        params.append("show_all_for_empty_search", "true");
+      }
       params.append("limit", limit.toString());
+      if (warehouseId) params.append("warehouse_id", warehouseId.toString());
 
       // Assumes backend endpoint /api/products/autocomplete exists
       const response = await apiClient.get<{ data: Product[] }>(
         `/products/autocomplete?${params.toString()}`,
       );
-      console.log("getProductsForAutocomplete response:", response.data.data);
       // Adapt if backend directly returns array: return response.data;
       return response.data.data ?? response.data; // Handle both {data: []} and [] structures
     } catch (error) {

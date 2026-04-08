@@ -239,6 +239,7 @@ const ProductsPage: React.FC = () => {
   const {
     data,
     isLoading,
+    isFetching,
     isError,
     error: queryError,
     fetchNextPage,
@@ -262,8 +263,8 @@ const ProductsPage: React.FC = () => {
   // Total product count from paginated response
   const totalProducts = data?.pages?.[0]?.meta?.total ?? 0;
 
-  // Show loading when fetching initial data
-  const isLoadingData = isLoading;
+  // Show loading when fetching initial data or refetching (e.g. warehouse/filter change)
+  const isLoadingData = isLoading || (isFetching && !isFetchingNextPage);
 
   // Stop sorting loading when data finishes loading or changes
   useEffect(() => {

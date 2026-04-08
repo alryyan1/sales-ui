@@ -311,8 +311,6 @@ const PosBlankPage: React.FC = () => {
           const showOutOfStock = getSetting("pos_show_out_of_stock_products", false);
 
           const isQuoteMode = selectedSale?.is_quote ?? false;
-          // alert('d')
-          console.log(isQuoteMode,'isQuoteMode')
           const filtered = raw.filter((p) => {
             // Stock quantity returned from server will be warehouse-specific if warehouse_id was passed
             const stock = p.current_stock_quantity ?? p.stock_quantity ?? 0;
@@ -333,7 +331,7 @@ const PosBlankPage: React.FC = () => {
         .finally(() => setProductSearchLoading(false));
     }, 300);
     return () => clearTimeout(t);
-  }, [productInputValue, user?.warehouse_id, getSetting]);
+  }, [productInputValue, user?.warehouse_id, getSetting, selectedSale?.is_quote]);
 
   // Handle Package addition from TopAppBar
   const handleAddPackageToSale = useCallback(

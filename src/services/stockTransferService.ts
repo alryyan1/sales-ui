@@ -4,37 +4,43 @@ import { Product } from "./productService";
 import { User } from "./authService";
 import { Warehouse } from "./warehouseService";
 
+export interface StockTransferItem {
+  id: number;
+  stock_transfer_id: number;
+  product_id: number;
+  quantity: number;
+  product?: Product;
+}
+
 export interface StockTransfer {
   id: number;
   from_warehouse_id: number;
   to_warehouse_id: number;
-  product_id: number;
-  quantity: number;
   transfer_date: string;
   notes?: string | null;
   user_id?: number | null;
   created_at: string;
   updated_at: string;
-  // Relationships
   from_warehouse?: Warehouse;
   to_warehouse?: Warehouse;
-  product?: Product;
   user?: User;
+  items?: StockTransferItem[];
+}
+
+export interface CreateStockTransferItemData {
+  product_id: number;
+  quantity: number;
 }
 
 export interface CreateStockTransferData {
   from_warehouse_id: number;
   to_warehouse_id: number;
-  product_id: number;
-  quantity: number;
   transfer_date: string;
   notes?: string;
+  items: CreateStockTransferItemData[];
 }
 
 const stockTransferService = {
-  /**
-   * List stock transfers
-   */
   getAll: async (
     page: number = 1,
     perPage: number = 15,
@@ -60,16 +66,9 @@ const stockTransferService = {
     return response.data;
   },
 
-  /**
-   * Create a new stock transfer
-   */
-  create: async (data: CreateStockTransferData): Promise<StockTransfer> => {
+  create: async (data: CreateStockTransferData): Promise<void> => {
     try {
-      const response = await apiClient.post<StockTransfer>(
-        "/stock-transfers",
-        data
-      );
-      return response.data;
+      await apiClient.post("/stock-transfers", data);
     } catch (error) {
       throw new Error(getErrorMessage(error));
     }

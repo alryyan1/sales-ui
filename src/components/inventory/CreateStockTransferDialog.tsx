@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
 import {
   Dialog,
   DialogTitle,
@@ -10,32 +10,36 @@ import {
   MenuItem,
   CircularProgress,
   Grid,
-  Typography,
   Alert,
+  Typography,
+  IconButton,
+  Divider,
+  Autocomplete,
+  Box,
 } from "@mui/material";
+import { Plus, Trash2, Save } from "lucide-react";
 
-// Services
 import { warehouseService, Warehouse } from "@/services/warehouseService";
-import stockTransferService, {
-  CreateStockTransferData,
-} from "@/services/stockTransferService";
-import { Product } from "@/services/productService";
-import { offlineSaleService } from "@/services/offlineSaleService";
+import stockTransferService from "@/services/stockTransferService";
+import productService, { Product } from "@/services/productService";
 import { toast } from "sonner";
-import { Save } from "lucide-react";
 
 interface CreateStockTransferDialogProps {
   onSuccess?: () => void;
   trigger?: React.ReactNode;
 }
 
+interface ItemFormValue {
+  product: Product | null;
+  quantity: string;
+}
+
 interface TransferFormValues {
   from_warehouse_id: string;
   to_warehouse_id: string;
-  product_id: string;
-  quantity: string;
   transfer_date: string;
   notes: string;
+  items: ItemFormValue[];
 }
 
 export function CreateStockTransferDialog({
@@ -44,112 +48,133 @@ export function CreateStockTransferDialog({
 }: CreateStockTransferDialogProps) {
   const [open, setOpen] = useState(false);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
-  const [loadingProducts, setLoadingProducts] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Per-item product options & loading state
+  const [productOptions, setProductOptions] = useState<Product[][]>([[]]);
+  const [productLoading, setProductLoading] = useState<boolean[]>([false]);
 
   const form = useForm<TransferFormValues>({
     defaultValues: {
       from_warehouse_id: "",
       to_warehouse_id: "",
-      product_id: "",
-      quantity: "",
       transfer_date: new Date().toISOString().split("T")[0],
       notes: "",
+      items: [{ product: null, quantity: "" }],
     },
   });
 
-  // Watch form values for filtering
-  const fromWarehouseId = form.watch("from_warehouse_id");
-  const selectedProductId = form.watch("product_id");
-  const transferQuantity = form.watch("quantity");
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "items",
+  });
 
-  // Filter warehouses: exclude selected "from" warehouse from "to" list
+  const fromWarehouseId = form.watch("from_warehouse_id");
+
   const availableToWarehouses = useMemo(() => {
     if (!fromWarehouseId) return warehouses;
-    return warehouses.filter(
-      (w) => w.id.toString() !== fromWarehouseId
-    );
+    return warehouses.filter((w) => w.id.toString() !== fromWarehouseId);
   }, [warehouses, fromWarehouseId]);
 
-  // Get selected product and its stock in the "from" warehouse
-  const selectedProduct = useMemo(() => {
-    if (!selectedProductId) return null;
-    return products.find((p) => p.id.toString() === selectedProductId);
-  }, [products, selectedProductId]);
-
-  // Get available stock in the selected "from" warehouse
-  const availableStock = useMemo(() => {
-    if (!selectedProduct || !fromWarehouseId) return null;
-    const warehouseId = parseInt(fromWarehouseId);
-    
-    // Check if product has warehouse-specific stock
-    if (selectedProduct.warehouses && selectedProduct.warehouses.length > 0) {
-      const warehouseStock = selectedProduct.warehouses.find(
-        (w) => w.id === warehouseId
-      );
-      if (warehouseStock) {
-        return warehouseStock.pivot.quantity;
-      }
-    }
-    
-    // Fallback to general stock_quantity if no warehouse-specific data
-    return selectedProduct.stock_quantity || 0;
-  }, [selectedProduct, fromWarehouseId]);
-
+  // Load warehouses on open; reset on close
   useEffect(() => {
     if (open) {
       loadWarehouses();
-      loadProducts(""); // Initial load or empty search
     } else {
-      // Reset form when dialog closes
-      form.reset();
+      form.reset({
+        from_warehouse_id: "",
+        to_warehouse_id: "",
+        transfer_date: new Date().toISOString().split("T")[0],
+        notes: "",
+        items: [{ product: null, quantity: "" }],
+      });
+      setProductOptions([[]]);
+      setProductLoading([false]);
     }
   }, [open]);
 
-  // Reset "to_warehouse_id" if it becomes invalid (same as from_warehouse_id)
+  // When source warehouse changes: reset all items & reload products
   useEffect(() => {
-    const toWarehouseId = form.getValues("to_warehouse_id");
-    if (fromWarehouseId && toWarehouseId === fromWarehouseId) {
-      form.setValue("to_warehouse_id", "");
-      form.clearErrors("to_warehouse_id");
+    form.setValue("items", [{ product: null, quantity: "" }]);
+    setProductOptions([[]]);
+    setProductLoading([false]);
+    if (fromWarehouseId) {
+      loadProductsForRow(0, "", fromWarehouseId);
     }
-  }, [fromWarehouseId, form]);
+  }, [fromWarehouseId]);
+
+  // Reset to_warehouse if it matches from_warehouse
+  useEffect(() => {
+    const toId = form.getValues("to_warehouse_id");
+    if (fromWarehouseId && toId === fromWarehouseId) {
+      form.setValue("to_warehouse_id", "");
+    }
+  }, [fromWarehouseId]);
 
   const loadWarehouses = async () => {
     try {
       setLoadingWarehouses(true);
-      const data = await warehouseService.getAll();
-      setWarehouses(data);
-    } catch (error) {
+      setWarehouses(await warehouseService.getAll());
+    } catch {
       toast.error("فشل تحميل المستودعات");
     } finally {
       setLoadingWarehouses(false);
     }
   };
 
-  // Load products from IndexedDB cache
-  const loadProducts = async (search: string) => {
+  const loadProductsForRow = async (
+    index: number,
+    search: string,
+    warehouseId?: string
+  ) => {
+    const wId = warehouseId ? parseInt(warehouseId) : undefined;
+    setProductLoading((prev) => {
+      const next = [...prev];
+      next[index] = true;
+      return next;
+    });
     try {
-      setLoadingProducts(true);
-      // Try to load from IndexedDB cache first
-      const cachedProducts = await offlineSaleService.searchProducts(search);
-      
-      if (cachedProducts.length > 0) {
-        setProducts(cachedProducts);
-      } else {
-        // If cache is empty, show message but don't fail
-        toast.info("لا توجد منتجات في الذاكرة المؤقتة. يرجى تحديث البيانات.");
-        setProducts([]);
-      }
-    } catch (error) {
-      console.error("Error loading products from cache:", error);
-      toast.error("فشل تحميل المنتجات من الذاكرة المؤقتة");
-      setProducts([]);
+      const data = await productService.getProductsForAutocomplete(
+        search,
+        25,
+        wId
+      );
+      setProductOptions((prev) => {
+        const next = [...prev];
+        next[index] = data;
+        return next;
+      });
+    } catch {
+      // silent
     } finally {
-      setLoadingProducts(false);
+      setProductLoading((prev) => {
+        const next = [...prev];
+        next[index] = false;
+        return next;
+      });
     }
+  };
+
+  const addItem = () => {
+    append({ product: null, quantity: "" });
+    const newIndex = fields.length;
+    setProductOptions((prev) => [...prev, []]);
+    setProductLoading((prev) => [...prev, false]);
+    if (fromWarehouseId) {
+      loadProductsForRow(newIndex, "", fromWarehouseId);
+    }
+  };
+
+  const removeItem = (index: number) => {
+    remove(index);
+    setProductOptions((prev) => prev.filter((_, i) => i !== index));
+    setProductLoading((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const getStockLabel = (p: Product): string => {
+    const stock = p.current_stock_quantity ?? p.stock_quantity ?? 0;
+    return `${p.name} (المخزون: ${stock})`;
   };
 
   const onSubmit = async (values: TransferFormValues) => {
@@ -161,36 +186,24 @@ export function CreateStockTransferDialog({
       return;
     }
 
-    // Validate stock availability
-    if (availableStock !== null && availableStock !== undefined) {
-      const requestedQuantity = parseFloat(values.quantity);
-      if (requestedQuantity > availableStock) {
-        form.setError("quantity", {
-          type: "manual",
-          message: `المخزون المتاح غير كافٍ. المتاح: ${availableStock}`,
-        });
-        return;
-      }
-    }
-
     try {
       setIsSubmitting(true);
-      const payload: CreateStockTransferData = {
+      await stockTransferService.create({
         from_warehouse_id: parseInt(values.from_warehouse_id),
         to_warehouse_id: parseInt(values.to_warehouse_id),
-        product_id: parseInt(values.product_id),
-        quantity: parseFloat(values.quantity),
         transfer_date: values.transfer_date,
         notes: values.notes,
-      };
-
-      await stockTransferService.create(payload);
+        items: values.items
+          .filter((item) => item.product && item.quantity)
+          .map((item) => ({
+            product_id: item.product!.id,
+            quantity: parseFloat(item.quantity),
+          })),
+      });
       toast.success("تم تحويل المخزون بنجاح");
       setOpen(false);
-      form.reset();
       onSuccess?.();
     } catch (error: any) {
-      console.error(error);
       toast.error(error.message || "فشل إنشاء التحويل");
     } finally {
       setIsSubmitting(false);
@@ -203,16 +216,12 @@ export function CreateStockTransferDialog({
         {trigger || <Button variant="outlined">تحويل جديد</Button>}
       </div>
 
-      <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
+      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>إنشاء تحويل مخزون</DialogTitle>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogContent dividers>
             <Grid container spacing={2}>
+              {/* Warehouses */}
               <Grid size={6}>
                 <Controller
                   control={form.control}
@@ -224,10 +233,9 @@ export function CreateStockTransferDialog({
                       select
                       label="من المستودع"
                       fullWidth
+                      size="small"
                       error={!!form.formState.errors.from_warehouse_id}
-                      helperText={
-                        form.formState.errors.from_warehouse_id?.message
-                      }
+                      helperText={form.formState.errors.from_warehouse_id?.message}
                       disabled={loadingWarehouses}
                     >
                       {warehouses.map((w) => (
@@ -250,6 +258,7 @@ export function CreateStockTransferDialog({
                       select
                       label="إلى المستودع"
                       fullWidth
+                      size="small"
                       error={!!form.formState.errors.to_warehouse_id}
                       helperText={
                         form.formState.errors.to_warehouse_id?.message ||
@@ -257,138 +266,148 @@ export function CreateStockTransferDialog({
                       }
                       disabled={loadingWarehouses || !fromWarehouseId}
                     >
-                      {availableToWarehouses.length === 0 ? (
-                        <MenuItem disabled>
-                          {fromWarehouseId
-                            ? "لا توجد مستودعات أخرى متاحة"
-                            : "اختر المستودع المصدر أولاً"}
+                      {availableToWarehouses.map((w) => (
+                        <MenuItem key={w.id} value={w.id.toString()}>
+                          {w.name}
                         </MenuItem>
-                      ) : (
-                        availableToWarehouses.map((w) => (
-                          <MenuItem key={w.id} value={w.id.toString()}>
-                            {w.name}
-                          </MenuItem>
-                        ))
-                      )}
+                      ))}
                     </TextField>
                   )}
                 />
               </Grid>
-
-              <Grid size={12}>
-                <Controller
-                  control={form.control}
-                  name="product_id"
-                  rules={{ required: "مطلوب" }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      select
-                      label={loadingProducts ? "جاري التحميل..." : "المنتج"}
-                      fullWidth
-                      error={!!form.formState.errors.product_id}
-                      helperText={form.formState.errors.product_id?.message}
-                      disabled={loadingProducts}
-                    >
-                      {products.length === 0 ? (
-                        <MenuItem disabled>
-                          {loadingProducts
-                            ? "جاري التحميل..."
-                            : "لا توجد منتجات متاحة"}
-                        </MenuItem>
-                      ) : (
-                        products.map((p) => {
-                          // Show warehouse-specific stock if available
-                          let stockDisplay = p.stock_quantity || 0;
-                          if (
-                            fromWarehouseId &&
-                            p.warehouses &&
-                            p.warehouses.length > 0
-                          ) {
-                            const warehouseId = parseInt(fromWarehouseId);
-                            const warehouseStock = p.warehouses.find(
-                              (w) => w.id === warehouseId
-                            );
-                            if (warehouseStock) {
-                              stockDisplay = warehouseStock.pivot.quantity;
-                            }
-                          }
-                          return (
-                            <MenuItem key={p.id} value={p.id.toString()}>
-                              {p.name} (المخزون: {stockDisplay})
-                            </MenuItem>
-                          );
-                        })
-                      )}
-                    </TextField>
-                  )}
-                />
-                {/* Show available stock info */}
-                {selectedProduct && fromWarehouseId && availableStock !== null && (
-                  <Alert severity="info" sx={{ mt: 1 }}>
-                    <Typography variant="body2">
-                      المخزون المتاح في المستودع المحدد:{" "}
-                      <strong>{availableStock}</strong>
-                    </Typography>
-                  </Alert>
-                )}
-              </Grid>
-
-              <Grid size={6}>
-                <TextField
-                  {...form.register("quantity", {
-                    required: "مطلوب",
-                    min: { value: 0.01, message: "يجب أن يكون أكبر من 0" },
-                    validate: (value) => {
-                      if (
-                        availableStock !== null &&
-                        availableStock !== undefined
-                      ) {
-                        const qty = parseFloat(value);
-                        if (qty > availableStock) {
-                          return `المخزون المتاح غير كافٍ. المتاح: ${availableStock}`;
-                        }
-                      }
-                      return true;
-                    },
-                  })}
-                  label="الكمية"
-                  type="number"
-                  fullWidth
-                  error={!!form.formState.errors.quantity}
-                  helperText={
-                    form.formState.errors.quantity?.message ||
-                    (availableStock !== null &&
-                      `المتاح: ${availableStock}`)
-                  }
-                  inputProps={{ step: "0.01", min: 0.01 }}
-                />
-              </Grid>
-
               <Grid size={6}>
                 <TextField
                   {...form.register("transfer_date", { required: "مطلوب" })}
                   label="التاريخ"
                   type="date"
                   fullWidth
+                  size="small"
                   InputLabelProps={{ shrink: true }}
                   error={!!form.formState.errors.transfer_date}
                   helperText={form.formState.errors.transfer_date?.message}
                 />
               </Grid>
-
-              <Grid size={12}>
+              <Grid size={6}>
                 <TextField
                   {...form.register("notes")}
                   label="ملاحظات"
-                  multiline
-                  rows={3}
                   fullWidth
-                  placeholder="ملاحظات اختيارية..."
+                  size="small"
+                  placeholder="اختياري..."
                 />
+              </Grid>
+
+              {/* Items */}
+              <Grid size={12}>
+                <Divider sx={{ mb: 1 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    المنتجات
+                  </Typography>
+                </Divider>
+
+                {!fromWarehouseId && (
+                  <Alert severity="info" sx={{ mb: 1 }}>
+                    اختر المستودع المصدر أولاً لإضافة منتجات
+                  </Alert>
+                )}
+
+                {fields.map((field, index) => (
+                  <Box
+                    key={field.id}
+                    sx={{ display: "flex", gap: 1, mb: 1, alignItems: "flex-start" }}
+                  >
+                    {/* Product Autocomplete */}
+                    <Box sx={{ flex: 1 }}>
+                      <Controller
+                        control={form.control}
+                        name={`items.${index}.product`}
+                        rules={{ required: "مطلوب" }}
+                        render={({ field: f, fieldState }) => (
+                          <Autocomplete
+                            options={productOptions[index] ?? []}
+                            loading={productLoading[index]}
+                            disabled={!fromWarehouseId}
+                            getOptionLabel={getStockLabel}
+                            isOptionEqualToValue={(opt, val) => opt.id === val.id}
+                            value={f.value}
+                            onChange={(_, val) => f.onChange(val)}
+                            onInputChange={(_, value, reason) => {
+                              if (reason === "input")
+                                loadProductsForRow(index, value, fromWarehouseId);
+                            }}
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                label="المنتج"
+                                size="small"
+                                error={!!fieldState.error}
+                                helperText={fieldState.error?.message}
+                                slotProps={{
+                                  input: {
+                                    ...params.InputProps,
+                                    endAdornment: (
+                                      <>
+                                        {productLoading[index] && (
+                                          <CircularProgress size={16} />
+                                        )}
+                                        {params.InputProps.endAdornment}
+                                      </>
+                                    ),
+                                  },
+                                }}
+                              />
+                            )}
+                          />
+                        )}
+                      />
+                    </Box>
+
+                    {/* Quantity */}
+                    <Box sx={{ width: 120 }}>
+                      <TextField
+                        {...form.register(`items.${index}.quantity`, {
+                          required: "مطلوب",
+                          min: { value: 0.01, message: "> 0" },
+                        })}
+                        label="الكمية"
+                        type="number"
+                        size="small"
+                        fullWidth
+                        error={!!form.formState.errors.items?.[index]?.quantity}
+                        helperText={
+                          form.formState.errors.items?.[index]?.quantity?.message
+                        }
+                        inputProps={{ step: "0.01", min: 0.01 }}
+                      />
+                    </Box>
+
+                    {/* Remove row */}
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => removeItem(index)}
+                      disabled={fields.length === 1}
+                      sx={{ mt: 0.5 }}
+                    >
+                      <Trash2 size={16} />
+                    </IconButton>
+                  </Box>
+                ))}
+
+                <Button
+                  size="small"
+                  startIcon={<Plus size={16} />}
+                  onClick={addItem}
+                  disabled={!fromWarehouseId}
+                  variant="outlined"
+                  sx={{ mt: 0.5 }}
+                >
+                  إضافة منتج
+                </Button>
               </Grid>
             </Grid>
           </DialogContent>
+
           <DialogActions>
             <Button onClick={() => setOpen(false)} color="inherit">
               إلغاء
@@ -399,7 +418,7 @@ export function CreateStockTransferDialog({
               disabled={isSubmitting}
               startIcon={
                 isSubmitting ? (
-                  <CircularProgress size={20} color="inherit" />
+                  <CircularProgress size={18} color="inherit" />
                 ) : (
                   <Save size={18} />
                 )
