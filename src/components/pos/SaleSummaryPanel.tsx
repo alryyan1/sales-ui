@@ -472,15 +472,15 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
           <Box sx={{ borderRadius: 1, border: "1px solid", borderColor: "grey.200", overflow: "hidden" }}>
             <FinRow label="المجموع الفرعي" value={formatNumber(subtotal)} bg="#f8fafc" />
             {discountAmt > 0 && (
-              <FinRow label="الخصم" value={`− ${formatNumber(discountAmt)}`} color="error.main" bg="#fff5f5" bold />
+              <FinRow label="الخصم" value={`− ${formatNumber(discountAmt, 2)}`} color="error.main" bg="#fff5f5" bold />
             )}
             <Divider />
-            <FinRow label="الإجمالي" value={formatNumber(total)} bold color="success.dark" />
+            <FinRow label="الإجمالي" value={formatNumber(total, 2)} bold color="success.dark" />
             <Divider />
-            <FinRow label="المدفوع" value={formatNumber(paid)} color="success.main" />
+            <FinRow label="المدفوع" value={formatNumber(paid, 2)} color="success.main" />
             <FinRow
               label="المتبقي"
-              value={formatNumber(due)}
+              value={formatNumber(due, 2)}
               bold
               color={isFullyPaid ? "success.dark" : "error.dark"}
               bg={isFullyPaid ? "#f0fdf4" : "#fff5f5"}

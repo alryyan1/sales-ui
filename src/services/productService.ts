@@ -342,6 +342,7 @@ const productService = {
       cost_per_sellable_unit: number | string;
       sale_price: number | string | null;
       expiry_date: string | null;
+      purchase_currency: "SDG" | "USD" | null;
       created_at: string | null;
     }[];
     meta: { current_page: number; last_page: number; total: number; per_page: number };

@@ -245,11 +245,11 @@ export const ProductContextMenu: React.FC<ProductContextMenuProps> = ({
                         <TableCell align="right">{item.quantity}</TableCell>
                         <TableCell align="right">
                           {item.cost_per_sellable_unit
-                            ? formatCurrency(Number(item.cost_per_sellable_unit))
-                            : formatCurrency(Number(item.unit_cost))}
+                            ? formatCurrency(Number(item.cost_per_sellable_unit), undefined, item.purchase_currency ?? "SDG")
+                            : formatCurrency(Number(item.unit_cost), undefined, item.purchase_currency ?? "SDG")}
                         </TableCell>
                         <TableCell align="right">
-                          {item.sale_price ? formatCurrency(Number(item.sale_price)) : "—"}
+                          {item.sale_price ? formatCurrency(Number(item.sale_price), undefined, item.purchase_currency ?? "SDG") : "—"}
                         </TableCell>
                         <TableCell>
                           {item.batch_number ? (

@@ -42,7 +42,6 @@ import { PurchaseItem } from "../../services/purchaseService";
 import apiClient from "@/lib/axios";
 import dayjs from "dayjs";
 import { useAuth } from "@/context/AuthContext";
-import { offlineSaleService } from "@/services/offlineSaleService"; // Use offline service for cached products
 import { warehouseService, Warehouse } from "@/services/warehouseService"; // Import warehouse service
 
 // --- Zod Schema with Arabic messages ---
@@ -156,26 +155,23 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
     }
   }, [isOpen, user?.warehouse_id, setValue, selectedWarehouseId]);
 
-  // --- Fetch Products (Cached / Debounced) ---
+  // --- Fetch Products directly from API ---
   const fetchProducts = useCallback(async (search: string) => {
-    // If no warehouse selected, maybe don't search? Or search global?
-    // Usually stock adjustment is warehouse specific.
-    // Let's assume we can search all, but ideally we filter by warehouse if possible.
-    // The cached search `offlineSaleService.searchProducts` returns all products.
-
     setLoadingProducts(true);
     try {
-      // Use offline service for cached/fast search
-      // Note: This returns all products in local DB.
-      const response = await offlineSaleService.searchProducts(search);
-      setProducts(response.slice(0, 50)); // Limit to 50 for performance
+      const response = await productService.getProductsForAutocomplete(
+        search,
+        50,
+        selectedWarehouseId ?? undefined
+      );
+      setProducts(response);
     } catch (error) {
       console.error("Error searching products", error);
       setProducts([]);
     } finally {
       setLoadingProducts(false);
     }
-  }, []);
+  }, [selectedWarehouseId]);
 
   useEffect(() => {
     if (productDebounceRef.current) clearTimeout(productDebounceRef.current);

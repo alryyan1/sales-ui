@@ -22,14 +22,14 @@ export const navItems: NavItem[] = [
   // Sales Group
   {
     to: "#",
-    label: "المعرض",
+    label: "المبيعات",
     icon: CircleDollarSign,
     permission: null,
-    category: "المعرض",
+    category: "المبيعات",
     children: [
       {
         to: "/sales/pos-blank",
-        label: "نقطة البيع ",
+        label: "المعرض  ",
         permission: null,
         category: "المبيعات",
       },
