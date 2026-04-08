@@ -14,7 +14,6 @@ import {
   TableHead,
   TableRow,
   Box,
-  Skeleton,
   CircularProgress,
   TextField,
   Select,
@@ -31,6 +30,7 @@ import {
   X,
   Save,
   Sparkles,
+  Pencil,
   Tag,
   Barcode,
   ArrowUpDown,
@@ -65,6 +65,8 @@ interface ProductsTableProps {
   isLoading?: boolean;
   onEdit: (product: ProductWithOptionalBatches) => void;
   onBarcodeLabel: (product: ProductWithOptionalBatches) => void;
+  onCurrencyChange?: (productId: number, currency: "SDG" | "USD" | null) => void;
+  onPriceUpdate?: (productId: number, field: "sale_price" | "cost_price", value: number | null) => Promise<void>;
   // Context Menu Handlers
   onDuplicate?: (product: ProductWithOptionalBatches) => void;
   onExport?: (product: ProductWithOptionalBatches) => void;
@@ -107,8 +109,98 @@ interface ProductRowProps {
   onDelete: (product: ProductWithOptionalBatches) => void;
   onCopyInfo: (product: ProductWithOptionalBatches) => void;
   onToggleFavorite: (product: ProductWithOptionalBatches) => void;
+  onCurrencyChange?: (productId: number, currency: "SDG" | "USD" | null) => void;
+  onPriceUpdate?: (productId: number, field: "sale_price" | "cost_price", value: number | null) => Promise<void>;
+  activeField?: "sale_price" | "cost_price" | null;
+  onFieldOpen?: (field: "sale_price" | "cost_price") => void;
+  onFieldNext?: (field: "sale_price" | "cost_price") => void;
   isFavorite?: boolean;
 }
+
+
+const InlineEditCell: React.FC<{
+  value: number | null | undefined;
+  highlight?: boolean;
+  forceOpen?: boolean;
+  onOpen?: () => void;
+  onNext?: () => void;
+  onSave: (value: number | null) => Promise<void>;
+}> = ({ value, highlight = false, forceOpen = false, onOpen, onNext, onSave }) => {
+  const [editing, setEditing] = useState(false);
+  const [input, setInput] = useState("");
+  const [saving, setSaving] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Open when forceOpen flips to true from outside
+  useEffect(() => {
+    if (forceOpen) {
+      setInput(value != null ? String(value) : "");
+      setEditing(true);
+      setTimeout(() => inputRef.current?.select(), 0);
+    }
+  }, [forceOpen]);
+
+  const startEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setInput(value != null ? String(value) : "");
+    setEditing(true);
+    onOpen?.();
+    setTimeout(() => inputRef.current?.select(), 0);
+  };
+
+  const commit = (andNext = false) => {
+    const parsed = input.trim() === "" ? null : parseFloat(input);
+    setEditing(false);
+    if (andNext) onNext?.();           // move instantly, don't await
+    if (parsed === value || (parsed == null && value == null)) return;
+    setSaving(true);
+    onSave(parsed).finally(() => setSaving(false));  // fire-and-forget
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") { e.preventDefault(); commit(true); }
+    if (e.key === "Escape") setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <TextField
+        inputRef={inputRef}
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onBlur={() => commit(false)}
+        onKeyDown={handleKeyDown}
+        type="number"
+        size="small"
+        slotProps={{ htmlInput: { step: "0.01" } }}
+        sx={{ width: 90, "& input": { textAlign: "center", py: 0.4, px: 0.5, fontSize: "0.8rem" } }}
+        onClick={(e) => e.stopPropagation()}
+      />
+    );
+  }
+
+  return (
+    <Box
+      onClick={startEdit}
+      sx={{ cursor: "text", display: "inline-flex", alignItems: "center", gap: 0.5,
+        px: 0.5, py: 0.2, borderRadius: 1,
+        "&:hover": { bgcolor: "action.hover" },
+      }}
+    >
+      {saving && <CircularProgress size={10} thickness={5} />}
+      {value != null ? (
+        <Typography
+          variant="body2"
+          sx={{ fontWeight: highlight ? 700 : 400, color: highlight ? "primary.main" : "text.primary", fontSize: "0.85rem" }}
+        >
+          {formatNumber(Number(value), 2)}
+        </Typography>
+      ) : (
+        <Typography variant="body2" sx={{ color: "text.disabled", fontSize: "0.78rem" }}>---</Typography>
+      )}
+    </Box>
+  );
+};
 
 const PriceWithCurrency: React.FC<{
   value: number;
@@ -156,6 +248,11 @@ const ProductRow: React.FC<ProductRowProps> = ({
   onDelete,
   onCopyInfo,
   onToggleFavorite,
+  onCurrencyChange,
+  onPriceUpdate,
+  activeField,
+  onFieldOpen,
+  onFieldNext,
   isFavorite = false,
 }) => {
   const stockQty = Number(
@@ -228,7 +325,7 @@ const ProductRow: React.FC<ProductRowProps> = ({
         hover
         onContextMenu={handleContextMenu}
         sx={{
-          cursor: "pointer",
+          cursor: "default",
           bgcolor: colorHighlight
             ? isExpired
               ? "rgba(211, 47, 47, 0.08)"
@@ -247,7 +344,6 @@ const ProductRow: React.FC<ProductRowProps> = ({
           },
         }}
         className={animationClass}
-        onClick={() => onEdit(product)}
       >
       <TableCell align="center" sx={{ width: 48, p: 0.5 }}>
         <ProductImage
@@ -319,27 +415,32 @@ const ProductRow: React.FC<ProductRowProps> = ({
       )}
       {vis.cost !== false && (
         <TableCell align="center">
-          {product.latest_cost_per_sellable_unit
-            ? <PriceWithCurrency value={Number(product.latest_cost_per_sellable_unit)} currency={product.last_purchase_currency ?? "SDG"} />
-            : "---"}
+          <InlineEditCell
+            value={product.cost_price ?? (product.latest_cost_per_sellable_unit != null ? Number(product.latest_cost_per_sellable_unit) : null)}
+            forceOpen={activeField === "cost_price"}
+            onOpen={() => onFieldOpen?.("cost_price")}
+            onNext={() => onFieldNext?.("cost_price")}
+            onSave={(val) => onPriceUpdate?.(product.id, "cost_price", val) ?? Promise.resolve()}
+          />
         </TableCell>
       )}
       {vis.sale_price !== false && (
         <TableCell align="center">
-          {product.last_sale_price_per_sellable_unit ? (
-            <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center">
-              <PriceWithCurrency
-                value={Number(product.last_sale_price_per_sellable_unit)}
-                currency={product.last_purchase_currency ?? "SDG"}
-                highlight={product.sale_price != null}
-              />
-              {product.sale_price != null && (
-                <Tooltip title="سعر البيع مُحدد يدوياً على المنتج">
-                  <Tag style={{ width: 13, height: 13, color: "var(--mui-palette-primary-main)" }} />
-                </Tooltip>
-              )}
-            </Stack>
-          ) : "---"}
+          <Stack direction="row" spacing={0.3} alignItems="center" justifyContent="center">
+            <InlineEditCell
+              value={product.sale_price ?? (product.last_sale_price_per_sellable_unit != null ? Number(product.last_sale_price_per_sellable_unit) : null)}
+              highlight={product.sale_price != null}
+              forceOpen={activeField === "sale_price"}
+              onOpen={() => onFieldOpen?.("sale_price")}
+              onNext={() => onFieldNext?.("sale_price")}
+              onSave={(val) => onPriceUpdate?.(product.id, "sale_price", val) ?? Promise.resolve()}
+            />
+            {product.sale_price != null && (
+              <Tooltip title="سعر البيع مُحدد يدوياً على المنتج">
+                <Tag style={{ width: 13, height: 13, color: "var(--mui-palette-primary-main)" }} />
+              </Tooltip>
+            )}
+          </Stack>
         </TableCell>
       )}
       {vis.expire_date !== false && (
@@ -349,6 +450,49 @@ const ProductRow: React.FC<ProductRowProps> = ({
           </Typography>
         </TableCell>
       )}
+      <TableCell align="center">
+        <Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
+          {(["SDG", "USD"] as const).map((cur) => {
+            const active = product.preferred_currency === cur;
+            const isLastPurchase = !product.preferred_currency && product.last_purchase_currency === cur;
+            return (
+              <Typography
+                key={cur}
+                onClick={(e) => { e.stopPropagation(); onCurrencyChange?.(product.id, active ? null : cur); }}
+                variant="caption"
+                sx={{
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  fontSize: "0.62rem",
+                  px: 0.6,
+                  py: 0.15,
+                  borderRadius: 0.75,
+                  lineHeight: 1.6,
+                  bgcolor: active ? (cur === "USD" ? "success.main" : "info.main") : "action.hover",
+                  color: active ? "#fff" : "text.secondary",
+                  outline: isLastPurchase ? "1.5px solid" : "none",
+                  outlineColor: isLastPurchase ? "error.main" : "transparent",
+                  "&:hover": { opacity: 0.8 },
+                  transition: "all 0.15s",
+                }}
+              >
+                {cur}
+              </Typography>
+            );
+          })}
+        </Stack>
+      </TableCell>
+      <TableCell align="center" sx={{ p: 0.5, width: 36 }}>
+        <Tooltip title="تعديل">
+          <IconButton
+            size="small"
+            onClick={(e) => { e.stopPropagation(); onEdit(product); }}
+            sx={{ width: 28, height: 28, opacity: 0.45, "&:hover": { opacity: 1, color: "primary.main" } }}
+          >
+            <Pencil size={14} />
+          </IconButton>
+        </Tooltip>
+      </TableCell>
     </TableRow>
 
     {/* Context Menu */}
@@ -649,6 +793,8 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
   onDelete = () => {},
   onCopyInfo = () => {},
   onToggleFavorite = () => {},
+  onCurrencyChange,
+  onPriceUpdate,
   categories,
   stockingUnits,
   sellableUnits,
@@ -666,6 +812,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
   const [copiedSku, setCopiedSku] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isCreatingLoading, setIsCreatingLoading] = useState(false);
+  const [activeCell, setActiveCell] = useState<{ productId: number; field: "sale_price" | "cost_price" } | null>(null);
 
   const handleCreateSave = async (data: ProductFormData) => {
     setIsCreatingLoading(true);
@@ -752,51 +899,6 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
     }
   };
 
-  const renderSkeletonRow = (index: number) => (
-    <TableRow key={`skeleton-${index}`}>
-      <TableCell align="center">
-        <Skeleton variant="text" width={20} />
-      </TableCell>
-      <TableCell align="center">
-        <Skeleton variant="text" width={80} />
-      </TableCell>
-      <TableCell align="left">
-        <Skeleton variant="text" width="80%" />
-      </TableCell>
-      <TableCell align="center">
-        <Skeleton variant="text" width={100} />
-      </TableCell>
-      <TableCell align="center">
-        <Skeleton
-          variant="rectangular"
-          width={60}
-          height={24}
-          sx={{ borderRadius: 1 }}
-        />
-      </TableCell>
-      <TableCell align="center">
-        <Skeleton variant="text" width={60} />
-      </TableCell>
-      <TableCell align="center">
-        <Skeleton variant="text" width={60} />
-      </TableCell>
-      <TableCell align="center">
-        <Skeleton variant="text" width={30} />
-      </TableCell>
-      <TableCell align="center">
-        <Skeleton variant="text" width={80} />
-      </TableCell>
-      <TableCell align="center">
-        <Skeleton variant="text" width={40} />
-      </TableCell>
-      <TableCell align="center">
-        <Skeleton variant="text" width={80} />
-      </TableCell>
-      <TableCell align="center">
-        <Skeleton variant="circular" width={18} height={18} />
-      </TableCell>
-    </TableRow>
-  );
 
   return (
     <>
@@ -1004,6 +1106,10 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                     </Box>
                   </TableCell>
                 )}
+                <TableCell align="center" sx={{ whiteSpace: 'nowrap', minWidth: 100 }}>
+                  العملة
+                </TableCell>
+                <TableCell align="center" sx={{ width: 36 }} />
               </TableRow>
             </TableHead>
             <TableBody>
@@ -1043,14 +1149,17 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                   onDelete={onDelete}
                   onCopyInfo={onCopyInfo}
                   onToggleFavorite={onToggleFavorite}
+                  onCurrencyChange={onCurrencyChange}
+                  onPriceUpdate={onPriceUpdate}
+                  activeField={activeCell?.productId === product.id ? activeCell.field : null}
+                  onFieldOpen={(field) => setActiveCell({ productId: product.id, field })}
+                  onFieldNext={(field) => {
+                    const idx = products.findIndex((p) => p.id === product.id);
+                    const next = products[idx + 1];
+                    setActiveCell(next ? { productId: next.id, field } : null);
+                  }}
                 />
               ))}
-
-              {/* Skeletons for initial loading only */}
-              {isLoading &&
-                Array.from(new Array(10)).map((_, index) =>
-                  renderSkeletonRow(index),
-                )}
 
               {/* Sentinel for infinite scroll */}
               {!isLoading && !isFetchingNextPage && hasNextPage && (
@@ -1063,18 +1172,20 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
         </TableContainer>
       </Paper>
 
-      {/* Centered Loading Indicator for Infinite Scroll */}
-      {isFetchingNextPage && (
+      {/* Centered overlay for any loading state */}
+      {(isLoading || isFetchingNextPage) && (
         <Box
           sx={{
             position: "fixed",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            bgcolor: "rgba(255,255,255,0.45)",
             zIndex: 9999,
           }}
         >
-          <CircularProgress size={50} />
+          <CircularProgress size={48} />
         </Box>
       )}
     </>

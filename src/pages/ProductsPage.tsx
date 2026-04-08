@@ -490,6 +490,41 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
     showSnackbar(`${product.name} ${Math.random() > 0.5 ? 'تم إضافته للمفضلة' : 'تم إزالته من المفضلة'}`, "info");
   };
 
+  const handleCurrencyChange = async (productId: number, currency: "SDG" | "USD" | null) => {
+    try {
+      await productService.updatePreferredCurrency(productId, currency);
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    } catch (error) {
+      showSnackbar("فشل تحديث العملة", "error");
+    }
+  };
+
+  const handlePriceUpdate = async (productId: number, field: "sale_price" | "cost_price", value: number | null) => {
+    // Optimistic update — patch the cache directly so no refetch/overlay is triggered
+    queryClient.setQueriesData(
+      { queryKey: ["products", "infinite"], exact: false },
+      (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            data: page.data.map((p: any) =>
+              p.id === productId ? { ...p, [field]: value } : p
+            ),
+          })),
+        };
+      }
+    );
+    try {
+      await productService.updateProduct(productId, { [field]: value });
+    } catch (error) {
+      // Revert on failure
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      showSnackbar("فشل تحديث السعر", "error");
+    }
+  };
+
   // --- Search Handlers ---
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
@@ -1097,6 +1132,8 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
               onDelete={handleDeleteProduct}
               onCopyInfo={handleCopyProductInfo}
               onToggleFavorite={handleToggleFavorite}
+              onCurrencyChange={handleCurrencyChange}
+              onPriceUpdate={handlePriceUpdate}
             />
           </Box>
         )}

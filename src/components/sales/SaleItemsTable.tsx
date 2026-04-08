@@ -370,6 +370,9 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                 <Typography
                   component="span"
                   sx={{
+                    width:"200px",
+                    textOverflow:'ellipsis',
+                    textWrap:'nowrap',
                     fontSize: "0.8125rem",
                     textDecoration: isFullyReturned ? "line-through" : "none",
                     color: isFullyReturned ? "text.disabled" : "text.primary",

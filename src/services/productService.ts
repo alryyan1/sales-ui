@@ -38,6 +38,7 @@ export interface Product {
   // Optional accessors that might be added by backend ProductResource
   // --- Stock (always in sellable units) ---
   latest_purchase_cost?: string | number | null;
+  preferred_currency?: "SDG" | "USD" | null;
   last_purchase_currency?: "SDG" | "USD" | null;
   suggested_sale_price?: string | number | null;
   latest_cost_per_sellable_unit?: number | null;
@@ -306,6 +307,20 @@ const productService = {
       console.error(`Error updating product ${id}:`, error);
       throw error;
     }
+  },
+
+  /**
+   * Set or clear the preferred currency override for a product.
+   */
+  updatePreferredCurrency: async (
+    id: number,
+    currency: "SDG" | "USD" | null,
+  ): Promise<Product> => {
+    const response = await apiClient.put<{ product: Product }>(
+      `/products/${id}`,
+      { preferred_currency: currency },
+    );
+    return response.data.product;
   },
 
   /**
