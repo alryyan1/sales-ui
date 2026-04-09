@@ -97,7 +97,7 @@ const ProductsPage: React.FC = () => {
   const [syncLoading, setSyncLoading] = useState(false);
   const [showOnlyInStock, setShowOnlyInStock] = useState(false);
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
-  const [sortBy, setSortBy] = useState<string>("created_at");
+  const [sortBy, setSortBy] = useState<string>("id");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [sortingLoading, setSortingLoading] = useState(false);
 
@@ -174,18 +174,18 @@ const ProductsPage: React.FC = () => {
   const [barcodeLabelProduct, setBarcodeLabelProduct] = useState<{ id: number; name: string; sku: string | null } | null>(null);
 
   // Column Visibility
-  const COLUMN_KEYS = ["sku", "name", "scientific_name", "category", "sellable_unit", "stocking_unit", "units_per_stocking", "stock", "cost", "sale_price", "expire_date"] as const;
+  const COLUMN_KEYS = ["sku", "name", "scientific_name", "category", "sellable_unit", "stocking_unit", "units_per_stocking", "stock", "cost", "sale_price", "expire_date", "description"] as const;
   type ColumnKey = typeof COLUMN_KEYS[number];
   const COLUMN_LABELS: Record<ColumnKey, string> = {
     sku: "SKU", name: "اسم المنتج", scientific_name: "الاسم العلمي",
     category: "الفئة", sellable_unit: "وحدة البيع", stocking_unit: "وحدة التخزين",
     units_per_stocking: "عدد الوحدات", stock: "المخزون", cost: "تكلفة",
-    sale_price: "سعر البيع", expire_date: "الصلاحية",
+    sale_price: "سعر البيع", expire_date: "الصلاحية", description: "الوصف",
   };
   const defaultVisibility: Record<ColumnKey, boolean> = {
     sku: true, name: true, scientific_name: true, category: true,
     sellable_unit: true, stocking_unit: true, units_per_stocking: true,
-    stock: true, cost: true, sale_price: true, expire_date: true,
+    stock: true, cost: true, sale_price: true, expire_date: true, description: true,
   };
   const [visibleColumns, setVisibleColumns] = useState<Record<ColumnKey, boolean>>(() => {
     try {

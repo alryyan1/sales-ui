@@ -87,6 +87,7 @@ interface ProductsTableProps {
     sku?: boolean; name?: boolean; scientific_name?: boolean; category?: boolean;
     sellable_unit?: boolean; stocking_unit?: boolean; units_per_stocking?: boolean;
     stock?: boolean; cost?: boolean; sale_price?: boolean; expire_date?: boolean;
+    description?: boolean;
   };
   // Sorting Props
   sortBy?: string;
@@ -447,6 +448,13 @@ const ProductRow: React.FC<ProductRowProps> = ({
         <TableCell sx={{ minWidth: 100 }} align="center">
           <Typography variant="body2" sx={{ color: isExpired ? "error.main" : "text.primary", fontWeight: isExpired ? 600 : 400 }}>
             {formatExpiryDate(product.earliest_expiry_date)}
+          </Typography>
+        </TableCell>
+      )}
+      {vis.description !== false && (
+        <TableCell align="center" sx={{ maxWidth: 200 }}>
+          <Typography variant="body2" sx={{ color: "text.secondary", whiteSpace: "pre-line", textAlign: "center" }}>
+            {product.description || "---"}
           </Typography>
         </TableCell>
       )}
@@ -948,7 +956,16 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                     </IconButton>
                   </Tooltip>
                 </TableCell>
-                <TableCell align="center" sx={{ width: 48 }} />
+                <TableCell
+                  align="center"
+                  sx={{ width: 48, ...getSortableColumnSx('id') }}
+                  onClick={() => !sortingLoading && onSort?.('id')}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    #
+                    {renderSortIcon('id')}
+                  </Box>
+                </TableCell>
                 {vis.sku !== false && (
                   <TableCell
                     align="center"
@@ -1104,6 +1121,11 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                       الصلاحية
                       {renderSortIcon('expire_date')}
                     </Box>
+                  </TableCell>
+                )}
+                {vis.description !== false && (
+                  <TableCell align="center" sx={{ minWidth: 150 }}>
+                    الوصف
                   </TableCell>
                 )}
                 <TableCell align="center" sx={{ whiteSpace: 'nowrap', minWidth: 100 }}>
