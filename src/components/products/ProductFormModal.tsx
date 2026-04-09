@@ -81,6 +81,7 @@ type ProductFormValues = {
   cost_price: number | string;
   expire_date: string;
   image_url: string;
+  description: string;
 };
 
 interface ProductFormModalProps {
@@ -182,6 +183,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       cost_price: "",
       expire_date: "",
       image_url: "",
+      description: "",
     },
   });
 
@@ -311,6 +313,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           cost_price: productToEdit.cost_price ?? "",
           expire_date: productToEdit.expire_date ?? "",
           image_url: productToEdit.image_url ?? "",
+          description: productToEdit.description ?? "",
         });
       } else {
         reset({
@@ -326,6 +329,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           cost_price: "",
           expire_date: "",
           image_url: "",
+          description: "",
         });
       }
       setActiveTab(0);
@@ -350,7 +354,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       name: data.name,
       scientific_name: data.scientific_name || null,
       sku: data.sku || null,
-      description: null,
+      description: data.description || null,
       image_url: data.image_url || null,
       stocking_unit_id: data.stocking_unit_id ? Number(data.stocking_unit_id) : null,
       sellable_unit_id: data.sellable_unit_id ? Number(data.sellable_unit_id) : null,
@@ -898,6 +902,22 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   )}
                 />
               </Box>
+              <Controller
+                control={control}
+                name="description"
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="الوصف"
+                    size="small"
+                    multiline
+                    rows={3}
+                    disabled={isSubmitting}
+                    value={field.value ?? ""}
+                    sx={{ ...fieldSx, mt: 1, width: "100%" }}
+                  />
+                )}
+              />
             </Paper>
 
             {/* ── Image Upload Section ── */}
