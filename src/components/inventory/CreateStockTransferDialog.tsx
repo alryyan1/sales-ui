@@ -23,6 +23,7 @@ import { warehouseService, Warehouse } from "@/services/warehouseService";
 import stockTransferService from "@/services/stockTransferService";
 import productService, { Product } from "@/services/productService";
 import { toast } from "sonner";
+import { ProductImage } from "@/components/products/ProductImage";
 
 interface CreateStockTransferDialogProps {
   onSuccess?: () => void;
@@ -335,6 +336,23 @@ export function CreateStockTransferDialog({
                               if (reason === "input")
                                 loadProductsForRow(index, value, fromWarehouseId);
                             }}
+                            renderOption={(props, option) => (
+                              <Box component="li" {...props} key={option.id}
+                                sx={{ display: "flex", alignItems: "center", gap: 1.5, py: 0.75 }}
+                              >
+                                <ProductImage
+                                  imageUrl={option.image_url}
+                                  productName={option.name}
+                                  size={30}
+                                />
+                                <Box>
+                                  <Typography variant="body2" fontWeight={500}>{option.name}</Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {getStockLabel(option).replace(option.name, "").trim()}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            )}
                             renderInput={(params) => (
                               <TextField
                                 {...params}

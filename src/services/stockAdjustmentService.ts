@@ -36,7 +36,7 @@ export interface StockAdjustment {
   notes: string | null;
   created_at: string; // ISO date string
   // Include related data if eager loaded by backend
-  product?: Pick<Product, "id" | "name" | "sku">; // Select specific fields
+  product?: Pick<Product, "id" | "name" | "sku" | "image_url">; // Select specific fields
   user?: Pick<User, "id" | "name">;
   warehouse?: { id: number; name: string }; // Minimal warehouse info
   purchaseItemBatch?: Pick<PurchaseItem, "id" | "batch_number">; // Select specific fields

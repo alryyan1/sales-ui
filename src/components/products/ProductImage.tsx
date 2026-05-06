@@ -9,6 +9,7 @@ import {
   Typography,
   Grow,
 } from "@mui/material";
+import { imagesUrl } from "@/constants";
 
 interface ProductImageProps {
   imageUrl?: string | null;
@@ -46,6 +47,12 @@ export const ProductImage: React.FC<ProductImageProps> = ({
     setAnchorEl(null);
   };
 
+  const resolvedImageUrl = imageUrl
+    ? imageUrl.startsWith("http")
+      ? imageUrl
+      : `${imagesUrl}${imageUrl}`
+    : null;
+
   // Modern, premium fallback gradients based on theme
   const fallbackGradient =
     theme.palette.mode === "dark"
@@ -55,7 +62,7 @@ export const ProductImage: React.FC<ProductImageProps> = ({
   const borderRadius =
     variant === "circular" ? "50%" : variant === "rounded" ? "12px" : "0px";
 
-  if (imageUrl && !imageError) {
+  if (resolvedImageUrl && !imageError) {
     return (
       <Box
         onMouseEnter={handleMouseEnter}
@@ -83,7 +90,7 @@ export const ProductImage: React.FC<ProductImageProps> = ({
       >
         <Box
           component="img"
-          src={imageUrl}
+          src={resolvedImageUrl}
           alt={productName}
           onError={handleImageError}
           sx={{
@@ -133,7 +140,7 @@ export const ProductImage: React.FC<ProductImageProps> = ({
           <Box sx={{ position: "relative" }}>
             <Box
               component="img"
-              src={imageUrl}
+              src={resolvedImageUrl}
               alt={productName}
               sx={{
                 width: "100%",

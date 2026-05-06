@@ -33,6 +33,7 @@ import stockAdjustmentService, {
 import { formatNumber } from "@/constants";
 import { PaginatedResponse } from "@/services/clientService";
 import dayjs from "dayjs";
+import { ProductImage } from "@/components/products/ProductImage";
 import StockAdjustmentFormModal from "./StockAdjustmentFormModal";
 import { warehouseService, Warehouse } from "../../services/warehouseService";
 import Select, { SelectChangeEvent } from "@mui/material/Select";
@@ -218,6 +219,7 @@ const StockAdjustmentsListPage: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell>التاريخ</TableCell>
+                    <TableCell sx={{ width: 48, p: 0.5 }} />
                     <TableCell>المنتج</TableCell>
                     <TableCell>المخزن</TableCell>
                     <TableCell>رقم الدفعة</TableCell>
@@ -231,7 +233,7 @@ const StockAdjustmentsListPage: React.FC = () => {
                 <TableBody>
                   {adjustmentsResponse.data.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+                      <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
                         <Typography color="text.secondary">
                           لا توجد تعديلات مخزون مسجلة.
                         </Typography>
@@ -242,6 +244,13 @@ const StockAdjustmentsListPage: React.FC = () => {
                     <TableRow key={adj.id}>
                       <TableCell>
                         {dayjs(adj.created_at).format("YYYY-MM-DD")}
+                      </TableCell>
+                      <TableCell sx={{ p: 0.5, width: 48 }}>
+                        <ProductImage
+                          imageUrl={adj.product?.image_url}
+                          productName={adj.product?.name}
+                          size={36}
+                        />
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" sx={{ fontWeight: 500 }}>

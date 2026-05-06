@@ -11,6 +11,7 @@ import {
 import { Save, X, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Product } from "@/services/productService";
+import { ProductImage } from "@/components/products/ProductImage";
 
 interface InlineCreateInventoryCountItemProps {
   onSave: (data: { product_id: number; actual_quantity?: number }) => void;
@@ -175,13 +176,20 @@ const InlineCreateInventoryCountItem: React.FC<
             const { ...otherProps } = props;
             return (
               <li key={option.id} {...otherProps}>
-                <Box sx={{ display: "flex", flexDirection: "column" }}>
-                  <Typography variant="body2">{option.name}</Typography>
-                  {(option.sku || option.barcode) && (
-                    <Typography variant="caption" color="text.secondary">
-                      {option.sku || option.barcode}
-                    </Typography>
-                  )}
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                  <ProductImage
+                    imageUrl={option.image_url}
+                    productName={option.name}
+                    size={30}
+                  />
+                  <Box sx={{ display: "flex", flexDirection: "column" }}>
+                    <Typography variant="body2">{option.name}</Typography>
+                    {(option.sku || option.barcode) && (
+                      <Typography variant="caption" color="text.secondary">
+                        {option.sku || option.barcode}
+                      </Typography>
+                    )}
+                  </Box>
                 </Box>
               </li>
             );

@@ -27,6 +27,7 @@ import InstantTextField from "@/components/purchases/InstantTextField";
 import { formatCurrency, formatNumber } from "@/constants";
 import { PurchaseItem } from "@/services/purchaseService";
 import { ProductUnitsMap } from "./types";
+import { ProductImage } from "@/components/products/ProductImage";
 
 // Helper: round to exactly 3 decimal places
 const roundToThreeDecimals = (value: number): number => {
@@ -91,6 +92,23 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
           );
         },
         size: 50,
+      }),
+
+      // 1b. Image column
+      columnHelper.display({
+        id: "image",
+        header: "",
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <ProductImage
+              imageUrl={item.product_image_url ?? item.product?.image_url}
+              productName={item.product?.name || item.product_name}
+              size={36}
+            />
+          );
+        },
+        size: 48,
       }),
 
       // 2. Product Name column

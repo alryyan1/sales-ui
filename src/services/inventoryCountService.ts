@@ -43,6 +43,7 @@ export interface InventoryCountItem {
     id: number;
     name: string;
     sku: string | null;
+    image_url?: string | null;
   };
 }
 

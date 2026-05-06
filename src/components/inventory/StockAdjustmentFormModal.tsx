@@ -43,6 +43,7 @@ import apiClient from "@/lib/axios";
 import dayjs from "dayjs";
 import { useAuth } from "@/context/AuthContext";
 import { warehouseService, Warehouse } from "@/services/warehouseService"; // Import warehouse service
+import { ProductImage } from "@/components/products/ProductImage";
 
 // --- Zod Schema with Arabic messages ---
 const adjustmentReasons = [
@@ -410,10 +411,15 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
                         sx={{
                           display: "flex",
                           alignItems: "center",
-                          gap: 1,
+                          gap: 1.5,
                           width: "100%",
                         }}
                       >
+                        <ProductImage
+                          imageUrl={option.image_url}
+                          productName={option.name}
+                          size={32}
+                        />
                         {field.value === option.id && (
                           <CheckIcon fontSize="small" color="primary" />
                         )}

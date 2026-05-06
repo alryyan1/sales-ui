@@ -43,6 +43,7 @@ import inventoryCountService, {
 import productService from "@/services/productService";
 import dayjs from "dayjs";
 import InlineCreateInventoryCountItem from "@/components/inventory/InlineCreateInventoryCountItem";
+import { ProductImage } from "@/components/products/ProductImage";
 
 const STATUS_LABEL: Record<string, string> = {
   draft: "مسودة",
@@ -359,6 +360,7 @@ const ManageInventoryCountPage: React.FC = () => {
             <TableHead>
               <TableRow sx={{ bgcolor: "grey.50" }}>
                 <TableCell sx={{ fontWeight: 700, fontSize: 12, width: 40 }}>#</TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: 12, width: 48, p: 0.5 }} />
                 <TableCell sx={{ fontWeight: 700, fontSize: 12 }}>المنتج</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 700, fontSize: 12, width: 110 }}>الكمية المسجلة</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 700, fontSize: 12, width: 150 }}>الكمية الفعلية</TableCell>
@@ -378,6 +380,13 @@ const ManageInventoryCountPage: React.FC = () => {
                 filteredItems.map((item, index) => (
                   <TableRow key={item.id} hover sx={{ "&:last-child td": { borderBottom: 0 } }}>
                     <TableCell sx={{ fontSize: 12, color: "text.secondary" }}>{index + 1}</TableCell>
+                    <TableCell sx={{ p: 0.5, width: 48 }}>
+                      <ProductImage
+                        imageUrl={item.product?.image_url}
+                        productName={item.product?.name}
+                        size={32}
+                      />
+                    </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight={500} fontSize={12}>{item.product?.name}</Typography>
                       {(item.product?.sku) && (

@@ -17,6 +17,7 @@ import { Save, X, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { Product } from "@/services/productService";
+import { ProductImage } from "@/components/products/ProductImage";
 import { AddPurchaseItemData } from "./types";
 import apiClient from "@/lib/axios";
 import { formatNumber } from "@/constants";
@@ -339,21 +340,26 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
             const { ...otherProps } = props;
             return (
               <li key={option.id} {...otherProps}>
-                <Box
-                  sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}
-                >
-                  <Typography variant="body2">{option.name}</Typography>
-                  {(option.sku || option.suggested_sale_price != null) && (
-                    <Typography variant="caption" color="text.secondary">
-                      {[
-                        option.sku,
-                        option.suggested_sale_price != null &&
-                          `Price: ${Number(option.suggested_sale_price).toFixed(2)}`,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </Typography>
-                  )}
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                  <ProductImage
+                    imageUrl={option.image_url}
+                    productName={option.name}
+                    size={32}
+                  />
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
+                    <Typography variant="body2">{option.name}</Typography>
+                    {(option.sku || option.suggested_sale_price != null) && (
+                      <Typography variant="caption" color="text.secondary">
+                        {[
+                          option.sku,
+                          option.suggested_sale_price != null &&
+                            `Price: ${Number(option.suggested_sale_price).toFixed(2)}`,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </Typography>
+                    )}
+                  </Box>
                 </Box>
               </li>
             );

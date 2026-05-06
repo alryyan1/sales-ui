@@ -14,6 +14,7 @@ import { CreateStockTransferDialog } from "@/components/inventory/CreateStockTra
 import stockTransferService, { StockTransfer } from "@/services/stockTransferService";
 import { Loader2, ArrowRightLeft } from "lucide-react";
 import { toast } from "sonner";
+import { ProductImage } from "@/components/products/ProductImage";
 import {
   Pagination,
   PaginationContent,
@@ -110,7 +111,12 @@ export default function StockTransfersPage() {
                           <div className="flex flex-col gap-1 items-center">
                             {transfer.items?.length ? (
                               transfer.items.map((item) => (
-                                <div key={item.id} className="flex items-center gap-1 text-xs">
+                                <div key={item.id} className="flex items-center gap-1.5 text-xs">
+                                  <ProductImage
+                                    imageUrl={item.product?.image_url}
+                                    productName={item.product?.name}
+                                    size={28}
+                                  />
                                   <span className="font-medium">{item.product?.name ?? `#${item.product_id}`}</span>
                                   <Badge className="tabular-nums text-xs px-1.5 py-0">
                                     {typeof item.quantity === "number"

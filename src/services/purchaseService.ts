@@ -19,6 +19,7 @@ export interface PurchaseItem {
   product_id: number;
   product_name?: string;
   product_sku?: string;
+  product_image_url?: string | null;
   batch_number: string | null;
   quantity: number; // Original quantity in STOCKING units
   /** @deprecated Stock is in product_warehouse only; may be 0 or omitted */

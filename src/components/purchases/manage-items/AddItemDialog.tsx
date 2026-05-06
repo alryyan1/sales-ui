@@ -35,6 +35,7 @@ import purchaseService from "@/services/purchaseService";
 import productService, { Product } from "@/services/productService";
 import { useSettings } from "@/context/SettingsContext";
 import { AddPurchaseItemData } from "./types";
+import { ProductImage } from "@/components/products/ProductImage";
 
 // Module-level cache
 let globalProductCache: Product[] | null = null;
@@ -504,36 +505,18 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                 const { key, ...otherProps } = props;
                 return (
                   <li key={option.id} {...otherProps}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 2,
-                        py: 0.5,
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 1.5,
-                          bgcolor: "primary.50",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <Package size={18} color="#3b82f6" />
-                      </Box>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, py: 0.5 }}>
+                      <ProductImage
+                        imageUrl={option.image_url}
+                        productName={option.name}
+                        size={36}
+                      />
                       <Box>
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>
                           {option.name}
                         </Typography>
                         {option.sku && (
-                          <Typography
-                            variant="caption"
-                            sx={{ color: "grey.500" }}
-                          >
+                          <Typography variant="caption" sx={{ color: "grey.500" }}>
                             باركود: {option.sku}
                           </Typography>
                         )}
