@@ -229,7 +229,7 @@ export const generateDailySalesPdf = async (filterParams?: string): Promise<void
  * @param filters - Optional filters (search, category_id)
  * @returns Promise that resolves when PDF opens in new tab
  */
-export const exportInventoryAuditPdf = async (filters: { search?: string; category_id?: number | null } = {}): Promise<void> => {
+export const exportInventoryAuditPdf = async (filters: { search?: string; category_id?: number | null; warehouse_id?: number | null } = {}): Promise<void> => {
   try {
     // Build query parameters
     const params = new URLSearchParams();
@@ -240,6 +240,10 @@ export const exportInventoryAuditPdf = async (filters: { search?: string; catego
     
     if (filters.category_id) {
       params.append('category_id', filters.category_id.toString());
+    }
+
+    if (filters.warehouse_id) {
+      params.append('warehouse_id', filters.warehouse_id.toString());
     }
 
     const response = await apiClient.get(`/reports/inventory-audit-pdf?${params}`, {

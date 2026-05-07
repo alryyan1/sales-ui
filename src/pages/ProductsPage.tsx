@@ -582,6 +582,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
       await exportInventoryAuditPdf({
         search: debouncedSearchTerm,
         category_id: selectedCategory,
+        warehouse_id: selectedWarehouse ? Number(selectedWarehouse) : null,
       });
       showSnackbar("جاري تصدير تقرير ارصده المخازن...", "success");
     } catch (error) {

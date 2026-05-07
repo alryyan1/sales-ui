@@ -1892,7 +1892,16 @@ const PosBlankPage: React.FC = () => {
                           justifyContent: "space-between",
                         }}
                       >
-                        <Typography variant="body2" fontWeight="medium">
+                        <Typography
+                          variant="body2"
+                          fontWeight="medium"
+                          sx={{
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            maxWidth: "70%",
+                          }}
+                        >
                           {option.name}
                         </Typography>
                         {option.current_stock_quantity != null ||

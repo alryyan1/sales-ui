@@ -138,6 +138,7 @@ const ExpensesPage: React.FC = () => {
     closeModal();
     setCurrentPage(1);
     fetchExpenses();
+    fetchCategories();
   };
   const handleDelete = async (expense: ExpenseTableItem) => {
     if (!window.confirm("هل أنت متأكد من حذف هذه المصروفات؟")) return;

@@ -360,27 +360,31 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
             const returnedQty = item.returned_quantity ?? 0;
             const isFullyReturned = returnedQty > 0 && returnedQty >= (item.quantity ?? 0);
             return (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexWrap: "wrap" }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, minWidth: 0 }}>
                 <ProductImage
                   imageUrl={item.product?.image_url}
                   productName={name}
                   size={32}
                   variant="rounded"
                 />
-                <Typography
-                  component="span"
-                  sx={{
-                    width:"200px",
-                    textOverflow:'ellipsis',
-                    textWrap:'nowrap',
-                    fontSize: "0.8125rem",
-                    textDecoration: isFullyReturned ? "line-through" : "none",
-                    color: isFullyReturned ? "text.disabled" : "text.primary",
-                  }}
-                >
-                  {name}
-                  {scientificName ? ` (${scientificName})` : ""}
-                </Typography>
+                <Tooltip title={scientificName ? `${name} (${scientificName})` : name} arrow>
+                  <Typography
+                    component="span"
+                    sx={{
+                      maxWidth: "200px",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      display: "block",
+                      fontSize: "0.8125rem",
+                      textDecoration: isFullyReturned ? "line-through" : "none",
+                      color: isFullyReturned ? "text.disabled" : "text.primary",
+                    }}
+                  >
+                    {name}
+                    {scientificName ? ` (${scientificName})` : ""}
+                  </Typography>
+                </Tooltip>
                 {returnedQty > 0 && (
                   <Tooltip
                     title={isFullyReturned ? "تم إرجاع هذا الصنف بالكامل" : `تم إرجاع ${returnedQty} من أصل ${item.quantity}`}
