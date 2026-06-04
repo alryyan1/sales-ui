@@ -1,5 +1,5 @@
 // src/pages/reports/InventoryLogPage.tsx
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -40,6 +40,19 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
 // Icons
 import {
@@ -52,6 +65,8 @@ import {
   ChevronDown,
   ChevronUp,
   PackageSearch,
+  X,
+  Check,
 } from "lucide-react";
 
 // Services and Types
@@ -60,6 +75,7 @@ import inventoryLogService, {
 } from "../../services/inventoryLogService";
 import { PaginatedResponse as LogPaginatedResponse } from "../../services/clientService";
 import { warehouseService, Warehouse } from "../../services/warehouseService";
+import productService, { Product } from "../../services/productService";
 import { formatNumber } from "@/constants";
 
 // --- Zod Schema ---
@@ -101,6 +117,14 @@ const InventoryLogPage: React.FC = () => {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [showFilters, setShowFilters] = useState(true);
 
+  // Product autocomplete
+  const [productOpen, setProductOpen] = useState(false);
+  const [productInput, setProductInput] = useState("");
+  const [productOptions, setProductOptions] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const productDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const form = useForm<LogFilterValues>({
     resolver: zodResolver(logFilterSchema),
     defaultValues: {
@@ -120,6 +144,26 @@ const InventoryLogPage: React.FC = () => {
       .then(setWarehouses)
       .catch(() => toast.error("فشل تحميل المستودعات", { id: "warehouse-fetch-error" }));
   }, []);
+
+  // Fetch product suggestions with debounce
+  useEffect(() => {
+    if (productDebounceRef.current) clearTimeout(productDebounceRef.current);
+    if (!productOpen) return;
+    productDebounceRef.current = setTimeout(async () => {
+      setLoadingProducts(true);
+      try {
+        const results = await productService.getProductsForAutocomplete(productInput, 20);
+        setProductOptions(results);
+      } catch {
+        setProductOptions([]);
+      } finally {
+        setLoadingProducts(false);
+      }
+    }, 300);
+    return () => {
+      if (productDebounceRef.current) clearTimeout(productDebounceRef.current);
+    };
+  }, [productInput, productOpen]);
 
   const fetchLog = useCallback(
     async (filters: LogFilterValues, page: number) => {
@@ -177,6 +221,8 @@ const InventoryLogPage: React.FC = () => {
 
   const clearFilters = () => {
     reset({ startDate: "", endDate: "", productId: null, warehouseId: null, type: null, search: "" });
+    setSelectedProduct(null);
+    setProductInput("");
     setSearchParams({});
   };
 
@@ -265,8 +311,109 @@ const InventoryLogPage: React.FC = () => {
           <CardContent className="px-4 pb-4 pt-0">
             <form onSubmit={handleSubmit(onFilterSubmit)}>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {/* Search - full width */}
-                <div className="sm:col-span-2 lg:col-span-4">
+                {/* Product Autocomplete */}
+                <div className="sm:col-span-2 space-y-1">
+                  <Label className="text-xs text-muted-foreground">المنتج</Label>
+                  <Controller
+                    control={control}
+                    name="productId"
+                    render={({ field }) => (
+                      <Popover open={productOpen} onOpenChange={setProductOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={productOpen}
+                            className="w-full h-9 justify-between text-sm font-normal"
+                          >
+                            {selectedProduct ? (
+                              <span className="truncate">{selectedProduct.name}</span>
+                            ) : (
+                              <span className="text-muted-foreground">ابحث عن منتج...</span>
+                            )}
+                            <div className="flex items-center gap-1 shrink-0">
+                              {selectedProduct && (
+                                <span
+                                  role="button"
+                                  tabIndex={0}
+                                  className="rounded-sm p-0.5 hover:bg-muted"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedProduct(null);
+                                    setProductInput("");
+                                    field.onChange(null);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                      e.stopPropagation();
+                                      setSelectedProduct(null);
+                                      setProductInput("");
+                                      field.onChange(null);
+                                    }
+                                  }}
+                                >
+                                  <X size={12} />
+                                </span>
+                              )}
+                              <ChevronDown size={14} className="text-muted-foreground" />
+                            </div>
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[320px] p-0" align="start">
+                          <Command shouldFilter={false}>
+                            <CommandInput
+                              placeholder="اكتب اسم المنتج..."
+                              value={productInput}
+                              onValueChange={setProductInput}
+                            />
+                            <CommandList>
+                              {loadingProducts ? (
+                                <div className="flex justify-center py-4">
+                                  <Loader2 size={16} className="animate-spin text-muted-foreground" />
+                                </div>
+                              ) : (
+                                <>
+                                  <CommandEmpty>لا توجد منتجات مطابقة</CommandEmpty>
+                                  <CommandGroup>
+                                    {productOptions.map((p) => (
+                                      <CommandItem
+                                        key={p.id}
+                                        value={String(p.id)}
+                                        onSelect={() => {
+                                          setSelectedProduct(p);
+                                          field.onChange(String(p.id));
+                                          setProductOpen(false);
+                                        }}
+                                      >
+                                        <Check
+                                          size={14}
+                                          className={cn(
+                                            "shrink-0",
+                                            field.value === String(p.id) ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                          <div className="text-sm truncate">{p.name}</div>
+                                          {p.sku && (
+                                            <div className="text-xs text-muted-foreground">{p.sku}</div>
+                                          )}
+                                        </div>
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </>
+                              )}
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  />
+                </div>
+
+                {/* General Search (batch, document) */}
+                <div className="sm:col-span-2 space-y-1">
+                  <Label className="text-xs text-muted-foreground">بحث (دفعة / مستند)</Label>
                   <Controller
                     control={control}
                     name="search"
@@ -276,7 +423,7 @@ const InventoryLogPage: React.FC = () => {
                         <Input
                           {...field}
                           value={field.value ?? ""}
-                          placeholder="بحث باسم المنتج، رقم المستند، الدفعة..."
+                          placeholder="رقم الدفعة أو المستند..."
                           className="pr-9 h-9 text-sm"
                         />
                       </div>
