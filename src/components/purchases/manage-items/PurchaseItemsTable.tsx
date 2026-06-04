@@ -118,7 +118,7 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
           const item = row.original;
           return (
             <Box sx={{ minWidth: 150 }}>
-              <Typography variant="body2" fontWeight="600" noWrap>
+              <Typography variant="body2" fontWeight="600" noWrap dir="auto">
                 {item.product_name ||
                   item.product?.name ||
                   `Product #${item.product_id}`}

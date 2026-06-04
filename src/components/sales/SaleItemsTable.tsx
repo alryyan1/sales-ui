@@ -370,6 +370,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                 <Tooltip title={scientificName ? `${name} (${scientificName})` : name} arrow>
                   <Typography
                     component="span"
+                    dir="auto"
                     sx={{
                       maxWidth: "200px",
                       overflow: "hidden",

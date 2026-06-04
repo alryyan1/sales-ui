@@ -202,7 +202,7 @@ const SaleDetailsDialog: React.FC<SaleDetailsDialogProps> = ({
                 <TableBody>
                   {sale.items?.map((item: any) => (
                     <TableRow key={item.id}>
-                      <TableCell>{item.product_name}</TableCell>
+                      <TableCell dir="auto">{item.product_name}</TableCell>
                       <TableCell align="center">{item.quantity}</TableCell>
                       <TableCell align="center">
                         {formatNumber(Number(item.unit_price))}

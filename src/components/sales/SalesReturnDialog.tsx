@@ -325,7 +325,7 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
                         onClick={(e) => e.stopPropagation()}
                       />
                       <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="body2" fontSize="0.82rem" fontWeight={selected ? 600 : 400} noWrap>
+                        <Typography variant="body2" fontSize="0.82rem" fontWeight={selected ? 600 : 400} noWrap dir="auto">
                           {item.product?.name ?? item.product_name ?? `#${pid}`}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
