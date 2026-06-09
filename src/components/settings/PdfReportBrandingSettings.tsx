@@ -124,6 +124,8 @@ export const PdfReportBrandingSettings: React.FC = () => {
       logo_width: settings.logo_width ?? 24,
       pdf_font: settings.pdf_font ?? "Amiri",
     }));
+    console.log("Loaded settings into state:", settings);
+    
     if (settings.company_logo_url) setLogoPreview(settings.company_logo_url);
     if (settings.company_header_url) setHeaderPreview(settings.company_header_url);
     if (settings.company_stamp_url) setStampPreview(settings.company_stamp_url);
