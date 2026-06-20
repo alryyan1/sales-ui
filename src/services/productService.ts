@@ -177,12 +177,14 @@ const productService = {
   getProductsForAutocomplete: async (
     search: string = "",
     limit: number = 20,
+    warehouseId?: number | null,
   ): Promise<Product[]> => {
     // Returns flat array, not paginated
     try {
       const params = new URLSearchParams();
       if (search) params.append("search", search);
       params.append("limit", limit.toString());
+      if (warehouseId) params.append("warehouse_id", warehouseId.toString());
 
       // Assumes backend endpoint /api/products/autocomplete exists
       const response = await apiClient.get<{ data: Product[] }>(

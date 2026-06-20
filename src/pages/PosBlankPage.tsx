@@ -1742,6 +1742,7 @@ const PosBlankPage: React.FC = () => {
           <Box sx={{ flex: 1, minWidth: 160, maxWidth: 380 }}>
             <Autocomplete
               freeSolo
+              filterOptions={(x) => x}
               value={selectedProduct}
               inputValue={productInputValue}
               onInputChange={(_, value) => setProductInputValue(value)}
@@ -1832,9 +1833,16 @@ const PosBlankPage: React.FC = () => {
                           justifyContent: "space-between",
                         }}
                       >
-                        <Typography variant="body2" fontWeight="medium">
-                          {option.name}
-                        </Typography>
+                        <Box>
+                          <Typography variant="body2" fontWeight="medium">
+                            {option.name}
+                          </Typography>
+                          {option.scientific_name && (
+                            <Typography variant="caption" color="text.secondary" fontStyle="italic">
+                              {option.scientific_name}
+                            </Typography>
+                          )}
+                        </Box>
                         {option.current_stock_quantity != null ||
                           option.stock_quantity != null ? (
                           <Typography

@@ -42,7 +42,6 @@ import { PurchaseItem } from "../../services/purchaseService";
 import apiClient from "@/lib/axios";
 import dayjs from "dayjs";
 import { useAuth } from "@/context/AuthContext";
-import { offlineSaleService } from "@/services/offlineSaleService"; // Use offline service for cached products
 import { warehouseService, Warehouse } from "@/services/warehouseService"; // Import warehouse service
 
 // --- Zod Schema with Arabic messages ---
@@ -156,19 +155,12 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
     }
   }, [isOpen, user?.warehouse_id, setValue, selectedWarehouseId]);
 
-  // --- Fetch Products (Cached / Debounced) ---
-  const fetchProducts = useCallback(async (search: string) => {
-    // If no warehouse selected, maybe don't search? Or search global?
-    // Usually stock adjustment is warehouse specific.
-    // Let's assume we can search all, but ideally we filter by warehouse if possible.
-    // The cached search `offlineSaleService.searchProducts` returns all products.
-
+  // --- Fetch Products (API / Debounced) ---
+  const fetchProducts = useCallback(async (search: string, warehouseId?: number) => {
     setLoadingProducts(true);
     try {
-      // Use offline service for cached/fast search
-      // Note: This returns all products in local DB.
-      const response = await offlineSaleService.searchProducts(search);
-      setProducts(response.slice(0, 50)); // Limit to 50 for performance
+      const results = await productService.getProductsForAutocomplete(search, 50, warehouseId);
+      setProducts(results);
     } catch (error) {
       console.error("Error searching products", error);
       setProducts([]);
@@ -189,8 +181,8 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
   }, [productSearchInput]);
 
   useEffect(() => {
-    fetchProducts(debouncedProductSearch);
-  }, [debouncedProductSearch, fetchProducts]);
+    fetchProducts(debouncedProductSearch, selectedWarehouseId);
+  }, [debouncedProductSearch, selectedWarehouseId, fetchProducts]);
 
   // --- Fetch Available Batches ---
   // Must filter by BOTH Product AND Warehouse
@@ -408,33 +400,42 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
                       }}
                     />
                   )}
-                  renderOption={(props, option) => (
-                    <Box component="li" {...props} key={option.id}>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1,
-                          width: "100%",
-                        }}
-                      >
-                        {field.value === option.id && (
-                          <CheckIcon fontSize="small" color="primary" />
-                        )}
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="body2">{option.name}</Typography>
-                          {option.sku && (
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              SKU: {option.sku}
-                            </Typography>
+                  renderOption={(props, option) => {
+                    const qty = option.current_stock_quantity ?? option.stock_quantity ?? 0;
+                    const isLow = qty <= 0;
+                    return (
+                      <Box component="li" {...props} key={option.id}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1,
+                            width: "100%",
+                          }}
+                        >
+                          {field.value === option.id && (
+                            <CheckIcon fontSize="small" color="primary" />
                           )}
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="body2">{option.name}</Typography>
+                            {option.sku && (
+                              <Typography variant="caption" color="text.secondary">
+                                SKU: {option.sku}
+                              </Typography>
+                            )}
+                          </Box>
+                          <Typography
+                            variant="caption"
+                            fontWeight="bold"
+                            color={isLow ? "error.main" : "success.main"}
+                            sx={{ whiteSpace: "nowrap" }}
+                          >
+                            الكمية: {qty}
+                          </Typography>
                         </Box>
                       </Box>
-                    </Box>
-                  )}
+                    );
+                  }}
                   noOptionsText={
                     productSearchInput ? "لا توجد نتائج" : "اكتب للبحث عن منتج"
                   }
