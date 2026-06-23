@@ -448,84 +448,95 @@ const ManageStockRequisitionsListPage: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>رقم الطلب</TableHead>
-                    <TableHead>تاريخ الطلب</TableHead>
-                    <TableHead>الطالب</TableHead>
-                    <TableHead>القسم / السبب</TableHead>
-                    <TableHead className="text-center">
-                      الحالة
-                    </TableHead>
-                    <TableHead className="text-center">
-                      الإجراءات
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {requisitionsResponse.data.length === 0 && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={6}
-                        className="h-24 text-center text-muted-foreground"
-                      >
-                        لم يتم العثور على طلبات
-                      </TableCell>
-                    </TableRow>
-                  )}{" "}
-                  {/* Add key */}
-                  {requisitionsResponse.data.map((req) => (
-                    <TableRow key={req.id}>
-                      <TableCell className="font-mono text-xs">
-                        REQ-{String(req.id).padStart(5, "0")}
-                      </TableCell>
-                      <TableCell>{formatDate(req.request_date)}</TableCell>
-                      <TableCell>
-                        {req.requester_name || "غير متوفر"}
-                      </TableCell>
-                      <TableCell>{req.department_or_reason || "---"}</TableCell>
-                      <TableCell className="text-center">
-                        <Badge
-                          variant={getStatusBadgeVariant(req.status)}
-                          className="text-xs"
-                        >
-                          {req.status === "pending_approval" ? "في انتظار الموافقة" :
-                           req.status === "approved" ? "معتمد" :
-                           req.status === "issued" ? "تم الإصدار" :
-                           req.status === "partially_issued" ? "إصدار جزئي" :
-                           req.status === "rejected" ? "مرفوض" :
-                           req.status === "cancelled" ? "ملغي" : req.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {/* Show "Process" button for pending/partially issued, "View" for others */}
-                        {(req.status === "pending_approval" ||
-                          req.status === "approved" ||
-                          req.status === "partially_issued") ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleProcessRequest(req.id)}
-                          >
-                            <Settings2 className="me-2 h-3 w-3" />{" "}
-                            معالجة الطلب
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleProcessRequest(req.id)}
-                          >
-                            <Eye className="me-2 h-3 w-3" />{" "}
-                            عرض التفاصيل
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div className="w-full overflow-x-auto">
+                <table className="w-full table-fixed text-sm caption-bottom">
+                  <colgroup>
+                    <col style={{ width: "120px" }} />
+                    <col style={{ width: "110px" }} />
+                    <col style={{ width: "130px" }} />
+                    <col />
+                    <col style={{ width: "130px" }} />
+                    <col style={{ width: "110px" }} />
+                  </colgroup>
+                  <thead className="[&_tr]:border-b">
+                    <tr className="border-b transition-colors hover:bg-muted/50">
+                      <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">رقم الطلب</th>
+                      <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">تاريخ الطلب</th>
+                      <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">الطالب</th>
+                      <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">القسم / السبب</th>
+                      <th className="h-12 px-4 text-center align-middle font-medium text-muted-foreground">الحالة</th>
+                      <th className="h-12 px-4 text-center align-middle font-medium text-muted-foreground">الإجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody className="[&_tr:last-child]:border-0">
+                    {requisitionsResponse.data.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="h-24 text-center text-muted-foreground">
+                          لم يتم العثور على طلبات
+                        </td>
+                      </tr>
+                    )}
+                    {requisitionsResponse.data.map((req) => (
+                      <tr key={req.id} className="border-b transition-colors hover:bg-muted/50">
+                        <td className="px-4 py-3 align-middle font-mono font-semibold">
+                          SR-{String(req.id).padStart(4, "0")}
+                        </td>
+                        <td className="px-4 py-3 align-middle">
+                          {formatDate(req.request_date)}
+                        </td>
+                        <td className="px-4 py-3 align-middle">
+                          {req.requester_name || "غير متوفر"}
+                        </td>
+                        <td className="px-4 py-3 align-middle truncate max-w-0">
+                          <span className="block truncate" title={req.department_or_reason || ""}>
+                            {req.department_or_reason || "—"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 align-middle text-center">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
+                            req.status === "pending_approval" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" :
+                            req.status === "approved"         ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" :
+                            req.status === "issued"           ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" :
+                            req.status === "partially_issued" ? "bg-teal-100 text-teal-800" :
+                            req.status === "rejected"         ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" :
+                                                                "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                          }`}>
+                            {req.status === "pending_approval" ? "قيد المراجعة"  :
+                             req.status === "approved"         ? "موافق عليه"    :
+                             req.status === "issued"           ? "تم الصرف"      :
+                             req.status === "partially_issued" ? "صرف جزئي"      :
+                             req.status === "rejected"         ? "مرفوض"          :
+                             req.status === "cancelled"        ? "ملغي"           : req.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 align-middle text-center">
+                          {(req.status === "pending_approval" ||
+                            req.status === "approved" ||
+                            req.status === "partially_issued") ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleProcessRequest(req.id)}
+                            >
+                              <Settings2 className="me-1 h-3.5 w-3.5" />
+                              معالجة
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleProcessRequest(req.id)}
+                            >
+                              <Eye className="me-1 h-3.5 w-3.5" />
+                              عرض
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </CardContent>
           </Card>
           {requisitionsResponse.last_page > 1 && (

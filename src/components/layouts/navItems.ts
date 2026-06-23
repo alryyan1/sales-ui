@@ -80,6 +80,12 @@ export const navItems: NavItem[] = [
         permission: null,
         category: "المخزون",
       },
+      {
+        to: "/inventory/requisitions",
+        label: "صرف المخزن",
+        permission: null,
+        category: "المخزون",
+      },
     ],
   },
 
@@ -230,6 +236,12 @@ export const navItems: NavItem[] = [
       {
         to: "/admin/warehouses",
         label: "المخازن",
+        permission: null,
+        category: "الإدارة",
+      },
+      {
+        to: "/admin/inventory/requisitions",
+        label: "طلبات الصرف",
         permission: null,
         category: "الإدارة",
       },

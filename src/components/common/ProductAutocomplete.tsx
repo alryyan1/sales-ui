@@ -130,14 +130,14 @@ export const ProductAutocomplete: React.FC<ProductAutocompleteProps> = React.mem
     }
   }, [debouncedProductSearch]);
 
-  // Sync input value when product is selected from external value
+  // Sync input value only when the external value (selected product) changes
   useEffect(() => {
-    if (value && value.name !== productSearchInput) {
+    if (value) {
       setProductSearchInput(value.name);
-    } else if (!value && productSearchInput !== '') {
+    } else {
       setProductSearchInput('');
     }
-  }, [value, productSearchInput]);
+  }, [value]);
 
   // Initial search when component mounts
   useEffect(() => {

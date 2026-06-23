@@ -30,6 +30,17 @@ import roleService, {
 } from "../../../../services/roleService";
 import { useAuth } from "@/context/AuthContext";
 
+// ترجمة أسماء الصلاحيات إلى العربية
+const PERMISSION_LABELS: Record<string, string> = {
+  // صرف المخزن
+  "request-stock":                 "طلب صرف مخزون",
+  "view-all-stock-requisitions":   "عرض جميع طلبات الصرف",
+  "process-stock-requisitions":    "معالجة طلبات الصرف (موافقة / رفض / صرف)",
+};
+
+const getPermissionLabel = (name: string): string =>
+  PERMISSION_LABELS[name] ?? name;
+
 // --- Form Types ---
 type RoleFormValues = {
   name: string;
@@ -269,7 +280,7 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
                             }
                             label={
                               <Typography variant="body2">
-                                {permission.name}
+                                {getPermissionLabel(permission.name)}
                               </Typography>
                             }
                             sx={{

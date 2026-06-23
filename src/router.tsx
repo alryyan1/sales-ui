@@ -24,6 +24,11 @@ import InventoryCountPage from "./pages/inventory/InventoryCountPage";
 import ManageInventoryCountPage from "./pages/inventory/ManageInventoryCountPage";
 import WarehousesListPage from "./pages/warehouses/WarehousesListPage";
 import WarehouseProductsPage from "./pages/warehouses/WarehouseProductsPage";
+import StockRequisitionsPage from "./pages/inventory/StockRequisitionsPage";
+import CreateStockRequisitionPage from "./pages/inventory/CreateStockRequisitionPage";
+import StockRequisitionDetailPage from "./pages/inventory/StockRequisitionDetailPage";
+import IssueStockRequisitionPage from "./pages/inventory/IssueStockRequisitionPage";
+import ManageStockRequisitionsListPage from "./pages/inventory/ManageStockRequisitionsListPage";
 // Sales & POS
 import PosBlankPage from "./pages/PosBlankPage";
 import SalesReturnsPage from "./pages/sales/SalesReturnsPage";
@@ -243,6 +248,36 @@ const router = createHashRouter([
                   {
                     path: ":id",
                     element: <ManageInventoryCountPage />,
+                  },
+                ],
+              },
+              // --- Stock Requisitions (Warehouse Dispatch) ---
+              {
+                path: "requisitions",
+                children: [
+                  {
+                    index: true,
+                    element: (
+                      <PermissionGuard requiredPermission="request-stock">
+                        <StockRequisitionsPage />
+                      </PermissionGuard>
+                    ),
+                  },
+                  {
+                    path: "create",
+                    element: (
+                      <PermissionGuard requiredPermission="request-stock">
+                        <CreateStockRequisitionPage />
+                      </PermissionGuard>
+                    ),
+                  },
+                  {
+                    path: ":requisitionId",
+                    element: (
+                      <PermissionGuard requiredPermission="request-stock">
+                        <StockRequisitionDetailPage />
+                      </PermissionGuard>
+                    ),
                   },
                 ],
               },
@@ -475,6 +510,33 @@ const router = createHashRouter([
                     <WarehouseProductsPage />
                   </PermissionGuard>
                 ),
+              },
+              // Manager: All requisitions list + process/issue
+              {
+                path: "inventory",
+                children: [
+                  {
+                    path: "requisitions",
+                    children: [
+                      {
+                        index: true,
+                        element: (
+                          <PermissionGuard requiredPermission="process-stock-requisitions">
+                            <ManageStockRequisitionsListPage />
+                          </PermissionGuard>
+                        ),
+                      },
+                      {
+                        path: ":requisitionId/process",
+                        element: (
+                          <PermissionGuard requiredPermission="process-stock-requisitions">
+                            <IssueStockRequisitionPage />
+                          </PermissionGuard>
+                        ),
+                      },
+                    ],
+                  },
+                ],
               },
             ],
           },
