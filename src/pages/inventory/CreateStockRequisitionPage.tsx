@@ -80,10 +80,19 @@ interface DepartmentComboboxProps {
   onChange: (val: string) => void;
 }
 
+const CUSTOM_DEPTS_KEY = "stock_requisition_custom_departments";
+
 const DepartmentCombobox: React.FC<DepartmentComboboxProps> = ({ value, onChange }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [customDepts, setCustomDepts] = useState<string[]>([]);
+  const [customDepts, setCustomDepts] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem(CUSTOM_DEPTS_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
 
   const allDepts = [...DEFAULT_DEPARTMENTS, ...customDepts];
   const filtered = allDepts.filter((d) =>
@@ -102,7 +111,9 @@ const DepartmentCombobox: React.FC<DepartmentComboboxProps> = ({ value, onChange
   const createNew = () => {
     const newDept = search.trim();
     if (newDept && !allDepts.includes(newDept)) {
-      setCustomDepts((prev) => [...prev, newDept]);
+      const updated = [...customDepts, newDept];
+      setCustomDepts(updated);
+      localStorage.setItem(CUSTOM_DEPTS_KEY, JSON.stringify(updated));
     }
     select(newDept);
   };
