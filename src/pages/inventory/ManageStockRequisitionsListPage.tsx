@@ -92,8 +92,32 @@ const generatePagination = (
   currentPage: number,
   lastPage: number,
   delta = 1
-) => {
-  /* ... (same helper) ... */
+): (number | string)[] => {
+  const range: number[] = [];
+  for (let i = 1; i <= lastPage; i++) {
+    if (
+      i === 1 ||
+      i === lastPage ||
+      (i >= currentPage - delta && i <= currentPage + delta)
+    ) {
+      range.push(i);
+    }
+  }
+
+  const withDots: (number | string)[] = [];
+  let last: number | undefined;
+  for (const page of range) {
+    if (last !== undefined) {
+      if (page - last === 2) {
+        withDots.push(last + 1);
+      } else if (page - last > 2) {
+        withDots.push("...");
+      }
+    }
+    withDots.push(page);
+    last = page;
+  }
+  return withDots;
 };
 
 // --- Filter Form Types ---
@@ -229,7 +253,8 @@ const ManageStockRequisitionsListPage: React.FC = () => {
   };
 
   const paginationItems = useMemo(() => {
-    /* ... generatePagination ... */
+    if (!requisitionsResponse) return [];
+    return generatePagination(currentPage, requisitionsResponse.last_page);
   }, [currentPage, requisitionsResponse?.last_page]);
 
   const getStatusBadgeVariant = (
