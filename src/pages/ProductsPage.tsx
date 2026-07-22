@@ -1,7 +1,7 @@
 // src/pages/ProductsPage.tsx
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, InfiniteData } from "@tanstack/react-query";
 import { useProducts } from "../hooks/useProducts";
 import { useSettings } from "../context/SettingsContext";
 
@@ -45,6 +45,7 @@ import Checkbox from "@mui/material/Checkbox";
 import productService, {
   Product,
   ProductFormData,
+  ApiPaginatedResponse,
 } from "../services/productService"; // Use product service
 import unitService, { Unit } from "../services/UnitService"; // Import unit service
 import categoryService, { Category } from "../services/CategoryService"; // Import category service
@@ -342,6 +343,32 @@ const ProductsPage: React.FC = () => {
       );
       throw err; // Re-throw to let the table know it failed
     }
+  };
+
+  const handleQuickUpdatePrice = async (
+    productId: number,
+    field: "cost_price" | "sale_price",
+    value: number | null,
+  ) => {
+    const updated = await productService.updateProduct(productId, {
+      [field]: value,
+    });
+
+    queryClient.setQueriesData<InfiniteData<ApiPaginatedResponse<Product>>>(
+      { queryKey: ["products", "infinite"] },
+      (oldData) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page) => ({
+            ...page,
+            data: page.data.map((p) =>
+              p.id === productId ? { ...p, ...updated } : p,
+            ),
+          })),
+        };
+      },
+    );
   };
 
   const handleSyncToFirestore = async () => {
@@ -780,6 +807,7 @@ const ProductsPage: React.FC = () => {
               stockingUnits={stockingUnits}
               sellableUnits={sellableUnits}
               onProductCreate={handleProductCreate}
+              onQuickUpdatePrice={handleQuickUpdatePrice}
               visibleColumns={visibleColumns}
             />
           </Box>

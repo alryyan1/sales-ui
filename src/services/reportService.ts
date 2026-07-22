@@ -33,12 +33,19 @@ const reportService = {
   getBestSellingProducts: async (
     days: number = 30,
     limit: number = 10,
+    filters: { startDate?: string; endDate?: string; productName?: string } = {},
   ): Promise<BestSellingProduct[]> => {
     try {
       const response = await apiClient.get<{ data: BestSellingProduct[] }>(
         "/reports/stats/best-selling",
         {
-          params: { days, limit },
+          params: {
+            days,
+            limit,
+            start_date: filters.startDate || undefined,
+            end_date: filters.endDate || undefined,
+            product_name: filters.productName || undefined,
+          },
         },
       );
       return response.data.data;

@@ -25,10 +25,25 @@ import reportService from "@/services/reportService";
 const BestSellingProductsPage: React.FC = () => {
   const [days, setDays] = useState<number>(30);
   const [limit, setLimit] = useState<number>(10);
+  const [productName, setProductName] = useState<string>("");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["best-selling-products", days, limit],
-    queryFn: () => reportService.getBestSellingProducts(days, limit),
+    queryKey: [
+      "best-selling-products",
+      days,
+      limit,
+      productName,
+      startDate,
+      endDate,
+    ],
+    queryFn: () =>
+      reportService.getBestSellingProducts(days, limit, {
+        productName: productName || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+      }),
   });
 
   return (
@@ -50,12 +65,52 @@ const BestSellingProductsPage: React.FC = () => {
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 space-y-2">
-              <Label htmlFor="days">الفترة (بالأيام)</Label>
+              <Label htmlFor="product-name">اسم المنتج</Label>
+              <Input
+                id="product-name"
+                type="text"
+                value={productName}
+                onChange={(e) => setProductName(e.target.value)}
+                placeholder="ابحث باسم المنتج..."
+              />
+            </div>
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="start-date">من تاريخ</Label>
+              <Input
+                id="start-date"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                max={endDate || undefined}
+              />
+            </div>
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="end-date">إلى تاريخ</Label>
+              <Input
+                id="end-date"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                min={startDate || undefined}
+              />
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-4 mt-4">
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="days">
+                الفترة (بالأيام)
+                {(startDate || endDate) && (
+                  <span className="text-xs text-muted-foreground mr-2">
+                    (متجاهلة عند تحديد فترة زمنية)
+                  </span>
+                )}
+              </Label>
               <Input
                 id="days"
                 type="number"
                 min={1}
                 value={days}
+                disabled={Boolean(startDate && endDate)}
                 onChange={(e) => setDays(Number(e.target.value))}
                 placeholder="30"
               />

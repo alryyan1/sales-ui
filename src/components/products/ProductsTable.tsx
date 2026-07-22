@@ -64,6 +64,12 @@ interface ProductsTableProps {
   stockingUnits: Unit[];
   sellableUnits: Unit[];
   onProductCreate: (data: ProductFormData) => Promise<void>;
+  // Inline Price Editing
+  onQuickUpdatePrice: (
+    productId: number,
+    field: "cost_price" | "sale_price",
+    value: number | null,
+  ) => Promise<void>;
   // Infinite Scroll Props
   onLoadMore: () => void;
   hasNextPage: boolean;
@@ -76,24 +82,66 @@ interface ProductsTableProps {
   };
 }
 
+// --- Inline Price Editing (cost / sale price) ---
+type PriceField = "cost" | "sale_price";
+
+const cellKey = (rowIndex: number, field: PriceField) => `${field}-${rowIndex}`;
+
+const getDisplayPrice = (
+  product: ProductWithOptionalBatches,
+  field: PriceField,
+): number | null => {
+  if (field === "cost") {
+    if (product.cost_price != null) return Number(product.cost_price);
+    if (product.latest_cost_per_sellable_unit != null) {
+      return Number(product.latest_cost_per_sellable_unit);
+    }
+    return null;
+  }
+  if (product.sale_price != null) return Number(product.sale_price);
+  if (product.last_sale_price_per_sellable_unit != null) {
+    return Number(product.last_sale_price_per_sellable_unit);
+  }
+  return null;
+};
+
+interface PriceEditControls {
+  editingCell: { rowIndex: number; field: PriceField } | null;
+  editValue: string;
+  savingCell: { rowIndex: number; field: PriceField } | null;
+  onStartEdit: (
+    rowIndex: number,
+    field: PriceField,
+    product: ProductWithOptionalBatches,
+  ) => void;
+  onChangeValue: (value: string) => void;
+  onKeyDown: (e: React.KeyboardEvent) => void;
+  onBlur: () => void;
+  registerInputRef: (key: string, el: HTMLInputElement | null) => void;
+}
+
 interface ProductRowProps {
   product: ProductWithOptionalBatches;
+  rowIndex: number;
   onEdit: (product: ProductWithOptionalBatches) => void;
   onBarcodeLabel: (product: ProductWithOptionalBatches) => void;
   copyToClipboard: (sku: string) => void;
   copiedSku: string | null;
   isLoading: boolean;
   vis: NonNullable<ProductsTableProps["visibleColumns"]>;
+  priceEdit: PriceEditControls;
 }
 
 const ProductRow: React.FC<ProductRowProps> = ({
   product,
+  rowIndex,
   onEdit,
   onBarcodeLabel,
   copyToClipboard,
   copiedSku,
   isLoading,
   vis,
+  priceEdit,
 }) => {
   const stockQty = Number(
     product.current_stock_quantity ?? product.stock_quantity ?? 0,
@@ -222,14 +270,76 @@ const ProductRow: React.FC<ProductRowProps> = ({
         </TableCell>
       )}
       {vis.cost !== false && (
-        <TableCell align="center">
-          {product.latest_cost_per_sellable_unit
-            ? formatCurrency(Number(product.latest_cost_per_sellable_unit)) : "---"}
+        <TableCell
+          align="center"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (
+              !(
+                priceEdit.editingCell?.rowIndex === rowIndex &&
+                priceEdit.editingCell?.field === "cost"
+              )
+            ) {
+              priceEdit.onStartEdit(rowIndex, "cost", product);
+            }
+          }}
+          sx={{ cursor: "text" }}
+        >
+          {priceEdit.editingCell?.rowIndex === rowIndex &&
+          priceEdit.editingCell?.field === "cost" ? (
+            <TextField
+              inputRef={(el) => priceEdit.registerInputRef(cellKey(rowIndex, "cost"), el)}
+              type="number"
+              size="small"
+              value={priceEdit.editValue}
+              onChange={(e) => priceEdit.onChangeValue(e.target.value)}
+              onKeyDown={priceEdit.onKeyDown}
+              onBlur={priceEdit.onBlur}
+              sx={{ width: 90 }}
+            />
+          ) : (
+            <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center">
+              <Typography variant="body2">
+                {product.latest_cost_per_sellable_unit
+                  ? formatCurrency(Number(product.latest_cost_per_sellable_unit)) : "---"}
+              </Typography>
+              {priceEdit.savingCell?.rowIndex === rowIndex &&
+                priceEdit.savingCell?.field === "cost" && (
+                  <CircularProgress size={12} />
+                )}
+            </Stack>
+          )}
         </TableCell>
       )}
       {vis.sale_price !== false && (
-        <TableCell align="center">
-          {product.last_sale_price_per_sellable_unit ? (
+        <TableCell
+          align="center"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (
+              !(
+                priceEdit.editingCell?.rowIndex === rowIndex &&
+                priceEdit.editingCell?.field === "sale_price"
+              )
+            ) {
+              priceEdit.onStartEdit(rowIndex, "sale_price", product);
+            }
+          }}
+          sx={{ cursor: "text" }}
+        >
+          {priceEdit.editingCell?.rowIndex === rowIndex &&
+          priceEdit.editingCell?.field === "sale_price" ? (
+            <TextField
+              inputRef={(el) => priceEdit.registerInputRef(cellKey(rowIndex, "sale_price"), el)}
+              type="number"
+              size="small"
+              value={priceEdit.editValue}
+              onChange={(e) => priceEdit.onChangeValue(e.target.value)}
+              onKeyDown={priceEdit.onKeyDown}
+              onBlur={priceEdit.onBlur}
+              sx={{ width: 90 }}
+            />
+          ) : product.last_sale_price_per_sellable_unit ? (
             <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center">
               <Typography
                 variant="body2"
@@ -242,8 +352,14 @@ const ProductRow: React.FC<ProductRowProps> = ({
                   <Tag style={{ width: 13, height: 13, color: "var(--mui-palette-primary-main)" }} />
                 </Tooltip>
               )}
+              {priceEdit.savingCell?.rowIndex === rowIndex &&
+                priceEdit.savingCell?.field === "sale_price" && (
+                  <CircularProgress size={12} />
+                )}
             </Stack>
-          ) : "---"}
+          ) : (
+            "---"
+          )}
         </TableCell>
       )}
       {vis.expire_date !== false && (
@@ -535,6 +651,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
   stockingUnits,
   sellableUnits,
   onProductCreate,
+  onQuickUpdatePrice,
   onLoadMore,
   hasNextPage,
   isFetchingNextPage,
@@ -555,6 +672,108 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
     } finally {
       setIsCreatingLoading(false);
     }
+  };
+
+  // --- Inline Price Editing (cost / sale price) ---
+  const [editingCell, setEditingCell] = useState<{ rowIndex: number; field: PriceField } | null>(null);
+  const [editValue, setEditValue] = useState<string>("");
+  const [savingCell, setSavingCell] = useState<{ rowIndex: number; field: PriceField } | null>(null);
+  const priceInputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+  const enterPressedRef = useRef(false);
+
+  const registerInputRef = useCallback((key: string, el: HTMLInputElement | null) => {
+    if (el) {
+      priceInputRefs.current.set(key, el);
+    } else {
+      priceInputRefs.current.delete(key);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!editingCell) return;
+    const el = priceInputRefs.current.get(cellKey(editingCell.rowIndex, editingCell.field));
+    el?.focus();
+    el?.select();
+  }, [editingCell]);
+
+  const startEdit = useCallback(
+    (rowIndex: number, field: PriceField, product: ProductWithOptionalBatches) => {
+      setEditingCell({ rowIndex, field });
+      const value = getDisplayPrice(product, field);
+      setEditValue(value != null ? String(value) : "");
+    },
+    [],
+  );
+
+  const commitEdit = useCallback(
+    (moveNext: boolean) => {
+      if (!editingCell) return;
+      const { rowIndex, field } = editingCell;
+      const product = products[rowIndex];
+      const backendField = field === "cost" ? "cost_price" : "sale_price";
+      const trimmed = editValue.trim();
+      const numericValue = trimmed === "" ? null : Number(trimmed);
+      const isValid = trimmed === "" || !Number.isNaN(numericValue);
+
+      if (isValid && product) {
+        const currentValue = getDisplayPrice(product, field);
+        if (currentValue !== numericValue) {
+          setSavingCell({ rowIndex, field });
+          onQuickUpdatePrice(product.id, backendField, numericValue)
+            .catch((err) => console.error("Failed to update price:", err))
+            .finally(() =>
+              setSavingCell((s) =>
+                s && s.rowIndex === rowIndex && s.field === field ? null : s,
+              ),
+            );
+        }
+      }
+
+      if (moveNext) {
+        const nextProduct = products[rowIndex + 1];
+        if (nextProduct) {
+          const nextValue = getDisplayPrice(nextProduct, field);
+          setEditValue(nextValue != null ? String(nextValue) : "");
+          setEditingCell({ rowIndex: rowIndex + 1, field });
+          return;
+        }
+      }
+      setEditingCell(null);
+    },
+    [editingCell, editValue, products, onQuickUpdatePrice],
+  );
+
+  const handlePriceCellKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        enterPressedRef.current = true;
+        commitEdit(true);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        setEditingCell(null);
+      }
+    },
+    [commitEdit],
+  );
+
+  const handlePriceCellBlur = useCallback(() => {
+    if (enterPressedRef.current) {
+      enterPressedRef.current = false;
+      return;
+    }
+    commitEdit(false);
+  }, [commitEdit]);
+
+  const priceEdit: PriceEditControls = {
+    editingCell,
+    editValue,
+    savingCell,
+    onStartEdit: startEdit,
+    onChangeValue: setEditValue,
+    onKeyDown: handlePriceCellKeyDown,
+    onBlur: handlePriceCellBlur,
+    registerInputRef,
   };
 
   // Intersection Observer for Infinite Scroll
@@ -707,16 +926,18 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                 </TableRow>
               )}
 
-              {products.map((product) => (
+              {products.map((product, index) => (
                 <ProductRow
                   key={product.id}
                   product={product}
+                  rowIndex={index}
                   onEdit={onEdit}
                   onBarcodeLabel={onBarcodeLabel}
                   copyToClipboard={copyToClipboard}
                   copiedSku={copiedSku}
                   isLoading={isLoading}
                   vis={vis}
+                  priceEdit={priceEdit}
                 />
               ))}
 
