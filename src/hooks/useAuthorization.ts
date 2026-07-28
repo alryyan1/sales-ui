@@ -1,6 +1,7 @@
 // src/hooks/useAuthorization.ts
 
 import { useAuth } from "@/context/AuthContext";
+import { ROLE_PAGE_ACCESS } from "@/config/rolePageAccess";
 
 /**
  * Custom hook providing utility functions for checking user roles and permissions.
@@ -51,6 +52,27 @@ export const useAuthorization = () => {
     return hasRole("admin") || hasRole("ادمن");
   };
 
+  /**
+   * Checks whether the current user's role(s) grant access to a given page key.
+   * Page access is driven by the static ROLE_PAGE_ACCESS map (not Spatie
+   * permissions), so it stays independent of the "إدارة الأدوار" permissions list.
+   * @param pageKeyOrKeys A single page key or an array of OR page keys.
+   * @returns True if the user's role grants access to any of the keys.
+   */
+  const hasPageAccess = (pageKeyOrKeys: string | string[]): boolean => {
+    if (!user) return false;
+
+    if (isAdmin()) return true;
+
+    const keysToCheck = Array.isArray(pageKeyOrKeys)
+      ? pageKeyOrKeys
+      : [pageKeyOrKeys];
+
+    return roles.some((userRole) =>
+      (ROLE_PAGE_ACCESS[userRole] || []).some((key) => keysToCheck.includes(key))
+    );
+  };
+
   return {
     user, // The user object
     roles, // Roles array
@@ -58,6 +80,7 @@ export const useAuthorization = () => {
     isLoggedIn: !!user,
     hasRole, // Check Role
     hasPermission, // Check Permission
+    hasPageAccess, // Check page access based on role
     isAdmin, // Check Admin
   };
 };
