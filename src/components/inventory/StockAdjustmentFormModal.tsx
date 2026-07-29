@@ -108,6 +108,7 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
   const [productSearchInput, setProductSearchInput] = useState("");
   const [debouncedProductSearch, setDebouncedProductSearch] = useState("");
   const productDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   // --- RHF Setup ---
   const form = useForm<AdjustmentFormValues>({
@@ -258,6 +259,7 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
       setProducts([]);
       setAvailableBatches([]);
       setProductSearchInput("");
+      setSelectedProduct(null);
     }
   }, [isOpen, reset, user?.warehouse_id]);
 
@@ -360,10 +362,17 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
                     `${option.name}${option.sku ? ` (${option.sku})` : ""}`
                   }
                   loading={loadingProducts}
-                  onInputChange={(_, newInputValue) => {
-                    setProductSearchInput(newInputValue);
+                  onInputChange={(_, newInputValue, reason) => {
+                    // Only react to actual typing; ignore the input-value churn
+                    // MUI fires when an option is selected or the field is reset,
+                    // otherwise it re-triggers a search that can drop the selected
+                    // product out of the `products` results list.
+                    if (reason === "input") {
+                      setProductSearchInput(newInputValue);
+                    }
                   }}
                   onChange={(_, newValue) => {
+                    setSelectedProduct(newValue);
                     if (newValue) {
                       field.onChange(newValue.id);
                       setValue(
@@ -375,7 +384,7 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
                       setValue("selected_product_name", "");
                     }
                   }}
-                  value={products.find((p) => p.id === field.value) || null}
+                  value={selectedProduct}
                   renderInput={(params) => (
                     <TextField
                       {...params}
