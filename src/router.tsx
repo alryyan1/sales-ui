@@ -20,6 +20,7 @@ import ManagePurchaseItemsPage from "./pages/purchases/ManagePurchaseItemsPage";
 import TaxCustomsManagementPage from "./pages/purchases/TaxCustomsManagementPage";
 import StockAdjustmentsListPage from "./components/inventory/StockAdjustmentsListPage";
 import StockTransfersPage from "./pages/inventory/StockTransfersPage";
+import TransitOrdersPage from "./pages/inventory/TransitOrdersPage";
 import InventoryCountPage from "./pages/inventory/InventoryCountPage";
 import ManageInventoryCountPage from "./pages/inventory/ManageInventoryCountPage";
 import WarehousesListPage from "./pages/warehouses/WarehousesListPage";
@@ -233,6 +234,10 @@ const router = createHashRouter([
                     <StockTransfersPage />
                   </PermissionGuard>
                 ),
+              },
+              {
+                path: "transit-orders",
+                element: <TransitOrdersPage />,
               },
               {
                 path: "counts",

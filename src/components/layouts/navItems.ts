@@ -103,7 +103,13 @@ export const navItems: NavItem[] = [
         permission: null,
         category: "المشتريات",
       },
-    
+      {
+        to: "/inventory/transit-orders",
+        label: "Transit Orders",
+        permission: null,
+        category: "المشتريات",
+      },
+
     ],
   },
 
