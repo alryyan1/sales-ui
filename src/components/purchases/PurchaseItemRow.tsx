@@ -45,7 +45,6 @@ export type PurchaseItemFormValues = {
   quantity: number;
   unit_cost: number;
   sale_price?: number | null;
-  expiry_date?: Date | null;
   total_sellable_units_display?: number;
   cost_per_sellable_unit_display?: number;
 };

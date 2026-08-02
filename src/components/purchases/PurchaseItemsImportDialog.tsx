@@ -44,7 +44,6 @@ interface ColumnMapping {
   quantity: string;
   unit_cost: string;
   sale_price: string;
-  expiry_date: string;
 }
 
 // Function to calculate similarity between two strings
@@ -94,7 +93,6 @@ const autoMapColumns = (headers: string[]): ColumnMapping => {
     quantity: ['quantity', 'qty', 'amount', 'stocking quantity', 'stocking_quantity', 'units'],
     unit_cost: ['unit cost', 'unit_cost', 'cost', 'price', 'unit price', 'unit_price', 'cost per unit'],
     sale_price: ['sale price', 'sale_price', 'selling price', 'selling_price', 'retail price', 'retail_price'],
-    expiry_date: ['expiry date', 'expiry_date', 'expiry', 'expiration date', 'expiration_date', 'expiration', 'expires']
   };
 
   const mapping: ColumnMapping = {
@@ -104,7 +102,6 @@ const autoMapColumns = (headers: string[]): ColumnMapping => {
     quantity: '',
     unit_cost: '',
     sale_price: '',
-    expiry_date: '',
   };
 
   // For each field, find the best matching header
@@ -147,7 +144,6 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
     quantity: '',
     unit_cost: '',
     sale_price: '',
-    expiry_date: '',
   });
   const [skipHeader, setSkipHeader] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -178,7 +174,6 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
     { key: 'quantity', label: 'الكمية', required: true },
     { key: 'unit_cost', label: 'تكلفة الوحدة', required: true },
     { key: 'sale_price', label: 'سعر البيع', required: false },
-    { key: 'expiry_date', label: 'تاريخ الانتهاء', required: false },
   ];
 
   // Memoized handlers to prevent unnecessary re-renders
@@ -318,7 +313,6 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
       quantity: '',
       unit_cost: '',
       sale_price: '',
-      expiry_date: '',
     });
     setSkipHeader(true);
     setError(null);
@@ -528,7 +522,6 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
                   <TableCell>الكمية</TableCell>
                   <TableCell>تكلفة الوحدة</TableCell>
                   <TableCell>سعر البيع</TableCell>
-                  <TableCell>تاريخ الانتهاء</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -540,7 +533,6 @@ const PurchaseItemsImportDialog: React.FC<PurchaseItemsImportDialogProps> = ({
                     <TableCell>{row.quantity || '-'}</TableCell>
                     <TableCell>{row.unit_cost || '-'}</TableCell>
                     <TableCell>{row.sale_price || '-'}</TableCell>
-                    <TableCell>{row.expiry_date || '-'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

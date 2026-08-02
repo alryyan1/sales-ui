@@ -51,7 +51,6 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
-import CurrencyExchangeIcon from "@mui/icons-material/CurrencyExchange";
 
 import purchaseService from "../../services/purchaseService";
 import supplierService, { Supplier } from "../../services/supplierService";
@@ -224,8 +223,7 @@ const PurchasesListPage: React.FC = () => {
 
   const rows: any[] = purchasesResponse?.data ?? [];
   const totalItems = rows.reduce((s: number, p: any) => s + Number(p.items_count ?? p.items?.length ?? 0), 0);
-  const totalSDG = rows.filter((p: any) => !p.currency || p.currency === "SDG").reduce((s: number, p: any) => s + Number(p.total_amount ?? 0), 0);
-  const totalUSD = rows.filter((p: any) => p.currency === "USD").reduce((s: number, p: any) => s + Number(p.total_amount ?? 0), 0);
+  const totalAmount = rows.reduce((s: number, p: any) => s + Number(p.total_amount ?? 0), 0);
 
   const fmtAmount = (n: number) =>
     n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -404,7 +402,6 @@ const PurchasesListPage: React.FC = () => {
                     { label: "المرجع",       width: 130 },
                     { label: "الحالة",       width: 130 },
                     { label: "الأصناف",     width: 70  },
-                    { label: "العملة",       width: 70  },
                     { label: "الإجمالي",    width: 120 },
                     { label: "",            width: 48  },
                   ].map(({ label, width }, i) => (
@@ -449,9 +446,7 @@ const PurchasesListPage: React.FC = () => {
                   rows.map((purchase: any, idx: number) => {
                     const cfg = STATUS_CONFIG[purchase.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.pending;
                     const itemsCount = purchase.items_count ?? purchase.items?.length ?? 0;
-                    const currency: "SDG" | "USD" = purchase.currency || "SDG";
                     const totalAmt = Number(purchase.total_amount ?? 0);
-                    const isUSD = currency === "USD";
 
                     return (
                       <TableRow
@@ -561,12 +556,6 @@ const PurchasesListPage: React.FC = () => {
                           >
                             {itemsCount}
                           </Box>
-                        </TableCell>
-
-                        {/* Currency badge */}
-                        <TableCell align="center">
-                       
-                          {purchase.currency }
                         </TableCell>
 
                         {/* Total amount */}
@@ -708,42 +697,11 @@ const PurchasesListPage: React.FC = () => {
                       </Box>
                     </TableCell>
 
-                    {/* Currency summary */}
-                    <TableCell align="center" colSpan={2} sx={{ border: "none" }}>
-                      <Stack direction="row" gap={1} justifyContent="center" flexWrap="wrap">
-                        {totalSDG > 0 && (
-                          <Stack direction="row" alignItems="center" gap={0.5}>
-                            <Chip
-                              label="SDG"
-                              size="small"
-                              sx={{
-                                height: 18, fontSize: "0.65rem", fontWeight: 700, fontFamily: "monospace",
-                                bgcolor: alpha(theme.palette.info.main, 0.1), color: "info.dark",
-                                border: `1px solid ${alpha(theme.palette.info.main, 0.3)}`,
-                              }}
-                            />
-                            <Typography variant="caption" fontWeight={700} sx={{ fontFamily: "monospace" }}>
-                              {fmtAmount(totalSDG)}
-                            </Typography>
-                          </Stack>
-                        )}
-                        {totalUSD > 0 && (
-                          <Stack direction="row" alignItems="center" gap={0.5}>
-                            <Chip
-                              label="USD"
-                              size="small"
-                              sx={{
-                                height: 18, fontSize: "0.65rem", fontWeight: 700, fontFamily: "monospace",
-                                bgcolor: alpha(theme.palette.success.main, 0.1), color: "success.dark",
-                                border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`,
-                              }}
-                            />
-                            <Typography variant="caption" fontWeight={700} sx={{ fontFamily: "monospace" }}>
-                              {fmtAmount(totalUSD)}
-                            </Typography>
-                          </Stack>
-                        )}
-                      </Stack>
+                    {/* Total amount */}
+                    <TableCell align="center" sx={{ border: "none" }}>
+                      <Typography variant="caption" fontWeight={700} sx={{ fontFamily: "monospace" }}>
+                        {fmtAmount(totalAmount)} OMR
+                      </Typography>
                     </TableCell>
 
                     <TableCell sx={{ border: "none" }} />

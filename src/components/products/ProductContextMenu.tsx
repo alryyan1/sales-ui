@@ -228,7 +228,6 @@ export const ProductContextMenu: React.FC<ProductContextMenuProps> = ({
                       <TableCell align="right">تكلفة الوحدة</TableCell>
                       <TableCell align="right">سعر البيع</TableCell>
                       <TableCell>رقم الدفعة</TableCell>
-                      <TableCell>تاريخ الانتهاء</TableCell>
                       <TableCell align="center">عرض الشراء</TableCell>
                     </TableRow>
                   </TableHead>
@@ -245,24 +244,15 @@ export const ProductContextMenu: React.FC<ProductContextMenuProps> = ({
                         <TableCell align="right">{item.quantity}</TableCell>
                         <TableCell align="right">
                           {item.cost_per_sellable_unit
-                            ? formatCurrency(Number(item.cost_per_sellable_unit), undefined, item.purchase_currency ?? "SDG")
-                            : formatCurrency(Number(item.unit_cost), undefined, item.purchase_currency ?? "SDG")}
+                            ? formatCurrency(Number(item.cost_per_sellable_unit))
+                            : formatCurrency(Number(item.unit_cost))}
                         </TableCell>
                         <TableCell align="right">
-                          {item.sale_price ? formatCurrency(Number(item.sale_price), undefined, item.purchase_currency ?? "SDG") : "—"}
+                          {item.sale_price ? formatCurrency(Number(item.sale_price)) : "—"}
                         </TableCell>
                         <TableCell>
                           {item.batch_number ? (
                             <Chip label={item.batch_number} size="small" />
-                          ) : "—"}
-                        </TableCell>
-                        <TableCell>
-                          {item.expiry_date ? (
-                            <Chip
-                              label={item.expiry_date}
-                              size="small"
-                              color={new Date(item.expiry_date) < new Date() ? "error" : "default"}
-                            />
                           ) : "—"}
                         </TableCell>
                         <TableCell align="center">

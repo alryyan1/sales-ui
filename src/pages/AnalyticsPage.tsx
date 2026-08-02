@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 
 import { useQuery } from "@tanstack/react-query";
-import dayjs from "dayjs";
 
 // shadcn/ui Components
 import { Button } from "@/components/ui/button";
@@ -28,7 +27,6 @@ import {
   DollarSign,
   Package,
   ShoppingCart,
-  AlertTriangle,
 } from "lucide-react";
 
 // Charts from recharts
@@ -152,37 +150,6 @@ const KPICard: React.FC<{
   );
 };
 
-// Expiry Alert Component
-const ExpiryAlert: React.FC<{ item: any }> = ({ item }) => {
-  const daysUntilExpiry = dayjs(item.expiry_date).diff(dayjs(), "day");
-  const urgency =
-    daysUntilExpiry <= 7 ? "high" : daysUntilExpiry <= 30 ? "medium" : "low";
-
-  const urgencyColors = {
-    high: "destructive",
-    medium: "secondary",
-    low: "outline",
-  } as const;
-
-  return (
-    <div className="flex items-center justify-between p-3 border rounded-lg">
-      <div className="flex-1">
-        <div className="font-medium">{item.product_name}</div>
-        <div className="text-sm text-gray-600 dark:text-gray-400">
-          Batch: {item.batch_number || "N/A"} • Qty:{" "}
-          {item.remaining_quantity != null ? formatNumber(item.remaining_quantity) : "—"}
-        </div>
-        <div className="text-xs text-gray-500">
-          Expires: {dayjs(item.expiry_date).format("MMM DD, YYYY")}
-        </div>
-      </div>
-      <Badge variant={urgencyColors[urgency]}>
-        {daysUntilExpiry <= 0 ? "Expired" : `${daysUntilExpiry} days`}
-      </Badge>
-    </div>
-  );
-};
-
 const AnalyticsPage: React.FC = () => {
   // State
   const [selectedRange, setSelectedRange] = useState<DateRange>("30days");
@@ -237,10 +204,6 @@ const AnalyticsPage: React.FC = () => {
       totalOrders: {
         value: formatNumber(analyticsData.summary.total_orders),
         change: analyticsData.summary.orders_growth_percentage,
-      },
-      expiringItems: {
-        value: formatNumber(analyticsData.expiring_items?.length || 0),
-        change: undefined,
       },
     };
   }, [analyticsData]);
@@ -319,7 +282,7 @@ const AnalyticsPage: React.FC = () => {
 
       {/* KPIs */}
       {kpis && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           <KPICard
             title="إجمالي المبيعات"
             value={kpis.totalSales.value}
@@ -340,13 +303,6 @@ const AnalyticsPage: React.FC = () => {
             change={kpis.totalOrders.change}
             icon={<Package className="h-4 w-4 text-purple-600" />}
             color="purple"
-          />
-          <KPICard
-            title="منتجات قاربت على الانتهاء"
-            value={kpis.expiringItems.value}
-            change={kpis.expiringItems.change}
-            icon={<AlertTriangle className="h-4 w-4 text-orange-600" />}
-            color="orange"
           />
         </div>
       )}
@@ -533,7 +489,7 @@ const AnalyticsPage: React.FC = () => {
 
         {/* Inventory Tab */}
         <TabsContent value="inventory" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             {/* Stock Levels */}
             <Card>
               <CardHeader>
@@ -549,29 +505,6 @@ const AnalyticsPage: React.FC = () => {
                     <Bar dataKey="current_stock" fill={CHART_COLORS.emerald} />
                   </BarChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            {/* Expiring Items */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-orange-600" />
-                  المنتجات قريبة الانتهاء
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {analyticsData.expiring_items?.length > 0 ? (
-                    analyticsData.expiring_items.map((item, index) => (
-                      <ExpiryAlert key={index} item={item} />
-                    ))
-                  ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      لا توجد منتجات قريبة الانتهاء حالياً
-                    </div>
-                  )}
-                </div>
               </CardContent>
             </Card>
           </div>

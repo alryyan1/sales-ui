@@ -40,7 +40,6 @@ import stockAdjustmentService, {
 import productService, { Product } from "../../services/productService";
 import { PurchaseItem } from "../../services/purchaseService";
 import apiClient from "@/lib/axios";
-import dayjs from "dayjs";
 import { useAuth } from "@/context/AuthContext";
 import { warehouseService, Warehouse } from "@/services/warehouseService"; // Import warehouse service
 import { ProductImage } from "@/components/products/ProductImage";
@@ -458,13 +457,7 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
                     },
                     ...availableBatches.map((batch) => ({
                       id: batch.id,
-                      label: `${
-                        batch.batch_number || `ID: ${batch.id}`
-                      } (انتهاء: ${
-                        batch.expiry_date
-                          ? dayjs(batch.expiry_date).format("YYYY-MM-DD")
-                          : "N/A"
-                      })`,
+                      label: batch.batch_number || `ID: ${batch.id}`,
                       batch,
                     })),
                   ]}
@@ -506,13 +499,7 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
                             const batch = availableBatches.find(
                               (b) => b.id === field.value
                             );
-                            return `${
-                              batch?.batch_number || `ID: ${batch?.id}`
-                            } (انتهاء: ${
-                              batch?.expiry_date
-                                ? dayjs(batch.expiry_date).format("YYYY-MM-DD")
-                                : "N/A"
-                            })`;
+                            return batch?.batch_number || `ID: ${batch?.id}`;
                           })(),
                           batch: availableBatches.find(
                             (b) => b.id === field.value

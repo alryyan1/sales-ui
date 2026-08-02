@@ -356,7 +356,6 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
             const item = row.original;
             const name =
               item.product_name ?? item.product?.name ?? `#${item.product_id}`;
-            const scientificName = item.product?.scientific_name;
             const returnedQty = item.returned_quantity ?? 0;
             const isFullyReturned = returnedQty > 0 && returnedQty >= (item.quantity ?? 0);
             return (
@@ -367,7 +366,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                   size={32}
                   variant="rounded"
                 />
-                <Tooltip title={scientificName ? `${name} (${scientificName})` : name} arrow>
+                <Tooltip title={name} arrow>
                   <Typography
                     component="span"
                     dir="auto"
@@ -383,7 +382,6 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                     }}
                   >
                     {name}
-                    {scientificName ? ` (${scientificName})` : ""}
                   </Typography>
                 </Tooltip>
                 {returnedQty > 0 && (
@@ -540,78 +538,6 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                   {batch}
                 </Typography>
               )}
-            </Box>
-          );
-        },
-        meta: { align: "center" },
-      }),
-      columnHelper.display({
-        id: "expiry_date",
-        header: "تاريخ الانتهاء",
-        cell: ({ row }) => {
-          const item = row.original;
-          const expiryDate =
-            item.expiry_date ||
-            item.purchase_item?.expiry_date ||
-            item.purchaseItemBatch?.expiry_date ||
-            item.earliest_expiry_date ||
-            item.product?.earliest_expiry_date;
-
-          if (!expiryDate) {
-            return (
-              <Typography
-                component="span"
-                sx={{ fontSize: "0.8125rem", color: "text.disabled" }}
-              >
-                —
-              </Typography>
-            );
-          }
-
-          // Calculate days until expiry
-          const today = new Date();
-          const expiry = new Date(expiryDate);
-          const diffDays = Math.ceil(
-            (expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
-          );
-
-          // Determine color based on expiry status
-          let color = "text.primary";
-          let bgcolor = "transparent";
-          if (diffDays < 0) {
-            color = "error.main";
-            bgcolor = "error.lighter";
-          } else if (diffDays <= 7) {
-            color = "error.main";
-            bgcolor = "error.lighter";
-          } else if (diffDays <= 30) {
-            color = "warning.main";
-            bgcolor = "warning.lighter";
-          }
-
-          // Format date as YYYY-MM-DD
-          const formattedDate = expiryDate.split("T")[0];
-
-          return (
-            <Box
-              sx={{
-                display: "inline-block",
-                px: 1,
-                py: 0.5,
-                borderRadius: 1,
-                bgcolor,
-              }}
-            >
-              <Typography
-                component="span"
-                sx={{
-                  fontSize: "0.8125rem",
-                  color,
-                  fontWeight: diffDays <= 7 ? 600 : 400,
-                }}
-              >
-                {formattedDate}
-              </Typography>
             </Box>
           );
         },

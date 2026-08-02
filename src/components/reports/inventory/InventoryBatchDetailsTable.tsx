@@ -12,7 +12,7 @@ import {
   Box,
 } from "@mui/material";
 import { PurchaseItem as PurchaseItemType } from "@/services/purchaseService";
-import { formatDate, formatNumber } from "@/constants";
+import { formatNumber } from "@/constants";
 import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 
 interface InventoryBatchDetailsTableProps {
@@ -45,7 +45,6 @@ export const InventoryBatchDetailsTable: React.FC<
           <TableCell align="center" sx={{ fontSize: "0.75rem" }}>
             الكمية المتبقية ({displaySellableUnit})
           </TableCell>
-          <TableCell sx={{ fontSize: "0.75rem" }}>تاريخ الانتهاء</TableCell>
           <TableCell align="right" sx={{ fontSize: "0.75rem" }}>
             التكلفة للوحدة ({displaySellableUnit})
           </TableCell>
@@ -70,9 +69,6 @@ export const InventoryBatchDetailsTable: React.FC<
             </TableCell>
             <TableCell align="center" sx={{ fontSize: "0.75rem" }}>
               {batch.remaining_quantity != null ? formatNumber(batch.remaining_quantity) : "—"}
-            </TableCell>
-            <TableCell sx={{ fontSize: "0.75rem" }}>
-              {batch.expiry_date ? formatDate(batch.expiry_date) : "-"}
             </TableCell>
             <TableCell align="right" sx={{ fontSize: "0.75rem" }}>
               {formatCurrency(batch.cost_per_sellable_unit)}

@@ -53,7 +53,6 @@ interface PurchaseItemFormData {
   quantity: number;
   unit_cost: number;
   sale_price: number | null;
-  expiry_date: string;
 }
 
 
@@ -80,7 +79,6 @@ const PurchaseItemsPage: React.FC = () => {
     quantity: 0,
     unit_cost: 0,
     sale_price: null,
-    expiry_date: '',
   });
   const [formErrors, setFormErrors] = useState<Partial<PurchaseItemFormData>>({});
 
@@ -170,7 +168,6 @@ const PurchaseItemsPage: React.FC = () => {
       quantity: 0,
       unit_cost: 0,
       sale_price: null,
-      expiry_date: '',
     });
     setFormErrors({});
     setIsAddingItem(true);
@@ -186,7 +183,6 @@ const PurchaseItemsPage: React.FC = () => {
       quantity: item.quantity,
       unit_cost: Number(item.unit_cost),
       sale_price: item.sale_price ? Number(item.sale_price) : null,
-      expiry_date: item.expiry_date || '',
     });
     setFormErrors({});
     setEditingItemId(item.id);
@@ -203,7 +199,6 @@ const PurchaseItemsPage: React.FC = () => {
       quantity: 0,
       unit_cost: 0,
       sale_price: null,
-      expiry_date: '',
     });
     setFormErrors({});
   };
@@ -225,7 +220,6 @@ const PurchaseItemsPage: React.FC = () => {
           quantity: formData.quantity,
           unit_cost: formData.unit_cost,
           sale_price: formData.sale_price,
-          expiry_date: formData.expiry_date || null,
         };
 
         const result = await purchaseService.updatePurchaseItem(Number(purchaseId), editingItemId, itemData);
@@ -240,7 +234,6 @@ const PurchaseItemsPage: React.FC = () => {
           quantity: formData.quantity,
           unit_cost: formData.unit_cost,
           sale_price: formData.sale_price,
-          expiry_date: formData.expiry_date || null,
         };
 
         const result = await purchaseService.addPurchaseItem(Number(purchaseId), itemData);
@@ -416,14 +409,13 @@ const PurchaseItemsPage: React.FC = () => {
                 <TableHead>تكلفة الوحدة</TableHead>
                 <TableHead>التكلفة الإجمالية</TableHead>
                 <TableHead>سعر البيع</TableHead>
-                <TableHead>تاريخ الانتهاء</TableHead>
                 <TableHead>إجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {purchaseItems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
+                  <TableCell colSpan={7} className="text-center py-8">
                     <Typography variant="body2" color="text.secondary">
                       لا توجد عناصر
                     </Typography>
@@ -445,9 +437,6 @@ const PurchaseItemsPage: React.FC = () => {
                     <TableCell>{formatCurrency(item.total_cost)}</TableCell>
                     <TableCell>
                       {item.sale_price ? formatCurrency(item.sale_price) : '-'}
-                    </TableCell>
-                    <TableCell>
-                      {item.expiry_date ? dayjs(item.expiry_date).format('DD/MM/YYYY') : '-'}
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
@@ -541,7 +530,7 @@ const PurchaseItemsPage: React.FC = () => {
                 error={!!formErrors.unit_cost}
                 helperText={formErrors.unit_cost}
                 InputProps={{
-                  startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                  startAdornment: <InputAdornment position="start">OMR</InputAdornment>,
                 }}
                 fullWidth
               />
@@ -553,18 +542,8 @@ const PurchaseItemsPage: React.FC = () => {
                 value={formData.sale_price || ''}
                 onChange={(e) => handleFormChange('sale_price', e.target.value ? Number(e.target.value) : null)}
                 InputProps={{
-                  startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                  startAdornment: <InputAdornment position="start">OMR</InputAdornment>,
                 }}
-                fullWidth
-              />
-
-              {/* Expiry Date */}
-              <TextField
-                label="تاريخ الانتهاء"
-                type="date"
-                value={formData.expiry_date}
-                onChange={(e) => handleFormChange('expiry_date', e.target.value)}
-                InputLabelProps={{ shrink: true }}
                 fullWidth
               />
             </div>

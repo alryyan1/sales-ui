@@ -63,31 +63,6 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
             </Typography>
             <Stack spacing={2}>
               <Controller
-                name="pos_show_expired_products"
-                control={control}
-                render={({ field }) => (
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={Boolean(field.value)}
-                        onChange={(e) => field.onChange(e.target.checked)}
-                      />
-                    }
-                    label={
-                      <Box>
-                        <Typography variant="body1" fontWeight={500}>
-                          عرض المنتجات المنتهية الصلاحية
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          عند التفعيل، ستظهر المنتجات منتهية الصلاحية في نتائج بحث نقطة البيع.
-                        </Typography>
-                      </Box>
-                    }
-                    sx={{ alignItems: "flex-start" }}
-                  />
-                )}
-              />
-              <Controller
                 name="pos_show_out_of_stock_products"
                 control={control}
                 render={({ field }) => (

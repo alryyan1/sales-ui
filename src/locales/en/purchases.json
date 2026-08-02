@@ -47,8 +47,6 @@
     "errorItemsRequired": "At least one product must be added.",
     "batchNumber": "Batch Number",
     "batchNumberPlaceholder": "Batch number (optional)",
-    "expiryDate": "Expiry Date",
-    "expiryDatePlaceholder": "Expiry date (optional)",
     "intendedSalePrice": "Intended Sale Price",
     "editPurchaseTitle": "Edit Purchase",
     "id": "ID",
@@ -131,8 +129,7 @@
         "batchNumber": "Batch Number",
         "quantity": "Quantity",
         "unitCost": "Unit Cost",
-        "salePrice": "Sale Price",
-        "expiryDate": "Expiry Date"
+        "salePrice": "Sale Price"
     },
 
     "managePurchaseItems": "Manage Purchase Items",

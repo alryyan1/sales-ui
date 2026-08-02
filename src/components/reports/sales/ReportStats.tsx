@@ -65,9 +65,8 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
     const expenses = expensesData?.data || [];
 
     const totalCash = byMethod["cash"] ?? 0;
-    const totalBankak = byMethod["bankak"] ?? 0;
-    const totalFawry = byMethod["fawry"] ?? 0;
-    const totalOcash = byMethod["ocash"] ?? 0;
+    const totalBankTransfer = byMethod["bank_transfer"] ?? 0;
+    const totalVisa = byMethod["visa"] ?? 0;
 
     return {
       totalSales: reportData?.total || data.length,
@@ -75,9 +74,8 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
       totalPaid: paymentStats?.total ?? 0,
       totalDue: data.reduce((s, sale) => s + Number(sale.due_amount || 0), 0),
       totalCash,
-      totalBankak,
-      totalFawry,
-      totalOcash,
+      totalBankTransfer,
+      totalVisa,
       totalExpenses: expenses.reduce((s, e) => s + Number(e.amount), 0),
     };
   }, [reportData, paymentStats, expensesData]);
@@ -98,9 +96,8 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
     { label: "إجمالي المبيعات", value: stats.totalAmount, sub: `${stats.totalSales} عملية`, color: "text-violet-600" },
     { label: "المدفوع", value: stats.totalPaid, color: "text-emerald-600" },
     { label: "نقدي", value: stats.totalCash, color: "text-green-600" },
-    { label: "بنكك", value: stats.totalBankak, color: "text-blue-600" },
-    { label: "فوري", value: stats.totalFawry, color: "text-orange-500" },
-    { label: "أوكاش", value: stats.totalOcash, color: "text-purple-500" },
+    { label: "تحويل بنكي", value: stats.totalBankTransfer, color: "text-blue-600" },
+    { label: "فيزا", value: stats.totalVisa, color: "text-orange-500" },
     { label: "المستحق", value: stats.totalDue, color: stats.totalDue > 0 ? "text-red-600" : "text-emerald-600" },
     { label: "المصروفات", value: stats.totalExpenses, color: "text-rose-600" },
   ];
@@ -114,7 +111,7 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
         >
           <span className="text-xs text-muted-foreground leading-tight">{item.label}</span>
           <span className={`text-sm font-bold tabular-nums ${item.color}`}>
-            {formatNumber(item.value)}
+            {formatNumber(item.value, 2)}
           </span>
           {item.sub && (
             <span className="text-xs text-muted-foreground">{item.sub}</span>

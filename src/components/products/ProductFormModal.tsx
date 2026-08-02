@@ -65,12 +65,10 @@ import { ProductImage } from "./ProductImage";
 import apiClient from "@/lib/axios";
 
 import { formatNumber, formatCurrency } from "@/constants";
-import { useSettings } from "@/context/SettingsContext";
 
 // --- Component Props & Types ---
 type ProductFormValues = {
   name: string;
-  scientific_name: string;
   sku: string;
   stocking_unit_id: string;
   sellable_unit_id: string;
@@ -79,7 +77,6 @@ type ProductFormValues = {
   stock_alert_level: number | null;
   sale_price: number | string;
   cost_price: number | string;
-  expire_date: string;
   image_url: string;
   description: string;
 };
@@ -149,10 +146,6 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [serverError, setServerError] = useState<string | null>(null);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
 
-  const { getSetting } = useSettings();
-  const scientificNameVisible = getSetting("product_scientific_name_visible", true);
-  const scientificNameRequired = getSetting("product_scientific_name_required", false);
-
   const [units, setUnits] = useState<Unit[]>([]);
   const [loadingUnits, setLoadingUnits] = useState(true);
 
@@ -172,7 +165,6 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     reValidateMode: "onChange",
     defaultValues: {
       name: "",
-      scientific_name: "",
       sku: "",
       stocking_unit_id: "",
       sellable_unit_id: "",
@@ -181,7 +173,6 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       stock_alert_level: 10,
       sale_price: "",
       cost_price: "",
-      expire_date: "",
       image_url: "",
       description: "",
     },
@@ -191,7 +182,6 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     handleSubmit,
     control,
     reset,
-    setValue,
     formState: { isSubmitting },
     setError,
   } = form;
@@ -296,7 +286,6 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       if (isEditMode && productToEdit) {
         reset({
           name: productToEdit.name || "",
-          scientific_name: productToEdit.scientific_name || "",
           sku: productToEdit.sku || "",
           stocking_unit_id: productToEdit.stocking_unit_id
             ? String(productToEdit.stocking_unit_id)
@@ -311,14 +300,12 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           stock_alert_level: productToEdit.stock_alert_level ?? 10,
           sale_price: productToEdit.sale_price ?? "",
           cost_price: productToEdit.cost_price ?? "",
-          expire_date: productToEdit.expire_date ?? "",
           image_url: productToEdit.image_url ?? "",
           description: productToEdit.description ?? "",
         });
       } else {
         reset({
           name: "",
-          scientific_name: "",
           sku: "",
           category_id: "",
           stocking_unit_id: "",
@@ -327,7 +314,6 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           stock_alert_level: 10,
           sale_price: "",
           cost_price: "",
-          expire_date: "",
           image_url: "",
           description: "",
         });
@@ -352,7 +338,6 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
     const dataToSend: ProductFormData = {
       name: data.name,
-      scientific_name: data.scientific_name || null,
       sku: data.sku || null,
       description: data.description || null,
       image_url: data.image_url || null,
@@ -364,7 +349,6 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       stock_alert_level: data.stock_alert_level ? Number(data.stock_alert_level) : null,
       sale_price: data.sale_price !== "" ? Number(data.sale_price) : null,
       cost_price: data.cost_price !== "" ? Number(data.cost_price) : null,
-      expire_date: data.expire_date || null,
     };
 
     try {
@@ -583,34 +567,9 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       error={!!fieldState.error}
                       helperText={fieldState.error?.message}
                       sx={{ ...fieldSx, flex: "1 1 180px" }}
-                      onChange={(e) => {
-                        field.onChange(e);
-                        setValue("scientific_name", e.target.value, { shouldValidate: true, shouldDirty: true });
-                      }}
                     />
                   )}
                 />
-
-                {/* Scientific Name */}
-              {scientificNameVisible && (
-                <Controller
-                  control={control}
-                  name="scientific_name"
-                  rules={scientificNameRequired ? { required: "الاسم العلمي مطلوب" } : {}}
-                  render={({ field, fieldState }) => (
-                    <TextField
-                      {...field}
-                      label={scientificNameRequired ? "الاسم العلمي *" : "الاسم العلمي"}
-                      placeholder={scientificNameRequired ? "" : "(اختياري)"}
-                      size="small"
-                      disabled={isSubmitting}
-                      error={!!fieldState.error}
-                      helperText={fieldState.error?.message}
-                      sx={{ ...fieldSx, flex: "1 1 180px" }}
-                    />
-                  )}
-                />
-              )}
 
                 {/* SKU */}
                 <Controller
@@ -876,28 +835,6 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                           </InputAdornment>
                         ),
                       } : undefined}
-                    />
-                  )}
-                />
-
-                {/* Expire Date */}
-                <Controller
-                  control={control}
-                  name="expire_date"
-                  render={({ field, fieldState }) => (
-                    <TextField
-                      {...field}
-                      label="تاريخ الصلاحية"
-                      type="date"
-                      
-                      size="small"
-                      disabled={isSubmitting}
-                      InputLabelProps={{ shrink: true }}
-                      value={field.value ?? ""}
-                      onChange={(e) => field.onChange(e.target.value)}
-                      helperText={fieldState.error?.message}
-                      error={!!fieldState.error}
-                      sx={fieldSx}
                     />
                   )}
                 />

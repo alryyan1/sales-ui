@@ -258,7 +258,7 @@ const MonthlyExpensesPage: React.FC = () => {
                     إجمالي المصروفات
                   </Typography>
                   <Typography variant="h5" fontWeight="bold">
-                    {formatNumber(reportData.month_summary.total)}
+                    {formatNumber(reportData.month_summary.total, 2)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -278,7 +278,7 @@ const MonthlyExpensesPage: React.FC = () => {
                     fontWeight="bold"
                     color="success.main"
                   >
-                    {formatNumber(reportData.month_summary.cash_total)}
+                    {formatNumber(reportData.month_summary.cash_total, 2)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -298,7 +298,7 @@ const MonthlyExpensesPage: React.FC = () => {
                     fontWeight="bold"
                     color="primary.main"
                   >
-                    {formatNumber(reportData.month_summary.bank_total)}
+                    {formatNumber(reportData.month_summary.bank_total, 2)}
                   </Typography>
                 </CardContent>
               </Card>

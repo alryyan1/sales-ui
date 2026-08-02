@@ -20,30 +20,26 @@ import { toast } from "sonner";
 export interface ShiftStats {
   sales: {
     cash: number;
-    bankak: number;
-    fawry: number;
-    ocash: number;
+    bank_transfer: number;
+    visa: number;
     total: number;
   };
   expenses: {
     cash: number;
-    bankak: number;
-    fawry: number;
-    ocash: number;
+    bank_transfer: number;
+    visa: number;
     total: number;
   };
   returns: {
     cash: number;
-    bankak: number;
-    fawry: number;
-    ocash: number;
+    bank_transfer: number;
+    visa: number;
     total: number;
   };
   net: {
     cash: number;
-    bankak: number;
-    fawry: number;
-    ocash: number;
+    bank_transfer: number;
+    visa: number;
     total: number;
   };
 }
@@ -177,13 +173,10 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
               نقدي
             </TableCell>
             <TableCell align="center" sx={{ fontWeight: 600 }}>
-              بنكك
+              تحويل بنكي
             </TableCell>
             <TableCell align="center" sx={{ fontWeight: 600 }}>
-              فوري
-            </TableCell>
-            <TableCell align="center" sx={{ fontWeight: 600 }}>
-              أوكاش
+              فيزا
             </TableCell>
             <TableCell align="center" sx={{ fontWeight: 600 }}>
               الإجمالي
@@ -202,19 +195,16 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
               الإيرادات
             </TableCell>
             <TableCell align="center">
-              {formatNumber(stats?.sales?.cash ?? 0)}
+              {formatNumber(stats?.sales?.cash ?? 0, 2)}
             </TableCell>
             <TableCell align="center">
-              {formatNumber(stats?.sales?.bankak ?? 0)}
+              {formatNumber(stats?.sales?.bank_transfer ?? 0, 2)}
             </TableCell>
             <TableCell align="center">
-              {formatNumber(stats?.sales?.fawry ?? 0)}
-            </TableCell>
-            <TableCell align="center">
-              {formatNumber(stats?.sales?.ocash ?? 0)}
+              {formatNumber(stats?.sales?.visa ?? 0, 2)}
             </TableCell>
             <TableCell align="center" sx={{ fontWeight: 600 }}>
-              {formatNumber(stats?.sales?.total ?? 0)}
+              {formatNumber(stats?.sales?.total ?? 0, 2)}
             </TableCell>
           </TableRow>
 
@@ -229,22 +219,19 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
               المصروفات
             </TableCell>
             <TableCell align="center">
-              {formatNumber(stats?.expenses?.cash ?? 0)}
+              {formatNumber(stats?.expenses?.cash ?? 0, 2)}
             </TableCell>
             <TableCell align="center">
-              {formatNumber(stats?.expenses?.bankak ?? 0)}
+              {formatNumber(stats?.expenses?.bank_transfer ?? 0, 2)}
             </TableCell>
             <TableCell align="center">
-              {formatNumber(stats?.expenses?.fawry ?? 0)}
-            </TableCell>
-            <TableCell align="center">
-              {formatNumber(stats?.expenses?.ocash ?? 0)}
+              {formatNumber(stats?.expenses?.visa ?? 0, 2)}
             </TableCell>
             <TableCell
               align="center"
               sx={{ fontWeight: 600, color: "error.main" }}
             >
-              {formatNumber(stats?.expenses?.total ?? 0)}
+              {formatNumber(stats?.expenses?.total ?? 0, 2)}
             </TableCell>
           </TableRow>
 
@@ -259,22 +246,19 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
               مردودات المبيعات
             </TableCell>
             <TableCell align="center">
-              {formatNumber(stats?.returns?.cash ?? 0)}
+              {formatNumber(stats?.returns?.cash ?? 0, 2)}
             </TableCell>
             <TableCell align="center">
-              {formatNumber(stats?.returns?.bankak ?? 0)}
+              {formatNumber(stats?.returns?.bank_transfer ?? 0, 2)}
             </TableCell>
             <TableCell align="center">
-              {formatNumber(stats?.returns?.fawry ?? 0)}
-            </TableCell>
-            <TableCell align="center">
-              {formatNumber(stats?.returns?.ocash ?? 0)}
+              {formatNumber(stats?.returns?.visa ?? 0, 2)}
             </TableCell>
             <TableCell
               align="center"
               sx={{ fontWeight: 600, color: "warning.main" }}
             >
-              {formatNumber(stats?.returns?.total ?? 0)}
+              {formatNumber(stats?.returns?.total ?? 0, 2)}
             </TableCell>
           </TableRow>
 
@@ -292,31 +276,25 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
               align="center"
               sx={{ fontWeight: 600, color: "primary.main" }}
             >
-              {formatNumber(stats?.net?.cash ?? 0)}
+              {formatNumber(stats?.net?.cash ?? 0, 2)}
             </TableCell>
             <TableCell
               align="center"
               sx={{ fontWeight: 600, color: "primary.main" }}
             >
-              {formatNumber(stats?.net?.bankak ?? 0)}
+              {formatNumber(stats?.net?.bank_transfer ?? 0, 2)}
             </TableCell>
             <TableCell
               align="center"
               sx={{ fontWeight: 600, color: "primary.main" }}
             >
-              {formatNumber(stats?.net?.fawry ?? 0)}
-            </TableCell>
-            <TableCell
-              align="center"
-              sx={{ fontWeight: 600, color: "primary.main" }}
-            >
-              {formatNumber(stats?.net?.ocash ?? 0)}
+              {formatNumber(stats?.net?.visa ?? 0, 2)}
             </TableCell>
             <TableCell
               align="center"
               sx={{ fontWeight: 700, color: "primary.main" }}
             >
-              {formatNumber(stats?.net?.total ?? 0)}
+              {formatNumber(stats?.net?.total ?? 0, 2)}
             </TableCell>
           </TableRow>
         </TableBody>

@@ -62,7 +62,7 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
   const [selectedReturns, setSelectedReturns] = useState<Record<number, SelectedReturn>>({});
   const [phoneNumber, setPhoneNumber] = useState("");
   const [reason, setReason] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "bankak" | "fawry" | "ocash">("cash");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank_transfer" | "visa" | "other">("cash");
   const [submitting, setSubmitting] = useState(false);
   const [pastSalesDialogOpen, setPastSalesDialogOpen] = useState(false);
 
@@ -404,9 +404,9 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
                       }
                     >
                       <MenuItem value="cash">نقدي</MenuItem>
-                      <MenuItem value="bankak">بنكك</MenuItem>
-                      <MenuItem value="fawry">فوري</MenuItem>
-                      <MenuItem value="ocash">أوكاش</MenuItem>
+                      <MenuItem value="bank_transfer">تحويل بنكي</MenuItem>
+                      <MenuItem value="visa">فيزا</MenuItem>
+                      <MenuItem value="other">أخرى</MenuItem>
                     </Select>
                   </FormControl>
                 </Stack>

@@ -754,9 +754,9 @@ const ClientLedgerPage: React.FC = () => {
                 onChange={(e) => setPayAllMethod(e.target.value)}
               >
                 <MenuItem value="cash">كاش</MenuItem>
-                <MenuItem value="bankak">بنكك</MenuItem>
-                <MenuItem value="fawry">فوري</MenuItem>
-                <MenuItem value="ocash">أوكاش</MenuItem>
+                <MenuItem value="bank_transfer">تحويل بنكي</MenuItem>
+                <MenuItem value="visa">فيزا</MenuItem>
+                <MenuItem value="other">أخرى</MenuItem>
               </Select>
             </FormControl>
             <TextField

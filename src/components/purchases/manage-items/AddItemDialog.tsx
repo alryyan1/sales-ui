@@ -21,7 +21,6 @@ import {
   Package,
   Search,
   Hash,
-  Calendar,
   DollarSign,
   Layers,
   Tag,
@@ -60,7 +59,6 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
 }) => {
   const { settings, getSetting } = useSettings();
   const showBatchNumber = getSetting("purchase_use_batch_number", true) ?? true;
-  const showExpiryDate = getSetting("purchase_use_expiry_date", true) ?? true;
 
   // Form state
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -76,7 +74,6 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
     number | undefined
   >(undefined);
   const [batchNumber, setBatchNumber] = useState("");
-  const [expiryDate, setExpiryDate] = useState("");
 
   // Reset form
   const resetForm = useCallback(() => {
@@ -89,7 +86,6 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
     setSalePrice(undefined);
     setSalePriceStockingUnit(undefined);
     setBatchNumber("");
-    setExpiryDate("");
   }, []);
 
   // Fetch ALL products for client-side filtering/scanning
@@ -291,7 +287,6 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
             ? roundToThreeDecimals(salePriceStockingUnit)
             : undefined,
         batch_number: batchNumber || undefined,
-        expiry_date: expiryDate || undefined,
       };
 
       onAddItem(data);
@@ -306,7 +301,6 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
     salePrice,
     salePriceStockingUnit,
     batchNumber,
-    expiryDate,
     unitsPerStockingUnit,
     profitRate,
     onAddItem,
@@ -815,96 +809,42 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                   </Box>
                 </Box>
 
-                {/* Third Row: Batch & Expiry (conditional) */}
-                {(showBatchNumber || showExpiryDate) && (
+                {/* Third Row: Batch (conditional) */}
+                {showBatchNumber && (
                   <Box
                     sx={{
                       display: "grid",
-                      gridTemplateColumns: {
-                        xs: "1fr",
-                        sm:
-                          showBatchNumber && showExpiryDate
-                            ? "1fr 1fr"
-                            : "1fr",
-                      },
+                      gridTemplateColumns: { xs: "1fr", sm: "1fr" },
                       gap: 2,
                     }}
                   >
-                    {showBatchNumber && (
-                      <Box>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontWeight: 600,
-                            color: "grey.700",
-                            mb: 1,
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 1,
-                          }}
-                        >
-                          <Hash size={16} />
-                          رقم الدفعة
-                        </Typography>
-                        <TextField
-                          value={batchNumber}
-                          onChange={(e) => setBatchNumber(e.target.value)}
-                          size="small"
-                          fullWidth
-                          placeholder="اختياري"
-                          onKeyDown={handleFormInputKeyDown}
-                          sx={{
-                            "& .MuiOutlinedInput-root": { borderRadius: 2 },
-                          }}
-                        />
-                      </Box>
-                    )}
-
-                    {showExpiryDate && (
-                      <Box>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontWeight: 600,
-                            color: "grey.700",
-                            mb: 1,
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 1,
-                          }}
-                        >
-                          <Calendar size={16} />
-                          تاريخ الانتهاء
-                        </Typography>
-                        <TextField
-                          type="date"
-                          value={expiryDate}
-                          onChange={(e) => {
-                            const newValue = e.target.value;
-                            if (newValue) {
-                              const date = new Date(newValue);
-                              const lastDay = new Date(
-                                date.getFullYear(),
-                                date.getMonth() + 1,
-                                0,
-                              );
-                              setExpiryDate(
-                                lastDay.toISOString().split("T")[0],
-                              );
-                            } else {
-                              setExpiryDate(newValue);
-                            }
-                          }}
-                          size="small"
-                          fullWidth
-                          InputLabelProps={{ shrink: true }}
-                          onKeyDown={handleFormInputKeyDown}
-                          sx={{
-                            "& .MuiOutlinedInput-root": { borderRadius: 2 },
-                          }}
-                        />
-                      </Box>
-                    )}
+                    <Box>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontWeight: 600,
+                          color: "grey.700",
+                          mb: 1,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                        }}
+                      >
+                        <Hash size={16} />
+                        رقم الدفعة
+                      </Typography>
+                      <TextField
+                        value={batchNumber}
+                        onChange={(e) => setBatchNumber(e.target.value)}
+                        size="small"
+                        fullWidth
+                        placeholder="اختياري"
+                        onKeyDown={handleFormInputKeyDown}
+                        sx={{
+                          "& .MuiOutlinedInput-root": { borderRadius: 2 },
+                        }}
+                      />
+                    </Box>
                   </Box>
                 )}
               </Box>

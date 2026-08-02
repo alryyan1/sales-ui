@@ -7,8 +7,6 @@
     "deleteSuccess": "تم حذف المورد بنجاح.",
     "saveSuccess": "تم حفظ بيانات المورد بنجاح.",
     "name": "اسم المنتج ",
-    "scientificName": "الاسم العلمي",
-    "scientificNamePlaceholder": "أدخل الاسم العلمي (اختياري)",
     "filterByCategory": "تصفية حسب الفئة",
     "allCategories": "جميع الفئات",
     "rowsPerPage": "الصفوف في الصفحة",
@@ -25,7 +23,7 @@
     "phone": "رقم الهاتف",
     "address": "العنوان",
     "noSuppliers": "لا يوجد موردون لعرضهم.",
-    "searchPlaceholder": "البحث في الاسم، الاسم العلمي، رمز المنتج...", 
+    "searchPlaceholder": "البحث في الاسم، رمز المنتج...",
     "selectSupplierPlaceholder": "اختر موردًا...", 
     "productNamePlaceholder": "اسم المنتج",
     "productDescriptionPlaceholder": "وصف المنتج",
@@ -139,7 +137,6 @@
     "fields": {
         "name": "اسم المنتج",
         "sku": "رمز المنتج",
-        "scientificName": "الاسم العلمي",
         "stockQuantity": "كمية المخزون"
     }
 }

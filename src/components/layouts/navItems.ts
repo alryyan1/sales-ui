@@ -169,26 +169,8 @@ export const navItems: NavItem[] = [
         category: "التقارير",
       },
       {
-        to: "/reports/shortages",
-        label: "الطلبية ",
-        permission: null,
-        category: "التقارير",
-      },
-      {
-        to: "/reports/moved-expired-products",
-        label: "المنتجات التالفة/المنتهية",
-        permission: null,
-        category: "التقارير",
-      },
-      {
         to: "/reports/monthly-shifts",
         label: "تقرير الورديات الشهري",
-        permission: null,
-        category: "التقارير",
-      },
-      {
-        to: "/reports/templates",
-        label: "نماذج التقارير",
         permission: null,
         category: "التقارير",
       },
@@ -236,12 +218,6 @@ export const navItems: NavItem[] = [
       {
         to: "/admin/warehouses",
         label: "المخازن",
-        permission: null,
-        category: "الإدارة",
-      },
-      {
-        to: "/admin/whatsapp-test",
-        label: "تجربة الواتساب",
         permission: null,
         category: "الإدارة",
       },

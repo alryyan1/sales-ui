@@ -103,7 +103,6 @@ export const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
             quantity: 1,
             unit_cost: 0,
             sale_price: null,
-            expiry_date: null,
             product: undefined,
         };
         

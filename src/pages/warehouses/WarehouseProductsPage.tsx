@@ -356,11 +356,6 @@ const WarehouseProductsPage: React.FC = () => {
                         <Typography variant="body2" fontWeight={500}>
                           {product.name}
                         </Typography>
-                        {product.scientific_name && (
-                          <Typography variant="caption" color="text.secondary">
-                            {product.scientific_name}
-                          </Typography>
-                        )}
                       </Box>
                     </TableCell>
                     <TableCell sx={{ fontSize: '0.875rem' }}>

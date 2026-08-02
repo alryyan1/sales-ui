@@ -44,7 +44,7 @@ import { Category } from "@/services/CategoryService";
 import { Unit } from "@/services/UnitService";
 import { ProductFormData } from "@/services/productService";
 
-import { formatNumber, formatCurrency } from "@/constants";
+import { formatNumber } from "@/constants";
 import { useSettings } from "@/context/SettingsContext";
 
 // Interface for Product with potentially loaded batches
@@ -65,7 +65,6 @@ interface ProductsTableProps {
   isLoading?: boolean;
   onEdit: (product: ProductWithOptionalBatches) => void;
   onBarcodeLabel: (product: ProductWithOptionalBatches) => void;
-  onCurrencyChange?: (productId: number, currency: "SDG" | "USD" | null) => void;
   onPriceUpdate?: (productId: number, field: "sale_price" | "cost_price", value: number | null) => Promise<void>;
   // Context Menu Handlers
   onDuplicate?: (product: ProductWithOptionalBatches) => void;
@@ -84,9 +83,9 @@ interface ProductsTableProps {
   isFetchingNextPage: boolean;
   // Column Visibility
   visibleColumns?: {
-    sku?: boolean; name?: boolean; scientific_name?: boolean; category?: boolean;
+    sku?: boolean; name?: boolean; category?: boolean;
     sellable_unit?: boolean; stocking_unit?: boolean; units_per_stocking?: boolean;
-    stock?: boolean; cost?: boolean; sale_price?: boolean; expire_date?: boolean;
+    stock?: boolean; cost?: boolean; sale_price?: boolean;
     description?: boolean;
   };
   // Sorting Props
@@ -110,7 +109,6 @@ interface ProductRowProps {
   onDelete: (product: ProductWithOptionalBatches) => void;
   onCopyInfo: (product: ProductWithOptionalBatches) => void;
   onToggleFavorite: (product: ProductWithOptionalBatches) => void;
-  onCurrencyChange?: (productId: number, currency: "SDG" | "USD" | null) => void;
   onPriceUpdate?: (productId: number, field: "sale_price" | "cost_price", value: number | null) => Promise<void>;
   activeField?: "sale_price" | "cost_price" | null;
   onFieldOpen?: (field: "sale_price" | "cost_price") => void;
@@ -203,39 +201,6 @@ const InlineEditCell: React.FC<{
   );
 };
 
-const PriceWithCurrency: React.FC<{
-  value: number;
-  currency: string;
-  highlight?: boolean;
-}> = ({ value, currency, highlight = false }) => {
-  const isUSD = currency === "USD";
-  return (
-    <Stack direction="row" spacing={0.4} alignItems="center" justifyContent="center">
-      <Typography
-        variant="body2"
-        sx={{ fontWeight: highlight ? 700 : 400, color: highlight ? "primary.main" : "text.primary" }}
-      >
-        {formatNumber(value.toFixed(2))}
-      </Typography>
-      <Typography
-        variant="caption"
-        sx={{
-          fontWeight: 700,
-          fontSize: "0.62rem",
-          px: 0.5,
-          py: 0.1,
-          borderRadius: 0.75,
-          lineHeight: 1.6,
-          bgcolor: isUSD ? "success.light" : "info.light",
-          color: isUSD ? "success.dark" : "info.dark",
-        }}
-      >
-        {currency}
-      </Typography>
-    </Stack>
-  );
-};
-
 const ProductRow: React.FC<ProductRowProps> = ({
   product,
   onEdit,
@@ -249,7 +214,6 @@ const ProductRow: React.FC<ProductRowProps> = ({
   onDelete,
   onCopyInfo,
   onToggleFavorite,
-  onCurrencyChange,
   onPriceUpdate,
   activeField,
   onFieldOpen,
@@ -263,10 +227,6 @@ const ProductRow: React.FC<ProductRowProps> = ({
     product.stock_alert_level !== null &&
     stockQty <= (product.stock_alert_level as number);
   const isOutOfStock = stockQty <= 0;
-
-  const isExpired = product.earliest_expiry_date
-    ? new Date(product.earliest_expiry_date) < new Date()
-    : false;
 
   const { getSetting } = useSettings();
   const colorHighlight = getSetting("product_row_color_highlight", true);
@@ -313,13 +273,6 @@ const ProductRow: React.FC<ProductRowProps> = ({
     setContextMenu(null);
   };
 
-  // Format expiry date
-  const formatExpiryDate = (dateString: string | null) => {
-    if (!dateString) return "---";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-CA"); // YYYY-MM-DD format
-  };
-
   return (
     <>
       <TableRow
@@ -328,19 +281,15 @@ const ProductRow: React.FC<ProductRowProps> = ({
         sx={{
           cursor: "default",
           bgcolor: colorHighlight
-            ? isExpired
-              ? "rgba(211, 47, 47, 0.08)"
-              : isOutOfStock
-                ? "rgba(237, 108, 2, 0.08)"
-                : "transparent"
+            ? isOutOfStock
+              ? "rgba(237, 108, 2, 0.08)"
+              : "transparent"
             : "transparent",
           "&:hover": {
             bgcolor: colorHighlight
-              ? isExpired
-                ? "rgba(211, 47, 47, 0.12) !important"
-                : isOutOfStock
-                  ? "rgba(237, 108, 2, 0.12) !important"
-                  : undefined
+              ? isOutOfStock
+                ? "rgba(237, 108, 2, 0.12) !important"
+                : undefined
               : undefined,
           },
         }}
@@ -395,9 +344,6 @@ const ProductRow: React.FC<ProductRowProps> = ({
           </Typography>
         </TableCell>
       )}
-      {vis.scientific_name !== false && (
-        <TableCell sx={{ minWidth: 300 }} align="center">{product.scientific_name || "---"}</TableCell>
-      )}
       {vis.category !== false && (
         <TableCell align="center">
           {product.category_name
@@ -451,45 +397,6 @@ const ProductRow: React.FC<ProductRowProps> = ({
           </Stack>
         </TableCell>
       )}
-      {vis.expire_date !== false && (
-        <TableCell sx={{ minWidth: 100 }} align="center">
-          <Typography variant="body2" sx={{ color: isExpired ? "error.main" : "text.primary", fontWeight: isExpired ? 600 : 400 }}>
-            {formatExpiryDate(product.earliest_expiry_date)}
-          </Typography>
-        </TableCell>
-      )}
-      <TableCell align="center">
-        <Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
-          {(["SDG", "USD"] as const).map((cur) => {
-            const active = product.preferred_currency === cur;
-            const isLastPurchase = !product.preferred_currency && product.last_purchase_currency === cur;
-            return (
-              <Typography
-                key={cur}
-                onClick={(e) => { e.stopPropagation(); onCurrencyChange?.(product.id, active ? null : cur); }}
-                variant="caption"
-                sx={{
-                  cursor: "pointer",
-                  fontWeight: 700,
-                  fontSize: "0.62rem",
-                  px: 0.6,
-                  py: 0.15,
-                  borderRadius: 0.75,
-                  lineHeight: 1.6,
-                  bgcolor: active ? (cur === "USD" ? "success.main" : "info.main") : "action.hover",
-                  color: active ? "#fff" : "text.secondary",
-                  outline: isLastPurchase ? "1.5px solid" : "none",
-                  outlineColor: isLastPurchase ? "error.main" : "transparent",
-                  "&:hover": { opacity: 0.8 },
-                  transition: "all 0.15s",
-                }}
-              >
-                {cur}
-              </Typography>
-            );
-          })}
-        </Stack>
-      </TableCell>
       <TableCell align="center" sx={{ p: 0.5, width: 36 }}>
         <Tooltip title="تعديل">
           <IconButton
@@ -541,7 +448,6 @@ const InlineCreateRow: React.FC<{
   const [formData, setFormData] = useState<ProductFormData>({
     name: "",
     sku: "",
-    scientific_name: "",
     category_id: "" as any,
     stocking_unit_id: "" as any,
     sellable_unit_id: "" as any,
@@ -551,18 +457,10 @@ const InlineCreateRow: React.FC<{
     description: "",
     cost_price: "",
     sale_price: "",
-    expire_date: "",
   });
 
   const handleChange = (field: keyof ProductFormData, value: any) => {
-    setFormData((prev) => {
-      const updates: any = { [field]: value };
-      // Sync scientific name with name if scientific name is empty or was same as name
-      if (field === "name") {
-        updates.scientific_name = value;
-      }
-      return { ...prev, ...updates };
-    });
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   // Set default units and category on mount
@@ -638,20 +536,6 @@ const InlineCreateRow: React.FC<{
           sx={{
             minWidth: 120,
             width: `${Math.max(12, formData.name.length + 2)}ch`,
-            transition: "width 0.2s ease",
-          }}
-        />
-      </TableCell>
-      <TableCell align="center">
-        <TextField
-          size="small"
-          placeholder="Scientific Name"
-          value={formData.scientific_name || ""}
-          onChange={(e) => handleChange("scientific_name", e.target.value)}
-          onKeyDown={handleKeyDown}
-          sx={{
-            minWidth: 100,
-            width: `${Math.max(10, (formData.scientific_name || "").length + 2)}ch`,
             transition: "width 0.2s ease",
           }}
         />
@@ -772,16 +656,6 @@ const InlineCreateRow: React.FC<{
           sx={{ width: 80 }}
         />
       </TableCell>
-      {/* Expiry Date */}
-      <TableCell align="center">
-        <TextField
-          type="date"
-          size="small"
-          value={formData.expire_date || ""}
-          onChange={(e) => handleChange("expire_date", e.target.value)}
-          sx={{ width: 130 }}
-        />
-      </TableCell>
       <TableCell align="center">
         <IconButton size="small" onClick={onCancel} disabled={isLoading}>
           <X size={18} color="red" />
@@ -801,7 +675,6 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
   onDelete = () => {},
   onCopyInfo = () => {},
   onToggleFavorite = () => {},
-  onCurrencyChange,
   onPriceUpdate,
   categories,
   stockingUnits,
@@ -995,22 +868,6 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                     الوصف
                   </TableCell>
                 )}
-                {vis.scientific_name !== false && (
-                  <TableCell
-                    align="center"
-                    sx={{
-                      cursor: onSort ? 'pointer' : 'default',
-                      userSelect: 'none',
-                      '&:hover': onSort ? { bgcolor: 'rgba(25, 118, 210, 0.04)' } : {}
-                    }}
-                    onClick={() => onSort?.('scientific_name')}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      الاسم العلمي
-                      {renderSortIcon('scientific_name')}
-                    </Box>
-                  </TableCell>
-                )}
                 {vis.category !== false && (
                   <TableCell
                     align="center"
@@ -1112,25 +969,6 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                     </Box>
                   </TableCell>
                 )}
-                {vis.expire_date !== false && (
-                  <TableCell
-                    align="center"
-                    sx={{
-                      cursor: onSort ? 'pointer' : 'default',
-                      userSelect: 'none',
-                      '&:hover': onSort ? { bgcolor: 'rgba(25, 118, 210, 0.04)' } : {}
-                    }}
-                    onClick={() => onSort?.('expire_date')}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      الصلاحية
-                      {renderSortIcon('expire_date')}
-                    </Box>
-                  </TableCell>
-                )}
-                <TableCell align="center" sx={{ whiteSpace: 'nowrap', minWidth: 100 }}>
-                  العملة
-                </TableCell>
                 <TableCell align="center" sx={{ width: 36 }} />
               </TableRow>
             </TableHead>
@@ -1171,7 +1009,6 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                   onDelete={onDelete}
                   onCopyInfo={onCopyInfo}
                   onToggleFavorite={onToggleFavorite}
-                  onCurrencyChange={onCurrencyChange}
                   onPriceUpdate={onPriceUpdate}
                   activeField={activeCell?.productId === product.id ? activeCell.field : null}
                   onFieldOpen={(field) => setActiveCell({ productId: product.id, field })}

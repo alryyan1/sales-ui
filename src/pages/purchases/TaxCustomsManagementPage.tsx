@@ -251,13 +251,10 @@ const TaxCustomsManagementPage: React.FC = () => {
                         {purchase.purchase_date}
                       </TableCell>
                       <TableCell align="right">
-                        {formatCurrency(
-                          purchase.total_amount,
-                          purchase.currency,
-                        )}
+                        {formatCurrency(purchase.total_amount)}
                       </TableCell>
                       <TableCell align="right">
-                        {formatCurrency(purchase.tax_amount, purchase.currency)}
+                        {formatCurrency(purchase.tax_amount)}
                       </TableCell>
                       <TableCell align="center">
                         <Tooltip title="تعديل">
@@ -335,16 +332,10 @@ const TaxCustomsManagementPage: React.FC = () => {
                         {purchase.purchase_date}
                       </TableCell>
                       <TableCell align="right">
-                        {formatCurrency(
-                          purchase.total_amount,
-                          purchase.currency,
-                        )}
+                        {formatCurrency(purchase.total_amount)}
                       </TableCell>
                       <TableCell align="right">
-                        {formatCurrency(
-                          purchase.customs_amount,
-                          purchase.currency,
-                        )}
+                        {formatCurrency(purchase.customs_amount)}
                       </TableCell>
                       <TableCell align="center">
                         <Tooltip title="تعديل">

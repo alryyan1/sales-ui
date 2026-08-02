@@ -12,9 +12,8 @@ const SaleReturnsPaymentsBreakdownTab: React.FC<
   SaleReturnsPaymentsBreakdownTabProps
 > = ({ returns }) => {
   let totalCash = 0;
-  let totalBankak = 0;
-  let totalFawry = 0;
-  let totalOcash = 0;
+  let totalBankTransfer = 0;
+  let totalVisa = 0;
   let totalOther = 0;
 
   for (const r of returns) {
@@ -27,19 +26,17 @@ const SaleReturnsPaymentsBreakdownTab: React.FC<
     const method = (r.returned_payment_method || "").toLowerCase();
     if (method === "cash") {
       totalCash += itemsTotal;
-    } else if (method === "bankak") {
-      totalBankak += itemsTotal;
-    } else if (method === "fawry") {
-      totalFawry += itemsTotal;
-    } else if (method === "ocash") {
-      totalOcash += itemsTotal;
+    } else if (method === "bank_transfer") {
+      totalBankTransfer += itemsTotal;
+    } else if (method === "visa") {
+      totalVisa += itemsTotal;
     } else {
       totalOther += itemsTotal;
     }
   }
 
   const totalAll =
-    totalCash + totalBankak + totalFawry + totalOcash + totalOther;
+    totalCash + totalBankTransfer + totalVisa + totalOther;
 
   if (!returns.length) {
     return (
@@ -73,10 +70,10 @@ const SaleReturnsPaymentsBreakdownTab: React.FC<
         <Card sx={{ minWidth: 200, flex: 1 }}>
           <CardContent>
             <Typography variant="body2" color="text.secondary">
-              إجمالي مردود بنكك
+              إجمالي مردود تحويل بنكي
             </Typography>
             <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              {formatNumber(totalBankak)}
+              {formatNumber(totalBankTransfer)}
             </Typography>
           </CardContent>
         </Card>
@@ -84,21 +81,10 @@ const SaleReturnsPaymentsBreakdownTab: React.FC<
         <Card sx={{ minWidth: 200, flex: 1 }}>
           <CardContent>
             <Typography variant="body2" color="text.secondary">
-              إجمالي مردود فوري
+              إجمالي مردود فيزا
             </Typography>
             <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              {formatNumber(totalFawry)}
-            </Typography>
-          </CardContent>
-        </Card>
-
-        <Card sx={{ minWidth: 200, flex: 1 }}>
-          <CardContent>
-            <Typography variant="body2" color="text.secondary">
-              إجمالي مردود أوكاش
-            </Typography>
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              {formatNumber(totalOcash)}
+              {formatNumber(totalVisa)}
             </Typography>
           </CardContent>
         </Card>

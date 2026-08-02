@@ -224,10 +224,10 @@ interface Props {
   settings?: AppSettings | null;
 }
 
-const currency = "SDG";
-const fmt = (n: number) => `${formatNumber(n)} ${currency}`;
-
 export const SupplierSummaryLedgerPdf: React.FC<Props> = ({ suppliers, settings }) => {
+  const currency = settings?.currency_symbol || "OMR";
+  const fmt = (n: number) => `${formatNumber(n)} ${currency}`;
+
   const totals = suppliers.reduce(
     (acc, s) => ({
       debit:   acc.debit   + s.total_debit,

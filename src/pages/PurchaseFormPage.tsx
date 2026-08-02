@@ -38,7 +38,6 @@ import purchaseService, {
 import supplierService, { Supplier } from "../services/supplierService";
 import apiClient from "@/lib/axios";
 import { warehouseService, Warehouse } from "../services/warehouseService";
-import { useSettings } from "@/context/SettingsContext";
 
 // --- Type Definitions ---
 export type PurchaseFormValues = {
@@ -46,7 +45,6 @@ export type PurchaseFormValues = {
   supplier_id: number;
   purchase_date: Date;
   status: "received" | "pending" | "ordered";
-  currency: "SDG" | "USD";
   reference_number?: string | null;
   notes?: string | null;
 };
@@ -54,7 +52,6 @@ export type PurchaseFormValues = {
 // --- Component ---
 const PurchaseFormPage: React.FC = () => {
   const navigate = useNavigate();
-  const { getSetting } = useSettings();
 
   // --- State ---
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -83,7 +80,6 @@ const PurchaseFormPage: React.FC = () => {
       supplier_id: undefined as any,
       purchase_date: new Date(),
       status: "pending" as const, // Default "pending"
-      currency: (getSetting("default_purchase_currency") ?? "SDG") as "SDG" | "USD",
       reference_number: "",
       notes: "",
     },
@@ -196,11 +192,6 @@ const PurchaseFormPage: React.FC = () => {
 
       if (!data.status) {
         setError("status", { type: "manual", message: "هذا الحقل مطلوب" });
-        return;
-      }
-
-      if (!data.currency) {
-        setError("currency", { type: "manual", message: "هذا الحقل مطلوب" });
         return;
       }
 

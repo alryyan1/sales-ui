@@ -59,9 +59,8 @@ const SaleReturnsMonthlyTab: React.FC<SaleReturnsMonthlyTabProps> = ({
 
     let totalAmount = 0;
     let totalCash = 0;
-    let totalBankak = 0;
-    let totalFawry = 0;
-    let totalOcash = 0;
+    let totalBankTransfer = 0;
+    let totalVisa = 0;
 
     for (const r of dayReturns) {
       const itemsTotal =
@@ -75,12 +74,10 @@ const SaleReturnsMonthlyTab: React.FC<SaleReturnsMonthlyTabProps> = ({
       const method = (r.returned_payment_method || "").toLowerCase();
       if (method === "cash") {
         totalCash += itemsTotal;
-      } else if (method === "bankak") {
-        totalBankak += itemsTotal;
-      } else if (method === "fawry") {
-        totalFawry += itemsTotal;
-      } else if (method === "ocash") {
-        totalOcash += itemsTotal;
+      } else if (method === "bank_transfer") {
+        totalBankTransfer += itemsTotal;
+      } else if (method === "visa") {
+        totalVisa += itemsTotal;
       }
     }
 
@@ -89,9 +86,8 @@ const SaleReturnsMonthlyTab: React.FC<SaleReturnsMonthlyTabProps> = ({
       count,
       totalAmount,
       totalCash,
-      totalBankak,
-      totalFawry,
-      totalOcash,
+      totalBankTransfer,
+      totalVisa,
     };
   });
 
@@ -104,9 +100,8 @@ const SaleReturnsMonthlyTab: React.FC<SaleReturnsMonthlyTabProps> = ({
             <TableCell align="right">عدد المردودات</TableCell>
             <TableCell align="right">إجمالي القيمة</TableCell>
             <TableCell align="right">إجمالي مردود نقدي</TableCell>
-            <TableCell align="right">إجمالي مردود بنكك</TableCell>
-            <TableCell align="right">إجمالي مردود فوري</TableCell>
-            <TableCell align="right">إجمالي مردود أوكاش</TableCell>
+            <TableCell align="right">إجمالي مردود تحويل بنكي</TableCell>
+            <TableCell align="right">إجمالي مردود فيزا</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -123,13 +118,10 @@ const SaleReturnsMonthlyTab: React.FC<SaleReturnsMonthlyTabProps> = ({
                 {formatNumber(row.totalCash)}
               </TableCell>
               <TableCell align="right">
-                {formatNumber(row.totalBankak)}
+                {formatNumber(row.totalBankTransfer)}
               </TableCell>
               <TableCell align="right">
-                {formatNumber(row.totalFawry)}
-              </TableCell>
-              <TableCell align="right">
-                {formatNumber(row.totalOcash)}
+                {formatNumber(row.totalVisa)}
               </TableCell>
             </TableRow>
           ))}

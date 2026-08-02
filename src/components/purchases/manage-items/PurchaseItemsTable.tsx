@@ -46,7 +46,6 @@ interface PurchaseItemsTableProps {
   totalCount: number; // Total number of items across all pages
   currency?: string;
   showBatchNumber?: boolean;
-  showExpiryDate?: boolean;
 }
 
 const columnHelper = createColumnHelper<PurchaseItem>();
@@ -63,7 +62,6 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
   totalCount,
   currency,
   showBatchNumber = true,
-  showExpiryDate = true,
 }) => {
   // Helper to check if a specific field is being updated
   const isFieldUpdating = useCallback(
@@ -186,42 +184,6 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
                 );
               },
               size: 120,
-            }),
-          ]
-        : []),
-
-      // 4. Expiry Date column (optional)
-      ...(showExpiryDate
-        ? [
-            columnHelper.accessor("expiry_date", {
-              header: "Expiry Date",
-              cell: ({ row }: { row: any }) => {
-                const item = row.original;
-                return (
-                  <Box sx={{ position: "relative", minWidth: 120 }}>
-                    <InstantTextField
-                      value={item.expiry_date || ""}
-                      onChangeValue={(v: string) =>
-                        onUpdate(item.id, "expiry_date", String(v) || null)
-                      }
-                      type="date"
-                      disabled={false}
-                    />
-                    {isFieldUpdating(item.id, "expiry_date") && (
-                      <CircularProgress
-                        size={16}
-                        sx={{
-                          position: "absolute",
-                          right: 8,
-                          top: "50%",
-                          transform: "translateY(-50%)",
-                        }}
-                      />
-                    )}
-                  </Box>
-                );
-              },
-              size: 140,
             }),
           ]
         : []),
@@ -377,6 +339,7 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
             <Typography variant="body2" fontWeight="700" color="primary.main">
               {formatNumber(
                 item.quantity * Number(item.unit_cost),
+                2,
               )}
             </Typography>
           );
@@ -393,7 +356,7 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
           const totalRetail = item.quantity * Number(item.sale_price || 0);
           return (
             <Typography variant="body2" fontWeight="700" color="success.main">
-              {formatNumber(totalRetail)}
+              {formatNumber(totalRetail, 2)}
             </Typography>
           );
         },
@@ -438,7 +401,6 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
       isFieldUpdating,
       currency,
       showBatchNumber,
-      showExpiryDate,
     ],
   );
 

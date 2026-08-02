@@ -94,7 +94,6 @@ const ProductRow: React.FC<ProductRowProps> = ({
           {product.name}
         </Typography>
       </TableCell>
-      <TableCell align="center">{product.scientific_name || "---"}</TableCell>
       <TableCell align="center">
         {product.category_name ? (
           <Chip

@@ -38,7 +38,6 @@ interface ProductImportDialogProps {
 interface ColumnMapping {
   name: string;
   sku: string;
-  scientific_name: string;
   stock_quantity: string;
 }
 
@@ -85,14 +84,12 @@ const autoMapColumns = (headers: string[]): ColumnMapping => {
   const fieldMappings = {
     name: ['name', 'product name', 'product_name', 'title', 'product title', 'item name', 'item_name'],
     sku: ['sku', 'product sku', 'product_sku', 'code', 'product code', 'product_code', 'barcode', 'item code', 'item_code'],
-    scientific_name: ['scientific name', 'scientific_name', 'scientific', 'generic name', 'generic_name'],
     stock_quantity: ['stock quantity', 'stock_quantity', 'quantity', 'qty', 'stock', 'inventory', 'available', 'stock level', 'stock_level']
   };
 
   const mapping: ColumnMapping = {
     name: '',
     sku: '',
-    scientific_name: '',
     stock_quantity: '',
   };
 
@@ -131,7 +128,6 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
   const [columnMapping, setColumnMapping] = useState<ColumnMapping>({
     name: '',
     sku: '',
-    scientific_name: '',
     stock_quantity: '',
   });
   const [skipHeader, setSkipHeader] = useState(true);
@@ -158,7 +154,6 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
   const productFields = [
     { key: 'name', label: 'اسم المنتج', required: true },
     { key: 'sku', label: 'الرمز (SKU)', required: false },
-    { key: 'scientific_name', label: 'الاسم العلمي', required: false },
     { key: 'stock_quantity', label: 'كمية المخزون', required: false },
   ];
 
@@ -281,7 +276,6 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
     setColumnMapping({
       name: '',
       sku: '',
-      scientific_name: '',
       stock_quantity: '',
     });
     setSkipHeader(true);
@@ -459,7 +453,6 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
                 <TableRow>
                   <TableCell>اسم المنتج</TableCell>
                   <TableCell>الرمز (SKU)</TableCell>
-                  <TableCell>الاسم العلمي</TableCell>
                   <TableCell>كمية المخزون</TableCell>
                 </TableRow>
               </TableHead>
@@ -468,7 +461,6 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({
                   <TableRow key={index}>
                     <TableCell>{row.name || '-'}</TableCell>
                     <TableCell>{row.sku || '-'}</TableCell>
-                    <TableCell>{row.scientific_name || '-'}</TableCell>
                     <TableCell>{row.stock_quantity || '-'}</TableCell>
                   </TableRow>
                 ))}

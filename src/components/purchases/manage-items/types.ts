@@ -7,7 +7,6 @@ export interface AddPurchaseItemData {
   sale_price: number;
   sale_price_stocking_unit?: number;
   batch_number?: string;
-  expiry_date?: string;
 }
 
 export interface PurchaseSummary {

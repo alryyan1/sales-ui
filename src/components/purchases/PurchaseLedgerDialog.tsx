@@ -62,9 +62,8 @@ type PaymentFormValues = z.infer<typeof paymentSchema>;
 
 const PAYMENT_METHODS = [
   { id: "cash", name: "كاش" },
-  { id: "bankak", name: "بنكك" },
-  { id: "fawry", name: "فوري" },
-  { id: "ocash", name: "أوكاش" },
+  { id: "bank_transfer", name: "تحويل بنكي" },
+  { id: "visa", name: "فيزا" },
   { id: "other", name: "أخرى" },
 ];
 

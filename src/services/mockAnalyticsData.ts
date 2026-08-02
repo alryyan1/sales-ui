@@ -97,40 +97,6 @@ export const generateMockAnalyticsData = (range: DateRange): AnalyticsData => {
       { id: 3, name: 'Product C', current_stock: 0, minimum_stock: 20, status: 'out' },
       { id: 4, name: 'Product D', current_stock: 89, minimum_stock: 40, status: 'good' },
       { id: 5, name: 'Product E', current_stock: 12, minimum_stock: 25, status: 'low' },
-    ],
-    expiring_items: [
-      {
-        id: 1,
-        product_name: 'Medicine ABC',
-        batch_number: 'BATCH001',
-        expiry_date: dayjs().add(5, 'day').format('YYYY-MM-DD'),
-        remaining_quantity: 45,
-        days_until_expiry: 5
-      },
-      {
-        id: 2,
-        product_name: 'Food Item XYZ',
-        batch_number: 'BATCH002',
-        expiry_date: dayjs().add(12, 'day').format('YYYY-MM-DD'),
-        remaining_quantity: 23,
-        days_until_expiry: 12
-      },
-      {
-        id: 3,
-        product_name: 'Cosmetic Product',
-        batch_number: 'BATCH003',
-        expiry_date: dayjs().add(25, 'day').format('YYYY-MM-DD'),
-        remaining_quantity: 67,
-        days_until_expiry: 25
-      },
-      {
-        id: 4,
-        product_name: 'Supplement DEF',
-        batch_number: 'BATCH004',
-        expiry_date: dayjs().subtract(2, 'day').format('YYYY-MM-DD'),
-        remaining_quantity: 8,
-        days_until_expiry: -2
-      },
     ]
   };
 };

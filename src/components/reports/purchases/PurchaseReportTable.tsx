@@ -82,7 +82,7 @@ const PurchaseReportTable: React.FC<PurchaseReportTableProps> = ({
             <Table>
               <TableBody>
                 <TableRow>
-                  <TableCell colSpan={9} className="h-64 text-center">
+                  <TableCell colSpan={8} className="h-64 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-500">
                       <div className="bg-slate-100 p-4 rounded-full mb-4">
                         <FileText className="h-8 w-8 text-slate-400" />
@@ -122,9 +122,6 @@ const PurchaseReportTable: React.FC<PurchaseReportTableProps> = ({
                       الحالة
                     </TableHead>
                     <TableHead className="text-right font-semibold">
-                      العملة
-                    </TableHead>
-                    <TableHead className="text-right font-semibold">
                       المبلغ الإجمالي
                     </TableHead>
                     <TableHead className="text-center font-semibold w-[100px]">
@@ -162,11 +159,8 @@ const PurchaseReportTable: React.FC<PurchaseReportTableProps> = ({
                           {statusLabels[purchase.status] || purchase.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="py-4 text-right">
-                        {purchase.currency || "SDG"}
-                      </TableCell>
                       <TableCell className="py-4 text-right font-medium">
-                        {formatNumber(purchase.total_amount)}
+                        {formatNumber(purchase.total_amount, 2)}
                       </TableCell>
                       <TableCell className="py-4 text-center">
                         <Button
@@ -183,13 +177,13 @@ const PurchaseReportTable: React.FC<PurchaseReportTableProps> = ({
                   {/* Page total row */}
                   {summaryStats && (
                     <TableRow className="bg-muted/30">
-                      <TableCell colSpan={7} className="py-4 text-right">
+                      <TableCell colSpan={6} className="py-4 text-right">
                         <span className="text-sm font-semibold text-muted-foreground">
                           إجمالي الصفحة
                         </span>
                       </TableCell>
                       <TableCell className="py-4 text-right font-bold">
-                        {formatNumber(summaryStats.totalAmount)}
+                        {formatNumber(summaryStats.totalAmount, 2)}
                       </TableCell>
                       <TableCell />
                     </TableRow>

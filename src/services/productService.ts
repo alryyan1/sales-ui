@@ -15,7 +15,6 @@ import { Category } from "./CategoryService";
 export interface Product {
   id: number;
   name: string;
-  scientific_name: string | null;
   sku: string | null;
   description: string | null;
   image_url: string | null;
@@ -34,21 +33,16 @@ export interface Product {
   units_per_stocking_unit?: number | null; // e.g., 12 (pieces per box) - ensure backend default is 1
   category_id?: number | null; // Optional if not included in resource
   category_name?: string | null; // Optional if included by resource
-  has_expiry_date?: boolean;
   // Optional accessors that might be added by backend ProductResource
   // --- Stock (always in sellable units) ---
   latest_purchase_cost?: string | number | null;
-  preferred_currency?: "SDG" | "USD" | null;
-  last_purchase_currency?: "SDG" | "USD" | null;
   suggested_sale_price?: string | number | null;
   latest_cost_per_sellable_unit?: number | null;
   suggested_sale_price_per_sellable_unit?: number | null;
   last_sale_price_per_sellable_unit?: number | null;
-  earliest_expiry_date?: string | null;
   current_stock_quantity?: number;
   sale_price?: number | null;
   cost_price?: number | null;
-  expire_date?: string | null;
   // --- Inventory Report specific fields ---
   total_items_purchased?: number | null;
   total_items_sold?: number | null;
@@ -60,8 +54,7 @@ export interface Product {
     remaining_quantity?: number;
     unit_cost: number;
     sale_price: number;
-    expiry_date: string | null;
-  }[]; // Batches for cost/expiry reference; quantity from product/warehouse
+  }[]; // Batches for cost reference; quantity from product/warehouse
   // Multi-warehouse stock
   warehouses?: {
     id: number;
@@ -78,7 +71,6 @@ export interface Product {
 // Zod schema/validation handles conversion/checking before sending to API if needed.
 export interface ProductFormData {
   name: string;
-  scientific_name: string | null;
   sku: string | null;
   description: string | null;
   image_url?: string | null;
@@ -90,10 +82,8 @@ export interface ProductFormData {
   stock_alert_level: string | number | null; // Form might use string, API expects integer/null
   sale_price?: string | number | null;
   cost_price?: string | number | null;
-  expire_date?: string | null;
   // unit?: string | null;
   category_id?: number | null;
-  has_expiry_date?: boolean;
 }
 
 // Matches Laravel API Resource Collection structure
@@ -310,20 +300,6 @@ const productService = {
   },
 
   /**
-   * Set or clear the preferred currency override for a product.
-   */
-  updatePreferredCurrency: async (
-    id: number,
-    currency: "SDG" | "USD" | null,
-  ): Promise<Product> => {
-    const response = await apiClient.put<{ product: Product }>(
-      `/products/${id}`,
-      { preferred_currency: currency },
-    );
-    return response.data.product;
-  },
-
-  /**
    * Get purchase history for a product (paginated).
    */
   getProductPurchaseHistory: async (
@@ -341,8 +317,6 @@ const productService = {
       unit_cost: number | string;
       cost_per_sellable_unit: number | string;
       sale_price: number | string | null;
-      expiry_date: string | null;
-      purchase_currency: "SDG" | "USD" | null;
       created_at: string | null;
     }[];
     meta: { current_page: number; last_page: number; total: number; per_page: number };

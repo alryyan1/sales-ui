@@ -188,7 +188,7 @@ export const PurchasePdf: React.FC<PurchasePdfProps> = ({
     (acc, item) => acc + item.quantity * Number(item.unit_cost),
     0
   );
-  const currencySymbol = settings?.currency_symbol || "SDG";
+  const currencySymbol = settings?.currency_symbol || "OMR";
 
   return (
     <Document>

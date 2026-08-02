@@ -14,8 +14,6 @@ import { format } from "date-fns";
 
 import { getPdfFont } from "@/utils/pdfFontRegistry";
 
-const currencySymbol = "SDG";
-
 const styles = StyleSheet.create({
   page: {
     padding: 30, // Standard A4 margin
@@ -174,6 +172,8 @@ export const SupplierLedgerPdf: React.FC<SupplierLedgerPdfProps> = ({
   ledger,
   settings,
 }) => {
+  const currencySymbol = settings?.currency_symbol || "OMR";
+
   const getTypeLabel = (type: string) => {
     switch (type) {
       case "purchase":

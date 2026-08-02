@@ -37,7 +37,6 @@ import saleService, {
 import productService, { Product } from "@/services/productService";
 import { Client } from "@/services/clientService";
 import { useClients } from "@/hooks/useClients";
-import reportService from "@/services/reportService";
 import { formatNumber, url as apiBaseUrl } from "@/constants";
 import { SaleItemsTable } from "@/components/sales/SaleItemsTable";
 import { PosSalesColumn } from "@/components/sales/PosSalesColumn";
@@ -47,7 +46,6 @@ import { PdfViewerDialog } from "@/components/common/PdfViewerDialog";
 import SalesReturnDialog from "@/components/sales/SalesReturnDialog";
 import { useAuth } from "@/context/AuthContext";
 import { useAuthorization } from "@/hooks/useAuthorization";
-import ExpiryProductsDialog, { PurchaseItem } from "@/components/pos/ExpiryProductsDialog";
 import TopSellingProductsDialog from "@/components/pos/TopSellingProductsDialog";
 import { uploadFileToFirebase } from "@/services/firebaseStorage";
 import { saveShiftToFirestore, saveSaleToFirestore, SaleData } from "@/services/firebaseStore";
@@ -57,7 +55,6 @@ import {
 } from "@/components/sales/ShiftFinancialTable";
 import { useSettings } from "@/context/SettingsContext";
 import ClientFormModal from "@/components/clients/ClientFormModal";
-import { Package } from "@/services/packageService";
 import { SaleSummaryPanel } from "@/components/pos/SaleSummaryPanel";
 import { DueRemindersDialog } from "@/components/pos/DueRemindersDialog";
 import saleReminderService, { DueReminder } from "@/services/saleReminderService";
@@ -205,13 +202,6 @@ const PosBlankPage: React.FC = () => {
   // Batch quantity update state
   const [batchQuantity, setBatchQuantity] = useState<string>("");
   const [isBatchUpdating, setIsBatchUpdating] = useState(false);
-  // Expiry alerts state
-  const [expiryDialogOpen, setExpiryDialogOpen] = useState(false);
-  const [expiryDialogType, setExpiryDialogType] = useState<
-    "near_expiring" | "expired" | null
-  >(null);
-  const [expiryItems, setExpiryItems] = useState<PurchaseItem[]>([]);
-  const [expiryItemsLoading, setExpiryItemsLoading] = useState(false);
   // Top selling
   const [topSellingDialogOpen, setTopSellingDialogOpen] = useState(false);
 
@@ -307,7 +297,6 @@ const PosBlankPage: React.FC = () => {
         )
         .then((list) => {
           const raw = Array.isArray(list) ? list : [];
-          const showExpired = getSetting("pos_show_expired_products", false);
           const showOutOfStock = getSetting("pos_show_out_of_stock_products", false);
 
           const isQuoteMode = selectedSale?.is_quote ?? false;
@@ -315,14 +304,6 @@ const PosBlankPage: React.FC = () => {
             // Stock quantity returned from server will be warehouse-specific if warehouse_id was passed
             const stock = p.current_stock_quantity ?? p.stock_quantity ?? 0;
             if (!isQuoteMode && !showOutOfStock && stock <= 0) return false;
-
-            // Check expiry if available
-            if (p.earliest_expiry_date) {
-              const exp = new Date(p.earliest_expiry_date);
-              const today = new Date();
-              today.setHours(0, 0, 0, 0);
-              if (!showExpired && exp < today) return false;
-            }
             return true;
           });
           setProductOptions(filtered);
@@ -332,68 +313,6 @@ const PosBlankPage: React.FC = () => {
     }, 300);
     return () => clearTimeout(t);
   }, [productInputValue, user?.warehouse_id, getSetting, selectedSale?.is_quote]);
-
-  // Handle Package addition from TopAppBar
-  const handleAddPackageToSale = useCallback(
-    async (pkg: Package) => {
-      if (!selectedSale) {
-        toast.error("اختر عملية بيع أولاً");
-        return;
-      }
-      if (!pkg.items || pkg.items.length === 0) {
-        toast.error("هذه المجموعة فارغة");
-        return;
-      }
-      try {
-        const usdFactor = getSetting("usd_to_sdg_factor", 1) as number;
-        for (const item of pkg.items) {
-          const basePrice = Number(item.product?.last_sale_price_per_sellable_unit ?? item.product?.sale_price) || 0;
-          const unitPrice = item.product?.last_purchase_currency === "USD" ? basePrice * usdFactor : basePrice;
-          const res = await saleService.addSaleItem(selectedSale.id, {
-            product_id: item.product_id,
-            quantity: 1,
-            unit_price: unitPrice,
-          });
-          if (res.sale) {
-            setSelectedSale(res.sale);
-            setSales((prev) =>
-              prev.map((s) => (s.id === res.sale.id ? res.sale : s)),
-            );
-          }
-        }
-        toast.success(`تم إضافة مجموعة "${pkg.name}" بنجاح`);
-        window.dispatchEvent(
-          new CustomEvent("package-addition-status", {
-            detail: { isAdding: false, success: true },
-          }),
-        );
-      } catch (err: unknown) {
-        toast.error(saleService.getErrorMessage(err));
-        window.dispatchEvent(
-          new CustomEvent("package-addition-status", {
-            detail: { isAdding: false, success: false },
-          }),
-        );
-      }
-    },
-    [selectedSale, getSetting],
-  );
-
-  // Listen for package selection events from TopAppBar
-  useEffect(() => {
-    const handleAddPackage = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      window.dispatchEvent(
-        new CustomEvent("package-addition-status", {
-          detail: { isAdding: true, success: false },
-        }),
-      );
-      handleAddPackageToSale(customEvent.detail);
-    };
-    window.addEventListener("add-package-to-sale", handleAddPackage);
-    return () =>
-      window.removeEventListener("add-package-to-sale", handleAddPackage);
-  }, [handleAddPackageToSale]);
 
   const handleClientChange = useCallback(
     async (client: Client | null) => {
@@ -707,9 +626,7 @@ const PosBlankPage: React.FC = () => {
         return;
       }
 
-      const usdFactor = getSetting("usd_to_sdg_factor", 1) as number;
-      const basePrice = Number(product.last_sale_price_per_sellable_unit ?? product.sale_price) || 0;
-      const unitPrice = product.last_purchase_currency === "USD" ? basePrice * usdFactor : basePrice;
+      const unitPrice = Number(product.last_sale_price_per_sellable_unit ?? product.sale_price) || 0;
       try {
         setAddProductLoading(true);
         const res = await saleService.addSaleItem(selectedSale.id, {
@@ -933,83 +850,7 @@ const PosBlankPage: React.FC = () => {
   // keeping them for now if used elsewhere, but lint says unused.
   // The popup now uses shift.stats.
 
-  // Removing unused variables to fix lint errors:
-
-  // Fetch expiry counts for badges
-  const fetchExpiryCounts = useCallback(async () => {
-    try {
-      const res = await apiClient.get("/reports/expiry-counts");
-      window.dispatchEvent(new CustomEvent("update-expiry-counts", { detail: { 
-        nearExpiringCount: res.data.near_expiring_count || 0,
-        expiredCount: res.data.expired_count || 0
-      }}));
-    } catch (err) {
-      console.error("Failed to fetch expiry counts:", err);
-    }
-  }, []);
-
-  // Fetch expiry products for dialog
-  const fetchExpiryProducts = useCallback(
-    async (type: "near_expiring" | "expired") => {
-      try {
-        setExpiryItemsLoading(true);
-        const endpoint =
-          type === "near_expiring"
-            ? "/reports/near-expiry"
-            : "/reports/expired-products";
-        const res = await apiClient.get(endpoint, {
-          params: { per_page: 100 },
-        });
-        setExpiryItems(res.data.data || []);
-      } catch (err) {
-        console.error("Failed to fetch expiry products:", err);
-        toast.error("فشل تحميل المنتجات");
-        setExpiryItems([]);
-      } finally {
-        setExpiryItemsLoading(false);
-      }
-    },
-    [],
-  );
-
-  // Handle opening expiry dialog
-  const handleOpenExpiryDialog = useCallback(
-    (type: "near_expiring" | "expired") => {
-      setExpiryDialogType(type);
-      setExpiryDialogOpen(true);
-      fetchExpiryProducts(type);
-    },
-    [fetchExpiryProducts],
-  );
-
-  // Listen for open dialog events from top app bar
-  useEffect(() => {
-    const handleOpenNearExpiring = () =>
-      handleOpenExpiryDialog("near_expiring");
-    const handleOpenExpired = () => handleOpenExpiryDialog("expired");
-
-    window.addEventListener(
-      "open-near-expiring-dialog",
-      handleOpenNearExpiring,
-    );
-    window.addEventListener("open-expired-dialog", handleOpenExpired);
-
-    return () => {
-      window.removeEventListener(
-        "open-near-expiring-dialog",
-        handleOpenNearExpiring,
-      );
-      window.removeEventListener("open-expired-dialog", handleOpenExpired);
-    };
-  }, [handleOpenExpiryDialog]);
-
-  // Handle closing expiry dialog
-  const handleCloseExpiryDialog = useCallback(() => {
-    setExpiryDialogOpen(false);
-    setExpiryDialogType(null);
-    setExpiryItems([]);
-  }, []);
-  const handleAddExpiryProductToCart = useCallback(
+  const handleAddProductByIdToCart = useCallback(
     async (productId: number, productName: string) => {
       if (!selectedSale) {
         toast.error("الرجاء اختيار عملية بيع أولاً");
@@ -1025,30 +866,6 @@ const PosBlankPage: React.FC = () => {
       }
     },
     [selectedSale, handleAddProductToSale],
-  );
-
-  const handleMoveExpiredProduct = useCallback(
-    async (purchaseItemId: number) => {
-      try {
-        setExpiryItemsLoading(true);
-        await reportService.moveExpiredProduct(purchaseItemId);
-        toast.success("تم نقل المنتج بنجاح وتحديث المخزون");
-
-        // Refresh the dialog list
-        if (expiryDialogType) {
-          fetchExpiryProducts(expiryDialogType);
-        }
-        // Refresh the counts badge
-        fetchExpiryCounts();
-      } catch (err: any) {
-        toast.error(
-          err.response?.data?.message || err.message || "فشل نقل المنتج",
-        );
-      } finally {
-        setExpiryItemsLoading(false);
-      }
-    },
-    [expiryDialogType, fetchExpiryProducts, fetchExpiryCounts],
   );
 
   const handleToggleQuote = useCallback(async () => {
@@ -1857,10 +1674,7 @@ const PosBlankPage: React.FC = () => {
                   helperText={
                     productInputValue.length > 0
                       ? (() => {
-                        const showExpired = getSetting("pos_show_expired_products", false);
                         const showOutOfStock = getSetting("pos_show_out_of_stock_products", false);
-                        if (!showExpired && !showOutOfStock) return "المنتجات المنتهية أو التي نفد مخزونها مخفية";
-                        if (!showExpired) return "المنتجات المنتهية مخفية";
                         if (!showOutOfStock) return "المنتجات التي نفد مخزونها مخفية";
                         return undefined;
                       })()
@@ -1934,33 +1748,10 @@ const PosBlankPage: React.FC = () => {
                         }}
                       >
                         {option.last_sale_price_per_sellable_unit != null ? (
-                          <Stack direction="row" spacing={0.4} alignItems="center">
-                            <Typography variant="caption" color="text.secondary">
-                              {`السعر: ${formatNumber(Number(option.last_sale_price_per_sellable_unit))}`}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              sx={{
-                                fontWeight: 700,
-                                fontSize: "0.6rem",
-                                px: 0.5,
-                                py: 0.1,
-                                borderRadius: 0.75,
-                                lineHeight: 1.6,
-                                bgcolor: option.last_purchase_currency === "USD" ? "success.light" : "info.light",
-                                color: option.last_purchase_currency === "USD" ? "success.dark" : "info.dark",
-                              }}
-                            >
-                              {option.last_purchase_currency ?? "SDG"}
-                            </Typography>
-                          </Stack>
-                        ) : null}
-
-                        {option.earliest_expiry_date && (
-                          <Typography variant="caption" color="warning.dark">
-                            {`ينتهي: ${option.earliest_expiry_date}`}
+                          <Typography variant="caption" color="text.secondary">
+                            {`السعر: ${formatNumber(Number(option.last_sale_price_per_sellable_unit), 2)}`}
                           </Typography>
-                        )}
+                        ) : null}
                       </Box>
                     </Box>
                   </li>
@@ -2301,20 +2092,10 @@ const PosBlankPage: React.FC = () => {
         shiftId={shift?.id ?? null}
       />
 
-      <ExpiryProductsDialog
-        open={expiryDialogOpen}
-        onClose={handleCloseExpiryDialog}
-        type={expiryDialogType}
-        items={expiryItems}
-        loading={expiryItemsLoading}
-        onAddToCart={handleAddExpiryProductToCart}
-        onMoveProduct={handleMoveExpiredProduct}
-      />
-
       <TopSellingProductsDialog
         open={topSellingDialogOpen}
         onClose={() => setTopSellingDialogOpen(false)}
-        onAddProduct={handleAddExpiryProductToCart}
+        onAddProduct={handleAddProductByIdToCart}
       />
 
       <ClientFormModal

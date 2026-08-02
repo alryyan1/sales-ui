@@ -23,14 +23,12 @@ export interface PurchaseSummary {
 interface PurchaseSummaryDialogProps {
   summary: PurchaseSummary;
   supplierName?: string;
-  currency?: string;
   onClose?: () => void;
 }
 
 const PurchaseSummaryDialog: React.FC<PurchaseSummaryDialogProps> = ({
   summary,
   supplierName,
-  currency,
   onClose,
 }) => {
   return (
@@ -67,7 +65,7 @@ const PurchaseSummaryDialog: React.FC<PurchaseSummaryDialogProps> = ({
           {/* Total Cost */}
           <Paper sx={{ p: 2, textAlign: "center", bgcolor: "success.lighter" }}>
             <Typography variant="h4" fontWeight="bold" color="success.main">
-              {formatCurrency(summary.totalCost, undefined, currency)}
+              {formatCurrency(summary.totalCost)}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               إجمالي التكلفة
@@ -79,7 +77,7 @@ const PurchaseSummaryDialog: React.FC<PurchaseSummaryDialogProps> = ({
             sx={{ p: 2, textAlign: "center", bgcolor: "secondary.lighter" }}
           >
             <Typography variant="h4" fontWeight="bold" color="secondary.main">
-              {formatCurrency(summary.totalSell, undefined, currency)}
+              {formatCurrency(summary.totalSell)}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               إجمالي قيمة البيع

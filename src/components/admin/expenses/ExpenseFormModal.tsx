@@ -319,9 +319,9 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
                     disabled={isSubmitting}
                   >
                     <MenuItem value="cash">نقدي</MenuItem>
-                    <MenuItem value="bankak">بنكك</MenuItem>
-                    <MenuItem value="fawry">فوري</MenuItem>
-                    <MenuItem value="ocash">أوكاش</MenuItem>
+                    <MenuItem value="bank_transfer">تحويل بنكي</MenuItem>
+                    <MenuItem value="visa">فيزا</MenuItem>
+                    <MenuItem value="other">أخرى</MenuItem>
                   </Select>
                   {fieldState.error && (
                     <Typography variant="caption" color="error">

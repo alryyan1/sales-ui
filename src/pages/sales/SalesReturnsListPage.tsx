@@ -37,16 +37,16 @@ import { formatNumber } from "@/constants";
 
 const METHOD_LABELS: Record<string, string> = {
   cash: "نقدي",
-  bankak: "بنكك",
-  fawry: "فوري",
-  ocash: "أوكاش",
+  bank_transfer: "تحويل بنكي",
+  visa: "فيزا",
+  other: "أخرى",
 };
 
 const METHOD_COLORS: Record<string, "default" | "success" | "info" | "warning"> = {
   cash: "success",
-  bankak: "info",
-  fawry: "warning",
-  ocash: "default",
+  bank_transfer: "info",
+  visa: "warning",
+  other: "default",
 };
 
 const SalesReturnsListPage: React.FC = () => {

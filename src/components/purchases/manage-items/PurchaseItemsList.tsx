@@ -54,7 +54,6 @@ interface PurchaseItemsListProps {
   markupPercentage?: number;
   currency?: string;
   showBatchNumber?: boolean;
-  showExpiryDate?: boolean;
 }
 
 import InlineCreatePurchaseItem from "./InlineCreatePurchaseItem";
@@ -78,7 +77,6 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
   markupPercentage = 20,
   currency,
   showBatchNumber = true,
-  showExpiryDate = true,
 }) => {
   const [showInlineCreate, setShowInlineCreate] = useState(false);
 
@@ -383,7 +381,6 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
             isLoading={isCreating}
             markupPercentage={markupPercentage}
             showBatchNumber={showBatchNumber}
-            showExpiryDate={showExpiryDate}
           />
         )}
 
@@ -400,7 +397,6 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
             totalCount={paginationData.total}
             currency={currency}
             showBatchNumber={showBatchNumber}
-            showExpiryDate={showExpiryDate}
           />
         ) : (
           <Box sx={{ textAlign: "center", py: 4 }}>

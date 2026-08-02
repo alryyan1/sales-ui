@@ -32,9 +32,9 @@ const SettingsPage: React.FC = () => {
       company_address: "",
       company_phone: "",
       company_email: "",
-      currency_symbol: "$",
+      currency_symbol: "OMR",
       date_format: "YYYY-MM-DD",
-      timezone: "Africa/Khartoum",
+      timezone: "Asia/Muscat",
       global_low_stock_threshold: 10,
       invoice_prefix: "INV-",
       purchase_order_prefix: "PO-",
@@ -45,7 +45,6 @@ const SettingsPage: React.FC = () => {
       whatsapp_shift_closure_numbers: "",
       firebase_collection_name: "none",
       purchase_use_batch_number: true,
-      purchase_use_expiry_date: true,
     },
   });
 
@@ -77,18 +76,10 @@ const SettingsPage: React.FC = () => {
           settings.firebase_collection_name || "none",
         product_row_color_highlight:
           settings.product_row_color_highlight ?? true,
-        product_scientific_name_visible:
-          settings.product_scientific_name_visible ?? true,
-        product_scientific_name_required:
-          settings.product_scientific_name_required ?? false,
-        pos_show_expired_products:
-          settings.pos_show_expired_products ?? false,
         pos_show_out_of_stock_products:
           settings.pos_show_out_of_stock_products ?? false,
         purchase_use_batch_number:
           settings.purchase_use_batch_number ?? true,
-        purchase_use_expiry_date:
-          settings.purchase_use_expiry_date ?? true,
       });
     }
   }, [settings, reset]);
@@ -104,10 +95,8 @@ const SettingsPage: React.FC = () => {
       tax_number: data.tax_number || undefined,
       pos_mode: data.pos_mode || "shift",
       pos_filter_sales_by_user: Boolean(data.pos_filter_sales_by_user),
-      pos_show_expired_products: Boolean(data.pos_show_expired_products),
       pos_show_out_of_stock_products: Boolean(data.pos_show_out_of_stock_products),
       purchase_use_batch_number: Boolean(data.purchase_use_batch_number),
-      purchase_use_expiry_date: Boolean(data.purchase_use_expiry_date),
     };
 
     try {

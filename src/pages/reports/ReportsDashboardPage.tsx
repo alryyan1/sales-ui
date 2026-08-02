@@ -13,43 +13,31 @@ import {
   Divider,
   Chip,
   Avatar,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Button,
 } from "@mui/material";
-import { TrendingUp, Clock, PackageX, RefreshCcw } from "lucide-react";
+import { TrendingUp, PackageX, RefreshCcw } from "lucide-react";
 import reportService, {
   BestSellingProduct,
   StagnantProduct,
-  ExpiringProduct,
 } from "../../services/reportService";
 import { formatCurrency, formatNumber } from "../../constants";
-import { format, isPast, differenceInDays } from "date-fns";
-import { ar } from "date-fns/locale";
 
 const ReportsDashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [bestSelling, setBestSelling] = useState<BestSellingProduct[]>([]);
   const [stagnant, setStagnant] = useState<StagnantProduct[]>([]);
-  const [expiring, setExpiring] = useState<ExpiringProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const [bestSellingData, stagnantData, expiringData] = await Promise.all([
+      const [bestSellingData, stagnantData] = await Promise.all([
         reportService.getBestSellingProducts(30, 10), // Last 30 days, top 10
         reportService.getStagnantProducts(3, 10), // No sales in 3 months, top 10
-        reportService.getExpiringProducts(6, 15), // Expiring in 6 months, top 15
       ]);
       setBestSelling(bestSellingData);
       setStagnant(stagnantData);
-      setExpiring(expiringData);
     } catch (err: unknown) {
       console.error("Failed to load reports:", err);
       setError("فشل في تحميل التقارير الإحصائية. يرجى المحاولة مرة أخرى.");
@@ -61,19 +49,6 @@ const ReportsDashboardPage: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, []);
-
-  const getExpiryStatus = (dateStr: string) => {
-    const date = new Date(dateStr);
-    if (isPast(date))
-      return { color: "error" as const, label: "منتهي الصلاحية" };
-    const daysLeft = differenceInDays(date, new Date());
-    if (daysLeft <= 30)
-      return { color: "warning" as const, label: `ينتهي خلال ${daysLeft} يوم` };
-    return {
-      color: "info" as const,
-      label: `ينتهي خلال ${Math.floor(daysLeft / 30)} شهر`,
-    };
-  };
 
   if (loading) {
     return (
@@ -271,75 +246,6 @@ const ReportsDashboardPage: React.FC = () => {
                 )}
               </List>
             </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Expiring Products */}
-        <Grid size={{ xs: 12 }}>
-          <Card elevation={2} sx={{ borderRadius: 2 }}>
-            <CardHeader
-              title="الأصناف المقاربة على الانتهاء (خلال 6 أشهر)"
-              avatar={<Clock color="#f59e0b" />}
-              titleTypographyProps={{ variant: "h6", fontWeight: 600 }}
-              sx={{
-                borderBottom: 1,
-                borderColor: "divider",
-                bgcolor: "background.default",
-              }}
-            />
-            <TableContainer>
-              <Table size="small">
-                <TableHead sx={{ bgcolor: "background.default" }}>
-                  <TableRow>
-                    <TableCell>الصنف</TableCell>
-                    <TableCell>التصنيف</TableCell>
-                    <TableCell align="center">المخزون المتوفر</TableCell>
-                    <TableCell align="center">أقرب تاريخ انتهاء</TableCell>
-                    <TableCell align="center">الحالة</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {expiring.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
-                        لا توجد أصناف تنتهي صلاحيتها قريباً.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    expiring.map((product) => {
-                      const status = getExpiryStatus(
-                        product.earliest_expiry_date,
-                      );
-                      return (
-                        <TableRow key={product.id} hover>
-                          <TableCell sx={{ fontWeight: 500 }}>
-                            {product.name}
-                          </TableCell>
-                          <TableCell>{product.category_name}</TableCell>
-                          <TableCell align="center">
-                            {product.stock_quantity}
-                          </TableCell>
-                          <TableCell align="center" sx={{ fontWeight: "bold" }}>
-                            {format(
-                              new Date(product.earliest_expiry_date),
-                              "dd MMMM yyyy",
-                              { locale: ar },
-                            )}
-                          </TableCell>
-                          <TableCell align="center">
-                            <Chip
-                              label={status.label}
-                              color={status.color}
-                              size="small"
-                            />
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
           </Card>
         </Grid>
       </Grid>

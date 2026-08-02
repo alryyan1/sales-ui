@@ -21,7 +21,7 @@ export interface CreateSaleReturnData {
   phone_number?: string | null;
   reason?: string | null;
   shift_id?: number | null;
-  returned_payment_method: "cash" | "bankak" | "fawry" | "ocash";
+  returned_payment_method: "cash" | "bank_transfer" | "visa" | "other";
   items: SimpleSaleReturnItemInput[];
 }
 

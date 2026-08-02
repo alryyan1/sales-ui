@@ -34,7 +34,6 @@ interface PurchaseItem {
   quantity: number;
   unit_cost: number;
   sale_price?: number;
-  expiry_date?: string;
   created_at: string;
   updated_at: string;
 }
@@ -177,7 +176,6 @@ export const PurchaseItemDetailsDialog: React.FC<PurchaseItemDetailsDialogProps>
                     <TableCell>الكمية</TableCell>
                     <TableCell>تكلفة الوحدة</TableCell>
                     <TableCell>إجمالي البند</TableCell>
-                    <TableCell>تاريخ الانتهاء</TableCell>
                     <TableCell>الحالة</TableCell>
                   </TableRow>
                 </TableHead>
@@ -220,9 +218,6 @@ export const PurchaseItemDetailsDialog: React.FC<PurchaseItemDetailsDialogProps>
                         <Typography variant="body2" sx={{ fontWeight: 500 }}>
                           {formatCurrency(item.quantity * item.unit_cost)}
                         </Typography>
-                      </TableCell>
-                      <TableCell>
-                        {item.expiry_date ? dayjs(item.expiry_date).format("YYYY-MM-DD") : "-"}
                       </TableCell>
                       <TableCell>
                         <Chip

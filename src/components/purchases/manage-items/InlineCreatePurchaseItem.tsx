@@ -10,9 +10,6 @@ import {
   CircularProgress,
   Typography,
 } from "@mui/material";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { Save, X, Search } from "lucide-react";
 import { toast } from "sonner";
 
@@ -28,7 +25,6 @@ interface InlineCreatePurchaseItemProps {
   isLoading: boolean;
   markupPercentage?: number;
   showBatchNumber?: boolean;
-  showExpiryDate?: boolean;
 }
 
 const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
@@ -37,7 +33,6 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
   isLoading,
   markupPercentage = 20,
   showBatchNumber = true,
-  showExpiryDate = true,
 }) => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productInputValue, setProductInputValue] = useState("");
@@ -47,12 +42,6 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
   const [unitCost, setUnitCost] = useState<number>();
   const [salePrice, setSalePrice] = useState<number>();
   const [batchNumber, setBatchNumber] = useState("");
-  // Default expiry date: 3 years from current date
-  const [expiryDate, setExpiryDate] = useState(() => {
-    const threeYearsFromNow = new Date();
-    threeYearsFromNow.setFullYear(threeYearsFromNow.getFullYear() + 3);
-    return threeYearsFromNow.toISOString().split("T")[0];
-  });
 
   // Ref for inputs to handle focus navigation
   const productInputRef = useRef<HTMLInputElement>(null);
@@ -61,7 +50,6 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
   const unitCostInputRef = useRef<HTMLInputElement>(null);
   const salePriceInputRef = useRef<HTMLInputElement>(null);
   const batchNumberInputRef = useRef<HTMLInputElement>(null);
-  const expiryDateInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-calculate Sale Price when Markup Percentage changes
   useEffect(() => {
@@ -129,9 +117,6 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
         if (showBatchNumber) {
           batchNumberInputRef.current?.focus();
           batchNumberInputRef.current?.select();
-        } else if (showExpiryDate) {
-          expiryDateInputRef.current?.focus();
-          expiryDateInputRef.current?.select();
         } else {
           unitCostInputRef.current?.focus();
           unitCostInputRef.current?.select();
@@ -140,7 +125,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
     } else {
       setProductInputValue("");
     }
-  }, [showBatchNumber, showExpiryDate]);
+  }, [showBatchNumber]);
 
   // Reset form to initial state
   const resetForm = useCallback(() => {
@@ -150,10 +135,6 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
     setUnitCost(undefined);
     setSalePrice(undefined);
     setBatchNumber("");
-    // Reset expiry date to 3 years from now
-    const threeYearsFromNow = new Date();
-    threeYearsFromNow.setFullYear(threeYearsFromNow.getFullYear() + 3);
-    setExpiryDate(threeYearsFromNow.toISOString().split("T")[0]);
     // Focus back to product autocomplete for next entry
     setTimeout(() => {
       productInputRef.current?.focus();
@@ -183,7 +164,6 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
       unit_cost: unitCost,
       sale_price: salePrice,
       batch_number: batchNumber || undefined,
-      expiry_date: expiryDate || undefined,
     };
 
     await onSave(data);
@@ -195,7 +175,6 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
     unitCost,
     salePrice,
     batchNumber,
-    expiryDate,
     onSave,
     resetForm,
   ]);
@@ -381,54 +360,12 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              if (showExpiryDate) {
-                expiryDateInputRef.current?.focus();
-                expiryDateInputRef.current?.select();
-              } else {
-                unitCostInputRef.current?.focus();
-                unitCostInputRef.current?.select();
-              }
+              unitCostInputRef.current?.focus();
+              unitCostInputRef.current?.select();
             }
           }}
           sx={{ width: 120 }}
         />
-      )}
-
-      {/* Expiry Date - 3 */}
-      {showExpiryDate && (
-        <LocalizationProvider dateAdapter={AdapterDateFns}>
-          <DatePicker
-            label=""
-            value={expiryDate ? new Date(expiryDate) : null}
-            onChange={(newValue) => {
-              if (newValue) {
-                const formattedDate = newValue.toISOString().split("T")[0];
-                setExpiryDate(formattedDate);
-              } else {
-                setExpiryDate("");
-              }
-            }}
-            format="yyyy/MM/dd"
-            slots={{
-              openPickerButton: () => null,
-            }}
-            slotProps={{
-              textField: {
-                size: "small",
-                placeholder: "Expiry Date",
-                sx: { width: 140 },
-                inputRef: expiryDateInputRef,
-                onKeyDown: (e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    unitCostInputRef.current?.focus();
-                    unitCostInputRef.current?.select();
-                  }
-                },
-              },
-            }}
-          />
-        </LocalizationProvider>
       )}
 
       {/* Unit Cost - 4 */}
@@ -498,6 +435,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
             (quantity || 0) * (unitCost || 0) > 0
               ? ((quantity || 0) * (unitCost || 0)).toFixed(2)
               : "—",
+            2,
           )}
         </Typography>
       </Box>
@@ -509,6 +447,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
             (quantity || 0) * (salePrice || 0) > 0
               ? ((quantity || 0) * (salePrice || 0)).toFixed(2)
               : "—",
+            2,
           )}
         </Typography>
       </Box>

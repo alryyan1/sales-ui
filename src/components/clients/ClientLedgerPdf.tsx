@@ -175,7 +175,7 @@ export const ClientLedgerPdf: React.FC<ClientLedgerPdfProps> = ({
   settings,
   companyName,
 }) => {
-  const currencySymbol = settings?.currency_symbol || "SDG";
+  const currencySymbol = settings?.currency_symbol || "OMR";
 
   const getTypeLabel = (type: string) => {
     switch (type) {

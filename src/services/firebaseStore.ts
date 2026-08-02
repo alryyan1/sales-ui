@@ -164,7 +164,6 @@ export const uploadProductsToFirestore = async (
         const data = {
           id: product.id,
           name: product.name,
-          scientific_name: product.scientific_name || null,
           sku: product.sku || null,
           description: product.description || null,
           category_name:
@@ -176,9 +175,6 @@ export const uploadProductsToFirestore = async (
           ),
           sale_price: Number(product.suggested_sale_price ?? 0),
           cost: Number(product.latest_purchase_cost ?? 0),
-
-          // Dates
-          expiry_date: product.earliest_expiry_date || null,
 
           // Metadata
           updated_at: serverTimestamp(),
@@ -205,9 +201,8 @@ import { db } from "../firebase";
 
 interface StatBreakdown {
   cash: number;
-  bankak: number;
-  fawry: number;
-  ocash: number;
+  bank_transfer: number;
+  visa: number;
   total: number;
 }
 

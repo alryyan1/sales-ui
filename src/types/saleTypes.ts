@@ -11,7 +11,6 @@ export interface CartItem {
   unitType?: 'stocking' | 'sellable'; // Unit type: 'stocking' for boxes, 'sellable' for pieces
   selectedBatchId?: number | null; // ID of the selected purchase batch
   selectedBatchNumber?: string | null; // Batch number for display
-  selectedBatchExpiryDate?: string | null; // Expiry date of selected batch
 }
 
 // Payment Type (matching backend PaymentResource)
@@ -51,7 +50,7 @@ export interface Sale {
 }
 
 // Payment Method Type
-export type PaymentMethod = 'cash' | 'bankak' | 'fawry' | 'ocash';
+export type PaymentMethod = 'cash' | 'bank_transfer' | 'visa' | 'other';
 
 // Payment Method Data Type (for payment objects with amount and reference)
 export interface PaymentMethodData {

@@ -73,7 +73,6 @@ const formSchema = z.object({
   }),
   reference_number: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
-  currency: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -103,7 +102,6 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
       status: "pending",
       reference_number: "",
       notes: "",
-      currency: "SDG",
     },
   });
 
@@ -117,7 +115,6 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
         status: purchase.status,
         reference_number: purchase.reference_number || "",
         notes: purchase.notes || "",
-        currency: purchase.currency || "SDG",
       });
       setSupplierSearchInput("");
     }
@@ -141,7 +138,6 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
         status: values.status,
         reference_number: values.reference_number || null,
         notes: values.notes || null,
-        currency: values.currency,
         items: [], // passing empty items as backend doesn't require updating items during header update
       });
       toast.success("تم التحديث بنجاح");
@@ -351,33 +347,6 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
                         )}
                       />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Currency */}
-              <FormField
-                control={form.control}
-                name="currency"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>العملة</FormLabel>
-                    <Select
-                      value={field.value ?? "SDG"}
-                      onValueChange={field.onChange}
-                      disabled={isSubmitting}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="اختر العملة" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="SDG">SDG — جنيه سوداني</SelectItem>
-                        <SelectItem value="USD">USD — دولار أمريكي</SelectItem>
-                      </SelectContent>
-                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

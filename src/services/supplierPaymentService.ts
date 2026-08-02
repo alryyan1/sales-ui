@@ -7,7 +7,7 @@ export interface SupplierPayment {
   purchase_id?: number | null;
   user_id: number;
   amount: number;
-  method: 'cash' | 'bank_transfer' | 'visa' | 'mastercard' | 'mada' | 'bankak' | 'fawry' | 'ocash' | 'refund' | 'other';
+  method: 'cash' | 'bank_transfer' | 'visa' | 'other';
   reference_number?: string;
   payment_date: string;
   created_at: string;
@@ -20,7 +20,7 @@ export interface SupplierPayment {
 
 export interface CreatePaymentData {
   amount: number;
-  method: 'cash' | 'bank_transfer' | 'visa' | 'mastercard' | 'mada' | 'bankak' | 'fawry' | 'ocash' | 'refund' | 'other';
+  method: 'cash' | 'bank_transfer' | 'visa' | 'other';
   reference_number?: string;
   payment_date: string;
   purchase_id?: number | string | null;
@@ -33,7 +33,6 @@ export interface UpdatePaymentData extends CreatePaymentData {
 export interface LedgerEntry {
   id: string;
   purchase_id?: number | string;
-  currency?: 'SDG' | 'USD';
   date: string;
   type: 'purchase' | 'payment';
   description: string;
@@ -58,8 +57,6 @@ export interface SupplierLedger {
   };
   summary: {
     total_purchases: number;
-    total_purchases_sdg: number;
-    total_purchases_usd: number;
     total_payments: number;
     balance: number;
   };

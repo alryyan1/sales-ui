@@ -150,11 +150,6 @@ const InventoryImpactDialog: React.FC<InventoryImpactDialogProps> = ({
                           دفعة: {item.batch_number}
                         </div>
                       )}
-                      {item.expiry_date && (
-                        <div className="text-xs text-slate-500">
-                          انتهاء: {item.expiry_date}
-                        </div>
-                      )}
                     </div>
                   </div>
                   <div className="text-left">

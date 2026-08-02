@@ -8,7 +8,7 @@ import { useSettings } from "@/context/SettingsContext";
  */
 export const useFormatCurrency = () => {
   const { getSetting } = useSettings();
-  const globalCurrencySymbol = getSetting("currency_symbol", "$");
+  const globalCurrencySymbol = getSetting("currency_symbol", "OMR");
 
   return useMemo(
     () =>
@@ -30,5 +30,5 @@ export const useFormatCurrency = () => {
  */
 export const useCurrencySymbol = () => {
   const { getSetting } = useSettings();
-  return getSetting("currency_symbol", "$");
+  return getSetting("currency_symbol", "OMR");
 };

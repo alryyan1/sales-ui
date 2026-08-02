@@ -32,12 +32,9 @@ import { AlertCircle } from "lucide-react";
 
 const METHOD_LABELS: Record<string, { label: string; color: string }> = {
   cash:          { label: "نقدي",        color: "bg-green-100 text-green-800 border-green-200" },
-  bankak:        { label: "بنكك",        color: "bg-blue-100 text-blue-800 border-blue-200" },
-  fawry:         { label: "فوري",        color: "bg-orange-100 text-orange-800 border-orange-200" },
-  ocash:         { label: "أوكاش",       color: "bg-purple-100 text-purple-800 border-purple-200" },
-  bank:          { label: "بنك",         color: "bg-sky-100 text-sky-800 border-sky-200" },
   bank_transfer: { label: "تحويل بنكي", color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
   visa:          { label: "فيزا",        color: "bg-cyan-100 text-cyan-800 border-cyan-200" },
+  other:         { label: "أخرى",        color: "bg-gray-100 text-gray-800 border-gray-200" },
 };
 
 interface PaymentsTableProps {
@@ -168,7 +165,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({
                       </TableCell>
 
                       <TableCell className="text-center font-bold text-base tabular-nums">
-                        {formatNumber(payment.amount)}
+                        {formatNumber(payment.amount, 2)}
                       </TableCell>
 
                       <TableCell className="text-center text-xs text-muted-foreground font-mono">
@@ -197,11 +194,11 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({
                       <TableCell className="text-center">
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="text-xs text-muted-foreground">
-                            إجمالي: <span className="font-semibold text-foreground">{formatNumber(payment.sale_total)}</span>
+                            إجمالي: <span className="font-semibold text-foreground">{formatNumber(payment.sale_total, 2)}</span>
                           </span>
                           {payment.sale_due > 0 && (
                             <span className="text-xs text-red-600 font-semibold">
-                              متبقي: {formatNumber(payment.sale_due)}
+                              متبقي: {formatNumber(payment.sale_due, 2)}
                             </span>
                           )}
                         </div>

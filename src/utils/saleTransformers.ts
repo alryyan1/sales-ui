@@ -20,7 +20,6 @@ export const transformSaleItemToCartItem = (item: SaleItem): CartItem => {
       last_sale_price_per_sellable_unit: Number(item.unit_price),
       stock_quantity: item.current_stock_quantity || 0,
       stock_alert_level: item.stock_alert_level,
-      earliest_expiry_date: item.earliest_expiry_date,
       current_stock_quantity: item.current_stock_quantity || 0,
       sellable_unit_name: item.sellable_unit_name || 'Piece'
     } as Product,
@@ -28,8 +27,7 @@ export const transformSaleItemToCartItem = (item: SaleItem): CartItem => {
     unitPrice: Number(item.unit_price),
     total: Number(item.total_price || item.quantity * Number(item.unit_price)),
     selectedBatchId: item.purchase_item_id || null,
-    selectedBatchNumber: item.batch_number_sold || null,
-    selectedBatchExpiryDate: item.purchaseItemBatch?.expiry_date || null
+    selectedBatchNumber: item.batch_number_sold || null
   };
 };
 
@@ -58,7 +56,7 @@ export const transformBackendSaleToPOS = (dbSale: BackendSale): POSSale => {
       id: payment.id,
       sale_id: payment.sale_id,
       user_name: payment.user_name,
-      method: payment.method as 'cash' | 'bankak' | 'fawry' | 'ocash',
+      method: payment.method as 'cash' | 'bank_transfer' | 'visa' | 'other',
       amount: Number(payment.amount),
       payment_date: payment.payment_date,
       reference_number: payment.reference_number || undefined,

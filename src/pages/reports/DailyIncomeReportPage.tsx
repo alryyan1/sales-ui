@@ -194,7 +194,7 @@ const pdfStyles = StyleSheet.create({
 const DailyIncomeReportPDF: React.FC<{
   data: MonthlyRevenueReportData;
   currencySymbol?: string;
-}> = ({ data, currencySymbol = "SDG" }) => {
+}> = ({ data, currencySymbol = "OMR" }) => {
   return (
     <Document>
       <Page size="A4" style={pdfStyles.page}>

@@ -55,7 +55,7 @@ const PurchaseReportSummaryStats: React.FC<PurchaseReportSummaryStatsProps> = ({
                 </div>
               </div>
               <h3 className="text-3xl font-bold leading-none">
-                {formatNumber(stats.totalAmount)}
+                {formatNumber(stats.totalAmount, 2)}
               </h3>
             </div>
           </CardContent>
@@ -113,7 +113,7 @@ const PurchaseReportSummaryStats: React.FC<PurchaseReportSummaryStatsProps> = ({
                 </p>
               </div>
               <h3 className="text-3xl font-bold leading-none">
-                {formatNumber(stats.averagePurchase)}
+                {formatNumber(stats.averagePurchase, 2)}
               </h3>
             </div>
           </CardContent>

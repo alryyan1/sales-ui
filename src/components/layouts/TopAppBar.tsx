@@ -18,30 +18,20 @@ import {
   Menu as MenuIcon,
   Warehouse,
   TrendingUp,
-  FileWarning as FileWarningIcon,
   Bell,
-  DollarSign,
 } from "lucide-react";
-import ErrorIcon from "@mui/icons-material/Error";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Button,
   Badge,
-  Popover,
-  TextField,
-  CircularProgress,
-  Autocomplete,
 } from "@mui/material";
 import { useSettings } from "@/context/SettingsContext";
 import { DRAWER_WIDTH } from "./types";
-import { toast } from "sonner";
 import { KeyboardShortcutsDialog } from "../common/KeyboardShortcutsDialog";
 import { DueRemindersDialog } from "../pos/DueRemindersDialog";
 import saleReminderService, { DueReminder } from "@/services/saleReminderService";
 import { db } from "@/firebase";
 import { collection, query, limit, onSnapshot } from "firebase/firestore";
-import packageService, { Package } from "@/services/packageService";
-import { formatNumber } from "@/constants";
 
 const COLLAPSED_DRAWER_WIDTH = 72;
 
@@ -59,26 +49,9 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
   const navigate = useNavigate(); // Initialize useNavigate
   const location = useLocation();
   const { user } = useAuth();
-  const { getSetting, updateSettings } = useSettings();
+  const { getSetting } = useSettings();
   const [shortcutsDialogOpen, setShortcutsDialogOpen] = React.useState(false);
-  
-  // USD to SDG Factor state
-  const usdFactor = getSetting("usd_to_sdg_factor", 1) as number;
-  const [localFactor, setLocalFactor] = React.useState(String(usdFactor));
-  const [factorAnchorEl, setFactorAnchorEl] =
-    React.useState<HTMLDivElement | null>(null);
-  const [isUpdatingFactor, setIsUpdatingFactor] = React.useState(false);
 
-  // Packages state (Moved from POS)
-  const [packageOptions, setPackageOptions] = React.useState<Package[]>([]);
-  const [packageSearchLoading, setPackageSearchLoading] = React.useState(false);
-  const [packageInputValue, setPackageInputValue] = React.useState("");
-  const [isAddingPackage, setIsAddingPackage] = React.useState(false);
-  
-  const [expiryCounts, setExpiryCounts] = React.useState({
-    nearExpiringCount: 0,
-    expiredCount: 0,
-  });
   const [dueReminders, setDueReminders] = React.useState<DueReminder[]>([]);
   const [remindersDialogOpen, setRemindersDialogOpen] = React.useState(false);
   const firebaseCollectionName = getSetting("firebase_collection_name", "none") as string;
@@ -89,74 +62,6 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
       .then((list) => setDueReminders(list))
       .catch(() => { /* silent fail */ });
   }, []);
-
-  // Search Packages logic
-  React.useEffect(() => {
-    const term = packageInputValue.trim();
-    if (!term) {
-      setPackageOptions([]);
-      return;
-    }
-    const t = setTimeout(() => {
-      setPackageSearchLoading(true);
-      packageService
-        .getPackages()
-        .then((list) => {
-          const filtered = list.filter((p) =>
-            p.name.toLowerCase().includes(term.toLowerCase()),
-          );
-          setPackageOptions(filtered);
-        })
-        .catch(() => setPackageOptions([]))
-        .finally(() => setPackageSearchLoading(false));
-    }, 300);
-    return () => clearTimeout(t);
-  }, [packageInputValue]);
-
-  // Listen for addition status from POS page
-  React.useEffect(() => {
-    const handleStatus = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      setIsAddingPackage(customEvent.detail.isAdding);
-      if (customEvent.detail.success) {
-        setPackageInputValue("");
-      }
-    };
-    window.addEventListener("package-addition-status", handleStatus);
-    return () =>
-      window.removeEventListener("package-addition-status", handleStatus);
-  }, []);
-
-  React.useEffect(() => {
-    setLocalFactor(String(usdFactor));
-  }, [usdFactor]);
-
-  const handleFactorClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    setFactorAnchorEl(event.currentTarget);
-  };
-
-  const handleFactorClose = () => {
-    setFactorAnchorEl(null);
-  };
-
-  const handleSaveFactor = async () => {
-    const val = parseFloat(localFactor);
-    if (isNaN(val) || val <= 0) {
-      toast.error("يجب إدخال قيمة صحيحة موجبة");
-      return;
-    }
-    try {
-      setIsUpdatingFactor(true);
-      await updateSettings({ usd_to_sdg_factor: val });
-      handleFactorClose();
-      toast.success("تم حفظ سعر الصرف بنجاح");
-    } catch (err) {
-      console.error("Failed to update factor:", err);
-      toast.error("فشل حفظ سعر الصرف");
-    } finally {
-      setIsUpdatingFactor(false);
-    }
-  };
 
   React.useEffect(() => {
     const q = query(collection(db, "pharmacies", firebaseCollectionName, "shifts"), limit(1));
@@ -175,16 +80,6 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
 
 
 
-
-  React.useEffect(() => {
-    const handleUpdateCounts = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      setExpiryCounts(customEvent.detail);
-    };
-    window.addEventListener("update-expiry-counts", handleUpdateCounts);
-    return () =>
-      window.removeEventListener("update-expiry-counts", handleUpdateCounts);
-  }, []);
 
   const theme = useTheme();
   const width = isSidebarCollapsed
@@ -250,184 +145,9 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
             </Button>
           )}
 
-          {location.pathname === "/sales/pos-blank" && (
-            <>
-              {/* Near Expiring Products Button */}
-              <IconButton
-                color="warning"
-                size="small"
-                onClick={() =>
-                  window.dispatchEvent(
-                    new CustomEvent("open-near-expiring-dialog"),
-                  )
-                }
-                sx={{
-                  bgcolor: "warning.lighter",
-                  "&:hover": { bgcolor: "warning.light" },
-                  ml: 1,
-                }}
-              >
-                <Badge
-                  badgeContent={expiryCounts.nearExpiringCount}
-                  color="warning"
-                >
-                  <FileWarningIcon size={20} />
-                </Badge>
-              </IconButton>
-
-              {/* Expired Products Button */}
-              <IconButton
-                color="error"
-                size="small"
-                onClick={() =>
-                  window.dispatchEvent(new CustomEvent("open-expired-dialog"))
-                }
-                sx={{
-                  bgcolor: "error.lighter",
-                  "&:hover": { bgcolor: "error.light" },
-                  ml: 1,
-                }}
-              >
-                <Badge
-                  badgeContent={expiryCounts.expiredCount}
-                  color={expiryCounts.expiredCount === 0 ? "info" : "error"}
-                >
-                  <ErrorIcon
-                    fontSize="small"
-                    color={expiryCounts.expiredCount === 0 ? "info" : "error"}
-                  />
-                </Badge>
-              </IconButton>
-            </>
-          )}
         </Typography>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-
-          {/* Package Search - Only on POS Page */}
-          {location.pathname === "/sales/pos-blank" && (
-            <Box sx={{ minWidth: 320 }}>
-              <Autocomplete
-                options={packageOptions}
-                getOptionLabel={(option) => option.name}
-                loading={packageSearchLoading || isAddingPackage}
-                inputValue={packageInputValue}
-                onInputChange={(_, value) => setPackageInputValue(value)}
-                onChange={(_, value) => {
-                  if (value) {
-                    window.dispatchEvent(
-                      new CustomEvent("add-package-to-sale", { detail: value }),
-                    );
-                  }
-                }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    placeholder="ابحث عن مجموعة"
-                    size="small"
-                    InputProps={{
-                      ...params.InputProps,
-                      endAdornment: (
-                        <React.Fragment>
-                          {packageSearchLoading || isAddingPackage ? (
-                            <CircularProgress color="inherit" size={20} />
-                          ) : null}
-                          {params.InputProps.endAdornment}
-                        </React.Fragment>
-                      ),
-                    }}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        bgcolor: alpha(theme.palette.background.paper, 0.5),
-                        "& fieldset": {
-                          borderColor: alpha(theme.palette.divider, 0.1),
-                        },
-                      },
-                    }}
-                  />
-                )}
-                noOptionsText={
-                  packageInputValue.trim() ? "لا توجد مجموعات مطابقة" : "ابحث عن مجموعة"
-                }
-              />
-            </Box>
-          )}
-
-          {/* USD Conversion Factor Display */}
-          <Tooltip title={` SDG   ${formatNumber(usdFactor)} = 1 USD `}>
-            <Box
-              onClick={handleFactorClick}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-                px: 1.5,
-                py: 0.5,
-                borderRadius: 1,
-                border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
-                cursor: "pointer",
-                height: 28,
-                "&:hover": {
-                  bgcolor: alpha(theme.palette.primary.main, 0.1),
-                },
-              }}
-            >
-              <DollarSign size={14} />
-              <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                {usdFactor.toFixed(2)}
-              </Typography>
-            </Box>
-          </Tooltip>
-
-          {/* USD Factor Popover */}
-          <Popover
-            open={Boolean(factorAnchorEl)}
-            anchorEl={factorAnchorEl}
-            onClose={handleFactorClose}
-            anchorOrigin={{
-              vertical: "bottom",
-              horizontal: "right",
-            }}
-            transformOrigin={{
-              vertical: "top",
-              horizontal: "right",
-            }}
-          >
-            <Box sx={{ p: 2, minWidth: 250 }}>
-              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-                تحديث سعر الصرف USD
-              </Typography>
-              <TextField
-                fullWidth
-                type="number"
-                inputProps={{ step: 0.01, min: 0 }}
-                label="سعر الصرف"
-                value={localFactor}
-                onChange={(e) => setLocalFactor(e.target.value)}
-                size="small"
-                sx={{ mb: 2 }}
-              />
-              <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={handleFactorClose}
-                  disabled={isUpdatingFactor}
-                >
-                  إلغاء
-                </Button>
-                <Button
-                  size="small"
-                  variant="contained"
-                  onClick={handleSaveFactor}
-                  disabled={isUpdatingFactor}
-                  startIcon={isUpdatingFactor ? <CircularProgress size={16} /> : undefined}
-                >
-                  حفظ
-                </Button>
-              </Box>
-            </Box>
-          </Popover>
 
           {/* Firebase Connection Indicator */}
           <Tooltip title={`pharmacies/${firebaseCollectionName}/shifts`}>

@@ -48,17 +48,6 @@ export interface StockLevel {
   status: 'good' | 'low' | 'out';
 }
 
-export interface ExpiringItem {
-  id: number;
-  product_name: string;
-  batch_number?: string;
-  expiry_date: string;
-  /** Stock is at product/warehouse level; may be omitted */
-  remaining_quantity?: number;
-  quantity_in_stock?: number;
-  days_until_expiry: number;
-}
-
 export interface AnalyticsData {
   summary: AnalyticsSummary;
   sales_trend: TrendData[];
@@ -68,7 +57,6 @@ export interface AnalyticsData {
   sales_by_category?: CategoryAnalytics[];
   purchase_by_category?: CategoryAnalytics[];
   stock_levels?: StockLevel[];
-  expiring_items?: ExpiringItem[];
 }
 
 class AnalyticsService {
@@ -84,20 +72,18 @@ class AnalyticsService {
         dashboardData,
         salesData,
         inventoryData,
-        nearExpiryData,
         monthlyRevenueData,
         profitLossData
       ] = await Promise.all([
         this.getDashboardSummary(),
         this.getSalesData(dateRange),
         this.getInventoryData(),
-        this.getNearExpiryData(),
         this.getMonthlyRevenueData(),
         this.getProfitLossData(dateRange)
       ]);
 
       // Transform and combine data into the expected AnalyticsData format
-      return this.transformToAnalyticsData(dashboardData, salesData, inventoryData, nearExpiryData, monthlyRevenueData, profitLossData, dateRange);
+      return this.transformToAnalyticsData(dashboardData, salesData, inventoryData, monthlyRevenueData, profitLossData, dateRange);
     } catch (error) {
       console.warn('Analytics API not available, using mock data:', error);
       // Return mock data for development/testing
@@ -159,21 +145,6 @@ class AnalyticsService {
       return response.data;
     } catch (error) {
       console.error('Error fetching product analytics:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get expiring items
-   */
-  async getExpiringItems(days: number = 30): Promise<ExpiringItem[]> {
-    try {
-      const response = await apiClient.get<ExpiringItem[]>(`${this.baseURL}/expiring-items`, {
-        params: { days }
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching expiring items:', error);
       throw error;
     }
   }
@@ -315,19 +286,6 @@ class AnalyticsService {
   }
 
   /**
-   * Get near expiry data
-   */
-  private async getNearExpiryData() {
-    const response = await apiClient.get('/reports/near-expiry', {
-      params: { 
-        days_threshold: 30,
-        per_page: 100
-      }
-    });
-    return response.data;
-  }
-
-  /**
    * Get monthly revenue data
    */
   private async getMonthlyRevenueData() {
@@ -389,7 +347,6 @@ class AnalyticsService {
     dashboardData: any,
     salesData: any,
     inventoryData: any,
-    nearExpiryData: any,
     monthlyRevenueData: any,
     profitLossData: any,
     dateRange: DateRange
@@ -412,9 +369,6 @@ class AnalyticsService {
     // Transform stock levels
     const stockLevels = this.transformStockLevels(inventoryData);
 
-    // Transform expiring items
-    const expiringItems = this.transformExpiringItems(nearExpiryData);
-
     // Calculate growth percentages
     const growthData = this.calculateGrowthPercentages(dashboardData);
 
@@ -432,8 +386,7 @@ class AnalyticsService {
       top_products: topProducts,
       top_suppliers: topSuppliers,
       sales_by_category: salesByCategory,
-      stock_levels: stockLevels,
-      expiring_items: expiringItems
+      stock_levels: stockLevels
     };
   }
 
@@ -554,30 +507,6 @@ class AnalyticsService {
     if (currentStock <= 0) return 'out';
     if (alertLevel && currentStock <= alertLevel) return 'low';
     return 'good';
-  }
-
-  /**
-   * Transform expiring items data
-   */
-  private transformExpiringItems(nearExpiryData: any): ExpiringItem[] {
-    if (nearExpiryData?.data) {
-      return nearExpiryData.data.map((item: any) => {
-        const today = new Date();
-        const expiryDate = new Date(item.expiry_date);
-        const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
-        return {
-          id: item.id,
-          product_name: item.product?.name || 'Unknown Product',
-          batch_number: item.batch_number,
-          expiry_date: item.expiry_date,
-          remaining_quantity: item.remaining_quantity ?? item.quantity_in_stock,
-          days_until_expiry: daysUntilExpiry
-        };
-      });
-    }
-
-    return [];
   }
 
   /**

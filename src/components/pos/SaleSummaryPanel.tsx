@@ -87,9 +87,9 @@ interface SaleSummaryPanelProps {
 
 const METHOD_LABELS: Record<string, string> = {
   cash: "نقدي",
-  bankak: "بنكك",
-  fawry: "فوري",
-  ocash: "أوكاش",
+  bank_transfer: "تحويل بنكي",
+  visa: "فيزا",
+  other: "أخرى",
 };
 
 // Tiny labeled row used in the financials block
@@ -390,7 +390,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
             <Stack direction="row" alignItems="center" gap={0.4} mt={0.3}>
               <AccessTimeIcon sx={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }} />
               <Typography sx={{ fontSize: "0.63rem" }} color="rgba(255,255,255,0.45)">
-                {dayjs(selectedSale.created_at.replace("Z", "")).format("YYYY-MM-DD HH:mm")}
+                {dayjs(selectedSale.created_at).format("YYYY-MM-DD HH:mm")}
               </Typography>
             </Stack>
           )}
@@ -470,7 +470,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
 
           {/* ── Financials ── */}
           <Box sx={{ borderRadius: 1, border: "1px solid", borderColor: "grey.200", overflow: "hidden" }}>
-            <FinRow label="المجموع الفرعي" value={formatNumber(subtotal)} bg="#f8fafc" />
+            <FinRow label="المجموع الفرعي" value={formatNumber(subtotal, 2)} bg="#f8fafc" />
             {discountAmt > 0 && (
               <FinRow label="الخصم" value={`− ${formatNumber(discountAmt, 2)}`} color="error.main" bg="#fff5f5" bold />
             )}
@@ -544,7 +544,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                     justifyContent="space-between"
                     alignItems="center"
                     sx={{ px: 1, py: 0.4, borderRadius: 1, border: "1px solid", borderColor: "grey.200" }}
-                  >
+                  > 
                     <Stack direction="row" alignItems="center" gap={0.5}>
                       <PaymentsIcon sx={{ fontSize: 12, color: "primary.main" }} />
                       <Typography sx={{ fontSize: "0.7rem" }} color="text.secondary">
@@ -553,7 +553,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                     </Stack>
                     <Stack direction="row" alignItems="center" gap={0.25}>
                       <Typography sx={{ fontSize: "0.75rem" }} fontWeight={700} color="success.dark">
-                        {formatNumber(Number(p.amount))}
+                        {formatNumber(Number(p.amount), 2)}
                       </Typography>
                       {p.id != null && (
                         <IconButton size="small" color="error" onClick={() => handleDeletePayment(p.id!)} disabled={!canCancelPayment || deletingPaymentId === p.id} sx={{ p: 0.2 }}>
@@ -575,7 +575,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.6}>
                 <Typography sx={{ fontSize: "0.7rem" }} color="primary.dark" fontWeight={700}>إضافة دفعة</Typography>
                 <Typography sx={{ fontSize: "0.7rem" }} color="error.main" fontWeight={800}>
-                  المتبقي: {formatNumber(due)}
+                  المتبقي: {formatNumber(due, 2)}
                 </Typography>
               </Stack>
               <Stack direction="row" alignItems="center" gap={0.5}>
@@ -588,9 +588,9 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                     sx={{ fontSize: "0.75rem" }}
                   >
                     <MenuItem value="cash" sx={{ fontSize: "0.75rem" }}>نقدي</MenuItem>
-                    <MenuItem value="bankak" sx={{ fontSize: "0.75rem" }}>بنكك</MenuItem>
-                    <MenuItem value="fawry" sx={{ fontSize: "0.75rem" }}>فوري</MenuItem>
-                    <MenuItem value="ocash" sx={{ fontSize: "0.75rem" }}>أوكاش</MenuItem>
+                    <MenuItem value="bank_transfer" sx={{ fontSize: "0.75rem" }}>تحويل بنكي</MenuItem>
+                    <MenuItem value="visa" sx={{ fontSize: "0.75rem" }}>فيزا</MenuItem>
+                    <MenuItem value="other" sx={{ fontSize: "0.75rem" }}>أخرى</MenuItem>
                   </Select>
                 </FormControl>
                 <TextField

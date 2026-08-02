@@ -187,19 +187,19 @@ export const MonthlyExpensesPdf: React.FC<MonthlyExpensesPdfProps> = ({
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>إجمالي المصروفات:</Text>
             <Text style={styles.summaryValue}>
-              {formatNumber(monthSummary.total)}
+              {formatNumber(monthSummary.total, 2)}
             </Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>المصروفات النقدية:</Text>
             <Text style={[styles.summaryValue, { color: "#059669" }]}>
-              {formatNumber(monthSummary.cash_total)}
+              {formatNumber(monthSummary.cash_total, 2)}
             </Text>
           </View>
           <View style={styles.summaryRowLast}>
             <Text style={styles.summaryLabel}>المصروفات البنكية:</Text>
             <Text style={[styles.summaryValue, { color: "#1e40af" }]}>
-              {formatNumber(monthSummary.bank_total)}
+              {formatNumber(monthSummary.bank_total, 2)}
             </Text>
           </View>
         </View>
@@ -227,13 +227,13 @@ export const MonthlyExpensesPdf: React.FC<MonthlyExpensesPdfProps> = ({
               >
                 <Text style={styles.colDate}>{formattedDate}</Text>
                 <Text style={styles.colTotal}>
-                  {formatNumber(day.total)}
+                  {formatNumber(day.total, 2)}
                 </Text>
                 <Text style={styles.colCash}>
-                  {formatNumber(day.cash_total)}
+                  {formatNumber(day.cash_total, 2)}
                 </Text>
                 <Text style={styles.colBank}>
-                  {formatNumber(day.bank_total)}
+                  {formatNumber(day.bank_total, 2)}
                 </Text>
               </View>
             );

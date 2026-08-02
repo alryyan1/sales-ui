@@ -312,34 +312,6 @@ const PurchaseItemCard: React.FC<PurchaseItemCardProps> = ({
           </Box>
         </Box>
 
-        {/* Expiry Date */}
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-          <Typography variant="caption" color="text.secondary" fontWeight="600">
-            تاريخ الانتهاء
-          </Typography>
-          <Box sx={{ position: "relative" }}>
-            <InstantTextField
-              value={item.expiry_date || ""}
-              onChangeValue={(v) =>
-                onUpdate(item.id, "expiry_date", String(v) || null)
-              }
-              type="date"
-              disabled={isReadOnly}
-            />
-            {isFieldUpdating("expiry_date") && (
-              <CircularProgress
-                size={16}
-                sx={{
-                  position: "absolute",
-                  right: 8,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                }}
-              />
-            )}
-          </Box>
-        </Box>
-
         {/* Total Cost */}
         <Box
           sx={{

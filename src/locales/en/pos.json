@@ -193,14 +193,11 @@
   "batch": "Batch",
   "batchNumber": "Batch Number",
   "availableStock": "Available Stock",
-  "expiryDate": "Expiry Date",
   "salePrice": "Sale Price",
   "unitCost": "Unit Cost",
   "select": "Select",
   "noBatchesAvailable": "No batches available",
   "noStockForProduct": "No stock available for this product",
   "totalBatchesAvailable": "{{count}} batches available",
-  "expired": "Expired",
-  "expiringSoon": "Expiring Soon",
   "batchUpdateFailed": "Failed to update batch selection"
-} 
+}

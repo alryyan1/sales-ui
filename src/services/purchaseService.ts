@@ -29,7 +29,6 @@ export interface PurchaseItem {
   total_cost: string | number; // Original total cost (quantity_stocking * unit_cost_stocking)
   sale_price: string | number | null; // Intended sale price per SELLABLE unit for this batch
   sale_price_stocking_unit?: string | number | null; // Optional: sale price per STOCKING unit
-  expiry_date: string | null; // Format YYYY-MM-DD
   product?: Product; // Optional full product details
 }
 
@@ -37,7 +36,6 @@ export interface PurchaseItem {
 // It's often similar to CreatePurchaseData but items MUST have IDs if they are existing,
 // or no ID if they are new items being added during the update.
 export interface UpdatePurchaseData {
-  currency?: string;
   tax_amount?: number | string;
   customs_amount?: number | string;
   tax_details?: TaxDetail[] | null;
@@ -50,7 +48,6 @@ export interface UpdatePurchaseData {
     quantity: number;
     unit_cost: number | string;
     sale_price?: number | string | null;
-    expiry_date?: string | null;
     _destroy?: boolean; // Optional: If backend supports marking items for deletion
   }>;
   // Backend might not expect total_amount for update, as it will recalculate
@@ -84,7 +81,6 @@ export interface Purchase {
   total_paid?: string | number; // Added from resource
   balance?: string | number; // Added from resource
   notes: string | null;
-  currency?: string;
   tax_amount: string | number;
   customs_amount: string | number;
   tax_details?: TaxDetail[] | null;
@@ -102,7 +98,6 @@ export interface CreatePurchaseData {
   reference_number?: string | null;
   status: "received" | "pending" | "ordered";
   notes?: string | null;
-  currency?: string; // Add currency here
   tax_amount?: number | string;
   customs_amount?: number | string;
   tax_details?: TaxDetail[] | null;
@@ -114,7 +109,6 @@ export interface CreatePurchaseData {
     unit_cost: number | string; // Cost Price
     sale_price: number | string; // Required: Intended sale price per SELLABLE UNIT
     sale_price_stocking_unit?: number | string | null; // Optional: per STOCKING UNIT
-    expiry_date?: string | null; // New: YYYY-MM-DD
   }>;
 }
 // --- Service Object ---
@@ -297,7 +291,6 @@ const purchaseService = {
       unit_cost: number;
       sale_price: number;
       sale_price_stocking_unit?: number | null;
-      expiry_date?: string | null;
     },
   ): Promise<{ purchase: Purchase }> => {
     try {
@@ -350,7 +343,6 @@ const purchaseService = {
       unit_cost: number;
       sale_price: number;
       sale_price_stocking_unit?: number | null;
-      expiry_date?: string | null;
     },
   ): Promise<{ purchase: Purchase }> => {
     try {

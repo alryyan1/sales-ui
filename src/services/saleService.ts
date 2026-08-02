@@ -22,7 +22,7 @@ export interface Payment {
   sale_id?: number; // Backend usually sets this
   user_id?: number | null;
   user_name?: string;
-  method: "cash" | "bankak" | "fawry" | "ocash";
+  method: "cash" | "bank_transfer" | "visa" | "other";
   amount: string | number; // String from form, number for API
   payment_date: string; // YYYY-MM-DD
   reference_number?: string | null;
@@ -42,13 +42,12 @@ export interface SaleItem {
   batch_number_sold?: string | null; // Copied from batch for display
   purchaseItemBatch?: Pick<
     BatchType,
-    "id" | "batch_number" | "unit_cost" | "expiry_date"
+    "id" | "batch_number" | "unit_cost"
   >; // For COGS and display
 
   // Current stock information from the product
   current_stock_quantity?: number;
   stock_alert_level?: number | null;
-  earliest_expiry_date?: string | null;
   sellable_unit_name?: string;
 
   quantity: number;
@@ -59,8 +58,6 @@ export interface SaleItem {
   // available_stock from batch was a temporary UI field, not usually part of SaleItem model
   created_at?: string;
   updated_at?: string;
-  expiry_date?: string | null;
-  purchase_item?: { expiry_date?: string | null } | null;
 }
 
 export interface Sale {

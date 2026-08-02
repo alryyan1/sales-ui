@@ -159,14 +159,14 @@ export const formatDate = (
  *
  * @param value The number to format.
  * @param locale The locale string (e.g., 'en-US', 'ar-SA'). Defaults to browser's locale.
- * @param currencySymbolOrCode The currency symbol (e.g., 'ريال', '$') or ISO 4217 currency code (e.g., 'USD', 'EUR', 'SAR'). Defaults to 'SDG'.
+ * @param currencySymbolOrCode The currency symbol (e.g., 'ريال', 'OMR') or ISO 4217 currency code (e.g., 'OMR', 'EUR', 'SAR'). Defaults to 'OMR'.
  * @param options Intl.NumberFormat options for currency.
  * @returns A formatted currency string or a fallback string ('---').
  */
 export const formatCurrency = (
   value: string | number | null | undefined,
   locale?: string, // Example: 'ar-SA' for Arabic (Saudi Arabia)
-  currencySymbolOrCode: string = "SDG", // Default currency set globally to Sudanese Pound
+  currencySymbolOrCode: string = "OMR", // Default currency set globally to Omani Rial
   options?: Intl.NumberFormatOptions,
 ): string => {
   if (value === null || value === undefined) return "---";
@@ -177,16 +177,17 @@ export const formatCurrency = (
     return "---";
   }
 
-  // Check if currencySymbolOrCode is a 3-letter currency code (like USD, SAR, EUR)
+  // Check if currencySymbolOrCode is a 3-letter currency code (like OMR, SAR, EUR)
   const isCurrencyCode = /^[A-Z]{3}$/.test(currencySymbolOrCode);
 
   if (isCurrencyCode) {
+    const fractionDigits = currencySymbolOrCode === "OMR" ? 2 : 0;
     // Use Intl.NumberFormat for standard currency codes
     const defaultOptions: Intl.NumberFormatOptions = {
       style: "currency",
       currency: currencySymbolOrCode,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
     };
 
     // Merge options properly - user options should override defaults

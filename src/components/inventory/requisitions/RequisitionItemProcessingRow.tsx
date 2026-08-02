@@ -42,7 +42,7 @@ import { Loader2, Check, ChevronsUpDown } from "lucide-react";
 import { Product } from "../../../services/productService";
 import { PurchaseItem } from "../../../services/purchaseService"; // Batch type
 import { StockRequisitionItem as OriginalRequisitionItem } from "../../../services/stockRequisitionService"; // Type for original item
-import { formatNumber, formatDate, formatCurrency } from "@/constants";
+import { formatNumber, formatCurrency } from "@/constants";
 import apiClient from "@/lib/axios";
 
 interface RequisitionItemProcessingRowProps {
@@ -223,13 +223,7 @@ export const RequisitionItemProcessingRow: React.FC<
                                   );
                                   setValue(
                                     `items.${index}.selected_batch_info`,
-                                    `${
-                                      batch.batch_number || `ID:${batch.id}`
-                                    } (Exp: ${
-                                      batch.expiry_date
-                                        ? formatDate(batch.expiry_date)
-                                        : "N/A"
-                                    })`
+                                    batch.batch_number || `ID:${batch.id}`
                                   );
                                   setBatchPopoverOpen(false);
                                 }}
@@ -242,11 +236,7 @@ export const RequisitionItemProcessingRow: React.FC<
                                       : "opacity-0"
                                   )}
                                 />
-                                {batch.batch_number || `ID:${batch.id}`} (Exp:{" "}
-                                {batch.expiry_date
-                                  ? formatDate(batch.expiry_date)
-                                  : "N/A"}
-                                )
+                                {batch.batch_number || `ID:${batch.id}`}
                               </CommandItem>
                             ))}
                           </CommandGroup>

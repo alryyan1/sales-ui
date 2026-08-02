@@ -21,8 +21,6 @@ import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 import { SupplierPayment } from "@/services/supplierPaymentService";
 import { Wallet, Calendar, User, Plus } from "lucide-react";
 import PaymentFormModal from "./PaymentFormModal";
-import { useSettings } from "@/context/SettingsContext";
-import { formatNumber } from "@/constants";
 
 interface PurchasePaymentsDialogProps {
   open: boolean;
@@ -30,7 +28,6 @@ interface PurchasePaymentsDialogProps {
   purchaseId: string | number;
   payments: SupplierPayment[];
   purchaseAmount: number;
-  currency?: "SDG" | "USD";
   supplierId: number;
   onSuccess: () => void;
 }
@@ -41,26 +38,20 @@ export const PurchasePaymentsDialog: React.FC<PurchasePaymentsDialogProps> = ({
   purchaseId,
   payments,
   purchaseAmount,
-  currency = "SDG",
   supplierId,
   onSuccess,
 }) => {
   const formatCurrency = useFormatCurrency();
-  const { getSetting } = useSettings();
-  const usdFactor = getSetting("usd_to_sdg_factor", 1) as number;
   const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
 
-  const isUSD = currency === "USD";
   const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
-  const purchaseInSDG = isUSD ? Number(purchaseAmount) * usdFactor : Number(purchaseAmount);
-  const remaining = purchaseInSDG - totalPaid;
+  const remaining = Number(purchaseAmount) - totalPaid;
 
   const getMethodLabel = (method: string) => {
     const methods: Record<string, string> = {
       cash: "نقداً",
-      bankak: "بنكك",
-      fawry: "فوري",
-      ocash: "أو كاش",
+      bank_transfer: "تحويل بنكي",
+      visa: "فيزا",
       other: "أخرى",
     };
     return methods[method] || method;
@@ -95,17 +86,7 @@ export const PurchasePaymentsDialog: React.FC<PurchasePaymentsDialogProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 mt-4">
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
               <p className="text-sm font-medium text-slate-500 mb-1">إجمالي الفاتورة</p>
-              {isUSD ? (
-                <>
-                  <p className="text-xl font-bold text-slate-900">
-                    {formatNumber(Number(purchaseAmount).toFixed(2))}
-                    <span className="ml-1 text-sm font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">USD</span>
-                  </p>
-                  <p className="text-xs text-slate-500 mt-0.5">≈ {formatNumber((Number(purchaseAmount) * usdFactor).toFixed(2))} SDG</p>
-                </>
-              ) : (
-                <p className="text-xl font-bold text-slate-900">{formatCurrency(purchaseAmount)}</p>
-              )}
+              <p className="text-xl font-bold text-slate-900">{formatCurrency(purchaseAmount)}</p>
             </div>
             <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
               <p className="text-sm font-medium text-emerald-600 mb-1">إجمالي المدفوع</p>

@@ -47,8 +47,6 @@
     "errorItemsRequired": "يجب إضافة منتج واحد على الأقل.",
     "batchNumber": "رقم الدفعة",
     "batchNumberPlaceholder": "رقم الدفعة (اختياري)",
-    "expiryDate": "تاريخ انتهاء الصلاحية",
-    "expiryDatePlaceholder": "تاريخ انتهاء الصلاحية (اختياري)",
     "intendedSalePrice": "سعر البيع المقصود",
     "editPurchaseTitle": "تعديل عملية الشراء",
     "id": "المعرف",
@@ -120,8 +118,7 @@
         "batchNumber": "رقم الدفعة",
         "quantity": "الكمية",
         "unitCost": "تكلفة الوحدة",
-        "salePrice": "سعر البيع",
-        "expiryDate": "تاريخ انتهاء الصلاحية"
+        "salePrice": "سعر البيع"
     },
 
     "managePurchaseItems": "إدارة عناصر الشراء",

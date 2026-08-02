@@ -83,11 +83,6 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
                 {formatDate(purchase.purchase_date, "en-US")}
               </span>
             </div>
-            <div className="mt-2">
-              <span className="text-lg font-bold text-slate-900">
-                {purchase.currency || "SDG"}
-              </span>
-            </div>
           </div>
         </div>
 
@@ -104,7 +99,7 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
             </div>
             <div className="bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg flex flex-col items-center min-w-[100px]">
               <span className="text-lg font-bold leading-none">
-                {formatCurrency(summary.totalCost, purchase.currency)}
+                {formatCurrency(summary.totalCost)}
               </span>
               <span className="text-[10px] opacity-80 font-medium">
                 إجمالي التكلفة
@@ -184,7 +179,6 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
                 <PurchaseSummaryDialog
                   summary={summary}
                   supplierName={purchase.supplier_name || "—"}
-                  currency={purchase.currency}
                 />
               </DialogContent>
             </Dialog>

@@ -44,15 +44,9 @@ export interface AppSettings {
   product_images_show_in_invoices?: boolean;
   product_images_show_in_reports?: boolean;
   firebase_collection_name?: string;
-  usd_to_sdg_factor?: number;
   product_row_color_highlight?: boolean;
-  product_scientific_name_visible?: boolean;
-  product_scientific_name_required?: boolean;
-  pos_show_expired_products?: boolean;
   pos_show_out_of_stock_products?: boolean;
   purchase_use_batch_number?: boolean;
-  purchase_use_expiry_date?: boolean;
-  default_purchase_currency?: "SDG" | "USD";
 }
 
 // Type for the update payload (can be partial)

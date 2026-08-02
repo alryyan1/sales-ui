@@ -23,13 +23,8 @@ import clientLedgerService, { ClientPayment } from "@/services/clientLedgerServi
 
 const METHOD_LABELS: Record<string, string> = {
   cash: "كاش",
-  bankak: "بنكك",
-  fawry: "فوري",
-  ocash: "أوكاش",
   bank_transfer: "تحويل بنكي",
   visa: "فيزا",
-  mastercard: "ماستركارد",
-  mada: "مدى",
   other: "أخرى",
 };
 

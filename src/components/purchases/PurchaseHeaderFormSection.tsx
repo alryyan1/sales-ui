@@ -12,9 +12,6 @@ import {
   Box,
   Typography,
   alpha,
-  FormControl,
-  Select,
-  MenuItem,
 } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 
@@ -22,7 +19,6 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
 import InventoryOutlinedIcon from "@mui/icons-material/InventoryOutlined";
-import CurrencyExchangeIcon from "@mui/icons-material/CurrencyExchange";
 
 // Types
 import { Supplier } from "../../services/supplierService";
@@ -299,37 +295,6 @@ export const PurchaseHeaderFormSection: React.FC<
                     date > new Date() || date < new Date("1900-01-01")
                   }
                 />
-              </Box>
-            )}
-          />
-
-          {/* Currency */}
-          <Controller
-          
-            control={control}
-            name="currency"
-            render={({ field, fieldState }) => (
-              <Box>
-                <FieldLabel required icon={<CurrencyExchangeIcon />}>
-                  العملة
-                </FieldLabel>
-                <FormControl size="small" fullWidth error={!!fieldState.error}>
-                  <Select
-                    value={field.value ?? "SDG"}
-                    onChange={field.onChange}
-                    disabled={isDisabled}
-                    fullWidth
-                    sx={inputStyles}
-                  >
-                    <MenuItem value="SDG">SDG — جنيه سوداني</MenuItem>
-                    <MenuItem value="USD">USD — دولار أمريكي</MenuItem>
-                  </Select>
-                  {fieldState.error && (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5, mx: 1.75 }}>
-                      {fieldState.error.message}
-                    </Typography>
-                  )}
-                </FormControl>
               </Box>
             )}
           />

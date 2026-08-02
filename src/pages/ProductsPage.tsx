@@ -1,7 +1,7 @@
 // src/pages/ProductsPage.tsx
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useProducts } from "../hooks/useProducts";
 import { useSettings } from "../context/SettingsContext";
 
@@ -23,12 +23,6 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Switch from "@mui/material/Switch";
-import Tabs from "@mui/material/Tabs";
-import Tab from "@mui/material/Tab";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
-import Grid from "@mui/material/Grid";
-import Skeleton from "@mui/material/Skeleton";
 
 // Lucide Icons (shadcn)
 import {
@@ -43,9 +37,6 @@ import {
   Columns3,
   RefreshCcw,
   Percent,
-  Package as PackageIcon,
-  Edit,
-  Trash2,
   Sparkles,
 } from "lucide-react";
 import Popover from "@mui/material/Popover";
@@ -67,9 +58,6 @@ import { ProductsTable } from "../components/products/ProductsTable"; // Use Pro
 import ProductFormModal from "../components/products/ProductFormModal"; // Use ProductFormModal
 import ProductImportDialog from "../components/products/ProductImportDialog"; // Import dialog
 import BarcodeLabelPdfDialog from "../components/products/BarcodeLabelPdfDialog";
-import PackageFormModal from "../components/products/PackageFormModal";
-import packageService, { Package } from "../services/packageService";
-import { toast } from "sonner";
 import UnitsPage from "../pages/UnitsPage"; // Import UnitsPage
 import { Button } from "@mui/material";
 
@@ -120,45 +108,6 @@ const ProductsPage: React.FC = () => {
   const navigate = useNavigate();
 
   // Modal State
-  // Tab State
-  const [activeTab, setActiveTab] = useState(0);
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    setActiveTab(newValue);
-  };
-
-  // Package State
-  const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
-  const [editingPackage, setEditingPackage] = useState<Package | null>(null);
-
-  const { data: packages, isLoading: isPackagesLoading } = useQuery({
-    queryKey: ["packages"],
-    queryFn: () => packageService.getPackages(),
-  });
-
-  const deletePackageMutation = useMutation({
-    mutationFn: (id: number) => packageService.deletePackage(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["packages"] });
-      toast.success("تم حذف المجموعة");
-    },
-  });
-
-  const handleDeletePackage = (id: number) => {
-    if (confirm("هل أنت متأكد من حذف هذه المجموعة؟")) {
-      deletePackageMutation.mutate(id);
-    }
-  };
-
-  const openPackageModal = (pkg: Package | null = null) => {
-    setEditingPackage(pkg);
-    setIsPackageModalOpen(true);
-  };
-
-  const closePackageModal = () => {
-    setIsPackageModalOpen(false);
-    setEditingPackage(null);
-  };
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null); // Use Product type directly
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -174,18 +123,18 @@ const ProductsPage: React.FC = () => {
   const [barcodeLabelProduct, setBarcodeLabelProduct] = useState<{ id: number; name: string; sku: string | null } | null>(null);
 
   // Column Visibility
-  const COLUMN_KEYS = ["sku", "name", "scientific_name", "category", "sellable_unit", "stocking_unit", "units_per_stocking", "stock", "cost", "sale_price", "expire_date", "description"] as const;
+  const COLUMN_KEYS = ["sku", "name", "category", "sellable_unit", "stocking_unit", "units_per_stocking", "stock", "cost", "sale_price", "description"] as const;
   type ColumnKey = typeof COLUMN_KEYS[number];
   const COLUMN_LABELS: Record<ColumnKey, string> = {
-    sku: "SKU", name: "اسم المنتج", scientific_name: "الاسم العلمي",
+    sku: "SKU", name: "اسم المنتج",
     category: "الفئة", sellable_unit: "وحدة البيع", stocking_unit: "وحدة التخزين",
     units_per_stocking: "عدد الوحدات", stock: "المخزون", cost: "تكلفة",
-    sale_price: "سعر البيع", expire_date: "الصلاحية", description: "الوصف",
+    sale_price: "سعر البيع", description: "الوصف",
   };
   const defaultVisibility: Record<ColumnKey, boolean> = {
-    sku: true, name: true, scientific_name: true, category: true,
+    sku: true, name: true, category: true,
     sellable_unit: true, stocking_unit: true, units_per_stocking: true,
-    stock: true, cost: true, sale_price: true, expire_date: true, description: true,
+    stock: true, cost: true, sale_price: true, description: true,
   };
   const [visibleColumns, setVisibleColumns] = useState<Record<ColumnKey, boolean>>(() => {
     try {
@@ -400,7 +349,6 @@ const ProductsPage: React.FC = () => {
     try {
       const duplicatedData: ProductFormData = {
         name: `${product.name} (نسخة)`,
-        scientific_name: product.scientific_name,
         sku: null, // Will be auto-generated
         description: product.description,
         image_url: product.image_url,
@@ -412,7 +360,6 @@ const ProductsPage: React.FC = () => {
         units_per_stocking_unit: product.units_per_stocking_unit,
         cost_price: product.cost_price,
         sale_price: product.last_sale_price_per_sellable_unit,
-        has_expiry_date: product.has_expiry_date,
       };
 
       await productService.createProduct(duplicatedData);
@@ -430,7 +377,6 @@ const ProductsPage: React.FC = () => {
       const exportData = {
         id: product.id,
         name: product.name,
-        scientific_name: product.scientific_name,
         sku: product.sku,
         category: product.category_name,
         stock_quantity: product.current_stock_quantity || product.stock_quantity,
@@ -469,7 +415,6 @@ const ProductsPage: React.FC = () => {
     try {
       const productInfo = `
 المنتج: ${product.name}
-${product.scientific_name ? `الاسم العلمي: ${product.scientific_name}` : ''}
 ${product.sku ? `SKU: ${product.sku}` : ''}
 الفئة: ${product.category_name || 'غير محدد'}
 المخزون: ${product.current_stock_quantity || product.stock_quantity || 0} ${product.sellable_unit_name || ''}
@@ -488,15 +433,6 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
   const handleToggleFavorite = (product: Product) => {
     // TODO: Implement favorites functionality
     showSnackbar(`${product.name} ${Math.random() > 0.5 ? 'تم إضافته للمفضلة' : 'تم إزالته من المفضلة'}`, "info");
-  };
-
-  const handleCurrencyChange = async (productId: number, currency: "SDG" | "USD" | null) => {
-    try {
-      await productService.updatePreferredCurrency(productId, currency);
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-    } catch (error) {
-      showSnackbar("فشل تحديث العملة", "error");
-    }
   };
 
   const handlePriceUpdate = async (productId: number, field: "sale_price" | "cost_price", value: number | null) => {
@@ -727,16 +663,6 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
               إجمالي المنتجات: {totalProducts.toLocaleString()}
             </Typography>
           </Box>
-          <Tabs
-            value={activeTab}
-            onChange={handleTabChange}
-            sx={{ mt: 1 }}
-            indicatorColor="primary"
-            textColor="primary"
-          >
-            <Tab label="المنتجات" id="products-tab" />
-            <Tab label="المجموعات (Packages)" id="packages-tab" />
-          </Tabs>
           <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
             {/* Columns Toggle */}
             <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -894,9 +820,9 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                 alignItems: "center",
               }}
             >
-              <Tooltip title={activeTab === 0 ? "إضافة منتج جديد" : "إضافة مجموعة جديدة"}>
+              <Tooltip title="إضافة منتج جديد">
                 <IconButton
-                  onClick={activeTab === 0 ? () => openModal() : () => openPackageModal()}
+                  onClick={() => openModal()}
                   color="primary"
                   sx={{
                     bgcolor: "primary.main",
@@ -1105,7 +1031,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
           </Alert>
         )}
         {/* Content Area */}
-        {!error && activeTab === 0 && (
+        {!error && (
           <Box sx={{ mt: 2, width: "100%", px: 2 }}>
             <ProductsTable
               products={(products as Product[]) || []}
@@ -1133,72 +1059,8 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
               onDelete={handleDeleteProduct}
               onCopyInfo={handleCopyProductInfo}
               onToggleFavorite={handleToggleFavorite}
-              onCurrencyChange={handleCurrencyChange}
               onPriceUpdate={handlePriceUpdate}
             />
-          </Box>
-        )}
-
-        {!error && activeTab === 1 && (
-          <Box sx={{ mt: 2, width: "100%", px: 2 }}>
-            {isPackagesLoading ? (
-              <Grid container spacing={2}>
-                {[1, 2, 3].map((i) => (
-                  <Grid item xs={12} sm={6} md={4} key={i}>
-                    <Skeleton variant="rectangular" height={150} />
-                  </Grid>
-                ))}
-              </Grid>
-            ) : (
-              <Grid container spacing={2}>
-                {packages?.map((pkg) => (
-                  <Grid item xs={12} sm={6} md={4} key={pkg.id}>
-                    <Card elevation={2} sx={{ height: "100%", display: "flex", flexDirection: "column", "&:hover": { boxShadow: 6 } }}>
-                      <CardContent>
-                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                            <PackageIcon className="text-primary-main" />
-                            <Typography variant="h6" fontWeight="bold">{pkg.name}</Typography>
-                          </Box>
-                          <Box>
-                            <IconButton size="small" onClick={() => openPackageModal(pkg)}>
-                              <Edit size={18} />
-                            </IconButton>
-                            <IconButton size="small" color="error" onClick={() => handleDeletePackage(pkg.id!)}>
-                              <Trash2 size={18} />
-                            </IconButton>
-                          </Box>
-                        </Box>
-                        <Typography variant="subtitle2" fontWeight="bold" sx={{ mt: 1 }}>
-                          المنتجات ({pkg.items?.length || 0}):
-                        </Typography>
-                        <Box sx={{ mt: 1 }}>
-                          {pkg.items?.slice(0, 3).map((item) => (
-                            <Typography key={item.id} variant="caption" display="block">
-                              • {item.product?.name}
-                            </Typography>
-                          ))}
-                          {(pkg.items?.length || 0) > 3 && (
-                            <Typography variant="caption" color="text.secondary">... وغيرهم</Typography>
-                          )}
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-                {(!packages || packages.length === 0) && (
-                  <Box sx={{ width: "100%", textAlign: "center", py: 8 }}>
-                    <PackageIcon size={64} className="text-gray-300 mb-4 mx-auto" strokeWidth={1} />
-                    <Typography color="text.secondary" variant="h6" sx={{ mb: 3 }}>
-                      لا توجد مجموعات حالياً. انقر على الزر أدناه لإضافة واحدة.
-                    </Typography>
-                    <Button variant="contained" startIcon={<Plus size={20} />} onClick={() => openPackageModal()} sx={{ borderRadius: 2, px: 4, py: 1.5 }}>
-                      إنشاء مجموعة جديدة
-                    </Button>
-                  </Box>
-                )}
-              </Grid>
-            )}
           </Box>
         )}
         {/* Modals and Snackbar */}
@@ -1213,11 +1075,6 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
           open={isImportDialogOpen}
           onClose={() => setIsImportDialogOpen(false)}
           onImportSuccess={handleImportSuccess}
-        />
-        <PackageFormModal
-          isOpen={isPackageModalOpen}
-          onClose={closePackageModal}
-          packageToEdit={editingPackage}
         />
         {/* Removed ConfirmationDialog */}
         {/* Snackbar for notifications */}
