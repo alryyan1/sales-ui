@@ -72,6 +72,19 @@ const headerSx = {
   color: "text.secondary",
 } as const;
 
+// The row-index and product columns are pinned so the product name stays
+// visible while scrolling the (often wide) items table horizontally on mobile.
+const STICKY_NUMBER_WIDTH = 40;
+const stickyColumnSx = (columnId: string) => {
+  if (columnId === "number") {
+    return { position: "sticky" as const, left: 0, zIndex: 2, width: STICKY_NUMBER_WIDTH, minWidth: STICKY_NUMBER_WIDTH };
+  }
+  if (columnId === "product") {
+    return { position: "sticky" as const, left: STICKY_NUMBER_WIDTH, zIndex: 2 };
+  }
+  return {};
+};
+
 export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
   items = [],
   maxHeight = 360,
@@ -754,7 +767,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                       }
                     )?.align ?? "left"
                   }
-                  sx={headerSx}
+                  sx={{ ...headerSx, ...stickyColumnSx(header.column.id) }}
                 >
                   {flexRender(
                     header.column.columnDef.header,
@@ -789,6 +802,15 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
               const returnedQty = item.returned_quantity ?? 0;
               const isFullyReturned = returnedQty > 0 && returnedQty >= (item.quantity ?? 0);
               const isPartiallyReturned = returnedQty > 0 && !isFullyReturned;
+              // Opaque background for the sticky (pinned) cells, matching the row's own state color
+              // — must be a solid color, not "inherit", or scrolled content would show through.
+              const rowBgColor = selected
+                ? "action.selected"
+                : isFullyReturned
+                  ? "error.50"
+                  : isPartiallyReturned
+                    ? "warning.50"
+                    : "background.paper";
               return (
                 <TableRow
                   key={row.id}
@@ -824,7 +846,13 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                           }
                         )?.align ?? "left"
                       }
-                      sx={cellSx}
+                      sx={{
+                        ...cellSx,
+                        ...stickyColumnSx(cell.column.id),
+                        ...(stickyColumnSx(cell.column.id).position
+                          ? { backgroundColor: rowBgColor }
+                          : {}),
+                      }}
                     >
                       {flexRender(
                         cell.column.columnDef.cell,

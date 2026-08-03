@@ -136,10 +136,18 @@ const ProductsPage: React.FC = () => {
     sellable_unit: true, stocking_unit: true, units_per_stocking: true,
     stock: true, cost: true, sale_price: true, description: true,
   };
+  // On phones, default to a lean column set to avoid excessive horizontal scrolling.
+  // Only used as the initial value when the user hasn't already saved a preference.
+  const mobileDefaultVisibility: Record<ColumnKey, boolean> = {
+    sku: true, name: true, category: false,
+    sellable_unit: false, stocking_unit: false, units_per_stocking: false,
+    stock: true, cost: false, sale_price: true, description: false,
+  };
   const [visibleColumns, setVisibleColumns] = useState<Record<ColumnKey, boolean>>(() => {
     try {
       const saved = localStorage.getItem("products_table_columns");
-      return saved ? { ...defaultVisibility, ...JSON.parse(saved) } : defaultVisibility;
+      if (saved) return { ...defaultVisibility, ...JSON.parse(saved) };
+      return window.innerWidth < 640 ? mobileDefaultVisibility : defaultVisibility;
     } catch { return defaultVisibility; }
   });
   const [columnsAnchor, setColumnsAnchor] = useState<HTMLButtonElement | null>(null);

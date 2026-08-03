@@ -21,21 +21,28 @@ export const PosSalesColumn: React.FC<PosSalesColumnProps> = ({
   return (
     <Box
       sx={{
-        display: { xs: "none", lg: "flex" },
-        flexDirection: "column",
-        width: 90,
-        p:1,
+        display: "flex",
+        flexDirection: { xs: "row", md: "column" },
+        width: { xs: "100%", md: 90 },
         flexShrink: 0,
-        overflowY: "auto",
-        maxHeight: "calc(100vh - 80px)",
+        p: 1,
+        overflowX: { xs: "auto", md: "visible" },
+        overflowY: { xs: "hidden", md: "auto" },
+        maxHeight: { xs: "none", md: "calc(100vh - 80px)" },
       }}
     >
       {salesLoading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 1 }}>
+        <Box sx={{ display: "flex", justifyContent: "center", py: 1, width: "100%" }}>
           <CircularProgress size={28} />
         </Box>
       ) : (
-        <Stack justifyContent="center" alignItems="center" direction="column" gap={1}>
+        <Stack
+          justifyContent="center"
+          alignItems="center"
+          direction={{ xs: "row", md: "column" }}
+          gap={1}
+          sx={{ flexWrap: "nowrap" }}
+        >
           {sales.map((sale) => {
             const isActive = selectedSale?.id === sale.id;
             const itemsCount = sale.items?.length ?? 0;
@@ -46,7 +53,7 @@ export const PosSalesColumn: React.FC<PosSalesColumnProps> = ({
             const isQuote = sale.is_quote === true;
             const badgeColor = hasNoPayments ? "error" : isActive ? "secondary" : "primary";
             return (
-              <Stack direction="row" gap={1} key={sale.id}>
+              <Stack direction="row" gap={1} key={sale.id} sx={{ flexShrink: 0 }}>
                 <Badge
                   badgeContent={itemsCount}
                   color={badgeColor}

@@ -1463,7 +1463,13 @@ const PosBlankPage: React.FC = () => {
         }}
       >
         <Toolbar
-          sx={{ height: 64, px: { xs: 2, sm: 3 }, gap: 2, flexWrap: "wrap" }}
+          sx={{
+            minHeight: { xs: "auto", sm: 64 },
+            py: { xs: 1, sm: 0 },
+            px: { xs: 2, sm: 3 },
+            gap: 2,
+            flexWrap: "wrap",
+          }}
         >
           <Typography
             variant="h6"
@@ -1527,7 +1533,7 @@ const PosBlankPage: React.FC = () => {
                   sx: { minWidth: 260, borderRadius: 2, mt: 1.5 },
                 }}
               >
-                <Stack sx={{ py: 1, minWidth: 500 }}>
+                <Stack sx={{ py: 1, width: { xs: "88vw", sm: 500 }, maxWidth: 500 }}>
                   {/* Header Info */}
                   <Stack
                     direction="row"
@@ -1593,7 +1599,7 @@ const PosBlankPage: React.FC = () => {
           </Button>
 
           {/* Sale ID search */}
-          <Box sx={{ width: 140 }}>
+          <Box sx={{ width: { xs: 110, sm: 140 } }}>
             <TextField
               size="small"
               placeholder="بحث برقم "
@@ -1616,7 +1622,7 @@ const PosBlankPage: React.FC = () => {
           </Box>
 
           {/* Product search – in header */}
-          <Box sx={{ flex: 1, minWidth: 160, maxWidth: 380 }}>
+          <Box sx={{ flex: 1, minWidth: 160, maxWidth: { xs: "100%", sm: 380 } }}>
             <Autocomplete
               freeSolo
               value={selectedProduct}
@@ -1842,14 +1848,15 @@ const PosBlankPage: React.FC = () => {
       <Box
         sx={{
           flex: 1,
-          overflow: "hidden",
+          overflow: { xs: "auto", md: "hidden" },
           px: { xs: 1, sm: 2, lg: 3 },
           py: 1.5,
         }}
       >
         <Box
           sx={{
-            height: "100%",
+            height: { xs: "auto", md: "100%" },
+            minHeight: { xs: "100%", md: "auto" },
             display: "flex",
             flexDirection: { xs: "column", md: "row" },
             gap: 1.5,

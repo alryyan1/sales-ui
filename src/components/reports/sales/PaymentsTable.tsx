@@ -126,13 +126,13 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-center w-16">#</TableHead>
+                  <TableHead className="text-center w-16 hidden sm:table-cell">#</TableHead>
                   <TableHead className="text-center">التاريخ</TableHead>
                   <TableHead className="text-center">طريقة الدفع</TableHead>
                   <TableHead className="text-center">المبلغ</TableHead>
-                  <TableHead className="text-center">المرجع</TableHead>
+                  <TableHead className="text-center hidden sm:table-cell">المرجع</TableHead>
                   <TableHead className="text-center">العميل</TableHead>
-                  <TableHead className="text-center">المستخدم</TableHead>
+                  <TableHead className="text-center hidden sm:table-cell">المستخدم</TableHead>
                   <TableHead className="text-center">رصيد العملية</TableHead>
                   <TableHead className="text-center">الفاتورة</TableHead>
                 </TableRow>
@@ -146,7 +146,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({
 
                   return (
                     <TableRow key={payment.id} className="text-center hover:bg-muted/40 transition-colors">
-                      <TableCell className="text-center text-xs text-muted-foreground font-mono">
+                      <TableCell className="text-center text-xs text-muted-foreground font-mono hidden sm:table-cell">
                         {payment.id}
                       </TableCell>
 
@@ -168,7 +168,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({
                         {formatNumber(payment.amount, 2)}
                       </TableCell>
 
-                      <TableCell className="text-center text-xs text-muted-foreground font-mono">
+                      <TableCell className="text-center text-xs text-muted-foreground font-mono hidden sm:table-cell">
                         {payment.reference_number || "—"}
                       </TableCell>
 
@@ -187,7 +187,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({
                         )}
                       </TableCell>
 
-                      <TableCell className="text-center text-sm">
+                      <TableCell className="text-center text-sm hidden sm:table-cell">
                         {payment.user_name || "—"}
                       </TableCell>
 
