@@ -318,7 +318,7 @@ const ClientLedgerPage: React.FC = () => {
     <Box sx={{ p: { xs: 1.5, md: 2 }, display: "flex", flexDirection: "column", gap: 1.5 }}>
 
       {/* Header */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap" }}>
         <IconButton onClick={() => navigate("/clients")} size="small">
           <ArrowLeft size={18} />
         </IconButton>
@@ -423,7 +423,7 @@ const ClientLedgerPage: React.FC = () => {
               <Typography variant="caption" color="text.secondary">جاري تحميل بيانات المورد...</Typography>
             </Stack>
           ) : (
-            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1.5,width:'600px' }}>
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr 1fr" }, gap: 1.5, width: { xs: "100%", sm: "600px" } }}>
               <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: summary.balance > 0 ? "#fef2f2" : "#f0fdf4", border: "1px solid", borderColor: summary.balance > 0 ? "error.light" : "success.light" }}>
                 <Typography variant="caption" color="text.secondary" display="block">رصيد المبيعات (يدين لنا)</Typography>
                 <Typography variant="subtitle2" fontWeight={700} color={summary.balance > 0 ? "error.main" : "success.main"}>
@@ -455,7 +455,7 @@ const ClientLedgerPage: React.FC = () => {
       {!client.is_supplier && <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: "200px 200px 200px",
+          gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 200px)" },
           gap: 1.5,
         }}
       >

@@ -13,6 +13,8 @@ import {
   IconButton,
   Stack,
   Alert,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 
 // Lucide Icons
@@ -33,6 +35,8 @@ export const PdfViewerDialog: React.FC<PdfViewerDialogProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down("sm"));
 
   useEffect(() => {
     if (isOpen && pdfUrl) {
@@ -65,13 +69,14 @@ export const PdfViewerDialog: React.FC<PdfViewerDialogProps> = ({
       onClose={onClose}
       maxWidth="lg"
       fullWidth
+      fullScreen={fullScreen}
       PaperProps={{
         sx: {
-          width: "400px",
-          maxWidth: "400px",
-          height: "90vh",
-          maxHeight: "90vh",
-          borderRadius: 3,
+          width: { xs: "100%", sm: "400px" },
+          maxWidth: { xs: "100%", sm: "400px" },
+          height: fullScreen ? "100%" : "90vh",
+          maxHeight: fullScreen ? "100%" : "90vh",
+          borderRadius: fullScreen ? 0 : 3,
         },
       }}
     >

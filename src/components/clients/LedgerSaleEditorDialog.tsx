@@ -385,7 +385,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
 
               {/* Product search */}
               <Autocomplete
-              sx={{width:400}}
+              sx={{width: "100%", maxWidth: 400}}
                 freeSolo
                 value={selectedProduct}
                 inputValue={productInputValue}

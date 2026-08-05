@@ -178,9 +178,12 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
           direction="row"
           justifyContent="space-between"
           alignItems="center"
+          flexWrap="wrap"
+          useFlexGap
+          gap={1.5}
           mb={2}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
             <Typography variant="h6">
               أصناف المشتريات ({paginationData.total})
             </Typography>
@@ -208,7 +211,7 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                 </InputAdornment>
               ),
             }}
-            sx={{ width: 300 }}
+            sx={{ width: { xs: "100%", sm: 300 } }}
           />
         </Stack>
         <Divider sx={{ mb: 2 }} />

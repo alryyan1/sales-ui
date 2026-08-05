@@ -150,7 +150,7 @@ const SalesReturnsListPage: React.FC = () => {
       </Box>
 
       {/* Summary Strip */}
-      <Box sx={{ display: "grid", gridTemplateColumns: "200px 200px", gap: 1.5 }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", sm: "200px 200px" }, gap: 1.5 }}>
         {[
           {
             label: "عدد المردودات",

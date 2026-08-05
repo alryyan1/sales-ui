@@ -367,7 +367,7 @@ const DashboardPage: React.FC = () => {
         </div>
 
         {/* ━━━━━━━━━━ KPI CARDS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <KpiCard label="مبيعات اليوم"
             value={formatCurrency(summaryData?.sales.today_amount ?? 0)}
             sub={<span className="text-[11px] text-gray-400">{formatNumber(summaryData?.sales.today_count ?? 0)} فاتورة</span>}
@@ -424,19 +424,19 @@ const DashboardPage: React.FC = () => {
         {/* ━━━━━━━━━━ PURCHASES STRIP ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
         <Card className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm">
           <CardContent className="p-4">
-            <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
               <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                 <ShoppingCart className="h-3.5 w-3.5" />
                 ملخص المشتريات
               </div>
               <Separator orientation="vertical" className="h-8 hidden sm:block dark:bg-gray-800" />
               {loadSummary ? (
-                <div className="flex gap-6 flex-1">
-                  <Skeleton className="h-8 w-32 rounded dark:bg-gray-800" />
-                  <Skeleton className="h-8 w-32 rounded dark:bg-gray-800" />
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-6 flex-1">
+                  <Skeleton className="h-8 w-full sm:w-32 rounded dark:bg-gray-800" />
+                  <Skeleton className="h-8 w-full sm:w-32 rounded dark:bg-gray-800" />
                 </div>
               ) : (
-                <div className="flex items-center gap-6 flex-wrap flex-1">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 flex-1 w-full">
                   <MiniStat label="إجمالي المشتريات" value={formatCurrency(summaryData?.purchases_summary.total ?? 0)}
                     color="bg-violet-500" icon={<ShoppingCart className="h-3.5 w-3.5 text-violet-600" />} />
                   <Separator orientation="vertical" className="h-8 hidden sm:block dark:bg-gray-800" />

@@ -136,18 +136,18 @@ const StockAdjustmentsListPage: React.FC = () => {
       className="dark:bg-gray-950 min-h-screen"
     >
       {/* Header */}
-      <Box sx={{ display: "flex", alignItems: "center", mb: 3, gap: 2 }}>
+      <Box sx={{ display: "flex", alignItems: "center", mb: 3, gap: 2, flexWrap: "wrap" }}>
         <IconButton onClick={() => navigate(-1)} size="small">
           <ArrowBackIcon />
         </IconButton>
         <Typography
-          variant="h4"
+          variant="h5"
           component="h1"
           className="text-gray-800 dark:text-gray-100 font-semibold"
         >
           سجل تعديلات المخزون
         </Typography>
-        <Box sx={{ display: "flex", gap: 1, ml: "auto", alignItems: "center" }}>
+        <Box sx={{ display: "flex", gap: 1, ml: { xs: 0, sm: "auto" }, alignItems: "center", flexWrap: "wrap" }}>
           <FormControl size="small" sx={{ minWidth: 150 }}>
             <InputLabel id="warehouse-select-label">المخزن</InputLabel>
             <Select

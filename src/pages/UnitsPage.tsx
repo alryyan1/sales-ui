@@ -112,14 +112,14 @@ const UnitsPage: React.FC = () => {
 
       {/* Filters */}
       <Paper sx={{ p: 2, mb: 3 }}>
-        <Stack direction="row" spacing={2} alignItems="center">
+        <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
           <TextField
             label="Search"
             variant="outlined"
             size="small"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            sx={{ minWidth: 300 }}
+            sx={{ minWidth: { xs: "100%", sm: 300 } }}
           />
           <FormControl size="small" sx={{ minWidth: 150 }}>
             <InputLabel>Type</InputLabel>

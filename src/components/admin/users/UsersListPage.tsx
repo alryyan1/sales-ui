@@ -141,8 +141,10 @@ const UsersListPage: React.FC = () => {
       <Box
         sx={{
           display: "flex",
-          alignItems: "center",
+          flexDirection: { xs: "column", sm: "row" },
+          alignItems: { xs: "stretch", sm: "center" },
           justifyContent: "space-between",
+          gap: 1.5,
           mb: 2.5,
         }}
       >
@@ -176,7 +178,7 @@ const UsersListPage: React.FC = () => {
           placeholder="ابحث بالاسم أو اسم الدخول..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{ flex: 1, maxWidth: 300 }}
+          sx={{ flex: 1, maxWidth: { xs: "100%", sm: 300 } }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
