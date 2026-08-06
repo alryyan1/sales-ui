@@ -33,6 +33,7 @@ import {
   Autocomplete,
 } from "@mui/material";
 import { useSettings } from "@/context/SettingsContext";
+import { useAuthorization } from "@/hooks/useAuthorization";
 import { DRAWER_WIDTH } from "./types";
 import { toast } from "sonner";
 import { KeyboardShortcutsDialog } from "../common/KeyboardShortcutsDialog";
@@ -60,6 +61,8 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
   const location = useLocation();
   const { user } = useAuth();
   const { getSetting, updateSettings } = useSettings();
+  const { hasPermission } = useAuthorization();
+  const canEditDollarRate = hasPermission("تعديل سعر الدولار");
   const [shortcutsDialogOpen, setShortcutsDialogOpen] = React.useState(false);
   
   // USD to SDG Factor state
@@ -132,6 +135,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
   }, [usdFactor]);
 
   const handleFactorClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!canEditDollarRate) return;
     setFactorAnchorEl(event.currentTarget);
   };
 
@@ -365,11 +369,11 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
                 py: 0.5,
                 borderRadius: 1,
                 border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
-                cursor: "pointer",
+                cursor: canEditDollarRate ? "pointer" : "default",
                 height: 28,
-                "&:hover": {
-                  bgcolor: alpha(theme.palette.primary.main, 0.1),
-                },
+                "&:hover": canEditDollarRate
+                  ? { bgcolor: alpha(theme.palette.primary.main, 0.1) }
+                  : undefined,
               }}
             >
               <DollarSign size={14} />

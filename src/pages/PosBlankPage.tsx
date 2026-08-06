@@ -127,6 +127,7 @@ const PosBlankPage: React.FC = () => {
   const canCancelPayment = hasPermission('الغاء سداد');
   const canDiscount = hasPermission('تخفيض');
   const canDeleteSaleItem = hasPermission('حذف منتج مضاف في عمليه بيع');
+  const canDeleteSale = hasPermission('حذف فاتورة');
   const canOpenShift = hasPermission('فتح ورديه');
   const canCloseShift = hasPermission('اغلاق ورديه');
   const firebaseCollectionName = getSetting(
@@ -170,6 +171,7 @@ const PosBlankPage: React.FC = () => {
   const [deletingSaleItemId, setDeletingSaleItemId] = useState<number | null>(
     null,
   );
+  const [deletingSaleId, setDeletingSaleId] = useState<number | null>(null);
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
 
   // Client Autocomplete State
@@ -435,9 +437,9 @@ const PosBlankPage: React.FC = () => {
     if (!selectedSale?.id) return;
     setSaleDateLoading(true);
     try {
-      await saleService.updateSale(selectedSale.id, { sale_date: date });
-      setSelectedSale((prev) => (prev ? { ...prev, sale_date: date } : prev));
-      setSales((prev) => prev.map((s) => (s.id === selectedSale.id ? { ...s, sale_date: date } : s)));
+      const updated = await saleService.updateSale(selectedSale.id, { sale_date: date });
+      setSelectedSale(updated);
+      setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
       toast.success("تم تحديث تاريخ الفاتورة");
     } catch (err) {
       toast.error(saleService.getErrorMessage(err));
@@ -1138,6 +1140,29 @@ const PosBlankPage: React.FC = () => {
       setDeletingSaleItemId(null);
     }
   }, [selectedSale]);
+
+  const handleDeleteSale = useCallback(
+    async (sale: Sale) => {
+      if ((sale.payments?.length ?? 0) > 0) {
+        toast.error("لا يمكن حذف الفاتورة لوجود مدفوعات مرتبطة بها");
+        return;
+      }
+      if (!window.confirm(`هل أنت متأكد من حذف الفاتورة رقم ${sale.number}؟ لا يمكن التراجع عن هذه العملية.`))
+        return;
+      try {
+        setDeletingSaleId(sale.id);
+        await saleService.deleteSale(sale.id);
+        setSales((prev) => prev.filter((s) => s.id !== sale.id));
+        setSelectedSale((prev) => (prev?.id === sale.id ? null : prev));
+        toast.success("تم حذف الفاتورة بنجاح");
+      } catch (err) {
+        toast.error(saleService.getErrorMessage(err));
+      } finally {
+        setDeletingSaleId(null);
+      }
+    },
+    [],
+  );
 
   const handlePrintThermalInvoice = useCallback(async () => {
     if (!selectedSale?.id) return;
@@ -2161,6 +2186,21 @@ const PosBlankPage: React.FC = () => {
                           aria-label="إزالة كل الأصناف"
                         >
                           {removeAllItemsLoading ? "جاري..." : "إزالة كل الأصناف"}
+                        </Button>
+                      )}
+                      {canDeleteSale && (
+                        <Button
+                          size="small"
+                          color="error"
+                          variant="contained"
+                          onClick={() => handleDeleteSale(selectedSale)}
+                          disabled={
+                            deletingSaleId === selectedSale.id ||
+                            (selectedSale.payments?.length ?? 0) > 0
+                          }
+                          aria-label="حذف الفاتورة"
+                        >
+                          {deletingSaleId === selectedSale.id ? "جاري الحذف..." : "حذف الفاتورة"}
                         </Button>
                       )}
                     </Box>

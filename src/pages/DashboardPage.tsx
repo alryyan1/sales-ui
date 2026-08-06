@@ -368,15 +368,19 @@ const DashboardPage: React.FC = () => {
 
         {/* ━━━━━━━━━━ KPI CARDS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          <KpiCard label="مبيعات اليوم"
-            value={formatCurrency(summaryData?.sales.today_amount ?? 0)}
-            sub={<span className="text-[11px] text-gray-400">{formatNumber(summaryData?.sales.today_count ?? 0)} فاتورة</span>}
+          <KpiCard label="إجمالي المبيعات"
+            value={formatCurrency(summaryData?.sales.filtered_amount ?? 0)}
+            sub={<span className="text-[11px] text-gray-400">{formatNumber(summaryData?.sales.filtered_count ?? 0)} فاتورة · للفترة المحددة</span>}
             icon={<CalendarDays className="h-4 w-4 text-blue-600" />}
             color="bg-blue-500" onClick={() => navigate("/sales")} loading={loadSummary} />
 
-          <KpiCard label="مبيعات الشهر"
-            value={formatCurrency(summaryData?.sales.this_month_amount ?? 0)}
-            sub={<span className="text-[11px] text-gray-400">{formatNumber(summaryData?.sales.this_month_count ?? 0)} فاتورة</span>}
+          <KpiCard label="متوسط الفاتورة"
+            value={formatCurrency(
+              summaryData && summaryData.sales.filtered_count
+                ? summaryData.sales.filtered_amount / summaryData.sales.filtered_count
+                : 0,
+            )}
+            sub={<span className="text-[11px] text-gray-400">لكل فاتورة · للفترة المحددة</span>}
             icon={<CircleDollarSign className="h-4 w-4 text-indigo-600" />}
             color="bg-indigo-500" onClick={() => navigate("/sales")} loading={loadSummary} />
 
