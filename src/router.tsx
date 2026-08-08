@@ -26,7 +26,9 @@ import ManageInventoryCountPage from "./pages/inventory/ManageInventoryCountPage
 import WarehousesListPage from "./pages/warehouses/WarehousesListPage";
 import WarehouseProductsPage from "./pages/warehouses/WarehouseProductsPage";
 // Sales & POS
+import PosPage from "./pages/pos/PosPage";
 import PosBlankPage from "./pages/PosBlankPage";
+import SalesListPage from "./pages/sales/SalesListPage";
 import SalesReturnsPage from "./pages/sales/SalesReturnsPage";
 import SalesReturnsListPage from "./pages/sales/SalesReturnsListPage";
 import SaleDetailsPage from "./pages/sales/SaleDetailsPage";
@@ -173,12 +175,28 @@ const router = createHashRouter([
           {
             path: "sales",
             children: [
-              { index: true, element: <Navigate to="pos-blank" replace /> },
+              { index: true, element: <Navigate to="pos" replace /> },
+              {
+                path: "pos",
+                element: (
+                  <PermissionGuard requiredPermission="view-pos">
+                    <PosPage />
+                  </PermissionGuard>
+                ),
+              },
               {
                 path: "pos-blank",
                 element: (
                   <PermissionGuard requiredPermission="view-pos">
                     <PosBlankPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "list",
+                element: (
+                  <PermissionGuard requiredPermission="view-sales">
+                    <SalesListPage />
                   </PermissionGuard>
                 ),
               },

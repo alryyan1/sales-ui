@@ -91,6 +91,8 @@ export interface Sale {
   discount_type?: "percentage" | "fixed"; // UI-only; backend stores amount
   is_returned?: boolean; // Whether this sale has been returned
   is_quote?: boolean; // Whether this is a quote (no inventory deduction)
+  finance_exported_at?: string | null; // When this sale was last sent to finance-api, if ever
+  finance_export_error?: string | null; // Reason the last export attempt failed, if any
 
   notes: string | null;
   created_at: string;
@@ -678,6 +680,15 @@ const saleService = {
   },
 
   /**
+   * Manually export a sale as a journal entry to finance-api (via Firestore).
+   * Safe to call again — re-exporting overwrites the same pending document.
+   */
+  exportToFinance: async (saleId: number): Promise<Sale> => {
+    const response = await apiClient.post<Sale>(`/sales/${saleId}/export-to-finance`);
+    return response.data;
+  },
+
+  /**
    * Delete a sale (generally not recommended for completed sales).
    */
   deleteSale: async (id: number): Promise<void> => {
@@ -730,7 +741,7 @@ const saleService = {
   getSaleForPOS: async (id: number): Promise<Sale> => {
     try {
       const response = await apiClient.get<{ sale: Sale } | Sale>(
-        `/sales/${id}/pos-format`,
+        `/sales/${id}`,
       );
       if ("sale" in response.data) {
         return response.data.sale;

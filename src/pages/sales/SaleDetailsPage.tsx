@@ -21,6 +21,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
+import Tooltip from "@mui/material/Tooltip";
 
 // Lucide Icons
 import {
@@ -31,6 +32,8 @@ import {
   User,
   Calendar,
   Printer,
+  Landmark,
+  CheckCircle2,
 } from "lucide-react";
 
 // Services and Types
@@ -58,7 +61,24 @@ const SaleDetailsPage: React.FC = () => {
   const [sale, setSale] = useState<Sale | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const formatCurrency = useFormatCurrency();
+
+  const handleExportToFinance = async () => {
+    if (!sale) return;
+    setIsExporting(true);
+    try {
+      const updated = await saleService.exportToFinance(sale.id);
+      setSale(updated);
+      toast.success("تم إرسال القيد إلى النظام المالي");
+    } catch (err) {
+      toast.error("فشل التصدير إلى النظام المالي", {
+        description: saleService.getErrorMessage(err),
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   useEffect(() => {
     const fetchSaleDetails = async (saleId: number) => {
@@ -246,6 +266,36 @@ const SaleDetailsPage: React.FC = () => {
         >
           طباعة الفاتورة
         </Button>
+        <Tooltip
+          title={
+            sale.finance_export_error
+              ? `فشل آخر تصدير: ${sale.finance_export_error}`
+              : sale.finance_exported_at
+              ? `آخر تصدير: ${dayjs(sale.finance_exported_at).format("YYYY-MM-DD HH:mm")} — اضغط لإعادة الإرسال`
+              : "إرسال قيد هذا البيع إلى النظام المالي"
+          }
+        >
+          <span>
+            <Button
+              variant={sale.finance_exported_at ? "outlined" : "contained"}
+              color={sale.finance_export_error ? "error" : "success"}
+              startIcon={
+                isExporting ? (
+                  <CircularProgress size={18} color="inherit" />
+                ) : sale.finance_exported_at ? (
+                  <CheckCircle2 size={20} />
+                ) : (
+                  <Landmark size={20} />
+                )
+              }
+              onClick={handleExportToFinance}
+              disabled={isExporting}
+              sx={{ ml: 2 }}
+            >
+              {sale.finance_exported_at ? "إعادة التصدير" : "تصدير إلى النظام المالي"}
+            </Button>
+          </span>
+        </Tooltip>
       </Box>
 
       {/* Main Details Card */}

@@ -26,6 +26,8 @@ import { CloudUploadIcon, FileText, SearchIcon } from "lucide-react";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import RequestQuoteIcon from "@mui/icons-material/RequestQuote";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 
 import apiClient from "@/lib/axios";
 import { toast } from "sonner";
@@ -301,18 +303,22 @@ const PosBlankPage: React.FC = () => {
     }
     const t = setTimeout(() => {
       setProductSearchLoading(true);
+      const showExpired = getSetting("pos_show_expired_products", false);
+      const showOutOfStock = getSetting("pos_show_out_of_stock_products", false);
+      const isQuoteMode = selectedSale?.is_quote ?? false;
+      // The backend hard-filters to in-stock-at-warehouse when warehouse_id is set,
+      // so it must be omitted (not just filtered client-side) to surface out-of-stock products.
+      const warehouseFilterId =
+        showOutOfStock || isQuoteMode ? undefined : user?.warehouse_id || undefined;
       productService
         .getProductsForAutocomplete(
           productInputValue.trim(),
           25,
+          warehouseFilterId,
           user?.warehouse_id || undefined,
         )
         .then((list) => {
           const raw = Array.isArray(list) ? list : [];
-          const showExpired = getSetting("pos_show_expired_products", false);
-          const showOutOfStock = getSetting("pos_show_out_of_stock_products", false);
-
-          const isQuoteMode = selectedSale?.is_quote ?? false;
           const filtered = raw.filter((p) => {
             // Stock quantity returned from server will be warehouse-specific if warehouse_id was passed
             const stock = p.current_stock_quantity ?? p.stock_quantity ?? 0;
@@ -1062,6 +1068,22 @@ const PosBlankPage: React.FC = () => {
       toast.success(updated.is_quote ? "تم التحويل لوضع التسعيره" : "تم التحويل لفاتورة عادية");
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "فشل تغيير وضع التسعيره");
+    }
+  }, [selectedSale]);
+
+  const [isExportingToFinance, setIsExportingToFinance] = useState(false);
+  const handleExportToFinance = useCallback(async () => {
+    if (!selectedSale) return;
+    setIsExportingToFinance(true);
+    try {
+      const updated = await saleService.exportToFinance(selectedSale.id);
+      setSelectedSale(updated);
+      setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+      toast.success("تم إرسال القيد إلى النظام المالي");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "فشل التصدير إلى النظام المالي");
+    } finally {
+      setIsExportingToFinance(false);
     }
   }, [selectedSale]);
 
@@ -2014,6 +2036,42 @@ const PosBlankPage: React.FC = () => {
           )}
           {selectedSale?.is_quote && (
             <Chip label="تسعيره" color="warning" size="small" sx={{ fontWeight: 700 }} />
+          )}
+
+          {/* Export to finance */}
+          {selectedSale && !selectedSale.is_quote && (
+            <Tooltip
+              title={
+                selectedSale.finance_export_error
+                  ? `فشل آخر تصدير: ${selectedSale.finance_export_error}`
+                  : selectedSale.finance_exported_at
+                  ? "تم التصدير — اضغط لإعادة الإرسال"
+                  : "تصدير إلى النظام المالي"
+              }
+            >
+              <span>
+                <IconButton
+                  onClick={handleExportToFinance}
+                  disabled={isExportingToFinance}
+                  color={
+                    selectedSale.finance_export_error
+                      ? "error"
+                      : selectedSale.finance_exported_at
+                      ? "success"
+                      : "default"
+                  }
+                  sx={{ borderRadius: 2 }}
+                >
+                  {isExportingToFinance ? (
+                    <CircularProgress size={20} />
+                  ) : selectedSale.finance_exported_at ? (
+                    <CheckCircleIcon />
+                  ) : (
+                    <AccountBalanceIcon />
+                  )}
+                </IconButton>
+              </span>
+            </Tooltip>
           )}
 
           {/* Create new sale */}

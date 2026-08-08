@@ -2,20 +2,31 @@
 import React, { useEffect, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { toast } from "sonner";
+
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
-  TextField,
-  Button,
-  Box,
-  Alert,
-  CircularProgress,
-} from "@mui/material";
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Loader2 } from "lucide-react";
 
 // Services and Types
-import clientService, { Client } from "../../services/clientService";
+import clientService, { Client } from "@/services/clientService";
 
 // --- Types ---
 type ClientFormValues = {
@@ -24,6 +35,13 @@ type ClientFormValues = {
   phone: string;
   address: string;
 };
+
+const CLIENT_FORM_FIELDS: (keyof ClientFormValues)[] = [
+  "name",
+  "email",
+  "phone",
+  "address",
+];
 
 // --- Component Props ---
 interface ClientFormModalProps {
@@ -55,37 +73,35 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
   const {
     handleSubmit,
     reset,
-    register,
-    formState: { isSubmitting, errors },
+    control,
+    formState: { isSubmitting },
     setError,
   } = form;
 
   // --- Effect to Populate/Reset Form ---
   useEffect(() => {
-    if (isOpen) {
-      setServerError(null);
-      if (isEditMode && clientToEdit) {
-        reset({
-          name: clientToEdit.name || "",
-          email: clientToEdit.email || "",
-          phone: clientToEdit.phone || "",
-          address: clientToEdit.address || "",
-        });
-      } else {
-        reset({
-          name: "",
-          email: "",
-          phone: "",
-          address: "",
-        });
-      }
+    if (!isOpen) return;
+    setServerError(null);
+    if (isEditMode && clientToEdit) {
+      reset({
+        name: clientToEdit.name || "",
+        email: clientToEdit.email || "",
+        phone: clientToEdit.phone || "",
+        address: clientToEdit.address || "",
+      });
+    } else {
+      reset({
+        name: "",
+        email: "",
+        phone: "",
+        address: "",
+      });
     }
   }, [isOpen, isEditMode, clientToEdit, reset]);
 
   // --- Form Submission Handler ---
   const onSubmit: SubmitHandler<ClientFormValues> = async (data) => {
     setServerError(null);
-    console.log("Submitting client data:", data);
 
     // Prepare data for API (ensure empty strings become null if API expects null)
     const dataToSend = {
@@ -105,7 +121,6 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
       } else {
         savedClient = await clientService.createClient(dataToSend);
       }
-      console.log("Save successful:", savedClient);
 
       toast.success("تم الحفظ بنجاح", {
         description: isEditMode
@@ -114,7 +129,7 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
         duration: 3000,
       });
 
-      onSaveSuccess(savedClient); // Pass client back
+      onSaveSuccess(savedClient);
       onClose();
     } catch (err) {
       console.error("Failed to save client:", err);
@@ -130,10 +145,10 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
 
       if (apiErrors) {
         Object.entries(apiErrors).forEach(([field, messages]) => {
-          if (field in ({} as ClientFormValues)) {
+          if (CLIENT_FORM_FIELDS.includes(field as keyof ClientFormValues)) {
             setError(field as keyof ClientFormValues, {
               type: "server",
-              message: messages[0], // Show first server error
+              message: messages[0],
             });
           }
         });
@@ -142,122 +157,120 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
     }
   };
 
-  // --- Render Modal ---
-  if (!isOpen) return null;
-
   return (
-    <Dialog
-      open={isOpen}
-      onClose={onClose}
-      fullWidth
-      maxWidth="sm"
-      dir="rtl" // Ensure RTL direction if needed for Arabic
-    >
-      <DialogTitle sx={{ fontWeight: 600 }}>
-        {isEditMode ? "تعديل عميل" : "إضافة عميل"}
-      </DialogTitle>
-      <DialogContent dividers>
-        <Box
-          component="form"
-          id="client-form"
-          onSubmit={handleSubmit(onSubmit)}
-          noValidate
-          sx={{ mt: 1 }}
-        >
-          {serverError && !isSubmitting && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {serverError}
-            </Alert>
-          )}
+    <Dialog open={isOpen} onOpenChange={(open) => !isSubmitting && !open && onClose()}>
+      <DialogContent className="sm:max-w-lg" dir="rtl">
+        <DialogHeader>
+          <DialogTitle>{isEditMode ? "تعديل عميل" : "إضافة عميل"}</DialogTitle>
+          <DialogDescription>
+            {isEditMode ? "تعديل بيانات العميل" : "أدخل بيانات العميل الجديد"}
+          </DialogDescription>
+        </DialogHeader>
 
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-              gap: 2,
-            }}
-          >
-            <Box sx={{ gridColumn: { xs: "span 1", sm: "span 2" } }}>
-              <TextField
-                label="الاسم"
-                fullWidth
-                required
-                placeholder="أدخل اسم العميل"
-                disabled={isSubmitting}
-                {...register("name", { required: "الاسم مطلوب" })}
-                error={!!errors.name}
-                helperText={errors.name?.message}
-                size="small"
+        {serverError && (
+          <Alert variant="destructive">
+            <AlertDescription>{serverError}</AlertDescription>
+          </Alert>
+        )}
+
+        <Form {...form}>
+          <form id="client-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormField
+                control={control}
+                name="name"
+                rules={{ required: "الاسم مطلوب" }}
+                render={({ field }) => (
+                  <FormItem className="sm:col-span-2">
+                    <FormLabel>الاسم</FormLabel>
+                    <FormControl>
+                      <Input placeholder="أدخل اسم العميل" disabled={isSubmitting} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </Box>
 
-            <TextField
-              label="البريد الإلكتروني"
-              type="email"
-              fullWidth
-              placeholder="example@email.com"
-              disabled={isSubmitting}
-              {...register("email", {
-                pattern: {
-                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                  message: "صيغة البريد الإلكتروني غير صحيحة",
-                },
-              })}
-              error={!!errors.email}
-              helperText={errors.email?.message}
-              size="small"
-            />
-
-            <TextField
-              label="رقم الهاتف"
-              type="tel"
-              fullWidth
-              required
-              placeholder="05xxxxxxxx"
-              disabled={isSubmitting}
-              {...register("phone", { required: "رقم الهاتف مطلوب" })}
-              error={!!errors.phone}
-              helperText={errors.phone?.message}
-              size="small"
-            />
-
-            <Box sx={{ gridColumn: { xs: "span 1", sm: "span 2" } }}>
-              <TextField
-                label="العنوان"
-                fullWidth
-                multiline
-                minRows={3}
-                placeholder="أدخل عنوان العميل"
-                disabled={isSubmitting}
-                {...register("address")}
-                error={!!errors.address}
-                helperText={errors.address?.message}
+              <FormField
+                control={control}
+                name="email"
+                rules={{
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: "صيغة البريد الإلكتروني غير صحيحة",
+                  },
+                }}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>البريد الإلكتروني</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        placeholder="example@email.com"
+                        dir="ltr"
+                        className="text-left"
+                        disabled={isSubmitting}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </Box>
-          </Box>
-        </Box>
+
+              <FormField
+                control={control}
+                name="phone"
+                rules={{ required: "رقم الهاتف مطلوب" }}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>رقم الهاتف</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="tel"
+                        dir="ltr"
+                        className="text-left"
+                        disabled={isSubmitting}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem className="sm:col-span-2">
+                    <FormLabel>العنوان</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="أدخل عنوان العميل"
+                        rows={3}
+                        disabled={isSubmitting}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </form>
+        </Form>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+            إلغاء
+          </Button>
+          <Button type="submit" form="client-form" disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+            حفظ
+          </Button>
+        </DialogFooter>
       </DialogContent>
-      <DialogActions sx={{ p: 2 }}>
-        <Button
-          type="button"
-          variant="outlined"
-          onClick={onClose}
-          disabled={isSubmitting}
-        >
-          إلغاء
-        </Button>
-        <Button
-          type="submit"
-          form="client-form"
-          variant="contained"
-          disabled={isSubmitting}
-          startIcon={
-            isSubmitting && <CircularProgress size={20} color="inherit" />
-          }
-        >
-          حفظ
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 };
