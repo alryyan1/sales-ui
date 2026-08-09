@@ -623,7 +623,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                       onChange={(e) =>
                         handleUnitCostChange(Number(e.target.value))
                       }
-                      inputProps={{ min: 0, step: 0.01 }}
+                      inputProps={{ min: 0, step: 0.001 }}
                       size="small"
                       fullWidth
                       onKeyDown={handleFormInputKeyDown}

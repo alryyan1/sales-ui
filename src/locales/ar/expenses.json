@@ -37,7 +37,6 @@
     "paymentMethodCash": "نقدي",
     "paymentMethodBankTransfer": "تحويل بنكي",
     "paymentMethodVisa": "فيزا",
-    "paymentMethodOther": "أخرى",
     "addCategoryDialogTitle": "إضافة قسم جديد",
     "categoryNameLabel": "اسم القسم",
     "cancelButton": "إلغاء",

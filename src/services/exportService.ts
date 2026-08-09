@@ -1,5 +1,6 @@
 // src/services/exportService.ts
 import apiClient from "../lib/axios";
+import i18n from "../i18n";
 
 export interface ExportFilters {
   search?: string;
@@ -176,8 +177,10 @@ const exportService = {
     try {
       // Create the URL for the web PDF endpoint (not API)
       const baseUrl = apiClient.defaults.baseURL?.replace('/api', '') || '';
-      const pdfUrl = `${baseUrl}/suppliers/${supplierId}/ledger/pdf`;
-      
+      // window.open can't set custom request headers, so the language is
+      // passed as a query param instead of relying on Accept-Language.
+      const pdfUrl = `${baseUrl}/suppliers/${supplierId}/ledger/pdf?lang=${i18n.language}`;
+
       // Open PDF in new tab
       window.open(pdfUrl, '_blank');
       

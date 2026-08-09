@@ -81,7 +81,7 @@ const DayExpensesDialog: React.FC<DayExpensesDialogProps> = ({
                     {expense.expense_category_name || "—"}
                   </TableCell>
                   <TableCell align="center" sx={{ fontWeight: "medium" }}>
-                    {formatNumber(Number(expense.amount), 2)}
+                    {formatNumber(Number(expense.amount), 3)}
                   </TableCell>
                   <TableCell align="center">
                     <Chip

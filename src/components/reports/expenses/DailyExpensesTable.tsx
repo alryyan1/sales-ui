@@ -75,13 +75,13 @@ const DailyExpensesTable: React.FC<DailyExpensesTableProps> = ({
               >
                 <TableCell>{formattedDate}</TableCell>
                 <TableCell align="center" sx={{ fontWeight: "medium" }}>
-                  {formatNumber(day.total, 2)}
+                  {formatNumber(day.total, 3)}
                 </TableCell>
                 <TableCell align="center" sx={{ color: "success.main" }}>
-                  {formatNumber(day.cash_total, 2)}
+                  {formatNumber(day.cash_total, 3)}
                 </TableCell>
                 <TableCell align="center" sx={{ color: "primary.main" }}>
-                  {formatNumber(day.bank_total, 2)}
+                  {formatNumber(day.bank_total, 3)}
                 </TableCell>
               </TableRow>
             );

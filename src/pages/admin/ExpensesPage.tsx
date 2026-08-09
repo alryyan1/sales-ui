@@ -294,7 +294,7 @@ const ExpensesPage: React.FC = () => {
                       <TableCell sx={{ py: 1 }}>{exp.title}</TableCell>
                       <TableCell sx={{ py: 1 }}>{exp.expense_category_name || "—"}</TableCell>
                       <TableCell align="right" sx={{ py: 1 }}>
-                        {Number(exp.amount).toFixed(2)}
+                        {Number(exp.amount).toFixed(3)}
                       </TableCell>
                       <TableCell sx={{ py: 1 }}>{exp.reference || "—"}</TableCell>
                       <TableCell align="center" sx={{ py: 1 }}>

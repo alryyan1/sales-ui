@@ -113,7 +113,7 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
         >
           <span className="text-xs text-muted-foreground leading-tight">{item.label}</span>
           <span className={`text-sm font-bold tabular-nums ${item.color}`}>
-            {formatNumber(item.value, 2)}
+            {formatNumber(item.value, 3)}
           </span>
           {item.sub && (
             <span className="text-xs text-muted-foreground">{item.sub}</span>

@@ -1,6 +1,7 @@
 // src/lib/axios.ts
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios"; // Import InternalAxiosRequestConfig
 import { url } from "../constants";
+import i18n from "../i18n";
 
 export const apiClient = axios.create({
   baseURL: url,
@@ -30,6 +31,11 @@ apiClient.interceptors.request.use(
         "Interceptor: No token found, sending request without Authorization header",
       ); // For debugging
     }
+
+    // Tell the backend which language the UI is currently using, so
+    // generated reports (PDF/Excel) can be produced in that language.
+    config.headers = config.headers ?? {};
+    config.headers["Accept-Language"] = i18n.language;
 
     // 3. Xdebug Session Trigger (for debugging)
     // Enable Xdebug by setting localStorage.setItem('xdebug_enabled', 'true')

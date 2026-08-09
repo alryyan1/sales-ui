@@ -297,8 +297,7 @@
         "methodLabels": {
             "cash": "نقدي",
             "bank_transfer": "تحويل بنكي",
-            "visa": "فيزا",
-            "other": "أخرى"
+            "visa": "فيزا"
         }
     },
     "saleReturnsReportPage": {

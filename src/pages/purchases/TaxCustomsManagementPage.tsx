@@ -385,6 +385,7 @@ const TaxCustomsManagementPage: React.FC = () => {
                 type="number"
                 value={taxAmount}
                 onChange={(e) => setTaxAmount(Number(e.target.value))}
+                inputProps={{ step: 0.001 }}
               />
             </Grid>
             <Grid item xs={12}>
@@ -394,6 +395,7 @@ const TaxCustomsManagementPage: React.FC = () => {
                 type="number"
                 value={customsAmount}
                 onChange={(e) => setCustomsAmount(Number(e.target.value))}
+                inputProps={{ step: 0.001 }}
               />
             </Grid>
           </Grid>

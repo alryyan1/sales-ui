@@ -197,16 +197,16 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
               {t("pos:shiftFinancialTable.revenue")}
             </TableCell>
             <TableCell align="center">
-              {formatNumber(stats?.sales?.cash ?? 0, 2)}
+              {formatNumber(stats?.sales?.cash ?? 0, 3)}
             </TableCell>
             <TableCell align="center">
-              {formatNumber(stats?.sales?.bank_transfer ?? 0, 2)}
+              {formatNumber(stats?.sales?.bank_transfer ?? 0, 3)}
             </TableCell>
             <TableCell align="center">
-              {formatNumber(stats?.sales?.visa ?? 0, 2)}
+              {formatNumber(stats?.sales?.visa ?? 0, 3)}
             </TableCell>
             <TableCell align="center" sx={{ fontWeight: 600 }}>
-              {formatNumber(stats?.sales?.total ?? 0, 2)}
+              {formatNumber(stats?.sales?.total ?? 0, 3)}
             </TableCell>
           </TableRow>
 
@@ -221,19 +221,19 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
               {t("pos:shiftFinancialTable.expenses")}
             </TableCell>
             <TableCell align="center">
-              {formatNumber(stats?.expenses?.cash ?? 0, 2)}
+              {formatNumber(stats?.expenses?.cash ?? 0, 3)}
             </TableCell>
             <TableCell align="center">
-              {formatNumber(stats?.expenses?.bank_transfer ?? 0, 2)}
+              {formatNumber(stats?.expenses?.bank_transfer ?? 0, 3)}
             </TableCell>
             <TableCell align="center">
-              {formatNumber(stats?.expenses?.visa ?? 0, 2)}
+              {formatNumber(stats?.expenses?.visa ?? 0, 3)}
             </TableCell>
             <TableCell
               align="center"
               sx={{ fontWeight: 600, color: "error.main" }}
             >
-              {formatNumber(stats?.expenses?.total ?? 0, 2)}
+              {formatNumber(stats?.expenses?.total ?? 0, 3)}
             </TableCell>
           </TableRow>
 
@@ -248,19 +248,19 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
               {t("pos:shiftFinancialTable.returns")}
             </TableCell>
             <TableCell align="center">
-              {formatNumber(stats?.returns?.cash ?? 0, 2)}
+              {formatNumber(stats?.returns?.cash ?? 0, 3)}
             </TableCell>
             <TableCell align="center">
-              {formatNumber(stats?.returns?.bank_transfer ?? 0, 2)}
+              {formatNumber(stats?.returns?.bank_transfer ?? 0, 3)}
             </TableCell>
             <TableCell align="center">
-              {formatNumber(stats?.returns?.visa ?? 0, 2)}
+              {formatNumber(stats?.returns?.visa ?? 0, 3)}
             </TableCell>
             <TableCell
               align="center"
               sx={{ fontWeight: 600, color: "warning.main" }}
             >
-              {formatNumber(stats?.returns?.total ?? 0, 2)}
+              {formatNumber(stats?.returns?.total ?? 0, 3)}
             </TableCell>
           </TableRow>
 
@@ -278,25 +278,25 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
               align="center"
               sx={{ fontWeight: 600, color: "primary.main" }}
             >
-              {formatNumber(stats?.net?.cash ?? 0, 2)}
+              {formatNumber(stats?.net?.cash ?? 0, 3)}
             </TableCell>
             <TableCell
               align="center"
               sx={{ fontWeight: 600, color: "primary.main" }}
             >
-              {formatNumber(stats?.net?.bank_transfer ?? 0, 2)}
+              {formatNumber(stats?.net?.bank_transfer ?? 0, 3)}
             </TableCell>
             <TableCell
               align="center"
               sx={{ fontWeight: 600, color: "primary.main" }}
             >
-              {formatNumber(stats?.net?.visa ?? 0, 2)}
+              {formatNumber(stats?.net?.visa ?? 0, 3)}
             </TableCell>
             <TableCell
               align="center"
               sx={{ fontWeight: 700, color: "primary.main" }}
             >
-              {formatNumber(stats?.net?.total ?? 0, 2)}
+              {formatNumber(stats?.net?.total ?? 0, 3)}
             </TableCell>
           </TableRow>
         </TableBody>

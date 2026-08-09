@@ -102,10 +102,10 @@ const SuppliersSummaryTable: React.FC<SuppliersSummaryTableProps> = ({
           >
             <TableCell className="py-4 font-medium">{supplier.name}</TableCell>
             <TableCell className="py-4 text-right">
-              {formatNumber(supplier.total_debit)}
+              {formatNumber(supplier.total_debit, 3)}
             </TableCell>
             <TableCell className="py-4 text-right">
-              {formatNumber(supplier.total_credit)}
+              {formatNumber(supplier.total_credit, 3)}
             </TableCell>
             <TableCell className="py-4 text-right">
               <Badge
@@ -115,7 +115,7 @@ const SuppliersSummaryTable: React.FC<SuppliersSummaryTableProps> = ({
                   supplier.balance < 0 && "bg-green-600 hover:bg-green-700"
                 )}
               >
-                {formatNumber(supplier.balance)}
+                {formatNumber(supplier.balance, 3)}
               </Badge>
             </TableCell>
             <TableCell className="py-4 text-center">

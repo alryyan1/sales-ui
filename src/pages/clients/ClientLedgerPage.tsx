@@ -36,7 +36,7 @@ import {
 import {
   ArrowLeft,
   FileText,
-  DollarSign,
+  Wallet,
   TrendingUp,
   TrendingDown,
   Receipt,
@@ -60,6 +60,7 @@ import { saveClientLedgerUrl } from "@/services/firebaseStore";
 import { toast } from "sonner";
 import apiClient from "@/lib/axios";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
+import { formatNumber } from "@/constants";
 
 const ClientLedgerPage: React.FC = () => {
   const { t, i18n } = useTranslation(["clients", "common"]);
@@ -367,7 +368,7 @@ const ClientLedgerPage: React.FC = () => {
           variant="contained"
           color="error"
           size="small"
-          startIcon={<DollarSign size={15} />}
+          startIcon={<Wallet size={15} />}
           disabled={summary.balance <= 0}
           onClick={() => {
             setPayAllAmount(String(ledger.summary.balance));
@@ -429,13 +430,13 @@ const ClientLedgerPage: React.FC = () => {
               <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: summary.balance > 0 ? "#fef2f2" : "#f0fdf4", border: "1px solid", borderColor: summary.balance > 0 ? "error.light" : "success.light" }}>
                 <Typography variant="caption" color="text.secondary" display="block">{t("clients:ledgerPage.salesBalance")}</Typography>
                 <Typography variant="subtitle2" fontWeight={700} color={summary.balance > 0 ? "error.main" : "success.main"}>
-                  {summary.balance.toLocaleString()}
+                  {formatNumber(summary.balance, 3)}
                 </Typography>
               </Box>
               <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: (supplierSummary?.balance ?? 0) > 0 ? "#fef2f2" : "#f0fdf4", border: "1px solid", borderColor: (supplierSummary?.balance ?? 0) > 0 ? "error.light" : "success.light" }}>
                 <Typography variant="caption" color="text.secondary" display="block">{t("clients:ledgerPage.purchasesBalance")}</Typography>
                 <Typography variant="subtitle2" fontWeight={700} color={(supplierSummary?.balance ?? 0) > 0 ? "error.main" : "success.main"}>
-                  {supplierSummary ? supplierSummary.balance.toLocaleString() : "—"}
+                  {supplierSummary ? formatNumber(supplierSummary.balance, 3) : "—"}
                 </Typography>
               </Box>
               {supplierSummary && (() => {
@@ -444,7 +445,7 @@ const ClientLedgerPage: React.FC = () => {
                   <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: net > 0 ? "#fef2f2" : net < 0 ? "#f0fdf4" : "#f8fafc", border: "1px solid", borderColor: net > 0 ? "error.light" : net < 0 ? "success.light" : "divider" }}>
                     <Typography variant="caption" color="text.secondary" display="block">{t("clients:ledgerPage.net")}</Typography>
                     <Typography variant="subtitle2" fontWeight={700} color={net > 0 ? "error.main" : net < 0 ? "success.main" : "text.secondary"}>
-                      {net > 0 ? `+${net.toLocaleString()}` : net < 0 ? net.toLocaleString() : t("clients:ledgerPage.balanced")}
+                      {net > 0 ? `+${formatNumber(net, 3)}` : net < 0 ? formatNumber(net, 3) : t("clients:ledgerPage.balanced")}
                     </Typography>
                   </Box>
                 );
@@ -464,20 +465,20 @@ const ClientLedgerPage: React.FC = () => {
         {[
           {
             label: t("clients:totalSales"),
-            value: summary.total_sales.toLocaleString(),
+            value: formatNumber(summary.total_sales, 3),
             icon: <TrendingUp size={18} />,
             color: "error" as const,
           },
           {
             label: t("clients:totalPayments"),
-            value: summary.total_payments.toLocaleString(),
+            value: formatNumber(summary.total_payments, 3),
             icon: <TrendingDown size={18} />,
             color: "success" as const,
           },
           {
             label: t("clients:balance"),
-            value: summary.balance.toLocaleString(),
-            icon: <DollarSign size={18} />,
+            value: formatNumber(summary.balance, 3),
+            icon: <Wallet size={18} />,
             color: summary.balance > 0 ? ("error" as const) : ("success" as const),
           },
         ].map(({ label, value, icon, color }) => (
@@ -610,16 +611,16 @@ const ClientLedgerPage: React.FC = () => {
                     </TableCell>
 
                     <TableCell align="right" dir="ltr" sx={{ fontSize: "0.82rem", fontWeight: 600 }}>
-                      {entry.total.toLocaleString()}
+                      {formatNumber(entry.total, 3)}
                     </TableCell>
 
                     <TableCell align="right" dir="ltr" sx={{ fontSize: "0.82rem", fontWeight: 600, color: entry.paid > 0 ? "success.main" : "text.disabled" }}>
-                      {entry.paid > 0 ? entry.paid.toLocaleString() : "—"}
+                      {entry.paid > 0 ? formatNumber(entry.paid, 3) : "—"}
                     </TableCell>
 
                     <TableCell align="right" dir="ltr">
                       <Typography variant="body2" fontWeight={700} color={entry.due > 0 ? "error.main" : "success.main"}>
-                        {entry.due > 0 ? entry.due.toLocaleString() : "✓"}
+                        {entry.due > 0 ? formatNumber(entry.due, 3) : "✓"}
                       </Typography>
                     </TableCell>
 
@@ -746,7 +747,7 @@ const ClientLedgerPage: React.FC = () => {
               autoFocus
               value={payAllAmount}
               onChange={(e) => setPayAllAmount(e.target.value)}
-              slotProps={{ htmlInput: { min: 0 } }}
+              slotProps={{ htmlInput: { min: 0, step: 0.001 } }}
             />
             <FormControl size="small" fullWidth>
               <InputLabel>{t("clients:ledgerPage.paymentMethodLabel")}</InputLabel>
@@ -758,7 +759,6 @@ const ClientLedgerPage: React.FC = () => {
                 <MenuItem value="cash">{t("clients:ledgerPage.methodCash")}</MenuItem>
                 <MenuItem value="bank_transfer">{t("clients:ledgerPage.methodBankTransfer")}</MenuItem>
                 <MenuItem value="visa">{t("clients:ledgerPage.methodVisa")}</MenuItem>
-                <MenuItem value="other">{t("clients:ledgerPage.methodOther")}</MenuItem>
               </Select>
             </FormControl>
             <TextField

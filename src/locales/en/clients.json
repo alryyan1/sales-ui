@@ -154,7 +154,6 @@
     "methodCash": "Cash",
     "methodBankTransfer": "Bank Transfer",
     "methodVisa": "Visa",
-    "methodOther": "Other",
     "paymentDateLabel": "Payment Date",
     "referenceOptional": "Reference Number (optional)",
     "confirmSettlement": "Confirm Settlement"
@@ -163,7 +162,6 @@
     "methodCash": "Cash",
     "methodBankTransfer": "Bank Transfer",
     "methodVisa": "Visa",
-    "methodOther": "Other",
     "loadFailed": "Failed to load payments",
     "periodLabel": "Period: {{from}} to {{to}}",
     "printTitle": "Payments Record — {{name}}",
@@ -246,7 +244,6 @@
     "methodCash": "Cash",
     "methodBankTransfer": "Bank Transfer",
     "methodVisa": "Visa",
-    "methodOther": "Other",
     "referenceOptional": "Reference Number (optional)",
     "confirm": "Confirm"
   },

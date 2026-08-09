@@ -181,7 +181,7 @@ export const formatCurrency = (
   const isCurrencyCode = /^[A-Z]{3}$/.test(currencySymbolOrCode);
 
   if (isCurrencyCode) {
-    const fractionDigits = currencySymbolOrCode === "OMR" ? 2 : 0;
+    const fractionDigits = currencySymbolOrCode === "OMR" ? 3 : 2;
     // Use Intl.NumberFormat for standard currency codes
     const defaultOptions: Intl.NumberFormatOptions = {
       style: "currency",
@@ -215,7 +215,7 @@ export const formatCurrency = (
     // For custom currency symbols (like "ريال", "$"), format manually
     const formattedNumber = formatNumber(
       numberValue,
-      options?.maximumFractionDigits ?? 0,
+      options?.maximumFractionDigits ?? 3,
     );
     // RTL-aware: Put symbol after number for Arabic, before for English
     const isRTL =

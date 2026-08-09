@@ -200,7 +200,7 @@ export const SalesTable: React.FC<SalesTableProps> = ({
                         Number(sale.discount_amount) > 0 ? (
                           <div>
                             <span className="text-center text-sm font-semibold text-yellow-600 dark:text-yellow-500">
-                              {formatNumber(sale.discount_amount)}
+                              {formatNumber(sale.discount_amount, 3)}
                             </span>
                             <span className="block text-center text-xs text-muted-foreground mt-1">
                               {(sale as any).discount_type === "percentage"
@@ -215,10 +215,10 @@ export const SalesTable: React.FC<SalesTableProps> = ({
                         )}
                       </TableCell>
                       <TableCell className="text-center font-semibold text-base">
-                        {formatNumber(sale.total_amount)}
+                        {formatNumber(sale.total_amount, 3)}
                       </TableCell>
                       <TableCell className="text-center font-medium text-green-600 dark:text-green-500">
-                        {formatNumber(sale.paid_amount)}
+                        {formatNumber(sale.paid_amount, 3)}
                       </TableCell>
                       <TableCell className="text-center">
                         <span
@@ -228,7 +228,7 @@ export const SalesTable: React.FC<SalesTableProps> = ({
                               : "text-green-600 dark:text-green-500"
                           }`}
                         >
-                          {formatNumber(sale.due_amount || 0)}
+                          {formatNumber(sale.due_amount || 0, 3)}
                         </span>
                       </TableCell>
                     </TableRow>

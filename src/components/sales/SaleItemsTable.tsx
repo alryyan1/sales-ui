@@ -579,7 +579,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
             );
           }
 
-          if (!canEdit) return formatNumber(Number(item.unit_price ?? 0), 2);
+          if (!canEdit) return formatNumber(Number(item.unit_price ?? 0), 3);
           if (editing) {
             return (
               <Box
@@ -597,7 +597,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                   onKeyDown={handlePriceKeyDown}
                   inputProps={{
                     min: 0,
-                    step: 0.01,
+                    step: 0.001,
                     "aria-label": t("sales:itemsTable.priceAria"),
                   }}
                   sx={{
@@ -658,7 +658,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                 },
               }}
             >
-              {formatNumber(Number(item.unit_price ?? 0), 2)}
+              {formatNumber(Number(item.unit_price ?? 0), 3)}
               <EditOutlinedIcon sx={{ fontSize: 14, opacity: 0.6 }} />
             </Box>
           );
@@ -670,7 +670,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
         {
           id: "total",
           header: t("sales:itemsTable.colTotal"),
-          cell: ({ getValue }) => formatNumber(getValue(), 2),
+          cell: ({ getValue }) => formatNumber(getValue(), 3),
           meta: { align: "right" },
         },
       ),

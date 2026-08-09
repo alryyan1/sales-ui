@@ -232,7 +232,6 @@
             "mastercard": "Mastercard",
             "bank_transfer": "Bank Transfer",
             "mada": "Mada",
-            "other": "Other",
             "store_credit": "Store Credit"
         }
     },
@@ -262,8 +261,7 @@
         "methodLabels": {
             "cash": "Cash",
             "bank_transfer": "Bank Transfer",
-            "visa": "Visa",
-            "other": "Other"
+            "visa": "Visa"
         }
     },
     "returnsPage": {
@@ -351,8 +349,7 @@
         "methodLabels": {
             "cash": "Cash",
             "bank_transfer": "Bank Transfer",
-            "visa": "Visa",
-            "other": "Other"
+            "visa": "Visa"
         }
     },
     "itemsTable": {

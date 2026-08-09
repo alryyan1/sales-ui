@@ -178,7 +178,7 @@ const SupplierPurchasesDialog: React.FC<SupplierPurchasesDialogProps> = ({
                           </Badge>
                         </TableCell>
                         <TableCell className="py-4 text-right font-medium">
-                          {formatNumber(purchase.total_amount)}
+                          {formatNumber(purchase.total_amount, 3)}
                         </TableCell>
                       </TableRow>
                     ))}

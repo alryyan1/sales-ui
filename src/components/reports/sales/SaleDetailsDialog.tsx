@@ -205,10 +205,10 @@ const SaleDetailsDialog: React.FC<SaleDetailsDialogProps> = ({
                       <TableCell dir="auto">{item.product_name}</TableCell>
                       <TableCell align="center">{item.quantity}</TableCell>
                       <TableCell align="center">
-                        {formatNumber(Number(item.unit_price))}
+                        {formatNumber(Number(item.unit_price), 3)}
                       </TableCell>
                       <TableCell align="center" sx={{ fontWeight: "bold" }}>
-                        {formatNumber(Number(item.subtotal))}
+                        {formatNumber(Number(item.subtotal), 3)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -244,7 +244,7 @@ const SaleDetailsDialog: React.FC<SaleDetailsDialogProps> = ({
                       <Typography variant="body2">إجمالي المنتجات</Typography>
                     </Stack>
                     <Typography variant="body2" fontWeight="bold">
-                      {formatNumber(Number(sale.total_amount))}
+                      {formatNumber(Number(sale.total_amount), 3)}
                     </Typography>
                   </Box>
 
@@ -264,7 +264,7 @@ const SaleDetailsDialog: React.FC<SaleDetailsDialogProps> = ({
                       fontWeight="bold"
                       color="warning.main"
                     >
-                      -{formatNumber(Number(sale.discount_amount || 0))}
+                      -{formatNumber(Number(sale.discount_amount || 0), 3)}
                     </Typography>
                   </Box>
 
@@ -288,7 +288,7 @@ const SaleDetailsDialog: React.FC<SaleDetailsDialogProps> = ({
                       fontWeight="900"
                       color="primary.main"
                     >
-                      {formatNumber(Number(sale.total_amount))}
+                      {formatNumber(Number(sale.total_amount), 3)}
                     </Typography>
                   </Box>
 
@@ -304,7 +304,7 @@ const SaleDetailsDialog: React.FC<SaleDetailsDialogProps> = ({
                       المسدد:
                     </Typography>
                     <Chip
-                      label={formatNumber(Number(sale.paid_amount))}
+                      label={formatNumber(Number(sale.paid_amount), 3)}
                       color="success"
                       size="small"
                       variant="filled"
@@ -324,7 +324,7 @@ const SaleDetailsDialog: React.FC<SaleDetailsDialogProps> = ({
                         المتبقي:
                       </Typography>
                       <Chip
-                        label={formatNumber(Number(sale.due_amount))}
+                        label={formatNumber(Number(sale.due_amount), 3)}
                         color="error"
                         size="small"
                         variant="outlined"
@@ -377,7 +377,7 @@ const SaleDetailsDialog: React.FC<SaleDetailsDialogProps> = ({
                           />
                         </TableCell>
                         <TableCell align="center" sx={{ fontWeight: "bold" }}>
-                          {formatNumber(Number(payment.amount))}
+                          {formatNumber(Number(payment.amount), 3)}
                         </TableCell>
                       </TableRow>
                     ))}

@@ -163,7 +163,6 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
     cash: t("pos:summaryPanel.methodLabels.cash"),
     bank_transfer: t("pos:summaryPanel.methodLabels.bank_transfer"),
     visa: t("pos:summaryPanel.methodLabels.visa"),
-    other: t("pos:summaryPanel.methodLabels.other"),
   };
   const [dateEditing, setDateEditing] = useState(false);
   const [tempDate, setTempDate] = useState("");
@@ -471,17 +470,17 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
 
           {/* ── Financials ── */}
           <Box sx={{ borderRadius: 1, border: "1px solid", borderColor: "grey.200", overflow: "hidden" }}>
-            <FinRow label={t("pos:subtotal")} value={formatNumber(subtotal, 2)} bg="#f8fafc" />
+            <FinRow label={t("pos:subtotal")} value={formatNumber(subtotal, 3)} bg="#f8fafc" />
             {discountAmt > 0 && (
-              <FinRow label={t("pos:discount")} value={`− ${formatNumber(discountAmt, 2)}`} color="error.main" bg="#fff5f5" bold />
+              <FinRow label={t("pos:discount")} value={`− ${formatNumber(discountAmt, 3)}`} color="error.main" bg="#fff5f5" bold />
             )}
             <Divider />
-            <FinRow label={t("pos:summaryPanel.totalLabel")} value={formatNumber(total, 2)} bold color="success.dark" />
+            <FinRow label={t("pos:summaryPanel.totalLabel")} value={formatNumber(total, 3)} bold color="success.dark" />
             <Divider />
-            <FinRow label={t("pos:paid")} value={formatNumber(paid, 2)} color="success.main" />
+            <FinRow label={t("pos:paid")} value={formatNumber(paid, 3)} color="success.main" />
             <FinRow
               label={t("pos:due")}
-              value={formatNumber(due, 2)}
+              value={formatNumber(due, 3)}
               bold
               color={isFullyPaid ? "success.dark" : "error.dark"}
               bg={isFullyPaid ? "#f0fdf4" : "#fff5f5"}
@@ -506,7 +505,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
               placeholder={discountType === "percentage" ? t("pos:summaryPanel.percentSign") : "0"}
               value={discountValue}
               onChange={(e) => setDiscountValue(e.target.value)}
-              inputProps={{ min: 0, max: discountType === "percentage" ? 100 : undefined, step: discountType === "percentage" ? 1 : 0.01 }}
+              inputProps={{ min: 0, max: discountType === "percentage" ? 100 : undefined, step: discountType === "percentage" ? 1 : 0.001 }}
               sx={{ flex: 1, "& .MuiInputBase-input": { fontSize: "0.85rem", fontWeight: 700, py: "6px" } }}
             />
             <IconButton
@@ -554,7 +553,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                     </Stack>
                     <Stack direction="row" alignItems="center" gap={0.25}>
                       <Typography sx={{ fontSize: "0.75rem" }} fontWeight={700} color="success.dark">
-                        {formatNumber(Number(p.amount), 2)}
+                        {formatNumber(Number(p.amount), 3)}
                       </Typography>
                       {p.id != null && (
                         <IconButton size="small" color="error" onClick={() => handleDeletePayment(p.id!)} disabled={!canCancelPayment || deletingPaymentId === p.id} sx={{ p: 0.2 }}>
@@ -576,7 +575,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.6}>
                 <Typography sx={{ fontSize: "0.7rem" }} color="primary.dark" fontWeight={700}>{t("pos:addPayment")}</Typography>
                 <Typography sx={{ fontSize: "0.7rem" }} color="error.main" fontWeight={800}>
-                  {t("pos:summaryPanel.remainingColon", { amount: formatNumber(due, 2) })}
+                  {t("pos:summaryPanel.remainingColon", { amount: formatNumber(due, 3) })}
                 </Typography>
               </Stack>
               <Stack direction="row" alignItems="center" gap={0.5}>
@@ -591,7 +590,6 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                     <MenuItem value="cash" sx={{ fontSize: "0.75rem" }}>{METHOD_LABELS.cash}</MenuItem>
                     <MenuItem value="bank_transfer" sx={{ fontSize: "0.75rem" }}>{METHOD_LABELS.bank_transfer}</MenuItem>
                     <MenuItem value="visa" sx={{ fontSize: "0.75rem" }}>{METHOD_LABELS.visa}</MenuItem>
-                    <MenuItem value="other" sx={{ fontSize: "0.75rem" }}>{METHOD_LABELS.other}</MenuItem>
                   </Select>
                 </FormControl>
                 <TextField
@@ -601,7 +599,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                   value={newPaymentAmount}
                   onFocus={(e) => e.target.select()}
                   onChange={(e) => setNewPaymentAmount(e.target.value)}
-                  inputProps={{ min: 0.01, step: 0.01 }}
+                  inputProps={{ min: 0.001, step: 0.001 }}
                   sx={{ flex: 1, "& .MuiInputBase-input": { fontSize: "0.95rem", fontWeight: 800, py: "6px" } }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === "+") { e.preventDefault(); handleAddPayment(); }

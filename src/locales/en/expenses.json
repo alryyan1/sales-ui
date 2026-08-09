@@ -37,7 +37,6 @@
     "paymentMethodCash": "Cash",
     "paymentMethodBankTransfer": "Bank Transfer",
     "paymentMethodVisa": "Visa",
-    "paymentMethodOther": "Other",
     "addCategoryDialogTitle": "Add New Category",
     "categoryNameLabel": "Category Name",
     "cancelButton": "Cancel",

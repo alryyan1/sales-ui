@@ -57,7 +57,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
   useEffect(() => {
     if (unitCost !== undefined && unitCost >= 0) {
       const calculatedPrice = unitCost * (1 + markupPercentage / 100);
-      setSalePrice(Number(calculatedPrice.toFixed(2)));
+      setSalePrice(Number(calculatedPrice.toFixed(3)));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [markupPercentage]);
@@ -69,7 +69,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
 
     if (newCost !== undefined && newCost >= 0) {
       const calculatedPrice = newCost * (1 + markupPercentage / 100);
-      setSalePrice(Number(calculatedPrice.toFixed(2)));
+      setSalePrice(Number(calculatedPrice.toFixed(3)));
     }
   };
 
@@ -340,7 +340,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
                         {[
                           option.sku,
                           option.suggested_sale_price != null &&
-                            `Price: ${Number(option.suggested_sale_price).toFixed(2)}`,
+                            `Price: ${Number(option.suggested_sale_price).toFixed(3)}`,
                         ]
                           .filter(Boolean)
                           .join(" · ")}
@@ -394,7 +394,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
             salePriceInputRef.current?.select();
           }
         }}
-        inputProps={{ min: 0, step: 0.01 }}
+        inputProps={{ min: 0, step: 0.001 }}
         sx={{ width: 150 }}
       />
 
@@ -416,7 +416,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
             quantityInputRef.current?.select();
           }
         }}
-        inputProps={{ min: 0, step: 0.01 }}
+        inputProps={{ min: 0, step: 0.001 }}
         sx={{ width: 150 }}
       />
 
@@ -441,9 +441,9 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
         <Typography variant="body2" color="text.secondary">
           {formatNumber(
             (quantity || 0) * (unitCost || 0) > 0
-              ? ((quantity || 0) * (unitCost || 0)).toFixed(2)
+              ? ((quantity || 0) * (unitCost || 0)).toFixed(3)
               : "—",
-            2,
+            3,
           )}
         </Typography>
       </Box>
@@ -453,9 +453,9 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
         <Typography variant="body2" color="success.main" fontWeight="bold">
           {formatNumber(
             (quantity || 0) * (salePrice || 0) > 0
-              ? ((quantity || 0) * (salePrice || 0)).toFixed(2)
+              ? ((quantity || 0) * (salePrice || 0)).toFixed(3)
               : "—",
-            2,
+            3,
           )}
         </Typography>
       </Box>

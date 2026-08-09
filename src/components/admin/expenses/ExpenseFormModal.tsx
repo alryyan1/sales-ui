@@ -251,6 +251,7 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
                   error={!!fieldState.error}
                   helperText={fieldState.error?.message}
                   disabled={isSubmitting}
+                  inputProps={{ step: 0.001 }}
                 />
               )}
             />
@@ -323,7 +324,6 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
                     <MenuItem value="cash">{t("expenses:formModal.paymentMethodCash")}</MenuItem>
                     <MenuItem value="bank_transfer">{t("expenses:formModal.paymentMethodBankTransfer")}</MenuItem>
                     <MenuItem value="visa">{t("expenses:formModal.paymentMethodVisa")}</MenuItem>
-                    <MenuItem value="other">{t("expenses:formModal.paymentMethodOther")}</MenuItem>
                   </Select>
                   {fieldState.error && (
                     <Typography variant="caption" color="error">

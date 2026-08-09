@@ -22,7 +22,7 @@ export interface Payment {
   sale_id?: number; // Backend usually sets this
   user_id?: number | null;
   user_name?: string;
-  method: "cash" | "bank_transfer" | "visa" | "other";
+  method: "cash" | "bank_transfer" | "visa";
   amount: string | number; // String from form, number for API
   payment_date: string; // YYYY-MM-DD
   reference_number?: string | null;

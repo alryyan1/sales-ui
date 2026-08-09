@@ -258,7 +258,7 @@ const SaleReturnsReportPage: React.FC = () => {
                   {t("reports:saleReturnsReportPage.totalValue")}
                 </Typography>
                 <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                  {formatNumber(totalAmount)}
+                  {formatNumber(totalAmount, 3)}
                 </Typography>
               </CardContent>
             </Card>

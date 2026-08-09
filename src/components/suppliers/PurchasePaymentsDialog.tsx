@@ -54,7 +54,6 @@ export const PurchasePaymentsDialog: React.FC<PurchasePaymentsDialogProps> = ({
       cash: t("suppliers:purchasePayments.methodCashAlt"),
       bank_transfer: t("suppliers:paymentForm.methodBankTransfer"),
       visa: t("suppliers:paymentForm.methodVisa"),
-      other: t("suppliers:paymentForm.methodOther"),
     };
     return methods[method] || method;
   };

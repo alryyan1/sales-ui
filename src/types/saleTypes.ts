@@ -50,7 +50,7 @@ export interface Sale {
 }
 
 // Payment Method Type
-export type PaymentMethod = 'cash' | 'bank_transfer' | 'visa' | 'other';
+export type PaymentMethod = 'cash' | 'bank_transfer' | 'visa';
 
 // Payment Method Data Type (for payment objects with amount and reference)
 export interface PaymentMethodData {

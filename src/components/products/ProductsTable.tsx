@@ -172,7 +172,7 @@ const InlineEditCell: React.FC<{
         onKeyDown={handleKeyDown}
         type="number"
         size="small"
-        slotProps={{ htmlInput: { step: "0.01" } }}
+        slotProps={{ htmlInput: { step: "0.001" } }}
         sx={{ width: 90, "& input": { textAlign: "center", py: 0.4, px: 0.5, fontSize: "0.8rem" } }}
         onClick={(e) => e.stopPropagation()}
       />
@@ -193,7 +193,7 @@ const InlineEditCell: React.FC<{
           variant="body2"
           sx={{ fontWeight: highlight ? 700 : 400, color: highlight ? "primary.main" : "text.primary", fontSize: "0.85rem" }}
         >
-          {formatNumber(Number(value), 2)}
+          {formatNumber(Number(value), 3)}
         </Typography>
       ) : (
         <Typography variant="body2" sx={{ color: "text.disabled", fontSize: "0.78rem" }}>---</Typography>
@@ -645,6 +645,7 @@ const InlineCreateRow: React.FC<{
           value={formData.cost_price || ""}
           onChange={(e) => handleChange("cost_price", e.target.value)}
           sx={{ width: 80 }}
+          slotProps={{ htmlInput: { step: "0.001" } }}
         />
       </TableCell>
       {/* Last Sale Price */}
@@ -656,6 +657,7 @@ const InlineCreateRow: React.FC<{
           value={formData.sale_price || ""}
           onChange={(e) => handleChange("sale_price", e.target.value)}
           sx={{ width: 80 }}
+          slotProps={{ htmlInput: { step: "0.001" } }}
         />
       </TableCell>
       <TableCell align="center">

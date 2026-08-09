@@ -120,7 +120,7 @@ const SuppliersPage: React.FC = () => {
     );
   }, [summaryData]);
 
-  const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 
   const firebaseCollectionName = getSetting("firebase_collection_name", "none") as string;
 
@@ -300,7 +300,7 @@ const SuppliersPage: React.FC = () => {
               {isSummaryLoading ? (
                 <Skeleton className="h-4 w-24 mt-0.5" />
               ) : (
-                <p className="text-sm font-semibold text-red-700">{formatNumber(overallTotals.debit)}</p>
+                <p className="text-sm font-semibold text-red-700">{formatNumber(overallTotals.debit, 3)}</p>
               )}
             </div>
           </div>
@@ -310,7 +310,7 @@ const SuppliersPage: React.FC = () => {
               {isSummaryLoading ? (
                 <Skeleton className="h-4 w-24 mt-0.5" />
               ) : (
-                <p className="text-sm font-semibold text-emerald-700">{formatNumber(overallTotals.credit)}</p>
+                <p className="text-sm font-semibold text-emerald-700">{formatNumber(overallTotals.credit, 3)}</p>
               )}
             </div>
           </div>
@@ -321,7 +321,7 @@ const SuppliersPage: React.FC = () => {
                 <Skeleton className="h-4 w-24 mt-0.5" />
               ) : (
                 <p className={`text-sm font-semibold ${overallTotals.balance > 0 ? "text-red-700" : overallTotals.balance < 0 ? "text-emerald-700" : "text-blue-700"}`}>
-                  {formatNumber(overallTotals.balance)}
+                  {formatNumber(overallTotals.balance, 3)}
                 </p>
               )}
             </div>

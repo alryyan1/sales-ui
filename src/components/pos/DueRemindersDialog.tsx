@@ -18,6 +18,7 @@ import {
 } from "@mui/material";
 import { X } from "lucide-react";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
+import { formatNumber } from "@/constants";
 import { toast } from "sonner";
 import apiClient from "@/lib/axios";
 import saleReminderService, { DueReminder } from "@/services/saleReminderService";
@@ -126,7 +127,7 @@ export const DueRemindersDialog: React.FC<Props> = ({ open, reminders, onDismiss
                   )}
                 </TableCell>
                 <TableCell align="right" dir="ltr" sx={{ fontWeight: 700, color: "error.main", fontSize: "0.85rem" }}>
-                  {reminder.sale.due_amount.toLocaleString()}
+                  {formatNumber(reminder.sale.due_amount, 3)}
                 </TableCell>
                 <TableCell sx={{ fontSize: "0.82rem", color: "text.secondary" }}>
                   {reminder.remind_at}

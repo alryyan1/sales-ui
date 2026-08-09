@@ -1756,7 +1756,7 @@ const PosBlankPage: React.FC = () => {
                         {option.last_sale_price_per_sellable_unit != null ? (
                           <Typography variant="caption" color="text.secondary">
                             {t("pos:blankPage.priceColon", {
-                              price: formatNumber(Number(option.last_sale_price_per_sellable_unit), 2),
+                              price: formatNumber(Number(option.last_sale_price_per_sellable_unit), 3),
                             })}
                           </Typography>
                         ) : null}

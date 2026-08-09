@@ -62,7 +62,7 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
 }) => {
   const { t } = useTranslation(["clients", "common"]);
   const fmt = (n: number) =>
-    n.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    n.toLocaleString("en", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 
   const allSelected = clients.length > 0 && clients.every((c) => selectedIds.has(c.id));
   const someSelected = clients.some((c) => selectedIds.has(c.id)) && !allSelected;

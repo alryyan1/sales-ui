@@ -141,7 +141,7 @@ const SalesWithDiscountsPage: React.FC = () => {
                 {t("reports:salesWithDiscountsPage.totalDiscount")}
               </Typography>
               <Typography variant="h5" sx={{ fontWeight: 700, color: "error.main" }}>
-                {formatNumber(totals.totalDiscount)}
+                {formatNumber(totals.totalDiscount, 3)}
               </Typography>
             </CardContent>
           </Card>
@@ -198,16 +198,17 @@ const SalesWithDiscountsPage: React.FC = () => {
                           {(s as ApiSale).client_name || "-"}
                         </TableCell>
                         <TableCell align="center">
-                          {formatNumber(Number(s.total_amount))}
+                          {formatNumber(Number(s.total_amount), 3)}
                         </TableCell>
                         <TableCell align="center" sx={{ color: "success.main" }}>
-                          {formatNumber(Number(s.paid_amount))}
+                          {formatNumber(Number(s.paid_amount), 3)}
                         </TableCell>
                         <TableCell align="center" sx={{ color: "error.main" }}>
                           {formatNumber(
                             Number(
                               (s.discount_amount as number | string | undefined) || 0
-                            )
+                            ),
+                            3
                           )}
                         </TableCell>
                         <TableCell align="center">

@@ -74,7 +74,6 @@ export function PurchaseLedgerDialog({
     { id: "cash", name: t("purchases:ledgerDialog.methodCash") },
     { id: "bank_transfer", name: t("purchases:ledgerDialog.methodBankTransfer") },
     { id: "visa", name: t("purchases:ledgerDialog.methodVisa") },
-    { id: "other", name: t("purchases:ledgerDialog.methodOther") },
   ];
   const [payments, setPayments] = useState<PurchasePayment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -289,7 +288,7 @@ export function PurchaseLedgerDialog({
                   </Label>
                   <Input
                     type="number"
-                    step="0.01"
+                    step="0.001"
                     {...register("amount")}
                     className={errors.amount ? "border-red-500" : ""}
                   />

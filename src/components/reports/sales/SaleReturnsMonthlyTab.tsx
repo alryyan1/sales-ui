@@ -114,16 +114,16 @@ const SaleReturnsMonthlyTab: React.FC<SaleReturnsMonthlyTabProps> = ({
                 {formatNumber(row.count)}
               </TableCell>
               <TableCell align="right">
-                {formatNumber(row.totalAmount)}
+                {formatNumber(row.totalAmount, 3)}
               </TableCell>
               <TableCell align="right">
-                {formatNumber(row.totalCash)}
+                {formatNumber(row.totalCash, 3)}
               </TableCell>
               <TableCell align="right">
-                {formatNumber(row.totalBankTransfer)}
+                {formatNumber(row.totalBankTransfer, 3)}
               </TableCell>
               <TableCell align="right">
-                {formatNumber(row.totalVisa)}
+                {formatNumber(row.totalVisa, 3)}
               </TableCell>
             </TableRow>
           ))}

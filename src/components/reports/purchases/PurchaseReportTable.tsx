@@ -163,7 +163,7 @@ const PurchaseReportTable: React.FC<PurchaseReportTableProps> = ({
                         </Badge>
                       </TableCell>
                       <TableCell className="py-4 text-right font-medium">
-                        {formatNumber(purchase.total_amount, 2)}
+                        {formatNumber(purchase.total_amount, 3)}
                       </TableCell>
                       <TableCell className="py-4 text-center">
                         <Button
@@ -186,7 +186,7 @@ const PurchaseReportTable: React.FC<PurchaseReportTableProps> = ({
                         </span>
                       </TableCell>
                       <TableCell className="py-4 text-right font-bold">
-                        {formatNumber(summaryStats.totalAmount, 2)}
+                        {formatNumber(summaryStats.totalAmount, 3)}
                       </TableCell>
                       <TableCell />
                     </TableRow>

@@ -64,7 +64,7 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
   const [selectedReturns, setSelectedReturns] = useState<Record<number, SelectedReturn>>({});
   const [phoneNumber, setPhoneNumber] = useState("");
   const [reason, setReason] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank_transfer" | "visa" | "other">("cash");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank_transfer" | "visa">("cash");
   const [submitting, setSubmitting] = useState(false);
   const [pastSalesDialogOpen, setPastSalesDialogOpen] = useState(false);
 
@@ -271,7 +271,7 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
                     {fetchedSale.client_name && ` — ${fetchedSale.client_name}`}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {fetchedSale.sale_date} · {t("sales:returnDialog.totalColon", { amount: Number(fetchedSale.total_amount ?? 0).toFixed(2) })}
+                    {fetchedSale.sale_date} · {t("sales:returnDialog.totalColon", { amount: Number(fetchedSale.total_amount ?? 0).toFixed(3) })}
                   </Typography>
                 </Box>
                 <Button size="small" color="inherit" onClick={resetSaleSection}
@@ -333,7 +333,7 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
                         <Typography variant="caption" color="text.secondary">
                           {t("sales:returnDialog.quantityColon", { qty: maxQty })}
                           {returnedQty > 0 && t("sales:returnDialog.returnedPreviously", { qty: returnedQty })}
-                          &nbsp;·&nbsp;{price.toFixed(2)}{t("sales:returnDialog.perUnit")}
+                          &nbsp;·&nbsp;{price.toFixed(3)}{t("sales:returnDialog.perUnit")}
                         </Typography>
                       </Box>
                       {selected && (
@@ -362,7 +362,7 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
                 }}>
                   <Typography variant="caption" color="text.secondary">{t("sales:returnDialog.totalReturnedLabel")}</Typography>
                   <Typography variant="subtitle2" fontWeight={700} color="error.main" dir="ltr">
-                    {totalReturnedAmount.toFixed(2)}
+                    {totalReturnedAmount.toFixed(3)}
                   </Typography>
                 </Box>
               )}
@@ -408,7 +408,6 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
                       <MenuItem value="cash">{t("sales:returnDialog.methodLabels.cash")}</MenuItem>
                       <MenuItem value="bank_transfer">{t("sales:returnDialog.methodLabels.bank_transfer")}</MenuItem>
                       <MenuItem value="visa">{t("sales:returnDialog.methodLabels.visa")}</MenuItem>
-                      <MenuItem value="other">{t("sales:returnDialog.methodLabels.other")}</MenuItem>
                     </Select>
                   </FormControl>
                 </Stack>

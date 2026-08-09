@@ -182,6 +182,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
             type="number"
             size="small"
             fullWidth
+            inputProps={{ step: 0.001 }}
             error={!!getFieldError('unit_cost')}
             helperText={getFieldError('unit_cost')}
             disabled={isSubmitting || isPurchaseReceived}
@@ -196,6 +197,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
             type="number"
             size="small"
             fullWidth
+            inputProps={{ step: 0.001 }}
             error={!!getFieldError('sale_price')}
             helperText={getFieldError('sale_price')}
             disabled={isSubmitting || isPurchaseReceived}
@@ -263,7 +265,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
             }}
           />
           <Chip
-            label={t("purchases:itemRow.itemTotal", { amount: formatNumber(calculatedValues.itemTotalCost) })}
+            label={t("purchases:itemRow.itemTotal", { amount: formatNumber(calculatedValues.itemTotalCost, 3) })}
             size="small"
             variant="outlined"
             sx={{

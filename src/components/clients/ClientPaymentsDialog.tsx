@@ -35,7 +35,6 @@ export const ClientPaymentsDialog: React.FC<Props> = ({ open, onClose, clientId,
     cash: t("clients:paymentsDialog.methodCash"),
     bank_transfer: t("clients:paymentsDialog.methodBankTransfer"),
     visa: t("clients:paymentsDialog.methodVisa"),
-    other: t("clients:paymentsDialog.methodOther"),
   };
   const [payments, setPayments] = useState<ClientPayment[]>([]);
   const [total, setTotal] = useState(0);
@@ -69,7 +68,7 @@ export const ClientPaymentsDialog: React.FC<Props> = ({ open, onClose, clientId,
   }, [dateFrom, dateTo, open]);
 
   const handlePrint = () => {
-    const fmt = (n: number) => n.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fmt = (n: number) => n.toLocaleString("en", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
     const rows = payments.map((p, i) => `
       <tr>
         <td>${payments.length - i}</td>
@@ -137,7 +136,7 @@ export const ClientPaymentsDialog: React.FC<Props> = ({ open, onClose, clientId,
     setTimeout(() => { win.print(); }, 400);
   };
 
-  const fmt = (n: number) => n.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmt = (n: number) => n.toLocaleString("en", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth

@@ -323,7 +323,6 @@ const PurchaseItemsPage: React.FC = () => {
       {/* Purchase Summary */}
       <Card className="mb-6">
         <CardHeader>
-        <CardHeader>
           <CardTitle>ملخص الشراء</CardTitle>
         </CardHeader>
         <CardContent>
@@ -532,6 +531,7 @@ const PurchaseItemsPage: React.FC = () => {
                 InputProps={{
                   startAdornment: <InputAdornment position="start">OMR</InputAdornment>,
                 }}
+                inputProps={{ step: 0.001 }}
                 fullWidth
               />
 
@@ -544,6 +544,7 @@ const PurchaseItemsPage: React.FC = () => {
                 InputProps={{
                   startAdornment: <InputAdornment position="start">OMR</InputAdornment>,
                 }}
+                inputProps={{ step: 0.001 }}
                 fullWidth
               />
             </div>

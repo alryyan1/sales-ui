@@ -49,7 +49,6 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({
     cash:          { label: t("reports:salesReportPage.methodLabels.cash"),         color: "bg-green-100 text-green-800 border-green-200" },
     bank_transfer: { label: t("reports:salesReportPage.methodLabels.bank_transfer"), color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
     visa:          { label: t("reports:salesReportPage.methodLabels.visa"),         color: "bg-cyan-100 text-cyan-800 border-cyan-200" },
-    other:         { label: t("reports:salesReportPage.methodLabels.other"),        color: "bg-gray-100 text-gray-800 border-gray-200" },
   };
   const navigate = useNavigate();
   const { getSetting } = useSettings();
@@ -166,7 +165,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({
                       </TableCell>
 
                       <TableCell className="text-center font-bold text-base tabular-nums">
-                        {formatNumber(payment.amount, 2)}
+                        {formatNumber(payment.amount, 3)}
                       </TableCell>
 
                       <TableCell className="text-center text-xs text-muted-foreground font-mono hidden sm:table-cell">
@@ -195,11 +194,11 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({
                       <TableCell className="text-center">
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="text-xs text-muted-foreground">
-                            {t("reports:salesReportPage.totalLabel")} <span className="font-semibold text-foreground">{formatNumber(payment.sale_total, 2)}</span>
+                            {t("reports:salesReportPage.totalLabel")} <span className="font-semibold text-foreground">{formatNumber(payment.sale_total, 3)}</span>
                           </span>
                           {payment.sale_due > 0 && (
                             <span className="text-xs text-red-600 font-semibold">
-                              {t("reports:salesReportPage.remainingLabel")} {formatNumber(payment.sale_due, 2)}
+                              {t("reports:salesReportPage.remainingLabel")} {formatNumber(payment.sale_due, 3)}
                             </span>
                           )}
                         </div>

@@ -28,7 +28,7 @@ import {
   RotateCcw,
   Plus,
   PackageX,
-  DollarSign,
+  Wallet,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -40,7 +40,6 @@ const METHOD_COLORS: Record<string, "default" | "success" | "info" | "warning"> 
   cash: "success",
   bank_transfer: "info",
   visa: "warning",
-  other: "default",
 };
 
 const SalesReturnsListPage: React.FC = () => {
@@ -50,7 +49,6 @@ const SalesReturnsListPage: React.FC = () => {
     cash: t("sales:returnsListPage.methodLabels.cash"),
     bank_transfer: t("sales:returnsListPage.methodLabels.bank_transfer"),
     visa: t("sales:returnsListPage.methodLabels.visa"),
-    other: t("sales:returnsListPage.methodLabels.other"),
   };
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -162,8 +160,8 @@ const SalesReturnsListPage: React.FC = () => {
           },
           {
             label: t("sales:returnsListPage.totalValue"),
-            value: formatNumber(totalAmount),
-            icon: <DollarSign size={18} />,
+            value: formatNumber(totalAmount, 3),
+            icon: <Wallet size={18} />,
             color: "error" as const,
           },
         ].map(({ label, value, icon, color }) => (
@@ -394,7 +392,7 @@ const SalesReturnsListPage: React.FC = () => {
                         </TableCell>
 
                         <TableCell align="right" dir="ltr" sx={{ fontWeight: 700, fontSize: "0.82rem", color: "error.main" }}>
-                          {formatNumber(itemsTotal)}
+                          {formatNumber(itemsTotal, 3)}
                         </TableCell>
                       </TableRow>
                     );

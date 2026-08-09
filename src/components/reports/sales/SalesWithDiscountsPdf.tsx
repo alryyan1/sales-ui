@@ -216,25 +216,25 @@ export const SalesWithDiscountsPdf: React.FC<SalesWithDiscountsPdfProps> = ({
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>{t("reports:salesWithDiscountsPage.pdfTotalSales")}</Text>
             <Text style={styles.summaryValue}>
-              {formatNumber(totals.totalAmount)}
+              {formatNumber(totals.totalAmount, 3)}
             </Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>{t("reports:salesWithDiscountsPage.pdfTotalPaid")}</Text>
             <Text style={[styles.summaryValue, { color: "#059669" }]}>
-              {formatNumber(totals.totalPaid)}
+              {formatNumber(totals.totalPaid, 3)}
             </Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>{t("reports:salesWithDiscountsPage.pdfTotalDiscount")}</Text>
             <Text style={[styles.summaryValue, { color: "#dc2626" }]}>
-              {formatNumber(totals.totalDiscount)}
+              {formatNumber(totals.totalDiscount, 3)}
             </Text>
           </View>
           <View style={styles.summaryRowLast}>
             <Text style={styles.summaryLabel}>{t("reports:salesWithDiscountsPage.pdfTotalDue")}</Text>
             <Text style={styles.summaryValue}>
-              {formatNumber(totals.totalDue)}
+              {formatNumber(totals.totalDue, 3)}
             </Text>
           </View>
         </View>
@@ -273,14 +273,15 @@ export const SalesWithDiscountsPdf: React.FC<SalesWithDiscountsPdfProps> = ({
                 {sale.client_name || "-"}
               </Text>
               <Text style={styles.colTotal}>
-                {formatNumber(Number(sale.total_amount))}
+                {formatNumber(Number(sale.total_amount), 3)}
               </Text>
               <Text style={styles.colPaid}>
-                {formatNumber(Number(sale.paid_amount))}
+                {formatNumber(Number(sale.paid_amount), 3)}
               </Text>
               <Text style={styles.colDiscount}>
                 {formatNumber(
-                  Number((sale.discount_amount as number | string | undefined) || 0)
+                  Number((sale.discount_amount as number | string | undefined) || 0),
+                  3
                 )}
               </Text>
               <Text style={styles.colType}>

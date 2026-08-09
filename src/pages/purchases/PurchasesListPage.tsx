@@ -229,7 +229,7 @@ const PurchasesListPage: React.FC = () => {
   const totalAmount = rows.reduce((s: number, p: any) => s + Number(p.total_amount ?? 0), 0);
 
   const fmtAmount = (n: number) =>
-    n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    n.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -433,7 +433,7 @@ const PurchasesListPage: React.FC = () => {
               <TableBody>
                 {rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} align="center" sx={{ py: 8, border: "none" }}>
+                    <TableCell colSpan={8} align="center" sx={{ py: 8, border: "none" }}>
                       <Stack alignItems="center" gap={1.5}>
                         <Box sx={{ p: 2, borderRadius: "50%", bgcolor: alpha(theme.palette.primary.main, 0.06) }}>
                           <ShoppingCartIcon sx={{ fontSize: 40, color: alpha(theme.palette.primary.main, 0.3) }} />
@@ -494,6 +494,7 @@ const PurchasesListPage: React.FC = () => {
                             noWrap
                             sx={{
                               maxWidth: 200,
+                              mx: 'auto',
                               textAlign: 'center',
                               cursor: 'pointer',
                               '&:hover': { color: 'primary.main' }

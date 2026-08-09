@@ -7,7 +7,7 @@ export interface SupplierPayment {
   purchase_id?: number | null;
   user_id: number;
   amount: number;
-  method: 'cash' | 'bank_transfer' | 'visa' | 'other';
+  method: 'cash' | 'bank_transfer' | 'visa';
   reference_number?: string;
   payment_date: string;
   created_at: string;
@@ -20,7 +20,7 @@ export interface SupplierPayment {
 
 export interface CreatePaymentData {
   amount: number;
-  method: 'cash' | 'bank_transfer' | 'visa' | 'other';
+  method: 'cash' | 'bank_transfer' | 'visa';
   reference_number?: string;
   payment_date: string;
   purchase_id?: number | string | null;

@@ -84,7 +84,6 @@ const PaymentFormModal: React.FC<PaymentFormModalProps> = ({
     { id: "cash", name: t("suppliers:paymentForm.methodCash") },
     { id: "bank_transfer", name: t("suppliers:paymentForm.methodBankTransfer") },
     { id: "visa", name: t("suppliers:paymentForm.methodVisa") },
-    { id: "other", name: t("suppliers:paymentForm.methodOther") },
   ];
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -195,7 +194,7 @@ const PaymentFormModal: React.FC<PaymentFormModalProps> = ({
                     <FormControl>
                       <Input
                         type="number"
-                        step="0.01"
+                        step="0.001"
                         placeholder="0.00"
                         {...field}
                         className={form.formState.errors.amount ? "border-red-500" : ""}

@@ -297,8 +297,7 @@
         "methodLabels": {
             "cash": "Cash",
             "bank_transfer": "Bank Transfer",
-            "visa": "Visa",
-            "other": "Other"
+            "visa": "Visa"
         }
     },
     "saleReturnsReportPage": {

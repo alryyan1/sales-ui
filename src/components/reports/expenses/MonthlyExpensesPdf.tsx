@@ -189,19 +189,19 @@ export const MonthlyExpensesPdf: React.FC<MonthlyExpensesPdfProps> = ({
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>{t("reports:monthlyExpensesPdf.totalExpenses")}</Text>
             <Text style={styles.summaryValue}>
-              {formatNumber(monthSummary.total, 2)}
+              {formatNumber(monthSummary.total, 3)}
             </Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>{t("reports:monthlyExpensesPdf.cashExpenses")}</Text>
             <Text style={[styles.summaryValue, { color: "#059669" }]}>
-              {formatNumber(monthSummary.cash_total, 2)}
+              {formatNumber(monthSummary.cash_total, 3)}
             </Text>
           </View>
           <View style={styles.summaryRowLast}>
             <Text style={styles.summaryLabel}>{t("reports:monthlyExpensesPdf.bankExpenses")}</Text>
             <Text style={[styles.summaryValue, { color: "#1e40af" }]}>
-              {formatNumber(monthSummary.bank_total, 2)}
+              {formatNumber(monthSummary.bank_total, 3)}
             </Text>
           </View>
         </View>
@@ -229,13 +229,13 @@ export const MonthlyExpensesPdf: React.FC<MonthlyExpensesPdfProps> = ({
               >
                 <Text style={styles.colDate}>{formattedDate}</Text>
                 <Text style={styles.colTotal}>
-                  {formatNumber(day.total, 2)}
+                  {formatNumber(day.total, 3)}
                 </Text>
                 <Text style={styles.colCash}>
-                  {formatNumber(day.cash_total, 2)}
+                  {formatNumber(day.cash_total, 3)}
                 </Text>
                 <Text style={styles.colBank}>
-                  {formatNumber(day.bank_total, 2)}
+                  {formatNumber(day.bank_total, 3)}
                 </Text>
               </View>
             );

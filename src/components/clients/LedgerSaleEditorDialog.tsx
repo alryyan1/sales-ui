@@ -317,14 +317,14 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
         </Typography>
         {sale && (
           <Chip
-            label={due > 0 ? t("clients:saleEditor.remaining", { amount: formatNumber(due) }) : t("clients:saleEditor.fullyPaidChip")}
+            label={due > 0 ? t("clients:saleEditor.remaining", { amount: formatNumber(due, 3) }) : t("clients:saleEditor.fullyPaidChip")}
             color={due > 0 ? "error" : "success"}
             size="small"
             sx={{ height: 22, fontSize: "0.72rem" }}
           />
         )}
         {sale && due > 0 && (
-          <Tooltip title={t("clients:saleEditor.payFullTooltip", { amount: formatNumber(due) })}>
+          <Tooltip title={t("clients:saleEditor.payFullTooltip", { amount: formatNumber(due, 3) })}>
             <span>
               <Button
                 size="small"
@@ -376,7 +376,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
                 <Box key={label}>
                   <Typography variant="caption" color="text.secondary">{label}</Typography>
                   <Typography variant="body2" fontWeight={700} color={color} dir="ltr">
-                    {formatNumber(value)}
+                    {formatNumber(value, 3)}
                   </Typography>
                 </Box>
               ))}
@@ -431,7 +431,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
                         <Box>
                           <Typography variant="body2" fontWeight={600}>{o.name}</Typography>
                           <Typography variant="caption" color="text.secondary">
-                            {[o.sku, o.suggested_sale_price != null && t("clients:saleEditor.priceInline", { price: formatNumber(Number(o.suggested_sale_price)) })].filter(Boolean).join(" · ")}
+                            {[o.sku, o.suggested_sale_price != null && t("clients:saleEditor.priceInline", { price: formatNumber(Number(o.suggested_sale_price), 3) })].filter(Boolean).join(" · ")}
                           </Typography>
                         </Box>
                         {(o.current_stock_quantity ?? o.stock_quantity) != null && (
@@ -487,6 +487,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
                         value={discountValue}
                         onChange={(e) => setDiscountValue(e.target.value)}
                         sx={{ flex: 1 }}
+                        inputProps={{ step: 0.001 }}
                       />
                     </Box>
                     <Box sx={{ display: "flex", gap: 1 }}>
@@ -505,7 +506,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
                       <Box sx={{ display: "flex", justifyContent: "space-between" }}>
                         <Typography variant="caption" color="text.secondary">{t("clients:saleEditor.appliedLabel")}</Typography>
                         <Typography variant="caption" fontWeight={700} color="error.main">
-                          − {formatNumber(sale.discount_amount ?? 0)}
+                          − {formatNumber(sale.discount_amount ?? 0, 3)}
                         </Typography>
                       </Box>
                     )}
@@ -555,7 +556,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
                               <TableCell sx={{ py: 0.4, fontSize: "0.78rem" }}>{payment.payment_date}</TableCell>
                               <TableCell sx={{ py: 0.4, fontSize: "0.78rem" }}>{payment.method}</TableCell>
                               <TableCell sx={{ py: 0.4, fontSize: "0.78rem" }} align="right" dir="ltr">
-                                {formatNumber(payment.amount)}
+                                {formatNumber(payment.amount, 3)}
                               </TableCell>
                               <TableCell sx={{ py: 0.4 }}>
                                 <Tooltip title={t("clients:saleEditor.deleteTooltip")}>
@@ -611,7 +612,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
               value={paymentAmount}
               onChange={(e) => setPaymentAmount(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddPayment(); } }}
-              inputProps={{ min: 0 }}
+              inputProps={{ min: 0, step: 0.001 }}
             />
             <FormControl size="small" fullWidth>
               <InputLabel>{t("clients:saleEditor.paymentMethodLabel")}</InputLabel>
@@ -623,7 +624,6 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
                 <MenuItem value="cash">{t("clients:saleEditor.methodCash")}</MenuItem>
                 <MenuItem value="bank_transfer">{t("clients:saleEditor.methodBankTransfer")}</MenuItem>
                 <MenuItem value="visa">{t("clients:saleEditor.methodVisa")}</MenuItem>
-                <MenuItem value="other">{t("clients:saleEditor.methodOther")}</MenuItem>
               </Select>
             </FormControl>
             <TextField

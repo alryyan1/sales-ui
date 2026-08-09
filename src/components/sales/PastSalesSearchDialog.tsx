@@ -190,13 +190,13 @@ export const PastSalesSearchDialog: React.FC<PastSalesSearchDialogProps> = ({
                           )
                           .join(t("sales:pastSalesDialog.listSeparator")) || "—"}
                       </TableCell>
-                      <TableCell>{formatNumber(sale.total_amount)}</TableCell>
+                      <TableCell>{formatNumber(sale.total_amount, 3)}</TableCell>
                       <TableCell>
                         <Typography
                           color={due > 0 ? "error.main" : "success.main"}
                           variant="body2"
                         >
-                          {formatNumber(due)}
+                          {formatNumber(due, 3)}
                         </Typography>
                       </TableCell>
                       <TableCell align="center">

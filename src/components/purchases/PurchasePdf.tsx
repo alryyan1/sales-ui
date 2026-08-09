@@ -320,9 +320,9 @@ export const PurchasePdf: React.FC<PurchasePdfProps> = ({
                 </Text>
                 <Text style={styles.colQty}>{item.quantity}</Text>
                 <Text style={styles.colCost}>
-                  {formatNumber(Number(item.unit_cost))} {currencySymbol}
+                  {formatNumber(Number(item.unit_cost), 3)} {currencySymbol}
                 </Text>
-                <Text style={styles.colTotal}>{formatNumber(rowTotal)} {currencySymbol}</Text>
+                <Text style={styles.colTotal}>{formatNumber(rowTotal, 3)} {currencySymbol}</Text>
               </View>
             );
           })}
@@ -337,7 +337,7 @@ export const PurchasePdf: React.FC<PurchasePdfProps> = ({
               <Text style={styles.summaryLabel}>{t("purchases:purchasePdf.totalItemsLabel")}</Text>
             </View>
             <View style={[styles.summaryRow, styles.grandTotal]}>
-              <Text style={styles.summaryValue}>{formatNumber(totalCost)} {currencySymbol}</Text>
+              <Text style={styles.summaryValue}>{formatNumber(totalCost, 3)} {currencySymbol}</Text>
               <Text style={styles.summaryLabel}>{t("purchases:purchasePdf.totalCostLabel")}</Text>
             </View>
           </View>

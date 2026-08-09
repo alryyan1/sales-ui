@@ -216,7 +216,7 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
                 }}
                 type="number"
                 min={0}
-                step={0.01}
+                step={0.001}
                 disabled={isReadOnly}
               />
               {isFieldUpdating(item.id, "unit_cost") && (
@@ -356,7 +356,7 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
           const totalRetail = item.quantity * Number(item.sale_price || 0);
           return (
             <Typography variant="body2" fontWeight="700" color="success.main">
-              {formatNumber(totalRetail, 2)}
+              {formatNumber(totalRetail, 3)}
             </Typography>
           );
         },

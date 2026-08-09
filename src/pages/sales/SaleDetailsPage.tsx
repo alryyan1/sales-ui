@@ -48,7 +48,6 @@ const SaleDetailsPage: React.FC = () => {
     mastercard: t("sales:detailsPage.paymentMethodLabels.mastercard"),
     bank_transfer: t("sales:detailsPage.paymentMethodLabels.bank_transfer"),
     mada: t("sales:detailsPage.paymentMethodLabels.mada"),
-    other: t("sales:detailsPage.paymentMethodLabels.other"),
     store_credit: t("sales:detailsPage.paymentMethodLabels.store_credit"),
   };
   const navigate = useNavigate();

@@ -228,7 +228,7 @@ interface Props {
 export const SupplierSummaryLedgerPdf: React.FC<Props> = ({ suppliers, settings }) => {
   const { t } = useTranslation(["reports"]);
   const currency = settings?.currency_symbol || "OMR";
-  const fmt = (n: number) => `${formatNumber(n)} ${currency}`;
+  const fmt = (n: number) => `${formatNumber(n, 3)} ${currency}`;
 
   const totals = suppliers.reduce(
     (acc, s) => ({

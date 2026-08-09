@@ -225,7 +225,7 @@ const PurchaseItemCard: React.FC<PurchaseItemCardProps> = ({
               }}
               type="number"
               min={0}
-              step={0.01}
+              step={0.001}
               disabled={isReadOnly}
             />
             {isFieldUpdating("unit_cost") && (

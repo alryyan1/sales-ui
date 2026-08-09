@@ -781,9 +781,9 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       {...field}
                       label={t("products:form.costPriceLabel")}
                       type="number"
-                      
+
                       size="small"
-                      inputProps={{ min: 0, step: "0.01" }}
+                      inputProps={{ min: 0, step: "0.001" }}
                       disabled={isSubmitting}
                       onFocus={(e) => e.target.select()}
                       value={field.value ?? ""}
@@ -805,7 +805,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       label={t("products:salePrice")}
                       type="number"
                       size="small"
-                      inputProps={{ min: 0, step: "0.01" }}
+                      inputProps={{ min: 0, step: "0.001" }}
                       disabled={isSubmitting}
                       onFocus={(e) => e.target.select()}
                       value={field.value ?? ""}

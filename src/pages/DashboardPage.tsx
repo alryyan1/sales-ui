@@ -260,11 +260,16 @@ const DashboardPage: React.FC = () => {
   const { t, i18n } = useTranslation(["dashboard", "common"]);
   const direction = i18n.dir();
 
-  const today        = new Date().toISOString().split("T")[0];
-  const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
+  // Build YYYY-MM-DD from local date parts (not toISOString, which shifts to UTC
+  // and rolls back to the previous day/month in timezones ahead of UTC, e.g. Oman UTC+4).
+  const toLocalDateStr = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+  const firstOfMonth = toLocalDateStr(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const lastOfMonth  = toLocalDateStr(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0));
 
   const [startDate, setStartDate] = useState(firstOfMonth);
-  const [endDate,   setEndDate]   = useState(today);
+  const [endDate,   setEndDate]   = useState(lastOfMonth);
   const [period,    setPeriod]    = useState<Period>("monthly");
 
   const [summaryData,   setSummaryData]   = useState<DashboardSummaryData | null>(null);

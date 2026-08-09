@@ -54,7 +54,7 @@ const SaleReturnsPaymentsBreakdownTab: React.FC<
     <Stack spacing={2}>
       <Typography variant="body2" color="text.secondary">
         {t("reports:saleReturnsReportPage.totalReturnsValueForPeriod")}{" "}
-        <strong>{formatNumber(totalAll)}</strong>
+        <strong>{formatNumber(totalAll, 3)}</strong>
       </Typography>
 
       <Stack direction="row" spacing={2} flexWrap="wrap">
@@ -64,7 +64,7 @@ const SaleReturnsPaymentsBreakdownTab: React.FC<
               {t("reports:saleReturnsReportPage.totalCashReturns")}
             </Typography>
             <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              {formatNumber(totalCash)}
+              {formatNumber(totalCash, 3)}
             </Typography>
           </CardContent>
         </Card>
@@ -75,7 +75,7 @@ const SaleReturnsPaymentsBreakdownTab: React.FC<
               {t("reports:saleReturnsReportPage.totalBankTransferReturns")}
             </Typography>
             <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              {formatNumber(totalBankTransfer)}
+              {formatNumber(totalBankTransfer, 3)}
             </Typography>
           </CardContent>
         </Card>
@@ -86,7 +86,7 @@ const SaleReturnsPaymentsBreakdownTab: React.FC<
               {t("reports:saleReturnsReportPage.totalVisaReturns")}
             </Typography>
             <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              {formatNumber(totalVisa)}
+              {formatNumber(totalVisa, 3)}
             </Typography>
           </CardContent>
         </Card>
@@ -98,7 +98,7 @@ const SaleReturnsPaymentsBreakdownTab: React.FC<
                 {t("reports:saleReturnsReportPage.totalOtherReturns")}
               </Typography>
               <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                {formatNumber(totalOther)}
+                {formatNumber(totalOther, 3)}
               </Typography>
             </CardContent>
           </Card>

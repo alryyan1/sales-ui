@@ -155,7 +155,6 @@
         "methodCash": "كاش",
         "methodBankTransfer": "تحويل بنكي",
         "methodVisa": "فيزا",
-        "methodOther": "أخرى",
         "paymentDateLabel": "تاريخ الدفع",
         "referenceOptional": "رقم المرجع (اختياري)",
         "confirmSettlement": "تأكيد السداد"
@@ -164,7 +163,6 @@
         "methodCash": "كاش",
         "methodBankTransfer": "تحويل بنكي",
         "methodVisa": "فيزا",
-        "methodOther": "أخرى",
         "loadFailed": "فشل تحميل المدفوعات",
         "periodLabel": "الفترة: {{from}} إلى {{to}}",
         "printTitle": "سجل مدفوعات — {{name}}",
@@ -247,7 +245,6 @@
         "methodCash": "كاش",
         "methodBankTransfer": "تحويل بنكي",
         "methodVisa": "فيزا",
-        "methodOther": "أخرى",
         "referenceOptional": "رقم المرجع (اختياري)",
         "confirm": "تأكيد"
     },

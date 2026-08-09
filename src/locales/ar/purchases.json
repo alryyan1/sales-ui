@@ -340,7 +340,6 @@
         "methodCash": "كاش",
         "methodBankTransfer": "تحويل بنكي",
         "methodVisa": "فيزا",
-        "methodOther": "أخرى",
         "fetchPaymentsFailed": "فشل في جلب الدفعات السابقة",
         "paymentAddedSuccess": "تم إضافة الدفعة بنجاح",
         "paymentAddFailed": "فشل في إضافة الدفعة",

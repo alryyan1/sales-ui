@@ -191,8 +191,8 @@ const SupplierLedgerPage: React.FC = () => {
       });
       const { payments_created, total_applied, remaining_unapplied } = res.result;
       toast.success(
-        t("suppliers:ledgerPage.bulkPaySuccess", { count: payments_created, applied: total_applied.toLocaleString() }) +
-        (remaining_unapplied > 0 ? t("suppliers:ledgerPage.bulkPayRemaining", { remaining: remaining_unapplied.toLocaleString() }) : "")
+        t("suppliers:ledgerPage.bulkPaySuccess", { count: payments_created, applied: formatNumber(total_applied, 3) }) +
+        (remaining_unapplied > 0 ? t("suppliers:ledgerPage.bulkPayRemaining", { remaining: formatNumber(remaining_unapplied, 3) }) : "")
       );
       setBulkPayOpen(false);
       fetchLedger();
@@ -367,7 +367,7 @@ const SupplierLedgerPage: React.FC = () => {
             <Box sx={{ flex: "1 1 180px", minWidth: 0 }}>
               <StatCard
                 label={t("suppliers:ledgerPage.totalPurchases")}
-                value={`${formatNumber((summary.total_purchases ?? 0).toFixed(2))} OMR`}
+                value={`${formatNumber(summary.total_purchases ?? 0, 3)} OMR`}
                 icon={<TrendingUp size={20} color="#4f46e5" />}
                 iconColor="#eef2ff"
               />
@@ -538,7 +538,7 @@ const SupplierLedgerPage: React.FC = () => {
                           <TableRow sx={{ bgcolor: "grey.50", "& td": { borderTop: "2px solid", borderTopColor: "divider", fontWeight: 700, py: 1.5 } }}>
                             <TableCell align="right" colSpan={2} sx={{ fontSize: 12, color: "text.secondary" }}>{t("suppliers:ledgerPage.totalRow")}</TableCell>
                             <TableCell align="left" sx={{ fontSize: 13, color: "text.primary" }}>
-                              {formatNumber((summary.total_purchases ?? 0).toFixed(2))} OMR
+                              {formatNumber(summary.total_purchases ?? 0, 3)} OMR
                             </TableCell>
                             <TableCell align="left" sx={{ fontSize: 13, color: "success.dark" }}>{formatCurrency(summary.total_payments)}</TableCell>
                             <TableCell align="left" sx={{ fontSize: 13, color: isInDebt ? "error.main" : "success.dark" }}>{formatCurrency(summary.balance)}</TableCell>
@@ -582,7 +582,7 @@ const SupplierLedgerPage: React.FC = () => {
               required
               value={bulkAmount}
               onChange={(e) => setBulkAmount(e.target.value)}
-              inputProps={{ min: 0.01, step: "0.01" }}
+              inputProps={{ min: 0.001, step: "0.001" }}
             />
             <FormControl size="small" fullWidth required>
               <InputLabel>{t("suppliers:ledgerPage.paymentMethodLabel")}</InputLabel>
@@ -594,7 +594,6 @@ const SupplierLedgerPage: React.FC = () => {
                 <MenuItem value="cash">{t("suppliers:ledgerPage.methodCash")}</MenuItem>
                 <MenuItem value="bank_transfer">{t("suppliers:ledgerPage.methodBankTransfer")}</MenuItem>
                 <MenuItem value="visa">{t("suppliers:ledgerPage.methodVisa")}</MenuItem>
-                <MenuItem value="other">{t("suppliers:ledgerPage.methodOther")}</MenuItem>
               </Select>
             </FormControl>
             <TextField

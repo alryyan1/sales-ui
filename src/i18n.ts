@@ -167,7 +167,7 @@ const getInitialLanguage = (): string => {
   } catch {
     // localStorage غير متاح (مثلاً أثناء SSR) - تجاهل
   }
-  return 'ar';
+  return 'en';
 };
 
 i18n
@@ -177,8 +177,8 @@ i18n
     ns: namespaces, // قائمة بجميع الـ namespaces
     defaultNS: 'common', // تحديد الـ Namespace الافتراضي (مهم!)
 
-    lng: getInitialLanguage(), // اللغة النشطة الافتراضية (محفوظة أو العربية)
-    fallbackLng: 'ar', // اللغة الاحتياطية
+    lng: getInitialLanguage(), // اللغة النشطة الافتراضية (محفوظة أو الإنجليزية)
+    fallbackLng: 'en', // اللغة الاحتياطية
 
     interpolation: {
       escapeValue: false // React يحمي بالفعل من XSS
