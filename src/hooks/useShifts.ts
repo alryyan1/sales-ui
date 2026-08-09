@@ -8,6 +8,7 @@ export interface Shift {
     start_time?: string;
     end_time?: string;
     status?: string;
+    is_open?: boolean;
 }
 
 export function useShifts() {
@@ -29,7 +30,10 @@ export function useCurrentShift() {
                 const response = await apiClient.get<{ data: Shift } | Shift>("/shifts/current");
                 const body = response.data as { data?: Shift } & Partial<Shift>;
                 const shift = (body?.data ?? body) as Shift | null;
-                return shift && typeof shift === "object" && "id" in shift ? shift : null;
+                if (!shift || typeof shift !== "object" || !("id" in shift)) return null;
+                // The endpoint returns the most recently created shift regardless of status —
+                // treat an explicitly closed shift the same as "no shift open".
+                return shift.is_open === false ? null : shift;
             } catch {
                 return null;
             }

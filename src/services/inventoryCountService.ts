@@ -1,4 +1,5 @@
 import apiClient from "@/lib/axios";
+import { PaginatedResponse } from "./clientService";
 
 export interface InventoryCount {
   id: number;
@@ -73,10 +74,13 @@ class InventoryCountService {
   /**
    * Get all inventory counts with optional filters
    */
-  async getInventoryCounts(filters?: InventoryCountFilters) {
-    const response = await apiClient.get("/inventory-counts", {
-      params: filters,
-    });
+  async getInventoryCounts(
+    filters?: InventoryCountFilters,
+  ): Promise<PaginatedResponse<InventoryCount>> {
+    const response = await apiClient.get<PaginatedResponse<InventoryCount>>(
+      "/inventory-counts",
+      { params: filters },
+    );
     return response.data;
   }
 

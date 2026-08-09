@@ -1,362 +1,501 @@
 // src/pages/admin/ExpensesPage.tsx
-import React, { useCallback, useEffect, useRef, useState } from "react";
-
-// MUI Components
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import type { DateRange } from "react-day-picker";
 import {
-  Box,
-  Button,
-  TextField,
-  InputAdornment,
-  MenuItem,
-  Select,
-  SelectChangeEvent,
-  InputLabel,
-  FormControl,
-  Alert,
-  CircularProgress,
-  Typography,
-  Stack,
+  AlertCircle,
+  Loader2,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Receipt,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
+  TableHeader,
   TableRow,
-  Paper,
-  Pagination,
-  IconButton,
-  Tooltip,
-} from "@mui/material";
+} from "@/components/ui/table";
 import {
-  Search as SearchIcon,
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-} from "@mui/icons-material";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { DatePickerWithRange } from "@/components/ui/date-range-picker";
+import { useFormatCurrency } from "@/hooks/useFormatCurrency";
+import { getPageNumbers } from "@/lib/pagination";
 
-// Services
 import expenseService, { Expense } from "@/services/expenseService";
-import expenseCategoryService, {
-  ExpenseCategory,
-} from "@/services/ExpenseCategoryService";
+import expenseCategoryService, { ExpenseCategory } from "@/services/ExpenseCategoryService";
 import ExpenseFormModal from "@/components/admin/expenses/ExpenseFormModal";
 
-type PaginatedResponse<T> =
-  import("@/services/clientService").PaginatedResponse<T>;
+const PER_PAGE = 10;
 
-type ExpenseTableItem = Expense;
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  cash: "نقدي",
+  bankak: "بنكك",
+  fawry: "فوري",
+  ocash: "أوكاش",
+};
 
 const ExpensesPage: React.FC = () => {
-  // Removed useTranslation
+  const queryClient = useQueryClient();
+  const formatCurrency = useFormatCurrency();
 
-  const [response, setResponse] =
-    useState<PaginatedResponse<ExpenseTableItem> | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 10;
-
-  // Filters
+  const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [categories, setCategories] = useState<ExpenseCategory[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingExpense, setEditingExpense] = useState<ExpenseTableItem | null>(
-    null
-  );
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
 
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => setDebouncedSearch(searchTerm), 400);
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
+    const t = setTimeout(() => setDebouncedSearch(searchTerm), 400);
+    return () => clearTimeout(t);
   }, [searchTerm]);
 
-  const fetchCategories = useCallback(async () => {
-    try {
-      const data = await expenseCategoryService.getCategories(
-        1,
-        9999,
-        "",
-        true
-      );
-      setCategories(data as ExpenseCategory[]);
-    } catch {
-      // silent
-    }
-  }, []);
+  const dateFrom = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined;
+  const dateTo = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined;
 
-  const fetchExpenses = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await expenseService.getExpenses(currentPage, rowsPerPage, {
-        search: debouncedSearch,
-        expense_category_id: selectedCategory ?? undefined,
-        date_from: dateFrom || undefined,
-        date_to: dateTo || undefined,
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, selectedCategory, dateFrom, dateTo]);
+
+  const categoriesQuery = useQuery({
+    queryKey: ["expense-categories-flat"],
+    queryFn: () =>
+      expenseCategoryService.getCategories(1, 999, "", true) as Promise<ExpenseCategory[]>,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const expensesQuery = useQuery({
+    queryKey: ["admin-expenses", page, debouncedSearch, selectedCategory, dateFrom, dateTo],
+    queryFn: () =>
+      expenseService.getExpenses(page, PER_PAGE, {
+        search: debouncedSearch || undefined,
+        expense_category_id: selectedCategory !== "all" ? Number(selectedCategory) : undefined,
+        date_from: dateFrom,
+        date_to: dateTo,
         sort_by: "expense_date",
         sort_direction: "desc",
-      });
-      setResponse(data);
-    } catch (err) {
-      setError(expenseService.getErrorMessage(err));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentPage, debouncedSearch, selectedCategory, dateFrom, dateTo]);
+      }),
+    placeholderData: (prev) => prev,
+  });
 
-  useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
-  useEffect(() => {
-    fetchExpenses();
-  }, [fetchExpenses]);
-
-  const handleCategoryChange = (event: SelectChangeEvent<number | "">) => {
-    const val = event.target.value as number | "";
-    setSelectedCategory(val === "" ? null : Number(val));
-    setCurrentPage(1);
-  };
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => expenseService.deleteExpense(id),
+    onSuccess: () => {
+      toast.success("تم حذف المصروف بنجاح");
+      const isLastRowOnPage = expensesQuery.data?.data.length === 1 && page > 1;
+      setExpenseToDelete(null);
+      if (isLastRowOnPage) {
+        setPage((p) => p - 1);
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["admin-expenses"] });
+      }
+    },
+    onError: (err) => {
+      toast.error("تعذر حذف المصروف", { description: expenseService.getErrorMessage(err) });
+    },
+  });
 
   const openCreateModal = () => {
     setEditingExpense(null);
     setIsModalOpen(true);
   };
-  const openEditModal = (expense: ExpenseTableItem) => {
+  const openEditModal = (expense: Expense) => {
     setEditingExpense(expense);
     setIsModalOpen(true);
   };
-  const closeModal = () => setIsModalOpen(false);
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingExpense(null);
+  };
   const handleSaveSuccess = () => {
+    const wasEdit = Boolean(editingExpense);
     closeModal();
-    setCurrentPage(1);
-    fetchExpenses();
-    fetchCategories();
+    queryClient.invalidateQueries({ queryKey: ["admin-expenses"] });
+    queryClient.invalidateQueries({ queryKey: ["expense-categories-flat"] });
+    toast.success(wasEdit ? "تم تحديث المصروف بنجاح" : "تم إضافة المصروف بنجاح");
   };
-  const handleDelete = async (expense: ExpenseTableItem) => {
-    if (!window.confirm("هل أنت متأكد من حذف هذه المصروفات؟")) return;
-    try {
-      await expenseService.deleteExpense(expense.id);
-      fetchExpenses();
-    } catch {
-      /* show snackbar later */
-    }
+  const confirmDelete = () => {
+    if (expenseToDelete) deleteMutation.mutate(expenseToDelete.id);
   };
+
+  const expenses = expensesQuery.data?.data ?? [];
+  const pageTotal = useMemo(
+    () => expenses.reduce((sum, e) => sum + Number(e.amount || 0), 0),
+    [expenses]
+  );
+
+  const hasActiveFilters =
+    debouncedSearch.trim() !== "" || selectedCategory !== "all" || !!dateRange?.from;
+  const clearFilters = () => {
+    setSearchTerm("");
+    setSelectedCategory("all");
+    setDateRange(undefined);
+  };
+
+  const isInitialLoading = expensesQuery.isLoading;
+  const isEmpty = !isInitialLoading && !expensesQuery.isError && expenses.length === 0;
 
   return (
-    <Box
-      sx={{
-        width: "100%",
-        maxWidth: 1200,
-        mx: "auto",
-        p: { xs: 2, md: 3 },
-        direction: "rtl",
-      }}
-    >
-      <Paper variant="outlined" sx={{ p: { xs: 2, md: 2.5 }, mb: 2, borderRadius: 3 }}>
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          justifyContent="space-between"
-          alignItems={{ xs: "stretch", sm: "center" }}
-          spacing={2}
-          sx={{ mb: 2 }}
-        >
-          <Box>
-            <Typography variant="h5" component="h1" sx={{ fontWeight: 700 }}>
-              المصروفات
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              شاشة مصروفات مدمجة وسريعة مع بحث فوري وتصفية احترافية
-            </Typography>
-          </Box>
-
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={openCreateModal}
-            sx={{ pt: 1, pb: 1, minWidth: 150 }}
-          >
+    <div dir="rtl" className="min-h-screen bg-background">
+      <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
+        {/* Page header */}
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b pb-5">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">المصروفات</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              سجّل مصروفات المنشأة وتتبعها حسب القسم وطريقة الدفع
+            </p>
+          </div>
+          <Button onClick={openCreateModal} className="gap-2">
+            <Plus className="size-4" />
             إضافة مصروف
           </Button>
-        </Stack>
+        </div>
 
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="flex-end">
-          <TextField
-            size="small"
-            placeholder="بحث..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" />
-                </InputAdornment>
-              ),
-            }}
-            sx={{ flex: 1, minWidth: 200 }}
-          />
+        {/* Toolbar */}
+        <div className="mb-4 flex flex-wrap items-end gap-2">
+          <div className="relative min-w-[200px] flex-1 sm:max-w-xs">
+            <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="ابحث بعنوان المصروف..."
+              className="pr-9"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm("")}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label="مسح البحث"
+              >
+                <X className="size-4" />
+              </button>
+            )}
+          </div>
 
-          <FormControl size="small" sx={{ minWidth: 180, flex: 1 }}>
-            <InputLabel>القسم</InputLabel>
-            <Select
-              label="القسم"
-              value={selectedCategory ?? ""}
-              onChange={handleCategoryChange}
-            >
-              <MenuItem value="">
-                <em>كل الأقسام</em>
-              </MenuItem>
-              {categories.map((c) => (
-                <MenuItem key={c.id} value={c.id}>
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="كل الأقسام" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">كل الأقسام</SelectItem>
+              {(categoriesQuery.data ?? []).map((c) => (
+                <SelectItem key={c.id} value={String(c.id)}>
                   {c.name}
-                </MenuItem>
+                </SelectItem>
               ))}
-            </Select>
-          </FormControl>
+            </SelectContent>
+          </Select>
 
-          <TextField
-            type="date"
-            size="small"
-            label="من تاريخ"
-            InputLabelProps={{ shrink: true }}
-            value={dateFrom}
-            onChange={(e) => {
-              setDateFrom(e.target.value);
-              setCurrentPage(1);
-            }}
-            sx={{ minWidth: 180, flex: 1 }}
-          />
+          <DatePickerWithRange date={dateRange} onDateChange={setDateRange} buttonSize="default" />
 
-          <TextField
-            type="date"
-            size="small"
-            label="إلى تاريخ"
-            InputLabelProps={{ shrink: true }}
-            value={dateTo}
-            onChange={(e) => {
-              setDateTo(e.target.value);
-              setCurrentPage(1);
-            }}
-            sx={{ minWidth: 180, flex: 1 }}
-          />
-        </Stack>
-      </Paper>
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1.5">
+              <X className="size-3.5" />
+              مسح الفلاتر
+            </Button>
+          )}
 
-      {isLoading && (
-        <Paper variant="outlined" sx={{ p: 3, mb: 2, borderRadius: 3 }}>
-          <Stack direction="row" spacing={2} alignItems="center" sx={{ py: 1 }}>
-            <CircularProgress size={20} />
-            <Typography variant="body2" color="text.secondary">
-              جاري التحميل...
-            </Typography>
-          </Stack>
-        </Paper>
-      )}
+          {!isInitialLoading && !expensesQuery.isError && (
+            <p className="ms-auto text-xs text-muted-foreground">
+              {expensesQuery.data?.total ?? expenses.length} نتيجة
+              {expenses.length > 0 && ` · إجمالي الصفحة ${formatCurrency(pageTotal)}`}
+            </p>
+          )}
+        </div>
 
-      {!isLoading && error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
+        {/* Error state */}
+        {expensesQuery.isError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="size-4" />
+            <AlertTitle>تعذر تحميل المصروفات</AlertTitle>
+            <AlertDescription className="flex items-center justify-between gap-3">
+              <span>{expenseService.getErrorMessage(expensesQuery.error)}</span>
+              <Button size="sm" variant="outline" onClick={() => expensesQuery.refetch()}>
+                إعادة المحاولة
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
-      {!isLoading && !error && response && (
-        <>
-          <Paper variant="outlined" sx={{ mb: 2, borderRadius: 3, overflow: "hidden" }}>
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
-                  <TableRow sx={{ bgcolor: "grey.100" }}>
-                    <TableCell sx={{ fontWeight: 700, py: 1 }}>#</TableCell>
-                    <TableCell sx={{ fontWeight: 700, py: 1 }}>التاريخ</TableCell>
-                    <TableCell sx={{ fontWeight: 700, py: 1 }}>العنوان</TableCell>
-                    <TableCell sx={{ fontWeight: 700, py: 1 }}>القسم</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 700, py: 1 }}>المبلغ</TableCell>
-                    <TableCell sx={{ fontWeight: 700, py: 1 }}>المرجع</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 700, py: 1 }}>الإجراءات</TableCell>
+        {/* Loading skeleton */}
+        {isInitialLoading && (
+          <div className="space-y-2 rounded-xl border p-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 py-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-5 w-20 rounded-full" />
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="ml-auto h-8 w-8 rounded-md" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {isEmpty && (
+          <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-16 text-center">
+            <Receipt className="size-10 text-muted-foreground" />
+            {hasActiveFilters ? (
+              <div>
+                <p className="font-medium text-foreground">لا توجد نتائج مطابقة للفلاتر الحالية</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  حاول تعديل البحث أو نطاق التاريخ أو القسم المحدد
+                </p>
+                <Button variant="link" size="sm" onClick={clearFilters}>
+                  مسح الفلاتر
+                </Button>
+              </div>
+            ) : (
+              <div>
+                <p className="font-medium text-foreground">لا توجد مصروفات بعد</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  سجّل أول مصروف لبدء تتبع نفقات المنشأة
+                </p>
+              </div>
+            )}
+            {!hasActiveFilters && (
+              <Button onClick={openCreateModal} className="mt-2 gap-2">
+                <Plus className="size-4" />
+                إضافة أول مصروف
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* Table */}
+        {!isInitialLoading && !expensesQuery.isError && !isEmpty && (
+          <>
+            <div className="overflow-hidden rounded-xl border">
+              <Table>
+                <TableHeader className="bg-muted/40">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="text-start">التاريخ</TableHead>
+                    <TableHead className="text-start">المصروف</TableHead>
+                    <TableHead className="text-start">القسم</TableHead>
+                    <TableHead className="text-start">طريقة الدفع</TableHead>
+                    <TableHead className="text-end">المبلغ</TableHead>
+                    <TableHead className="w-12">
+                      <span className="sr-only">إجراءات</span>
+                    </TableHead>
                   </TableRow>
-                </TableHead>
+                </TableHeader>
                 <TableBody>
-                  {response.data.map((exp) => (
-                    <TableRow key={exp.id} hover sx={{ '&:last-child td': { borderBottom: 0 } }}>
-                      <TableCell sx={{ py: 1 }}>{exp.id}</TableCell>
-                      <TableCell sx={{ py: 1 }}>{exp.expense_date}</TableCell>
-                      <TableCell sx={{ py: 1 }}>{exp.title}</TableCell>
-                      <TableCell sx={{ py: 1 }}>{exp.expense_category_name || "—"}</TableCell>
-                      <TableCell align="right" sx={{ py: 1 }}>
-                        {Number(exp.amount).toFixed(2)}
+                  {expenses.map((expense) => (
+                    <TableRow key={expense.id}>
+                      <TableCell className="py-3 text-sm text-muted-foreground">
+                        {expense.expense_date}
                       </TableCell>
-                      <TableCell sx={{ py: 1 }}>{exp.reference || "—"}</TableCell>
-                      <TableCell align="center" sx={{ py: 1 }}>
-                        <Stack direction="row" spacing={0.5} justifyContent="center">
-                          <Tooltip title="تعديل">
-                            <IconButton
-                              size="small"
-                              color="primary"
-                              onClick={() => openEditModal(exp)}
-                              sx={{ p: 0.75 }}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="حذف">
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => handleDelete(exp)}
-                              sx={{ p: 0.75 }}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </Stack>
+                      <TableCell>
+                        <span className="font-medium text-foreground">{expense.title}</span>
+                        {expense.reference && (
+                          <span className="mt-0.5 block text-xs text-muted-foreground">
+                            {expense.reference}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {expense.expense_category_name ? (
+                          <Badge variant="secondary">{expense.expense_category_name}</Badge>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {expense.payment_method
+                          ? PAYMENT_METHOD_LABELS[expense.payment_method] ?? expense.payment_method
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-end font-semibold text-foreground">
+                        {formatCurrency(expense.amount)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-center">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="size-8">
+                                <MoreHorizontal className="size-4" />
+                                <span className="sr-only">إجراءات</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start">
+                              <DropdownMenuItem onSelect={() => openEditModal(expense)}>
+                                <Pencil className="size-4" />
+                                تعديل
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                variant="destructive"
+                                onSelect={() => setExpenseToDelete(expense)}
+                              >
+                                <Trash2 className="size-4" />
+                                حذف
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
-                  {response.data.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          لا توجد نتائج
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  )}
                 </TableBody>
               </Table>
-            </TableContainer>
-          </Paper>
+            </div>
 
-          {response.last_page > 1 && (
-            <Box sx={{ display: "flex", justifyContent: "center", p: 2 }}>
-              <Pagination
-                count={response.last_page}
-                page={currentPage}
-                onChange={(_, page) => setCurrentPage(page)}
-                color="primary"
-                dir="rtl"
-              />
-            </Box>
-          )}
-        </>
-      )}
+            {/* Pagination */}
+            {expensesQuery.data && expensesQuery.data.last_page > 1 && (
+              <Pagination className="mt-4">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (page > 1 && !expensesQuery.isFetching) setPage((p) => p - 1);
+                      }}
+                      className={
+                        page <= 1 || expensesQuery.isFetching
+                          ? "pointer-events-none opacity-50"
+                          : undefined
+                      }
+                    />
+                  </PaginationItem>
+                  {getPageNumbers(page, expensesQuery.data.last_page).map((p, i) =>
+                    p === "ellipsis" ? (
+                      <PaginationItem key={`e-${i}`}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    ) : (
+                      <PaginationItem key={p}>
+                        <PaginationLink
+                          href="#"
+                          isActive={p === page}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (!expensesQuery.isFetching) setPage(p);
+                          }}
+                        >
+                          {p}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  )}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (
+                          expensesQuery.data &&
+                          page < expensesQuery.data.last_page &&
+                          !expensesQuery.isFetching
+                        ) {
+                          setPage((p) => p + 1);
+                        }
+                      }}
+                      className={
+                        (expensesQuery.data && page >= expensesQuery.data.last_page) ||
+                        expensesQuery.isFetching
+                          ? "pointer-events-none opacity-50"
+                          : undefined
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
+          </>
+        )}
+      </div>
 
+      {/* Create / edit expense */}
       <ExpenseFormModal
         isOpen={isModalOpen}
         onClose={closeModal}
         expenseToEdit={editingExpense}
-        onSaveSuccess={() => handleSaveSuccess()}
+        onSaveSuccess={handleSaveSuccess}
       />
-    </Box>
+
+      {/* Delete confirmation */}
+      <AlertDialog
+        open={!!expenseToDelete}
+        onOpenChange={(open) => {
+          if (!open && !deleteMutation.isPending) setExpenseToDelete(null);
+        }}
+      >
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف المصروف "{expenseToDelete?.title}"؟</AlertDialogTitle>
+            <AlertDialogDescription>هذا الإجراء لا يمكن التراجع عنه.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={deleteMutation.isPending}
+              onClick={() => setExpenseToDelete(null)}
+            >
+              إلغاء
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              onClick={confirmDelete}
+              className="gap-2"
+            >
+              {deleteMutation.isPending && <Loader2 className="size-4 animate-spin" />}
+              حذف نهائي
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 };
 

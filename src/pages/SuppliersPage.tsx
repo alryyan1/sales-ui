@@ -1,23 +1,36 @@
 // src/pages/SuppliersPage.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-  keepPreviousData,
-} from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { toast } from "sonner";
+import {
+  AlertCircle,
+  Building2,
+  CloudUpload,
+  FileDown,
+  FileText,
+  Loader2,
+  Mail,
+  MapPin,
+  MoreHorizontal,
+  Pencil,
+  Phone,
+  Plus,
+  Search,
+  ShoppingCart,
+  Trash2,
+  TrendingDown,
+  TrendingUp,
+  User,
+  Wallet,
+  X,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Table,
   TableBody,
@@ -27,120 +40,127 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Skeleton } from "@/components/ui/skeleton";
-
 import {
-  Plus,
-  Search,
-  Building2,
-  Phone,
-  Mail,
-  MoreHorizontal,
-  Pencil,
-  Trash2,
-  FileText,
-  RefreshCw,
-  User,
-  MapPin,
-  AlertCircle,
-  X,
-  ChevronRight,
-  ChevronLeft,
-  TrendingUp,
-  TrendingDown,
-  Wallet,
-  FileDown,
-  CloudUpload,
-  ShoppingCart,
-} from "lucide-react";
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { cn } from "@/lib/utils";
+import { getPageNumbers } from "@/lib/pagination";
+import { formatNumber } from "@/constants";
 
-import supplierService, { Supplier, SupplierSummary } from "../services/supplierService";
+import supplierService, { Supplier, SupplierSummary } from "@/services/supplierService";
 import { useSettings } from "@/context/SettingsContext";
-import { uploadSuppliersToFirestore } from "../services/firebaseStore";
-import apiClient from "../lib/axios";
+import { uploadSuppliersToFirestore } from "@/services/firebaseStore";
+import apiClient from "@/lib/axios";
 import { SupplierSummaryLedgerPdf } from "@/components/reports/suppliers/SupplierSummaryLedgerPdf";
 import { downloadPdf } from "@/utils/pdfDownload";
 import { registerPdfFonts } from "@/utils/pdfFontRegistry";
-import SupplierFormModal from "../components/suppliers/SupplierFormModal";
-import ConfirmationDialog from "../components/common/ConfirmationDialog";
-import { formatNumber } from "@/constants";
+import SupplierFormModal from "@/components/suppliers/SupplierFormModal";
+
+const PER_PAGE_LABEL = "مورد";
+
+function balanceTone(balance: number) {
+  if (balance > 0) return "text-destructive";
+  if (balance < 0) return "text-green-600 dark:text-green-400";
+  return "text-muted-foreground";
+}
 
 const SuppliersPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { settings, getSetting } = useSettings();
 
-  const [currentPage, setCurrentPage] = useState(1);
+  const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
-  const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; id: number | null }>({ isOpen: false, id: null });
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [selectedSupplierDetails, setSelectedSupplierDetails] = useState<Supplier | null>(null);
+  const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
+  const [detailsSupplier, setDetailsSupplier] = useState<Supplier | null>(null);
+
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
 
   useEffect(() => {
-    const timerId = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-      setCurrentPage(1);
+    const t = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPage(1);
     }, 500);
-    return () => clearTimeout(timerId);
+    return () => clearTimeout(t);
   }, [searchTerm]);
 
-  const { data: suppliersResponse, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["suppliers", currentPage, debouncedSearchTerm],
-    queryFn: () => supplierService.getSuppliers(currentPage, debouncedSearchTerm),
+  const suppliersQuery = useQuery({
+    queryKey: ["suppliers", page, debouncedSearch],
+    queryFn: () => supplierService.getSuppliers(page, debouncedSearch),
     placeholderData: keepPreviousData,
   });
 
-  const { data: summaryData, isLoading: isSummaryLoading } = useQuery({
+  const summaryQuery = useQuery({
     queryKey: ["suppliers-summary"],
     queryFn: () => supplierService.getSuppliersSummary(),
   });
 
-  const summaryMap = React.useMemo(() => {
+  const summaryMap = useMemo(() => {
     const map = new Map<number, SupplierSummary>();
-    summaryData?.forEach((s) => map.set(s.id, s));
+    summaryQuery.data?.forEach((s) => map.set(s.id, s));
     return map;
-  }, [summaryData]);
+  }, [summaryQuery.data]);
 
-  const overallTotals = React.useMemo(() => {
-    if (!summaryData) return { debit: 0, credit: 0, balance: 0 };
-    return summaryData.reduce(
-      (acc, s) => ({ debit: acc.debit + s.total_debit, credit: acc.credit + s.total_credit, balance: acc.balance + s.balance }),
+  const overallTotals = useMemo(() => {
+    if (!summaryQuery.data) return { debit: 0, credit: 0, balance: 0 };
+    return summaryQuery.data.reduce(
+      (acc, s) => ({
+        debit: acc.debit + s.total_debit,
+        credit: acc.credit + s.total_credit,
+        balance: acc.balance + s.balance,
+      }),
       { debit: 0, credit: 0, balance: 0 }
     );
-  }, [summaryData]);
-
-  const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }, [summaryQuery.data]);
 
   const firebaseCollectionName = getSetting("firebase_collection_name", "none") as string;
-
-  const [isSyncing, setIsSyncing] = useState(false);
 
   const handleSyncToFirebase = async () => {
     setIsSyncing(true);
     try {
-      // Fetch all suppliers by looping pages
       const allSuppliers: Supplier[] = [];
-      let page = 1;
+      let fetchPage = 1;
       let lastPage = 1;
       do {
         const res = await apiClient.get<{ data: Supplier[]; last_page: number }>(
-          `/suppliers?page=${page}&per_page=500`,
+          `/suppliers?page=${fetchPage}&per_page=500`
         );
         allSuppliers.push(...res.data.data);
         lastPage = res.data.last_page;
-        page++;
-      } while (page <= lastPage);
+        fetchPage++;
+      } while (fetchPage <= lastPage);
 
-      // Merge financial summary (already loaded) into each supplier
       const suppliersWithFinancials = allSuppliers.map((s) => ({
         ...s,
         total_debit: summaryMap.get(s.id)?.total_debit ?? null,
@@ -157,14 +177,13 @@ const SuppliersPage: React.FC = () => {
     }
   };
 
-  const [isPdfLoading, setIsPdfLoading] = React.useState(false);
   const handleDownloadPdf = async () => {
-    if (!summaryData) return;
+    if (!summaryQuery.data) return;
     setIsPdfLoading(true);
     try {
       registerPdfFonts();
       await downloadPdf(
-        <SupplierSummaryLedgerPdf suppliers={summaryData} settings={settings} />,
+        <SupplierSummaryLedgerPdf suppliers={summaryQuery.data} settings={settings} />,
         `suppliers-summary-${new Date().toISOString().slice(0, 10)}.pdf`
       );
     } finally {
@@ -173,531 +192,582 @@ const SuppliersPage: React.FC = () => {
   };
 
   const deleteMutation = useMutation({
-    mutationFn: supplierService.deleteSupplier,
+    mutationFn: (id: number) => supplierService.deleteSupplier(id),
     onSuccess: () => {
       toast.success("تم حذف المورد بنجاح");
-      setDeleteConfirmation({ isOpen: false, id: null });
-      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
-      if (suppliersResponse && suppliersResponse.data.length === 1 && currentPage > 1) {
-        setCurrentPage((prev) => prev - 1);
+      const isLastRowOnPage = suppliersQuery.data?.data.length === 1 && page > 1;
+      setSupplierToDelete(null);
+      if (isLastRowOnPage) {
+        setPage((p) => p - 1);
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["suppliers"] });
       }
     },
-    onError: (err: any) => {
-      toast.error(supplierService.getErrorMessage(err));
-      setDeleteConfirmation((prev) => ({ ...prev, isOpen: false }));
+    onError: (err) => {
+      toast.error("تعذر حذف المورد", { description: supplierService.getErrorMessage(err) });
     },
   });
 
-  const handleOpenModal = (supplier: Supplier | null = null) => {
+  const openCreateModal = () => {
+    setEditingSupplier(null);
+    setIsModalOpen(true);
+  };
+  const openEditModal = (supplier: Supplier) => {
     setEditingSupplier(supplier);
     setIsModalOpen(true);
   };
-
-  const handleCloseModal = () => {
+  const closeModal = () => {
     setIsModalOpen(false);
-    setTimeout(() => setEditingSupplier(null), 150);
+    setEditingSupplier(null);
   };
-
   const handleSaveSuccess = () => {
-    handleCloseModal();
+    closeModal();
     queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+    queryClient.invalidateQueries({ queryKey: ["suppliers-summary"] });
+  };
+  const confirmDelete = () => {
+    if (supplierToDelete) deleteMutation.mutate(supplierToDelete.id);
   };
 
-  const handleRowClick = (supplier: Supplier) => {
-    setSelectedSupplierDetails(supplier);
-    setDetailsOpen(true);
-  };
-
-  const handleConfirmDelete = () => {
-    if (deleteConfirmation.id) deleteMutation.mutate(deleteConfirmation.id);
-  };
-
-  const suppliers = suppliersResponse?.data ?? [];
-  const totalPages = suppliersResponse?.last_page ?? 1;
+  const suppliers = suppliersQuery.data?.data ?? [];
+  const isInitialLoading = suppliersQuery.isLoading;
+  const isEmpty = !isInitialLoading && !suppliersQuery.isError && suppliers.length === 0;
 
   return (
-    <div className="min-h-screen bg-slate-50/50" dir="rtl">
-      {/* Page Header */}
-      <div className="bg-white border-b border-slate-200 px-6 py-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-50 rounded-lg">
-              <Building2 className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold leading-tight">الموردون</h1>
-              <p className="text-xs text-slate-500 mt-0.5">إدارة الموردين والمشتريات</p>
-            </div>
-            {suppliersResponse && (
-              <Badge variant="secondary" className="text-xs font-normal">
-                {suppliersResponse.total ?? suppliers.length}
-              </Badge>
-            )}
+    <div dir="rtl" className="min-h-screen bg-background">
+      <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
+        {/* Page header */}
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b pb-5">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">الموردون</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              إدارة بيانات الموردين ومتابعة أرصدتهم وكشوف حساباتهم
+            </p>
           </div>
-
           <div className="flex items-center gap-2">
-            <div className="px-6 py-3 bg-white border-b border-slate-200">
-        <div className="grid grid-cols-3 gap-3">
-          <div className="flex items-center gap-3 bg-red-50 border border-red-100 rounded-lg justify-center px-4 py-2.5">
-            
-            <div>
-              <p className="text-[11px] text-red-500 font-medium">إجمالي المدين</p>
-              {isSummaryLoading ? (
-                <Skeleton className="h-4 w-24 mt-0.5" />
+            <Button onClick={openCreateModal} className="gap-2">
+              <Plus className="size-4" />
+              مورد جديد
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <MoreHorizontal className="size-4" />
+                  <span className="sr-only">إجراءات إضافية</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem
+                  disabled={isPdfLoading || summaryQuery.isLoading || !summaryQuery.data}
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    handleDownloadPdf();
+                  }}
+                >
+                  {isPdfLoading ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <FileDown className="size-4" />
+                  )}
+                  تصدير كشف الموردين PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={isSyncing}
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    handleSyncToFirebase();
+                  }}
+                >
+                  {isSyncing ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <CloudUpload className="size-4" />
+                  )}
+                  رفع إلى Firebase
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {/* Financial summary */}
+        <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="flex items-center gap-3 rounded-xl border bg-card px-4 py-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+              <TrendingUp className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">إجمالي المدين (مشتريات)</p>
+              {summaryQuery.isLoading ? (
+                <Skeleton className="mt-1 h-5 w-24" />
               ) : (
-                <p className="text-sm font-semibold text-red-700">{formatNumber(overallTotals.debit)}</p>
+                <p className="text-base font-semibold text-destructive tabular-nums">
+                  {formatNumber(overallTotals.debit)}
+                </p>
               )}
             </div>
           </div>
-          <div className="flex items-center bg-emerald-50 border border-emerald-100 rounded-lg justify-center px-4 py-2.5 gap-3">
-           
-            <div>
-              <p className="text-[11px] text-emerald-500 font-medium">إجمالي الدائن</p>
-              {isSummaryLoading ? (
-                <Skeleton className="h-4 w-24 mt-0.5" />
+          <div className="flex items-center gap-3 rounded-xl border bg-card px-4 py-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-green-500/10 text-green-600 dark:text-green-400">
+              <TrendingDown className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">إجمالي الدائن (مدفوعات)</p>
+              {summaryQuery.isLoading ? (
+                <Skeleton className="mt-1 h-5 w-24" />
               ) : (
-                <p className="text-sm font-semibold text-emerald-700">{formatNumber(overallTotals.credit)}</p>
+                <p className="text-base font-semibold text-green-600 tabular-nums dark:text-green-400">
+                  {formatNumber(overallTotals.credit)}
+                </p>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-lg px-4 py-2.5">
-            
-            <div>
-              <p className="text-[11px] text-blue-500 font-medium">صافي الرصيد</p>
-              {isSummaryLoading ? (
-                <Skeleton className="h-4 w-24 mt-0.5" />
+          <div className="flex items-center gap-3 rounded-xl border bg-card px-4 py-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Wallet className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">صافي الرصيد المستحق</p>
+              {summaryQuery.isLoading ? (
+                <Skeleton className="mt-1 h-5 w-24" />
               ) : (
-                <p className={`text-sm font-semibold ${overallTotals.balance > 0 ? "text-red-700" : overallTotals.balance < 0 ? "text-emerald-700" : "text-blue-700"}`}>
+                <p className={cn("text-base font-semibold tabular-nums", balanceTone(overallTotals.balance))}>
                   {formatNumber(overallTotals.balance)}
                 </p>
               )}
             </div>
           </div>
         </div>
-      </div>
-            <div className="relative w-60">
-              <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-              <Input
-                placeholder="بحث بالاسم، البريد أو الهاتف..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pr-8 h-8 text-sm border-slate-200 focus-visible:ring-blue-500"
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm("")}
-                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-            <Button
-              onClick={handleDownloadPdf}
-              size="sm"
-              variant="outline"
-              className="h-8 gap-1.5 border-slate-200"
-              disabled={isPdfLoading || isSummaryLoading || !summaryData}
-            >
-              <FileDown className="h-4 w-4" />
-              {isPdfLoading ? "جاري التصدير..." : "تصدير PDF"}
-            </Button>
-            <Button
-              onClick={handleSyncToFirebase}
-              size="sm"
-              variant="outline"
-              className="h-8 gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-              disabled={isSyncing}
-            >
-              {isSyncing ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <CloudUpload className="h-4 w-4" />
-              )}
-              {isSyncing ? "جاري الرفع..." : "رفع إلى Firebase"}
-            </Button>
-            <Button
-              onClick={() => handleOpenModal()}
-              size="sm"
-              className="h-8 bg-blue-600 hover:bg-blue-700 text-white gap-1.5"
-            >
-              <Plus className="h-4 w-4" />
-              مورد جديد
-            </Button>
+
+        {/* Toolbar */}
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[200px] flex-1 sm:max-w-xs">
+            <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="ابحث بالاسم، البريد أو الهاتف..."
+              className="pr-9"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm("")}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label="مسح البحث"
+              >
+                <X className="size-4" />
+              </button>
+            )}
           </div>
+          {!isInitialLoading && !suppliersQuery.isError && (
+            <p className="ms-auto text-xs text-muted-foreground">
+              {suppliersQuery.data?.total ?? suppliers.length} {PER_PAGE_LABEL}
+            </p>
+          )}
         </div>
-      </div>
 
-      {/* Summary Cards */}
-      
+        {/* Error state */}
+        {suppliersQuery.isError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="size-4" />
+            <AlertTitle>تعذر تحميل الموردين</AlertTitle>
+            <AlertDescription className="flex items-center justify-between gap-3">
+              <span>{supplierService.getErrorMessage(suppliersQuery.error)}</span>
+              <Button size="sm" variant="outline" onClick={() => suppliersQuery.refetch()}>
+                إعادة المحاولة
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
-      {/* Main Content */}
-      <div className="p-4">
-        {/* Error State */}
-        {isError && (
-          <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700 mb-4">
-            <AlertCircle className="h-4 w-4 flex-shrink-0" />
-            <p className="flex-1">{supplierService.getErrorMessage(error)}</p>
-            <Button variant="ghost" size="sm" onClick={() => refetch()} className="h-7 px-2 text-red-600 hover:bg-red-100">
-              <RefreshCw className="h-3.5 w-3.5 ml-1" />
-              إعادة
-            </Button>
+        {/* Loading skeleton */}
+        {isInitialLoading && (
+          <div className="space-y-2 rounded-xl border p-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 py-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="ml-auto h-8 w-8 rounded-md" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {isEmpty && (
+          <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-16 text-center">
+            <Building2 className="size-10 text-muted-foreground" />
+            {debouncedSearch ? (
+              <div>
+                <p className="font-medium text-foreground">لا توجد نتائج مطابقة لـ "{debouncedSearch}"</p>
+                <Button variant="link" size="sm" onClick={() => setSearchTerm("")}>
+                  مسح البحث
+                </Button>
+              </div>
+            ) : (
+              <div>
+                <p className="font-medium text-foreground">لا يوجد موردون بعد</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  أضف أول مورد لبدء تسجيل المشتريات والمدفوعات
+                </p>
+              </div>
+            )}
+            {!debouncedSearch && (
+              <Button onClick={openCreateModal} className="mt-2 gap-2">
+                <Plus className="size-4" />
+                إضافة أول مورد
+              </Button>
+            )}
           </div>
         )}
 
         {/* Table */}
-        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-slate-50 hover:bg-slate-50 border-b border-slate-200">
-                <TableHead className="text-right text-xs font-semibold text-slate-600 h-9 px-4">المورد</TableHead>
-                <TableHead className="text-right text-xs font-semibold text-slate-600 h-9 px-4">معلومات الاتصال</TableHead>
-                <TableHead className="text-right text-xs font-semibold text-red-500 h-9 px-4">المدين</TableHead>
-                <TableHead className="text-right text-xs font-semibold text-emerald-600 h-9 px-4">الدائن</TableHead>
-                <TableHead className="text-right text-xs font-semibold text-blue-600 h-9 px-4">الرصيد</TableHead>
-                <TableHead className="text-center text-xs font-semibold text-slate-600 h-9 px-4 w-12">⋯</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array.from({ length: 6 }).map((_, i) => (
-                  <TableRow key={i} className="border-b border-slate-100">
-                    <TableCell className="px-4 py-2.5">
-                      <div className="flex items-center gap-2">
-                        <Skeleton className="h-7 w-7 rounded-md flex-shrink-0" />
-                        <div className="space-y-1">
-                          <Skeleton className="h-3 w-28" />
-                          <Skeleton className="h-2.5 w-16" />
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-4 py-2.5"><Skeleton className="h-3 w-24" /></TableCell>
-                    <TableCell className="px-4 py-2.5"><Skeleton className="h-3 w-32" /></TableCell>
-                    <TableCell className="px-4 py-2.5 hidden md:table-cell"><Skeleton className="h-3 w-28" /></TableCell>
-                    <TableCell className="px-4 py-2.5"><Skeleton className="h-3 w-20" /></TableCell>
-                    <TableCell className="px-4 py-2.5"><Skeleton className="h-3 w-20" /></TableCell>
-                    <TableCell className="px-4 py-2.5"><Skeleton className="h-3 w-20" /></TableCell>
-                    <TableCell className="px-4 py-2.5"><Skeleton className="h-6 w-6 rounded mx-auto" /></TableCell>
+        {!isInitialLoading && !suppliersQuery.isError && !isEmpty && (
+          <>
+            <div className="overflow-hidden rounded-xl border">
+              <Table>
+                <TableHeader className="bg-muted/40">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="text-start">المورد</TableHead>
+                    <TableHead className="text-start">معلومات الاتصال</TableHead>
+                    <TableHead className="text-end">المدين</TableHead>
+                    <TableHead className="text-end">الدائن</TableHead>
+                    <TableHead className="text-end">الرصيد</TableHead>
+                    <TableHead className="w-12">
+                      <span className="sr-only">إجراءات</span>
+                    </TableHead>
                   </TableRow>
-                ))
-              ) : !isError && suppliers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="h-40 text-center">
-                    <div className="flex flex-col items-center justify-center gap-2 text-slate-400">
-                      <Building2 className="h-8 w-8" />
-                      <p className="text-sm font-medium text-slate-500">لا يوجد موردين</p>
-                      {debouncedSearchTerm && (
-                        <p className="text-xs">لا توجد نتائج لـ "{debouncedSearchTerm}"</p>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                suppliers.map((supplier) => (
-                  <TableRow
-                    key={supplier.id}
-                    className={`cursor-pointer transition-colors border-b border-slate-100 last:border-0 ${supplier.is_client ? "bg-blue-50/40 hover:bg-blue-50/70" : "hover:bg-blue-50/30"}`}
-                    onClick={() => handleRowClick(supplier)}
-                  >
-                    <TableCell className="px-4 py-2.5">
-                      <div className="flex items-center gap-2">
-                        
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <p className="text-sm font-medium leading-tight">{supplier.name}</p>
-                            {supplier.is_client && (
-                              <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-600 ring-1 ring-inset ring-blue-200">
-                                عميل
+                </TableHeader>
+                <TableBody>
+                  {suppliers.map((supplier) => {
+                    const summary = summaryMap.get(supplier.id);
+                    const balance = summary?.balance ?? 0;
+                    return (
+                      <TableRow
+                        key={supplier.id}
+                        className={cn(
+                          "cursor-pointer",
+                          supplier.is_client && "bg-primary/5 hover:bg-primary/10"
+                        )}
+                        onClick={() => setDetailsSupplier(supplier)}
+                      >
+                        <TableCell className="py-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-foreground">{supplier.name}</span>
+                            {supplier.is_client && <Badge variant="secondary">عميل</Badge>}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-0.5">
+                            {supplier.phone && (
+                              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <Phone className="size-3 text-green-600 dark:text-green-400" />
+                                <span dir="ltr">{supplier.phone}</span>
                               </span>
                             )}
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-    
-                    <TableCell className="px-4 py-2.5">
-                      <div className="flex flex-col gap-0.5">
-                        {supplier.phone && (
-                          <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                            <Phone className="h-3 w-3 text-emerald-500" />
-                            <span dir="ltr">{supplier.phone}</span>
-                          </div>
-                        )}
-                        {supplier.email && (
-                          <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                            <Mail className="h-3 w-3 text-blue-400" />
-                            <span className="truncate max-w-[160px]">{supplier.email}</span>
-                          </div>
-                        )}
-                        {!supplier.phone && !supplier.email && (
-                          <span className="text-xs text-slate-300">—</span>
-                        )}
-                      </div>
-                    </TableCell>
-                   
-                    <TableCell className="px-4 py-2.5">
-                      {isSummaryLoading ? (
-                        <Skeleton className="h-3 w-16" />
-                      ) : (
-                        <span className="text-xs font-medium text-red-600 tabular-nums">
-                          {fmt(summaryMap.get(supplier.id)?.total_debit ?? 0)}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="px-4 py-2.5">
-                      {isSummaryLoading ? (
-                        <Skeleton className="h-3 w-16" />
-                      ) : (
-                        <span className="text-xs font-medium text-emerald-600 tabular-nums">
-                          {fmt(summaryMap.get(supplier.id)?.total_credit ?? 0)}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="px-4 py-2.5">
-                      {isSummaryLoading ? (
-                        <Skeleton className="h-3 w-16" />
-                      ) : (() => {
-                        const bal = summaryMap.get(supplier.id)?.balance ?? 0;
-                        return (
-                          <span className={`text-xs font-semibold tabular-nums ${bal > 0 ? "text-red-600" : bal < 0 ? "text-emerald-600" : "text-slate-400"}`}>
-                            {fmt(bal)}
-                          </span>
-                        );
-                      })()}
-                    </TableCell>
-                    <TableCell className="px-4 py-2.5">
-                      <div className="flex justify-center">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-slate-400 hover:text-slate-700 hover:bg-slate-100"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-44 text-sm">
-                            <DropdownMenuItem
-                              onClick={(e) => { e.stopPropagation(); navigate(`/suppliers/${supplier.id}/ledger`); }}
-                              className="gap-2"
-                            >
-                              <FileText className="h-3.5 w-3.5 text-blue-500" />
-                              كشف الحساب
-                            </DropdownMenuItem>
-                            {supplier.is_client && supplier.client_id && (
-                              <DropdownMenuItem
-                                onClick={(e) => { e.stopPropagation(); navigate(`/clients/${supplier.client_id}/ledger`); }}
-                                className="gap-2"
-                              >
-                                <ShoppingCart className="h-3.5 w-3.5 text-blue-500" />
-                                كشف مبيعاته
-                              </DropdownMenuItem>
+                            {supplier.email && (
+                              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <Mail className="size-3 text-primary" />
+                                <span className="max-w-[180px] truncate">{supplier.email}</span>
+                              </span>
                             )}
-                            <DropdownMenuItem
-                              onClick={(e) => { e.stopPropagation(); handleOpenModal(supplier); }}
-                              className="gap-2"
-                            >
-                              <Pencil className="h-3.5 w-3.5 text-amber-500" />
-                              تعديل
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={(e) => { e.stopPropagation(); setDeleteConfirmation({ isOpen: true, id: supplier.id }); }}
-                              className="gap-2 text-red-600 focus:text-red-700 focus:bg-red-50"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                              حذف
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-
-          {/* Pagination */}
-          {!isLoading && totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-2.5 border-t border-slate-100 bg-slate-50/50">
-              <p className="text-xs text-slate-500">
-                صفحة {currentPage} من {totalPages}
-              </p>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1 || isLoading}
-                >
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </Button>
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const page = i + Math.max(1, Math.min(currentPage - 2, totalPages - 4));
-                  return (
-                    <Button
-                      key={page}
-                      variant={currentPage === page ? "default" : "outline"}
-                      size="icon"
-                      className={`h-7 w-7 text-xs ${currentPage === page ? "bg-blue-600 hover:bg-blue-700" : ""}`}
-                      onClick={() => setCurrentPage(page)}
-                    >
-                      {page}
-                    </Button>
-                  );
-                })}
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages || isLoading}
-                >
-                  <ChevronLeft className="h-3.5 w-3.5" />
-                </Button>
-              </div>
+                            {!supplier.phone && !supplier.email && (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-end text-sm text-destructive tabular-nums">
+                          {summaryQuery.isLoading ? (
+                            <Skeleton className="ms-auto h-3.5 w-16" />
+                          ) : (
+                            formatNumber(summary?.total_debit ?? 0, 2)
+                          )}
+                        </TableCell>
+                        <TableCell className="text-end text-sm text-green-600 tabular-nums dark:text-green-400">
+                          {summaryQuery.isLoading ? (
+                            <Skeleton className="ms-auto h-3.5 w-16" />
+                          ) : (
+                            formatNumber(summary?.total_credit ?? 0, 2)
+                          )}
+                        </TableCell>
+                        <TableCell className={cn("text-end text-sm font-semibold tabular-nums", balanceTone(balance))}>
+                          {summaryQuery.isLoading ? (
+                            <Skeleton className="ms-auto h-3.5 w-16" />
+                          ) : (
+                            formatNumber(balance, 2)
+                          )}
+                        </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <div className="flex justify-center">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="size-8">
+                                  <MoreHorizontal className="size-4" />
+                                  <span className="sr-only">إجراءات</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start">
+                                <DropdownMenuItem
+                                  onSelect={() => navigate(`/suppliers/${supplier.id}/ledger`)}
+                                >
+                                  <FileText className="size-4" />
+                                  كشف الحساب
+                                </DropdownMenuItem>
+                                {supplier.is_client && supplier.client_id && (
+                                  <DropdownMenuItem
+                                    onSelect={() => navigate(`/clients/${supplier.client_id}/ledger`)}
+                                  >
+                                    <ShoppingCart className="size-4" />
+                                    كشف مبيعاته
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem onSelect={() => openEditModal(supplier)}>
+                                  <Pencil className="size-4" />
+                                  تعديل
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  variant="destructive"
+                                  onSelect={() => setSupplierToDelete(supplier)}
+                                >
+                                  <Trash2 className="size-4" />
+                                  حذف
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
-          )}
-        </div>
+
+            {/* Pagination */}
+            {suppliersQuery.data && suppliersQuery.data.last_page > 1 && (
+              <Pagination className="mt-4">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (page > 1 && !suppliersQuery.isFetching) setPage((p) => p - 1);
+                      }}
+                      className={
+                        page <= 1 || suppliersQuery.isFetching
+                          ? "pointer-events-none opacity-50"
+                          : undefined
+                      }
+                    />
+                  </PaginationItem>
+                  {getPageNumbers(page, suppliersQuery.data.last_page).map((p, i) =>
+                    p === "ellipsis" ? (
+                      <PaginationItem key={`e-${i}`}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    ) : (
+                      <PaginationItem key={p}>
+                        <PaginationLink
+                          href="#"
+                          isActive={p === page}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (!suppliersQuery.isFetching) setPage(p);
+                          }}
+                        >
+                          {p}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  )}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (
+                          suppliersQuery.data &&
+                          page < suppliersQuery.data.last_page &&
+                          !suppliersQuery.isFetching
+                        ) {
+                          setPage((p) => p + 1);
+                        }
+                      }}
+                      className={
+                        (suppliersQuery.data && page >= suppliersQuery.data.last_page) ||
+                        suppliersQuery.isFetching
+                          ? "pointer-events-none opacity-50"
+                          : undefined
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
+          </>
+        )}
       </div>
 
-      {/* Supplier Details Dialog */}
-      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="sm:max-w-md p-0 overflow-hidden">
-          {/* Colored top bar */}
-          <div className="h-1 w-full bg-gradient-to-r from-blue-600 to-blue-400" />
-
-          {/* Header */}
-          <div className="px-5 pt-4 pb-3 flex items-start gap-3 border-b border-slate-100">
-            <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-              <Building2 className="h-5 w-5 text-white" />
-            </div>
-            <div className="min-w-0">
-              <DialogHeader>
-                <DialogTitle className="text-base font-bold text-slate-800 leading-tight truncate">
-                  {selectedSupplierDetails?.name}
-                </DialogTitle>
-              </DialogHeader>
-              <p className="text-[11px] text-slate-400 mt-0.5">بيانات المورد</p>
-            </div>
-          </div>
-
-          <div className="px-5 py-4 space-y-4">
-            {/* Financial summary strip */}
-            {selectedSupplierDetails && (
-              <div className="grid grid-cols-3 gap-2">
-                <div className="rounded-lg bg-red-50 border border-red-100 px-3 py-2 text-center">
-                  <p className="text-[10px] text-red-400 font-medium mb-0.5">المدين</p>
-                  <p className="text-xs font-bold text-red-600 tabular-nums">
-                    {fmt(summaryMap.get(selectedSupplierDetails.id)?.total_debit ?? 0)}
-                  </p>
-                </div>
-                <div className="rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2 text-center">
-                  <p className="text-[10px] text-emerald-500 font-medium mb-0.5">الدائن</p>
-                  <p className="text-xs font-bold text-emerald-600 tabular-nums">
-                    {fmt(summaryMap.get(selectedSupplierDetails.id)?.total_credit ?? 0)}
-                  </p>
-                </div>
-                <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 text-center">
-                  <p className="text-[10px] text-blue-400 font-medium mb-0.5">الرصيد</p>
-                  {(() => {
-                    const bal = summaryMap.get(selectedSupplierDetails.id)?.balance ?? 0;
-                    return (
-                      <p className={`text-xs font-bold tabular-nums ${bal > 0 ? "text-red-600" : bal < 0 ? "text-emerald-600" : "text-slate-400"}`}>
-                        {fmt(bal)}
-                      </p>
-                    );
-                  })()}
-                </div>
-              </div>
-            )}
-
-            {/* Contact info */}
-            <div className="space-y-2">
-              {selectedSupplierDetails?.contact_person && (
-                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                  <User className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                  <div>
-                    <p className="text-[10px] text-slate-400">المسؤول</p>
-                    <p className="text-xs font-medium text-slate-700">{selectedSupplierDetails.contact_person}</p>
-                  </div>
-                </div>
-              )}
-              {selectedSupplierDetails?.phone && (
-                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                  <Phone className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
-                  <div>
-                    <p className="text-[10px] text-slate-400">الهاتف</p>
-                    <p className="text-xs font-medium text-slate-700" dir="ltr">{selectedSupplierDetails.phone}</p>
-                  </div>
-                </div>
-              )}
-              {selectedSupplierDetails?.email && (
-                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                  <Mail className="h-3.5 w-3.5 text-blue-400 flex-shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-[10px] text-slate-400">البريد الإلكتروني</p>
-                    <p className="text-xs font-medium text-slate-700 truncate">{selectedSupplierDetails.email}</p>
-                  </div>
-                </div>
-              )}
-              {selectedSupplierDetails?.address && (
-                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                  <MapPin className="h-3.5 w-3.5 text-rose-400 flex-shrink-0" />
-                  <div>
-                    <p className="text-[10px] text-slate-400">العنوان</p>
-                    <p className="text-xs font-medium text-slate-700">{selectedSupplierDetails.address}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-2 pt-1 border-t border-slate-100">
-              <Button
-                size="sm"
-                className="flex-1 h-9 bg-blue-600 hover:bg-blue-700 text-white gap-1.5 text-xs font-medium"
-                onClick={() => { if (selectedSupplierDetails) navigate(`/suppliers/${selectedSupplierDetails.id}/ledger`); setDetailsOpen(false); }}
-              >
-                <FileText className="h-3.5 w-3.5" />
-                كشف الحساب
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1 h-9 gap-1.5 text-xs font-medium border-slate-200"
-                onClick={() => { if (selectedSupplierDetails) handleOpenModal(selectedSupplierDetails); setDetailsOpen(false); }}
-              >
-                <Pencil className="h-3.5 w-3.5 text-amber-500" />
-                تعديل
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
+      {/* Create / edit supplier */}
       <SupplierFormModal
         isOpen={isModalOpen}
-        onClose={handleCloseModal}
+        onClose={closeModal}
         supplierToEdit={editingSupplier}
         onSaveSuccess={handleSaveSuccess}
       />
 
-      <ConfirmationDialog
-        open={deleteConfirmation.isOpen}
-        onClose={() => setDeleteConfirmation({ ...deleteConfirmation, isOpen: false })}
-        onConfirm={handleConfirmDelete}
-        title="حذف المورد"
-        message="هل أنت متأكد من حذف هذا المورد؟ لا يمكن التراجع عن هذه العملية."
-        confirmText={deleteMutation.isPending ? "جاري الحذف..." : "حذف"}
-        cancelText="إلغاء"
-        confirmVariant="destructive"
-        isLoading={deleteMutation.isPending}
-      />
+      {/* Quick-view details */}
+      <Dialog open={!!detailsSupplier} onOpenChange={(open) => !open && setDetailsSupplier(null)}>
+        <DialogContent dir="rtl" className="sm:max-w-md">
+          {detailsSupplier && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center gap-3">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                    <Building2 className="size-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <DialogTitle className="truncate">{detailsSupplier.name}</DialogTitle>
+                    <DialogDescription>بيانات المورد</DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="rounded-lg border bg-destructive/5 px-3 py-2 text-center">
+                  <p className="text-[11px] text-muted-foreground">المدين</p>
+                  <p className="text-xs font-bold text-destructive tabular-nums">
+                    {formatNumber(summaryMap.get(detailsSupplier.id)?.total_debit ?? 0, 2)}
+                  </p>
+                </div>
+                <div className="rounded-lg border bg-green-500/5 px-3 py-2 text-center">
+                  <p className="text-[11px] text-muted-foreground">الدائن</p>
+                  <p className="text-xs font-bold text-green-600 tabular-nums dark:text-green-400">
+                    {formatNumber(summaryMap.get(detailsSupplier.id)?.total_credit ?? 0, 2)}
+                  </p>
+                </div>
+                <div className="rounded-lg border bg-primary/5 px-3 py-2 text-center">
+                  <p className="text-[11px] text-muted-foreground">الرصيد</p>
+                  <p
+                    className={cn(
+                      "text-xs font-bold tabular-nums",
+                      balanceTone(summaryMap.get(detailsSupplier.id)?.balance ?? 0)
+                    )}
+                  >
+                    {formatNumber(summaryMap.get(detailsSupplier.id)?.balance ?? 0, 2)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {detailsSupplier.contact_person && (
+                  <div className="flex items-center gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
+                    <User className="size-3.5 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-muted-foreground">المسؤول</p>
+                      <p className="text-xs font-medium text-foreground">{detailsSupplier.contact_person}</p>
+                    </div>
+                  </div>
+                )}
+                {detailsSupplier.phone && (
+                  <div className="flex items-center gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
+                    <Phone className="size-3.5 shrink-0 text-green-600 dark:text-green-400" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-muted-foreground">الهاتف</p>
+                      <p className="text-xs font-medium text-foreground" dir="ltr">{detailsSupplier.phone}</p>
+                    </div>
+                  </div>
+                )}
+                {detailsSupplier.email && (
+                  <div className="flex items-center gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
+                    <Mail className="size-3.5 shrink-0 text-primary" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-muted-foreground">البريد الإلكتروني</p>
+                      <p className="truncate text-xs font-medium text-foreground">{detailsSupplier.email}</p>
+                    </div>
+                  </div>
+                )}
+                {detailsSupplier.address && (
+                  <div className="flex items-center gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
+                    <MapPin className="size-3.5 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-muted-foreground">العنوان</p>
+                      <p className="text-xs font-medium text-foreground">{detailsSupplier.address}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-2 border-t pt-4">
+                <Button
+                  size="sm"
+                  className="flex-1 gap-1.5"
+                  onClick={() => {
+                    navigate(`/suppliers/${detailsSupplier.id}/ledger`);
+                    setDetailsSupplier(null);
+                  }}
+                >
+                  <FileText className="size-3.5" />
+                  كشف الحساب
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 gap-1.5"
+                  onClick={() => {
+                    openEditModal(detailsSupplier);
+                    setDetailsSupplier(null);
+                  }}
+                >
+                  <Pencil className="size-3.5" />
+                  تعديل
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation */}
+      <AlertDialog
+        open={!!supplierToDelete}
+        onOpenChange={(open) => {
+          if (!open && !deleteMutation.isPending) setSupplierToDelete(null);
+        }}
+      >
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف المورد "{supplierToDelete?.name}"؟</AlertDialogTitle>
+            <AlertDialogDescription>هذا الإجراء لا يمكن التراجع عنه.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={deleteMutation.isPending}
+              onClick={() => setSupplierToDelete(null)}
+            >
+              إلغاء
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              onClick={confirmDelete}
+              className="gap-2"
+            >
+              {deleteMutation.isPending && <Loader2 className="size-4 animate-spin" />}
+              حذف نهائي
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

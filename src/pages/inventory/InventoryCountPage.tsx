@@ -1,429 +1,648 @@
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import type { DateRange } from "react-day-picker";
+import dayjs from "dayjs";
 import {
-  Box,
-  Button,
-  Paper,
+  AlertCircle,
+  Check,
+  ChevronLeft,
+  ClipboardList,
+  Loader2,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
+  TableHeader,
   TableRow,
-  Chip,
-  TextField,
-  MenuItem,
-  Pagination,
-  Typography,
-  Stack,
-} from "@mui/material";
-
+} from "@/components/ui/table";
 import {
-  Add,
-  Edit,
-  Delete,
-  Visibility,
-  CheckCircle,
-  Cancel,
-  Assessment,
-  FileUpload,
-} from "@mui/icons-material";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { DatePickerWithRange } from "@/components/ui/date-range-picker";
+import { SegmentedControl } from "@/components/settings/shared/SegmentedControl";
+import { getPageNumbers } from "@/lib/pagination";
+
 import inventoryCountService, {
   InventoryCount,
   InventoryCountFilters,
 } from "@/services/inventoryCountService";
 import { warehouseService } from "@/services/warehouseService";
-import InventoryCountDialog from "../../components/inventory/InventoryCountDialog";
-import dayjs from "dayjs";
+import InventoryCountDialog from "@/components/inventory/InventoryCountDialog";
+
+const PER_PAGE = 15;
+
+type Status = InventoryCount["status"];
+type StatusFilter = "" | Status;
+
+const STATUS_CONFIG: Record<Status, { label: string; badge: "secondary" | "info" | "warning" | "success" | "destructive" }> = {
+  draft: { label: "مسودة", badge: "secondary" },
+  in_progress: { label: "قيد التنفيذ", badge: "info" },
+  completed: { label: "مكتمل", badge: "warning" },
+  approved: { label: "معتمد", badge: "success" },
+  rejected: { label: "مرفوض", badge: "destructive" },
+};
+
+const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
+  { value: "", label: "الكل" },
+  { value: "draft", label: STATUS_CONFIG.draft.label },
+  { value: "in_progress", label: STATUS_CONFIG.in_progress.label },
+  { value: "completed", label: STATUS_CONFIG.completed.label },
+  { value: "approved", label: STATUS_CONFIG.approved.label },
+  { value: "rejected", label: STATUS_CONFIG.rejected.label },
+];
+
+type PendingAction = {
+  type: "delete" | "approve" | "reject" | "import";
+  count: InventoryCount;
+};
+
+const ACTION_COPY: Record<
+  PendingAction["type"],
+  { title: (c: InventoryCount) => string; description: string; confirmLabel: string; variant: "default" | "destructive" }
+> = {
+  delete: {
+    title: (c) => `حذف الجرد #${c.id}؟`,
+    description: "سيتم حذف هذا الجرد وكل بياناته نهائيًا. هذا الإجراء لا يمكن التراجع عنه.",
+    confirmLabel: "حذف نهائي",
+    variant: "destructive",
+  },
+  approve: {
+    title: (c) => `اعتماد الجرد #${c.id}؟`,
+    description: "سيتم تعديل كميات المخزون تلقائيًا لتطابق نتائج هذا الجرد فور الاعتماد.",
+    confirmLabel: "اعتماد وتعديل المخزون",
+    variant: "default",
+  },
+  reject: {
+    title: (c) => `رفض الجرد #${c.id}؟`,
+    description: "لن يتم تعديل المخزون، ويمكن مراجعة الجرد لاحقًا.",
+    confirmLabel: "رفض الجرد",
+    variant: "destructive",
+  },
+  import: {
+    title: (c) => `استيراد كل منتجات المستودع إلى الجرد #${c.id}؟`,
+    description: "ستتم إضافة كل المنتجات التي لم تُدرج بعد في هذا الجرد بكمياتها المتوقعة الحالية.",
+    confirmLabel: "استيراد",
+    variant: "default",
+  },
+};
 
 const InventoryCountPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // State
   const [page, setPage] = useState(1);
-  const [filters, setFilters] = useState<InventoryCountFilters>({});
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [status, setStatus] = useState<StatusFilter>("");
+  const [warehouseId, setWarehouseId] = useState("all");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCount, setEditingCount] = useState<InventoryCount | null>(null);
-  const perPage = 15; // Define perPage as a constant
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 
-  // Queries
-  const { data: countsData, isLoading } = useQuery({
-    queryKey: ["inventory-counts", page, perPage, filters],
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm), 400);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  const startDate = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined;
+  const endDate = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined;
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, status, warehouseId, startDate, endDate]);
+
+  const filters: InventoryCountFilters = {
+    search: debouncedSearch || undefined,
+    status: status || undefined,
+    warehouse_id: warehouseId !== "all" ? Number(warehouseId) : undefined,
+    start_date: startDate,
+    end_date: endDate,
+  };
+
+  const countsQuery = useQuery({
+    queryKey: ["inventory-counts", page, PER_PAGE, filters],
     queryFn: () =>
-      inventoryCountService.getInventoryCounts({
-        ...filters,
-        page,
-        per_page: perPage,
-      }),
+      inventoryCountService.getInventoryCounts({ ...filters, page, per_page: PER_PAGE }),
+    placeholderData: (prev) => prev,
   });
 
-  const { data: warehouses } = useQuery({
+  const warehousesQuery = useQuery({
     queryKey: ["warehouses"],
     queryFn: () => warehouseService.getAll(),
+    staleTime: 5 * 60 * 1000,
   });
 
-  // Mutations
+  const invalidateCounts = () => queryClient.invalidateQueries({ queryKey: ["inventory-counts"] });
+
   const deleteMutation = useMutation({
     mutationFn: (id: number) => inventoryCountService.deleteInventoryCount(id),
     onSuccess: () => {
       toast.success("تم حذف الجرد بنجاح");
-      queryClient.invalidateQueries({ queryKey: ["inventory-counts"] });
+      setPendingAction(null);
+      invalidateCounts();
     },
-    onError: (error) => {
-      toast.error("خطأ", {
-        description: inventoryCountService.getErrorMessage(error),
-      });
-    },
+    onError: (error) => toast.error("تعذر حذف الجرد", { description: inventoryCountService.getErrorMessage(error) }),
   });
 
   const approveMutation = useMutation({
     mutationFn: (id: number) => inventoryCountService.approveCount(id),
     onSuccess: () => {
       toast.success("تم اعتماد الجرد وتعديل المخزون");
-      queryClient.invalidateQueries({ queryKey: ["inventory-counts"] });
+      setPendingAction(null);
+      invalidateCounts();
     },
-    onError: (error) => {
-      toast.error("خطأ", {
-        description: inventoryCountService.getErrorMessage(error),
-      });
-    },
+    onError: (error) => toast.error("تعذر اعتماد الجرد", { description: inventoryCountService.getErrorMessage(error) }),
   });
 
   const rejectMutation = useMutation({
     mutationFn: (id: number) => inventoryCountService.rejectCount(id),
     onSuccess: () => {
       toast.success("تم رفض الجرد");
-      queryClient.invalidateQueries({ queryKey: ["inventory-counts"] });
+      setPendingAction(null);
+      invalidateCounts();
     },
-    onError: (error) => {
-      toast.error("خطأ", {
-        description: inventoryCountService.getErrorMessage(error),
-      });
-    },
+    onError: (error) => toast.error("تعذر رفض الجرد", { description: inventoryCountService.getErrorMessage(error) }),
   });
 
   const importAllProductsMutation = useMutation({
     mutationFn: (id: number) => inventoryCountService.importAllProducts(id),
     onSuccess: (data) => {
       toast.success(data.message);
-      queryClient.invalidateQueries({ queryKey: ["inventory-counts"] });
+      setPendingAction(null);
+      invalidateCounts();
     },
-    onError: (error) => {
-      toast.error("خطأ", {
-        description: inventoryCountService.getErrorMessage(error),
-      });
-    },
+    onError: (error) => toast.error("تعذر الاستيراد", { description: inventoryCountService.getErrorMessage(error) }),
   });
 
-  // Handlers
-  const handleDelete = (count: InventoryCount) => {
-    if (window.confirm("هل أنت متأكد من حذف هذا الجرد؟")) {
-      deleteMutation.mutate(count.id);
-    }
+  const isActing =
+    deleteMutation.isPending ||
+    approveMutation.isPending ||
+    rejectMutation.isPending ||
+    importAllProductsMutation.isPending;
+
+  const confirmPendingAction = () => {
+    if (!pendingAction) return;
+    const { type, count } = pendingAction;
+    if (type === "delete") deleteMutation.mutate(count.id);
+    else if (type === "approve") approveMutation.mutate(count.id);
+    else if (type === "reject") rejectMutation.mutate(count.id);
+    else importAllProductsMutation.mutate(count.id);
   };
 
-  const handleApprove = (count: InventoryCount) => {
-    if (
-      window.confirm(
-        "هل أنت متأكد من اعتماد هذا الجرد؟ سيتم تعديل المخزون تلقائياً.",
-      )
-    ) {
-      approveMutation.mutate(count.id);
-    }
+  const openCreateDialog = () => {
+    setEditingCount(null);
+    setDialogOpen(true);
+  };
+  const openEditDialog = (count: InventoryCount) => {
+    setEditingCount(count);
+    setDialogOpen(true);
+  };
+  const closeDialog = () => {
+    setDialogOpen(false);
+    setEditingCount(null);
   };
 
-  const handleReject = (count: InventoryCount) => {
-    if (window.confirm("هل أنت متأكد من رفض هذا الجرد؟")) {
-      rejectMutation.mutate(count.id);
-    }
+  const counts = countsQuery.data?.data ?? [];
+  const hasActiveFilters =
+    debouncedSearch.trim() !== "" || status !== "" || warehouseId !== "all" || !!dateRange?.from;
+  const clearFilters = () => {
+    setSearchTerm("");
+    setStatus("");
+    setWarehouseId("all");
+    setDateRange(undefined);
   };
 
-  const handleImportAllProducts = (count: InventoryCount) => {
-    if (
-      window.confirm(
-        "هل تريد استيراد جميع المنتجات من المستودع؟ سيتم إضافة المنتجات التي لم تتم إضافتها مسبقاً.",
-      )
-    ) {
-      importAllProductsMutation.mutate(count.id);
-    }
-  };
+  const isInitialLoading = countsQuery.isLoading;
+  const isEmpty = !isInitialLoading && !countsQuery.isError && counts.length === 0;
 
-  const getStatusChip = (status: string) => {
-    const statusConfig = {
-      draft: { label: "مسودة", color: "default" as const },
-      in_progress: { label: "قيد التنفيذ", color: "info" as const },
-      completed: { label: "مكتمل", color: "warning" as const },
-      approved: { label: "معتمد", color: "success" as const },
-      rejected: { label: "مرفوض", color: "error" as const },
-    };
-
-    const config =
-      statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
-    return <Chip label={config.label} color={config.color} size="small" />;
-  };
+  const actionCopy = pendingAction ? ACTION_COPY[pendingAction.type] : null;
 
   return (
-    <Box sx={{ p: 3 }}>
-      {/* Header */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 3,
-        }}
-      >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-          <Assessment sx={{ fontSize: 32, color: "primary.main" }} />
-          <Typography variant="h4" fontWeight="bold">
-            جرد المخزون
-          </Typography>
-        </Box>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={() => {
-            setEditingCount(null);
-            setDialogOpen(true);
-          }}
-        >
-          جرد جديد
-        </Button>
-      </Box>
+    <div dir="rtl" className="min-h-screen bg-background">
+      <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
+        {/* Page header */}
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b pb-5">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">جرد المخزون</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              أنشئ عمليات جرد للمستودعات، سجّل الكميات الفعلية، واعتمد النتائج لتحديث المخزون
+            </p>
+          </div>
+          <Button onClick={openCreateDialog} className="gap-2">
+            <Plus className="size-4" />
+            جرد جديد
+          </Button>
+        </div>
 
-      {/* Filters */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: 2,
-          }}
-        >
-          <TextField
-            select
-            label="المستودع"
-            value={filters.warehouse_id || ""}
-            onChange={(e) =>
-              setFilters({
-                ...filters,
-                warehouse_id: Number(e.target.value) || undefined,
-              })
-            }
-            size="small"
-          >
-            <MenuItem value="">الكل</MenuItem>
-            {warehouses?.map((w: any) => (
-              <MenuItem key={w.id} value={w.id}>
-                {w.name}
-              </MenuItem>
-            ))}
-          </TextField>
+        {/* Status filter */}
+        <div className="mb-4 overflow-x-auto">
+          <SegmentedControl value={status} onChange={setStatus} options={STATUS_FILTER_OPTIONS} />
+        </div>
 
-          <TextField
-            select
-            label="الحالة"
-            value={filters.status || ""}
-            onChange={(e) =>
-              setFilters({ ...filters, status: e.target.value || undefined })
-            }
-            size="small"
-          >
-            <MenuItem value="">الكل</MenuItem>
-            <MenuItem value="draft">مسودة</MenuItem>
-            <MenuItem value="in_progress">قيد التنفيذ</MenuItem>
-            <MenuItem value="completed">مكتمل</MenuItem>
-            <MenuItem value="approved">معتمد</MenuItem>
-            <MenuItem value="rejected">مرفوض</MenuItem>
-          </TextField>
-
-          <TextField
-            type="date"
-            label="من تاريخ"
-            value={filters.start_date || ""}
-            onChange={(e) =>
-              setFilters({
-                ...filters,
-                start_date: e.target.value || undefined,
-              })
-            }
-            size="small"
-            InputLabelProps={{ shrink: true }}
-          />
-
-          <TextField
-            type="date"
-            label="إلى تاريخ"
-            value={filters.end_date || ""}
-            onChange={(e) =>
-              setFilters({ ...filters, end_date: e.target.value || undefined })
-            }
-            size="small"
-            InputLabelProps={{ shrink: true }}
-          />
-        </Box>
-      </Paper>
-
-      {/* Table */}
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow sx={{ bgcolor: "grey.100" }}>
-              <TableCell>#</TableCell>
-              <TableCell>التاريخ</TableCell>
-              <TableCell>المستودع</TableCell>
-              <TableCell>الحالة</TableCell>
-              <TableCell>المستخدم</TableCell>
-              <TableCell align="center">عدد المنتجات</TableCell>
-              <TableCell>الملاحظات</TableCell>
-              <TableCell align="center">الإجراءات</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={8} align="center">
-                  جاري التحميل...
-                </TableCell>
-              </TableRow>
-            ) : countsData?.data?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} align="center">
-                  لا توجد عمليات جرد
-                </TableCell>
-              </TableRow>
-            ) : (
-              countsData?.data?.map((count: InventoryCount) => (
-                <TableRow key={count.id} hover>
-                  <TableCell>{count.id}</TableCell>
-                  <TableCell>
-                    {dayjs(count.count_date).format("YYYY-MM-DD")}
-                  </TableCell>
-                  <TableCell>{count.warehouse?.name}</TableCell>
-                  <TableCell>{getStatusChip(count.status)}</TableCell>
-                  <TableCell>{count.user?.name}</TableCell>
-                  <TableCell align="center">
-                    <Chip
-                      label={count.items_count || 0}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell>{count.notes || "—"}</TableCell>
-                  <TableCell align="center">
-                    <Stack direction="row" spacing={0.5} justifyContent="center" flexWrap="wrap">
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<Visibility fontSize="small" />}
-                        onClick={() => navigate(`/inventory/counts/${count.id}`)}
-                        sx={{ fontSize: 11 }}
-                      >
-                        عرض
-                      </Button>
-
-                      {(count.status === "draft" || count.status === "in_progress") && (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          color="primary"
-                          startIcon={<FileUpload fontSize="small" />}
-                          onClick={() => handleImportAllProducts(count)}
-                          disabled={importAllProductsMutation.isPending}
-                          sx={{ fontSize: 11 }}
-                        >
-                          استيراد الكل
-                        </Button>
-                      )}
-
-                      {count.status === "draft" && (
-                        <>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            startIcon={<Edit fontSize="small" />}
-                            onClick={() => { setEditingCount(count); setDialogOpen(true); }}
-                            sx={{ fontSize: 11 }}
-                          >
-                            تعديل
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            color="error"
-                            startIcon={<Delete fontSize="small" />}
-                            onClick={() => handleDelete(count)}
-                            sx={{ fontSize: 11 }}
-                          >
-                            حذف
-                          </Button>
-                        </>
-                      )}
-
-                      {count.status === "completed" && (
-                        <>
-                          <Button
-                            size="small"
-                            variant="contained"
-                            color="success"
-                            startIcon={<CheckCircle fontSize="small" />}
-                            onClick={() => handleApprove(count)}
-                            sx={{ fontSize: 11 }}
-                          >
-                            اعتماد
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            color="error"
-                            startIcon={<Cancel fontSize="small" />}
-                            onClick={() => handleReject(count)}
-                            sx={{ fontSize: 11 }}
-                          >
-                            رفض
-                          </Button>
-                        </>
-                      )}
-                    </Stack>
-                  </TableCell>
-                </TableRow>
-              ))
+        {/* Toolbar */}
+        <div className="mb-4 flex flex-wrap items-end gap-2">
+          <div className="relative min-w-[200px] flex-1 sm:max-w-xs">
+            <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="ابحث بالملاحظات..."
+              className="pr-9"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm("")}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label="مسح البحث"
+              >
+                <X className="size-4" />
+              </button>
             )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+          </div>
 
-      {/* Pagination */}
-      {countsData?.last_page > 1 && (
-        <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
-          <Pagination
-            count={countsData.last_page}
-            page={page}
-            onChange={(_, value) => setPage(value)}
-            color="primary"
-          />
-        </Box>
-      )}
+          <Select value={warehouseId} onValueChange={setWarehouseId}>
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="كل المستودعات" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">كل المستودعات</SelectItem>
+              {(warehousesQuery.data ?? []).map((w) => (
+                <SelectItem key={w.id} value={String(w.id)}>
+                  {w.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-      {/* Dialog */}
+          <DatePickerWithRange date={dateRange} onDateChange={setDateRange} buttonSize="default" />
+
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1.5">
+              <X className="size-3.5" />
+              مسح الفلاتر
+            </Button>
+          )}
+
+          {!isInitialLoading && !countsQuery.isError && (
+            <p className="ms-auto text-xs text-muted-foreground">
+              {countsQuery.data?.total ?? counts.length} عملية جرد
+            </p>
+          )}
+        </div>
+
+        {/* Error state */}
+        {countsQuery.isError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="size-4" />
+            <AlertTitle>تعذر تحميل عمليات الجرد</AlertTitle>
+            <AlertDescription className="flex items-center justify-between gap-3">
+              <span>{inventoryCountService.getErrorMessage(countsQuery.error)}</span>
+              <Button size="sm" variant="outline" onClick={() => countsQuery.refetch()}>
+                إعادة المحاولة
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Loading skeleton */}
+        {isInitialLoading && (
+          <div className="space-y-2 rounded-xl border p-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 py-2">
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-5 w-20 rounded-full" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="ml-auto h-8 w-24 rounded-md" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {isEmpty && (
+          <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-16 text-center">
+            <ClipboardList className="size-10 text-muted-foreground" />
+            {hasActiveFilters ? (
+              <div>
+                <p className="font-medium text-foreground">لا توجد نتائج مطابقة للفلاتر الحالية</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  حاول تعديل البحث أو الحالة أو المستودع أو نطاق التاريخ
+                </p>
+                <Button variant="link" size="sm" onClick={clearFilters}>
+                  مسح الفلاتر
+                </Button>
+              </div>
+            ) : (
+              <div>
+                <p className="font-medium text-foreground">لا توجد عمليات جرد بعد</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  ابدأ أول عملية جرد لمراجعة كميات المخزون الفعلية
+                </p>
+              </div>
+            )}
+            {!hasActiveFilters && (
+              <Button onClick={openCreateDialog} className="mt-2 gap-2">
+                <Plus className="size-4" />
+                إنشاء أول جرد
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* Table */}
+        {!isInitialLoading && !countsQuery.isError && !isEmpty && (
+          <>
+            <div className="overflow-hidden rounded-xl border">
+              <Table>
+                <TableHeader className="bg-muted/40">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="text-start">التاريخ</TableHead>
+                    <TableHead className="text-start">المستودع</TableHead>
+                    <TableHead className="text-start">الحالة</TableHead>
+                    <TableHead className="text-start">المستخدم</TableHead>
+                    <TableHead className="text-center">المنتجات</TableHead>
+                    <TableHead className="text-start">الملاحظات</TableHead>
+                    <TableHead className="w-40">
+                      <span className="sr-only">إجراءات</span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {counts.map((count) => {
+                    const statusInfo = STATUS_CONFIG[count.status];
+                    const hasSecondaryActions = count.status === "draft" || count.status === "in_progress";
+
+                    return (
+                      <TableRow
+                        key={count.id}
+                        className="cursor-pointer"
+                        onClick={() => navigate(`/inventory/counts/${count.id}`)}
+                      >
+                        <TableCell className="py-3 text-sm text-muted-foreground">
+                          {dayjs(count.count_date).format("YYYY-MM-DD")}
+                        </TableCell>
+                        <TableCell className="text-sm font-medium text-foreground">
+                          {count.warehouse?.name ?? "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={statusInfo.badge}>{statusInfo.label}</Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {count.user?.name ?? "—"}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline">{count.items_count ?? 0}</Badge>
+                        </TableCell>
+                        <TableCell className="max-w-48 text-sm text-muted-foreground">
+                          {count.notes ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="block truncate">{count.notes}</span>
+                              </TooltipTrigger>
+                              <TooltipContent
+                                side="bottom"
+                                className="max-w-64 border bg-popover text-popover-foreground shadow-md [&>span]:hidden"
+                              >
+                                {count.notes}
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1.5">
+                            {count.status === "completed" && (
+                              <>
+                                <Button
+                                  size="xs"
+                                  variant="success"
+                                  className="gap-1"
+                                  onClick={() => setPendingAction({ type: "approve", count })}
+                                >
+                                  <Check className="size-3.5" />
+                                  اعتماد
+                                </Button>
+                                <Button
+                                  size="xs"
+                                  variant="outline"
+                                  className="gap-1 text-destructive hover:text-destructive"
+                                  onClick={() => setPendingAction({ type: "reject", count })}
+                                >
+                                  <X className="size-3.5" />
+                                  رفض
+                                </Button>
+                              </>
+                            )}
+
+                            {hasSecondaryActions && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="size-8">
+                                    <MoreHorizontal className="size-4" />
+                                    <span className="sr-only">إجراءات</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start">
+                                  {count.status === "draft" && (
+                                    <DropdownMenuItem onSelect={() => openEditDialog(count)}>
+                                      <Pencil className="size-4" />
+                                      تعديل
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuItem
+                                    onSelect={() => setPendingAction({ type: "import", count })}
+                                  >
+                                    <Upload className="size-4" />
+                                    استيراد كل المنتجات
+                                  </DropdownMenuItem>
+                                  {count.status === "draft" && (
+                                    <DropdownMenuItem
+                                      variant="destructive"
+                                      onSelect={() => setPendingAction({ type: "delete", count })}
+                                    >
+                                      <Trash2 className="size-4" />
+                                      حذف
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+
+                            <ChevronLeft className="size-4 shrink-0 text-muted-foreground" />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Pagination */}
+            {countsQuery.data && countsQuery.data.last_page > 1 && (
+              <Pagination className="mt-4">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (page > 1 && !countsQuery.isFetching) setPage((p) => p - 1);
+                      }}
+                      className={
+                        page <= 1 || countsQuery.isFetching ? "pointer-events-none opacity-50" : undefined
+                      }
+                    />
+                  </PaginationItem>
+                  {getPageNumbers(page, countsQuery.data.last_page).map((p, i) =>
+                    p === "ellipsis" ? (
+                      <PaginationItem key={`e-${i}`}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    ) : (
+                      <PaginationItem key={p}>
+                        <PaginationLink
+                          href="#"
+                          isActive={p === page}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (!countsQuery.isFetching) setPage(p);
+                          }}
+                        >
+                          {p}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  )}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (
+                          countsQuery.data &&
+                          page < countsQuery.data.last_page &&
+                          !countsQuery.isFetching
+                        ) {
+                          setPage((p) => p + 1);
+                        }
+                      }}
+                      className={
+                        (countsQuery.data && page >= countsQuery.data.last_page) ||
+                        countsQuery.isFetching
+                          ? "pointer-events-none opacity-50"
+                          : undefined
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Create / edit dialog */}
       <InventoryCountDialog
         open={dialogOpen}
-        onClose={() => {
-          setDialogOpen(false);
-          setEditingCount(null);
-        }}
+        onClose={closeDialog}
         count={editingCount}
         onSuccess={() => {
-          setDialogOpen(false);
-          setEditingCount(null);
-          queryClient.invalidateQueries({ queryKey: ["inventory-counts"] });
+          closeDialog();
+          invalidateCounts();
         }}
       />
-    </Box>
+
+      {/* Action confirmation */}
+      <AlertDialog
+        open={!!pendingAction}
+        onOpenChange={(open) => {
+          if (!open && !isActing) setPendingAction(null);
+        }}
+      >
+        <AlertDialogContent dir="rtl">
+          {pendingAction && actionCopy && (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{actionCopy.title(pendingAction.count)}</AlertDialogTitle>
+                <AlertDialogDescription>{actionCopy.description}</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isActing}
+                  onClick={() => setPendingAction(null)}
+                >
+                  إلغاء
+                </Button>
+                <Button
+                  type="button"
+                  variant={actionCopy.variant}
+                  disabled={isActing}
+                  onClick={confirmPendingAction}
+                  className="gap-2"
+                >
+                  {isActing && <Loader2 className="size-4 animate-spin" />}
+                  {actionCopy.confirmLabel}
+                </Button>
+              </AlertDialogFooter>
+            </>
+          )}
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 };
 

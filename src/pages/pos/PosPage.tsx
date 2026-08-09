@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Plus, ShieldCheck, Users, X } from "lucide-react";
+import { FileText, Loader2, Plus, ShieldCheck, Users, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -14,7 +14,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PdfViewerDialog } from "@/components/common/PdfViewerDialog";
+import { ShiftFinancialTable } from "@/components/sales/ShiftFinancialTable";
 import { cn } from "@/lib/utils";
 
 import { useAuth } from "@/context/AuthContext";
@@ -133,6 +135,11 @@ const PosPage: React.FC = () => {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
   const [isExportingToFinance, setIsExportingToFinance] = useState(false);
+
+  const [shiftReportLoading, setShiftReportLoading] = useState(false);
+  const [shiftReportUrl, setShiftReportUrl] = useState<string | null>(null);
+  const [shiftReportDialogOpen, setShiftReportDialogOpen] = useState(false);
+  const [shiftSummaryOpen, setShiftSummaryOpen] = useState(false);
 
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -553,6 +560,33 @@ const PosPage: React.FC = () => {
       setPdfUrl(null);
     }
   }, [pdfUrl]);
+
+  const handleShiftReportPdf = useCallback(async () => {
+    if (!shiftId) return;
+    setShiftReportLoading(true);
+    try {
+      const response = await apiClient.get("/reports/sales-pdf", {
+        params: { shift_id: shiftId, user_id: user?.id },
+        responseType: "blob",
+      });
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      setShiftReportUrl(window.URL.createObjectURL(blob));
+      setShiftReportDialogOpen(true);
+      setShiftSummaryOpen(false);
+    } catch (err) {
+      toast.error("فشل تحميل تقرير الوردية", { description: saleService.getErrorMessage(err) });
+    } finally {
+      setShiftReportLoading(false);
+    }
+  }, [shiftId, user?.id]);
+
+  const handleCloseShiftReportDialog = useCallback(() => {
+    setShiftReportDialogOpen(false);
+    if (shiftReportUrl) {
+      window.URL.revokeObjectURL(shiftReportUrl);
+      setShiftReportUrl(null);
+    }
+  }, [shiftReportUrl]);
 
   // ── Shift open/close (shift-based POS mode only) — legitimate server actions, unrelated to cart building ──
   const handleOpenShift = useCallback(async () => {
@@ -975,6 +1009,32 @@ const PosPage: React.FC = () => {
               </Button>
             </>
           )}
+          {posMode === "shift" && currentShiftQuery.data && (
+            <Popover open={shiftSummaryOpen} onOpenChange={setShiftSummaryOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <FileText className="size-3.5" />
+                  ملخص وردية #{currentShiftQuery.data.id}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-[520px] p-0" dir="rtl">
+                <div className="border-b px-3 py-2">
+                  <p className="text-sm font-semibold text-foreground">وردية #{currentShiftQuery.data.id}</p>
+                </div>
+                <ShiftFinancialTable shiftId={currentShiftQuery.data.id} />
+                <div className="border-t p-2">
+                  <Button
+                    className="w-full gap-2"
+                    disabled={shiftReportLoading}
+                    onClick={handleShiftReportPdf}
+                  >
+                    {shiftReportLoading ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />}
+                    تقرير الوردية PDF
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
           <CustomerPicker
             open={customerPickerOpen}
             onOpenChange={setCustomerPickerOpen}
@@ -1201,6 +1261,16 @@ const PosPage: React.FC = () => {
       {/* Receipt PDF */}
       {pdfUrl && (
         <PdfViewerDialog isOpen={pdfDialogOpen} onClose={handleClosePdfDialog} pdfUrl={pdfUrl} title="فاتورة البيع" />
+      )}
+
+      {/* Shift report PDF */}
+      {shiftReportUrl && (
+        <PdfViewerDialog
+          isOpen={shiftReportDialogOpen}
+          onClose={handleCloseShiftReportDialog}
+          pdfUrl={shiftReportUrl}
+          title={currentShiftQuery.data ? `تقرير الوردية #${currentShiftQuery.data.id}` : "تقرير الوردية"}
+        />
       )}
     </div>
   );

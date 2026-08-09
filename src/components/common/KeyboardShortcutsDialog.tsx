@@ -27,19 +27,54 @@ interface Shortcut {
 
 const shortcuts: Shortcut[] = [
   {
+    keys: ["/"],
+    description: "التركيز على مربع بحث المنتجات / الباركود",
+    category: "نقطة البيع",
+  },
+  {
+    keys: ["F4"],
+    description: "اختيار العميل",
+    category: "نقطة البيع",
+  },
+  {
+    keys: ["F8"],
+    description: "فتح نافذة الدفع",
+    category: "نقطة البيع",
+  },
+  {
+    keys: ["F10"],
+    description: "دفع سريع نقدًا بكامل المبلغ",
+    category: "نقطة البيع",
+  },
+  {
+    keys: ["Delete"],
+    description: "حذف الصنف المحدد من السلة",
+    category: "نقطة البيع",
+  },
+  {
+    keys: ["+", "-"],
+    description: "زيادة أو إنقاص كمية الصنف المحدد",
+    category: "نقطة البيع",
+  },
+  {
+    keys: ["Esc"],
+    description: "إغلاق النافذة الحالية / إلغاء تحديد الصنف",
+    category: "نقطة البيع",
+  },
+  {
     keys: ["+"],
     description: "فتح نافذة الدفع / إنشاء عملية بيع جديدة",
-    category: "نقطة البيع",
+    category: "المعرض (الكلاسيكية)",
   },
   {
     keys: ["Ctrl", "N"],
     description: "إنشاء عملية بيع جديدة",
-    category: "نقطة البيع",
+    category: "المعرض (الكلاسيكية)",
   },
   {
     keys: ["Ctrl", "S"],
     description: "حفظ المسودة",
-    category: "نقطة البيع",
+    category: "المعرض (الكلاسيكية)",
   },
 ];
 

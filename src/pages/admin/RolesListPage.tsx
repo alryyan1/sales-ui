@@ -1,466 +1,452 @@
 // src/pages/admin/RolesListPage.tsx
-import React, { useState, useEffect, useCallback } from "react";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-
-// MUI Components
 import {
-  Box,
-  Typography,
-  Button,
-  Card,
-  CardContent,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  IconButton,
-  CircularProgress,
-  Alert,
-  AlertTitle,
-  Pagination,
-  Stack,
-  Tooltip,
-  Container,
-} from "@mui/material";
-
-// Icons
-import {
-  Edit,
-  Plus,
-  Trash2,
   AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Lock,
+  Plus,
+  Search,
+  Shield,
+  ShieldAlert,
   ShieldCheck,
-  Users,
+  ShieldQuestion,
+  X,
 } from "lucide-react";
 
-// Services and Types
-import roleService, {
-  RoleWithPermissions,
-  Permission,
-} from "../../services/roleService";
-import { PaginatedResponse } from "@/services/clientService";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
-// Custom Components
-import ConfirmationDialog from "../../components/common/ConfirmationDialog";
-import RoleFormModal from "@/components/admin/users/roles/RoleFormModal";
+import roleService, { RoleWithPermissions } from "@/services/roleService";
+import { RolePermissionsPanel } from "@/components/admin/users/roles/RolePermissionsPanel";
+import { isSystemRole } from "@/components/admin/users/roles/roleUtils";
+
+function RoleListItem({
+  role,
+  selected,
+  onSelect,
+}: {
+  role: RoleWithPermissions;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const protectedRole = isSystemRole(role.name);
+  const permissionCount = role.permissions_count ?? 0;
+  const usersCount = role.users_count ?? 0;
+  const noPermissions = permissionCount === 0;
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        "group flex w-full items-center gap-3 rounded-lg px-2.5 py-2.5 text-start transition-colors",
+        selected ? "bg-accent" : "hover:bg-accent/50"
+      )}
+    >
+      <div
+        className={cn(
+          "flex size-9 shrink-0 items-center justify-center rounded-full",
+          protectedRole
+            ? "bg-primary/10 text-primary"
+            : noPermissions
+            ? "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-200"
+            : "bg-muted text-muted-foreground"
+        )}
+      >
+        {protectedRole ? (
+          <ShieldCheck className="size-4" />
+        ) : noPermissions ? (
+          <ShieldAlert className="size-4" />
+        ) : (
+          <Shield className="size-4" />
+        )}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <span className="truncate text-sm font-medium text-foreground">{role.name}</span>
+          {protectedRole && <Lock className="size-3 shrink-0 text-muted-foreground" />}
+        </div>
+        <p
+          className={cn(
+            "truncate text-xs",
+            noPermissions ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"
+          )}
+        >
+          {noPermissions ? "بدون صلاحيات" : `${permissionCount} صلاحية`}
+          {usersCount > 0 && ` · ${usersCount} مستخدم`}
+        </p>
+      </div>
+
+      <ChevronLeft
+        className={cn(
+          "size-4 shrink-0 text-muted-foreground transition-opacity",
+          selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+        )}
+      />
+    </button>
+  );
+}
+
+function EmptyDetailState({ onCreate }: { onCreate: () => void }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
+      <ShieldQuestion className="size-8 text-muted-foreground" />
+      <div>
+        <p className="text-sm font-medium text-foreground">اختر دورًا لعرض صلاحياته</p>
+        <p className="mt-1 max-w-xs text-xs text-muted-foreground">
+          حدد دورًا من القائمة لمراجعة أو تعديل الصلاحيات الممنوحة له، أو أنشئ دورًا جديدًا.
+        </p>
+      </div>
+      <Button size="sm" variant="outline" onClick={onCreate} className="gap-1.5">
+        <Plus className="size-4" />
+        دور جديد
+      </Button>
+    </div>
+  );
+}
 
 const RolesListPage: React.FC = () => {
-  // --- State ---
-  const [rolesResponse, setRolesResponse] =
-    useState<PaginatedResponse<RoleWithPermissions> | null>(null);
-  const [availablePermissions, setAvailablePermissions] = useState<
-    Permission[]
-  >([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadingPermissions, setLoadingPermissions] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const queryClient = useQueryClient();
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
 
-  // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingRole, setEditingRole] = useState<RoleWithPermissions | null>(
-    null
-  );
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
 
-  // Deletion State
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [roleToDeleteId, setRoleToDeleteId] = useState<number | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<RoleWithPermissions | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isPanelSubmitting, setIsPanelSubmitting] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState<RoleWithPermissions | null>(null);
 
-  // --- Fetch Roles ---
-  const fetchRoles = useCallback(async (page: number) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await roleService.getRoles(page);
-      setRolesResponse(data);
-    } catch (err) {
-      setError(roleService.getErrorMessage(err));
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const panelMode: "create" | "edit" | null = isCreating
+    ? "create"
+    : selectedRole
+    ? "edit"
+    : null;
 
-  // --- Fetch Permissions ---
-  const fetchPermissions = useCallback(async () => {
-    setLoadingPermissions(true);
-    try {
-      const data = await roleService.getPermissions();
-      setAvailablePermissions(data);
-    } catch (err) {
-      toast.error("خطأ في جلب الصلاحيات", {
-        description: roleService.getErrorMessage(err),
-      });
-    } finally {
-      setLoadingPermissions(false);
-    }
-  }, []);
+  const rolesQuery = useQuery({
+    queryKey: ["admin-roles", page],
+    queryFn: () => roleService.getRoles(page),
+    placeholderData: (prev) => prev,
+  });
 
-  // --- Effects ---
-  useEffect(() => {
-    fetchRoles(currentPage);
-  }, [fetchRoles, currentPage]);
+  const permissionsQuery = useQuery({
+    queryKey: ["admin-permissions"],
+    queryFn: () => roleService.getPermissions(),
+    staleTime: 5 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    fetchPermissions();
-  }, [fetchPermissions]);
-
-  // --- Handlers ---
-  const openModal = (role: RoleWithPermissions | null = null) => {
-    setEditingRole(role);
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setEditingRole(null);
-  };
-
-  const handleSaveSuccess = () => {
-    closeModal();
-    fetchRoles(currentPage);
-  };
-
-  const openConfirmDialog = (id: number) => {
-    setRoleToDeleteId(id);
-    setIsConfirmOpen(true);
-  };
-
-  const closeConfirmDialog = () => {
-    if (!isDeleting) {
-      setIsConfirmOpen(false);
-      setTimeout(() => setRoleToDeleteId(null), 300);
-    }
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!roleToDeleteId) return;
-    setIsDeleting(true);
-    try {
-      await roleService.deleteRole(roleToDeleteId);
-      toast.success("تم بنجاح", { description: "تم حذف الدور بنجاح" });
-      closeConfirmDialog();
-      // Refetch, potentially adjusting page
-      if (rolesResponse && rolesResponse.data.length === 1 && currentPage > 1) {
-        setCurrentPage((prev) => prev - 1);
-      } else {
-        fetchRoles(currentPage);
+  const createMutation = useMutation({ mutationFn: roleService.createRole });
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: { permissions: string[] } }) =>
+      roleService.updateRole(id, data),
+  });
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => roleService.deleteRole(id),
+    onSuccess: () => {
+      toast.success("تم حذف الدور بنجاح");
+      if (roleToDelete && selectedRole?.id === roleToDelete.id) {
+        setSelectedRole(null);
       }
-    } catch (err) {
-      toast.error("خطأ", { description: roleService.getErrorMessage(err) });
-      closeConfirmDialog();
-    } finally {
-      setIsDeleting(false);
-    }
+      setRoleToDelete(null);
+      const isLastRowOnPage = rolesQuery.data?.data.length === 1 && page > 1;
+      if (isLastRowOnPage) {
+        setPage((p) => p - 1);
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["admin-roles"] });
+      }
+    },
+    onError: (err) => {
+      toast.error("تعذر حذف الدور", { description: roleService.getErrorMessage(err) });
+    },
+  });
+
+  const roles = rolesQuery.data?.data ?? [];
+  const filteredRoles = useMemo(() => {
+    const term = search.trim();
+    if (!term) return roles;
+    return roles.filter((role) => role.name.includes(term));
+  }, [roles, search]);
+
+  const openCreatePanel = () => {
+    setSelectedRole(null);
+    setIsCreating(true);
+  };
+  const openRolePanel = (role: RoleWithPermissions) => {
+    setIsCreating(false);
+    setSelectedRole(role);
+  };
+  const closePanel = () => {
+    setIsCreating(false);
+    setSelectedRole(null);
   };
 
-  const handlePageChange = (
-    _event: React.ChangeEvent<unknown>,
-    value: number
-  ) => {
-    setCurrentPage(value);
+  const handleSaved = (kind: "create" | "update", role: RoleWithPermissions) => {
+    queryClient.invalidateQueries({ queryKey: ["admin-roles"] });
+    toast.success(kind === "create" ? "تم إنشاء الدور بنجاح" : "تم تحديث الدور بنجاح");
+    setIsCreating(false);
+    setSelectedRole(role);
   };
 
-  // --- Render ---
+  const confirmDelete = () => {
+    if (roleToDelete) deleteMutation.mutate(roleToDelete.id);
+  };
+
+  const isInitialLoading = rolesQuery.isLoading;
+  const isEmpty = !isInitialLoading && !rolesQuery.isError && roles.length === 0;
+  const isSearchEmpty =
+    !isInitialLoading && !isEmpty && search.trim() !== "" && filteredRoles.length === 0;
+
+  const panelProps = panelMode
+    ? {
+        mode: panelMode,
+        role: selectedRole,
+        availablePermissions: permissionsQuery.data ?? [],
+        loadingPermissions: permissionsQuery.isLoading,
+        permissionsError: permissionsQuery.isError,
+        onCreate: (data: Parameters<typeof createMutation.mutateAsync>[0]) =>
+          createMutation.mutateAsync(data),
+        onUpdate: (id: number, data: { permissions: string[] }) =>
+          updateMutation.mutateAsync({ id, data }),
+        onSaved: handleSaved,
+        onCancel: closePanel,
+        onRequestDelete: setRoleToDelete,
+        onSubmittingChange: setIsPanelSubmitting,
+      }
+    : null;
+
   return (
-    <Container maxWidth="xl" dir="rtl" sx={{ py: 4, minHeight: "100vh" }}>
-      {/* Header & Add Button */}
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: { xs: "column", sm: "row" },
-          justifyContent: "space-between",
-          alignItems: { xs: "start", sm: "center" },
-          mb: 4,
-          gap: 2,
+    <div dir="rtl" className="min-h-screen bg-background">
+      <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
+        {/* Page header */}
+        <div className="mb-6 border-b pb-5">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">
+            الأدوار والصلاحيات
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            حدد الصلاحيات المتاحة لكل دور وتحكم في وصول المستخدمين داخل النظام
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-5 lg:h-[calc(100vh-230px)] lg:min-h-[560px] lg:grid-cols-[340px_1fr]">
+          {/* List pane */}
+          <div className="flex min-h-0 flex-col rounded-xl border bg-card">
+            <div className="flex items-center justify-between gap-2 border-b p-3">
+              <div>
+                <p className="text-sm font-semibold text-foreground">الأدوار</p>
+                <p className="text-xs text-muted-foreground">
+                  {rolesQuery.isError ? "—" : rolesQuery.data?.total ?? roles.length} دور
+                </p>
+              </div>
+              <Button size="sm" onClick={openCreatePanel} className="gap-1.5">
+                <Plus className="size-4" />
+                دور جديد
+              </Button>
+            </div>
+
+            <div className="border-b p-3">
+              <div className="relative">
+                <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="ابحث باسم الدور..."
+                  className="pr-9"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    aria-label="مسح البحث"
+                  >
+                    <X className="size-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 space-y-1 overflow-y-auto p-2">
+              {rolesQuery.isError && (
+                <Alert variant="destructive" className="m-1">
+                  <AlertCircle className="size-4" />
+                  <AlertTitle>تعذر تحميل الأدوار</AlertTitle>
+                  <AlertDescription className="flex flex-col items-start gap-2">
+                    <span>{roleService.getErrorMessage(rolesQuery.error)}</span>
+                    <Button size="sm" variant="outline" onClick={() => rolesQuery.refetch()}>
+                      إعادة المحاولة
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {isInitialLoading &&
+                Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 px-2.5 py-2.5">
+                    <Skeleton className="size-9 shrink-0 rounded-full" />
+                    <div className="flex-1 space-y-1.5">
+                      <Skeleton className="h-3.5 w-24" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                  </div>
+                ))}
+
+              {isEmpty && (
+                <div className="flex flex-col items-center justify-center gap-3 px-4 py-12 text-center">
+                  <ShieldQuestion className="size-8 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">لا توجد أدوار بعد</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      أنشئ أول دور لتتمكن من تعيين صلاحيات محددة لمستخدمي النظام
+                    </p>
+                  </div>
+                  <Button size="sm" onClick={openCreatePanel} className="gap-1.5">
+                    <Plus className="size-4" />
+                    إنشاء أول دور
+                  </Button>
+                </div>
+              )}
+
+              {isSearchEmpty && (
+                <div className="flex flex-col items-center justify-center gap-1 px-4 py-10 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    لا توجد نتائج مطابقة لـ "{search}"
+                  </p>
+                  <Button variant="link" size="sm" onClick={() => setSearch("")}>
+                    مسح البحث
+                  </Button>
+                </div>
+              )}
+
+              {!isInitialLoading &&
+                !rolesQuery.isError &&
+                filteredRoles.map((role) => (
+                  <RoleListItem
+                    key={role.id}
+                    role={role}
+                    selected={selectedRole?.id === role.id}
+                    onSelect={() => openRolePanel(role)}
+                  />
+                ))}
+            </div>
+
+            {rolesQuery.data && rolesQuery.data.last_page > 1 && (
+              <div className="flex items-center justify-between gap-2 border-t p-2.5">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={page <= 1 || rolesQuery.isFetching}
+                  onClick={() => setPage((p) => p - 1)}
+                  className="gap-1"
+                >
+                  <ChevronRight className="size-4" />
+                  السابق
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {rolesQuery.data.current_page} / {rolesQuery.data.last_page}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={page >= rolesQuery.data.last_page || rolesQuery.isFetching}
+                  onClick={() => setPage((p) => p + 1)}
+                  className="gap-1"
+                >
+                  التالي
+                  <ChevronLeft className="size-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Detail pane — desktop only (mobile uses the Sheet below) */}
+          {isDesktop && (
+            <div className="flex min-h-0 flex-col rounded-xl border bg-card">
+              {panelProps ? (
+                <RolePermissionsPanel {...panelProps} />
+              ) : (
+                <EmptyDetailState onCreate={openCreatePanel} />
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Detail panel — mobile / tablet */}
+      {!isDesktop && (
+        <Sheet
+          open={panelMode !== null}
+          onOpenChange={(open) => {
+            if (!open && !isPanelSubmitting) closePanel();
+          }}
+        >
+          <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-lg">
+            <SheetHeader className="sr-only">
+              <SheetTitle>
+                {panelMode === "create" ? "دور جديد" : selectedRole?.name ?? "الدور"}
+              </SheetTitle>
+            </SheetHeader>
+            {panelProps && <RolePermissionsPanel {...panelProps} />}
+          </SheetContent>
+        </Sheet>
+      )}
+
+      {/* Delete confirmation */}
+      <AlertDialog
+        open={!!roleToDelete}
+        onOpenChange={(open) => {
+          if (!open && !deleteMutation.isPending) setRoleToDelete(null);
         }}
       >
-        <Box>
-          <Typography
-            variant="h4"
-            component="h1"
-            fontWeight="bold"
-            gutterBottom
-            sx={{ display: "flex", alignItems: "center", gap: 1 }}
-          >
-            <ShieldCheck className="h-8 w-8 text-primary" />
-            إدارة الأدوار
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            إدارة أدوار المستخدمين وصلاحياتهم في النظام
-          </Typography>
-        </Box>
-
-        <Button
-          variant="contained"
-          onClick={() => openModal()}
-          disabled={loadingPermissions}
-          startIcon={<Plus className="h-5 w-5" />}
-          sx={{
-            px: 3,
-            py: 1,
-            borderRadius: 2,
-            textTransform: "none",
-            fontWeight: 600,
-          }}
-        >
-          إضافة دور جديد
-        </Button>
-      </Box>
-
-      {/* Loading */}
-      {(isLoading || loadingPermissions) && (
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            py: 10,
-          }}
-        >
-          <CircularProgress />
-        </Box>
-      )}
-
-      {/* Error */}
-      {!isLoading && error && (
-        <Alert
-          severity="error"
-          sx={{ mb: 3 }}
-          icon={<AlertCircle className="h-4 w-4" />}
-        >
-          <AlertTitle>خطأ</AlertTitle>
-          {error}
-        </Alert>
-      )}
-
-      {/* Roles Table */}
-      {!isLoading && !error && rolesResponse && (
-        <>
-          <Card
-            elevation={0}
-            sx={{
-              border: "1px solid",
-              borderColor: "divider",
-              borderRadius: 3,
-              overflow: "hidden",
-            }}
-          >
-            <CardContent sx={{ p: 0 }}>
-              <TableContainer
-                component={Paper}
-                elevation={0}
-                sx={{ borderRadius: 0 }}
-              >
-                <Table sx={{ minWidth: 650 }}>
-                  <TableHead sx={{ bgcolor: "action.hover" }}>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: "bold",textAlign:'center' }}>
-                        اسم الدور
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: "bold" ,textAlign:'center'}}>
-                        عدد الصلاحيات
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: "bold" ,textAlign:'center'}}>
-                        عدد المستخدمين
-                      </TableCell>
-                      <TableCell align="center" sx={{ fontWeight: "bold",textAlign:'center' }}>
-                        إجراءات
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {rolesResponse.data.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={4} align="center" sx={{ py: 8 }}>
-                          <Typography variant="body1" color="text.secondary">
-                            لا توجد أدوار متاحة حالياً
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      rolesResponse.data.map((role) => (
-                        <TableRow
-                          key={role.id}
-                          sx={{
-                            "&:last-child td, &:last-child th": { border: 0 },
-                            "&:hover": { bgcolor: "action.hover" },
-                          }}
-                        >
-                          <TableCell component="th" scope="row">
-                            <Box
-                              sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 1.5,
-                              }}
-                            >
-                              <Box
-                                sx={{
-                                  p: 1,
-                                  borderRadius: "50%",
-                                  bgcolor:
-                                    role.name === "admin"
-                                      ? "primary.light"
-                                      : "action.selected",
-                                  color:
-                                    role.name === "admin"
-                                      ? "primary.main"
-                                      : "text.primary",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                }}
-                              >
-                                <ShieldCheck className="h-4 w-4" />
-                              </Box>
-                              <Typography variant="body2" fontWeight={500}>
-                                {role.name === "admin"
-                                  ? "مدير النظام"
-                                  : role.name}
-                              </Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            <Box
-                              sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 1,
-                              }}
-                            >
-                              <Box
-                                component="span"
-                                sx={{
-                                  px: 1.5,
-                                  py: 0.5,
-                                  bgcolor: "action.selected",
-                                  borderRadius: 1,
-                                  fontSize: "0.75rem",
-                                  fontWeight: 600,
-                                }}
-                              >
-                                {role.permissions_count ?? 0}
-                              </Box>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                              >
-                                صلاحية
-                              </Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            <Box
-                              sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 1,
-                              }}
-                            >
-                              <Users className="h-4 w-4 text-gray-400" />
-                              <Typography variant="body2">
-                                {role.users_count ?? 0}
-                              </Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell align="center">
-                            <Stack
-                              direction="row"
-                              spacing={1}
-                              justifyContent="center"
-                            >
-                              <Tooltip title="تعديل">
-                                <span>
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => openModal(role)}
-                                    disabled={loadingPermissions}
-                                    color="primary"
-                                    sx={{
-                                      bgcolor: "primary.lighter",
-                                      "&:hover": {
-                                        bgcolor: "primary.light",
-                                        color: "primary.contrastText",
-                                      },
-                                    }}
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </IconButton>
-                                </span>
-                              </Tooltip>
-
-                              {role.name !== "admin" && (
-                                <Tooltip title="حذف">
-                                  <IconButton
-                                    size="small"
-                                    color="error"
-                                    onClick={() => openConfirmDialog(role.id)}
-                                    disabled={isDeleting}
-                                    sx={{
-                                      bgcolor: "error.lighter",
-                                      "&:hover": {
-                                        bgcolor: "error.light",
-                                        color: "error.contrastText",
-                                      },
-                                    }}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
-                            </Stack>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </CardContent>
-          </Card>
-
-          {/* Pagination */}
-          {rolesResponse.last_page > 1 && (
-            <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
-              <Pagination
-                count={rolesResponse.last_page}
-                page={currentPage}
-                onChange={handlePageChange}
-                color="primary"
-                shape="rounded"
-                showFirstButton
-                showLastButton
-              />
-            </Box>
-          )}
-        </>
-      )}
-
-      {/* Modals */}
-      <RoleFormModal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        roleToEdit={editingRole}
-        onSaveSuccess={handleSaveSuccess}
-        availablePermissions={availablePermissions}
-        loadingPermissions={loadingPermissions}
-      />
-
-      <ConfirmationDialog
-        open={isConfirmOpen}
-        onClose={closeConfirmDialog}
-        onConfirm={handleDeleteConfirm}
-        title="تأكيد الحذف"
-        message="هل أنت متأكد من حذف هذا الدور؟ هذا الإجراء لا يمكن التراجع عنه."
-        confirmText="حذف"
-        cancelText="إلغاء"
-        isLoading={isDeleting}
-      />
-    </Container>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف الدور "{roleToDelete?.name}"؟</AlertDialogTitle>
+            <AlertDialogDescription>
+              {roleToDelete?.users_count
+                ? `هذا الدور مُسند حاليًا إلى ${roleToDelete.users_count} مستخدم. سيفقد هؤلاء المستخدمون الصلاحيات المرتبطة به فور الحذف. هذا الإجراء لا يمكن التراجع عنه.`
+                : "هذا الإجراء لا يمكن التراجع عنه."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={deleteMutation.isPending}
+              onClick={() => setRoleToDelete(null)}
+            >
+              إلغاء
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              onClick={confirmDelete}
+              className="gap-2"
+            >
+              {deleteMutation.isPending && <Loader2 className="size-4 animate-spin" />}
+              حذف نهائي
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 };
 

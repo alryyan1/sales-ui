@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(lsof -ti:5173 -sTCP:LISTEN)",
+      "Bash(curl -sf http://localhost:5173)",
+      "Read(//tmp/**)",
+      "Bash(sleep 2; cat /tmp/vite2.log)",
+      "Bash(npx tsc *)",
+      "Bash(/c/xampp/mysql/bin/mysql.exe -uroot auger -e \"DESCRIBE sales;\")",
+      "Bash(curl -s -o /tmp/resp.txt -w \"%{http_code}\\\\n\" \"http://localhost:5174/src/components/pos/ProductSearchPanel.tsx\")",
+      "PowerShell(Get-CimInstance Win32_Process -Filter \"Name = 'node.exe'\" | Where-Object { $_.CommandLine -match 'vite' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue })",
+      "Bash(git status *)"
+    ],
+    "additionalDirectories": [
+      "C:\\xampp\\htdocs\\sales-api\\app\\Http\\Controllers\\Api"
+    ]
+  }
+}

@@ -1,38 +1,35 @@
 // src/components/settings/PdfReportBrandingSettings.tsx
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { ChevronDown, Droplets, ImageIcon, Loader2, Save, Upload } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Box,
-  Button,
-  Chip,
-  CircularProgress,
-  Divider,
-  FormControl,
-  FormControlLabel,
-  InputLabel,
-  MenuItem,
   Select,
-  Stack,
-  Switch,
-  TextField,
-  ToggleButton,
-  ToggleButtonGroup,
-  Tooltip,
-  Typography,
-  useTheme,
-} from "@mui/material";
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
-  ExpandMore as ExpandMoreIcon,
-  Image as ImageIcon,
-  Save as SaveIcon,
-  SettingsApplications as SettingsIcon,
-  Tune as TuneIcon,
-  Upload as UploadIcon,
-  WaterDrop as WatermarkIcon,
-} from "@mui/icons-material";
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { SwitchField } from "./shared/SwitchField";
+import { SegmentedControl } from "./shared/SegmentedControl";
+import { SettingsSection } from "./shared/SettingsSection";
+import { SettingsGroup } from "./shared/SettingsGroup";
+import { cn } from "@/lib/utils";
 
 import pdfReportSettingService, {
   PdfReportSetting,
@@ -80,10 +77,58 @@ function toReportState(s: PdfReportSetting): ReportState {
   };
 }
 
+const brandingTypeLabel = (type: BrandingType) =>
+  type === "logo" ? "شعار" : type === "header" ? "هيدر" : type === "none" ? "بدون" : "افتراضي";
+
+// ─── Small building blocks ────────────────────────────────────────────────────
+
+function UploadBox({
+  label,
+  preview,
+  uploading,
+  onClick,
+  inputRef,
+  onChange,
+  imgClassName,
+  className,
+}: {
+  label: string;
+  preview: string | null;
+  uploading: boolean;
+  onClick: () => void;
+  inputRef: React.RefObject<HTMLInputElement>;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  imgClassName?: string;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed p-3 transition-colors hover:border-primary hover:bg-accent/50",
+        className
+      )}
+    >
+      {uploading ? (
+        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+      ) : preview ? (
+        <img src={preview} alt={label} className={cn("max-h-14 max-w-full object-contain", imgClassName)} />
+      ) : (
+        <ImageIcon className="size-7 text-muted-foreground/60" />
+      )}
+      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+        <Upload className="size-3" />
+        {preview ? `تغيير ${label}` : `رفع ${label}`}
+      </span>
+      <input ref={inputRef} type="file" accept="image/*" hidden onChange={onChange} />
+    </button>
+  );
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export const PdfReportBrandingSettings: React.FC = () => {
-  const theme = useTheme();
   const { settings, fetchSettings } = useSettings();
 
   // ── Global settings state ────────────────────────────────────────────────
@@ -124,8 +169,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
       logo_width: settings.logo_width ?? 24,
       pdf_font: settings.pdf_font ?? "Amiri",
     }));
-    console.log("Loaded settings into state:", settings);
-    
+
     if (settings.company_logo_url) setLogoPreview(settings.company_logo_url);
     if (settings.company_header_url) setHeaderPreview(settings.company_header_url);
     if (settings.company_stamp_url) setStampPreview(settings.company_stamp_url);
@@ -265,472 +309,261 @@ export const PdfReportBrandingSettings: React.FC = () => {
     }
   };
 
-  // ── Card/panel sx ────────────────────────────────────────────────────────
-
-  const cardSx = {
-    border: `1px solid ${theme.palette.divider}`,
-    borderRadius: 2,
-    overflow: "hidden",
-  };
-
-  const uploadBoxSx = {
-    border: `1.5px dashed ${theme.palette.divider}`,
-    borderRadius: 1.5,
-    p: 2,
-    display: "flex",
-    flexDirection: "column" as const,
-    alignItems: "center",
-    gap: 1,
-    cursor: "pointer",
-    transition: "border-color 0.15s, background 0.15s",
-    "&:hover": {
-      borderColor: theme.palette.primary.main,
-      bgcolor: theme.palette.action.hover,
-    },
-  };
-
   if (loading) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
-        <CircularProgress size={32} />
-      </Box>
+      <div className="flex justify-center py-12">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
     );
   }
 
   return (
-    <Stack spacing={2} dir="rtl">
-      {/* ── Section 1: Global Branding ──────────────────────────────────── */}
-      <Box sx={cardSx}>
-        {/* Header */}
-        <Box
-          sx={{
-            px: 2.5,
-            py: 1.5,
-            bgcolor: theme.palette.action.selected,
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-          }}
-        >
-          <SettingsIcon fontSize="small" color="primary" />
-          <Typography fontWeight={600} fontSize={14}>
-            الإعدادات العامة للهيدر
-          </Typography>
-          <Typography
-            fontSize={12}
-            color="text.secondary"
-            sx={{ mr: "auto" }}
+    <SettingsSection
+      title="تقارير PDF والهيدر"
+      description="تحكم بالشعار والختم والتوقيع، وهيدر كل تقرير على حدة."
+    >
+      <SettingsGroup title="شعار الشركة وعناصر الهيدر">
+        {/* Image uploads */}
+        <div className="flex flex-col gap-4 sm:flex-row">
+          <div className="flex-1 space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">صورة الشعار</Label>
+            <UploadBox
+              label="شعار"
+              preview={logoPreview}
+              uploading={logoUploading}
+              onClick={() => logoInputRef.current?.click()}
+              inputRef={logoInputRef}
+              onChange={handleLogoUpload}
+            />
+          </div>
+
+          <div className="flex-[2] space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">
+              صورة الهيدر الكامل (تمتد بعرض الصفحة)
+            </Label>
+            <UploadBox
+              label="هيدر"
+              preview={headerPreview}
+              uploading={headerUploading}
+              onClick={() => headerInputRef.current?.click()}
+              inputRef={headerInputRef}
+              onChange={handleHeaderUpload}
+              imgClassName="w-full rounded object-cover"
+              className="min-h-20"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4 sm:flex-row">
+          <div className="flex-1 space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">صورة الختم</Label>
+            <UploadBox
+              label="ختم"
+              preview={stampPreview}
+              uploading={stampUploading}
+              onClick={() => stampInputRef.current?.click()}
+              inputRef={stampInputRef}
+              onChange={handleStampUpload}
+            />
+          </div>
+
+          <div className="flex-1 space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">صورة التوقيع</Label>
+            <UploadBox
+              label="توقيع"
+              preview={signaturePreview}
+              uploading={signatureUploading}
+              onClick={() => signatureInputRef.current?.click()}
+              inputRef={signatureInputRef}
+              onChange={handleSignatureUpload}
+            />
+          </div>
+        </div>
+      </SettingsGroup>
+
+      <Separator />
+
+      <SettingsGroup
+        title="نمط الهيدر الافتراضي"
+        description="تطبّق على جميع التقارير التي لا تملك إعداداً مخصصاً"
+        action={
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={handleGlobalSave}
+            disabled={global.saving}
+            className="min-w-[130px]"
           >
-            تطبّق على جميع التقارير التي لا تملك إعداداً مخصصاً
-          </Typography>
-        </Box>
+            {global.saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+            حفظ
+          </Button>
+        }
+      >
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">النمط</Label>
+            <SegmentedControl
+              value={global.invoice_branding_type}
+              onChange={(v) => patchGlobal({ invoice_branding_type: v })}
+              options={[
+                { value: "logo", label: "شعار ونص" },
+                { value: "header", label: "هيدر كامل" },
+              ]}
+            />
+          </div>
 
-        <Box sx={{ p: 2.5 }}>
-          <Stack spacing={2.5}>
-            {/* Image uploads */}
-            <Stack direction="row" spacing={2}>
-              {/* Logo upload */}
-              <Box sx={{ flex: 1 }}>
-                <Typography fontSize={12} fontWeight={500} color="text.secondary" mb={0.75}>
-                  صورة الشعار
-                </Typography>
-                <Box
-                  component="label"
-                  sx={uploadBoxSx}
-                  onClick={() => logoInputRef.current?.click()}
-                >
-                  {logoUploading ? (
-                    <CircularProgress size={20} />
-                  ) : logoPreview ? (
-                    <img
-                      src={logoPreview}
-                      alt="logo"
-                      style={{ maxHeight: 56, maxWidth: "100%", objectFit: "contain" }}
-                    />
-                  ) : (
-                    <ImageIcon sx={{ fontSize: 32, color: "text.disabled" }} />
-                  )}
-                  <Stack direction="row" alignItems="center" spacing={0.5}>
-                    <UploadIcon sx={{ fontSize: 14, color: "text.secondary" }} />
-                    <Typography fontSize={12} color="text.secondary">
-                      {logoPreview ? "تغيير الشعار" : "رفع شعار"}
-                    </Typography>
-                  </Stack>
-                  <input
-                    ref={logoInputRef}
-                    type="file"
-                    accept="image/*"
-                    hidden
-                    onChange={handleLogoUpload}
-                  />
-                </Box>
-              </Box>
-
-              {/* Header image upload */}
-              <Box sx={{ flex: 2 }}>
-                <Typography fontSize={12} fontWeight={500} color="text.secondary" mb={0.75}>
-                  صورة الهيدر الكامل (تمتد بعرض الصفحة)
-                </Typography>
-                <Box
-                  component="label"
-                  sx={{ ...uploadBoxSx, minHeight: 80 }}
-                  onClick={() => headerInputRef.current?.click()}
-                >
-                  {headerUploading ? (
-                    <CircularProgress size={20} />
-                  ) : headerPreview ? (
-                    <img
-                      src={headerPreview}
-                      alt="header"
-                      style={{ maxHeight: 56, width: "100%", objectFit: "cover", borderRadius: 4 }}
-                    />
-                  ) : (
-                    <ImageIcon sx={{ fontSize: 32, color: "text.disabled" }} />
-                  )}
-                  <Stack direction="row" alignItems="center" spacing={0.5}>
-                    <UploadIcon sx={{ fontSize: 14, color: "text.secondary" }} />
-                    <Typography fontSize={12} color="text.secondary">
-                      {headerPreview ? "تغيير الهيدر" : "رفع هيدر"}
-                    </Typography>
-                  </Stack>
-                  <input
-                    ref={headerInputRef}
-                    type="file"
-                    accept="image/*"
-                    hidden
-                    onChange={handleHeaderUpload}
-                  />
-                </Box>
-              </Box>
-            </Stack>
-
-            {/* Stamp & Signature uploads */}
-            <Stack direction="row" spacing={2}>
-              {/* Stamp upload */}
-              <Box sx={{ flex: 1 }}>
-                <Typography fontSize={12} fontWeight={500} color="text.secondary" mb={0.75}>
-                  صورة الختم
-                </Typography>
-                <Box
-                  component="label"
-                  sx={uploadBoxSx}
-                  onClick={() => stampInputRef.current?.click()}
-                >
-                  {stampUploading ? (
-                    <CircularProgress size={20} />
-                  ) : stampPreview ? (
-                    <img
-                      src={stampPreview}
-                      alt="stamp"
-                      style={{ maxHeight: 56, maxWidth: "100%", objectFit: "contain" }}
-                    />
-                  ) : (
-                    <ImageIcon sx={{ fontSize: 32, color: "text.disabled" }} />
-                  )}
-                  <Stack direction="row" alignItems="center" spacing={0.5}>
-                    <UploadIcon sx={{ fontSize: 14, color: "text.secondary" }} />
-                    <Typography fontSize={12} color="text.secondary">
-                      {stampPreview ? "تغيير الختم" : "رفع ختم"}
-                    </Typography>
-                  </Stack>
-                  <input
-                    ref={stampInputRef}
-                    type="file"
-                    accept="image/*"
-                    hidden
-                    onChange={handleStampUpload}
-                  />
-                </Box>
-              </Box>
-
-              {/* Signature upload */}
-              <Box sx={{ flex: 1 }}>
-                <Typography fontSize={12} fontWeight={500} color="text.secondary" mb={0.75}>
-                  صورة التوقيع
-                </Typography>
-                <Box
-                  component="label"
-                  sx={uploadBoxSx}
-                  onClick={() => signatureInputRef.current?.click()}
-                >
-                  {signatureUploading ? (
-                    <CircularProgress size={20} />
-                  ) : signaturePreview ? (
-                    <img
-                      src={signaturePreview}
-                      alt="signature"
-                      style={{ maxHeight: 56, maxWidth: "100%", objectFit: "contain" }}
-                    />
-                  ) : (
-                    <ImageIcon sx={{ fontSize: 32, color: "text.disabled" }} />
-                  )}
-                  <Stack direction="row" alignItems="center" spacing={0.5}>
-                    <UploadIcon sx={{ fontSize: 14, color: "text.secondary" }} />
-                    <Typography fontSize={12} color="text.secondary">
-                      {signaturePreview ? "تغيير التوقيع" : "رفع توقيع"}
-                    </Typography>
-                  </Stack>
-                  <input
-                    ref={signatureInputRef}
-                    type="file"
-                    accept="image/*"
-                    hidden
-                    onChange={handleSignatureUpload}
-                  />
-                </Box>
-              </Box>
-            </Stack>
-
-            <Divider />
-
-            {/* Branding type + logo options + font */}
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "flex-end" }}>
-              {/* Branding type toggle */}
-              <Box>
-                <Typography fontSize={12} fontWeight={500} color="text.secondary" mb={0.75}>
-                  نمط الهيدر الافتراضي
-                </Typography>
-                <ToggleButtonGroup
-                  exclusive
-                  size="small"
-                  value={global.invoice_branding_type}
-                  onChange={(_, v) => v && patchGlobal({ invoice_branding_type: v })}
-                >
-                  <ToggleButton value="logo" sx={{ px: 2, fontSize: 12 }}>
-                    شعار ونص
-                  </ToggleButton>
-                  <ToggleButton value="header" sx={{ px: 2, fontSize: 12 }}>
-                    هيدر كامل
-                  </ToggleButton>
-                </ToggleButtonGroup>
-              </Box>
-
-              {/* Logo options (shown when logo type) */}
-              {global.invoice_branding_type === "logo" && (
-                <>
-                  <FormControl size="small" sx={{ minWidth: 120 }}>
-                    <InputLabel sx={{ fontSize: 12 }}>موضع الشعار</InputLabel>
-                    <Select
-                      label="موضع الشعار"
-                      value={global.logo_position}
-                      onChange={(e) =>
-                        patchGlobal({ logo_position: e.target.value as "left" | "right" | "center" })
-                      }
-                      sx={{ fontSize: 13 }}
-                    >
-                      <MenuItem value="right">يمين</MenuItem>
-                      <MenuItem value="left">يسار</MenuItem>
-                      <MenuItem value="center">وسط</MenuItem>
-                    </Select>
-                  </FormControl>
-
-                  <TextField
-                    size="small"
-                    label="العرض (mm)"
-                    type="number"
-                    value={global.logo_width}
-                    onChange={(e) => patchGlobal({ logo_width: Number(e.target.value) })}
-                    inputProps={{ min: 10, max: 200, dir: "ltr" }}
-                    sx={{ width: 100, "& input": { textAlign: "left" } }}
-                  />
-                  <TextField
-                    size="small"
-                    label="الارتفاع (mm)"
-                    type="number"
-                    value={global.logo_height}
-                    onChange={(e) => patchGlobal({ logo_height: Number(e.target.value) })}
-                    inputProps={{ min: 10, max: 200, dir: "ltr" }}
-                    sx={{ width: 110, "& input": { textAlign: "left" } }}
-                  />
-                </>
-              )}
-
-              {/* PDF font */}
-              <FormControl size="small" sx={{ minWidth: 180 }}>
-                <InputLabel sx={{ fontSize: 12 }}>خط PDF</InputLabel>
+          {global.invoice_branding_type === "logo" && (
+            <>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">موضع الشعار</Label>
                 <Select
-                  label="خط PDF"
-                  value={global.pdf_font}
-                  onChange={(e) => patchGlobal({ pdf_font: e.target.value })}
-                  sx={{ fontSize: 13 }}
+                  value={global.logo_position}
+                  onValueChange={(v) =>
+                    patchGlobal({ logo_position: v as "left" | "right" | "center" })
+                  }
                 >
-                  <MenuItem value={PDF_FONTS.AMIRI}>Amiri — نسخ كلاسيكي</MenuItem>
-                  <MenuItem value={PDF_FONTS.TAJAWAL}>Tajawal — حديث</MenuItem>
-                  <MenuItem value={PDF_FONTS.IBM_PLEX}>IBM Plex Arabic — عصري</MenuItem>
-                  <MenuItem value={PDF_FONTS.ARIAL}>Arial — قياسي</MenuItem>
+                  <SelectTrigger size="sm" className="w-[110px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="right">يمين</SelectItem>
+                    <SelectItem value="left">يسار</SelectItem>
+                    <SelectItem value="center">وسط</SelectItem>
+                  </SelectContent>
                 </Select>
-              </FormControl>
-            </Box>
+              </div>
 
-            {/* Save global */}
-            <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={global.saving ? <CircularProgress size={14} color="inherit" /> : <SaveIcon />}
-                onClick={handleGlobalSave}
-                disabled={global.saving}
-                sx={{ minWidth: 120, fontSize: 13 }}
-              >
-                حفظ الإعدادات العامة
-              </Button>
-            </Box>
-          </Stack>
-        </Box>
-      </Box>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">العرض (mm)</Label>
+                <Input
+                  type="number"
+                  min={10}
+                  max={200}
+                  dir="ltr"
+                  value={global.logo_width}
+                  onChange={(e) => patchGlobal({ logo_width: Number(e.target.value) })}
+                  className="h-8 w-[90px] text-left"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">الارتفاع (mm)</Label>
+                <Input
+                  type="number"
+                  min={10}
+                  max={200}
+                  dir="ltr"
+                  value={global.logo_height}
+                  onChange={(e) => patchGlobal({ logo_height: Number(e.target.value) })}
+                  className="h-8 w-[90px] text-left"
+                />
+              </div>
+            </>
+          )}
 
-      {/* ── Section 2: Per-Report Settings ──────────────────────────────── */}
-      <Box sx={cardSx}>
-        <Box
-          sx={{
-            px: 2.5,
-            py: 1.5,
-            bgcolor: theme.palette.action.selected,
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-          }}
-        >
-          <TuneIcon fontSize="small" color="primary" />
-          <Typography fontWeight={600} fontSize={14}>
-            إعدادات هيدر كل تقرير
-          </Typography>
-          <Typography fontSize={12} color="text.secondary" sx={{ mr: "auto" }}>
-            يمكن لكل تقرير تجاوز الإعداد العام أو استخدامه
-          </Typography>
-        </Box>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">خط PDF</Label>
+            <Select value={global.pdf_font} onValueChange={(v) => patchGlobal({ pdf_font: v })}>
+              <SelectTrigger size="sm" className="w-[190px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={PDF_FONTS.AMIRI}>Amiri — نسخ كلاسيكي</SelectItem>
+                <SelectItem value={PDF_FONTS.TAJAWAL}>Tajawal — حديث</SelectItem>
+                <SelectItem value={PDF_FONTS.IBM_PLEX}>IBM Plex Arabic — عصري</SelectItem>
+                <SelectItem value={PDF_FONTS.ARIAL}>Arial — قياسي</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </SettingsGroup>
 
-        <Box>
+      <Separator />
+
+      <SettingsGroup
+        title="تخصيص كل تقرير"
+        description="يمكن لكل تقرير تجاوز الإعداد العام أو استخدامه"
+      >
+        <div className="overflow-hidden rounded-lg border">
           {reports.map((report, idx) => {
             const s = reportStates[report.report_key];
             if (!s) return null;
 
             const isCustom = s.branding_type !== "global";
-            const hasWatermark = s.show_watermark;
 
             return (
-              <Accordion
+              <Collapsible
                 key={report.report_key}
-                disableGutters
-                elevation={0}
-                square
-                sx={{
-                  borderBottom:
-                    idx < reports.length - 1
-                      ? `1px solid ${theme.palette.divider}`
-                      : "none",
-                  "&:before": { display: "none" },
-                  "&.Mui-expanded": { margin: 0 },
-                }}
+                className={cn(idx < reports.length - 1 && "border-b")}
               >
-                <AccordionSummary
-                  expandIcon={<ExpandMoreIcon sx={{ fontSize: 18 }} />}
-                  sx={{
-                    minHeight: 44,
-                    px: 2.5,
-                    "& .MuiAccordionSummary-content": {
-                      my: 0.75,
-                      alignItems: "center",
-                      gap: 1,
-                    },
-                  }}
+                <CollapsibleTrigger
+                  type="button"
+                  className="group flex w-full items-center gap-2 px-5 py-2.5 text-start hover:bg-accent/40"
                 >
-                  <Typography fontSize={13} fontWeight={500} sx={{ flex: 1 }}>
-                    {report.report_name}
-                  </Typography>
-                  <Stack direction="row" spacing={0.5}>
-                    {isCustom && (
-                      <Chip
-                        label={
-                          s.branding_type === "logo"
-                            ? "شعار"
-                            : s.branding_type === "header"
-                              ? "هيدر"
-                              : "بدون"
-                        }
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                        sx={{ height: 20, fontSize: 11 }}
-                      />
-                    )}
-                    {hasWatermark && (
-                      <Tooltip title="علامة مائية مفعّلة">
-                        <WatermarkIcon
-                          sx={{ fontSize: 16, color: "info.main" }}
-                        />
-                      </Tooltip>
-                    )}
-                  </Stack>
-                </AccordionSummary>
+                  <span className="flex-1 text-sm font-medium">{report.report_name}</span>
+                  {isCustom && (
+                    <Badge variant="outline" className="h-5 text-[11px]">
+                      {brandingTypeLabel(s.branding_type)}
+                    </Badge>
+                  )}
+                  {s.show_watermark && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Droplets className="size-3.5 text-blue-500" />
+                      </TooltipTrigger>
+                      <TooltipContent>علامة مائية مفعّلة</TooltipContent>
+                    </Tooltip>
+                  )}
+                  <ChevronDown className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                </CollapsibleTrigger>
 
-                <AccordionDetails
-                  sx={{
-                    px: 2.5,
-                    pb: 2,
-                    pt: 0,
-                    bgcolor: theme.palette.action.hover,
-                  }}
-                >
-                  <Stack spacing={1.5}>
-                    {/* Branding type */}
-                    <Box sx={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 2 }}>
-                      <Typography fontSize={12} color="text.secondary" minWidth={80}>
-                        نمط الهيدر
-                      </Typography>
-                      <ToggleButtonGroup
-                        exclusive
-                        size="small"
-                        value={s.branding_type}
-                        onChange={(_, v) =>
-                          v && patchReport(report.report_key, { branding_type: v as BrandingType })
-                        }
-                      >
-                        <ToggleButton value="global" sx={{ px: 1.5, fontSize: 11 }}>
-                          افتراضي
-                        </ToggleButton>
-                        <ToggleButton value="logo" sx={{ px: 1.5, fontSize: 11 }}>
-                          شعار
-                        </ToggleButton>
-                        <ToggleButton value="header" sx={{ px: 1.5, fontSize: 11 }}>
-                          هيدر كامل
-                        </ToggleButton>
-                        <ToggleButton value="none" sx={{ px: 1.5, fontSize: 11 }}>
-                          بدون
-                        </ToggleButton>
-                      </ToggleButtonGroup>
-                    </Box>
+                <CollapsibleContent className="space-y-3 bg-muted/30 px-5 pt-1 pb-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="min-w-20 text-xs text-muted-foreground">نمط الهيدر</span>
+                    <SegmentedControl
+                      value={s.branding_type}
+                      onChange={(v) => patchReport(report.report_key, { branding_type: v })}
+                      options={[
+                        { value: "global", label: "افتراضي" },
+                        { value: "logo", label: "شعار" },
+                        { value: "header", label: "هيدر كامل" },
+                        { value: "none", label: "بدون" },
+                      ]}
+                    />
+                  </div>
 
-                    {/* Logo sub-options */}
-                    {s.branding_type === "logo" && (
-                      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, alignItems: "flex-end" }}>
-                        <FormControl size="small" sx={{ minWidth: 110 }}>
-                          <InputLabel sx={{ fontSize: 12 }}>الموضع</InputLabel>
-                          <Select
-                            label="الموضع"
-                            value={s.logo_position ?? ""}
-                            onChange={(e) =>
-                              patchReport(report.report_key, {
-                                logo_position: e.target.value
-                                  ? (e.target.value as "left" | "right" | "center")
-                                  : null,
-                              })
-                            }
-                            sx={{ fontSize: 12 }}
-                          >
-                            <MenuItem value="">
-                              <em>عام ({global.logo_position})</em>
-                            </MenuItem>
-                            <MenuItem value="right">يمين</MenuItem>
-                            <MenuItem value="left">يسار</MenuItem>
-                            <MenuItem value="center">وسط</MenuItem>
-                          </Select>
-                        </FormControl>
+                  {s.branding_type === "logo" && (
+                    <div className="flex flex-wrap items-end gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">الموضع</Label>
+                        <Select
+                          value={s.logo_position ?? "__global__"}
+                          onValueChange={(v) =>
+                            patchReport(report.report_key, {
+                              logo_position:
+                                v === "__global__" ? null : (v as "left" | "right" | "center"),
+                            })
+                          }
+                        >
+                          <SelectTrigger size="sm" className="w-[130px] text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__global__">عام ({global.logo_position})</SelectItem>
+                            <SelectItem value="right">يمين</SelectItem>
+                            <SelectItem value="left">يسار</SelectItem>
+                            <SelectItem value="center">وسط</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                        <TextField
-                          size="small"
-                          label="العرض (mm)"
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">العرض (mm)</Label>
+                        <Input
                           type="number"
+                          min={10}
+                          max={200}
+                          dir="ltr"
                           placeholder={String(global.logo_width)}
                           value={s.logo_width ?? ""}
                           onChange={(e) =>
@@ -738,13 +571,16 @@ export const PdfReportBrandingSettings: React.FC = () => {
                               logo_width: e.target.value ? Number(e.target.value) : null,
                             })
                           }
-                          inputProps={{ min: 10, max: 200, dir: "ltr" }}
-                          sx={{ width: 95, "& input": { textAlign: "left", fontSize: 12 } }}
+                          className="h-8 w-[85px] text-left text-xs"
                         />
-                        <TextField
-                          size="small"
-                          label="الارتفاع (mm)"
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">الارتفاع (mm)</Label>
+                        <Input
                           type="number"
+                          min={10}
+                          max={200}
+                          dir="ltr"
                           placeholder={String(global.logo_height)}
                           value={s.logo_height ?? ""}
                           onChange={(e) =>
@@ -752,89 +588,56 @@ export const PdfReportBrandingSettings: React.FC = () => {
                               logo_height: e.target.value ? Number(e.target.value) : null,
                             })
                           }
-                          inputProps={{ min: 10, max: 200, dir: "ltr" }}
-                          sx={{ width: 105, "& input": { textAlign: "left", fontSize: 12 } }}
+                          className="h-8 w-[85px] text-left text-xs"
                         />
-                      </Box>
-                    )}
+                      </div>
+                    </div>
+                  )}
 
-                    {/* Toggles + Save row */}
-                    <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
-                      <Stack direction="row" flexWrap="wrap" gap={0.5}>
-                        <FormControlLabel
-                          control={
-                            <Switch
-                              size="small"
-                              checked={s.show_watermark}
-                              onChange={(e) =>
-                                patchReport(report.report_key, { show_watermark: e.target.checked })
-                              }
-                            />
-                          }
-                          label={
-                            <Typography fontSize={12} color="text.secondary">
-                              علامة مائية
-                            </Typography>
-                          }
-                        />
-                        <FormControlLabel
-                          control={
-                            <Switch
-                              size="small"
-                              checked={s.show_stamp}
-                              onChange={(e) =>
-                                patchReport(report.report_key, { show_stamp: e.target.checked })
-                              }
-                            />
-                          }
-                          label={
-                            <Typography fontSize={12} color="text.secondary">
-                              ختم
-                            </Typography>
-                          }
-                        />
-                        <FormControlLabel
-                          control={
-                            <Switch
-                              size="small"
-                              checked={s.show_signature}
-                              onChange={(e) =>
-                                patchReport(report.report_key, { show_signature: e.target.checked })
-                              }
-                            />
-                          }
-                          label={
-                            <Typography fontSize={12} color="text.secondary">
-                              توقيع
-                            </Typography>
-                          }
-                        />
-                      </Stack>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-4">
+                      <SwitchField
+                        label="علامة مائية"
+                        checked={s.show_watermark}
+                        onCheckedChange={(v) => patchReport(report.report_key, { show_watermark: v })}
+                        className="items-center gap-2"
+                      />
+                      <SwitchField
+                        label="ختم"
+                        checked={s.show_stamp}
+                        onCheckedChange={(v) => patchReport(report.report_key, { show_stamp: v })}
+                        className="items-center gap-2"
+                      />
+                      <SwitchField
+                        label="توقيع"
+                        checked={s.show_signature}
+                        onCheckedChange={(v) => patchReport(report.report_key, { show_signature: v })}
+                        className="items-center gap-2"
+                      />
+                    </div>
 
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={
-                          s.saving ? (
-                            <CircularProgress size={12} color="inherit" />
-                          ) : (
-                            <SaveIcon sx={{ fontSize: 14 }} />
-                          )
-                        }
-                        onClick={() => handleReportSave(report.report_key)}
-                        disabled={s.saving}
-                        sx={{ fontSize: 12, minWidth: 80 }}
-                      >
-                        حفظ
-                      </Button>
-                    </Stack>
-                  </Stack>
-                </AccordionDetails>
-              </Accordion>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleReportSave(report.report_key)}
+                      disabled={s.saving}
+                      className="h-7 min-w-20 text-xs"
+                    >
+                      {s.saving ? (
+                        <Loader2 className="size-3 animate-spin" />
+                      ) : (
+                        <Save className="size-3" />
+                      )}
+                      حفظ
+                    </Button>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             );
           })}
-        </Box>
-      </Box>
-    </Stack>
+        </div>
+      </SettingsGroup>
+    </SettingsSection>
   );
 };

@@ -1,20 +1,16 @@
 import { Controller, Control } from "react-hook-form";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  FormControl,
-  InputLabel,
   Select,
-  MenuItem,
-  Switch,
-  Stack,
-  alpha,
-  useTheme,
-  FormControlLabel,
-  Divider,
-} from "@mui/material";
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { SettingsSection } from "./shared/SettingsSection";
+import { SettingsGroup } from "./shared/SettingsGroup";
+import { SwitchField } from "./shared/SwitchField";
 import { AppSettings } from "@/services/settingService";
 
 interface PurchaseSettingsProps {
@@ -22,139 +18,63 @@ interface PurchaseSettingsProps {
 }
 
 export const PurchaseSettings = ({ control }: PurchaseSettingsProps) => {
-  const theme = useTheme();
-
   return (
-    <Card
-      sx={{
-        borderRadius: 2,
-        boxShadow: theme.shadows[2],
-        mx: "auto",
-        maxWidth: 900,
-        border: `1px solid ${theme.palette.divider}`,
-      }}
+    <SettingsSection
+      title="إعدادات المشتريات"
+      description="تحكم في العملة الافتراضية وحقول أصناف فواتير الشراء."
     >
-      <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-        <Typography
-          variant="h6"
-          fontWeight={600}
-          gutterBottom
-          sx={{ mb: 4, color: "text.primary" }}
-        >
-          إعدادات المشتريات
-        </Typography>
+      <SettingsGroup title="العملة الافتراضية للمشتريات">
+        <Controller
+          name="default_purchase_currency"
+          control={control}
+          render={({ field }) => (
+            <div className="space-y-2">
+              <Label htmlFor="default_purchase_currency">العملة الافتراضية</Label>
+              <Select value={field.value ?? "SDG"} onValueChange={field.onChange}>
+                <SelectTrigger id="default_purchase_currency" className="w-[220px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SDG">SDG — جنيه سوداني</SelectItem>
+                  <SelectItem value="USD">USD — دولار أمريكي</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                سيتم استخدام هذه العملة كقيمة افتراضية عند إنشاء فاتورة شراء جديدة.
+              </p>
+            </div>
+          )}
+        />
+      </SettingsGroup>
 
-        {/* Default Currency */}
-        <Box
-          sx={{
-            bgcolor: alpha(theme.palette.warning.main, 0.05),
-            p: 3,
-            borderRadius: 2,
-            border: `1px solid ${alpha(theme.palette.warning.main, 0.15)}`,
-            mb: 3,
-          }}
-        >
-          <Typography variant="subtitle1" fontWeight={600} gutterBottom sx={{ mb: 2 }}>
-            العملة الافتراضية للمشتريات
-          </Typography>
-          <Controller
-            name="default_purchase_currency"
-            control={control}
-            render={({ field }) => (
-              <FormControl size="small" sx={{ minWidth: 200 }}>
-                <InputLabel>العملة الافتراضية</InputLabel>
-                <Select
-                  value={field.value ?? "SDG"}
-                  label="العملة الافتراضية"
-                  onChange={(e) => field.onChange(e.target.value)}
-                >
-                  <MenuItem value="SDG">SDG — جنيه سوداني</MenuItem>
-                  <MenuItem value="USD">USD — دولار أمريكي</MenuItem>
-                </Select>
-              </FormControl>
-            )}
-          />
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
-            سيتم استخدام هذه العملة كقيمة افتراضية عند إنشاء فاتورة شراء جديدة.
-          </Typography>
-        </Box>
+      <Separator />
 
-        <Divider sx={{ mb: 3 }} />
-
-        <Box
-          sx={{
-            bgcolor: alpha(theme.palette.primary.main, 0.05),
-            p: 3,
-            borderRadius: 2,
-            border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-          }}
-        >
-          <FormControl component="fieldset" sx={{ width: "100%" }}>
-            <Typography
-              variant="subtitle1"
-              fontWeight={600}
-              gutterBottom
-              sx={{ mb: 2 }}
-            >
-              حقول أصناف المشتريات
-            </Typography>
-            <Stack spacing={2}>
-              <Controller
-                name="purchase_use_batch_number"
-                control={control}
-                render={({ field }) => (
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={Boolean(field.value)}
-                        onChange={(e) => field.onChange(e.target.checked)}
-                      />
-                    }
-                    label={
-                      <Box>
-                        <Typography variant="body1" fontWeight={500}>
-                          استخدام رقم الباتش (Batch Number)
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          عند التفعيل، يظهر عمود رقم الباتش في جدول أصناف
-                          المشتريات ويمكن إدخاله لكل صنف.
-                        </Typography>
-                      </Box>
-                    }
-                    sx={{ alignItems: "flex-start" }}
-                  />
-                )}
-              />
-              <Controller
-                name="purchase_use_expiry_date"
-                control={control}
-                render={({ field }) => (
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={Boolean(field.value)}
-                        onChange={(e) => field.onChange(e.target.checked)}
-                      />
-                    }
-                    label={
-                      <Box>
-                        <Typography variant="body1" fontWeight={500}>
-                          استخدام تاريخ الانتهاء (Expiry Date)
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          عند التفعيل، يظهر عمود تاريخ الانتهاء في جدول أصناف
-                          المشتريات ويمكن تحديده لكل صنف.
-                        </Typography>
-                      </Box>
-                    }
-                    sx={{ alignItems: "flex-start" }}
-                  />
-                )}
-              />
-            </Stack>
-          </FormControl>
-        </Box>
-      </CardContent>
-    </Card>
+      <SettingsGroup title="حقول أصناف المشتريات">
+        <Controller
+          name="purchase_use_batch_number"
+          control={control}
+          render={({ field }) => (
+            <SwitchField
+              label="استخدام رقم الباتش (Batch Number)"
+              description="عند التفعيل، يظهر عمود رقم الباتش في جدول أصناف المشتريات ويمكن إدخاله لكل صنف."
+              checked={Boolean(field.value)}
+              onCheckedChange={field.onChange}
+            />
+          )}
+        />
+        <Controller
+          name="purchase_use_expiry_date"
+          control={control}
+          render={({ field }) => (
+            <SwitchField
+              label="استخدام تاريخ الانتهاء (Expiry Date)"
+              description="عند التفعيل، يظهر عمود تاريخ الانتهاء في جدول أصناف المشتريات ويمكن تحديده لكل صنف."
+              checked={Boolean(field.value)}
+              onCheckedChange={field.onChange}
+            />
+          )}
+        />
+      </SettingsGroup>
+    </SettingsSection>
   );
 };

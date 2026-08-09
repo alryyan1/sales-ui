@@ -1,19 +1,10 @@
 import { Controller, Control } from "react-hook-form";
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  FormControl,
-  Switch,
-  TextField,
-  Stack,
-  alpha,
-  useTheme,
-} from "@mui/material";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { SettingsSection } from "./shared/SettingsSection";
+import { SettingsGroup } from "./shared/SettingsGroup";
+import { SwitchField } from "./shared/SwitchField";
 import { AppSettings } from "@/services/settingService";
 
 interface PosSettingsProps {
@@ -21,173 +12,92 @@ interface PosSettingsProps {
 }
 
 export const PosSettings = ({ control }: PosSettingsProps) => {
-  const theme = useTheme();
-
   return (
-    <Card
-      sx={{
-        borderRadius: 2,
-        boxShadow: theme.shadows[2],
-        mx: "auto",
-        maxWidth: 900,
-        border: `1px solid ${theme.palette.divider}`,
-      }}
+    <SettingsSection
+      title="إعدادات نقاط البيع (POS)"
+      description="تحكم في سلوك شاشة نقطة البيع وإشعاراتها."
     >
-      <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-        <Typography
-          variant="h6"
-          fontWeight={600}
-          gutterBottom
-          sx={{ mb: 4, color: "text.primary" }}
-        >
-          إعدادات نقاط البيع (POS)
-        </Typography>
-        {/* Product Visibility Settings */}
-        <Box
-          sx={{
-            bgcolor: alpha(theme.palette.primary.main, 0.05),
-            p: 3,
-            borderRadius: 2,
-            border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-            mt: 3,
-          }}
-        >
-          <FormControl component="fieldset" sx={{ width: "100%" }}>
-            <Typography
-              variant="subtitle1"
-              fontWeight={600}
-              gutterBottom
-              sx={{ mb: 2 }}
-            >
-              ظهور المنتجات (Product Visibility)
-            </Typography>
-            <Stack spacing={2}>
-              <Controller
-                name="pos_show_expired_products"
-                control={control}
-                render={({ field }) => (
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={Boolean(field.value)}
-                        onChange={(e) => field.onChange(e.target.checked)}
-                      />
-                    }
-                    label={
-                      <Box>
-                        <Typography variant="body1" fontWeight={500}>
-                          عرض المنتجات المنتهية الصلاحية
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          عند التفعيل، ستظهر المنتجات منتهية الصلاحية في نتائج بحث نقطة البيع.
-                        </Typography>
-                      </Box>
-                    }
-                    sx={{ alignItems: "flex-start" }}
-                  />
-                )}
-              />
-              <Controller
-                name="pos_show_out_of_stock_products"
-                control={control}
-                render={({ field }) => (
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={Boolean(field.value)}
-                        onChange={(e) => field.onChange(e.target.checked)}
-                      />
-                    }
-                    label={
-                      <Box>
-                        <Typography variant="body1" fontWeight={500}>
-                          عرض المنتجات التي نفد مخزونها
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          عند التفعيل، ستظهر المنتجات التي رصيدها صفراً أو أقل في نتائج بحث نقطة البيع.
-                        </Typography>
-                      </Box>
-                    }
-                    sx={{ alignItems: "flex-start" }}
-                  />
-                )}
-              />
-            </Stack>
-          </FormControl>
-        </Box>
-        <Box
-          sx={{
-            bgcolor: alpha(theme.palette.primary.main, 0.05),
-            p: 3,
-            borderRadius: 2,
-            border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-            mt: 3,
-          }}
-        >
-          <FormControl component="fieldset" sx={{ width: "100%" }}>
-            <Typography
-              variant="subtitle1"
-              fontWeight={600}
-              gutterBottom
-              sx={{ mb: 2 }}
-            >
-              إشعارات الواتساب (WhatsApp Notifications)
-            </Typography>
-            <Controller
-              name="whatsapp_shift_closure_numbers"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  value={field.value || ""}
-                  label="أرقام استلام تقرير إغلاق الوردية"
-                  placeholder="مثال: 249991961111,249123456789"
-                  helperText="أدخل أرقام الهواتف (مفصولة بفاصلة) التي يجب أن تتلقى رسالة الواتساب عند إغلاق أي وردية. يجب أن تتضمن الرمز الدولي بدون +"
-                  fullWidth
-                  variant="outlined"
-                  dir="ltr"
-                />
-              )}
+      <SettingsGroup title="ظهور المنتجات (Product Visibility)">
+        <Controller
+          name="pos_show_expired_products"
+          control={control}
+          render={({ field }) => (
+            <SwitchField
+              label="عرض المنتجات المنتهية الصلاحية"
+              description="عند التفعيل، ستظهر المنتجات منتهية الصلاحية في نتائج بحث نقطة البيع."
+              checked={Boolean(field.value)}
+              onCheckedChange={field.onChange}
             />
-          </FormControl>
-        </Box>
-        <Box
-          sx={{
-            bgcolor: alpha(theme.palette.primary.main, 0.05),
-            p: 3,
-            borderRadius: 2,
-            border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-            mt: 3,
-          }}
-        >
-          <FormControl component="fieldset" sx={{ width: "100%" }}>
-            <Typography
-              variant="subtitle1"
-              fontWeight={600}
-              gutterBottom
-              sx={{ mb: 2 }}
-            >
-              إعدادات Firebase (Firebase Settings)
-            </Typography>
-            <Controller
-              name="firebase_collection_name"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  value={field.value || "none"}
-                  label="اسم مجموعة Firebase (Collection Name)"
-                  placeholder="مثال: none"
-                  helperText="اسم المجموعة (Collection) في Firestore حيث يتم تخزين المنتجات والورديات."
-                  fullWidth
-                  variant="outlined"
-                  dir="ltr"
-                />
-              )}
+          )}
+        />
+        <Controller
+          name="pos_show_out_of_stock_products"
+          control={control}
+          render={({ field }) => (
+            <SwitchField
+              label="عرض المنتجات التي نفد مخزونها"
+              description="عند التفعيل، ستظهر المنتجات التي رصيدها صفراً أو أقل في نتائج بحث نقطة البيع."
+              checked={Boolean(field.value)}
+              onCheckedChange={field.onChange}
             />
-          </FormControl>
-        </Box>
-      </CardContent>
-    </Card>
+          )}
+        />
+      </SettingsGroup>
+
+      <Separator />
+
+      <SettingsGroup title="إشعارات الواتساب (WhatsApp Notifications)">
+        <Controller
+          name="whatsapp_shift_closure_numbers"
+          control={control}
+          render={({ field }) => (
+            <div className="space-y-2">
+              <Label htmlFor="whatsapp_shift_closure_numbers">
+                أرقام استلام تقرير إغلاق الوردية
+              </Label>
+              <Input
+                id="whatsapp_shift_closure_numbers"
+                {...field}
+                value={field.value || ""}
+                placeholder="مثال: 249991961111,249123456789"
+                dir="ltr"
+                className="text-left"
+              />
+              <p className="text-xs text-muted-foreground">
+                أدخل أرقام الهواتف (مفصولة بفاصلة) التي يجب أن تتلقى رسالة الواتساب عند
+                إغلاق أي وردية. يجب أن تتضمن الرمز الدولي بدون +
+              </p>
+            </div>
+          )}
+        />
+      </SettingsGroup>
+
+      <Separator />
+
+      <SettingsGroup title="إعدادات Firebase (Firebase Settings)">
+        <Controller
+          name="firebase_collection_name"
+          control={control}
+          render={({ field }) => (
+            <div className="space-y-2">
+              <Label htmlFor="firebase_collection_name">
+                اسم مجموعة Firebase (Collection Name)
+              </Label>
+              <Input
+                id="firebase_collection_name"
+                {...field}
+                value={field.value || "none"}
+                placeholder="مثال: none"
+                dir="ltr"
+                className="text-left"
+              />
+              <p className="text-xs text-muted-foreground">
+                اسم المجموعة (Collection) في Firestore حيث يتم تخزين المنتجات والورديات.
+              </p>
+            </div>
+          )}
+        />
+      </SettingsGroup>
+    </SettingsSection>
   );
 };

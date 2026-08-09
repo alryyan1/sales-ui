@@ -1,59 +1,70 @@
 // src/components/layouts/UserMenu.tsx
-import React from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import React from "react";
+import { Link as RouterLink } from "react-router-dom";
+import { LogOut, Settings as SettingsIcon, UserCircle } from "lucide-react";
 import {
-    Menu,
-    MenuItem,
-    ListItemIcon,
-    ListItemText,
-    Divider,
-} from '@mui/material';
-import { LogOut, UserCircle, Settings as SettingsIcon } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useAuth } from "@/context/AuthContext";
+import { User } from "@/services/authService";
 
 interface UserMenuProps {
-    anchorEl: HTMLElement | null;
-    onClose: () => void;
+  user: User;
 }
 
-const UserMenu: React.FC<UserMenuProps> = ({ anchorEl, onClose }) => {
-    const { handleLogout } = useAuth();
+const UserMenu: React.FC<UserMenuProps> = ({ user }) => {
+  const { handleLogout } = useAuth();
 
-    const handleLogoutClick = async () => {
-        onClose();
-        await handleLogout();
-    };
+  const initials = user.name
+    ? user.name.substring(0, 2).toUpperCase()
+    : user.username?.substring(0, 2).toUpperCase() || "U";
 
-    return (
-        <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={onClose}
-            transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-            anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label="حساب المستخدم"
+          className="flex size-9 items-center justify-center rounded-full transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-            <MenuItem component={RouterLink} to="/profile" onClick={onClose}>
-                <ListItemIcon>
-                    <UserCircle size={20} />
-                </ListItemIcon>
-                <ListItemText>الملف الشخصي</ListItemText>
-            </MenuItem>
-            <MenuItem component={RouterLink} to="/admin/settings" onClick={onClose}>
-                <ListItemIcon>
-                    <SettingsIcon size={20} />
-                </ListItemIcon>
-                <ListItemText>الإعدادات</ListItemText>
-            </MenuItem>
-            <Divider />
-            <MenuItem onClick={handleLogoutClick} sx={{ color: 'error.main' }}>
-                <ListItemIcon>
-                    <LogOut size={20} />
-                </ListItemIcon>
-                <ListItemText>تسجيل الخروج</ListItemText>
-            </MenuItem>
-        </Menu>
-    );
+          <Avatar className="size-9">
+            <AvatarFallback className="bg-primary text-sm font-medium text-primary-foreground">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel className="truncate">
+          {user.name || user.username}
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <RouterLink to="/profile">
+            <UserCircle />
+            الملف الشخصي
+          </RouterLink>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <RouterLink to="/admin/settings">
+            <SettingsIcon />
+            الإعدادات
+          </RouterLink>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive" onClick={() => handleLogout()}>
+          <LogOut />
+          تسجيل الخروج
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 };
 
 export default UserMenu;
-

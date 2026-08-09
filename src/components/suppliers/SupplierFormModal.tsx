@@ -1,32 +1,29 @@
 // src/components/suppliers/SupplierFormModal.tsx
-import React, { useEffect, useState } from "react";
-import { useForm, SubmitHandler } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { Loader2, AlertCircle } from "lucide-react";
+
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
-  TextField,
-  Button,
-  Box,
-  Alert,
-  Divider,
-  FormControlLabel,
-  Switch,
-  Typography,
-} from "@mui/material";
-import { Loader2 } from "lucide-react";
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
-// Services and Types
-import supplierService, {
-  Supplier,
-  SupplierFormData,
-} from "../../services/supplierService";
+import supplierService, { Supplier, SupplierFormData } from "@/services/supplierService";
 
-// --- Zod Schema for Validation ---
 const supplierFormSchema = z.object({
   name: z.string().min(1, { message: "اسم المورد مطلوب" }),
   contact_person: z.string().nullable().optional(),
@@ -43,7 +40,15 @@ const supplierFormSchema = z.object({
 
 type SupplierFormValues = z.infer<typeof supplierFormSchema>;
 
-// --- Component Props ---
+const FORM_FIELD_KEYS: (keyof SupplierFormValues)[] = [
+  "name",
+  "contact_person",
+  "email",
+  "phone",
+  "address",
+  "is_client",
+];
+
 interface SupplierFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -51,7 +56,6 @@ interface SupplierFormModalProps {
   onSaveSuccess: () => void;
 }
 
-// --- Component Definition ---
 const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
   isOpen,
   onClose,
@@ -59,10 +63,16 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
   onSaveSuccess,
 }) => {
   const isEditMode = Boolean(supplierToEdit);
-
   const [serverError, setServerError] = useState<string | null>(null);
 
-  const form = useForm<SupplierFormValues>({
+  const {
+    handleSubmit,
+    reset,
+    control,
+    register,
+    setError,
+    formState: { isSubmitting, errors },
+  } = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierFormSchema),
     defaultValues: {
       name: "",
@@ -70,52 +80,37 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
       email: "",
       phone: "",
       address: "",
+      is_client: false,
     },
   });
 
-  const {
-    handleSubmit,
-    reset,
-    register,
-    watch,
-    setValue,
-    formState: { isSubmitting, errors },
-    setError,
-  } = form;
-
-  // --- Effect to Populate/Reset Form ---
   useEffect(() => {
-    if (isOpen) {
-      setServerError(null);
-      if (isEditMode && supplierToEdit) {
-        reset({
-          name: supplierToEdit.name || "",
-          contact_person: supplierToEdit.contact_person || "",
-          email: supplierToEdit.email || "",
-          phone: supplierToEdit.phone || "",
-          address: supplierToEdit.address || "",
-          is_client: supplierToEdit.is_client ?? false,
-        });
-      } else {
-        reset({
-          name: "",
-          contact_person: "",
-          email: "",
-          phone: "",
-          address: "",
-          is_client: false,
-        }); // Reset to defaults for adding
-      }
+    if (!isOpen) return;
+    setServerError(null);
+    if (isEditMode && supplierToEdit) {
+      reset({
+        name: supplierToEdit.name || "",
+        contact_person: supplierToEdit.contact_person || "",
+        email: supplierToEdit.email || "",
+        phone: supplierToEdit.phone || "",
+        address: supplierToEdit.address || "",
+        is_client: supplierToEdit.is_client ?? false,
+      });
+    } else {
+      reset({
+        name: "",
+        contact_person: "",
+        email: "",
+        phone: "",
+        address: "",
+        is_client: false,
+      });
     }
   }, [isOpen, isEditMode, supplierToEdit, reset]);
 
-  // --- Form Submission Handler ---
   const onSubmit: SubmitHandler<SupplierFormValues> = async (data) => {
     setServerError(null);
-    console.log("Submitting supplier data:", data);
-
-    // Prepare data for API (ensure empty strings become null)
-    const dataToSend = {
+    const dataToSend: SupplierFormData = {
       ...data,
       contact_person: data.contact_person || null,
       email: data.email || null,
@@ -124,190 +119,159 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
     };
 
     try {
-      let savedSupplier: Supplier;
       if (isEditMode && supplierToEdit) {
-        savedSupplier = await supplierService.updateSupplier(
-          supplierToEdit.id,
-          dataToSend
-        );
+        await supplierService.updateSupplier(supplierToEdit.id, dataToSend);
       } else {
-        savedSupplier = await supplierService.createSupplier(dataToSend);
+        await supplierService.createSupplier(dataToSend);
       }
-      console.log("Save successful:", savedSupplier);
-
       toast.success("تم الحفظ بنجاح", {
-        description: isEditMode
-          ? "تم تحديث بيانات المورد بنجاح"
-          : "تم إضافة المورد بنجاح",
-        duration: 3000,
+        description: isEditMode ? "تم تحديث بيانات المورد بنجاح" : "تم إضافة المورد بنجاح",
       });
-
       onSaveSuccess();
       onClose();
     } catch (err) {
-      console.error("Failed to save supplier:", err);
       const generalError = supplierService.getErrorMessage(err);
       const apiErrors = supplierService.getValidationErrors(err);
-
-      toast.error("خطأ", {
-        description: generalError,
-        duration: 5000,
-      });
-      setServerError(generalError);
-
+      toast.error("تعذر الحفظ", { description: generalError });
+      setServerError(apiErrors ? "يرجى التحقق من الحقول المدخلة." : generalError);
       if (apiErrors) {
         Object.entries(apiErrors).forEach(([field, messages]) => {
-          if (field in ({} as SupplierFormValues)) {
+          if (FORM_FIELD_KEYS.includes(field as keyof SupplierFormValues)) {
             setError(field as keyof SupplierFormValues, {
               type: "server",
               message: messages[0],
             });
           }
         });
-        setServerError("يرجى التحقق من الحقول المدخلة.");
       }
     }
   };
 
-  // --- Render Modal ---
-  if (!isOpen) return null;
-
   return (
-    <Dialog open={isOpen} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>
-        {isEditMode ? "تعديل مورد" : "إضافة مورد"}
-      </DialogTitle>
-      <DialogContent dividers>
-        <Box
-          component="form"
-          onSubmit={handleSubmit(onSubmit)}
-          noValidate
-          sx={{ mt: 1 }}
-        >
-          {serverError && !isSubmitting && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {serverError}
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open && !isSubmitting) onClose();
+      }}
+    >
+      <DialogContent dir="rtl" className="sm:max-w-lg">
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
+          <DialogHeader>
+            <DialogTitle>{isEditMode ? "تعديل مورد" : "إضافة مورد"}</DialogTitle>
+            <DialogDescription>
+              {isEditMode
+                ? "حدّث بيانات التواصل الخاصة بهذا المورد."
+                : "أدخل بيانات المورد الجديد. يمكن ربطه بحساب عميل إذا كان يشتري منكم أيضًا."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {serverError && (
+            <Alert variant="destructive">
+              <AlertCircle className="size-4" />
+              <AlertTitle>تعذر الحفظ</AlertTitle>
+              <AlertDescription>{serverError}</AlertDescription>
             </Alert>
           )}
 
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-              gap: 2,
-            }}
-          >
-            <Box sx={{ gridColumn: { xs: "span 1", sm: "span 2" } }}>
-              <TextField
-                label="اسم المورد"
-                autoFocus={true}
-                fullWidth
-                required
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="supplier-name">اسم المورد</Label>
+              <Input
+                id="supplier-name"
+                autoFocus
                 placeholder="أدخل اسم المورد"
                 disabled={isSubmitting}
+                aria-invalid={!!errors.name}
                 {...register("name")}
-                error={!!errors.name}
-                helperText={errors.name?.message}
               />
-            </Box>
+              {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+            </div>
 
-            <TextField
-              label="مسؤول التواصل"
-              fullWidth
-              placeholder="اسم الشخص المسؤول"
-              disabled={isSubmitting}
-              {...register("contact_person")}
-              error={!!errors.contact_person}
-              helperText={errors.contact_person?.message}
-            />
+            <div className="space-y-1.5">
+              <Label htmlFor="supplier-contact">مسؤول التواصل</Label>
+              <Input
+                id="supplier-contact"
+                placeholder="اسم الشخص المسؤول"
+                disabled={isSubmitting}
+                {...register("contact_person")}
+              />
+            </div>
 
-            <TextField
-              label="البريد الإلكتروني"
-              type="email"
-              fullWidth
-              placeholder="example@email.com"
-              disabled={isSubmitting}
-              {...register("email")}
-              error={!!errors.email}
-              helperText={errors.email?.message}
-            />
+            <div className="space-y-1.5">
+              <Label htmlFor="supplier-email">البريد الإلكتروني</Label>
+              <Input
+                id="supplier-email"
+                type="email"
+                placeholder="example@email.com"
+                disabled={isSubmitting}
+                aria-invalid={!!errors.email}
+                {...register("email")}
+              />
+              {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+            </div>
 
-            <TextField
-              label="رقم الهاتف"
-              type="tel"
-              fullWidth
-              placeholder="05xxxxxxxx"
-              disabled={isSubmitting}
-              {...register("phone")}
-              error={!!errors.phone}
-              helperText={errors.phone?.message}
-            />
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="supplier-phone">رقم الهاتف</Label>
+              <Input
+                id="supplier-phone"
+                type="tel"
+                placeholder="05xxxxxxxx"
+                disabled={isSubmitting}
+                {...register("phone")}
+              />
+            </div>
 
-            <Box sx={{ gridColumn: { xs: "span 1", sm: "span 2" } }}>
-              <TextField
-                label="العنوان"
-                fullWidth
-                multiline
-                minRows={3}
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="supplier-address">العنوان</Label>
+              <Textarea
+                id="supplier-address"
+                rows={3}
                 placeholder="أدخل عنوان المورد"
                 disabled={isSubmitting}
                 {...register("address")}
-                error={!!errors.address}
-                helperText={errors.address?.message}
               />
-            </Box>
+            </div>
+          </div>
 
-            <Box sx={{ gridColumn: { xs: "span 1", sm: "span 2" } }}>
-              <Divider sx={{ mb: 2 }} />
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={watch("is_client") ?? false}
-                    onChange={(e) => setValue("is_client", e.target.checked)}
-                    disabled={isSubmitting}
-                    color="primary"
-                  />
-                }
-                label={
-                  <Box>
-                    <Typography variant="body2" fontWeight={600}>
-                      هذا المورد عميل أيضاً
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      سيتم إنشاء سجل عميل مرتبط لتتبع المبيعات
-                    </Typography>
-                  </Box>
-                }
-              />
-              {isEditMode && supplierToEdit?.is_client && (
-                <Alert severity="info" sx={{ mt: 1.5 }} icon={false}>
-                  مرتبط بحساب عميل — يمكن عرض كشف مبيعاته من صفحة المورد
-                </Alert>
-              )}
-            </Box>
-          </Box>
+          <Separator />
 
-          <DialogActions sx={{ mt: 2 }}>
-            <Button
-              type="button"
-              variant="outlined"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
+          <Controller
+            control={control}
+            name="is_client"
+            render={({ field }) => (
+              <label className="flex cursor-pointer items-start justify-between gap-4 rounded-lg -mx-2 px-2 py-1.5">
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium text-foreground">هذا المورد عميل أيضًا</p>
+                  <p className="text-xs text-muted-foreground">
+                    سيتم إنشاء سجل عميل مرتبط لتتبع المبيعات
+                  </p>
+                </div>
+                <Switch
+                  checked={field.value ?? false}
+                  onCheckedChange={field.onChange}
+                  disabled={isSubmitting}
+                  className="mt-0.5 shrink-0"
+                />
+              </label>
+            )}
+          />
+
+          {isEditMode && supplierToEdit?.is_client && (
+            <p className="text-xs text-muted-foreground">
+              مرتبط بحساب عميل — يمكن عرض كشف مبيعاته من صفحة المورد
+            </p>
+          )}
+
+          <DialogFooter>
+            <Button type="button" variant="outline" disabled={isSubmitting} onClick={onClose}>
               إلغاء
             </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={isSubmitting}
-            >
-              {isSubmitting && (
-                <Loader2 className="me-2 h-4 w-4 animate-spin" />
-              )}
+            <Button type="submit" disabled={isSubmitting} className="min-w-24 gap-2">
+              {isSubmitting && <Loader2 className="size-4 animate-spin" />}
               حفظ
             </Button>
-          </DialogActions>
-        </Box>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

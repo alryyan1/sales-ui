@@ -10,9 +10,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 // استيراد الإعدادات المخصصة
-import theme, { cacheRtl } from "./theme"; // استيراد Theme الـ MUI المخصص (مع RTL)
+import { getTheme, cacheRtl } from "./theme"; // استيراد Theme الـ MUI المخصص (مع RTL)
 import { CacheProvider } from "@emotion/react";
-import "./fonts/tajawal.css"; // استيراد خط Tajawal المحلي
 import "./fonts/tajawal.css"; // استيراد خط Tajawal المحلي
 import "./index.css"; // استيراد CSS العام (اختياري)
 import { registerPdfFonts } from "./utils/pdfFontRegistry";
@@ -21,8 +20,18 @@ import { registerPdfFonts } from "./utils/pdfFontRegistry";
 registerPdfFonts();
 import router from "./router";
 import { SettingsProvider } from "./context/SettingsContext";
-import { ThemeProvider as TailwindTheme } from "./context/ThemeContext";
+import { ThemeProvider as TailwindTheme, useTheme as useTailwindTheme } from "./context/ThemeContext";
 import { ThemeProvider } from "@mui/material";
+import { useMemo } from "react";
+
+// Bridges the app's light/dark ThemeContext into the MUI theme, so MUI
+// components (tables, dialogs, admin pages) follow the same mode instead
+// of always rendering with the light palette.
+function MuiThemeBridge({ children }: { children: React.ReactNode }) {
+  const { resolvedTheme } = useTailwindTheme();
+  const muiTheme = useMemo(() => getTheme(resolvedTheme), [resolvedTheme]);
+  return <ThemeProvider theme={muiTheme}>{children}</ThemeProvider>;
+}
 
 console.log("main.tsx: Initializing application...");
 
@@ -56,10 +65,10 @@ ReactDOM.createRoot(rootElement).render(
         <TailwindTheme defaultTheme="system" storageKey="app-ui-theme">
           <CacheProvider value={cacheRtl}>
             <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <ThemeProvider theme={theme}>
+              <MuiThemeBridge>
                 <CssBaseline />
                 <RouterProvider router={router} />
-              </ThemeProvider>
+              </MuiThemeBridge>
             </LocalizationProvider>
           </CacheProvider>
         </TailwindTheme>

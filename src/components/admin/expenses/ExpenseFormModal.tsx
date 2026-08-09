@@ -1,35 +1,31 @@
 // src/components/admin/expenses/ExpenseFormModal.tsx
-import React, { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
+import { AlertCircle, Loader2, Plus } from "lucide-react";
 
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
-  Button,
-  TextField,
-  MenuItem,
-  FormControl,
-  InputLabel,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import {
   Select,
-  Box,
-  Typography,
-  IconButton,
-  Tooltip,
-  CircularProgress,
-  Alert,
-} from "@mui/material";
-import { X, Plus } from "lucide-react";
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-import expenseCategoryService, {
-  ExpenseCategory,
-} from "@/services/ExpenseCategoryService";
-
-import expenseService, {
-  Expense,
-  ExpenseFormData,
-} from "@/services/expenseService";
+import expenseCategoryService, { ExpenseCategory } from "@/services/ExpenseCategoryService";
+import expenseService, { Expense, ExpenseFormData } from "@/services/expenseService";
 
 interface ExpenseFormModalProps {
   isOpen: boolean;
@@ -41,14 +37,23 @@ interface ExpenseFormModalProps {
 
 type ExpenseFormFields = {
   title: string;
-  amount: string | number;
+  amount: string;
   payment_method: string;
-  expense_category_id: number | "";
+  expense_category_id: string;
 };
+
+const PAYMENT_METHODS = [
+  { value: "cash", label: "نقدي" },
+  { value: "bankak", label: "بنكك" },
+  { value: "fawry", label: "فوري" },
+  { value: "ocash", label: "أوكاش" },
+];
 
 const getToday = () => {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate()
+  ).padStart(2, "0")}`;
 };
 
 const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
@@ -59,8 +64,7 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
   shiftId,
 }) => {
   const isEditMode = Boolean(expenseToEdit);
-
-  const [serverError, setServerError] = React.useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const {
     handleSubmit,
@@ -77,13 +81,13 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
     },
   });
 
-  const [categories, setCategories] = React.useState<ExpenseCategory[]>([]);
-  const [isLoadingCategories, setIsLoadingCategories] = React.useState(false);
-  const [isAddCategoryDialogOpen, setIsAddCategoryDialogOpen] = React.useState(false);
-  const [newCategoryName, setNewCategoryName] = React.useState("");
-  const [isAddingCategory, setIsAddingCategory] = React.useState(false);
+  const [categories, setCategories] = useState<ExpenseCategory[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+  const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
 
-  const fetchCategories = React.useCallback(async () => {
+  const fetchCategories = useCallback(async () => {
     setIsLoadingCategories(true);
     try {
       const data = await expenseCategoryService.getCategories(1, 999, "", true);
@@ -96,9 +100,7 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
   }, []);
 
   useEffect(() => {
-    if (isOpen) {
-      fetchCategories();
-    }
+    if (isOpen) fetchCategories();
   }, [isOpen, fetchCategories]);
 
   useEffect(() => {
@@ -109,15 +111,12 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
         title: expenseToEdit.title ?? "",
         amount: String(expenseToEdit.amount ?? ""),
         payment_method: expenseToEdit.payment_method ?? "cash",
-        expense_category_id: expenseToEdit.expense_category_id ?? "",
+        expense_category_id: expenseToEdit.expense_category_id
+          ? String(expenseToEdit.expense_category_id)
+          : "",
       });
     } else {
-      reset({
-        title: "",
-        amount: "",
-        payment_method: "cash",
-        expense_category_id: "",
-      });
+      reset({ title: "", amount: "", payment_method: "cash", expense_category_id: "" });
     }
   }, [isOpen, isEditMode, expenseToEdit, reset]);
 
@@ -126,36 +125,30 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
     const payload: ExpenseFormData = {
       title: data.title,
       amount: Number(data.amount),
-      expense_date: isEditMode && expenseToEdit?.expense_date
-        ? expenseToEdit.expense_date
-        : getToday(),
-      expense_category_id: data.expense_category_id === "" ? null : data.expense_category_id,
+      expense_date:
+        isEditMode && expenseToEdit?.expense_date ? expenseToEdit.expense_date : getToday(),
+      expense_category_id: data.expense_category_id ? Number(data.expense_category_id) : null,
       payment_method: data.payment_method || null,
       reference: null,
       description: null,
       shift_id: shiftId ?? null,
     };
     try {
-      let saved: Expense;
-      if (isEditMode && expenseToEdit) {
-        saved = await expenseService.updateExpense(expenseToEdit.id, payload);
-      } else {
-        saved = await expenseService.createExpense(payload);
-      }
+      const saved =
+        isEditMode && expenseToEdit
+          ? await expenseService.updateExpense(expenseToEdit.id, payload)
+          : await expenseService.createExpense(payload);
       onSaveSuccess(saved);
       onClose();
     } catch (err) {
       setServerError(expenseService.getErrorMessage(err));
       const apiErrors = expenseService.getValidationErrors(err);
       if (apiErrors) {
-        (
-          Object.entries(apiErrors) as [keyof ExpenseFormFields, string[]][]
-        ).forEach(([field, messages]) => {
-          setError(field as keyof ExpenseFormFields, {
-            type: "server",
-            message: (messages as string[])[0],
-          });
-        });
+        (Object.entries(apiErrors) as [keyof ExpenseFormFields, string[]][]).forEach(
+          ([field, messages]) => {
+            setError(field, { type: "server", message: messages[0] });
+          }
+        );
       }
     }
   };
@@ -164,13 +157,11 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
     if (!newCategoryName.trim()) return;
     setIsAddingCategory(true);
     try {
-      const newCat = await expenseCategoryService.createCategory({
-        name: newCategoryName,
-      });
+      const newCat = await expenseCategoryService.createCategory({ name: newCategoryName });
       await fetchCategories();
-      setIsAddCategoryDialogOpen(false);
+      setIsAddCategoryOpen(false);
       setNewCategoryName("");
-      reset((prev) => ({ ...prev, expense_category_id: newCat.id }));
+      reset((prev) => ({ ...prev, expense_category_id: String(newCat.id) }));
     } catch (err) {
       console.error("Failed to add category", err);
     } finally {
@@ -181,222 +172,205 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
   return (
     <Dialog
       open={isOpen}
-      onClose={onClose}
-      maxWidth="sm"
-      fullWidth
-      PaperProps={{
-        sx: { borderRadius: 3, overflow: "hidden" },
+      onOpenChange={(open) => {
+        if (!open && !isSubmitting) onClose();
       }}
     >
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
-        <DialogTitle
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            pt: 2,
-            px: 2,
-            pb: 1,
-            borderBottom: "1px solid",
-            borderColor: "divider",
-          }}
-        >
-          <Typography variant="h6" fontWeight={700}>
-            {isEditMode ? "تعديل المصروف" : "إضافة مصروف"}
-          </Typography>
-          <IconButton onClick={onClose} size="small">
-            <X size={18} />
-          </IconButton>
-        </DialogTitle>
+      <DialogContent dir="rtl" className="sm:max-w-md">
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
+          <DialogHeader>
+            <DialogTitle>{isEditMode ? "تعديل المصروف" : "إضافة مصروف"}</DialogTitle>
+            <DialogDescription>
+              {isEditMode
+                ? "حدّث تفاصيل هذا المصروف."
+                : "سجّل مصروفًا جديدًا وحدد القسم وطريقة الدفع."}
+            </DialogDescription>
+          </DialogHeader>
 
-        <DialogContent sx={{ px: 3, py: 3 }}>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <Box sx={{ mb: 1, pb: 1, borderBottom: '1px dashed', borderColor: 'divider' }}>
+          {serverError && (
+            <Alert variant="destructive">
+              <AlertCircle className="size-4" />
+              <AlertTitle>تعذر الحفظ</AlertTitle>
+              <AlertDescription>{serverError}</AlertDescription>
+            </Alert>
+          )}
 
-            </Box>
-
-            {serverError && <Alert severity="error">{serverError}</Alert>}
-
-            <Controller
-              name="title"
-              control={control}
-              rules={{ required: "اسم المصروف مطلوب" }}
-              render={({ field, fieldState }) => (
-                <TextField
-                  {...field}
-                  label="اسم المصروف"
-                  fullWidth
-                  size="small"
-                  autoFocus
-                  error={!!fieldState.error}
-                  helperText={fieldState.error?.message}
-                  disabled={isSubmitting}
-                />
-              )}
-            />
-            <Controller
-              name="amount"
-              control={control}
-              rules={{ required: "المبلغ مطلوب" }}
-              render={({ field, fieldState }) => (
-                <TextField
-                  {...field}
-                  label="المبلغ"
-                  type="number"
-                  fullWidth
-                  size="small"
-                  onFocus={(e) => e.target.select()}
-                  error={!!fieldState.error}
-                  helperText={fieldState.error?.message}
-                  disabled={isSubmitting}
-                />
-              )}
-            />
-            <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="expense-title">اسم المصروف</Label>
               <Controller
-                name="expense_category_id"
                 control={control}
+                name="title"
+                rules={{ required: "اسم المصروف مطلوب" }}
                 render={({ field, fieldState }) => (
-                  <FormControl
-                    fullWidth
-                    size="small"
-                    error={!!fieldState.error}
-                  >
-                    <InputLabel>القسم</InputLabel>
-                    <Select
+                  <>
+                    <Input
+                      id="expense-title"
+                      placeholder="مثال: صيانة مكيف"
+                      autoFocus
+                      disabled={isSubmitting}
+                      aria-invalid={!!fieldState.error}
                       {...field}
-                      label="القسم"
-                      fullWidth
-                      disabled={isSubmitting || isLoadingCategories}
-                    >
-                      <MenuItem value="">
-                        <em>بدون قسم</em>
-                      </MenuItem>
-                      {categories.map((c) => (
-                        <MenuItem key={c.id} value={c.id}>
-                          {c.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
+                    />
                     {fieldState.error && (
-                      <Typography variant="caption" color="error">
-                        {fieldState.error.message}
-                      </Typography>
+                      <p className="text-xs text-destructive">{fieldState.error.message}</p>
                     )}
-                  </FormControl>
+                  </>
                 )}
               />
-              <Tooltip title="إضافة قسم جديد">
-                <IconButton
-                  onClick={() => setIsAddCategoryDialogOpen(true)}
-                  color="primary"
-                  sx={{
-                    bgcolor: 'primary.lighter',
-                    '&:hover': { bgcolor: 'primary.light' },
-                    p: 1
-                  }}
-                  disabled={isSubmitting}
-                >
-                  <Plus size={20} />
-                </IconButton>
-              </Tooltip>
-            </Box>
+            </div>
 
-            <Controller
-              name="payment_method"
-              control={control}
-              render={({ field, fieldState }) => (
-                <FormControl
-                  fullWidth
-                  size="small"
-                  error={!!fieldState.error}
-                >
-                  <InputLabel>طريقة الدفع</InputLabel>
-                  <Select
-                    {...field}
-                    label="طريقة الدفع"
-                    fullWidth
-                    disabled={isSubmitting}
-                  >
-                    <MenuItem value="cash">نقدي</MenuItem>
-                    <MenuItem value="bankak">بنكك</MenuItem>
-                    <MenuItem value="fawry">فوري</MenuItem>
-                    <MenuItem value="ocash">أوكاش</MenuItem>
-                  </Select>
-                  {fieldState.error && (
-                    <Typography variant="caption" color="error">
-                      {fieldState.error.message}
-                    </Typography>
+            <div className="space-y-1.5">
+              <Label htmlFor="expense-amount">المبلغ</Label>
+              <Controller
+                control={control}
+                name="amount"
+                rules={{ required: "المبلغ مطلوب" }}
+                render={({ field, fieldState }) => (
+                  <>
+                    <Input
+                      id="expense-amount"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      disabled={isSubmitting}
+                      aria-invalid={!!fieldState.error}
+                      onFocus={(e) => e.target.select()}
+                      {...field}
+                    />
+                    {fieldState.error && (
+                      <p className="text-xs text-destructive">{fieldState.error.message}</p>
+                    )}
+                  </>
+                )}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="expense-category">القسم</Label>
+              <div className="flex items-center gap-2">
+                <Controller
+                  control={control}
+                  name="expense_category_id"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={isSubmitting || isLoadingCategories}
+                    >
+                      <SelectTrigger id="expense-category" className="flex-1">
+                        <SelectValue placeholder="بدون قسم" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((c) => (
+                          <SelectItem key={c.id} value={String(c.id)}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   )}
-                </FormControl>
-              )}
-            />
-          </Box>
-        </DialogContent>
+                />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      disabled={isSubmitting}
+                      onClick={() => setIsAddCategoryOpen(true)}
+                    >
+                      <Plus className="size-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>إضافة قسم جديد</TooltipContent>
+                </Tooltip>
+              </div>
+            </div>
 
-        {/* Quick Add Category Dialog */}
-        <Dialog
-          open={isAddCategoryDialogOpen}
-          onClose={() => !isAddingCategory && setIsAddCategoryDialogOpen(false)}
-          maxWidth="xs"
-          fullWidth
-        >
-          <DialogTitle sx={{ py: 2, px: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-            <Typography variant="h6" fontWeight={700}>إضافة قسم جديد</Typography>
-          </DialogTitle>
-          <DialogContent sx={{ py: 2, px: 2 }}>
-            <TextField
-              fullWidth
-              size="small"
-              label="اسم القسم"
+            <div className="space-y-1.5">
+              <Label htmlFor="expense-payment-method">طريقة الدفع</Label>
+              <Controller
+                control={control}
+                name="payment_method"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange} disabled={isSubmitting}>
+                    <SelectTrigger id="expense-payment-method" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAYMENT_METHODS.map((pm) => (
+                        <SelectItem key={pm.value} value={pm.value}>
+                          {pm.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" disabled={isSubmitting} onClick={onClose}>
+              إلغاء
+            </Button>
+            <Button type="submit" disabled={isSubmitting} className="min-w-24 gap-2">
+              {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+              {isEditMode ? "تحديث" : "حفظ"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+
+      {/* Quick add category */}
+      <Dialog
+        open={isAddCategoryOpen}
+        onOpenChange={(open) => {
+          if (!open && !isAddingCategory) setIsAddCategoryOpen(false);
+        }}
+      >
+        <DialogContent dir="rtl" className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>إضافة قسم جديد</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor="new-category-name">اسم القسم</Label>
+            <Input
+              id="new-category-name"
               value={newCategoryName}
               onChange={(e) => setNewCategoryName(e.target.value)}
               autoFocus
-              sx={{ mt: 1 }}
               disabled={isAddingCategory}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleAddCategory();
+                }
+              }}
             />
-          </DialogContent>
-          <DialogActions sx={{ p: 2, gap: 1 }}>
+          </div>
+          <DialogFooter>
             <Button
-              onClick={() => setIsAddCategoryDialogOpen(false)}
+              type="button"
+              variant="outline"
               disabled={isAddingCategory}
-              color="inherit"
-              size="small"
+              onClick={() => setIsAddCategoryOpen(false)}
             >
               إلغاء
             </Button>
             <Button
-              onClick={handleAddCategory}
-              variant="contained"
+              type="button"
               disabled={isAddingCategory || !newCategoryName.trim()}
-              size="small"
-              startIcon={isAddingCategory ? <CircularProgress size={18} color="inherit" /> : null}
+              onClick={handleAddCategory}
+              className="gap-2"
             >
+              {isAddingCategory && <Loader2 className="size-4 animate-spin" />}
               إضافة
             </Button>
-          </DialogActions>
-        </Dialog>
-
-        <DialogActions sx={{ px: 2, py: 2, gap: 1 }}>
-          <Button onClick={onClose} disabled={isSubmitting} color="inherit" size="small">
-            إلغاء
-          </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={isSubmitting}
-            size="small"
-            startIcon={
-              isSubmitting ? (
-                <CircularProgress size={18} color="inherit" />
-              ) : null
-            }
-            sx={{ minWidth: 100 }}
-          >
-            {isEditMode ? "تحديث" : "حفظ"}
-          </Button>
-        </DialogActions>
-      </form>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };

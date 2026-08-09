@@ -1,42 +1,36 @@
 // src/components/admin/users/UserFormModal.tsx
 import React, { useEffect, useState } from "react";
-import { useForm, SubmitHandler, Controller } from "react-hook-form";
-
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
-import Box from "@mui/material/Box";
-import Grid from "@mui/material/Grid";
-import Typography from "@mui/material/Typography";
-import TextField from "@mui/material/TextField";
-import Select from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
-import FormHelperText from "@mui/material/FormHelperText";
-import InputAdornment from "@mui/material/InputAdornment";
-import IconButton from "@mui/material/IconButton";
-import Button from "@mui/material/Button";
-import Chip from "@mui/material/Chip";
-import Alert from "@mui/material/Alert";
-import Divider from "@mui/material/Divider";
-import Paper from "@mui/material/Paper";
-import LinearProgress from "@mui/material/LinearProgress";
-import CircularProgress from "@mui/material/CircularProgress";
+import { useForm, SubmitHandler } from "react-hook-form";
 
 import {
-  Visibility,
-  VisibilityOff,
-  CheckCircleOutline,
-  PersonOutline,
-  SecurityOutlined,
-  BadgeOutlined,
-  DashboardOutlined,
-  ManageAccountsOutlined,
-  WarehouseOutlined,
-  ErrorOutline,
-} from "@mui/icons-material";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { cn } from "@/lib/utils";
 
 // Services and Types
 import userService, { Role } from "@/services/userService";
@@ -65,12 +59,14 @@ type UserFormValues = {
   allowed_navs: string[];
 };
 
-function getPasswordStrength(password: string): {
-  score: number;
-  label: string;
-  color: "error" | "warning" | "info" | "success";
-} {
-  if (!password) return { score: 0, label: "", color: "error" };
+const NO_WAREHOUSE = "__none__";
+
+function isAdminRoleName(name: string) {
+  return name === "admin" || name === "ادمن";
+}
+
+function getPasswordStrength(password: string): { label: string; className: string } {
+  if (!password) return { label: "", className: "" };
   let score = 0;
   if (password.length >= 8) score++;
   if (password.length >= 12) score++;
@@ -78,57 +74,12 @@ function getPasswordStrength(password: string): {
   if (/[0-9]/.test(password)) score++;
   if (/[^A-Za-z0-9]/.test(password)) score++;
 
-  if (score <= 1) return { score, label: "ضعيفة جداً", color: "error" };
-  if (score === 2) return { score, label: "ضعيفة", color: "warning" };
-  if (score === 3) return { score, label: "متوسطة", color: "info" };
-  if (score === 4) return { score, label: "جيدة", color: "info" };
-  return { score, label: "قوية", color: "success" };
+  if (score <= 1) return { label: "ضعيفة جداً", className: "text-destructive" };
+  if (score === 2) return { label: "ضعيفة", className: "text-amber-600 dark:text-amber-500" };
+  if (score === 3) return { label: "متوسطة", className: "text-blue-600 dark:text-blue-400" };
+  if (score === 4) return { label: "جيدة", className: "text-blue-600 dark:text-blue-400" };
+  return { label: "قوية", className: "text-green-600 dark:text-green-500" };
 }
-
-// Section card wrapper
-const SectionCard: React.FC<{
-  icon: React.ReactNode;
-  title: string;
-  badge?: string;
-  children: React.ReactNode;
-}> = ({ icon, title, badge, children }) => (
-  <Paper variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>
-    <Box
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        gap: 1,
-        px: 2,
-        py: 1.25,
-        bgcolor: "grey.50",
-        borderBottom: "1px solid",
-        borderColor: "divider",
-      }}
-    >
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 28,
-          height: 28,
-          borderRadius: 1,
-          bgcolor: "primary.main",
-          color: "white",
-        }}
-      >
-        {icon}
-      </Box>
-      <Typography variant="subtitle2" fontWeight={600} sx={{ flex: 1 }}>
-        {title}
-      </Typography>
-      {badge && (
-        <Chip label={badge} size="small" variant="outlined" color="default" />
-      )}
-    </Box>
-    <Box sx={{ p: 2 }}>{children}</Box>
-  </Paper>
-);
 
 const UserFormModal: React.FC<UserFormModalProps> = ({
   isOpen,
@@ -138,6 +89,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
   availableRoles,
 }) => {
   const isEditMode = Boolean(userToEdit);
+  const isSuperadmin = userToEdit?.username === "superadmin";
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -159,13 +111,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
 
   const [allowedNavs, setAllowedNavs] = useState<string[] | null>(null);
 
-  const {
-    handleSubmit,
-    reset,
-    setError,
-    control,
-    formState: { isSubmitting, errors },
-  } = useForm<UserFormValues>({
+  const form = useForm<UserFormValues>({
     defaultValues: {
       name: "",
       username: "",
@@ -176,6 +122,13 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
       allowed_navs: [],
     },
   });
+  const {
+    handleSubmit,
+    reset,
+    setError,
+    control,
+    formState: { isSubmitting },
+  } = form;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -186,8 +139,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
 
     if (isEditMode && userToEdit) {
       const navs = userToEdit.allowed_navs;
-      const normalizedNavs =
-        navs === null ? null : Array.isArray(navs) ? navs : [];
+      const normalizedNavs = navs === null ? null : Array.isArray(navs) ? navs : [];
       setAllowedNavs(normalizedNavs);
       reset({
         name: userToEdit.name || "",
@@ -225,14 +177,14 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
     }
     if (!isEditMode) {
       if (!data.password || data.password.length < 8) {
-        setError("password" as any, {
+        setError("password", {
           type: "manual",
           message: "كلمة المرور يجب أن تكون 8 أحرف على الأقل",
         });
         return;
       }
       if (data.password !== data.password_confirmation) {
-        setError("password_confirmation" as any, {
+        setError("password_confirmation", {
           type: "manual",
           message: "كلمات المرور غير متطابقة",
         });
@@ -256,16 +208,16 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
           roles: data.roles,
           warehouse_id: data.warehouse_id,
           allowed_navs: allowedNavs,
-        } as any);
+        });
       } else {
         savedUser = await userService.createUser({
           ...data,
           allowed_navs: allowedNavs,
-        } as any);
+        });
       }
       onSaveSuccess(savedUser);
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to save user:", err);
       const generalError = userService.getErrorMessage(err);
       const apiErrors = userService.getValidationErrors(err);
@@ -273,7 +225,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
       if (apiErrors) {
         Object.entries(apiErrors).forEach(([field, messages]) => {
           if (["name", "username", "password", "roles"].includes(field)) {
-            setError(field as any, { type: "server", message: messages[0] });
+            setError(field as keyof UserFormValues, { type: "server", message: messages[0] });
           }
         });
         setServerError("يرجى التحقق من الحقول المُشار إليها وتصحيحها");
@@ -286,411 +238,226 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
   const pwStrength = getPasswordStrength(passwordValue);
 
   return (
-    <Dialog
-      open={isOpen}
-      onClose={() => !isSubmitting && onClose()}
-      maxWidth="lg"
-      fullWidth
-      PaperProps={{ sx: { borderRadius: 3 } }}
-    >
-      {/* ── Header ── */}
-      <DialogTitle
-        sx={{
-          borderBottom: "1px solid",
-          borderColor: "divider",
-          py: 1.5,
-          px: 3,
-        }}
-      >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 38,
-              height: 38,
-              borderRadius: "50%",
-              bgcolor: "primary.main",
-              color: "white",
-              flexShrink: 0,
-            }}
-          >
-            <ManageAccountsOutlined fontSize="small" />
-          </Box>
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="subtitle1" fontWeight={700} lineHeight={1.3}>
-              {isEditMode
-                ? `تعديل: ${userToEdit?.name}`
-                : "إضافة مستخدم جديد"}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {isEditMode
-                ? "تعديل بيانات وصلاحيات المستخدم"
-                : "أدخل بيانات المستخدم الجديد وحدد صلاحياته"}
-            </Typography>
-          </Box>
-          {isEditMode && userToEdit?.roles?.map((r) => (
-            <Chip key={r} label={r} size="small" color="primary" variant="outlined" />
-          ))}
-        </Box>
-      </DialogTitle>
+    <Dialog open={isOpen} onOpenChange={(open) => !isSubmitting && !open && onClose()}>
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogHeader>
+          <DialogTitle>{isEditMode ? `تعديل: ${userToEdit?.name}` : "إضافة مستخدم جديد"}</DialogTitle>
+          <DialogDescription>
+            {isEditMode ? "تعديل بيانات وصلاحيات المستخدم" : "أدخل بيانات المستخدم الجديد وحدد صلاحياته"}
+          </DialogDescription>
+        </DialogHeader>
 
-      {/* ── Body ── */}
-      <DialogContent sx={{ p: 2.5 }}>
-        <Box
-          component="form"
-          id="user-form"
-          onSubmit={handleSubmit(onSubmit)}
-          noValidate
-          sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 0.5 }}
-        >
-          {serverError && (
-            <Alert severity="error" icon={<ErrorOutline />} sx={{ py: 0.75 }}>
-              {serverError}
-            </Alert>
-          )}
+        {serverError && (
+          <Alert variant="destructive">
+            <AlertDescription>{serverError}</AlertDescription>
+          </Alert>
+        )}
 
-          {/* ── Section 1: Basic Info ── */}
-          <SectionCard
-            icon={<PersonOutline sx={{ fontSize: 16 }} />}
-            title="البيانات الأساسية"
-          >
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <Controller
+        <Form {...form}>
+          <form id="user-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {/* ── Basic info ── */}
+            <div className="rounded-lg border p-4 space-y-3">
+              <h3 className="text-sm font-semibold">البيانات الأساسية</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <FormField
+                  control={control}
                   name="name"
-                  control={control}
                   render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="الاسم الكامل"
-                      fullWidth
-                      size="small"
-                      error={!!errors.name}
-                      helperText={errors.name?.message}
-                      placeholder="أدخل الاسم الكامل"
-                    />
+                    <FormItem>
+                      <FormLabel>الاسم الكامل</FormLabel>
+                      <FormControl>
+                        <Input placeholder="أدخل الاسم الكامل" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
                 />
-              </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <Controller
+                <FormField
+                  control={control}
                   name="username"
-                  control={control}
                   render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="اسم المستخدم"
-                      fullWidth
-                      size="small"
-                      error={!!errors.username}
-                      helperText={errors.username?.message}
-                      placeholder="username"
-                      inputProps={{ dir: "ltr", style: { fontFamily: "monospace" } }}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <Typography color="text.secondary" variant="body2">
-                              @
-                            </Typography>
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
+                    <FormItem>
+                      <FormLabel>اسم المستخدم</FormLabel>
+                      <FormControl>
+                        <Input placeholder="username" dir="ltr" className="font-mono" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
                 />
-              </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <Controller
+                <FormField
+                  control={control}
                   name="warehouse_id"
-                  control={control}
                   render={({ field }) => (
-                    <FormControl fullWidth size="small">
-                      <InputLabel>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                          <WarehouseOutlined sx={{ fontSize: 14 }} />
-                          المستودع الرئيسي
-                        </Box>
-                      </InputLabel>
+                    <FormItem>
+                      <FormLabel>المستودع الرئيسي</FormLabel>
                       <Select
-                        {...field}
-                        label="المستودع الرئيسي"
-                        value={field.value?.toString() ?? ""}
-                        onChange={(e) =>
-                          field.onChange(
-                            e.target.value === "" ? null : Number(e.target.value),
-                          )
-                        }
+                        value={field.value ? String(field.value) : NO_WAREHOUSE}
+                        onValueChange={(v) => field.onChange(v === NO_WAREHOUSE ? null : Number(v))}
                         disabled={loadingWarehouses}
-                        endAdornment={
-                          loadingWarehouses ? (
-                            <InputAdornment position="end" sx={{ mr: 2 }}>
-                              <CircularProgress size={14} />
-                            </InputAdornment>
-                          ) : undefined
-                        }
                       >
-                        <MenuItem value="">
-                          <Typography variant="body2" color="text.secondary">
-                            — غير محدد (افتراضي)
-                          </Typography>
-                        </MenuItem>
-                        {warehouses.map((w) => (
-                          <MenuItem key={w.id} value={w.id.toString()}>
-                            {w.name}
-                          </MenuItem>
-                        ))}
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={loadingWarehouses ? "جاري التحميل..." : "غير محدد"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value={NO_WAREHOUSE}>— غير محدد (افتراضي)</SelectItem>
+                          {warehouses.map((w) => (
+                            <SelectItem key={w.id} value={String(w.id)}>
+                              {w.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
                       </Select>
-                    </FormControl>
+                    </FormItem>
                   )}
                 />
-              </Grid>
-            </Grid>
-          </SectionCard>
+              </div>
+            </div>
 
-          {/* ── Section 2: Password (create only) ── */}
-          {!isEditMode && (
-            <SectionCard
-              icon={<SecurityOutlined sx={{ fontSize: 16 }} />}
-              title="كلمة المرور"
-            >
-              <Grid container spacing={2}>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <Controller
+            {/* ── Password (create only) ── */}
+            {!isEditMode && (
+              <div className="rounded-lg border p-4 space-y-3">
+                <h3 className="text-sm font-semibold">كلمة المرور</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <FormField
+                    control={control}
                     name="password"
-                    control={control}
                     render={({ field }) => (
-                      <TextField
-                        {...field}
-                        label="كلمة المرور"
-                        fullWidth
-                        size="small"
-                        type={showPassword ? "text" : "password"}
-                        error={!!errors.password}
-                        helperText={
-                          errors.password?.message || "8 أحرف على الأقل"
-                        }
-                        placeholder="أدخل كلمة المرور"
-                        onChange={(e) => {
-                          field.onChange(e);
-                          setPasswordValue(e.target.value);
-                        }}
-                        InputProps={{
-                          endAdornment: (
-                            <InputAdornment position="end">
-                              <IconButton
-                                size="small"
-                                onClick={() => setShowPassword(!showPassword)}
-                                tabIndex={-1}
-                                edge="end"
-                              >
-                                {showPassword ? (
-                                  <VisibilityOff fontSize="small" />
-                                ) : (
-                                  <Visibility fontSize="small" />
-                                )}
-                              </IconButton>
-                            </InputAdornment>
-                          ),
-                        }}
-                      />
+                      <FormItem>
+                        <FormLabel>كلمة المرور</FormLabel>
+                        <div className="flex gap-2">
+                          <FormControl>
+                            <Input
+                              type={showPassword ? "text" : "password"}
+                              placeholder="8 أحرف على الأقل"
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(e);
+                                setPasswordValue(e.target.value);
+                              }}
+                            />
+                          </FormControl>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowPassword((v) => !v)}
+                          >
+                            {showPassword ? "إخفاء" : "إظهار"}
+                          </Button>
+                        </div>
+                        {passwordValue && (
+                          <p className="text-xs text-muted-foreground">
+                            قوة كلمة المرور: <span className={cn("font-medium", pwStrength.className)}>{pwStrength.label}</span>
+                          </p>
+                        )}
+                        <FormMessage />
+                      </FormItem>
                     )}
                   />
-                  {passwordValue && (
-                    <Box sx={{ mt: 1 }}>
-                      <LinearProgress
-                        variant="determinate"
-                        value={(pwStrength.score / 5) * 100}
-                        color={pwStrength.color}
-                        sx={{ height: 4, borderRadius: 2 }}
-                      />
-                      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
-                        قوة كلمة المرور:{" "}
-                        <Box component="span" fontWeight={600} color="text.primary">
-                          {pwStrength.label}
-                        </Box>
-                      </Typography>
-                    </Box>
-                  )}
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <Controller
+                  <FormField
+                    control={control}
                     name="password_confirmation"
-                    control={control}
                     render={({ field }) => (
-                      <TextField
-                        {...field}
-                        label="تأكيد كلمة المرور"
-                        fullWidth
-                        size="small"
-                        type={showConfirmPassword ? "text" : "password"}
-                        error={!!(errors as any).password_confirmation}
-                        helperText={
-                          (errors as any).password_confirmation?.message
-                        }
-                        placeholder="أعد إدخال كلمة المرور"
-                        InputProps={{
-                          endAdornment: (
-                            <InputAdornment position="end">
-                              <IconButton
-                                size="small"
-                                onClick={() =>
-                                  setShowConfirmPassword(!showConfirmPassword)
-                                }
-                                tabIndex={-1}
-                                edge="end"
-                              >
-                                {showConfirmPassword ? (
-                                  <VisibilityOff fontSize="small" />
-                                ) : (
-                                  <Visibility fontSize="small" />
-                                )}
-                              </IconButton>
-                            </InputAdornment>
-                          ),
-                        }}
-                      />
+                      <FormItem>
+                        <FormLabel>تأكيد كلمة المرور</FormLabel>
+                        <div className="flex gap-2">
+                          <FormControl>
+                            <Input
+                              type={showConfirmPassword ? "text" : "password"}
+                              placeholder="أعد إدخال كلمة المرور"
+                              {...field}
+                            />
+                          </FormControl>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowConfirmPassword((v) => !v)}
+                          >
+                            {showConfirmPassword ? "إخفاء" : "إظهار"}
+                          </Button>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
                     )}
                   />
-                </Grid>
-              </Grid>
-            </SectionCard>
-          )}
+                </div>
+              </div>
+            )}
 
-          {/* ── Section 3: Roles ── */}
-          <SectionCard
-            icon={<BadgeOutlined sx={{ fontSize: 16 }} />}
-            title="الأدوار الوظيفية"
-            badge={`${availableRoles.length} دور متاح`}
-          >
-            <Controller
-              name="roles"
-              control={control}
-              render={({ field }) => (
-                <>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 1,
-                      p: 1.5,
-                      border: "1px solid",
-                      borderColor: errors.roles ? "error.main" : "divider",
-                      borderRadius: 1.5,
-                      bgcolor: "grey.50",
-                      maxHeight: 140,
-                      overflowY: "auto",
-                    }}
-                  >
-                    {availableRoles.map((role) => {
-                      const isSelected = field.value?.includes(role.name);
-                      const isDisabled =
-                        role.name === "admin" &&
-                        userToEdit?.username === "superadmin";
-                      return (
-                        <Chip
-                          key={role.id}
-                          label={role.name}
-                          size="small"
-                          clickable={!isDisabled}
-                          disabled={isDisabled}
-                          color={isSelected ? "primary" : "default"}
-                          variant={isSelected ? "filled" : "outlined"}
-                          icon={
-                            isSelected ? (
-                              <CheckCircleOutline sx={{ fontSize: 14 }} />
-                            ) : undefined
-                          }
-                          onClick={() => {
-                            if (isDisabled) return;
-                            const current = field.value || [];
-                            field.onChange(
-                              isSelected
-                                ? current.filter((r) => r !== role.name)
-                                : [...current, role.name],
-                            );
-                          }}
-                        />
-                      );
-                    })}
-                  </Box>
-                  {errors.roles && (
-                    <FormHelperText error sx={{ mx: 1.75, mt: 0.5 }}>
-                      {errors.roles.message}
-                    </FormHelperText>
-                  )}
-                  {(field.value?.length ?? 0) > 0 && (
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ mt: 0.5, display: "block" }}
-                    >
-                      تم اختيار{" "}
-                      <Box component="span" fontWeight={600} color="text.primary">
-                        {field.value.length}
-                      </Box>{" "}
-                      {field.value.length === 1 ? "دور" : "أدوار"}
-                    </Typography>
-                  )}
-                </>
-              )}
-            />
-          </SectionCard>
+            {/* ── Roles ── */}
+            <div className="rounded-lg border p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold">الأدوار الوظيفية</h3>
+                <span className="text-xs text-muted-foreground">{availableRoles.length} دور متاح</span>
+              </div>
+              <Separator />
+              <FormField
+                control={control}
+                name="roles"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {availableRoles.map((role) => {
+                        const isAdminRole = isAdminRoleName(role.name);
+                        const isDisabled = isAdminRole && isSuperadmin;
+                        const checked = field.value?.includes(role.name) ?? false;
+                        return (
+                          <div key={role.id} className="flex items-center gap-2">
+                            <Checkbox
+                              id={`role-${role.id}`}
+                              checked={checked}
+                              disabled={isDisabled}
+                              onCheckedChange={(c) => {
+                                const current = field.value || [];
+                                field.onChange(
+                                  c
+                                    ? [...current, role.name]
+                                    : current.filter((r) => r !== role.name)
+                                );
+                              }}
+                            />
+                            <FormLabel
+                              htmlFor={`role-${role.id}`}
+                              className={cn(
+                                "cursor-pointer font-normal",
+                                isAdminRole && "font-semibold",
+                                isDisabled && "cursor-not-allowed opacity-60"
+                              )}
+                            >
+                              {role.name}
+                            </FormLabel>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-          {/* ── Section 4: Navigation Permissions ── */}
-          <SectionCard
-            icon={<DashboardOutlined sx={{ fontSize: 16 }} />}
-            title="صلاحيات الوصول للصفحات"
-          >
+            {/* ── Navigation permissions ── */}
             <NavigationPermissionsSection
               value={allowedNavs}
               onChange={setAllowedNavs}
-              isSuperadmin={userToEdit?.username === "superadmin"}
+              isSuperadmin={isSuperadmin}
             />
-          </SectionCard>
-        </Box>
-      </DialogContent>
+          </form>
+        </Form>
 
-      {/* ── Footer ── */}
-      <DialogActions
-        sx={{
-          borderTop: "1px solid",
-          borderColor: "divider",
-          px: 3,
-          py: 1.5,
-          gap: 1,
-        }}
-      >
-        <Button
-          variant="outlined"
-          color="inherit"
-          onClick={onClose}
-          disabled={isSubmitting}
-        >
-          إلغاء
-        </Button>
-        <Button
-          type="submit"
-          form="user-form"
-          variant="contained"
-          disabled={isSubmitting}
-          startIcon={
-            isSubmitting ? (
-              <CircularProgress size={16} color="inherit" />
-            ) : (
-              <CheckCircleOutline />
-            )
-          }
-          sx={{ minWidth: 130 }}
-        >
-          {isSubmitting
-            ? "جاري الحفظ..."
-            : isEditMode
-            ? "حفظ التعديلات"
-            : "إنشاء المستخدم"}
-        </Button>
-      </DialogActions>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+            إلغاء
+          </Button>
+          <Button type="submit" form="user-form" disabled={isSubmitting}>
+            {isSubmitting ? "جاري الحفظ..." : isEditMode ? "حفظ التعديلات" : "إنشاء المستخدم"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
     </Dialog>
   );
 };

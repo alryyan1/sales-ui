@@ -15,10 +15,27 @@ import { PdfReportBrandingSettings } from "@/components/settings/PdfReportBrandi
 // shadcn/ui Components
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Settings, Save } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Building2,
+  FileImage,
+  Loader2,
+  Receipt,
+  Save,
+  ShieldCheck,
+  ShoppingCart,
+} from "lucide-react";
 
 // Form values type
 type SettingsFormValues = Partial<AppSettings>;
+
+const TABS = [
+  { value: "company", label: "الشركة", icon: Building2 },
+  { value: "business", label: "قواعد العمل", icon: ShieldCheck },
+  { value: "pos", label: "نقاط البيع", icon: ShoppingCart },
+  { value: "purchases", label: "المشتريات", icon: Receipt },
+  { value: "pdf", label: "تقارير PDF", icon: FileImage },
+] as const;
 
 // --- Component ---
 const SettingsPage: React.FC = () => {
@@ -48,12 +65,11 @@ const SettingsPage: React.FC = () => {
       purchase_use_expiry_date: true,
     },
   });
-
   const {
     handleSubmit,
     control,
     reset,
-    formState: { isSubmitting },
+    formState: { isSubmitting, isDirty },
   } = form;
 
   // Fetch on mount
@@ -128,71 +144,87 @@ const SettingsPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8" dir="rtl">
-      <div className="mx-auto max-w-7xl">
+    <div className="min-h-screen bg-background" dir="rtl">
+      <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
         {/* Page Header */}
-        <div className="mb-8 border-b pb-6">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-md">
-              <Settings className="h-7 w-7" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">
-                إعدادات النظام
-              </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                تحكم في جميع خصائص وإعدادات التطبيق من مكان واحد
-              </p>
-            </div>
-          </div>
+        <div className="mb-8 border-b pb-5">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">
+            إعدادات النظام
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            تحكم في جميع خصائص وإعدادات التطبيق من مكان واحد
+          </p>
         </div>
 
-        {/* Main Layout */}
+        {serverError && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertDescription>{serverError}</AlertDescription>
+          </Alert>
+        )}
+
         <form onSubmit={handleSubmit(onSubmit)}>
-          {serverError && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertDescription>{serverError}</AlertDescription>
-            </Alert>
-          )}
+          <Tabs
+            defaultValue="company"
+            orientation="vertical"
+            className="flex-col gap-8 lg:flex-row lg:items-start"
+          >
+            {/* Vertical section nav */}
+            <TabsList className="h-auto w-full flex-none flex-row flex-wrap justify-start gap-1 bg-transparent p-0 lg:w-56 lg:flex-col lg:items-stretch lg:border-e lg:pe-6">
+              {TABS.map(({ value, label, icon: Icon }) => (
+                <TabsTrigger
+                  key={value}
+                  value={value}
+                  className="w-full flex-none justify-start gap-2.5 rounded-lg border-none px-3 py-2 text-sm font-medium text-muted-foreground shadow-none data-[state=active]:bg-accent data-[state=active]:text-foreground data-[state=active]:shadow-none dark:data-[state=active]:bg-accent dark:data-[state=active]:border-none"
+                >
+                  <Icon className="size-4" />
+                  {label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
-          <div className="space-y-6 pb-10">
-            <CompanyInfoSettings control={control} />
-            <BusinessRulesSettings control={control} />
-            <PosSettings control={control} />
-            <PurchaseSettings control={control} />
-          </div>
+            {/* Content */}
+            <div className="min-w-0 flex-1 space-y-6">
+              <TabsContent value="company" className="mt-0">
+                <CompanyInfoSettings control={control} />
+              </TabsContent>
+              <TabsContent value="business" className="mt-0">
+                <BusinessRulesSettings control={control} />
+              </TabsContent>
+              <TabsContent value="pos" className="mt-0">
+                <PosSettings control={control} />
+              </TabsContent>
+              <TabsContent value="purchases" className="mt-0">
+                <PurchaseSettings control={control} />
+              </TabsContent>
+              <TabsContent value="pdf" className="mt-0">
+                <PdfReportBrandingSettings />
+              </TabsContent>
 
-          <div className="flex justify-end">
-            <Button
-              type="submit"
-              size="lg"
-              disabled={isSubmitting || isLoadingSettings}
-              className="font-semibold"
-            >
-              {isSubmitting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="mr-2 h-4 w-4" />
-              )}
-              حفظ التغييرات
-            </Button>
-          </div>
-        </form>
-
-        <div className="mt-8 space-y-4">
-          <div className="rounded-2xl border border-muted/20 bg-muted/50 p-4">
-            <div className="flex items-center gap-3">
-              <Settings className="h-5 w-5 text-primary" />
-              <div>
-                <p className="font-medium">إعدادات تقارير PDF والهيدر</p>
-                <p className="text-sm text-muted-foreground">
-                  التحكم بالشعار وهيدر التقارير من خلال هذا القسم.
-                </p>
+              {/* Persistent save bar — applies to all form tabs except PDF branding,
+                  which saves itself independently. */}
+              <div className="sticky bottom-4 z-10 flex items-center justify-end gap-3 rounded-xl border bg-background/95 p-3 shadow-lg backdrop-blur">
+                {isDirty && (
+                  <span className="text-xs text-muted-foreground">
+                    لديك تغييرات غير محفوظة
+                  </span>
+                )}
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={isSubmitting || isLoadingSettings}
+                  className="min-w-[160px] font-semibold"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Save className="size-4" />
+                  )}
+                  حفظ التغييرات
+                </Button>
               </div>
             </div>
-          </div>
-          <PdfReportBrandingSettings />
-        </div>
+          </Tabs>
+        </form>
       </div>
     </div>
   );
