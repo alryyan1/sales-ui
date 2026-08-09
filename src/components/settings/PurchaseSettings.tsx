@@ -1,4 +1,5 @@
 import { Controller, Control } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import {
   Box,
   Card,
@@ -18,6 +19,7 @@ interface PurchaseSettingsProps {
 }
 
 export const PurchaseSettings = ({ control }: PurchaseSettingsProps) => {
+  const { t } = useTranslation(["settings"]);
   const theme = useTheme();
 
   return (
@@ -37,7 +39,7 @@ export const PurchaseSettings = ({ control }: PurchaseSettingsProps) => {
           gutterBottom
           sx={{ mb: 4, color: "text.primary" }}
         >
-          إعدادات المشتريات
+          {t("settings:purchaseSettingsSectionTitle")}
         </Typography>
 
         <Box
@@ -55,7 +57,7 @@ export const PurchaseSettings = ({ control }: PurchaseSettingsProps) => {
               gutterBottom
               sx={{ mb: 2 }}
             >
-              حقول أصناف المشتريات
+              {t("settings:purchaseItemFieldsSectionTitle")}
             </Typography>
             <Stack spacing={2}>
               <Controller
@@ -72,11 +74,10 @@ export const PurchaseSettings = ({ control }: PurchaseSettingsProps) => {
                     label={
                       <Box>
                         <Typography variant="body1" fontWeight={500}>
-                          استخدام رقم الباتش (Batch Number)
+                          {t("settings:useBatchNumberLabel")}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          عند التفعيل، يظهر عمود رقم الباتش في جدول أصناف
-                          المشتريات ويمكن إدخاله لكل صنف.
+                          {t("settings:useBatchNumberDesc")}
                         </Typography>
                       </Box>
                     }

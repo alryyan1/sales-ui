@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { SaleReturn } from "@/services/saleReturnService";
+import { useTranslation } from "react-i18next";
 
 interface SaleReturnsProductsPieTabProps {
   returns: SaleReturn[];
@@ -31,6 +32,7 @@ const COLORS = [
 const SaleReturnsProductsPieTab: React.FC<SaleReturnsProductsPieTabProps> = ({
   returns,
 }) => {
+  const { t } = useTranslation(["reports"]);
   const productMap = new Map<string, number>();
 
   for (const r of returns) {
@@ -38,7 +40,7 @@ const SaleReturnsProductsPieTab: React.FC<SaleReturnsProductsPieTabProps> = ({
     for (const item of r.items) {
       const name =
         item.product?.name ||
-        (item.product_id ? `منتج #${item.product_id}` : "منتج غير معروف");
+        (item.product_id ? t("reports:saleReturnsReportPage.productHash", { id: item.product_id }) : t("reports:saleReturnsReportPage.unknownProduct"));
       const quantity = Number(item.quantity) || 0;
       productMap.set(name, (productMap.get(name) ?? 0) + quantity);
     }
@@ -53,7 +55,7 @@ const SaleReturnsProductsPieTab: React.FC<SaleReturnsProductsPieTabProps> = ({
     return (
       <Box sx={{ textAlign: "center", py: 4 }}>
         <Typography variant="body1" color="text.secondary">
-          لا توجد بيانات منتجات مرتجعة في الفترة المحددة
+          {t("reports:saleReturnsReportPage.noReturnedProductsData")}
         </Typography>
       </Box>
     );

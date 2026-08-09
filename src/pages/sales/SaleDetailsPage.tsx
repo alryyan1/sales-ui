@@ -38,19 +38,19 @@ import saleService, { Sale } from "../../services/saleService";
 import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 import dayjs from "dayjs";
 import { url } from "@/constants";
-
-// Payment method labels in Arabic
-const paymentMethodLabels: Record<string, string> = {
-  cash: "نقدي",
-  visa: "فيزا",
-  mastercard: "ماستركارد",
-  bank_transfer: "تحويل بنكي",
-  mada: "مدى",
-  other: "أخرى",
-  store_credit: "رصيد متجر",
-};
+import { useTranslation } from "react-i18next";
 
 const SaleDetailsPage: React.FC = () => {
+  const { t, i18n } = useTranslation(["sales", "common"]);
+  const paymentMethodLabels: Record<string, string> = {
+    cash: t("sales:detailsPage.paymentMethodLabels.cash"),
+    visa: t("sales:detailsPage.paymentMethodLabels.visa"),
+    mastercard: t("sales:detailsPage.paymentMethodLabels.mastercard"),
+    bank_transfer: t("sales:detailsPage.paymentMethodLabels.bank_transfer"),
+    mada: t("sales:detailsPage.paymentMethodLabels.mada"),
+    other: t("sales:detailsPage.paymentMethodLabels.other"),
+    store_credit: t("sales:detailsPage.paymentMethodLabels.store_credit"),
+  };
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
 
@@ -72,7 +72,7 @@ const SaleDetailsPage: React.FC = () => {
         console.error(`Failed to fetch sale ${saleId}:`, err);
         const errorMsg = saleService.getErrorMessage(err);
         setError(errorMsg);
-        toast.error("خطأ", { description: errorMsg });
+        toast.error(t("common:error"), { description: errorMsg });
       } finally {
         setIsLoading(false);
       }
@@ -83,7 +83,7 @@ const SaleDetailsPage: React.FC = () => {
     if (id && !isNaN(numericId) && numericId > 0) {
       fetchSaleDetails(numericId);
     } else {
-      setError("معرف بيع غير صالح.");
+      setError(t("sales:invalidId"));
       setIsLoading(false);
     }
   }, [id]);
@@ -94,11 +94,11 @@ const SaleDetailsPage: React.FC = () => {
     const paid = Number(sale.paid_amount);
 
     if (paid >= total && total > 0) {
-      return { label: "مدفوع بالكامل", color: "success" as const };
+      return { label: t("sales:detailsPage.fullyPaid"), color: "success" as const };
     } else if (paid > 0) {
-      return { label: "مدفوع جزئياً", color: "warning" as const };
+      return { label: t("sales:detailsPage.partiallyPaid"), color: "warning" as const };
     } else {
-      return { label: "غير مدفوع", color: "error" as const };
+      return { label: t("sales:detailsPage.unpaid"), color: "error" as const };
     }
   };
 
@@ -126,7 +126,7 @@ const SaleDetailsPage: React.FC = () => {
         }}
       >
         <CircularProgress />
-        <Typography sx={{ ml: 2 }}>جاري التحميل...</Typography>
+        <Typography sx={{ ml: 2 }}>{t("common:loading")}</Typography>
       </Box>
     );
   }
@@ -141,7 +141,7 @@ const SaleDetailsPage: React.FC = () => {
           startIcon={<ArrowLeft size={20} />}
           onClick={() => navigate("/sales/pos-blank")}
         >
-          العودة للقائمة
+          {t("sales:backToList")}
         </Button>
       </Box>
     );
@@ -150,12 +150,12 @@ const SaleDetailsPage: React.FC = () => {
   if (!sale) {
     return (
       <Box sx={{ p: 3 }}>
-        <Typography>لم يتم العثور على البيع</Typography>
+        <Typography>{t("sales:notFound")}</Typography>
         <Button
           startIcon={<ArrowLeft size={20} />}
           onClick={() => navigate("/sales/pos-blank")}
         >
-          العودة للقائمة
+          {t("sales:backToList")}
         </Button>
       </Box>
     );
@@ -171,7 +171,7 @@ const SaleDetailsPage: React.FC = () => {
   // Display Sale Details
   return (
     <Box
-      sx={{ p: { xs: 1, sm: 2, md: 3 }, direction: "rtl" }}
+      sx={{ p: { xs: 1, sm: 2, md: 3 }, direction: i18n.dir() }}
       className="dark:bg-gray-950 pb-10"
     >
       {/* Back Button & Title */}
@@ -179,7 +179,7 @@ const SaleDetailsPage: React.FC = () => {
         <IconButton
           onClick={() => navigate("/sales/pos-blank")}
           sx={{ mr: 1 }}
-          aria-label="رجوع"
+          aria-label={t("sales:detailsPage.back")}
         >
           <ArrowLeft size={24} />
         </IconButton>
@@ -189,11 +189,11 @@ const SaleDetailsPage: React.FC = () => {
             component="h1"
             className="text-gray-800 dark:text-gray-100 font-semibold"
           >
-            تفاصيل البيع #{sale.id}
+            {t("sales:detailsPage.title", { id: sale.id })}
           </Typography>
           {sale.number && (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              رقم الطلب: {sale.number}
+              {t("sales:detailsPage.orderNumberColon", { number: sale.number })}
             </Typography>
           )}
         </Box>
@@ -231,7 +231,7 @@ const SaleDetailsPage: React.FC = () => {
                 // Fallback: download if popup blocked
                 const link = document.createElement("a");
                 link.href = blobUrl;
-                link.download = `فاتورة_${sale.invoice_number || sale.id}.pdf`;
+                link.download = `${t("sales:detailsPage.invoiceFilenamePrefix")}_${sale.invoice_number || sale.id}.pdf`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -239,12 +239,12 @@ const SaleDetailsPage: React.FC = () => {
               }
             } catch (error) {
               console.error("Failed to open invoice:", error);
-              toast.error("فشل فتح الفاتورة");
+              toast.error(t("sales:detailsPage.openInvoiceFailed"));
             }
           }}
           sx={{ ml: 2 }}
         >
-          طباعة الفاتورة
+          {t("sales:printInvoice")}
         </Button>
       </Box>
 
@@ -262,10 +262,10 @@ const SaleDetailsPage: React.FC = () => {
               sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
             >
               <User size={14} />
-              العميل
+              {t("sales:client")}
             </Typography>
             <Typography variant="body1" fontWeight="medium" sx={{ mt: 0.5 }}>
-              {sale.client_name || "عميل غير محدد"}
+              {sale.client_name || t("sales:detailsPage.unspecifiedClient")}
             </Typography>
           </Grid>
           <Grid xs={12} sm={6} md={4}>
@@ -275,7 +275,7 @@ const SaleDetailsPage: React.FC = () => {
               sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
             >
               <Calendar size={14} />
-              تاريخ البيع
+              {t("sales:saleDate")}
             </Typography>
             <Typography variant="body1" fontWeight="medium" sx={{ mt: 0.5 }}>
               {dayjs(sale.sale_date).format("YYYY-MM-DD")}
@@ -288,7 +288,7 @@ const SaleDetailsPage: React.FC = () => {
               sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
             >
               <FileText size={14} />
-              رقم الفاتورة
+              {t("sales:invoice")}
             </Typography>
             <Typography variant="body1" fontWeight="medium" sx={{ mt: 0.5 }}>
               {sale.invoice_number || "---"}
@@ -302,7 +302,7 @@ const SaleDetailsPage: React.FC = () => {
                 sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
               >
                 <ShoppingCart size={14} />
-                رقم الطلب
+                {t("sales:detailsPage.orderNumber")}
               </Typography>
               <Typography variant="body1" fontWeight="medium" sx={{ mt: 0.5 }}>
                 {sale.number}
@@ -311,7 +311,7 @@ const SaleDetailsPage: React.FC = () => {
           )}
           <Grid xs={12} sm={6} md={4}>
             <Typography variant="overline" color="text.secondary">
-              سجل بواسطة
+              {t("sales:detailsPage.recordedBy")}
             </Typography>
             <Typography variant="body1" fontWeight="medium" sx={{ mt: 0.5 }}>
               {sale.user_name || "---"}
@@ -319,7 +319,7 @@ const SaleDetailsPage: React.FC = () => {
           </Grid>
           <Grid xs={12} sm={6} md={4}>
             <Typography variant="overline" color="text.secondary">
-              تاريخ التسجيل
+              {t("sales:detailsPage.recordedDate")}
             </Typography>
             <Typography variant="body1" fontWeight="medium" sx={{ mt: 0.5 }}>
               {dayjs(sale.created_at).format("YYYY-MM-DD HH:mm")}
@@ -327,7 +327,7 @@ const SaleDetailsPage: React.FC = () => {
           </Grid>
           <Grid xs={12} sm={6} md={4}>
             <Typography variant="overline" color="text.secondary">
-              حالة الدفع
+              {t("sales:detailsPage.paymentStatusLabel")}
             </Typography>
             <Box sx={{ mt: 0.5 }}>
               <Chip
@@ -340,7 +340,7 @@ const SaleDetailsPage: React.FC = () => {
           {sale.notes && (
             <Grid xs={12}>
               <Typography variant="overline" color="text.secondary">
-                ملاحظات
+                {t("sales:detailsPage.notes")}
               </Typography>
               <Typography
                 variant="body2"
@@ -356,7 +356,7 @@ const SaleDetailsPage: React.FC = () => {
 
       {/* Items Table */}
       <Typography variant="h6" component="h2" sx={{ mb: 2, fontWeight: 600 }}>
-        عناصر البيع
+        {t("sales:saleItems")}
       </Typography>
       <TableContainer
         component={Paper}
@@ -370,16 +370,16 @@ const SaleDetailsPage: React.FC = () => {
             className="dark:bg-gray-700"
           >
             <TableRow>
-              <TableCell className="dark:text-gray-300">المنتج</TableCell>
+              <TableCell className="dark:text-gray-300">{t("sales:product")}</TableCell>
               <TableCell className="dark:text-gray-300">SKU</TableCell>
               <TableCell align="center" className="dark:text-gray-300">
-                الكمية
+                {t("sales:quantity")}
               </TableCell>
               <TableCell align="right" className="dark:text-gray-300">
-                سعر الوحدة
+                {t("sales:unitPrice")}
               </TableCell>
               <TableCell align="right" className="dark:text-gray-300">
-                الإجمالي
+                {t("sales:detailsPage.total")}
               </TableCell>
             </TableRow>
           </TableHead>
@@ -388,14 +388,14 @@ const SaleDetailsPage: React.FC = () => {
               sale.items.map((item) => (
                 <TableRow key={item.id} hover>
                   <TableCell className="dark:text-gray-100">
-                    {item.product_name || `(منتج ID: ${item.product_id})`}
+                    {item.product_name || t("sales:detailsPage.productIdFallback", { id: item.product_id })}
                     {item.batch_number_sold && (
                       <Typography
                         variant="caption"
                         color="text.secondary"
                         sx={{ display: "block", mt: 0.5 }}
                       >
-                        دفعة: {item.batch_number_sold}
+                        {t("sales:detailsPage.batchColon", { batch: item.batch_number_sold })}
                       </Typography>
                     )}
                   </TableCell>
@@ -423,7 +423,7 @@ const SaleDetailsPage: React.FC = () => {
                   align="center"
                   className="dark:text-gray-400"
                 >
-                  لا توجد عناصر
+                  {t("sales:detailsPage.noItems")}
                 </TableCell>
               </TableRow>
             )}
@@ -433,7 +433,7 @@ const SaleDetailsPage: React.FC = () => {
 
       {/* Payments Table */}
       <Typography variant="h6" component="h2" sx={{ mb: 2, fontWeight: 600 }}>
-        المدفوعات
+        {t("sales:paymentsMadeTitle")}
       </Typography>
       <TableContainer
         component={Paper}
@@ -447,13 +447,13 @@ const SaleDetailsPage: React.FC = () => {
             className="dark:bg-gray-700"
           >
             <TableRow>
-              <TableCell className="dark:text-gray-300">طريقة الدفع</TableCell>
+              <TableCell className="dark:text-gray-300">{t("sales:paymentMethod")}</TableCell>
               <TableCell align="right" className="dark:text-gray-300">
-                المبلغ
+                {t("sales:detailsPage.amount")}
               </TableCell>
-              <TableCell className="dark:text-gray-300">تاريخ الدفع</TableCell>
-              <TableCell className="dark:text-gray-300">رقم المرجع</TableCell>
-              <TableCell className="dark:text-gray-300">ملاحظات</TableCell>
+              <TableCell className="dark:text-gray-300">{t("sales:paymentDate")}</TableCell>
+              <TableCell className="dark:text-gray-300">{t("sales:paymentReference")}</TableCell>
+              <TableCell className="dark:text-gray-300">{t("sales:detailsPage.notes")}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -484,7 +484,7 @@ const SaleDetailsPage: React.FC = () => {
                   align="center"
                   className="dark:text-gray-400"
                 >
-                  لا توجد مدفوعات
+                  {t("sales:noPaymentsRecorded")}
                 </TableCell>
               </TableRow>
             )}
@@ -495,7 +495,7 @@ const SaleDetailsPage: React.FC = () => {
       {/* Summary Section */}
       <Paper elevation={2} className="dark:bg-gray-800" sx={{ p: 3 }}>
         <Typography variant="h6" component="h2" sx={{ mb: 2, fontWeight: 600 }}>
-          الملخص
+          {t("sales:detailsPage.summary")}
         </Typography>
         <Divider sx={{ mb: 2 }} />
         <Stack spacing={1.5}>
@@ -507,7 +507,7 @@ const SaleDetailsPage: React.FC = () => {
             }}
           >
             <Typography variant="body1" color="text.secondary">
-              المجموع الفرعي:
+              {t("sales:detailsPage.subtotalColon")}
             </Typography>
             <Typography variant="body1" fontWeight="medium">
               {formatCurrency(subtotal)}
@@ -522,7 +522,7 @@ const SaleDetailsPage: React.FC = () => {
               }}
             >
               <Typography variant="body1" color="text.secondary">
-                الخصم{" "}
+                {t("sales:discount")}{" "}
                 {sale.discount_type === "percentage"
                   ? `(${discountAmount}%)`
                   : ""}
@@ -542,7 +542,7 @@ const SaleDetailsPage: React.FC = () => {
             }}
           >
             <Typography variant="h6" fontWeight="bold">
-              الإجمالي:
+              {t("sales:detailsPage.totalColon")}
             </Typography>
             <Typography
               variant="h6"
@@ -565,7 +565,7 @@ const SaleDetailsPage: React.FC = () => {
               sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
             >
               <DollarSign size={16} />
-              المدفوع:
+              {t("sales:detailsPage.paidColon")}
             </Typography>
             <Typography
               variant="body1"
@@ -584,7 +584,7 @@ const SaleDetailsPage: React.FC = () => {
               }}
             >
               <Typography variant="body1" color="text.secondary">
-                المتبقي:
+                {t("sales:detailsPage.remainingColon")}
               </Typography>
               <Typography
                 variant="body1"

@@ -26,6 +26,7 @@ import {
 } from "@mui/material";
 import { X, Search as SearchIcon, Trash2, Plus, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import saleService, { Sale, SaleItem } from "@/services/saleService";
 import productService, { Product } from "@/services/productService";
 import { SaleItemsTable } from "@/components/sales/SaleItemsTable";
@@ -44,6 +45,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
   saleId,
   onSaleUpdated,
 }) => {
+  const { t } = useTranslation(["clients", "common"]);
   const [sale, setSale] = useState<Sale | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +77,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
       setSale(data);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load sale details");
-      toast.error("فشل في تحميل بيانات العملية");
+      toast.error(t("clients:saleEditor.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -125,12 +127,12 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
       });
       setSale(responseSale.sale);
       onSaleUpdated();
-      toast.success(`تمت إضافة ${product.name}`);
+      toast.success(t("clients:saleEditor.addedProduct", { name: product.name }));
       setProductInputValue("");
       setSelectedProduct(null);
       setTimeout(() => productInputRef.current?.focus(), 100);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "فشل في إضافة المنتج");
+      toast.error(err instanceof Error ? err.message : t("clients:saleEditor.addProductFailed"));
     } finally {
       setAddProductLoading(false);
     }
@@ -146,12 +148,12 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
         await handleAddProductToSale(data[0]);
       } else if (data.length > 1) {
         setProductOptions(data);
-        toast.info("يوجد أكثر من نتيجة، يرجى الاختيار");
+        toast.info(t("clients:saleEditor.multipleResults"));
       } else {
-        toast.warning("المنتج غير موجود");
+        toast.warning(t("clients:saleEditor.productNotFound"));
       }
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "فشل البحث");
+      toast.error(err instanceof Error ? err.message : t("clients:saleEditor.searchFailed"));
     } finally {
       setAddProductLoading(false);
     }
@@ -167,7 +169,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
       setSale(responseSale);
       onSaleUpdated();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "فشل تعديل الكمية");
+      toast.error(err instanceof Error ? err.message : t("clients:saleEditor.quantityUpdateFailed"));
     }
   }, [sale?.id, onSaleUpdated]);
 
@@ -181,14 +183,14 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
       setSale(responseSale);
       onSaleUpdated();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "فشل تعديل السعر");
+      toast.error(err instanceof Error ? err.message : t("clients:saleEditor.priceUpdateFailed"));
     }
   }, [sale?.id, onSaleUpdated]);
 
   const handleDeleteItem = useCallback(async (item: SaleItem) => {
     if (!sale?.id || !item.id) return;
     if ((sale.payments?.length ?? 0) > 0) {
-      toast.error("لا يمكن حذف الأصناف عند وجود مدفوعات");
+      toast.error(t("clients:saleEditor.cannotDeleteWithPayments"));
       return;
     }
     setRemovingItemId(item.id);
@@ -196,9 +198,9 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
       await saleService.deleteSaleItem(sale.id, item.id);
       await fetchSale();
       onSaleUpdated();
-      toast.success("تم الحذف");
+      toast.success(t("clients:saleEditor.deletedSuccess"));
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "فشل حذف الصنف");
+      toast.error(err instanceof Error ? err.message : t("clients:saleEditor.deleteItemFailed"));
     } finally {
       setRemovingItemId(null);
     }
@@ -207,16 +209,16 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
   const handleApplyDiscount = useCallback(async () => {
     if (!sale?.id) return;
     const num = Number(discountValue);
-    if (!Number.isFinite(num) || num < 0) { toast.error("أدخل قيمة خصم صحيحة"); return; }
+    if (!Number.isFinite(num) || num < 0) { toast.error(t("clients:saleEditor.enterValidDiscount")); return; }
     setDiscountLoading(true);
     try {
       const updated = await saleService.updateSaleDiscount(sale.id, { discount_type: discountType, discount_amount: num });
       setSale(updated);
       onSaleUpdated();
       setDiscountValue("");
-      toast.success("تم تطبيق الخصم");
+      toast.success(t("clients:saleEditor.discountApplied"));
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "فشل تطبيق الخصم");
+      toast.error(err instanceof Error ? err.message : t("clients:saleEditor.discountApplyFailed"));
     } finally {
       setDiscountLoading(false);
     }
@@ -230,9 +232,9 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
       setSale(updated);
       onSaleUpdated();
       setDiscountValue("");
-      toast.success("تم إلغاء الخصم");
+      toast.success(t("clients:saleEditor.discountCancelled"));
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "فشل إلغاء الخصم");
+      toast.error(err instanceof Error ? err.message : t("clients:saleEditor.discountCancelFailed"));
     } finally {
       setDiscountLoading(false);
     }
@@ -240,7 +242,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
 
   const handleAddPayment = useCallback(async () => {
     if (!sale?.id) return;
-    if (!paymentAmount || Number(paymentAmount) <= 0) { toast.error("الرجاء إدخال مبلغ صحيح"); return; }
+    if (!paymentAmount || Number(paymentAmount) <= 0) { toast.error(t("clients:saleEditor.enterValidAmount")); return; }
     setPaymentLoading(true);
     try {
       await saleService.addPayment(sale.id, {
@@ -253,9 +255,9 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
       setPaymentAmount("");
       setPaymentReference("");
       setIsAddPaymentOpen(false);
-      toast.success("تمت إضافة الدفعة");
+      toast.success(t("clients:saleEditor.paymentAdded"));
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "فشل إضافة الدفعة");
+      toast.error(err instanceof Error ? err.message : t("clients:saleEditor.paymentAddFailed"));
     } finally {
       setPaymentLoading(false);
     }
@@ -267,9 +269,9 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
       await saleService.deletePayment(sale.id, paymentId);
       await fetchSale();
       onSaleUpdated();
-      toast.success("تم حذف الدفعة");
+      toast.success(t("clients:saleEditor.paymentDeleted"));
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "فشل حذف الدفعة");
+      toast.error(err instanceof Error ? err.message : t("clients:saleEditor.paymentDeleteFailed"));
     }
   }, [sale?.id, fetchSale, onSaleUpdated]);
 
@@ -287,9 +289,9 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
       await fetchSale();
       onSaleUpdated();
       setPaymentAmount("");
-      toast.success("تم تسديد كامل المبلغ");
+      toast.success(t("clients:saleEditor.fullyPaidSuccess"));
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "فشل إضافة الدفعة");
+      toast.error(err instanceof Error ? err.message : t("clients:saleEditor.paymentAddFailed"));
     } finally {
       setPaymentLoading(false);
     }
@@ -311,18 +313,18 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
       {/* Header */}
       <Box sx={{ display: "flex", alignItems: "center", px: 2, py: 1.25, borderBottom: 1, borderColor: "divider", gap: 1.5 }}>
         <Typography variant="subtitle1" fontWeight={700} sx={{ flex: 1 }}>
-          فاتورة #{saleId}
+          {t("clients:saleEditor.invoiceHash", { id: saleId })}
         </Typography>
         {sale && (
           <Chip
-            label={due > 0 ? `متبقي: ${formatNumber(due)}` : "مدفوعة بالكامل"}
+            label={due > 0 ? t("clients:saleEditor.remaining", { amount: formatNumber(due) }) : t("clients:saleEditor.fullyPaidChip")}
             color={due > 0 ? "error" : "success"}
             size="small"
             sx={{ height: 22, fontSize: "0.72rem" }}
           />
         )}
         {sale && due > 0 && (
-          <Tooltip title={`تسديد كامل المبلغ (${formatNumber(due)})`}>
+          <Tooltip title={t("clients:saleEditor.payFullTooltip", { amount: formatNumber(due) })}>
             <span>
               <Button
                 size="small"
@@ -333,7 +335,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
                 startIcon={paymentLoading ? <CircularProgress size={14} color="inherit" /> : <CheckCircle size={15} />}
                 sx={{ textTransform: "none", fontWeight: 600, "& .MuiButton-startIcon": { ml: "4px" } }}
               >
-                تسديد كامل
+                {t("clients:saleEditor.payFullButton")}
               </Button>
             </span>
           </Tooltip>
@@ -347,7 +349,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
         {loading ? (
           <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", flex: 1, gap: 1.5 }}>
             <CircularProgress size={24} />
-            <Typography color="text.secondary" variant="body2">جاري التحميل...</Typography>
+            <Typography color="text.secondary" variant="body2">{t("clients:saleEditor.loadingEllipsis")}</Typography>
           </Box>
         ) : error ? (
           <Box sx={{ p: 3 }}>
@@ -362,14 +364,14 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
                 <Avatar/>
                 {/* <Typography variant="caption" color="text.secondary">العميل</Typography> */}
                 <Typography variant="body2" fontWeight={600}>
-                  {sale.client_name ?? sale.client?.name ?? "عميل نقدي"}
+                  {sale.client_name ?? sale.client?.name ?? t("clients:saleEditor.cashClient")}
                 </Typography>
               </Box>
               <Divider orientation="vertical" flexItem />
               {[
-                { label: "الإجمالي", value: sale.total_amount ?? 0, color: "text.primary" },
-                { label: "المدفوع", value: sale.paid_amount ?? 0, color: "success.main" },
-                { label: "المتبقي", value: due, color: due > 0 ? "error.main" : "success.main" },
+                { label: t("clients:saleEditor.totalLabel"), value: sale.total_amount ?? 0, color: "text.primary" },
+                { label: t("clients:saleEditor.paidLabel"), value: sale.paid_amount ?? 0, color: "success.main" },
+                { label: t("clients:saleEditor.remainingLabel"), value: due, color: due > 0 ? "error.main" : "success.main" },
               ].map(({ label, value, color }) => (
                 <Box key={label}>
                   <Typography variant="caption" color="text.secondary">{label}</Typography>
@@ -407,7 +409,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
                   <TextField
                     {...params}
                     inputRef={productInputRef}
-                    placeholder="ابحث أو امسح باركود لإضافة منتج..."
+                    placeholder={t("clients:saleEditor.searchOrScanPlaceholder")}
                     InputProps={{
                       ...params.InputProps,
                       startAdornment: <SearchIcon size={15} style={{ marginRight: 6, opacity: 0.45 }} />,
@@ -429,7 +431,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
                         <Box>
                           <Typography variant="body2" fontWeight={600}>{o.name}</Typography>
                           <Typography variant="caption" color="text.secondary">
-                            {[o.sku, o.suggested_sale_price != null && `السعر: ${formatNumber(Number(o.suggested_sale_price))}`].filter(Boolean).join(" · ")}
+                            {[o.sku, o.suggested_sale_price != null && t("clients:saleEditor.priceInline", { price: formatNumber(Number(o.suggested_sale_price)) })].filter(Boolean).join(" · ")}
                           </Typography>
                         </Box>
                         {(o.current_stock_quantity ?? o.stock_quantity) != null && (
@@ -442,7 +444,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
                     </li>
                   );
                 }}
-                noOptionsText={productInputValue.trim() ? "لا توجد نتائج" : "اكتب للبحث"}
+                noOptionsText={productInputValue.trim() ? t("clients:saleEditor.noResultsShort") : t("clients:saleEditor.typeToSearchShort")}
               />
 
               {/* Items table */}
@@ -466,16 +468,16 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
                 {!hasPayments && <Box>
                   <Typography variant="caption" fontWeight={700} color="text.secondary"
                     sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 0.75 }}>
-                    الخصم
+                    {t("clients:saleEditor.discountTitle")}
                   </Typography>
                   <Box sx={{ p: 1.5, border: 1, borderColor: "divider", borderRadius: 1.5, display: "flex", flexDirection: "column", gap: 1 }}>
                     <Box sx={{ display: "flex", gap: 1 }}>
                       <FormControl size="small" sx={{ minWidth: 100 }}>
-                        <InputLabel>النوع</InputLabel>
-                        <Select value={discountType} label="النوع"
+                        <InputLabel>{t("clients:saleEditor.typeLabel")}</InputLabel>
+                        <Select value={discountType} label={t("clients:saleEditor.typeLabel")}
                           onChange={(e) => setDiscountType(e.target.value as "percentage" | "fixed")}>
-                          <MenuItem value="fixed">مبلغ</MenuItem>
-                          <MenuItem value="percentage">نسبة %</MenuItem>
+                          <MenuItem value="fixed">{t("clients:saleEditor.fixedAmount")}</MenuItem>
+                          <MenuItem value="percentage">{t("clients:saleEditor.percentageAmount")}</MenuItem>
                         </Select>
                       </FormControl>
                       <TextField
@@ -490,18 +492,18 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
                     <Box sx={{ display: "flex", gap: 1 }}>
                       <Button size="small" variant="outlined" fullWidth onClick={handleApplyDiscount}
                         disabled={discountLoading || !discountValue.trim() || hasPayments}>
-                        تطبيق
+                        {t("clients:saleEditor.apply")}
                       </Button>
                       {Number(sale.discount_amount ?? 0) > 0 && (
                         <Button size="small" variant="outlined" color="error" fullWidth
                           onClick={handleRemoveDiscount} disabled={discountLoading || hasPayments}>
-                          إلغاء
+                          {t("clients:saleEditor.cancel")}
                         </Button>
                       )}
                     </Box>
                     {Number(sale.discount_amount ?? 0) > 0 && (
                       <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                        <Typography variant="caption" color="text.secondary">المطبق</Typography>
+                        <Typography variant="caption" color="text.secondary">{t("clients:saleEditor.appliedLabel")}</Typography>
                         <Typography variant="caption" fontWeight={700} color="error.main">
                           − {formatNumber(sale.discount_amount ?? 0)}
                         </Typography>
@@ -515,7 +517,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
                   <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 0.75 }}>
                     <Typography variant="caption" fontWeight={700} color="text.secondary"
                       sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}>
-                      المدفوعات
+                      {t("clients:saleEditor.paymentsTitle")}
                     </Typography>
                     {!isFullyPaid && (
                       <Button
@@ -532,7 +534,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
                         }}
                         sx={{ textTransform: "none", fontSize: "0.75rem", py: 0.25, "& .MuiButton-startIcon": { ml: "4px" } }}
                       >
-                        إضافة دفعة
+                        {t("clients:saleEditor.addPaymentButton")}
                       </Button>
                     )}
                   </Box>
@@ -541,9 +543,9 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
                       <Table size="small">
                         <TableHead>
                           <TableRow sx={{ bgcolor: "grey.50" }}>
-                            <TableCell sx={{ py: 0.4, fontSize: "0.74rem" }}>التاريخ</TableCell>
-                            <TableCell sx={{ py: 0.4, fontSize: "0.74rem" }}>الطريقة</TableCell>
-                            <TableCell sx={{ py: 0.4, fontSize: "0.74rem" }} align="right">المبلغ</TableCell>
+                            <TableCell sx={{ py: 0.4, fontSize: "0.74rem" }}>{t("clients:saleEditor.colDate")}</TableCell>
+                            <TableCell sx={{ py: 0.4, fontSize: "0.74rem" }}>{t("clients:saleEditor.colMethod")}</TableCell>
+                            <TableCell sx={{ py: 0.4, fontSize: "0.74rem" }} align="right">{t("clients:saleEditor.colAmount")}</TableCell>
                             <TableCell sx={{ py: 0.4, width: 32 }} />
                           </TableRow>
                         </TableHead>
@@ -556,7 +558,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
                                 {formatNumber(payment.amount)}
                               </TableCell>
                               <TableCell sx={{ py: 0.4 }}>
-                                <Tooltip title="حذف">
+                                <Tooltip title={t("clients:saleEditor.deleteTooltip")}>
                                   <IconButton size="small" color="error"
                                     onClick={() => handleDeletePayment(payment.id!)}>
                                     <Trash2 size={13} />
@@ -570,7 +572,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
                     ) : (
                       <Typography variant="caption" color="text.secondary"
                         sx={{ textAlign: "center", display: "block", py: 1.5 }}>
-                        لا توجد مدفوعات
+                        {t("clients:saleEditor.noPayments")}
                       </Typography>
                     )}
                   </Box>
@@ -582,7 +584,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
       </DialogContent>
 
       <DialogActions sx={{ px: 2, py: 1.25, borderTop: 1, borderColor: "divider" }}>
-        <Button onClick={onClose} variant="contained" size="small">إغلاق</Button>
+        <Button onClick={onClose} variant="contained" size="small">{t("clients:saleEditor.close")}</Button>
       </DialogActions>
 
       {/* ── Add Payment Sub-Dialog ─────────────────────────────────── */}
@@ -593,7 +595,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
         fullWidth
       >
         <Box sx={{ display: "flex", alignItems: "center", px: 2, py: 1.25, borderBottom: 1, borderColor: "divider" }}>
-          <Typography variant="subtitle2" fontWeight={700} sx={{ flex: 1 }}>إضافة دفعة</Typography>
+          <Typography variant="subtitle2" fontWeight={700} sx={{ flex: 1 }}>{t("clients:saleEditor.addPaymentTitle")}</Typography>
           <IconButton size="small" onClick={() => setIsAddPaymentOpen(false)} disabled={paymentLoading}>
             <X size={16} />
           </IconButton>
@@ -601,7 +603,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
         <DialogContent sx={{ pt: 2, pb: 1 }}>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
             <TextField
-              label="المبلغ"
+              label={t("clients:saleEditor.amountLabel")}
               size="small"
               type="number"
               fullWidth
@@ -612,20 +614,20 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
               inputProps={{ min: 0 }}
             />
             <FormControl size="small" fullWidth>
-              <InputLabel>طريقة الدفع</InputLabel>
+              <InputLabel>{t("clients:saleEditor.paymentMethodLabel")}</InputLabel>
               <Select
-                label="طريقة الدفع"
+                label={t("clients:saleEditor.paymentMethodLabel")}
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value)}
               >
-                <MenuItem value="cash">كاش</MenuItem>
-                <MenuItem value="bank_transfer">تحويل بنكي</MenuItem>
-                <MenuItem value="visa">فيزا</MenuItem>
-                <MenuItem value="other">أخرى</MenuItem>
+                <MenuItem value="cash">{t("clients:saleEditor.methodCash")}</MenuItem>
+                <MenuItem value="bank_transfer">{t("clients:saleEditor.methodBankTransfer")}</MenuItem>
+                <MenuItem value="visa">{t("clients:saleEditor.methodVisa")}</MenuItem>
+                <MenuItem value="other">{t("clients:saleEditor.methodOther")}</MenuItem>
               </Select>
             </FormControl>
             <TextField
-              label="رقم المرجع (اختياري)"
+              label={t("clients:saleEditor.referenceOptional")}
               size="small"
               fullWidth
               value={paymentReference}
@@ -640,7 +642,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
             onClick={() => setIsAddPaymentOpen(false)}
             disabled={paymentLoading}
           >
-            إلغاء
+            {t("clients:saleEditor.cancel")}
           </Button>
           <Button
             size="small"
@@ -650,7 +652,7 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
             disabled={paymentLoading || !paymentAmount || Number(paymentAmount) <= 0}
             startIcon={paymentLoading ? <CircularProgress size={14} color="inherit" /> : null}
           >
-            تأكيد
+            {t("clients:saleEditor.confirm")}
           </Button>
         </DialogActions>
       </Dialog>

@@ -1,11 +1,16 @@
 {
     "title": "إنشاء حساب جديد",
     "nameLabel": "الاسم",
+    "usernameLabel": "اسم المستخدم",
     "emailLabel": "البريد الإلكتروني",
     "passwordLabel": "كلمة المرور",
     "confirmPasswordLabel": "تأكيد كلمة المرور",
-    "submitButton": "تسجيل",
+    "submitButton": "إنشاء حساب",
     "submitButtonLoading": "جاري التسجيل...",
     "loginPrompt": "لديك حساب بالفعل؟",
-    "loginLink": "تسجيل الدخول"
+    "loginLink": "تسجيل الدخول",
+    "requiredField": "هذا الحقل مطلوب",
+    "passwordMinLength": "كلمة المرور يجب أن تكون 8 أحرف على الأقل",
+    "passwordMismatch": "كلمات المرور غير متطابقة",
+    "checkFields": "يرجى التحقق من الحقول"
 }

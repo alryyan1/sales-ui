@@ -20,6 +20,7 @@ import {
 } from "@mui/material";
 import { Loader2, AlertCircle } from "lucide-react";
 import unitService, { Unit, UnitFormData } from "@/services/UnitService";
+import { useTranslation } from "react-i18next";
 
 // --- Form Types ---
 type UnitFormValues = {
@@ -43,6 +44,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
   unitToEdit,
   onSaveSuccess,
 }) => {
+  const { t } = useTranslation(["units"]);
   const isEditMode = Boolean(unitToEdit);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -89,7 +91,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
 
     // Basic validation
     if (!data.name || data.name.trim() === "") {
-      setError("name", { type: "manual", message: "هذا الحقل مطلوب" });
+      setError("name", { type: "manual", message: t("units:nameRequired") });
       return;
     }
     const dataToSend: UnitFormData = {
@@ -108,8 +110,8 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
       }
       console.log("Save successful:", savedUnit);
 
-      toast.success("نجح", {
-        description: isEditMode ? "تم تحديث الوحدة بنجاح" : "تم إنشاء الوحدة بنجاح",
+      toast.success(t("units:successTitle"), {
+        description: isEditMode ? t("units:updateSuccess") : t("units:createSuccess"),
         duration: 3000,
       });
 
@@ -120,7 +122,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
       const generalError = unitService.getErrorMessage(err);
       const apiErrors = unitService.getValidationErrors(err);
 
-      toast.error("خطأ", {
+      toast.error(t("units:errorTitle"), {
         description: generalError,
         duration: 5000,
       });
@@ -133,7 +135,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
             message: messages[0],
           });
         });
-        setServerError("يرجى التحقق من الحقول");
+        setServerError(t("units:pleaseCheckFields"));
       }
     }
   };
@@ -160,7 +162,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
         }}
       >
         <Typography variant="h6" component="div" fontWeight={600}>
-          {isEditMode ? "تعديل وحدة" : "إضافة وحدة جديدة"}
+          {isEditMode ? t("units:editTitle") : t("units:createTitle")}
         </Typography>
       </DialogTitle>
       <Box
@@ -180,7 +182,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
             <Alert severity="error" sx={{ mb: 2 }}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>خطأ</AlertTitle>
+                <AlertTitle>{t("units:errorTitle")}</AlertTitle>
               </Box>
               {serverError}
             </Alert>
@@ -192,13 +194,13 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
               control={control}
               name="name"
               rules={{
-                required: "اسم الوحدة مطلوب",
+                required: t("units:nameRequired"),
               }}
               render={({ field, fieldState }) => (
                 <TextField
                   {...field}
-                  label="اسم الوحدة"
-                  placeholder="مثال: حبة، كرتونة، باكت..."
+                  label={t("units:name")}
+                  placeholder={t("units:namePlaceholderExample")}
                   fullWidth
                   size="small"
                   disabled={isSubmitting}
@@ -225,7 +227,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
                   }
                   label={
                     <Typography variant="body2" fontWeight={500}>
-                      تعيين كافتراضي
+                      {t("units:setAsDefault")}
                     </Typography>
                   }
                 />
@@ -244,7 +246,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
             disabled={isSubmitting}
             sx={{ minWidth: 90 }}
           >
-            إلغاء
+            {t("units:cancel")}
           </Button>
           <Button
             type="submit"
@@ -257,7 +259,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
               ) : undefined
             }
           >
-            {isEditMode ? "تحديث" : "حفظ"}
+            {isEditMode ? t("units:update") : t("units:save")}
           </Button>
         </DialogActions>
       </Box>

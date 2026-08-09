@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 
 // MUI
@@ -107,6 +108,7 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, icon, iconColor, valu
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const SupplierLedgerPage: React.FC = () => {
+  const { t, i18n } = useTranslation(["suppliers", "common"]);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const formatCurrency = useFormatCurrency();
@@ -159,9 +161,9 @@ const SupplierLedgerPage: React.FC = () => {
     setIsExporting(true);
     try {
       await exportService.exportSupplierLedgerPdf(supplierId);
-      toast.success("جاري تصدير كشف الحساب...");
+      toast.success(t("suppliers:ledgerPage.exportStarted"));
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "فشل تصدير كشف الحساب";
+      const msg = err instanceof Error ? err.message : t("suppliers:ledgerPage.exportFailed");
       toast.error(msg);
     } finally {
       setIsExporting(false);
@@ -189,8 +191,8 @@ const SupplierLedgerPage: React.FC = () => {
       });
       const { payments_created, total_applied, remaining_unapplied } = res.result;
       toast.success(
-        `تم توزيع ${payments_created} دفعة على المشتريات — المدفوع: ${total_applied.toLocaleString()}` +
-        (remaining_unapplied > 0 ? ` — متبقي غير مطبق: ${remaining_unapplied.toLocaleString()}` : "")
+        t("suppliers:ledgerPage.bulkPaySuccess", { count: payments_created, applied: total_applied.toLocaleString() }) +
+        (remaining_unapplied > 0 ? t("suppliers:ledgerPage.bulkPayRemaining", { remaining: remaining_unapplied.toLocaleString() }) : "")
       );
       setBulkPayOpen(false);
       fetchLedger();
@@ -204,7 +206,7 @@ const SupplierLedgerPage: React.FC = () => {
   // ── Loading ──────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <Box sx={{  bgcolor: "grey.50", p: 3 }} dir="rtl">
+      <Box sx={{  bgcolor: "grey.50", p: 3 }} dir={i18n.dir()}>
         <Stack direction="row" justifyContent="space-between" mb={3}>
           <Skeleton variant="rounded" width={260} height={36} />
           <Skeleton variant="rounded" width={120} height={36} />
@@ -224,15 +226,15 @@ const SupplierLedgerPage: React.FC = () => {
   // ── Error ────────────────────────────────────────────────────────────────
   if (error || !ledger) {
     return (
-      <Box sx={{  bgcolor: "grey.50", display: "flex", alignItems: "center", justifyContent: "center", p: 3 }} dir="rtl">
+      <Box sx={{  bgcolor: "grey.50", display: "flex", alignItems: "center", justifyContent: "center", p: 3 }} dir={i18n.dir()}>
         <Paper variant="outlined" sx={{ maxWidth: 380, width: "100%", p: 4, borderRadius: 3, textAlign: "center" }}>
           <Box sx={{ width: 56, height: 56, borderRadius: "50%", bgcolor: "error.50", display: "flex", alignItems: "center", justifyContent: "center", mx: "auto", mb: 2 }}>
             <AlertCircle size={28} color="#ef4444" />
           </Box>
-          <Typography variant="subtitle1" fontWeight={700} mb={0.5}>تعذّر تحميل البيانات</Typography>
-          <Typography variant="body2" color="text.secondary" mb={3}>{error || "فشل تحميل سجل المورد"}</Typography>
+          <Typography variant="subtitle1" fontWeight={700} mb={0.5}>{t("suppliers:ledgerPage.loadFailedTitle")}</Typography>
+          <Typography variant="body2" color="text.secondary" mb={3}>{error || t("suppliers:ledgerPage.loadFailedDesc")}</Typography>
           <Button variant="contained" fullWidth onClick={() => navigate("/suppliers")} disableElevation sx={{ borderRadius: 2 }}>
-            العودة إلى قائمة الموردين
+            {t("suppliers:ledgerPage.backToSuppliers")}
           </Button>
         </Paper>
       </Box>
@@ -243,7 +245,7 @@ const SupplierLedgerPage: React.FC = () => {
   const isInDebt = summary.balance > 0;
 
   return (
-    <Box sx={{  bgcolor: "grey.50" }} dir="rtl">
+    <Box sx={{  bgcolor: "grey.50" }} dir={i18n.dir()}>
 
       {/* ── Sticky Header ─────────────────────────────────────────────── */}
       <Paper
@@ -266,13 +268,13 @@ const SupplierLedgerPage: React.FC = () => {
                   sx={{ cursor: "pointer", "&:hover": { color: "text.primary" } }}
                   onClick={() => navigate("/suppliers")}
                 >
-                  الموردون
+                  {t("suppliers:ledgerPage.breadcrumbSuppliers")}
                 </Typography>
                 <Typography component="span" fontSize={14} fontWeight={600} color="text.primary">
                   {supplier.name}
                 </Typography>
                 <Typography component="span" fontSize={14} color="text.secondary">
-                  كشف الحساب
+                  {t("suppliers:ledgerPage.breadcrumbLedger")}
                 </Typography>
               </Breadcrumbs>
             </Stack>
@@ -288,7 +290,7 @@ const SupplierLedgerPage: React.FC = () => {
                 startIcon={<DollarSign size={14} />}
                 sx={{ borderRadius: 1.5, textTransform: "none", fontWeight: 600 }}
               >
-                سداد الكل
+                {t("suppliers:ledgerPage.settleAll")}
               </Button>
               <Button
                 variant="contained"
@@ -299,7 +301,7 @@ const SupplierLedgerPage: React.FC = () => {
                 startIcon={isExporting ? <CircularProgress size={14} color="inherit" /> : <Printer size={14} />}
                 sx={{ borderRadius: 1.5, textTransform: "none", fontWeight: 600 }}
               >
-                تصدير PDF
+                {t("suppliers:ledgerPage.exportPdf")}
               </Button>
             </Stack>
           </Stack>
@@ -364,7 +366,7 @@ const SupplierLedgerPage: React.FC = () => {
             {/* Total Purchases */}
             <Box sx={{ flex: "1 1 180px", minWidth: 0 }}>
               <StatCard
-                label="إجمالي المشتريات"
+                label={t("suppliers:ledgerPage.totalPurchases")}
                 value={`${formatNumber((summary.total_purchases ?? 0).toFixed(2))} OMR`}
                 icon={<TrendingUp size={20} color="#4f46e5" />}
                 iconColor="#eef2ff"
@@ -374,7 +376,7 @@ const SupplierLedgerPage: React.FC = () => {
             {/* Total Payments */}
             <Box sx={{ flex: "1 1 180px", minWidth: 0 }}>
               <StatCard
-                label="إجمالي المدفوعات"
+                label={t("suppliers:ledgerPage.totalPayments")}
                 value={formatCurrency(summary.total_payments)}
                 icon={<TrendingDown size={20} color="#16a34a" />}
                 iconColor="#f0fdf4"
@@ -385,14 +387,14 @@ const SupplierLedgerPage: React.FC = () => {
             {/* Balance */}
             <Box sx={{ flex: "1 1 180px", minWidth: 0 }}>
               <StatCard
-                label="الرصيد المستحق"
+                label={t("suppliers:ledgerPage.dueBalance")}
                 value={formatCurrency(summary.balance)}
                 icon={<CreditCard size={20} color={isInDebt ? "#dc2626" : "#16a34a"} />}
                 iconColor={isInDebt ? "#fef2f2" : "#f0fdf4"}
                 valueColor={isInDebt ? "error.main" : "success.dark"}
                 sub={
                   <Typography variant="caption" color={isInDebt ? "error.main" : "success.dark"} fontWeight={500}>
-                    {isInDebt ? "مبالغ مستحقة" : "لا توجد مستحقات"}
+                    {isInDebt ? t("suppliers:ledgerPage.amountsDue") : t("suppliers:ledgerPage.noAmountsDue")}
                   </Typography>
                 }
               />
@@ -407,10 +409,10 @@ const SupplierLedgerPage: React.FC = () => {
                   <ShoppingCart size={18} color="#2563eb" />
                   <Box>
                     <Typography variant="body2" fontWeight={600} color="primary.main">
-                      هذا المورد عميل أيضاً
+                      {t("suppliers:ledgerPage.alsoClientTitle")}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      يمكنك عرض كشف حساب مبيعاته
+                      {t("suppliers:ledgerPage.alsoClientDesc")}
                     </Typography>
                   </Box>
                 </Stack>
@@ -421,7 +423,7 @@ const SupplierLedgerPage: React.FC = () => {
                   startIcon={<ExternalLink size={14} />}
                   sx={{ borderRadius: 1.5, textTransform: "none", fontWeight: 600, flexShrink: 0 }}
                 >
-                  كشف حساب المبيعات
+                  {t("suppliers:ledgerPage.salesLedgerButton")}
                 </Button>
               </Stack>
             </Paper>
@@ -436,7 +438,7 @@ const SupplierLedgerPage: React.FC = () => {
                 <>
                   <Stack direction="row" alignItems="center" gap={1} px={2.5} py={1.75} borderBottom="1px solid" borderColor="divider">
                     <FileText size={16} color="#94a3b8" />
-                    <Typography variant="body2" fontWeight={600} color="text.primary">الفواتير</Typography>
+                    <Typography variant="body2" fontWeight={600} color="text.primary">{t("suppliers:ledgerPage.invoicesTitle")}</Typography>
                     {purchaseEntries.length > 0 && (
                       <Chip label={purchaseEntries.length} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600 }} />
                     )}
@@ -446,12 +448,12 @@ const SupplierLedgerPage: React.FC = () => {
                     <Table size="small">
                       <TableHead>
                         <TableRow sx={{ bgcolor: "grey.50" }}>
-                          <TableCell sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary" }}>كود</TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>التاريخ</TableCell>
-                          <TableCell align="left" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>إجمالي الفاتورة</TableCell>
-                          <TableCell align="left" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>إجمالي المدفوع</TableCell>
-                          <TableCell align="left" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>الرصيد</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>الدفعات</TableCell>
+                          <TableCell sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary" }}>{t("suppliers:ledgerPage.colCode")}</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>{t("suppliers:ledgerPage.colDate")}</TableCell>
+                          <TableCell align="left" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>{t("suppliers:ledgerPage.colInvoiceTotal")}</TableCell>
+                          <TableCell align="left" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>{t("suppliers:ledgerPage.colTotalPaid")}</TableCell>
+                          <TableCell align="left" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>{t("suppliers:ledgerPage.colBalance")}</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 600, fontSize: 12, color: "text.secondary", whiteSpace: "nowrap" }}>{t("suppliers:ledgerPage.colPayments")}</TableCell>
                         </TableRow>
                       </TableHead>
 
@@ -461,7 +463,7 @@ const SupplierLedgerPage: React.FC = () => {
                             <TableCell colSpan={6} align="center" sx={{ py: 10 }}>
                               <Stack alignItems="center" gap={1.5} color="text.disabled">
                                 <FileText size={40} color="#e2e8f0" />
-                                <Typography variant="body2" fontWeight={500}>لا توجد معاملات مسجّلة</Typography>
+                                <Typography variant="body2" fontWeight={500}>{t("suppliers:ledgerPage.noTransactions")}</Typography>
                               </Stack>
                             </TableCell>
                           </TableRow>
@@ -521,7 +523,7 @@ const SupplierLedgerPage: React.FC = () => {
                                     startIcon={<Wallet size={13} />}
                                     sx={{ borderRadius: 1.5, textTransform: "none", fontSize: 12, fontWeight: 600, py: 0.3, minWidth: 0 }}
                                   >
-                                    الدفعات
+                                    {t("suppliers:ledgerPage.paymentsButton")}
                                   </Button>
                                 </TableCell>
                               </TableRow>
@@ -534,7 +536,7 @@ const SupplierLedgerPage: React.FC = () => {
                       {purchaseEntries.length > 0 && (
                         <TableFooter>
                           <TableRow sx={{ bgcolor: "grey.50", "& td": { borderTop: "2px solid", borderTopColor: "divider", fontWeight: 700, py: 1.5 } }}>
-                            <TableCell align="right" colSpan={2} sx={{ fontSize: 12, color: "text.secondary" }}>الإجمالي</TableCell>
+                            <TableCell align="right" colSpan={2} sx={{ fontSize: 12, color: "text.secondary" }}>{t("suppliers:ledgerPage.totalRow")}</TableCell>
                             <TableCell align="left" sx={{ fontSize: 13, color: "text.primary" }}>
                               {formatNumber((summary.total_purchases ?? 0).toFixed(2))} OMR
                             </TableCell>
@@ -559,21 +561,21 @@ const SupplierLedgerPage: React.FC = () => {
         <DialogTitle sx={{ fontWeight: 700, fontSize: 16 }}>
           <Stack direction="row" alignItems="center" gap={1}>
             <DollarSign size={18} />
-            سداد دفعة شاملة
+            {t("suppliers:ledgerPage.bulkPayTitle")}
           </Stack>
         </DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2.5} pt={0.5}>
             {ledger && (
               <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: "error.50", border: "1px solid", borderColor: "error.light" }}>
-                <Typography variant="caption" color="text.secondary" display="block">الرصيد المستحق</Typography>
+                <Typography variant="caption" color="text.secondary" display="block">{t("suppliers:ledgerPage.dueBalance")}</Typography>
                 <Typography variant="subtitle1" fontWeight={700} color="error.main">
                   {formatCurrency(ledger.summary.balance)}
                 </Typography>
               </Box>
             )}
             <TextField
-              label="المبلغ"
+              label={t("suppliers:ledgerPage.amountLabel")}
               type="number"
               size="small"
               fullWidth
@@ -583,20 +585,20 @@ const SupplierLedgerPage: React.FC = () => {
               inputProps={{ min: 0.01, step: "0.01" }}
             />
             <FormControl size="small" fullWidth required>
-              <InputLabel>طريقة الدفع</InputLabel>
+              <InputLabel>{t("suppliers:ledgerPage.paymentMethodLabel")}</InputLabel>
               <Select
                 value={bulkMethod}
-                label="طريقة الدفع"
+                label={t("suppliers:ledgerPage.paymentMethodLabel")}
                 onChange={(e) => setBulkMethod(e.target.value)}
               >
-                <MenuItem value="cash">كاش</MenuItem>
-                <MenuItem value="bank_transfer">تحويل بنكي</MenuItem>
-                <MenuItem value="visa">فيزا</MenuItem>
-                <MenuItem value="other">أخرى</MenuItem>
+                <MenuItem value="cash">{t("suppliers:ledgerPage.methodCash")}</MenuItem>
+                <MenuItem value="bank_transfer">{t("suppliers:ledgerPage.methodBankTransfer")}</MenuItem>
+                <MenuItem value="visa">{t("suppliers:ledgerPage.methodVisa")}</MenuItem>
+                <MenuItem value="other">{t("suppliers:ledgerPage.methodOther")}</MenuItem>
               </Select>
             </FormControl>
             <TextField
-              label="تاريخ الدفع"
+              label={t("suppliers:ledgerPage.paymentDateLabel")}
               type="date"
               size="small"
               fullWidth
@@ -606,12 +608,12 @@ const SupplierLedgerPage: React.FC = () => {
               InputLabelProps={{ shrink: true }}
             />
             <TextField
-              label="رقم المرجع (اختياري)"
+              label={t("suppliers:ledgerPage.referenceOptional")}
               size="small"
               fullWidth
               value={bulkRef}
               onChange={(e) => setBulkRef(e.target.value)}
-              placeholder="رقم الشيك أو الحوالة"
+              placeholder={t("suppliers:ledgerPage.referencePlaceholder")}
             />
           </Stack>
         </DialogContent>
@@ -623,7 +625,7 @@ const SupplierLedgerPage: React.FC = () => {
             disabled={bulkLoading}
             sx={{ borderRadius: 1.5, textTransform: "none" }}
           >
-            إلغاء
+            {t("common:cancel")}
           </Button>
           <Button
             variant="contained"
@@ -635,7 +637,7 @@ const SupplierLedgerPage: React.FC = () => {
             startIcon={bulkLoading ? <CircularProgress size={14} color="inherit" /> : <DollarSign size={14} />}
             sx={{ borderRadius: 1.5, textTransform: "none", fontWeight: 600, minWidth: 110 }}
           >
-            {bulkLoading ? "جاري الحفظ..." : "تأكيد الدفع"}
+            {bulkLoading ? t("suppliers:ledgerPage.savingEllipsis") : t("suppliers:ledgerPage.confirmPayment")}
           </Button>
         </DialogActions>
       </Dialog>

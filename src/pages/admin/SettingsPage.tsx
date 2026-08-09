@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { useSettings } from "@/context/SettingsContext";
 import { AppSettings } from "@/services/settingService";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 // Settings Subcomponents
 import { CompanyInfoSettings } from "@/components/settings/CompanyInfoSettings";
@@ -22,6 +23,7 @@ type SettingsFormValues = Partial<AppSettings>;
 
 // --- Component ---
 const SettingsPage: React.FC = () => {
+  const { t, i18n } = useTranslation(["settings"]);
   const { settings, isLoadingSettings, updateSettings, fetchSettings } =
     useSettings();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -101,10 +103,10 @@ const SettingsPage: React.FC = () => {
 
     try {
       await updateSettings(dataToSubmit);
-      toast.success("تم تحديث الإعدادات بنجاح");
+      toast.success(t("settings:settingsSaved"));
     } catch (err) {
       console.error("Failed to update settings:", err);
-      setServerError("حدث خطأ أثناء تحديث الإعدادات");
+      setServerError(t("settings:settingsSaveError"));
     }
   };
 
@@ -117,7 +119,7 @@ const SettingsPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8" dir="rtl">
+    <div className="min-h-screen bg-background p-4 md:p-8" dir={i18n.dir()}>
       <div className="mx-auto max-w-7xl">
         {/* Page Header */}
         <div className="mb-8 border-b pb-6">
@@ -127,10 +129,10 @@ const SettingsPage: React.FC = () => {
             </div>
             <div>
               <h1 className="text-3xl font-bold text-foreground">
-                إعدادات النظام
+                {t("settings:systemSettingsTitle")}
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                تحكم في جميع خصائص وإعدادات التطبيق من مكان واحد
+                {t("settings:systemSettingsSubtitle")}
               </p>
             </div>
           </div>
@@ -163,7 +165,7 @@ const SettingsPage: React.FC = () => {
               ) : (
                 <Save className="mr-2 h-4 w-4" />
               )}
-              حفظ التغييرات
+              {t("settings:saveChanges")}
             </Button>
           </div>
         </form>
@@ -173,9 +175,9 @@ const SettingsPage: React.FC = () => {
             <div className="flex items-center gap-3">
               <Settings className="h-5 w-5 text-primary" />
               <div>
-                <p className="font-medium">إعدادات تقارير PDF والهيدر</p>
+                <p className="font-medium">{t("settings:pdfReportSettingsTitle")}</p>
                 <p className="text-sm text-muted-foreground">
-                  التحكم بالشعار وهيدر التقارير من خلال هذا القسم.
+                  {t("settings:pdfReportSettingsDesc")}
                 </p>
               </div>
             </div>

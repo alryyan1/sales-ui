@@ -21,8 +21,10 @@ import reportService, {
   StagnantProduct,
 } from "../../services/reportService";
 import { formatCurrency, formatNumber } from "../../constants";
+import { useTranslation } from "react-i18next";
 
 const ReportsDashboardPage: React.FC = () => {
+  const { t } = useTranslation(["reports"]);
   const [loading, setLoading] = useState(true);
   const [bestSelling, setBestSelling] = useState<BestSellingProduct[]>([]);
   const [stagnant, setStagnant] = useState<StagnantProduct[]>([]);
@@ -40,7 +42,7 @@ const ReportsDashboardPage: React.FC = () => {
       setStagnant(stagnantData);
     } catch (err: unknown) {
       console.error("Failed to load reports:", err);
-      setError("فشل في تحميل التقارير الإحصائية. يرجى المحاولة مرة أخرى.");
+      setError(t("reports:reportsDashboardPage.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -76,7 +78,7 @@ const ReportsDashboardPage: React.FC = () => {
           startIcon={<RefreshCcw size={16} />}
           onClick={fetchData}
         >
-          إعادة المحاولة
+          {t("reports:reportsDashboardPage.retryButton")}
         </Button>
       </Box>
     );
@@ -93,14 +95,14 @@ const ReportsDashboardPage: React.FC = () => {
         }}
       >
         <Typography variant="h4" fontWeight="bold">
-          التقارير الإحصائية (لوحة المعلومات)
+          {t("reports:reportsDashboardPage.title")}
         </Typography>
         <Button
           variant="outlined"
           startIcon={<RefreshCcw size={18} />}
           onClick={fetchData}
         >
-          تحديث البيانات
+          {t("reports:reportsDashboardPage.refreshButton")}
         </Button>
       </Box>
 
@@ -109,7 +111,7 @@ const ReportsDashboardPage: React.FC = () => {
         <Grid size={{ xs: 12, md: 6 }}>
           <Card elevation={2} sx={{ height: "100%", borderRadius: 2 }}>
             <CardHeader
-              title="الأصناف الأكثر مبيعاً (آخر 30 يوم)"
+              title={t("reports:reportsDashboardPage.topSellingTitle")}
               avatar={<TrendingUp color="#10b981" />}
               titleTypographyProps={{ variant: "h6", fontWeight: 600 }}
               sx={{
@@ -122,7 +124,7 @@ const ReportsDashboardPage: React.FC = () => {
               <List disablePadding>
                 {bestSelling.length === 0 ? (
                   <ListItem>
-                    <ListItemText primary="لا توجد بيانات للفترة المحددة." />
+                    <ListItemText primary={t("reports:reportsDashboardPage.noDataForPeriod")} />
                   </ListItem>
                 ) : (
                   bestSelling.map((product, index) => (
@@ -152,8 +154,7 @@ const ReportsDashboardPage: React.FC = () => {
                               {product.name}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                              التصنيف: {product.category_name} | المتبقي:{" "}
-                              {product.current_stock}
+                              {t("reports:reportsDashboardPage.categoryLabel", { category: product.category_name, remaining: product.current_stock })}
                             </Typography>
                           </Box>
                           <Box sx={{ textAlign: "left", minWidth: 100 }}>
@@ -162,7 +163,7 @@ const ReportsDashboardPage: React.FC = () => {
                               color="success.main"
                               fontWeight="bold"
                             >
-                              {formatNumber(product.total_quantity_sold)} مباع
+                              {formatNumber(product.total_quantity_sold)} {t("reports:reportsDashboardPage.soldSuffix")}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                               {formatCurrency(product.total_revenue)}
@@ -183,7 +184,7 @@ const ReportsDashboardPage: React.FC = () => {
         <Grid size={{ xs: 12, md: 6 }}>
           <Card elevation={2} sx={{ height: "100%", borderRadius: 2 }}>
             <CardHeader
-              title="الأصناف الراكدة (لا مبيعات منذ 3 أشهر)"
+              title={t("reports:reportsDashboardPage.stagnantTitle")}
               avatar={<PackageX color="#6b7280" />}
               titleTypographyProps={{ variant: "h6", fontWeight: 600 }}
               sx={{
@@ -196,7 +197,7 @@ const ReportsDashboardPage: React.FC = () => {
               <List disablePadding>
                 {stagnant.length === 0 ? (
                   <ListItem>
-                    <ListItemText primary="لا توجد أصناف راكدة." />
+                    <ListItemText primary={t("reports:reportsDashboardPage.noStagnantItems")} />
                   </ListItem>
                 ) : (
                   stagnant.map((product, index) => (
@@ -226,13 +227,12 @@ const ReportsDashboardPage: React.FC = () => {
                               {product.name}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                              التصنيف: {product.category_name} | إجمالي مبيعاته
-                              السابقة: {product.lifetime_sales}
+                              {t("reports:reportsDashboardPage.categoryAndLifetimeSales", { category: product.category_name, sales: product.lifetime_sales })}
                             </Typography>
                           </Box>
                           <Box sx={{ textAlign: "left" }}>
                             <Chip
-                              label={`${product.stock_quantity} متوفر`}
+                              label={`${product.stock_quantity} ${t("reports:reportsDashboardPage.availableSuffix")}`}
                               size="small"
                               variant="outlined"
                               color="default"

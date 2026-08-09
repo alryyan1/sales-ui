@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Package, TrendingUp, TrendingDown, AlertCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { PurchaseItem } from "@/services/purchaseService";
 
 interface InventoryImpactDialogProps {
@@ -30,6 +31,7 @@ const InventoryImpactDialog: React.FC<InventoryImpactDialogProps> = ({
   newStatus,
   isLoading = false,
 }) => {
+  const { t, i18n } = useTranslation(["purchases", "common"]);
   // Determine the type of change
   const isAddingStock =
     previousStatus !== "received" && newStatus === "received";
@@ -40,15 +42,14 @@ const InventoryImpactDialog: React.FC<InventoryImpactDialogProps> = ({
   // Calculate total quantity
   const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
 
-  // Get status label in Arabic
   const getStatusLabel = (status: string) => {
     switch (status) {
       case "pending":
-        return "قيد الانتظار";
+        return t("purchases:status_pending");
       case "ordered":
-        return "تم الطلب";
+        return t("purchases:status_ordered");
       case "received":
-        return "تم الاستلام";
+        return t("purchases:status_received");
       default:
         return status;
     }
@@ -58,49 +59,52 @@ const InventoryImpactDialog: React.FC<InventoryImpactDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col"
-        dir="rtl"
+        dir={i18n.dir()}
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             {isAddingStock && (
               <>
                 <TrendingUp className="h-5 w-5 text-green-600" />
-                <span>إضافة أصناف إلى المخزون</span>
+                <span>{t("purchases:inventoryImpact.addingStockTitle")}</span>
               </>
             )}
             {isRemovingStock && (
               <>
                 <TrendingDown className="h-5 w-5 text-red-600" />
-                <span>خصم أصناف من المخزون</span>
+                <span>{t("purchases:inventoryImpact.removingStockTitle")}</span>
               </>
             )}
             {noInventoryChange && (
               <>
                 <AlertCircle className="h-5 w-5 text-blue-600" />
-                <span>تغيير حالة المشتريات</span>
+                <span>{t("purchases:inventoryImpact.statusChangeTitle")}</span>
               </>
             )}
           </DialogTitle>
           <DialogDescription className="text-base">
             {isAddingStock && (
               <span className="text-green-700">
-                سيتم إضافة الأصناف التالية إلى المخزون عند تغيير الحالة من{" "}
-                <strong>{getStatusLabel(previousStatus)}</strong> إلى{" "}
-                <strong>{getStatusLabel(newStatus)}</strong>
+                {t("purchases:inventoryImpact.addingStockDesc", {
+                  from: getStatusLabel(previousStatus),
+                  to: getStatusLabel(newStatus),
+                })}
               </span>
             )}
             {isRemovingStock && (
               <span className="text-red-700">
-                سيتم خصم الأصناف التالية من المخزون عند تغيير الحالة من{" "}
-                <strong>{getStatusLabel(previousStatus)}</strong> إلى{" "}
-                <strong>{getStatusLabel(newStatus)}</strong>
+                {t("purchases:inventoryImpact.removingStockDesc", {
+                  from: getStatusLabel(previousStatus),
+                  to: getStatusLabel(newStatus),
+                })}
               </span>
             )}
             {noInventoryChange && (
               <span className="text-slate-600">
-                لن يتأثر المخزون عند تغيير الحالة من{" "}
-                <strong>{getStatusLabel(previousStatus)}</strong> إلى{" "}
-                <strong>{getStatusLabel(newStatus)}</strong>
+                {t("purchases:inventoryImpact.noChangeDesc", {
+                  from: getStatusLabel(previousStatus),
+                  to: getStatusLabel(newStatus),
+                })}
               </span>
             )}
           </DialogDescription>
@@ -143,11 +147,11 @@ const InventoryImpactDialog: React.FC<InventoryImpactDialogProps> = ({
                     </div>
                     <div className="flex-1">
                       <div className="font-semibold text-slate-900">
-                        {item.product_name || `منتج #${item.product_id}`}
+                        {item.product_name || t("purchases:inventoryImpact.productHash", { id: item.product_id })}
                       </div>
                       {item.batch_number && (
                         <div className="text-xs text-slate-500 mt-0.5">
-                          دفعة: {item.batch_number}
+                          {t("purchases:inventoryImpact.batchLabel", { batch: item.batch_number })}
                         </div>
                       )}
                     </div>
@@ -166,7 +170,7 @@ const InventoryImpactDialog: React.FC<InventoryImpactDialogProps> = ({
                       {isRemovingStock && "-"}
                       {item.quantity}
                     </div>
-                    <div className="text-xs text-slate-500">وحدة</div>
+                    <div className="text-xs text-slate-500">{t("purchases:inventoryImpact.unitWord")}</div>
                   </div>
                 </div>
               </div>
@@ -186,9 +190,9 @@ const InventoryImpactDialog: React.FC<InventoryImpactDialogProps> = ({
         >
           <div className="flex items-center justify-between">
             <span className="font-semibold text-slate-700">
-              {isAddingStock && "إجمالي الإضافة:"}
-              {isRemovingStock && "إجمالي الخصم:"}
-              {noInventoryChange && "إجمالي الأصناف:"}
+              {isAddingStock && t("purchases:inventoryImpact.totalAddition")}
+              {isRemovingStock && t("purchases:inventoryImpact.totalDeduction")}
+              {noInventoryChange && t("purchases:inventoryImpact.totalItemsLabel")}
             </span>
             <span
               className={`text-2xl font-bold ${
@@ -201,11 +205,11 @@ const InventoryImpactDialog: React.FC<InventoryImpactDialogProps> = ({
             >
               {isAddingStock && "+"}
               {isRemovingStock && "-"}
-              {totalQuantity} وحدة
+              {t("purchases:inventoryImpact.unitsTotal", { count: totalQuantity })}
             </span>
           </div>
           <div className="text-sm text-slate-600 mt-1">
-            عدد الأصناف: {items.length}
+            {t("purchases:inventoryImpact.itemsCountFooter", { count: items.length })}
           </div>
         </div>
 
@@ -217,7 +221,7 @@ const InventoryImpactDialog: React.FC<InventoryImpactDialogProps> = ({
             className="flex-1"
             disabled={isLoading}
           >
-            إلغاء
+            {t("common:cancel")}
           </Button>
           <Button
             onClick={onConfirm}
@@ -233,10 +237,10 @@ const InventoryImpactDialog: React.FC<InventoryImpactDialogProps> = ({
             {isLoading ? (
               <>
                 <span className="animate-spin mr-2">⏳</span>
-                جاري التحديث...
+                {t("purchases:inventoryImpact.updatingEllipsis")}
               </>
             ) : (
-              "تأكيد التغيير"
+              t("purchases:inventoryImpact.confirmChange")
             )}
           </Button>
         </div>

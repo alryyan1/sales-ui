@@ -12,6 +12,7 @@ import { Save, X, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Product } from "@/services/productService";
 import { ProductImage } from "@/components/products/ProductImage";
+import { useTranslation } from "react-i18next";
 
 interface InlineCreateInventoryCountItemProps {
   onSave: (data: { product_id: number; actual_quantity?: number }) => void;
@@ -23,6 +24,7 @@ interface InlineCreateInventoryCountItemProps {
 const InlineCreateInventoryCountItem: React.FC<
   InlineCreateInventoryCountItemProps
 > = ({ onSave, onCancel, isLoading, availableProducts }) => {
+  const { t } = useTranslation(["inventory", "common"]);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [productInputValue, setProductInputValue] = useState("");
   const [actualQuantity, setActualQuantity] = useState<string>("");
@@ -53,7 +55,7 @@ const InlineCreateInventoryCountItem: React.FC<
 
   const handleSave = useCallback(() => {
     if (!selectedProduct) {
-      toast.error("خطأ", { description: "يرجى اختيار منتج أولاً" });
+      toast.error(t("common:error"), { description: t("inventory:inlineCreateItem.chooseProductFirst") });
       productInputRef.current?.focus();
       return;
     }
@@ -63,7 +65,7 @@ const InlineCreateInventoryCountItem: React.FC<
       actualQuantity &&
       (isNaN(Number(actualQuantity)) || Number(actualQuantity) < 0)
     ) {
-      toast.error("خطأ", { description: "الكمية يجب أن تكون رقماً موجباً" });
+      toast.error(t("common:error"), { description: t("inventory:inlineCreateItem.quantityMustBePositive") });
       quantityInputRef.current?.focus();
       return;
     }
@@ -132,14 +134,14 @@ const InlineCreateInventoryCountItem: React.FC<
           }}
           value={selectedProduct}
           onChange={(_, newValue) => handleProductSelect(newValue)}
-          noOptionsText="لا توجد نتائج"
+          noOptionsText={t("inventory:inlineCreateItem.noResults")}
           autoHighlight
           freeSolo // Allows typing to search
           size="small"
           renderInput={(params) => (
             <TextField
               {...params}
-              placeholder="المنتج (الاسم أو الباركود)"
+              placeholder={t("inventory:inlineCreateItem.productPlaceholder")}
               inputRef={productInputRef}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
@@ -200,7 +202,7 @@ const InlineCreateInventoryCountItem: React.FC<
       {/* Quantity Input */}
       <TextField
         size="small"
-        placeholder="الكمية"
+        placeholder={t("inventory:inlineCreateItem.quantityPlaceholder")}
         type="number"
         value={actualQuantity}
         onChange={(e) => setActualQuantity(e.target.value)}
@@ -213,7 +215,7 @@ const InlineCreateInventoryCountItem: React.FC<
 
       {/* Actions */}
       <Box sx={{ display: "flex", gap: 0.5 }}>
-        <Tooltip title="حفظ">
+        <Tooltip title={t("inventory:inlineCreateItem.saveTooltip")}>
           <IconButton
             size="small"
             onClick={handleSave}
@@ -224,7 +226,7 @@ const InlineCreateInventoryCountItem: React.FC<
           </IconButton>
         </Tooltip>
 
-        <Tooltip title="إلغاء">
+        <Tooltip title={t("inventory:inlineCreateItem.cancelTooltip")}>
           <IconButton size="small" onClick={onCancel} disabled={isLoading}>
             <X size={18} />
           </IconButton>

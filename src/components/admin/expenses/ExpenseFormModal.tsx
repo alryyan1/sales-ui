@@ -1,6 +1,7 @@
 // src/components/admin/expenses/ExpenseFormModal.tsx
 import React, { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 
 import {
   Dialog,
@@ -58,6 +59,7 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
   onSaveSuccess,
   shiftId,
 }) => {
+  const { t } = useTranslation(["expenses"]);
   const isEditMode = Boolean(expenseToEdit);
 
   const [serverError, setServerError] = React.useState<string | null>(null);
@@ -202,7 +204,7 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
           }}
         >
           <Typography variant="h6" fontWeight={700}>
-            {isEditMode ? "تعديل المصروف" : "إضافة مصروف"}
+            {isEditMode ? t("expenses:editTitle") : t("expenses:addTitle")}
           </Typography>
           <IconButton onClick={onClose} size="small">
             <X size={18} />
@@ -220,11 +222,11 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
             <Controller
               name="title"
               control={control}
-              rules={{ required: "اسم المصروف مطلوب" }}
+              rules={{ required: t("expenses:formModal.nameRequired") }}
               render={({ field, fieldState }) => (
                 <TextField
                   {...field}
-                  label="اسم المصروف"
+                  label={t("expenses:formModal.nameLabel")}
                   fullWidth
                   size="small"
                   autoFocus
@@ -237,11 +239,11 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
             <Controller
               name="amount"
               control={control}
-              rules={{ required: "المبلغ مطلوب" }}
+              rules={{ required: t("expenses:formModal.amountRequired") }}
               render={({ field, fieldState }) => (
                 <TextField
                   {...field}
-                  label="المبلغ"
+                  label={t("expenses:amount")}
                   type="number"
                   fullWidth
                   size="small"
@@ -262,15 +264,15 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
                     size="small"
                     error={!!fieldState.error}
                   >
-                    <InputLabel>القسم</InputLabel>
+                    <InputLabel>{t("expenses:formModal.categoryLabel")}</InputLabel>
                     <Select
                       {...field}
-                      label="القسم"
+                      label={t("expenses:formModal.categoryLabel")}
                       fullWidth
                       disabled={isSubmitting || isLoadingCategories}
                     >
                       <MenuItem value="">
-                        <em>بدون قسم</em>
+                        <em>{t("expenses:formModal.noCategoryOption")}</em>
                       </MenuItem>
                       {categories.map((c) => (
                         <MenuItem key={c.id} value={c.id}>
@@ -286,7 +288,7 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
                   </FormControl>
                 )}
               />
-              <Tooltip title="إضافة قسم جديد">
+              <Tooltip title={t("expenses:formModal.addCategoryTooltip")}>
                 <IconButton
                   onClick={() => setIsAddCategoryDialogOpen(true)}
                   color="primary"
@@ -311,17 +313,17 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
                   size="small"
                   error={!!fieldState.error}
                 >
-                  <InputLabel>طريقة الدفع</InputLabel>
+                  <InputLabel>{t("expenses:paymentMethod")}</InputLabel>
                   <Select
                     {...field}
-                    label="طريقة الدفع"
+                    label={t("expenses:paymentMethod")}
                     fullWidth
                     disabled={isSubmitting}
                   >
-                    <MenuItem value="cash">نقدي</MenuItem>
-                    <MenuItem value="bank_transfer">تحويل بنكي</MenuItem>
-                    <MenuItem value="visa">فيزا</MenuItem>
-                    <MenuItem value="other">أخرى</MenuItem>
+                    <MenuItem value="cash">{t("expenses:formModal.paymentMethodCash")}</MenuItem>
+                    <MenuItem value="bank_transfer">{t("expenses:formModal.paymentMethodBankTransfer")}</MenuItem>
+                    <MenuItem value="visa">{t("expenses:formModal.paymentMethodVisa")}</MenuItem>
+                    <MenuItem value="other">{t("expenses:formModal.paymentMethodOther")}</MenuItem>
                   </Select>
                   {fieldState.error && (
                     <Typography variant="caption" color="error">
@@ -342,13 +344,13 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
           fullWidth
         >
           <DialogTitle sx={{ py: 2, px: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-            <Typography variant="h6" fontWeight={700}>إضافة قسم جديد</Typography>
+            <Typography variant="h6" fontWeight={700}>{t("expenses:formModal.addCategoryDialogTitle")}</Typography>
           </DialogTitle>
           <DialogContent sx={{ py: 2, px: 2 }}>
             <TextField
               fullWidth
               size="small"
-              label="اسم القسم"
+              label={t("expenses:formModal.categoryNameLabel")}
               value={newCategoryName}
               onChange={(e) => setNewCategoryName(e.target.value)}
               autoFocus
@@ -363,7 +365,7 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
               color="inherit"
               size="small"
             >
-              إلغاء
+              {t("expenses:formModal.cancelButton")}
             </Button>
             <Button
               onClick={handleAddCategory}
@@ -372,14 +374,14 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
               size="small"
               startIcon={isAddingCategory ? <CircularProgress size={18} color="inherit" /> : null}
             >
-              إضافة
+              {t("expenses:formModal.addButton")}
             </Button>
           </DialogActions>
         </Dialog>
 
         <DialogActions sx={{ px: 2, py: 2, gap: 1 }}>
           <Button onClick={onClose} disabled={isSubmitting} color="inherit" size="small">
-            إلغاء
+            {t("expenses:formModal.cancelButton")}
           </Button>
           <Button
             type="submit"
@@ -393,7 +395,7 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
             }
             sx={{ minWidth: 100 }}
           >
-            {isEditMode ? "تحديث" : "حفظ"}
+            {isEditMode ? t("expenses:formModal.updateButton") : t("expenses:formModal.saveButton")}
           </Button>
         </DialogActions>
       </form>

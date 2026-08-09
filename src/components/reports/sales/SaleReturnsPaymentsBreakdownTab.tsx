@@ -3,6 +3,7 @@ import React from "react";
 import { Box, Stack, Typography, Card, CardContent } from "@mui/material";
 import type { SaleReturn } from "@/services/saleReturnService";
 import { formatNumber } from "@/constants";
+import { useTranslation } from "react-i18next";
 
 interface SaleReturnsPaymentsBreakdownTabProps {
   returns: SaleReturn[];
@@ -11,6 +12,7 @@ interface SaleReturnsPaymentsBreakdownTabProps {
 const SaleReturnsPaymentsBreakdownTab: React.FC<
   SaleReturnsPaymentsBreakdownTabProps
 > = ({ returns }) => {
+  const { t } = useTranslation(["reports"]);
   let totalCash = 0;
   let totalBankTransfer = 0;
   let totalVisa = 0;
@@ -42,7 +44,7 @@ const SaleReturnsPaymentsBreakdownTab: React.FC<
     return (
       <Box sx={{ textAlign: "center", py: 4 }}>
         <Typography variant="body1" color="text.secondary">
-          لا توجد مردودات في الفترة المحددة
+          {t("reports:saleReturnsReportPage.noReturnsForPeriod")}
         </Typography>
       </Box>
     );
@@ -51,7 +53,7 @@ const SaleReturnsPaymentsBreakdownTab: React.FC<
   return (
     <Stack spacing={2}>
       <Typography variant="body2" color="text.secondary">
-        إجمالي قيمة المردودات في الفترة المحددة:{" "}
+        {t("reports:saleReturnsReportPage.totalReturnsValueForPeriod")}{" "}
         <strong>{formatNumber(totalAll)}</strong>
       </Typography>
 
@@ -59,7 +61,7 @@ const SaleReturnsPaymentsBreakdownTab: React.FC<
         <Card sx={{ minWidth: 200, flex: 1 }}>
           <CardContent>
             <Typography variant="body2" color="text.secondary">
-              إجمالي مردود نقدي
+              {t("reports:saleReturnsReportPage.totalCashReturns")}
             </Typography>
             <Typography variant="h6" sx={{ fontWeight: 700 }}>
               {formatNumber(totalCash)}
@@ -70,7 +72,7 @@ const SaleReturnsPaymentsBreakdownTab: React.FC<
         <Card sx={{ minWidth: 200, flex: 1 }}>
           <CardContent>
             <Typography variant="body2" color="text.secondary">
-              إجمالي مردود تحويل بنكي
+              {t("reports:saleReturnsReportPage.totalBankTransferReturns")}
             </Typography>
             <Typography variant="h6" sx={{ fontWeight: 700 }}>
               {formatNumber(totalBankTransfer)}
@@ -81,7 +83,7 @@ const SaleReturnsPaymentsBreakdownTab: React.FC<
         <Card sx={{ minWidth: 200, flex: 1 }}>
           <CardContent>
             <Typography variant="body2" color="text.secondary">
-              إجمالي مردود فيزا
+              {t("reports:saleReturnsReportPage.totalVisaReturns")}
             </Typography>
             <Typography variant="h6" sx={{ fontWeight: 700 }}>
               {formatNumber(totalVisa)}
@@ -93,7 +95,7 @@ const SaleReturnsPaymentsBreakdownTab: React.FC<
           <Card sx={{ minWidth: 200, flex: 1 }}>
             <CardContent>
               <Typography variant="body2" color="text.secondary">
-                إجمالي مردود بطرق أخرى
+                {t("reports:saleReturnsReportPage.totalOtherReturns")}
               </Typography>
               <Typography variant="h6" sx={{ fontWeight: 700 }}>
                 {formatNumber(totalOther)}

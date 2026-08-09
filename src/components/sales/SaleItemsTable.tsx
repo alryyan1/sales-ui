@@ -26,6 +26,7 @@ import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
 import { formatNumber } from "@/constants";
 import type { SaleItem } from "@/services/saleService";
 import { ProductImage } from "@/components/products/ProductImage";
+import { useTranslation } from "react-i18next";
 
 export interface SaleItemsTableProps {
   items: SaleItem[] | undefined;
@@ -95,6 +96,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
   canDeleteItems = true,
   disableQuantityAndPriceEdit = false,
 }) => {
+  const { t } = useTranslation(["sales"]);
   const list = useMemo(() => items ?? [], [items]);
   const [editingKey, setEditingKey] = useState<number | string | null>(null);
   const [editingField, setEditingField] = useState<"quantity" | "price" | null>(
@@ -364,7 +366,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
         (row) => row.product_name ?? row.product?.name ?? `#${row.product_id}`,
         {
           id: "product",
-          header: "المنتج",
+          header: t("sales:itemsTable.colProduct"),
           cell: ({ row }) => {
             const item = row.original;
             const name =
@@ -399,11 +401,11 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                 </Tooltip>
                 {returnedQty > 0 && (
                   <Tooltip
-                    title={isFullyReturned ? "تم إرجاع هذا الصنف بالكامل" : `تم إرجاع ${returnedQty} من أصل ${item.quantity}`}
+                    title={isFullyReturned ? t("sales:itemsTable.fullyReturnedTooltip") : t("sales:itemsTable.partiallyReturnedTooltip", { returned: returnedQty, total: item.quantity })}
                     arrow
                   >
                     <Chip
-                      label={`مرتجع ${returnedQty}`}
+                      label={t("sales:itemsTable.returnedChip", { count: returnedQty })}
                       size="small"
                       color={isFullyReturned ? "error" : "warning"}
                       variant="outlined"
@@ -419,7 +421,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
       ),
       columnHelper.accessor("quantity", {
         id: "quantity",
-        header: "الكمية",
+        header: t("sales:itemsTable.colQuantity"),
         meta: { align: "center" },
         cell: ({ row }) => {
           const item = row.original;
@@ -457,7 +459,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                   inputProps={{
                     min: 0.01,
                     step: 0.01,
-                    "aria-label": "الكمية",
+                    "aria-label": t("sales:itemsTable.quantityAria"),
                   }}
                   sx={{
                     width: 88,
@@ -493,7 +495,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                   startEditingQuantity(item);
                 }
               }}
-              aria-label="تعديل الكمية"
+              aria-label={t("sales:itemsTable.editQuantityAria")}
               sx={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -525,7 +527,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
       }),
       columnHelper.display({
         id: "stock",
-        header: "المخزون",
+        header: t("sales:itemsTable.colStock"),
         cell: ({ row }) => {
           const item = row.original;
           const stock =
@@ -558,7 +560,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
       }),
       columnHelper.accessor((row) => Number(row.unit_price ?? 0), {
         id: "price",
-        header: "السعر",
+        header: t("sales:itemsTable.colPrice"),
         meta: { align: "right" },
         cell: ({ row }) => {
           const item = row.original;
@@ -596,7 +598,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                   inputProps={{
                     min: 0,
                     step: 0.01,
-                    "aria-label": "السعر",
+                    "aria-label": t("sales:itemsTable.priceAria"),
                   }}
                   sx={{
                     width: 100,
@@ -632,7 +634,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                   startEditingPrice(item);
                 }
               }}
-              aria-label="تعديل السعر"
+              aria-label={t("sales:itemsTable.editPriceAria")}
               sx={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -667,7 +669,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
           Number(row.total_price ?? row.quantity * Number(row.unit_price ?? 0)),
         {
           id: "total",
-          header: "الإجمالي",
+          header: t("sales:itemsTable.colTotal"),
           cell: ({ getValue }) => formatNumber(getValue(), 2),
           meta: { align: "right" },
         },
@@ -700,7 +702,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                       onDeleteItem(item);
                     }}
                     disabled={disabled}
-                    aria-label="حذف الصنف"
+                    aria-label={t("sales:itemsTable.deleteItemAria")}
                     sx={{ p: 0.25 }}
                   >
                     <DeleteOutlineIcon sx={{ fontSize: 18 }} />
@@ -732,6 +734,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
       deletingItemId,
       list,
       updatingKeys,
+      t,
     ],
   );
 
@@ -790,7 +793,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                   fontSize: "0.875rem",
                 }}
               >
-                لا توجد عناصر
+                {t("sales:itemsTable.noItems")}
               </TableCell>
             </TableRow>
           ) : (

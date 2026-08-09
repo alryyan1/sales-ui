@@ -55,6 +55,7 @@ import analyticsService, {
 } from "../services/analyticsService";
 import { formatCurrency, formatNumber } from "@/constants";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 // Color scheme for charts
 const CHART_COLORS = {
@@ -151,6 +152,7 @@ const KPICard: React.FC<{
 };
 
 const AnalyticsPage: React.FC = () => {
+  const { t } = useTranslation(["analytics", "common", "navigation"]);
   // State
   const [selectedRange, setSelectedRange] = useState<DateRange>("30days");
   const [selectedTab, setSelectedTab] = useState("overview");
@@ -179,12 +181,12 @@ const AnalyticsPage: React.FC = () => {
     onSuccess: () => {
       // Show success toast only when real data is loaded
       if (!isUsingMockData) {
-        toast.success("تم تحديث البيانات");
+        toast.success(t("analytics:dataRefreshed"));
       }
     },
     onError: () => {
       setIsUsingMockData(true);
-      toast.warning("يتم استخدام بيانات تجريبية");
+      toast.warning(t("analytics:usingMockData"));
     },
   });
 
@@ -212,7 +214,7 @@ const AnalyticsPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <CircularProgress />
-        <Typography sx={{ ml: 2 }}>جاري التحميل...</Typography>
+        <Typography sx={{ ml: 2 }}>{t("analytics:loadingAnalytics")}</Typography>
       </div>
     );
   }
@@ -222,9 +224,9 @@ const AnalyticsPage: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <Typography color="error" className="mb-4">
-            حدث خطأ أثناء تحميل البيانات
+            {t("analytics:errorLoadingData")}
           </Typography>
-          <Button onClick={() => refetch()}>إعادة المحاولة</Button>
+          <Button onClick={() => refetch()}>{t("common:retryAction")}</Button>
         </div>
       </div>
     );
@@ -237,7 +239,7 @@ const AnalyticsPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-3 mb-2">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              التحليلات
+              {t("navigation:analytics")}
             </h1>
             <Badge
               variant={isUsingMockData ? "secondary" : "default"}
@@ -247,15 +249,15 @@ const AnalyticsPage: React.FC = () => {
                   : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
               }`}
             >
-              {isUsingMockData ? "بيانات تجريبية" : "بيانات حقيقية"}
+              {isUsingMockData ? t("analytics:mockData") : t("analytics:realData")}
             </Badge>
           </div>
           <p className="text-gray-600 dark:text-gray-400">
-            نظرة عامة على أداء المتجر والمبيعات
+            {t("analytics:pageSubtitle")}
           </p>
           {isUsingMockData && (
             <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">
-              تنبيه: يتم عرض بيانات تجريبية لعدم توفر اتصال بالخادم
+              {t("analytics:mockDataBanner")}
             </p>
           )}
         </div>
@@ -268,14 +270,14 @@ const AnalyticsPage: React.FC = () => {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="7days">آخر 7 أيام</SelectItem>
-              <SelectItem value="30days">آخر 30 يوم</SelectItem>
-              <SelectItem value="90days">آخر 90 يوم</SelectItem>
-              <SelectItem value="1year">السنة الماضية</SelectItem>
+              <SelectItem value="7days">{t("analytics:last7Days")}</SelectItem>
+              <SelectItem value="30days">{t("analytics:last30Days")}</SelectItem>
+              <SelectItem value="90days">{t("analytics:last90Days")}</SelectItem>
+              <SelectItem value="1year">{t("analytics:lastYear")}</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline" onClick={() => refetch()}>
-            تحديث
+            {t("common:refresh")}
           </Button>
         </div>
       </div>
@@ -284,21 +286,21 @@ const AnalyticsPage: React.FC = () => {
       {kpis && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           <KPICard
-            title="إجمالي المبيعات"
+            title={t("analytics:totalSales")}
             value={kpis.totalSales.value}
             change={kpis.totalSales.change}
             icon={<DollarSign className="h-4 w-4 text-green-600" />}
             color="green"
           />
           <KPICard
-            title="إجمالي المشتريات"
+            title={t("analytics:totalPurchases")}
             value={kpis.totalPurchases.value}
             change={kpis.totalPurchases.change}
             icon={<ShoppingCart className="h-4 w-4 text-blue-600" />}
             color="blue"
           />
           <KPICard
-            title="إجمالي الطلبات"
+            title={t("analytics:totalOrders")}
             value={kpis.totalOrders.value}
             change={kpis.totalOrders.change}
             icon={<Package className="h-4 w-4 text-purple-600" />}
@@ -314,10 +316,10 @@ const AnalyticsPage: React.FC = () => {
         className="space-y-4"
       >
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
-          <TabsTrigger value="sales">المبيعات</TabsTrigger>
-          <TabsTrigger value="purchases">المشتريات</TabsTrigger>
-          <TabsTrigger value="inventory">المخزون</TabsTrigger>
+          <TabsTrigger value="overview">{t("analytics:overview")}</TabsTrigger>
+          <TabsTrigger value="sales">{t("analytics:sales")}</TabsTrigger>
+          <TabsTrigger value="purchases">{t("analytics:purchases")}</TabsTrigger>
+          <TabsTrigger value="inventory">{t("analytics:inventory")}</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -328,7 +330,7 @@ const AnalyticsPage: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5" />
-                  اتجاه المبيعات
+                  {t("analytics:salesTrend")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -353,7 +355,7 @@ const AnalyticsPage: React.FC = () => {
             {/* Top Products */}
             <Card>
               <CardHeader>
-                <CardTitle>أكثر المنتجات مبيعاً</CardTitle>
+                <CardTitle>{t("analytics:bestSellingProducts")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -376,7 +378,7 @@ const AnalyticsPage: React.FC = () => {
             {/* Daily Sales */}
             <Card>
               <CardHeader>
-                <CardTitle>المبيعات اليومية</CardTitle>
+                <CardTitle>{t("analytics:dailySales")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={400}>
@@ -391,14 +393,14 @@ const AnalyticsPage: React.FC = () => {
                       dataKey="amount"
                       stroke={CHART_COLORS.primary}
                       strokeWidth={2}
-                      name="قيمة المبيعات"
+                      name={t("analytics:salesValueSeries")}
                     />
                     <Line
                       type="monotone"
                       dataKey="orders"
                       stroke={CHART_COLORS.secondary}
                       strokeWidth={2}
-                      name="عدد الطلبات"
+                      name={t("analytics:ordersCountSeries")}
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -408,7 +410,7 @@ const AnalyticsPage: React.FC = () => {
             {/* Sales by Category */}
             <Card>
               <CardHeader>
-                <CardTitle>المبيعات حسب الفئة</CardTitle>
+                <CardTitle>{t("analytics:salesByCategory")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={400}>
@@ -446,7 +448,7 @@ const AnalyticsPage: React.FC = () => {
             {/* Purchase Trend */}
             <Card>
               <CardHeader>
-                <CardTitle>اتجاه المشتريات</CardTitle>
+                <CardTitle>{t("analytics:purchaseTrend")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={400}>
@@ -470,7 +472,7 @@ const AnalyticsPage: React.FC = () => {
             {/* Top Suppliers */}
             <Card>
               <CardHeader>
-                <CardTitle>أفضل الموردين</CardTitle>
+                <CardTitle>{t("analytics:topSuppliers")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={400}>
@@ -493,7 +495,7 @@ const AnalyticsPage: React.FC = () => {
             {/* Stock Levels */}
             <Card>
               <CardHeader>
-                <CardTitle>مستويات المخزون</CardTitle>
+                <CardTitle>{t("analytics:stockLevels")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={400}>

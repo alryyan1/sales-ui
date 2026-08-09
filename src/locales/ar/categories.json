@@ -23,5 +23,42 @@
   "errorSelfParent": "لا يمكن أن يكون التصنيف أبًا لنفسه.",
   "errorHasProducts": "لا يمكن حذف التصنيف. هناك منتجات معينة له.",
   "errorHasSubcategories": "لا يمكن حذف التصنيف. لديه تصنيفات فرعية.",
-  "searchPlaceholder":"البحث"
+  "searchPlaceholder":"البحث",
+  "fieldRequired": "هذا الحقل مطلوب",
+  "successTitle": "نجح",
+  "errorTitle": "خطأ",
+  "unknownError": "حدث خطأ غير معروف",
+  "saveFailed": "فشل في حفظ الفئة",
+  "none": "لا يوجد",
+  "setAsDefaultCategory": "تعيين كفئة افتراضية",
+  "cancel": "إلغاء",
+  "updateButton": "تحديث",
+  "createButton": "إنشاء",
+  "formModal": {
+    "editTitle": "تعديل فئة",
+    "addTitle": "إضافة فئة",
+    "nameLabel": "اسم الفئة",
+    "parentCategoryLabel": "الفئة الرئيسية",
+    "descriptionLabel": "الوصف"
+  },
+  "listPage": {
+    "pageTitle": "إدارة الأقسام",
+    "addCategoryButton": "إضافة قسم",
+    "searchCategoriesPlaceholder": "البحث في الأقسام...",
+    "columnCategoryName": "اسم القسم",
+    "columnParentCategory": "القسم الرئيسي",
+    "columnDefault": "افتراضي",
+    "columnProductsCount": "عدد المنتجات",
+    "columnActions": "إجراءات",
+    "noResults": "لا توجد نتائج",
+    "notAvailable": "---",
+    "previousButton": "السابق",
+    "nextButton": "التالي",
+    "pageOfSummary": "صفحة {{page}} من {{lastPage}}",
+    "deleteSuccessTitle": "نجاح",
+    "deleteSuccessDesc": "تم حذف القسم بنجاح",
+    "deleteConfirmTitle": "تأكيد الحذف",
+    "deleteConfirmMessage": "هل أنت متأكد أنك تريد حذف هذا القسم؟",
+    "deleteButton": "حذف"
+  }
 }

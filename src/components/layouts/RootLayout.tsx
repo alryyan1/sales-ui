@@ -1,22 +1,32 @@
 // src/components/layouts/RootLayout.tsx
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Outlet } from "react-router-dom";
 import { Box, Drawer, useTheme, alpha, Toolbar } from "@mui/material";
 import { Loader2 } from "lucide-react";
 import { Toaster } from "sonner";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/context/AuthContext";
 import { PosFilterProvider } from "@/context/PosFilterContext";
 import SidebarPro from "./SidebarPro";
 import TopAppBar from "./TopAppBar";
 import UserMenu from "./UserMenu";
 import { DRAWER_WIDTH } from "./types";
-import { navItems } from "./navItems";
+import { getNavItems } from "./navItems";
 
 const COLLAPSED_DRAWER_WIDTH = 72;
 
 const RootLayout: React.FC = () => {
   const { isLoading, user, roles, permissions } = useAuth();
   const theme = useTheme();
+  const { t } = useTranslation(["navigation"]);
+  // NOTE: always "left" — never swap this based on the active language. The app is wrapped
+  // in a direction-aware emotion cache (see theme.ts/getEmotionCache) whose
+  // stylis-plugin-rtl already auto-flips the physical left/right CSS this
+  // prop generates (including MUI's own Drawer styles) whenever the active
+  // language is RTL. Manually swapping here double-flips it, which is what
+  // pinned the sidebar to the left in Arabic no matter what.
+  const drawerAnchor = "left";
+  const navItems = useMemo(() => getNavItems(t), [t]);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -79,7 +89,7 @@ const RootLayout: React.FC = () => {
         {/* ... Drawer logic ... */}
         <Drawer
           variant="temporary"
-          anchor="right"
+          anchor={drawerAnchor}
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{
@@ -90,7 +100,8 @@ const RootLayout: React.FC = () => {
             "& .MuiDrawer-paper": {
               boxSizing: "border-box",
               width: DRAWER_WIDTH,
-              borderLeft: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+              // always "borderRight" — the RTL emotion cache auto-flips this; see drawerAnchor note above
+              borderRight: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
             },
           }}
         >
@@ -104,13 +115,14 @@ const RootLayout: React.FC = () => {
         </Drawer>
         <Drawer
           variant="permanent"
-          anchor="right"
+          anchor={drawerAnchor}
           sx={{
             display: { xs: "none", sm: "block" },
             "& .MuiDrawer-paper": {
               boxSizing: "border-box",
               width: isSidebarCollapsed ? COLLAPSED_DRAWER_WIDTH : DRAWER_WIDTH,
-              borderLeft: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+              // always "borderRight" — the RTL emotion cache auto-flips this; see drawerAnchor note above
+              borderRight: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
               overflowX: "hidden",
             },
           }}

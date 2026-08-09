@@ -34,6 +34,7 @@ import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import { Sale, Payment } from "@/services/saleService";
 import { Client } from "@/services/clientService";
 import dayjs from "dayjs";
+import { useTranslation } from "react-i18next";
 
 export interface ClientOptionType extends Partial<Client> {
   inputValue?: string;
@@ -84,13 +85,6 @@ interface SaleSummaryPanelProps {
   onRemoveReminder: () => Promise<void>;
   reminderLoading: boolean;
 }
-
-const METHOD_LABELS: Record<string, string> = {
-  cash: "نقدي",
-  bank_transfer: "تحويل بنكي",
-  visa: "فيزا",
-  other: "أخرى",
-};
 
 // Tiny labeled row used in the financials block
 const FinRow = ({
@@ -164,6 +158,13 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
   canCancelPayment = true,
   canDiscount = true,
 }) => {
+  const { t } = useTranslation(["pos", "common"]);
+  const METHOD_LABELS: Record<string, string> = {
+    cash: t("pos:summaryPanel.methodLabels.cash"),
+    bank_transfer: t("pos:summaryPanel.methodLabels.bank_transfer"),
+    visa: t("pos:summaryPanel.methodLabels.visa"),
+    other: t("pos:summaryPanel.methodLabels.other"),
+  };
   const [dateEditing, setDateEditing] = useState(false);
   const [tempDate, setTempDate] = useState("");
   const [bellAnchor, setBellAnchor] = useState<HTMLButtonElement | null>(null);
@@ -192,7 +193,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
         >
           <ReceiptLongIcon sx={{ fontSize: 32, color: "grey.300" }} />
           <Typography variant="caption" color="text.disabled" fontWeight={500}>
-            اختر فاتورة لعرض التفاصيل
+            {t("pos:summaryPanel.selectSaleToShowDetails")}
           </Typography>
         </Paper>
       </Box>
@@ -237,11 +238,11 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
         >
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Typography sx={{ fontSize: "0.8rem" }} fontWeight={700} color="white">
-              فاتورة #{selectedSale.id}
+              {t("pos:summaryPanel.invoiceHash", { id: selectedSale.id })}
             </Typography>
             <Stack direction="row" alignItems="center" gap={0.5}>
               <Chip
-                label={isFullyPaid ? "مسددة" : "غير مسددة"}
+                label={isFullyPaid ? t("pos:summaryPanel.paidStatus") : t("pos:summaryPanel.unpaidStatus")}
                 size="small"
                 sx={{
                   height: 18,
@@ -252,7 +253,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                 }}
               />
               {!isFullyPaid && (
-                <Tooltip title={reminderDate ? `تذكير بتاريخ ${dayjs(reminderDate).format("YYYY-MM-DD")}` : "تعيين تذكير دفع"}>
+                <Tooltip title={reminderDate ? t("pos:summaryPanel.reminderDateTooltip", { date: dayjs(reminderDate).format("YYYY-MM-DD") }) : t("pos:summaryPanel.setPaymentReminderTooltip")}>
                   <IconButton
                     size="small"
                     onClick={(e) => setBellAnchor(e.currentTarget)}
@@ -275,7 +276,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
             slotProps={{ paper: { sx: { p: 1.5, width: 200 } } }}
           >
             <Typography variant="caption" fontWeight={700} display="block" mb={1}>
-              تذكير بعد (أيام)
+              {t("pos:summaryPanel.reminderAfterDays")}
             </Typography>
             <TextField
               size="small"
@@ -309,7 +310,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                 }}
                 sx={{ textTransform: "none", fontSize: "0.75rem" }}
               >
-                حفظ
+                {t("pos:summaryPanel.save")}
               </Button>
               {reminderDate && (
                 <Button
@@ -324,7 +325,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                   }}
                   sx={{ textTransform: "none", fontSize: "0.75rem" }}
                 >
-                  إلغاء
+                  {t("common:cancel")}
                 </Button>
               )}
             </Stack>
@@ -412,7 +413,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
               const { inputValue } = params;
               const isExisting = options.some((o) => inputValue === o.name);
               if (inputValue !== "" && !isExisting) {
-                filtered.push({ inputValue, name: `إضافة "${inputValue}"` });
+                filtered.push({ inputValue, name: t("pos:summaryPanel.addQuoted", { value: inputValue }) });
               }
               return filtered;
             }}
@@ -437,7 +438,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
             }}
             renderOption={(props, option) => {
               const { key, ...rest } = props;
-              return <li key={key} {...rest}>{`${option.is_supplier ? "مورد" : "عميل"}: ${option.name}`}</li>;
+              return <li key={key} {...rest}>{`${option.is_supplier ? t("pos:summaryPanel.supplierLabel") : t("pos:summaryPanel.clientLabel")}: ${option.name}`}</li>;
             }}
             isOptionEqualToValue={(option, value) => option.id === value.id}
             loading={clientSearchLoading}
@@ -450,8 +451,8 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
             renderInput={(params) => (
               <TextField
                 {...params}
-                placeholder="عميل / زبون..."
-                label="العميل"
+                placeholder={t("pos:summaryPanel.clientPlaceholder")}
+                label={t("pos:summaryPanel.clientLabel")}
                 InputProps={{
                   ...params.InputProps,
                   endAdornment: (
@@ -465,21 +466,21 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                 inputProps={{ ...params.inputProps, style: { fontSize: "0.8rem" } }}
               />
             )}
-            noOptionsText={clientInputValue.trim() ? "لا توجد نتائج" : "اكتب للبحث"}
+            noOptionsText={clientInputValue.trim() ? t("pos:blankPage.noResultsOption") : t("pos:blankPage.typeToSearchOption")}
           />
 
           {/* ── Financials ── */}
           <Box sx={{ borderRadius: 1, border: "1px solid", borderColor: "grey.200", overflow: "hidden" }}>
-            <FinRow label="المجموع الفرعي" value={formatNumber(subtotal, 2)} bg="#f8fafc" />
+            <FinRow label={t("pos:subtotal")} value={formatNumber(subtotal, 2)} bg="#f8fafc" />
             {discountAmt > 0 && (
-              <FinRow label="الخصم" value={`− ${formatNumber(discountAmt, 2)}`} color="error.main" bg="#fff5f5" bold />
+              <FinRow label={t("pos:discount")} value={`− ${formatNumber(discountAmt, 2)}`} color="error.main" bg="#fff5f5" bold />
             )}
             <Divider />
-            <FinRow label="الإجمالي" value={formatNumber(total, 2)} bold color="success.dark" />
+            <FinRow label={t("pos:summaryPanel.totalLabel")} value={formatNumber(total, 2)} bold color="success.dark" />
             <Divider />
-            <FinRow label="المدفوع" value={formatNumber(paid, 2)} color="success.main" />
+            <FinRow label={t("pos:paid")} value={formatNumber(paid, 2)} color="success.main" />
             <FinRow
-              label="المتبقي"
+              label={t("pos:due")}
               value={formatNumber(due, 2)}
               bold
               color={isFullyPaid ? "success.dark" : "error.dark"}
@@ -488,21 +489,21 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
           </Box>
           {!selectedSale?.payments?.length > 0 && <Stack direction="row" alignItems="center" gap={0.5}>
             <FormControl size="small" sx={{ minWidth: 80 }}>
-              <InputLabel sx={{ fontSize: "0.75rem" }}>الخصم</InputLabel>
+              <InputLabel sx={{ fontSize: "0.75rem" }}>{t("pos:discount")}</InputLabel>
               <Select
                 value={discountType}
-                label="الخصم"
+                label={t("pos:discount")}
                 onChange={(e) => setDiscountType(e.target.value as "percentage" | "fixed")}
                 sx={{ fontSize: "0.75rem" }}
               >
-                <MenuItem value="fixed" sx={{ fontSize: "0.75rem" }}>مبلغ</MenuItem>
-                <MenuItem value="percentage" sx={{ fontSize: "0.75rem" }}>٪</MenuItem>
+                <MenuItem value="fixed" sx={{ fontSize: "0.75rem" }}>{t("pos:summaryPanel.amountShort")}</MenuItem>
+                <MenuItem value="percentage" sx={{ fontSize: "0.75rem" }}>{t("pos:summaryPanel.percentSign")}</MenuItem>
               </Select>
             </FormControl>
             <TextField
               size="small"
               type="number"
-              placeholder={discountType === "percentage" ? "٪" : "0"}
+              placeholder={discountType === "percentage" ? t("pos:summaryPanel.percentSign") : "0"}
               value={discountValue}
               onChange={(e) => setDiscountValue(e.target.value)}
               inputProps={{ min: 0, max: discountType === "percentage" ? 100 : undefined, step: discountType === "percentage" ? 1 : 0.01 }}
@@ -525,7 +526,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                 disabled={!canDiscount || discountLoading || (selectedSale.payments?.length ?? 0) > 0}
                 sx={{ fontSize: "0.65rem", px: 0.5, minWidth: 0, whiteSpace: "nowrap" }}
               >
-                إلغاء
+                {t("common:cancel")}
               </Button>
             )}
           </Stack>}
@@ -534,7 +535,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
           {(selectedSale.payments?.length ?? 0) > 0 && (
             <Box>
               <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: "block", mb: 0.4, fontSize: "0.68rem" }}>
-                المدفوعات
+                {t("pos:payments")}
               </Typography>
               <Stack gap={0.4}>
                 {selectedSale.payments!.map((p) => (
@@ -573,30 +574,30 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
           {!isFullyPaid && (
             <Box sx={{ borderRadius: 1, border: "1px solid", borderColor: "primary.200", bgcolor: "#eff6ff", p: 1 }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.6}>
-                <Typography sx={{ fontSize: "0.7rem" }} color="primary.dark" fontWeight={700}>إضافة دفعة</Typography>
+                <Typography sx={{ fontSize: "0.7rem" }} color="primary.dark" fontWeight={700}>{t("pos:addPayment")}</Typography>
                 <Typography sx={{ fontSize: "0.7rem" }} color="error.main" fontWeight={800}>
-                  المتبقي: {formatNumber(due, 2)}
+                  {t("pos:summaryPanel.remainingColon", { amount: formatNumber(due, 2) })}
                 </Typography>
               </Stack>
               <Stack direction="row" alignItems="center" gap={0.5}>
                 <FormControl size="small" sx={{ minWidth: 78 }}>
-                  <InputLabel sx={{ fontSize: "0.75rem" }}>طريقة</InputLabel>
+                  <InputLabel sx={{ fontSize: "0.75rem" }}>{t("pos:summaryPanel.methodLabel")}</InputLabel>
                   <Select
                     value={newPaymentMethod}
-                    label="طريقة"
+                    label={t("pos:summaryPanel.methodLabel")}
                     onChange={(e) => setNewPaymentMethod(e.target.value as Payment["method"])}
                     sx={{ fontSize: "0.75rem" }}
                   >
-                    <MenuItem value="cash" sx={{ fontSize: "0.75rem" }}>نقدي</MenuItem>
-                    <MenuItem value="bank_transfer" sx={{ fontSize: "0.75rem" }}>تحويل بنكي</MenuItem>
-                    <MenuItem value="visa" sx={{ fontSize: "0.75rem" }}>فيزا</MenuItem>
-                    <MenuItem value="other" sx={{ fontSize: "0.75rem" }}>أخرى</MenuItem>
+                    <MenuItem value="cash" sx={{ fontSize: "0.75rem" }}>{METHOD_LABELS.cash}</MenuItem>
+                    <MenuItem value="bank_transfer" sx={{ fontSize: "0.75rem" }}>{METHOD_LABELS.bank_transfer}</MenuItem>
+                    <MenuItem value="visa" sx={{ fontSize: "0.75rem" }}>{METHOD_LABELS.visa}</MenuItem>
+                    <MenuItem value="other" sx={{ fontSize: "0.75rem" }}>{METHOD_LABELS.other}</MenuItem>
                   </Select>
                 </FormControl>
                 <TextField
                   size="small"
                   type="number"
-                  placeholder="المبلغ"
+                  placeholder={t("pos:amount")}
                   value={newPaymentAmount}
                   onFocus={(e) => e.target.select()}
                   onChange={(e) => setNewPaymentAmount(e.target.value)}
@@ -635,7 +636,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                 onClick={handlePrintThermalInvoice}
                 sx={{ textTransform: "none", fontSize: "0.7rem", fontWeight: 600, py: 0.5 }}
               >
-                {thermalPdfLoading ? "..." : "طباعة"}
+                {thermalPdfLoading ? "..." : t("pos:summaryPanel.printButton")}
               </Button>
               <Button
                 fullWidth variant="outlined" size="small"
@@ -653,7 +654,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                 onClick={handleSendWhatsApp}
                 sx={{ textTransform: "none", fontSize: "0.7rem", fontWeight: 600, py: 0.5, color: "success.main", borderColor: "success.main", "&:hover": { borderColor: "success.dark", bgcolor: "success.50" } }}
               >
-                {whatsAppLoading ? "..." : "واتساب"}
+                {whatsAppLoading ? "..." : t("pos:summaryPanel.whatsappButton")}
               </Button>
             </Stack>
 
@@ -669,7 +670,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
             >
               {fullPaymentLoading
                 ? <CircularProgress size={16} color="inherit" />
-                : isFullyPaid ? "✓ تم التسديد" : "تسديد كامل"}
+                : isFullyPaid ? t("pos:summaryPanel.fullyPaidCheckmark") : t("pos:summaryPanel.fullPaymentButton")}
             </Button>
           </Box>
         </Box>

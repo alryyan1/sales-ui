@@ -19,6 +19,7 @@ import { SupplierLedgerPdf } from "@/components/suppliers/SupplierLedgerPdf";
 import { useSettings } from "@/context/SettingsContext";
 import supplierPaymentService from "@/services/supplierPaymentService";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 interface SuppliersSummaryTableProps {
   data: SupplierSummary[];
@@ -29,6 +30,7 @@ const SuppliersSummaryTable: React.FC<SuppliersSummaryTableProps> = ({
   data,
   onRowClick,
 }) => {
+  const { t } = useTranslation(["reports", "common"]);
   const navigate = useNavigate();
   const { settings } = useSettings();
   const [loadingPdfId, setLoadingPdfId] = useState<number | null>(null);
@@ -50,12 +52,12 @@ const SuppliersSummaryTable: React.FC<SuppliersSummaryTableProps> = ({
       
       await downloadPdf(
         pdfDocument,
-        `كشف_حساب_${supplier.name}_${new Date().toISOString().split("T")[0]}.pdf`
+        `${t("reports:suppliersSummary.ledgerFilenamePrefix")}_${supplier.name}_${new Date().toISOString().split("T")[0]}.pdf`
       );
     } catch (error: any) {
       console.error("Error fetching ledger:", error);
-      toast.error("خطأ", {
-        description: supplierPaymentService.getErrorMessage(error) || "فشل في جلب بيانات كشف الحساب",
+      toast.error(t("common:error"), {
+        description: supplierPaymentService.getErrorMessage(error) || t("reports:suppliersSummary.ledgerFetchFailed"),
       });
     } finally {
       setLoadingPdfId(null);
@@ -75,19 +77,19 @@ const SuppliersSummaryTable: React.FC<SuppliersSummaryTableProps> = ({
       <TableHeader>
         <TableRow className="bg-slate-50 hover:bg-slate-50">
           <TableHead className="text-right font-semibold">
-            اسم المورد
+            {t("reports:suppliersSummary.colSupplierName")}
           </TableHead>
           <TableHead className="text-right font-semibold">
-            إجمالي المدين
+            {t("reports:suppliersSummary.colTotalDebit")}
           </TableHead>
           <TableHead className="text-right font-semibold">
-            إجمالي الدائن
+            {t("reports:suppliersSummary.colTotalCredit")}
           </TableHead>
           <TableHead className="text-right font-semibold">
-            الرصيد
+            {t("reports:suppliersSummary.colBalance")}
           </TableHead>
           <TableHead className="text-center font-semibold w-[140px]">
-            الإجراءات
+            {t("reports:suppliersSummary.colActions")}
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -123,7 +125,7 @@ const SuppliersSummaryTable: React.FC<SuppliersSummaryTableProps> = ({
                   size="icon"
                   onClick={(e) => handleNavigateToLedger(e, supplier)}
                   className="h-8 w-8 text-slate-500 hover:text-blue-600"
-                  title="عرض كشف الحساب"
+                  title={t("reports:suppliersSummary.viewLedgerTooltip")}
                 >
                   <Eye className="h-4 w-4" />
                 </Button>
@@ -133,7 +135,7 @@ const SuppliersSummaryTable: React.FC<SuppliersSummaryTableProps> = ({
                   onClick={(e) => handleDownloadPdf(e, supplier)}
                   disabled={loadingPdfId === supplier.id}
                   className="h-8 w-8 text-slate-500 hover:text-blue-600"
-                  title="تحميل PDF"
+                  title={t("reports:suppliersSummary.downloadPdfTooltip")}
                 >
                   {loadingPdfId === supplier.id ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

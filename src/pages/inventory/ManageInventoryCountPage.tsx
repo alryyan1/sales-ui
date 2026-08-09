@@ -44,14 +44,7 @@ import productService from "@/services/productService";
 import dayjs from "dayjs";
 import InlineCreateInventoryCountItem from "@/components/inventory/InlineCreateInventoryCountItem";
 import { ProductImage } from "@/components/products/ProductImage";
-
-const STATUS_LABEL: Record<string, string> = {
-  draft: "مسودة",
-  in_progress: "قيد التنفيذ",
-  completed: "مكتمل",
-  approved: "معتمد",
-  rejected: "مرفوض",
-};
+import { useTranslation } from "react-i18next";
 
 const STATUS_COLOR: Record<string, "default" | "info" | "warning" | "success" | "error"> = {
   draft: "default",
@@ -62,6 +55,14 @@ const STATUS_COLOR: Record<string, "default" | "info" | "warning" | "success" | 
 };
 
 const ManageInventoryCountPage: React.FC = () => {
+  const { t, i18n } = useTranslation(["inventory"]);
+  const STATUS_LABEL: Record<string, string> = {
+    draft: t("inventory:manageCountPage.statusLabels.draft"),
+    in_progress: t("inventory:manageCountPage.statusLabels.in_progress"),
+    completed: t("inventory:manageCountPage.statusLabels.completed"),
+    approved: t("inventory:manageCountPage.statusLabels.approved"),
+    rejected: t("inventory:manageCountPage.statusLabels.rejected"),
+  };
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -87,7 +88,7 @@ const ManageInventoryCountPage: React.FC = () => {
     mutationFn: (data: { product_id: number; actual_quantity?: number }) =>
       inventoryCountService.addCountItem(Number(id), data),
     onSuccess: () => {
-      toast.success("تم إضافة المنتج بنجاح");
+      toast.success(t("inventory:manageCountPage.productAddedSuccess"));
       queryClient.invalidateQueries({ queryKey: ["inventory-count", id] });
     },
     onError: (error) => toast.error(inventoryCountService.getErrorMessage(error)),
@@ -110,7 +111,7 @@ const ManageInventoryCountPage: React.FC = () => {
     mutationFn: (itemId: number) =>
       inventoryCountService.deleteCountItem(Number(id), itemId),
     onSuccess: () => {
-      toast.success("تم حذف المنتج");
+      toast.success(t("inventory:manageCountPage.itemDeletedSuccess"));
       queryClient.invalidateQueries({ queryKey: ["inventory-count", id] });
     },
     onError: (error) => toast.error(inventoryCountService.getErrorMessage(error)),
@@ -120,7 +121,7 @@ const ManageInventoryCountPage: React.FC = () => {
     mutationFn: (status: string) =>
       inventoryCountService.updateInventoryCount(Number(id), { status } as any),
     onSuccess: () => {
-      toast.success("تم تحديث الحالة");
+      toast.success(t("inventory:manageCountPage.statusUpdatedSuccess"));
       queryClient.invalidateQueries({ queryKey: ["inventory-count", id] });
     },
     onError: (error) => toast.error(inventoryCountService.getErrorMessage(error)),
@@ -129,7 +130,7 @@ const ManageInventoryCountPage: React.FC = () => {
   const approveMutation = useMutation({
     mutationFn: () => inventoryCountService.approveCount(Number(id)),
     onSuccess: () => {
-      toast.success("تم اعتماد الجرد وتعديل المخزون");
+      toast.success(t("inventory:manageCountPage.approveSuccess"));
       queryClient.invalidateQueries({ queryKey: ["inventory-count", id] });
     },
     onError: (error) => toast.error(inventoryCountService.getErrorMessage(error)),
@@ -138,7 +139,7 @@ const ManageInventoryCountPage: React.FC = () => {
   const rejectMutation = useMutation({
     mutationFn: () => inventoryCountService.rejectCount(Number(id)),
     onSuccess: () => {
-      toast.success("تم رفض الجرد");
+      toast.success(t("inventory:manageCountPage.rejectSuccess"));
       queryClient.invalidateQueries({ queryKey: ["inventory-count", id] });
     },
     onError: (error) => toast.error(inventoryCountService.getErrorMessage(error)),
@@ -199,13 +200,13 @@ const ManageInventoryCountPage: React.FC = () => {
 
   if (!count) return (
     <Box sx={{ p: 4, textAlign: "center" }}>
-      <Typography variant="h6" color="text.secondary">الجرد غير موجود</Typography>
-      <Button variant="outlined" sx={{ mt: 2 }} onClick={() => navigate("/inventory/counts")}>العودة للقائمة</Button>
+      <Typography variant="h6" color="text.secondary">{t("inventory:manageCountPage.countNotFound")}</Typography>
+      <Button variant="outlined" sx={{ mt: 2 }} onClick={() => navigate("/inventory/counts")}>{t("inventory:manageCountPage.backToList")}</Button>
     </Box>
   );
 
   return (
-    <Box sx={{ p: 2 }} dir="rtl">
+    <Box sx={{ p: 2 }} dir={i18n.dir()}>
 
       {/* ── Compact Header ─────────────────────────────────────────────────── */}
       <Paper variant="outlined" sx={{ p: 1.5, mb: 2, borderRadius: 2 }}>
@@ -216,7 +217,7 @@ const ManageInventoryCountPage: React.FC = () => {
           </IconButton>
 
           <Stack direction="row" alignItems="center" gap={1} sx={{ flexShrink: 0 }}>
-            <Typography variant="subtitle1" fontWeight={700}>جرد #{count.id}</Typography>
+            <Typography variant="subtitle1" fontWeight={700}>{t("inventory:manageCountPage.countHash", { id: count.id })}</Typography>
             <Chip
               label={STATUS_LABEL[count.status] ?? count.status}
               color={STATUS_COLOR[count.status] ?? "default"}
@@ -233,14 +234,14 @@ const ManageInventoryCountPage: React.FC = () => {
             <Stack direction="row" alignItems="center" gap={0.5}>
               <AccessTime sx={{ fontSize: 13, color: "text.disabled" }} />
               <Typography variant="caption" color="text.secondary">
-                إنشاء: {dayjs(count.created_at).format("YYYY-MM-DD HH:mm")}
+                {t("inventory:manageCountPage.createdLabel", { date: dayjs(count.created_at).format("YYYY-MM-DD HH:mm") })}
               </Typography>
             </Stack>
             {count.started_at && (
               <Stack direction="row" alignItems="center" gap={0.5}>
                 <PlayArrow sx={{ fontSize: 13, color: "info.main" }} />
                 <Typography variant="caption" color="info.main">
-                  بدأ: {dayjs(count.started_at).format("YYYY-MM-DD HH:mm")}
+                  {t("inventory:manageCountPage.startedLabel", { date: dayjs(count.started_at).format("YYYY-MM-DD HH:mm") })}
                 </Typography>
               </Stack>
             )}
@@ -248,7 +249,7 @@ const ManageInventoryCountPage: React.FC = () => {
               <Stack direction="row" alignItems="center" gap={0.5}>
                 <DoneAll sx={{ fontSize: 13, color: "warning.main" }} />
                 <Typography variant="caption" color="warning.main">
-                  اكتمل: {dayjs(count.completed_at).format("YYYY-MM-DD HH:mm")}
+                  {t("inventory:manageCountPage.completedLabel", { date: dayjs(count.completed_at).format("YYYY-MM-DD HH:mm") })}
                 </Typography>
               </Stack>
             )}
@@ -256,7 +257,7 @@ const ManageInventoryCountPage: React.FC = () => {
               <Stack direction="row" alignItems="center" gap={0.5}>
                 <CheckCircle sx={{ fontSize: 13, color: "success.main" }} />
                 <Typography variant="caption" color="success.main">
-                  اعتمد: {dayjs(count.approved_at).format("YYYY-MM-DD HH:mm")}
+                  {t("inventory:manageCountPage.approvedLabel", { date: dayjs(count.approved_at).format("YYYY-MM-DD HH:mm") })}
                 </Typography>
               </Stack>
             )}
@@ -267,9 +268,9 @@ const ManageInventoryCountPage: React.FC = () => {
           {/* Stat pills */}
           <Stack direction="row" gap={0.75} sx={{ flexShrink: 0 }}>
             {[
-              { icon: <Inventory sx={{ fontSize: 12 }} />, value: summary.total, label: "صنف", color: "primary.main", bg: "grey.50", border: "divider" },
-              { icon: <Assessment sx={{ fontSize: 12 }} />, value: (summary.diff > 0 ? "+" : "") + summary.diff, label: "فرق", color: getDiffColor(summary.diff), bg: summary.diff !== 0 ? "#fef2f2" : "grey.50", border: summary.diff !== 0 ? "error.light" : "divider" },
-              { icon: <Warning sx={{ fontSize: 12 }} />, value: summary.withDiff, label: "بفروق", color: summary.withDiff > 0 ? "warning.main" : "text.disabled", bg: summary.withDiff > 0 ? "#fffbeb" : "grey.50", border: summary.withDiff > 0 ? "warning.light" : "divider" },
+              { icon: <Inventory sx={{ fontSize: 12 }} />, value: summary.total, label: t("inventory:manageCountPage.statItem"), color: "primary.main", bg: "grey.50", border: "divider" },
+              { icon: <Assessment sx={{ fontSize: 12 }} />, value: (summary.diff > 0 ? "+" : "") + summary.diff, label: t("inventory:manageCountPage.statDiff"), color: getDiffColor(summary.diff), bg: summary.diff !== 0 ? "#fef2f2" : "grey.50", border: summary.diff !== 0 ? "error.light" : "divider" },
+              { icon: <Warning sx={{ fontSize: 12 }} />, value: summary.withDiff, label: t("inventory:manageCountPage.statWithDiff"), color: summary.withDiff > 0 ? "warning.main" : "text.disabled", bg: summary.withDiff > 0 ? "#fffbeb" : "grey.50", border: summary.withDiff > 0 ? "warning.light" : "divider" },
             ].map(({ icon, value, label, color, bg, border }, i) => (
               <Box key={i} sx={{ px: 1.25, py: 0.5, bgcolor: bg, borderRadius: 1.5, border: "1px solid", borderColor: border }}>
                 <Stack direction="row" alignItems="center" gap={0.4}>
@@ -288,20 +289,20 @@ const ManageInventoryCountPage: React.FC = () => {
             {canEdit && (
               <>
                 <Button size="small" variant="contained" startIcon={<Add />} onClick={() => setShowInlineAdd(true)} disableElevation sx={{ fontSize: 12 }}>
-                  إضافة
+                  {t("inventory:manageCountPage.addButton")}
                 </Button>
                 {count.status === "draft" && (
                   <Button size="small" variant="outlined" color="info" startIcon={<PlayArrow />}
                     onClick={() => updateStatusMutation.mutate("in_progress")}
                     disabled={updateStatusMutation.isPending} sx={{ fontSize: 12 }}>
-                    بدء الجرد
+                    {t("inventory:manageCountPage.startCountButton")}
                   </Button>
                 )}
                 {canComplete && (
                   <Button size="small" variant="outlined" color="warning" startIcon={<Save />}
                     onClick={() => updateStatusMutation.mutate("completed")}
                     disabled={updateStatusMutation.isPending} sx={{ fontSize: 12 }}>
-                    إكمال
+                    {t("inventory:manageCountPage.completeButton")}
                   </Button>
                 )}
               </>
@@ -309,14 +310,14 @@ const ManageInventoryCountPage: React.FC = () => {
             {canApprove && (
               <>
                 <Button size="small" variant="contained" color="success" startIcon={<CheckCircle />}
-                  onClick={() => { if (window.confirm("اعتماد الجرد وتعديل المخزون؟")) approveMutation.mutate(); }}
+                  onClick={() => { if (window.confirm(t("inventory:manageCountPage.confirmApprove"))) approveMutation.mutate(); }}
                   disabled={approveMutation.isPending} disableElevation sx={{ fontSize: 12 }}>
-                  اعتماد
+                  {t("inventory:manageCountPage.approveButton")}
                 </Button>
                 <Button size="small" variant="outlined" color="error" startIcon={<Cancel />}
-                  onClick={() => { if (window.confirm("رفض الجرد؟")) rejectMutation.mutate(); }}
+                  onClick={() => { if (window.confirm(t("inventory:manageCountPage.confirmReject"))) rejectMutation.mutate(); }}
                   disabled={rejectMutation.isPending} sx={{ fontSize: 12 }}>
-                  رفض
+                  {t("inventory:manageCountPage.rejectButton")}
                 </Button>
               </>
             )}
@@ -342,12 +343,12 @@ const ManageInventoryCountPage: React.FC = () => {
           borderBottom="1px solid" sx={{ borderColor: "divider" }}>
           <Stack direction="row" alignItems="center" gap={1}>
             <ListAlt sx={{ fontSize: 16, color: "text.secondary" }} />
-            <Typography variant="body2" fontWeight={700}>قائمة المنتجات</Typography>
+            <Typography variant="body2" fontWeight={700}>{t("inventory:manageCountPage.productsListTitle")}</Typography>
             <Chip label={filteredItems.length} size="small" sx={{ height: 18, fontSize: 11, fontWeight: 700 }} />
           </Stack>
           <TextField
             size="small"
-            placeholder="بحث..."
+            placeholder={t("inventory:manageCountPage.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             InputProps={{ startAdornment: <InputAdornment position="start"><Search fontSize="small" color="action" /></InputAdornment> }}
@@ -359,12 +360,12 @@ const ManageInventoryCountPage: React.FC = () => {
           <Table size="small">
             <TableHead>
               <TableRow sx={{ bgcolor: "grey.50" }}>
-                <TableCell sx={{ fontWeight: 700, fontSize: 12, width: 40 }}>#</TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: 12, width: 40 }}>{t("inventory:manageCountPage.colNumber")}</TableCell>
                 <TableCell sx={{ fontWeight: 700, fontSize: 12, width: 48, p: 0.5 }} />
-                <TableCell sx={{ fontWeight: 700, fontSize: 12 }}>المنتج</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 700, fontSize: 12, width: 110 }}>الكمية المسجلة</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 700, fontSize: 12, width: 150 }}>الكمية الفعلية</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 700, fontSize: 12, width: 90 }}>الفرق</TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: 12 }}>{t("inventory:manageCountPage.colProduct")}</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 700, fontSize: 12, width: 110 }}>{t("inventory:manageCountPage.colRecordedQuantity")}</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 700, fontSize: 12, width: 150 }}>{t("inventory:manageCountPage.colActualQuantity")}</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 700, fontSize: 12, width: 90 }}>{t("inventory:manageCountPage.colDifference")}</TableCell>
                 {canEdit && <TableCell sx={{ width: 50 }} />}
               </TableRow>
             </TableHead>
@@ -373,7 +374,7 @@ const ManageInventoryCountPage: React.FC = () => {
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 8, color: "text.disabled" }}>
                     <ListAlt sx={{ fontSize: 40, mb: 1, display: "block", mx: "auto", opacity: 0.3 }} />
-                    لا توجد منتجات مطابقة
+                    {t("inventory:manageCountPage.noMatchingProducts")}
                   </TableCell>
                 </TableRow>
               ) : (

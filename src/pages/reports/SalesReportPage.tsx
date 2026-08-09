@@ -16,8 +16,10 @@ import ReportFilters, { ReportFilterValues } from "@/components/reports/sales/Re
 import { ReportStats } from "@/components/reports/sales/ReportStats";
 import { PaymentsTable } from "@/components/reports/sales/PaymentsTable";
 import { LedgerSaleEditorDialog } from "@/components/clients/LedgerSaleEditorDialog";
+import { useTranslation } from "react-i18next";
 
 const SalesReportPage: React.FC = () => {
+  const { t, i18n } = useTranslation(["reports"]);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -99,11 +101,11 @@ const SalesReportPage: React.FC = () => {
     if (currentFilters.userId) params.append("user_id", String(currentFilters.userId));
     if (currentFilters.shiftId) params.append("shift_id", String(currentFilters.shiftId));
     window.open(`${webUrl}/reports/sales/pdf?${params.toString()}`, "_blank");
-    toast.info("جاري فتح PDF في تبويب جديد...");
+    toast.info(t("reports:salesReportPage.openingPdf"));
   };
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background" dir={i18n.dir()}>
       {/* Header */}
       <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
         <div className="px-4 sm:px-6 lg:px-8 py-2.5">
@@ -116,7 +118,7 @@ const SalesReportPage: React.FC = () => {
                 >
                   <ArrowLeft size={16} />
                 </button>
-                <h1 className="text-base font-bold">تقرير المبيعات</h1>
+                <h1 className="text-base font-bold">{t("reports:salesReportPage.title")}</h1>
               </div>
               <button
                 onClick={handleDownloadPdf}

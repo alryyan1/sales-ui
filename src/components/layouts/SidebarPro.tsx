@@ -2,6 +2,7 @@ import React from "react";
 import { Sidebar, Menu, MenuItem, SubMenu } from "react-pro-sidebar";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 import { useTheme } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { LogOut, ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
 import { NavItem } from "./types";
 import { Box, Typography, IconButton } from "@mui/material";
@@ -25,6 +26,8 @@ const SidebarPro: React.FC<SidebarProProps> = ({
   const theme = useTheme();
   const location = useLocation();
   const { handleLogout, user } = useAuth();
+  const { t, i18n } = useTranslation(["common"]);
+  const isRtl = i18n.dir() === "rtl";
 
   // Helper to check if a menu item is active
   const isActive = (path: string) => location.pathname === path;
@@ -120,16 +123,16 @@ const SidebarPro: React.FC<SidebarProProps> = ({
   };
 
   return (
-    <div style={{ display: "flex", height: "100%", direction: "rtl" }}>
+    <div style={{ display: "flex", height: "100%", direction: isRtl ? "rtl" : "ltr" }}>
       <Sidebar
         collapsed={collapsed}
         toggled={toggled}
         onBackdropClick={() => onToggle(false)}
-        rtl={true}
+        rtl={isRtl}
         breakPoint="md"
         backgroundColor="#ffffff"
         rootStyles={{
-          borderLeft: "1px solid #e5e7eb",
+          [isRtl ? "borderLeft" : "borderRight"]: "1px solid #e5e7eb",
           color: "#374151", // slate-700
         }}
       >
@@ -189,7 +192,7 @@ const SidebarPro: React.FC<SidebarProProps> = ({
         <Menu
           menuItemStyles={{
             button: {
-              direction: "rtl",
+              direction: isRtl ? "rtl" : "ltr",
               [`&.active`]: {
                 backgroundColor: "#13395e",
                 color: "#b6c8d9",
@@ -215,7 +218,7 @@ const SidebarPro: React.FC<SidebarProProps> = ({
                 },
               }}
             >
-              {!collapsed && "تسجيل خروج"}
+              {!collapsed && t("common:logout")}
             </MenuItem>
           </Menu>
           {collapsed && (

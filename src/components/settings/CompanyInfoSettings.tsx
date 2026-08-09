@@ -1,4 +1,5 @@
 import { Controller, Control } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,10 +11,11 @@ interface CompanyInfoSettingsProps {
 }
 
 export const CompanyInfoSettings = ({ control }: CompanyInfoSettingsProps) => {
+  const { t } = useTranslation(["settings"]);
   return (
     <Card className="mx-auto max-w-4xl border shadow-sm">
       <CardHeader>
-        <CardTitle>معلومات الشركة الأساسية</CardTitle>
+        <CardTitle>{t("settings:companyInfoSectionTitle")}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap gap-6">
@@ -24,12 +26,12 @@ export const CompanyInfoSettings = ({ control }: CompanyInfoSettingsProps) => {
               control={control}
               render={({ field }) => (
                 <>
-                  <Label htmlFor="company_name">اسم الشركة</Label>
+                  <Label htmlFor="company_name">{t("settings:companyName")}</Label>
                   <div dir="ltr" className="[&_input]:!text-left [&_input]:![direction:ltr]">
                     <Input
                       id="company_name"
                       {...field}
-                      placeholder="أدخل اسم الشركة"
+                      placeholder={t("settings:companyNamePlaceholder")}
                       className="!text-left ![direction:ltr]"
                       dir="ltr"
                       style={{ direction: "ltr", textAlign: "left" }}
@@ -47,7 +49,7 @@ export const CompanyInfoSettings = ({ control }: CompanyInfoSettingsProps) => {
               control={control}
               render={({ field }) => (
                 <>
-                  <Label htmlFor="company_phone">رقم الهاتف 1</Label>
+                  <Label htmlFor="company_phone">{t("settings:companyPhone1Label")}</Label>
                   <div
                     dir="ltr"
                     className="[&_input]:!text-left [&_input]:![direction:ltr]"
@@ -56,7 +58,7 @@ export const CompanyInfoSettings = ({ control }: CompanyInfoSettingsProps) => {
                     <Input
                       id="company_phone"
                       {...field}
-                      placeholder="+249 1230 56130"
+                      placeholder={t("settings:companyPhone1Placeholder")}
                       className="!text-left ![direction:ltr]"
                       dir="ltr"
                       style={{ direction: "ltr", textAlign: "left" }}
@@ -74,7 +76,7 @@ export const CompanyInfoSettings = ({ control }: CompanyInfoSettingsProps) => {
               control={control}
               render={({ field }) => (
                 <>
-                  <Label htmlFor="company_phone_2">رقم الهاتف 2</Label>
+                  <Label htmlFor="company_phone_2">{t("settings:companyPhone2Label")}</Label>
                   <div
                     dir="ltr"
                     className="[&_input]:!text-left [&_input]:![direction:ltr]"
@@ -84,7 +86,7 @@ export const CompanyInfoSettings = ({ control }: CompanyInfoSettingsProps) => {
                       id="company_phone_2"
                       {...field}
                       value={field.value || ""}
-                      placeholder="+249 1247 81028"
+                      placeholder={t("settings:companyPhone2Placeholder")}
                       className="!text-left ![direction:ltr]"
                       dir="ltr"
                       style={{ direction: "ltr", textAlign: "left" }}
@@ -102,7 +104,7 @@ export const CompanyInfoSettings = ({ control }: CompanyInfoSettingsProps) => {
               control={control}
               render={({ field }) => (
                 <>
-                  <Label htmlFor="company_email">البريد الإلكتروني</Label>
+                  <Label htmlFor="company_email">{t("settings:companyEmail")}</Label>
                   <div dir="ltr" className="[&_input]:!text-left [&_input]:![direction:ltr]">
                     <Input
                       id="company_email"
@@ -126,7 +128,7 @@ export const CompanyInfoSettings = ({ control }: CompanyInfoSettingsProps) => {
               control={control}
               render={({ field }) => (
                 <>
-                  <Label htmlFor="tax_number">الرقم الضريبي</Label>
+                  <Label htmlFor="tax_number">{t("settings:taxNumberLabel")}</Label>
                   <div dir="ltr" className="[&_input]:!text-left [&_input]:![direction:ltr]">
                     <Input
                       id="tax_number"
@@ -149,13 +151,13 @@ export const CompanyInfoSettings = ({ control }: CompanyInfoSettingsProps) => {
               control={control}
               render={({ field }) => (
                 <>
-                  <Label htmlFor="company_address">العنوان</Label>
+                  <Label htmlFor="company_address">{t("settings:addressLabel")}</Label>
                   <div dir="ltr" className="[&_textarea]:!text-left [&_textarea]:![direction:ltr]">
                     <Textarea
                       id="company_address"
                       {...field}
                       rows={3}
-                      placeholder="تفاصيل العنوان للظهور في الفواتير"
+                      placeholder={t("settings:addressPlaceholder")}
                       className="!text-left ![direction:ltr]"
                       dir="ltr"
                       style={{ direction: "ltr", textAlign: "left" }}

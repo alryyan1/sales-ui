@@ -19,9 +19,10 @@ import {
 } from "@mui/material";
 import { formatNumber } from "@/constants";
 import { SalesWithDiscountsPdfDialog } from "@/components/reports/sales/SalesWithDiscountsPdfDialog";
+import { useTranslation } from "react-i18next";
 
 const SalesWithDiscountsPage: React.FC = () => {
-  // Removed useTranslation
+  const { t } = useTranslation(["reports", "common"]);
   const [sales, setSales] = useState<ApiSale[]>([]);
   const [loading, setLoading] = useState(false);
   const toYmd = (d: Date) => d.toISOString().split("T")[0];
@@ -57,8 +58,8 @@ const SalesWithDiscountsPage: React.FC = () => {
       console.error("Failed to fetch discounted sales", e);
       const errorMsg = saleService.getErrorMessage
         ? saleService.getErrorMessage(e)
-        : e?.message || "حدث خطأ أثناء جلب البيانات";
-      toast.error("خطأ", { description: errorMsg });
+        : e?.message || t("reports:salesWithDiscountsPage.fetchFailed");
+      toast.error(t("common:error"), { description: errorMsg });
       setSales([]);
     } finally {
       setLoading(false);
@@ -96,7 +97,7 @@ const SalesWithDiscountsPage: React.FC = () => {
       <Stack spacing={2}>
         <Stack direction="row" gap={1} alignItems="center" justifyContent="space-between">
           <Typography variant="h5" component="h2" sx={{ fontWeight: 700 }}>
-            تقرير المبيعات المخفضة
+            {t("reports:salesWithDiscountsPage.title")}
           </Typography>
           {/* <Button onClick={openPdf} variant="outlined" size="small">
             معاينة PDF
@@ -105,7 +106,7 @@ const SalesWithDiscountsPage: React.FC = () => {
         <Stack direction="row" gap={1} spacing={2} alignItems="flex-end">
           <TextField
             type="date"
-            label="البدء"
+            label={t("reports:salesWithDiscountsPage.startLabel")}
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
             size="small"
@@ -113,7 +114,7 @@ const SalesWithDiscountsPage: React.FC = () => {
           />
           <TextField
             type="date"
-            label="الانتهاء"
+            label={t("reports:salesWithDiscountsPage.endLabel")}
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
             size="small"
@@ -128,7 +129,7 @@ const SalesWithDiscountsPage: React.FC = () => {
             variant="contained"
             startIcon={loading ? <CircularProgress size={16} /> : undefined}
           >
-            {loading ? "جاري التحميل..." : "تصفية"}
+            {loading ? t("reports:salesWithDiscountsPage.loadingEllipsis") : t("reports:salesWithDiscountsPage.filterButton")}
           </Button>
         </Stack>
 
@@ -137,7 +138,7 @@ const SalesWithDiscountsPage: React.FC = () => {
           <Card>
             <CardContent sx={{ p: 2, textAlign: "center" }}>
               <Typography variant="caption" color="text.secondary">
-                إجمالي الخصم
+                {t("reports:salesWithDiscountsPage.totalDiscount")}
               </Typography>
               <Typography variant="h5" sx={{ fontWeight: 700, color: "error.main" }}>
                 {formatNumber(totals.totalDiscount)}
@@ -147,7 +148,7 @@ const SalesWithDiscountsPage: React.FC = () => {
           <Card>
             <CardContent sx={{ p: 2, textAlign: "center" }}>
               <Typography variant="caption" color="text.secondary">
-                العدد
+                {t("reports:salesWithDiscountsPage.count")}
               </Typography>
               <Typography variant="h5" sx={{ fontWeight: 700 }}>
                 {formatNumber(sales.length)}
@@ -162,13 +163,13 @@ const SalesWithDiscountsPage: React.FC = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell align="center">#</TableCell>
-                    <TableCell align="center">التاريخ</TableCell>
-                    <TableCell align="center">العميل</TableCell>
-                    <TableCell align="center">المجموع</TableCell>
-                    <TableCell align="center">المدفوع</TableCell>
-                    <TableCell align="center">الخصم</TableCell>
-                    <TableCell align="center">النوع</TableCell>
+                    <TableCell align="center">{t("reports:salesWithDiscountsPage.colNumber")}</TableCell>
+                    <TableCell align="center">{t("reports:salesWithDiscountsPage.colDate")}</TableCell>
+                    <TableCell align="center">{t("reports:salesWithDiscountsPage.colClient")}</TableCell>
+                    <TableCell align="center">{t("reports:salesWithDiscountsPage.colTotal")}</TableCell>
+                    <TableCell align="center">{t("reports:salesWithDiscountsPage.colPaid")}</TableCell>
+                    <TableCell align="center">{t("reports:salesWithDiscountsPage.colDiscount")}</TableCell>
+                    <TableCell align="center">{t("reports:salesWithDiscountsPage.colType")}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -182,7 +183,7 @@ const SalesWithDiscountsPage: React.FC = () => {
                     <TableRow>
                       <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
                         <Typography variant="body2" color="text.secondary">
-                          لا توجد مبيعات مخفضة
+                          {t("reports:salesWithDiscountsPage.noDiscountedSales")}
                         </Typography>
                       </TableCell>
                     </TableRow>

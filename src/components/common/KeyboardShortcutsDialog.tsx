@@ -13,6 +13,7 @@ import {
   Stack,
 } from "@mui/material";
 import { X, Keyboard } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface KeyboardShortcutsDialogProps {
   open: boolean;
@@ -25,29 +26,30 @@ interface Shortcut {
   category?: string;
 }
 
-const shortcuts: Shortcut[] = [
-  {
-    keys: ["+"],
-    description: "فتح نافذة الدفع / إنشاء عملية بيع جديدة",
-    category: "نقطة البيع",
-  },
-  {
-    keys: ["Ctrl", "N"],
-    description: "إنشاء عملية بيع جديدة",
-    category: "نقطة البيع",
-  },
-  {
-    keys: ["Ctrl", "S"],
-    description: "حفظ المسودة",
-    category: "نقطة البيع",
-  },
-];
-
 export const KeyboardShortcutsDialog: React.FC<KeyboardShortcutsDialogProps> = ({
   open,
   onClose,
 }) => {
+  const { t } = useTranslation(["common"]);
   const theme = useTheme();
+
+  const shortcuts: Shortcut[] = [
+    {
+      keys: ["+"],
+      description: t("common:keyboardShortcuts.openPaymentDialog"),
+      category: t("common:keyboardShortcuts.posCategory"),
+    },
+    {
+      keys: ["Ctrl", "N"],
+      description: t("common:keyboardShortcuts.createNewSale"),
+      category: t("common:keyboardShortcuts.posCategory"),
+    },
+    {
+      keys: ["Ctrl", "S"],
+      description: t("common:keyboardShortcuts.saveDraft"),
+      category: t("common:keyboardShortcuts.posCategory"),
+    },
+  ];
 
   const formatKey = (key: string): string => {
     const keyMap: Record<string, string> = {
@@ -64,7 +66,7 @@ export const KeyboardShortcutsDialog: React.FC<KeyboardShortcutsDialogProps> = (
   };
 
   const groupedShortcuts = shortcuts.reduce((acc, shortcut) => {
-    const category = shortcut.category || "عام";
+    const category = shortcut.category || t("common:keyboardShortcuts.generalCategory");
     if (!acc[category]) {
       acc[category] = [];
     }
@@ -95,7 +97,7 @@ export const KeyboardShortcutsDialog: React.FC<KeyboardShortcutsDialogProps> = (
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Keyboard size={24} />
           <Typography variant="h6" component="span">
-            اختصارات لوحة المفاتيح
+            {t("common:keyboardShortcuts.title")}
           </Typography>
         </Box>
         <Button
@@ -198,7 +200,7 @@ export const KeyboardShortcutsDialog: React.FC<KeyboardShortcutsDialogProps> = (
 
       <DialogActions sx={{ px: 3, py: 2 }}>
         <Button onClick={onClose} variant="contained" fullWidth>
-          إغلاق
+          {t("common:keyboardShortcuts.close")}
         </Button>
       </DialogActions>
     </Dialog>

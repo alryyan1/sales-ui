@@ -15,7 +15,7 @@
     "users": "المستخدمون",
     "login": "تسجيل الدخول",
     "register": "إنشاء حساب",
-    "roleLabel": "الصلاحيات", 
+    "roleLabel": "الصلاحيات",
     "deleteConfirm": "هل أنت متأكد من حذف هذا المستخدم؟ لا يمكن التراجع عن هذا الإجراء.",
     "roles": "الصلاحيات",
     "adjustments": "التعديلات",
@@ -23,7 +23,7 @@
     "salesReturns": "مرتجع المبيعات",
     "inventoryRequest": "طلبات الجرد",
     "requisitions": "طلبات المخزن",
-    "inventoryLog": "سجل الجرد",
+    "inventoryLog": "سجل المخزون",
     "salesDesc": "إدارة المبيعات، الفواتير، المدفوعات، والمزيد.",
     "purchasesDesc": "إدارة المشتريات، الفواتير، المدفوعات، والمزيد.",
     "inventoryDesc": "إدارة المنتجات، التصنيفات، التعديلات، والمزيد.",
@@ -38,10 +38,34 @@
     "whatsappSchedulers": "جدولة الواتساب",
     "admin": "الإدارة",
     "system": "النظام",
-    "units": "الوحدات"
-
-   
-  
-
-
+    "units": "الوحدات",
+    "expenses": "المصروفات",
+    "analytics": "التحليلات",
+    "inventory": "المخزون",
+    "showroom": "المعرض",
+    "stockAdjustments": "تعديلات المخزون",
+    "stockTransfers": "تحويل المخزون",
+    "inventoryCounts": "جرد المخزون",
+    "purchasesGroup": "الواردات",
+    "purchasesList": "قائمة المشتريات",
+    "salesReport": "تقرير المبيعات",
+    "purchasesReport": "تقرير المشتريات",
+    "dailyIncomeReport": "تقرير المبيعات الشهري",
+    "monthlyExpensesReport": "تقرير المصروفات الشهرية",
+    "bestSellingProducts": "المنتجات الأكثر مبيعاً",
+    "stagnantProducts": "المنتجات الراكدة",
+    "lowStockProducts": "المنتجات منخفضة المخزون",
+    "monthlyShiftsReport": "تقرير الورديات الشهري",
+    "warehouses": "المخازن",
+    "navPermissions": {
+      "superadminNotice": "المستخدم لديه صلاحية الوصول الكاملة لجميع صفحات النظام (Superadmin)، ولكن يمكنك تخصيص القائمة الجانبية له.",
+      "customizeSidebarTitle": "تخصيص القائمة الجانبية المسموحة",
+      "pageAccessPermissions": "صلاحيات الوصول للصفحات",
+      "deselectAll": "إلغاء تحديد الكل",
+      "selectAll": "تحديد الكل",
+      "selectPagesToShowHint": "اختر الصفحات التي تود إظهارها في القائمة الجانبية لهذا المستخدم.",
+      "selectPagesAccessHint": "اختر الصفحات التي يمكن للمستخدم الوصول إليها. سيتم إخفاء الصفحات غير المحددة من القائمة الجانبية.",
+      "pageCount": "({{count}} صفحة)",
+      "selectedCountSummary": "تم تحديد {{selected}} من {{total}} صفحة"
+    }
   }

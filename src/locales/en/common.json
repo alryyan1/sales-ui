@@ -45,5 +45,48 @@
   "errorUpdatingData": "Error updating data",
   "errorDeletingData": "Error deleting data",
   "apply": "Apply",
-  "all": "All"
-} 
+  "all": "All",
+  "switchLanguage": "Switch to Arabic",
+  "switchToEnglish": "English",
+  "switchToArabic": "العربية",
+  "logout": "Logout",
+  "retryAction": "Retry",
+  "notSpecified": "Not specified",
+  "copy": "Copy",
+  "pdfDownloadSuccess": "File downloaded successfully",
+  "pdfDownloadError": "Failed to generate PDF file",
+  "selectDate": "Select date",
+  "pdfViewerDialog": {
+    "defaultTitle": "Inventory Report",
+    "downloadButton": "Download",
+    "loadError": "Error loading PDF file",
+    "loadingPdf": "Loading PDF file...",
+    "close": "Close"
+  },
+  "keyboardShortcuts": {
+    "title": "Keyboard Shortcuts",
+    "close": "Close",
+    "generalCategory": "General",
+    "posCategory": "Point of Sale",
+    "openPaymentDialog": "Open payment dialog / create new sale",
+    "createNewSale": "Create new sale",
+    "saveDraft": "Save draft"
+  },
+  "toggleTheme": "Toggle theme",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "themeSystem": "System",
+  "accessDeniedTitle": "Access Denied",
+  "accessDeniedDesc": "You do not have the required permission ({{permission}}) to view this page.",
+  "notFoundPage": {
+    "unexpectedError": "An unexpected error occurred",
+    "lostTitle": "Oops, you lost your way!",
+    "errorTitle": "An unexpected error occurred",
+    "pathNotFound": "The path {{path}} was not found or has been moved elsewhere.",
+    "genericErrorDesc": "We apologize for this issue, our technical team is working to resolve it.",
+    "backToHome": "Back to Home",
+    "refreshPage": "Refresh Page",
+    "technicalDetails": "Technical Error Details",
+    "noAdditionalInfo": "No additional information about the error is available."
+  }
+}

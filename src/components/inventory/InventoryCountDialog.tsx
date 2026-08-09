@@ -16,6 +16,7 @@ import inventoryCountService, {
   InventoryCountFormData,
 } from "@/services/inventoryCountService";
 import { warehouseService } from "@/services/warehouseService";
+import { useTranslation } from "react-i18next";
 
 interface InventoryCountDialogProps {
   open: boolean;
@@ -30,6 +31,7 @@ const InventoryCountDialog: React.FC<InventoryCountDialogProps> = ({
   count,
   onSuccess,
 }) => {
+  const { t, i18n } = useTranslation(["inventory", "common"]);
   const isEdit = !!count;
 
   const {
@@ -56,12 +58,12 @@ const InventoryCountDialog: React.FC<InventoryCountDialogProps> = ({
         ? inventoryCountService.updateInventoryCount(count.id, data)
         : inventoryCountService.createInventoryCount(data),
     onSuccess: () => {
-      toast.success(isEdit ? "تم تحديث الجرد بنجاح" : "تم إنشاء الجرد بنجاح");
+      toast.success(isEdit ? t("inventory:countDialog.updateSuccess") : t("inventory:countDialog.createSuccess"));
       onSuccess();
       reset();
     },
     onError: (error) => {
-      toast.error("خطأ", {
+      toast.error(t("common:error"), {
         description: inventoryCountService.getErrorMessage(error),
       });
     },
@@ -88,19 +90,19 @@ const InventoryCountDialog: React.FC<InventoryCountDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth dir="rtl">
-      <DialogTitle>{isEdit ? "تعديل الجرد" : "جرد جديد"}</DialogTitle>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth dir={i18n.dir()}>
+      <DialogTitle>{isEdit ? t("inventory:countDialog.editTitle") : t("inventory:countDialog.newTitle")}</DialogTitle>
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
           <Controller
             name="warehouse_id"
             control={control}
-            rules={{ required: "المستودع مطلوب" }}
+            rules={{ required: t("inventory:countDialog.warehouseRequired") }}
             render={({ field }) => (
               <TextField
                 {...field}
                 select
-                label="المستودع"
+                label={t("inventory:countDialog.warehouseLabel")}
                 fullWidth
                 margin="normal"
                 error={!!errors.warehouse_id}
@@ -119,12 +121,12 @@ const InventoryCountDialog: React.FC<InventoryCountDialogProps> = ({
           <Controller
             name="count_date"
             control={control}
-            rules={{ required: "التاريخ مطلوب" }}
+            rules={{ required: t("inventory:countDialog.dateRequired") }}
             render={({ field }) => (
               <TextField
                 {...field}
                 type="date"
-                label="تاريخ الجرد"
+                label={t("inventory:countDialog.countDateLabel")}
                 fullWidth
                 margin="normal"
                 error={!!errors.count_date}
@@ -140,7 +142,7 @@ const InventoryCountDialog: React.FC<InventoryCountDialogProps> = ({
             render={({ field }) => (
               <TextField
                 {...field}
-                label="ملاحظات"
+                label={t("inventory:countDialog.notesLabel")}
                 fullWidth
                 margin="normal"
                 multiline
@@ -150,13 +152,13 @@ const InventoryCountDialog: React.FC<InventoryCountDialogProps> = ({
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose}>إلغاء</Button>
+          <Button onClick={onClose}>{t("common:cancel")}</Button>
           <Button
             type="submit"
             variant="contained"
             disabled={mutation.isPending}
           >
-            {mutation.isPending ? "جاري الحفظ..." : isEdit ? "تحديث" : "إنشاء"}
+            {mutation.isPending ? t("inventory:countDialog.savingEllipsis") : isEdit ? t("inventory:countDialog.updateButton") : t("inventory:countDialog.createButton")}
           </Button>
         </DialogActions>
       </form>

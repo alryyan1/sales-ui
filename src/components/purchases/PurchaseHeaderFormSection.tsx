@@ -14,6 +14,7 @@ import {
   alpha,
 } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { useTranslation } from "react-i18next";
 
 // Icons
 import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
@@ -89,6 +90,7 @@ export const PurchaseHeaderFormSection: React.FC<
   warehouses,
   loadingWarehouses,
 }) => {
+  const { t } = useTranslation(["purchases", "common"]);
   const { control } = useFormContext();
 
   const inputStyles = {
@@ -145,7 +147,7 @@ export const PurchaseHeaderFormSection: React.FC<
           }}
         >
           <InventoryOutlinedIcon sx={{ fontSize: 20, color: "primary.main" }} />
-          معلومات الطلب
+          {t("purchases:orderInfo")}
         </Typography>
       </Box>
 
@@ -172,7 +174,7 @@ export const PurchaseHeaderFormSection: React.FC<
             render={({ field, fieldState }) => (
               <Box>
                 <FieldLabel required icon={<InventoryOutlinedIcon />}>
-                  المخزن
+                  {t("purchases:warehouseLabel")}
                 </FieldLabel>
                 <Autocomplete
                   options={warehouses || []}
@@ -188,7 +190,7 @@ export const PurchaseHeaderFormSection: React.FC<
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      placeholder="اختر المخزن"
+                      placeholder={t("purchases:selectWarehousePlaceholder")}
                       error={!!fieldState.error}
                       helperText={fieldState.error?.message}
                       size="small"
@@ -206,7 +208,7 @@ export const PurchaseHeaderFormSection: React.FC<
             render={({ field, fieldState }) => (
               <Box>
                 <FieldLabel required icon={<LocalShippingOutlinedIcon />}>
-                  المورد
+                  {t("purchases:supplierLabel")}
                 </FieldLabel>
                 <Autocomplete
                   options={suppliers}
@@ -223,12 +225,12 @@ export const PurchaseHeaderFormSection: React.FC<
                   loading={loadingSuppliers}
                   disabled={isDisabled}
                   size="small"
-                  noOptionsText="لا توجد نتائج"
-                  loadingText="جاري البحث..."
+                  noOptionsText={t("common:noResultsFound")}
+                  loadingText={t("purchases:searchingEllipsis")}
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      placeholder="ابحث عن مورد..."
+                      placeholder={t("purchases:searchForSupplierPlaceholder")}
                       error={!!fieldState.error}
                       helperText={fieldState.error?.message}
                       sx={inputStyles}
@@ -275,7 +277,7 @@ export const PurchaseHeaderFormSection: React.FC<
             render={({ field, fieldState }) => (
               <Box>
                 <FieldLabel required icon={<CalendarTodayOutlinedIcon />}>
-                  تاريخ الفاتوره
+                  {t("purchases:invoiceDateLabel")}
                 </FieldLabel>
                 <DatePicker
                   value={field.value ?? null}

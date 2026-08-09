@@ -1,6 +1,7 @@
 // src/pages/PurchaseDetailsPage.tsx
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { toast } from "sonner";
 
@@ -37,7 +38,7 @@ import dayjs from "dayjs";
 // Helper to format currency
 
 const PurchaseDetailsPage: React.FC = () => {
-  // Removed useTranslation
+  const { t } = useTranslation(["purchases", "common"]);
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>(); // Get the 'id' parameter from the URL
 
@@ -60,7 +61,7 @@ const PurchaseDetailsPage: React.FC = () => {
         console.error(`Failed to fetch purchase ${purchaseId}:`, err);
         const errorMsg = purchaseService.getErrorMessage(err);
         setError(errorMsg);
-        toast.error("خطأ", { description: errorMsg });
+        toast.error(t("common:error"), { description: errorMsg });
         // Optional: Navigate back or to a not-found page on error
         // navigate('/purchases');
       } finally {
@@ -73,7 +74,7 @@ const PurchaseDetailsPage: React.FC = () => {
     if (id && !isNaN(numericId) && numericId > 0) {
       fetchPurchaseDetails(numericId);
     } else {
-      setError("معرف شراء غير صالح."); // Add translation key
+      setError(t("purchases:invalidId"));
       setIsLoading(false);
       // Optionally navigate away if ID is invalid
       // navigate('/404');
@@ -94,7 +95,7 @@ const PurchaseDetailsPage: React.FC = () => {
         }}
       >
         <CircularProgress />
-        <Typography sx={{ ml: 2 }}>جاري التحميل...</Typography>
+        <Typography sx={{ ml: 2 }}>{t("common:loading")}</Typography>
       </Box>
     );
   }
@@ -109,7 +110,7 @@ const PurchaseDetailsPage: React.FC = () => {
           startIcon={<ArrowBackIcon />}
           onClick={() => navigate("/purchases")}
         >
-          العودة للقائمة {/* Add key */}
+          {t("purchases:backToList")}
         </Button>
       </Box>
     );
@@ -119,12 +120,12 @@ const PurchaseDetailsPage: React.FC = () => {
     // Should ideally be caught by error state, but handle just in case
     return (
       <Box sx={{ p: 3 }}>
-        <Typography>لم يتم العثور على الشراء</Typography> {/* Add key */}
+        <Typography>{t("purchases:details.purchaseNotFoundShort")}</Typography>
         <Button
           startIcon={<ArrowBackIcon />}
           onClick={() => navigate("/purchases")}
         >
-          العودة للقائمة
+          {t("purchases:backToList")}
         </Button>
       </Box>
     );
@@ -138,7 +139,7 @@ const PurchaseDetailsPage: React.FC = () => {
         <IconButton
           onClick={() => navigate("/purchases")}
           sx={{ mr: 1 }}
-          aria-label="رجوع"
+          aria-label={t("purchases:details.backButtonAria")}
         >
           <ArrowBackIcon />
         </IconButton>
@@ -147,7 +148,7 @@ const PurchaseDetailsPage: React.FC = () => {
           component="h1"
           className="text-gray-800 dark:text-gray-100 font-semibold"
         >
-          تفاصيل الشراء #{purchase.id}
+          {t("purchases:details.detailsHash", { id: purchase.id })}
         </Typography>
       </Box>
 
@@ -160,7 +161,7 @@ const PurchaseDetailsPage: React.FC = () => {
         <Grid container spacing={3}>
           <Grid xs={12} sm={6} md={4}>
             <Typography variant="overline" color="text.secondary">
-              المورد
+              {t("purchases:supplier")}
             </Typography>
             <Typography variant="body1" fontWeight="medium">
               {purchase.supplier_name || "---"}
@@ -168,7 +169,7 @@ const PurchaseDetailsPage: React.FC = () => {
           </Grid>
           <Grid xs={12} sm={6} md={4}>
             <Typography variant="overline" color="text.secondary">
-              تاريخ الشراء
+              {t("purchases:purchaseDate")}
             </Typography>
             <Typography variant="body1" fontWeight="medium">
               {dayjs(purchase.purchase_date).format("YYYY-MM-DD")}
@@ -176,7 +177,7 @@ const PurchaseDetailsPage: React.FC = () => {
           </Grid>
           <Grid xs={12} sm={6} md={4}>
             <Typography variant="overline" color="text.secondary">
-              المرجع
+              {t("purchases:reference")}
             </Typography>
             <Typography variant="body1" fontWeight="medium">
               {purchase.reference_number || "---"}
@@ -184,15 +185,15 @@ const PurchaseDetailsPage: React.FC = () => {
           </Grid>
           <Grid xs={12} sm={6} md={4}>
             <Typography variant="overline" color="text.secondary">
-              الحالة
+              {t("purchases:status")}
             </Typography>
             <Box sx={{ mt: 0.5 }}>
               <Chip
                 label={
                   {
-                    received: "تم الاستلام",
-                    pending: "معلق",
-                    ordered: "تم الطلب",
+                    received: t("purchases:status_received"),
+                    pending: t("purchases:details.statusPendingAlt"),
+                    ordered: t("purchases:status_ordered"),
                   }[purchase.status] || purchase.status
                 }
                 size="small"
@@ -208,18 +209,16 @@ const PurchaseDetailsPage: React.FC = () => {
           </Grid>
           <Grid xs={12} sm={6} md={4}>
             <Typography variant="overline" color="text.secondary">
-              سجل بواسطة
+              {t("purchases:details.recordedBy")}
             </Typography>{" "}
-            {/* Add key */}
             <Typography variant="body1" fontWeight="medium">
               {purchase.user_name || "---"}
             </Typography>
           </Grid>
           <Grid xs={12} sm={6} md={4}>
             <Typography variant="overline" color="text.secondary">
-              تاريخ التسجيل
+              {t("purchases:details.registeredAt")}
             </Typography>{" "}
-            {/* Add key */}
             <Typography variant="body1" fontWeight="medium">
               {dayjs(purchase.created_at).format("YYYY-MM-DD")}
             </Typography>
@@ -227,7 +226,7 @@ const PurchaseDetailsPage: React.FC = () => {
           {purchase.notes && (
             <Grid xs={12}>
               <Typography variant="overline" color="text.secondary">
-                ملاحظات
+                {t("purchases:details.notes")}
               </Typography>
               <Typography
                 variant="body2"
@@ -250,14 +249,14 @@ const PurchaseDetailsPage: React.FC = () => {
         }}
       >
         <Typography variant="h6" component="h2">
-          العناصر
+          {t("purchases:details.items")}
         </Typography>
         <Button
           variant="contained"
           startIcon={<InventoryIcon />}
           onClick={() => navigate(`/purchases/${purchase.id}/items`)}
         >
-          إدارة العناصر
+          {t("purchases:details.manageItems")}
         </Button>
       </Box>
       <TableContainer
@@ -271,16 +270,16 @@ const PurchaseDetailsPage: React.FC = () => {
             className="dark:bg-gray-700"
           >
             <TableRow>
-              <TableCell className="dark:text-gray-300">المنتج</TableCell>
+              <TableCell className="dark:text-gray-300">{t("purchases:product")}</TableCell>
               <TableCell className="dark:text-gray-300">SKU</TableCell>
               <TableCell align="right" className="dark:text-gray-300">
-                الكمية
+                {t("purchases:quantity")}
               </TableCell>
               <TableCell align="right" className="dark:text-gray-300">
-                تكلفة الوحدة
+                {t("purchases:fields.unitCost")}
               </TableCell>
               <TableCell align="right" className="dark:text-gray-300">
-                التكلفة الإجمالية
+                {t("purchases:totalCost")}
               </TableCell>
             </TableRow>
           </TableHead>
@@ -288,7 +287,7 @@ const PurchaseDetailsPage: React.FC = () => {
             {purchase.items?.map((item) => (
               <TableRow key={item.id} hover>
                 <TableCell className="dark:text-gray-100">
-                  {item.product_name || `(منتج ID: ${item.product_id})`}
+                  {item.product_name || t("purchases:details.productIdFallback", { id: item.product_id })}
                 </TableCell>
                 <TableCell className="dark:text-gray-100">
                   {item.product_sku || "---"}
@@ -325,7 +324,7 @@ const PurchaseDetailsPage: React.FC = () => {
           fontWeight="bold"
           className="text-gray-800 dark:text-gray-100"
         >
-          المجموع الكلي: {formatCurrency(purchase.total_amount)}
+          {t("purchases:details.grandTotalLabel", { amount: formatCurrency(purchase.total_amount) })}
         </Typography>
       </Box>
     </Box>

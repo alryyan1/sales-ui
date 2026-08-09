@@ -27,5 +27,32 @@
   "whatsappSchedulers": "WhatsApp Schedulers",
   "inventoryRequest": "Request Stock",
   "requisitions": "Stock Requisitions",
-  "expenses": "Expenses"
+  "expenses": "Expenses",
+  "showroom": "Showroom",
+  "stockAdjustments": "Stock Adjustments",
+  "stockTransfers": "Stock Transfers",
+  "inventoryCounts": "Inventory Counts",
+  "purchasesGroup": "Purchases",
+  "purchasesList": "Purchases List",
+  "salesReport": "Sales Report",
+  "purchasesReport": "Purchases Report",
+  "inventoryLog": "Inventory Log",
+  "dailyIncomeReport": "Daily Income Report",
+  "monthlyExpensesReport": "Monthly Expenses Report",
+  "bestSellingProducts": "Best Selling Products",
+  "stagnantProducts": "Stagnant Products",
+  "lowStockProducts": "Low Stock Products",
+  "monthlyShiftsReport": "Monthly Shifts Report",
+  "warehouses": "Warehouses",
+  "navPermissions": {
+    "superadminNotice": "The user has full access to all system pages (Superadmin), but you can customize their sidebar menu.",
+    "customizeSidebarTitle": "Customize Allowed Sidebar Menu",
+    "pageAccessPermissions": "Page Access Permissions",
+    "deselectAll": "Deselect All",
+    "selectAll": "Select All",
+    "selectPagesToShowHint": "Choose the pages you want to show in the sidebar menu for this user.",
+    "selectPagesAccessHint": "Choose the pages the user can access. Unselected pages will be hidden from the sidebar.",
+    "pageCount": "({{count}} page)",
+    "selectedCountSummary": "Selected {{selected}} of {{total}} pages"
+  }
 }

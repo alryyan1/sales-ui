@@ -23,10 +23,12 @@ import {
   Inventory as InventoryIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Warehouse, warehouseService } from "../../services/warehouseService";
 import WarehouseFormDialog from "./WarehouseFormDialog";
 
 const WarehousesListPage: React.FC = () => {
+  const { t } = useTranslation(["warehouses"]);
   const navigate = useNavigate();
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,7 +101,7 @@ const WarehousesListPage: React.FC = () => {
           gap={1}
         >
           <StoreIcon fontSize="large" color="primary" />
-          المستودعات
+          {t("warehouses:listPage.title")}
         </Typography>
         <Button
           variant="contained"
@@ -107,7 +109,7 @@ const WarehousesListPage: React.FC = () => {
           startIcon={<AddIcon />}
           onClick={handleAdd}
         >
-          إضافة مستودع
+          {t("warehouses:listPage.addWarehouse")}
         </Button>
       </Box>
 
@@ -116,22 +118,22 @@ const WarehousesListPage: React.FC = () => {
           <TableHead>
             <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
               <TableCell>
-                <strong>المعرف</strong>
+                <strong>{t("warehouses:listPage.columnId")}</strong>
               </TableCell>
               <TableCell>
-                <strong>الاسم</strong>
+                <strong>{t("warehouses:listPage.columnName")}</strong>
               </TableCell>
               <TableCell>
-                <strong>العنوان</strong>
+                <strong>{t("warehouses:listPage.columnAddress")}</strong>
               </TableCell>
               <TableCell>
-                <strong>معلومات الاتصال</strong>
+                <strong>{t("warehouses:listPage.columnContactInfo")}</strong>
               </TableCell>
               <TableCell>
-                <strong>الحالة</strong>
+                <strong>{t("warehouses:listPage.columnStatus")}</strong>
               </TableCell>
               <TableCell align="right">
-                <strong>الإجراءات</strong>
+                <strong>{t("warehouses:listPage.columnActions")}</strong>
               </TableCell>
             </TableRow>
           </TableHead>
@@ -139,13 +141,13 @@ const WarehousesListPage: React.FC = () => {
             {loading ? (
               <TableRow>
                 <TableCell colSpan={6} align="center">
-                  جاري التحميل...
+                  {t("warehouses:listPage.loadingEllipsis")}
                 </TableCell>
               </TableRow>
             ) : warehouses.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} align="center">
-                  لا توجد مستودعات.
+                  {t("warehouses:listPage.noWarehouses")}
                 </TableCell>
               </TableRow>
             ) : (
@@ -157,7 +159,7 @@ const WarehousesListPage: React.FC = () => {
                   <TableCell>{warehouse.contact_info || "-"}</TableCell>
                   <TableCell>
                     <Chip
-                      label={warehouse.is_active ? "نشط" : "غير نشط"}
+                      label={warehouse.is_active ? t("warehouses:listPage.active") : t("warehouses:listPage.inactive")}
                       color={warehouse.is_active ? "success" : "default"}
                       size="small"
                     />
@@ -167,7 +169,7 @@ const WarehousesListPage: React.FC = () => {
                       color="primary"
                       size="small"
                       onClick={() => handleViewProducts(warehouse.id)}
-                      title="عرض المنتجات"
+                      title={t("warehouses:listPage.viewProducts")}
                     >
                       <InventoryIcon />
                     </IconButton>
@@ -175,11 +177,11 @@ const WarehousesListPage: React.FC = () => {
                       color="primary"
                       size="small"
                       onClick={() => handleEdit(warehouse)}
-                      title="تعديل"
+                      title={t("warehouses:listPage.edit")}
                     >
                       <EditIcon />
                     </IconButton>
-                    <Tooltip title={warehouse.is_active ? "تعطيل المستودع" : "تفعيل المستودع"}>
+                    <Tooltip title={warehouse.is_active ? t("warehouses:listPage.disableWarehouse") : t("warehouses:listPage.enableWarehouse")}>
                       <Switch
                         size="small"
                         checked={warehouse.is_active}

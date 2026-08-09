@@ -55,18 +55,12 @@ import {
   Cell,
 } from "recharts";
 
-// --- Zod Schema for Filter Form ---
-const profitLossFilterSchema = z
-  .object({
-    startDate: z.date({ required_error: "تاريخ البدء مطلوب" }),
-    endDate: z.date({ required_error: "تاريخ الانتهاء مطلوب" }),
-  })
-  .refine((data) => data.endDate >= data.startDate, {
-    message: "تاريخ الانتهاء يجب أن يكون بعد تاريخ البدء",
-    path: ["endDate"],
-  });
+import { useTranslation } from "react-i18next";
 
-type ProfitLossFilterValues = z.infer<typeof profitLossFilterSchema>;
+type ProfitLossFilterValues = {
+  startDate: Date;
+  endDate: Date;
+};
 
 // --- Type for Report Data ---
 interface ProfitLossData {
@@ -86,6 +80,22 @@ interface ProfitLossData {
 
 // --- Component ---
 const ProfitLossReportPage: React.FC = () => {
+  const { t } = useTranslation(["reports"]);
+
+  const profitLossFilterSchema = useMemo(
+    () =>
+      z
+        .object({
+          startDate: z.date({ required_error: t("reports:profitLossReportPage.startDateRequired") }),
+          endDate: z.date({ required_error: t("reports:profitLossReportPage.endDateRequired") }),
+        })
+        .refine((data) => data.endDate >= data.startDate, {
+          message: t("reports:profitLossReportPage.endDateAfterStartDate"),
+          path: ["endDate"],
+        }),
+    [t]
+  );
+
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -126,7 +136,7 @@ const ProfitLossReportPage: React.FC = () => {
     } catch (err) {
       const errorMsg = getErrorMessage(err);
       setError(errorMsg);
-      toast.error("فشل تحميل التقرير", { description: errorMsg });
+      toast.error(t("reports:profitLossReportPage.loadReportFailed"), { description: errorMsg });
     } finally {
       setIsLoading(false);
     }
@@ -179,22 +189,22 @@ const ProfitLossReportPage: React.FC = () => {
     if (!reportData) return [];
     return [
       {
-        name: "الإيرادات",
+        name: t("reports:profitLossReportPage.chartRevenue"),
         value: reportData.revenue,
         fill: "#10b981", // Emerald 500
       },
       {
-        name: "التكاليف",
+        name: t("reports:profitLossReportPage.chartCosts"),
         value: reportData.cost_of_goods_sold,
         fill: "#f59e0b", // Amber 500
       },
       {
-        name: "المصروفات",
+        name: t("reports:profitLossReportPage.chartExpenses"),
         value: reportData.total_expenses,
         fill: "#ef4444", // Red 500
       },
       {
-        name: "صافي الربح",
+        name: t("reports:profitLossReportPage.chartNetProfit"),
         value: reportData.net_profit,
         fill: reportData.net_profit >= 0 ? "#3b82f6" : "#ef4444", // Blue 500 or Red if loss
       },
@@ -236,23 +246,23 @@ const ProfitLossReportPage: React.FC = () => {
             </IconButton>
             <Box>
               <Typography variant="h5" fontWeight={700} color="text.primary">
-                تقرير الأرباح والخسائر
+                {t("reports:profitLossReportPage.title")}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                نظرة شاملة على الأداء المالي للمنشأة
+                {t("reports:profitLossReportPage.subtitle")}
               </Typography>
             </Box>
           </Stack>
 
           <Stack direction="row" spacing={1}>
-            <Tooltip title="طباعة التقرير">
+            <Tooltip title={t("reports:profitLossReportPage.printReportTooltip")}>
               <Button
                 variant="outlined"
                 startIcon={<PrintIcon />}
                 onClick={handlePrint}
                 sx={{ textTransform: "none" }}
               >
-                طباعة
+                {t("reports:profitLossReportPage.printButton")}
               </Button>
             </Tooltip>
           </Stack>
@@ -289,7 +299,7 @@ const ProfitLossReportPage: React.FC = () => {
               >
                 <FilterIcon color="action" fontSize="small" />
                 <Typography variant="subtitle2" fontWeight={600}>
-                  تصفية النتائج:
+                  {t("reports:profitLossReportPage.filterResultsLabel")}
                 </Typography>
               </Box>
 
@@ -299,7 +309,7 @@ const ProfitLossReportPage: React.FC = () => {
                   name="startDate"
                   render={({ field }) => (
                     <DatePicker
-                      label="من تاريخ"
+                      label={t("reports:profitLossReportPage.fromDateLabel")}
                       value={field.value}
                       onChange={field.onChange}
                       slotProps={{
@@ -316,7 +326,7 @@ const ProfitLossReportPage: React.FC = () => {
                   name="endDate"
                   render={({ field }) => (
                     <DatePicker
-                      label="إلى تاريخ"
+                      label={t("reports:profitLossReportPage.toDateLabel")}
                       value={field.value}
                       onChange={field.onChange}
                       slotProps={{
@@ -341,7 +351,7 @@ const ProfitLossReportPage: React.FC = () => {
                   startIcon={<ClearIcon />}
                   fullWidth
                 >
-                  مسح
+                  {t("reports:profitLossReportPage.clearButton")}
                 </Button>
                 <Button
                   type="submit"
@@ -352,7 +362,7 @@ const ProfitLossReportPage: React.FC = () => {
                   }
                   fullWidth
                 >
-                  تحديث التقرير
+                  {t("reports:profitLossReportPage.updateReportButton")}
                 </Button>
               </Stack>
             </Stack>
@@ -361,7 +371,7 @@ const ProfitLossReportPage: React.FC = () => {
           {/* Error State */}
           {error && (
             <Alert severity="error">
-              <AlertTitle>خطأ</AlertTitle>
+              <AlertTitle>{t("reports:profitLossReportPage.errorTitle")}</AlertTitle>
               {error}
             </Alert>
           )}
@@ -371,7 +381,7 @@ const ProfitLossReportPage: React.FC = () => {
             <Box sx={{ py: 8, textAlign: "center" }}>
               <CircularProgress />
               <Typography sx={{ mt: 2 }} color="text.secondary">
-                جاري جلب البيانات المالية...
+                {t("reports:profitLossReportPage.fetchingFinancialData")}
               </Typography>
             </Box>
           )}
@@ -386,9 +396,10 @@ const ProfitLossReportPage: React.FC = () => {
                 gutterBottom
                 sx={{ display: "none", "@media print": { display: "block" } }}
               >
-                تقرير الأرباح والخسائر للفترة من
-                {format(new Date(reportData.start_date), "yyyy-MM-dd")} إلى
-                {format(new Date(reportData.end_date), "yyyy-MM-dd")}
+                {t("reports:profitLossReportPage.printHeaderTitle", {
+                  start: format(new Date(reportData.start_date), "yyyy-MM-dd"),
+                  end: format(new Date(reportData.end_date), "yyyy-MM-dd"),
+                })}
               </Typography>
 
               {/* Summary Cards Row */}
@@ -417,7 +428,7 @@ const ProfitLossReportPage: React.FC = () => {
                         gap={1}
                       >
                         <TrendingUpIcon fontSize="small" color="success" />
-                        إجمالي الإيرادات
+                        {t("reports:profitLossReportPage.totalRevenueLabel")}
                       </Typography>
                       <Typography
                         variant="h4"
@@ -427,7 +438,7 @@ const ProfitLossReportPage: React.FC = () => {
                         {formatNumber(reportData.revenue)}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        مجموع المبيعات في الفترة المحددة
+                        {t("reports:profitLossReportPage.totalSalesInPeriod")}
                       </Typography>
                     </Stack>
                   </CardContent>
@@ -453,7 +464,7 @@ const ProfitLossReportPage: React.FC = () => {
                         gap={1}
                       >
                         <TrendingDownIcon fontSize="small" color="error" />
-                        إجمالي التكاليف والمصروفات
+                        {t("reports:profitLossReportPage.totalCostsExpensesLabel")}
                       </Typography>
                       <Typography
                         variant="h4"
@@ -466,7 +477,7 @@ const ProfitLossReportPage: React.FC = () => {
                         )}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        تكلفة البضاعة + المصروفات التشغيلية
+                        {t("reports:profitLossReportPage.cogsPlusOperatingExpenses")}
                       </Typography>
                     </Stack>
                   </CardContent>
@@ -503,7 +514,7 @@ const ProfitLossReportPage: React.FC = () => {
                             reportData.net_profit >= 0 ? "primary" : "error"
                           }
                         />
-                        صافي الربح / الخسارة
+                        {t("reports:profitLossReportPage.netProfitLossLabel")}
                       </Typography>
                       <Typography
                         variant="h4"
@@ -517,7 +528,7 @@ const ProfitLossReportPage: React.FC = () => {
                         {formatNumber(reportData.net_profit)}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        الناتج النهائي للأعمال
+                        {t("reports:profitLossReportPage.finalBusinessResult")}
                       </Typography>
                     </Stack>
                   </CardContent>
@@ -537,8 +548,8 @@ const ProfitLossReportPage: React.FC = () => {
                   sx={{ flex: 2, width: "100%" }}
                 >
                   <CardHeader
-                    title="قائمة الدخل التفصيلية"
-                    subheader="تفاصيل الإيرادات والمصروفات"
+                    title={t("reports:profitLossReportPage.incomeStatementTitle")}
+                    subheader={t("reports:profitLossReportPage.incomeStatementSubtitle")}
                     avatar={<MoneyIcon color="action" />}
                   />
                   <Divider />
@@ -559,7 +570,7 @@ const ProfitLossReportPage: React.FC = () => {
                             }}
                           >
                             <Typography variant="body2" color="text.secondary">
-                              إجمالي المبيعات (Gross Sales)
+                              {t("reports:profitLossReportPage.grossSalesLabel")}
                             </Typography>
                             <Typography variant="body2">
                               {formatNumber(
@@ -580,7 +591,7 @@ const ProfitLossReportPage: React.FC = () => {
                                 color="error.main"
                                 sx={{ pl: 2 }}
                               >
-                                (-) مرتجعات المبيعات
+                                {t("reports:profitLossReportPage.salesReturnsLabel")}
                               </Typography>
                               <Typography variant="body2" color="error.main">
                                 ({formatNumber(reportData.returns_value || 0)})
@@ -597,7 +608,7 @@ const ProfitLossReportPage: React.FC = () => {
                             }}
                           >
                             <Typography fontWeight={600}>
-                              = صافي الإيرادات (Net Revenue)
+                              {t("reports:profitLossReportPage.netRevenueLabel")}
                             </Typography>
                             <Typography fontWeight={600} color="success.main">
                               {formatNumber(reportData.revenue)}
@@ -622,7 +633,7 @@ const ProfitLossReportPage: React.FC = () => {
                             }}
                           >
                             <Typography variant="body2" color="text.secondary">
-                              تكلفة المبيعات (Gross COGS)
+                              {t("reports:profitLossReportPage.grossCogsLabel")}
                             </Typography>
                             <Typography variant="body2">
                               (
@@ -646,7 +657,7 @@ const ProfitLossReportPage: React.FC = () => {
                                 color="success.main"
                                 sx={{ pl: 2 }}
                               >
-                                (+) تكلفة المرتجعات (تعود للمخزون)
+                                {t("reports:profitLossReportPage.returnsCostLabel")}
                               </Typography>
                               <Typography variant="body2" color="success.main">
                                 {formatNumber(reportData.returns_cost || 0)}
@@ -663,7 +674,7 @@ const ProfitLossReportPage: React.FC = () => {
                             }}
                           >
                             <Typography fontWeight={500} color="text.secondary">
-                              = (-) صافي تكلفة البضاعة المباعة
+                              {t("reports:profitLossReportPage.netCogsLabel")}
                             </Typography>
                             <Typography fontWeight={500} color="error.main">
                               ({formatNumber(reportData.cost_of_goods_sold)})
@@ -682,7 +693,7 @@ const ProfitLossReportPage: React.FC = () => {
                           bgcolor: "action.hover",
                         }}
                       >
-                        <Typography fontWeight={700}>= مجمل الربح</Typography>
+                        <Typography fontWeight={700}>{t("reports:profitLossReportPage.grossProfitLabel")}</Typography>
                         <Typography
                           fontWeight={700}
                           color={
@@ -706,7 +717,7 @@ const ProfitLossReportPage: React.FC = () => {
                         }}
                       >
                         <Typography color="text.secondary" sx={{ pl: 2 }}>
-                          (-) المصروفات التشغيلية
+                          {t("reports:profitLossReportPage.operatingExpensesLabel")}
                         </Typography>
                         <Typography color="warning.dark">
                           ({formatNumber(reportData.total_expenses)})
@@ -731,7 +742,7 @@ const ProfitLossReportPage: React.FC = () => {
                         }}
                       >
                         <Typography variant="h6" fontWeight={800}>
-                          = صافي الربح
+                          {t("reports:profitLossReportPage.netProfitLabel")}
                         </Typography>
                         <Typography
                           variant="h5"
@@ -755,7 +766,7 @@ const ProfitLossReportPage: React.FC = () => {
                   variant="outlined"
                   sx={{ flex: 1, width: "100%", minHeight: 400 }}
                 >
-                  <CardHeader title="التمثيل البياني" />
+                  <CardHeader title={t("reports:profitLossReportPage.chartSectionTitle")} />
                   <Divider />
                   <CardContent
                     sx={{
@@ -782,7 +793,7 @@ const ProfitLossReportPage: React.FC = () => {
                         <RechartsTooltip
                           formatter={(value: number) => [
                             formatCurrency(value),
-                            "القيمة",
+                            t("reports:profitLossReportPage.valueTooltipLabel"),
                           ]}
                           cursor={{ fill: "transparent" }}
                           contentStyle={{
@@ -811,7 +822,7 @@ const ProfitLossReportPage: React.FC = () => {
                 sx={{ fontSize: 60, mb: 2, color: "action.active" }}
               />
               <Typography variant="h6" color="text.secondary">
-                الرجاء اختيار الفترة الزمنية لعرض التقرير
+                {t("reports:profitLossReportPage.emptyStateMessage")}
               </Typography>
             </Box>
           )}

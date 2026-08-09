@@ -43,40 +43,41 @@ import apiClient from "@/lib/axios";
 import { useAuth } from "@/context/AuthContext";
 import { warehouseService, Warehouse } from "@/services/warehouseService"; // Import warehouse service
 import { ProductImage } from "@/components/products/ProductImage";
+import { useTranslation, TFunction } from "react-i18next";
 
-// --- Zod Schema with Arabic messages ---
-const adjustmentReasons = [
-  { value: "stock_take", label: "جرد المخزون" },
-  { value: "damaged", label: "تلف" },
-  { value: "lost", label: "فقدان" },
-  { value: "found", label: "اكتشاف" },
-  { value: "initial_stock", label: "مخزون ابتدائي" },
-  { value: "adjustment", label: "تعديل عادي" },
-  { value: "other", label: "أخرى" },
+const getAdjustmentReasons = (t: TFunction) => [
+  { value: "stock_take", label: t("inventory:adjustmentFormModal.reasons.stock_take") },
+  { value: "damaged", label: t("inventory:adjustmentFormModal.reasons.damaged") },
+  { value: "lost", label: t("inventory:adjustmentFormModal.reasons.lost") },
+  { value: "found", label: t("inventory:adjustmentFormModal.reasons.found") },
+  { value: "initial_stock", label: t("inventory:adjustmentFormModal.reasons.initial_stock") },
+  { value: "adjustment", label: t("inventory:adjustmentFormModal.reasons.adjustment") },
+  { value: "other", label: t("inventory:adjustmentFormModal.reasons.other") },
 ] as const;
 
-const adjustmentFormSchema = z.object({
-  warehouse_id: z.number({ required_error: "يرجى اختيار المخزن" }),
-  product_id: z
-    .number({ required_error: "يرجى اختيار منتج" })
-    .positive({ message: "يرجى اختيار منتج صحيح" }),
-  selected_product_name: z.string().optional(),
-  purchase_item_id: z.number().positive().nullable().optional(),
-  selected_batch_info: z.string().nullable().optional(),
-  // We will split quantity handling into: adjustmentType ('add' | 'subtract') and numerical value
-  quantity_value: z.coerce
-    .number({
-      required_error: "هذا الحقل مطلوب",
-      invalid_type_error: "يجب أن يكون رقماً صحيحاً",
-    })
-    .int({ message: "يجب أن يكون رقماً صحيحاً" })
-    .positive({ message: "يجب أن تكون القيمة أكبر من صفر" }),
-  adjustment_type: z.enum(["add", "subtract"]),
-  reason: z.string().min(1, { message: "هذا الحقل مطلوب" }),
-  notes: z.string().nullable().optional(),
-});
+const getAdjustmentFormSchema = (t: TFunction) =>
+  z.object({
+    warehouse_id: z.number({ required_error: t("inventory:adjustmentFormModal.warehouseRequired") }),
+    product_id: z
+      .number({ required_error: t("inventory:adjustmentFormModal.productRequired") })
+      .positive({ message: t("inventory:adjustmentFormModal.productPositive") }),
+    selected_product_name: z.string().optional(),
+    purchase_item_id: z.number().positive().nullable().optional(),
+    selected_batch_info: z.string().nullable().optional(),
+    // We will split quantity handling into: adjustmentType ('add' | 'subtract') and numerical value
+    quantity_value: z.coerce
+      .number({
+        required_error: t("inventory:adjustmentFormModal.fieldRequired"),
+        invalid_type_error: t("inventory:adjustmentFormModal.mustBeInteger"),
+      })
+      .int({ message: t("inventory:adjustmentFormModal.mustBeInteger") })
+      .positive({ message: t("inventory:adjustmentFormModal.mustBeGreaterThanZero") }),
+    adjustment_type: z.enum(["add", "subtract"]),
+    reason: z.string().min(1, { message: t("inventory:adjustmentFormModal.fieldRequired") }),
+    notes: z.string().nullable().optional(),
+  });
 
-type AdjustmentFormValues = z.infer<typeof adjustmentFormSchema>;
+type AdjustmentFormValues = z.infer<ReturnType<typeof getAdjustmentFormSchema>>;
 
 // --- Component Props ---
 interface StockAdjustmentFormModalProps {
@@ -91,6 +92,9 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
   onClose,
   onSaveSuccess,
 }) => {
+  const { t, i18n } = useTranslation(["inventory", "common"]);
+  const adjustmentReasons = React.useMemo(() => getAdjustmentReasons(t), [t]);
+  const adjustmentFormSchema = React.useMemo(() => getAdjustmentFormSchema(t), [t]);
   const { user } = useAuth();
 
   // State for async data
@@ -286,8 +290,8 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
 
     try {
       const result = await stockAdjustmentService.createAdjustment(apiData);
-      toast.success("نجح", {
-        description: "تم حفظ التعديل بنجاح",
+      toast.success(t("inventory:adjustmentFormModal.successTitle"), {
+        description: t("inventory:adjustmentFormModal.adjustmentSavedSuccess"),
       });
       onSaveSuccess(result.product);
       onClose();
@@ -295,7 +299,7 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
       console.error("Failed to save stock adjustment:", err);
       const generalError = stockAdjustmentService.getErrorMessage(err);
       const apiErrors = stockAdjustmentService.getValidationErrors(err);
-      toast.error("خطأ", { description: generalError });
+      toast.error(t("inventory:adjustmentFormModal.errorTitle"), { description: generalError });
       setServerError(generalError);
       if (apiErrors) {
         Object.entries(apiErrors).forEach(([field, messages]) => {
@@ -314,14 +318,14 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
   return (
     <Dialog open={isOpen} onClose={onClose} maxWidth="sm" fullWidth>
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
-        <DialogTitle sx={{ direction: "rtl", fontWeight: "bold" }}>
-          إضافة تعديل مخزون
+        <DialogTitle sx={{ direction: i18n.dir(), fontWeight: "bold" }}>
+          {t("inventory:adjustmentFormModal.title")}
         </DialogTitle>
-        <DialogContent sx={{ direction: "rtl" }}>
+        <DialogContent sx={{ direction: i18n.dir() }}>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3, pt: 2 }}>
             {serverError && !isSubmitting && (
               <Alert severity="error">
-                <AlertTitle>خطأ</AlertTitle>
+                <AlertTitle>{t("inventory:adjustmentFormModal.errorTitle")}</AlertTitle>
                 {serverError}
               </Alert>
             )}
@@ -332,10 +336,10 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
               name="warehouse_id"
               render={({ field, fieldState }) => (
                 <FormControl fullWidth error={!!fieldState.error}>
-                  <InputLabel>المخزن</InputLabel>
+                  <InputLabel>{t("inventory:adjustmentFormModal.warehouseLabel")}</InputLabel>
                   <Select
                     {...field}
-                    label="المخزن"
+                    label={t("inventory:adjustmentFormModal.warehouseLabel")}
                     disabled={isSubmitting || loadingWarehouses}
                     onChange={(e) => field.onChange(Number(e.target.value))}
                   >
@@ -372,7 +376,7 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
                       field.onChange(newValue.id);
                       setValue(
                         "selected_product_name",
-                        `${newValue.name} (${newValue.sku || "بدون SKU"})`
+                        `${newValue.name} (${newValue.sku || t("inventory:adjustmentFormModal.noSku")})`
                       );
                     } else {
                       field.onChange(undefined);
@@ -383,12 +387,12 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="المنتج"
-                      placeholder="ابحث عن منتج..."
+                      label={t("inventory:adjustmentFormModal.productLabel")}
+                      placeholder={t("inventory:adjustmentFormModal.searchProductPlaceholder")}
                       error={!!fieldState.error}
                       helperText={
                         !selectedWarehouseId
-                          ? "يرجى اختيار المخزن أولاً"
+                          ? t("inventory:adjustmentFormModal.chooseWarehouseFirst")
                           : fieldState.error?.message || ""
                       }
                       InputProps={{
@@ -437,7 +441,7 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
                     </Box>
                   )}
                   noOptionsText={
-                    productSearchInput ? "لا توجد نتائج" : "اكتب للبحث عن منتج"
+                    productSearchInput ? t("inventory:adjustmentFormModal.noResults") : t("inventory:adjustmentFormModal.typeToSearchProduct")
                   }
                 />
               )}
@@ -452,7 +456,7 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
                   options={[
                     {
                       id: null,
-                      label: "تعديل المخزون الإجمالي",
+                      label: t("inventory:adjustmentFormModal.totalAdjustmentOption"),
                       isTotal: true,
                     },
                     ...availableBatches.map((batch) => ({
@@ -474,7 +478,7 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
                         field.onChange(null);
                         setValue(
                           "selected_batch_info",
-                          "تعديل المخزون الإجمالي"
+                          t("inventory:adjustmentFormModal.totalAdjustmentOption")
                         );
                       } else {
                         field.onChange(newValue.id);
@@ -489,7 +493,7 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
                     field.value === null
                       ? {
                           id: null,
-                          label: "تعديل المخزون الإجمالي",
+                          label: t("inventory:adjustmentFormModal.totalAdjustmentOption"),
                           isTotal: true,
                         }
                       : availableBatches.find((b) => b.id === field.value)
@@ -510,16 +514,16 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="اختيار الدفعة (اختياري)"
+                      label={t("inventory:adjustmentFormModal.batchSelectLabel")}
                       placeholder={
                         loadingBatches
-                          ? "جاري التحميل..."
-                          : "اختر دفعة أو اتركه لتعديل المخزون الإجمالي"
+                          ? t("inventory:adjustmentFormModal.loadingEllipsis")
+                          : t("inventory:adjustmentFormModal.batchSelectPlaceholder")
                       }
-                      helperText="اختر دفعة محددة أو اتركه فارغاً لتعديل المخزون الإجمالي"
+                      helperText={t("inventory:adjustmentFormModal.batchSelectHelper")}
                     />
                   )}
-                  noOptionsText="لا توجد دفعات متاحة لهذا المنتج في هذا المخزن"
+                  noOptionsText={t("inventory:adjustmentFormModal.noBatchesAvailable")}
                 />
               )}
             />
@@ -542,11 +546,11 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
                   >
                     <ToggleButton value="add" sx={{ px: 3 }}>
                       <AddIcon sx={{ mr: 1 }} />
-                      <Typography fontWeight="bold">إضافة</Typography>
+                      <Typography fontWeight="bold">{t("inventory:adjustmentFormModal.addButton")}</Typography>
                     </ToggleButton>
                     <ToggleButton value="subtract" sx={{ px: 3 }}>
                       <RemoveIcon sx={{ mr: 1 }} />
-                      <Typography fontWeight="bold">خصم</Typography>
+                      <Typography fontWeight="bold">{t("inventory:adjustmentFormModal.subtractButton")}</Typography>
                     </ToggleButton>
                   </ToggleButtonGroup>
                 )}
@@ -560,8 +564,8 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
                   <TextField
                     {...field}
                     type="number"
-                    label="الكمية"
-                    placeholder="مثال: 5"
+                    label={t("inventory:adjustmentFormModal.quantityLabel")}
+                    placeholder={t("inventory:adjustmentFormModal.quantityPlaceholder")}
                     error={!!fieldState.error}
                     helperText={fieldState.error?.message}
                     disabled={isSubmitting}
@@ -577,8 +581,8 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
               name="reason"
               render={({ field, fieldState }) => (
                 <FormControl fullWidth error={!!fieldState.error}>
-                  <InputLabel>السبب</InputLabel>
-                  <Select {...field} label="السبب" disabled={isSubmitting}>
+                  <InputLabel>{t("inventory:adjustmentFormModal.reasonLabel")}</InputLabel>
+                  <Select {...field} label={t("inventory:adjustmentFormModal.reasonLabel")} disabled={isSubmitting}>
                     {adjustmentReasons.map((reason) => (
                       <MenuItem key={reason.value} value={reason.value}>
                         {reason.label}
@@ -599,8 +603,8 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
               render={({ field }) => (
                 <TextField
                   {...field}
-                  label="ملاحظات (اختياري)"
-                  placeholder="أضف أي ملاحظات إضافية..."
+                  label={t("inventory:adjustmentFormModal.notesLabel")}
+                  placeholder={t("inventory:adjustmentFormModal.notesPlaceholder")}
                   multiline
                   rows={3}
                   disabled={isSubmitting}
@@ -610,9 +614,9 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
             />
           </Box>
         </DialogContent>
-        <DialogActions sx={{ direction: "rtl", px: 3, pb: 2 }}>
+        <DialogActions sx={{ direction: i18n.dir(), px: 3, pb: 2 }}>
           <Button onClick={onClose} disabled={isSubmitting}>
-            إلغاء
+            {t("common:cancel")}
           </Button>
           <Button
             type="submit"
@@ -620,7 +624,7 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
             disabled={isSubmitting}
             startIcon={isSubmitting ? <CircularProgress size={16} /> : null}
           >
-            {isSubmitting ? "جاري الحفظ..." : "حفظ التعديل"}
+            {isSubmitting ? t("inventory:adjustmentFormModal.savingEllipsis") : t("inventory:adjustmentFormModal.saveAdjustmentButton")}
           </Button>
         </DialogActions>
       </form>

@@ -21,6 +21,7 @@ import { X, CheckCircle } from "lucide-react";
 import saleService, { Sale } from "@/services/saleService";
 import { formatNumber } from "@/constants";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 interface PastSalesSearchDialogProps {
   open: boolean;
@@ -33,6 +34,7 @@ export const PastSalesSearchDialog: React.FC<PastSalesSearchDialogProps> = ({
   onClose,
   onSelectSale,
 }) => {
+  const { t } = useTranslation(["sales"]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -63,7 +65,7 @@ export const PastSalesSearchDialog: React.FC<PastSalesSearchDialogProps> = ({
         }
       } catch (err) {
         console.error(err);
-        toast.error("فشل إحضار العمليات السابقة");
+        toast.error(t("sales:pastSalesDialog.fetchFailed"));
       } finally {
         setLoading(false);
       }
@@ -102,7 +104,7 @@ export const PastSalesSearchDialog: React.FC<PastSalesSearchDialogProps> = ({
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           <DialogTitle sx={{ p: 0, fontWeight: "bold" }}>
-            العمليات السابقة
+            {t("sales:pastSalesDialog.title")}
           </DialogTitle>
           <TextField
             type="date"
@@ -113,7 +115,7 @@ export const PastSalesSearchDialog: React.FC<PastSalesSearchDialogProps> = ({
               setPage(1); // Reset page on filter change
             }}
             InputLabelProps={{ shrink: true }}
-            label="تاريخ الفاتورة"
+            label={t("sales:pastSalesDialog.invoiceDateLabel")}
             sx={{ width: 150 }}
           />
         </Box>
@@ -130,7 +132,7 @@ export const PastSalesSearchDialog: React.FC<PastSalesSearchDialogProps> = ({
         ) : sales.length === 0 ? (
           <Box sx={{ p: 4, textAlign: "center" }}>
             <Typography color="text.secondary">
-              لا توجد عمليات سابقة لعرضها.
+              {t("sales:pastSalesDialog.noPastSales")}
             </Typography>
           </Box>
         ) : (
@@ -138,13 +140,13 @@ export const PastSalesSearchDialog: React.FC<PastSalesSearchDialogProps> = ({
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>رقم الفاتورة</TableCell>
-                  <TableCell>التاريخ</TableCell>
-                  <TableCell>العميل</TableCell>
-                  <TableCell>الأصناف</TableCell>
-                  <TableCell>الإجمالي</TableCell>
-                  <TableCell>المتبقي</TableCell>
-                  <TableCell align="center">اختيار</TableCell>
+                  <TableCell>{t("sales:pastSalesDialog.colInvoiceNumber")}</TableCell>
+                  <TableCell>{t("sales:pastSalesDialog.colDate")}</TableCell>
+                  <TableCell>{t("sales:pastSalesDialog.colClient")}</TableCell>
+                  <TableCell>{t("sales:pastSalesDialog.colItems")}</TableCell>
+                  <TableCell>{t("sales:pastSalesDialog.colTotal")}</TableCell>
+                  <TableCell>{t("sales:pastSalesDialog.colRemaining")}</TableCell>
+                  <TableCell align="center">{t("sales:pastSalesDialog.colSelect")}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -159,7 +161,7 @@ export const PastSalesSearchDialog: React.FC<PastSalesSearchDialogProps> = ({
                       <TableCell>#{sale.id}</TableCell>
                       <TableCell>{sale.sale_date}</TableCell>
                       <TableCell>
-                        {sale.client_name ?? sale.client?.name ?? "عميل نقدي"}
+                        {sale.client_name ?? sale.client?.name ?? t("sales:pastSalesDialog.cashClient")}
                       </TableCell>
                       <TableCell
                         sx={{
@@ -174,9 +176,9 @@ export const PastSalesSearchDialog: React.FC<PastSalesSearchDialogProps> = ({
                               (i) =>
                                 i.product?.name ??
                                 i.product_name ??
-                                "صنف غير معروف",
+                                t("sales:pastSalesDialog.unknownItem"),
                             )
-                            .join("، ") || ""
+                            .join(t("sales:pastSalesDialog.listSeparator")) || ""
                         }
                       >
                         {sale.items
@@ -184,9 +186,9 @@ export const PastSalesSearchDialog: React.FC<PastSalesSearchDialogProps> = ({
                             (i) =>
                               i.product?.name ??
                               i.product_name ??
-                              "صنف غير معروف",
+                              t("sales:pastSalesDialog.unknownItem"),
                           )
-                          .join("، ") || "—"}
+                          .join(t("sales:pastSalesDialog.listSeparator")) || "—"}
                       </TableCell>
                       <TableCell>{formatNumber(sale.total_amount)}</TableCell>
                       <TableCell>
@@ -210,11 +212,11 @@ export const PastSalesSearchDialog: React.FC<PastSalesSearchDialogProps> = ({
                           sx={{ textTransform: "none" }}
                           title={
                             !canReturn
-                              ? "لا يمكن إرجاع فاتورة غير مسددة بالكامل"
+                              ? t("sales:pastSalesDialog.cannotReturnUnpaid")
                               : ""
                           }
                         >
-                          اختيار
+                          {t("sales:pastSalesDialog.selectButton")}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -245,7 +247,7 @@ export const PastSalesSearchDialog: React.FC<PastSalesSearchDialogProps> = ({
       </DialogContent>
       <DialogActions sx={{ p: 2, borderTop: 1, borderColor: "divider" }}>
         <Button onClick={onClose} variant="outlined" color="inherit">
-          إغلاق
+          {t("sales:pastSalesDialog.close")}
         </Button>
       </DialogActions>
     </Dialog>

@@ -26,5 +26,38 @@
     "roleInUseError": "Cannot delete role. There are users assigned to this role.",
     "cannotDeleteAdminRole": "Cannot delete system administrator role.",
     "cannotEditAdminRole": "Cannot edit system administrator role.",
-    "roles": "Roles"
+    "roles": "Roles",
+    "fieldRequired": "This field is required",
+    "atLeastOnePermissionRequired": "At least one permission must be selected",
+    "successTitle": "Success",
+    "errorTitle": "Error",
+    "formModal": {
+        "editTitle": "Edit Role",
+        "addTitle": "Add Role",
+        "roleNamePlaceholder": "Enter role name",
+        "assignPermissionsTitle": "Assign Permissions",
+        "assignPermissionsDesc": "Select the permissions to grant to this role",
+        "noPermissionsAvailable": "No permissions available"
+    },
+    "cancel": "Cancel",
+    "updateButton": "Update",
+    "createButton": "Create",
+    "listPage": {
+        "pageTitle": "Roles Management",
+        "pageSubtitle": "Manage user roles and their permissions in the system",
+        "addRoleButton": "Add New Role",
+        "fetchPermissionsErrorTitle": "Error fetching permissions",
+        "deleteSuccessTitle": "Success",
+        "columnRoleName": "Role Name",
+        "columnPermissionsCount": "Permissions Count",
+        "columnUsersCount": "Users Count",
+        "columnActions": "Actions",
+        "noRolesAvailable": "No roles available currently",
+        "permissionUnitLabel": "permission",
+        "editTooltip": "Edit",
+        "deleteTooltip": "Delete",
+        "deleteConfirmTitle": "Confirm Deletion",
+        "deleteConfirmMessage": "Are you sure you want to delete this role? This action cannot be undone.",
+        "deleteButton": "Delete"
+    }
 } 

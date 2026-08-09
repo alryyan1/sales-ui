@@ -21,6 +21,7 @@ import {
   Bell,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   Button,
   Badge,
@@ -29,6 +30,7 @@ import { useSettings } from "@/context/SettingsContext";
 import { DRAWER_WIDTH } from "./types";
 import { KeyboardShortcutsDialog } from "../common/KeyboardShortcutsDialog";
 import { DueRemindersDialog } from "../pos/DueRemindersDialog";
+import LanguageSwitcher from "../common/LanguageSwitcher";
 import saleReminderService, { DueReminder } from "@/services/saleReminderService";
 import { db } from "@/firebase";
 import { collection, query, limit, onSnapshot } from "firebase/firestore";
@@ -50,6 +52,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
   const location = useLocation();
   const { user } = useAuth();
   const { getSetting } = useSettings();
+  const { t } = useTranslation(["pos"]);
   const [shortcutsDialogOpen, setShortcutsDialogOpen] = React.useState(false);
 
   const [dueReminders, setDueReminders] = React.useState<DueReminder[]>([]);
@@ -91,7 +94,9 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
       position="fixed"
       sx={{
         width: { sm: width },
-        mr: {
+        // always "ml" — the RTL emotion cache auto-flips this to margin-right
+        // when Arabic is active (see RootLayout.tsx's drawerAnchor note)
+        ml: {
           sm: isSidebarCollapsed
             ? `${COLLAPSED_DRAWER_WIDTH}px`
             : `${DRAWER_WIDTH}px`,
@@ -101,7 +106,6 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
         color: "text.primary",
         borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
         boxShadow: "none",
-        direction: "rtl",
         transition: theme.transitions.create(["width", "margin"], {
           easing: theme.transitions.easing.sharp,
           duration: theme.transitions.duration.leavingScreen,
@@ -141,7 +145,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
                 borderRadius: 2,
               }}
             >
-              الأكثر مبيعاً
+              {t("pos:topSellingButton")}
             </Button>
           )}
 
@@ -208,8 +212,10 @@ const TopAppBar: React.FC<TopAppBarProps> = ({
 
           {/* <ThemeToggle /> */}
 
+          <LanguageSwitcher />
+
           {/* Due Reminders Bell */}
-          <Tooltip title="تذكيرات الدفع">
+          <Tooltip title={t("pos:dueReminders")}>
             <IconButton
               size="small"
               color={dueReminders.length > 0 ? "warning" : "default"}

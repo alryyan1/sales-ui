@@ -8,6 +8,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { formatNumber } from "@/constants";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface SuppliersSummaryTotalsProps {
   totalDebit: number;
@@ -20,11 +21,12 @@ const SuppliersSummaryTotals: React.FC<SuppliersSummaryTotalsProps> = ({
   totalCredit,
   totalBalance,
 }) => {
+  const { t } = useTranslation(["reports"]);
   return (
     <Table>
       <TableBody>
         <TableRow className="bg-muted/30 font-bold">
-          <TableCell className="py-4 font-bold">الإجمالي</TableCell>
+          <TableCell className="py-4 font-bold">{t("reports:suppliersSummary.total")}</TableCell>
           <TableCell className="py-4 text-right font-bold">
             {formatNumber(totalDebit)}
           </TableCell>

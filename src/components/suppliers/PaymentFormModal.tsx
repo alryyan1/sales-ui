@@ -2,9 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { format } from 'date-fns';
-import { ar } from "date-fns/locale";
+import { ar, enUS } from "date-fns/locale";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 // UI Components
@@ -48,24 +49,17 @@ import supplierPaymentService, {
 } from '@/services/supplierPaymentService';
 
 // Schema matching PurchaseLedgerDialog (minus notes)
-const paymentSchema = z.object({
-  amount: z.coerce.number().min(0.01, "يجب أن يكون المبلغ أكبر من 0"),
-  method: z.string().min(1, "طريقة الدفع مطلوبة"),
-  payment_date: z.date({
-    required_error: "تاريخ الدفع مطلوب",
-  }),
-  reference_number: z.string().optional(),
-});
+const getPaymentSchema = (t: (key: string) => string) =>
+  z.object({
+    amount: z.coerce.number().min(0.01, t("suppliers:paymentForm.amountMinError")),
+    method: z.string().min(1, t("suppliers:paymentForm.methodRequired")),
+    payment_date: z.date({
+      required_error: t("suppliers:paymentForm.dateRequired"),
+    }),
+    reference_number: z.string().optional(),
+  });
 
-type PaymentFormValues = z.infer<typeof paymentSchema>;
-
-// Matching PurchaseLedgerDialog methods
-const PAYMENT_METHODS = [
-  { id: "cash", name: "كاش" },
-  { id: "bank_transfer", name: "تحويل بنكي" },
-  { id: "visa", name: "فيزا" },
-  { id: "other", name: "أخرى" },
-];
+type PaymentFormValues = z.infer<ReturnType<typeof getPaymentSchema>>;
 
 interface PaymentFormModalProps {
   isOpen: boolean;
@@ -84,11 +78,19 @@ const PaymentFormModal: React.FC<PaymentFormModalProps> = ({
   paymentToEdit,
   purchaseId,
 }) => {
+  const { t, i18n } = useTranslation(["suppliers", "common"]);
+  const dateLocale = i18n.language === "ar" ? ar : enUS;
+  const PAYMENT_METHODS = [
+    { id: "cash", name: t("suppliers:paymentForm.methodCash") },
+    { id: "bank_transfer", name: t("suppliers:paymentForm.methodBankTransfer") },
+    { id: "visa", name: t("suppliers:paymentForm.methodVisa") },
+    { id: "other", name: t("suppliers:paymentForm.methodOther") },
+  ];
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<PaymentFormValues>({
-    resolver: zodResolver(paymentSchema),
+    resolver: zodResolver(getPaymentSchema(t)),
     defaultValues: {
       amount: 0,
       method: "cash",
@@ -154,18 +156,18 @@ const PaymentFormModal: React.FC<PaymentFormModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl" dir="rtl">
+      <DialogContent className="max-w-2xl" dir={i18n.dir()}>
         <DialogHeader>
           <DialogTitle className="flex items-center text-xl gap-2 text-primary">
             <Wallet className="w-5 h-5" />
-            {paymentToEdit ? 'تعديل الدفع' : 'إضافة دفعة جديدة'}
+            {paymentToEdit ? t("suppliers:paymentForm.editTitle") : t("suppliers:paymentForm.addTitle")}
           </DialogTitle>
           <DialogDescription>
-            {paymentToEdit 
-              ? 'تعديل معلومات الدفعة المسجلة' 
-              : 'أدخل تفاصيل الدفعة المالية للمورد'
+            {paymentToEdit
+              ? t("suppliers:paymentForm.editDesc")
+              : t("suppliers:paymentForm.addDesc")
             }
-            {purchaseId && ` للمشتريات #${purchaseId}`}
+            {purchaseId && t("suppliers:paymentForm.forPurchase", { id: purchaseId })}
           </DialogDescription>
         </DialogHeader>
 
@@ -173,7 +175,7 @@ const PaymentFormModal: React.FC<PaymentFormModalProps> = ({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 bg-slate-50/50 p-4 rounded-lg border">
             <h4 className="font-semibold mb-2 flex items-center gap-2">
               <FileText className="w-4 h-4" />
-              تفاصيل الدفعة
+              {t("suppliers:paymentForm.detailsTitle")}
             </h4>
 
             {error && (
@@ -189,7 +191,7 @@ const PaymentFormModal: React.FC<PaymentFormModalProps> = ({
                 name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>المبلغ <span className="text-red-500">*</span></FormLabel>
+                    <FormLabel>{t("suppliers:paymentForm.amountLabel")} <span className="text-red-500">*</span></FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -210,22 +212,22 @@ const PaymentFormModal: React.FC<PaymentFormModalProps> = ({
                 name="payment_date"
                 render={({ field: dateField }) => (
                   <FormItem>
-                    <FormLabel>تاريخ الدفع <span className="text-red-500">*</span></FormLabel>
+                    <FormLabel>{t("suppliers:paymentForm.paymentDateLabel")} <span className="text-red-500">*</span></FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
                           variant={"outline"}
                           className={cn(
-                            "w-full justify-start text-right font-normal",
+                            "w-full justify-start text-start font-normal",
                             !dateField.value && "text-muted-foreground",
                             form.formState.errors.payment_date && "border-red-500"
                           )}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4 ml-2" />
                           {dateField.value ? (
-                            format(dateField.value, "dd MMMM yyyy", { locale: ar })
+                            format(dateField.value, "dd MMMM yyyy", { locale: dateLocale })
                           ) : (
-                            <span>اختر التاريخ</span>
+                            <span>{t("suppliers:paymentForm.chooseDate")}</span>
                           )}
                         </Button>
                       </PopoverTrigger>
@@ -249,11 +251,11 @@ const PaymentFormModal: React.FC<PaymentFormModalProps> = ({
                 name="method"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>طريقة الدفع <span className="text-red-500">*</span></FormLabel>
+                    <FormLabel>{t("suppliers:paymentForm.paymentMethodLabel")} <span className="text-red-500">*</span></FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className={form.formState.errors.method ? "border-red-500" : ""}>
-                          <SelectValue placeholder="اختر طريقة الدفع" />
+                          <SelectValue placeholder={t("suppliers:paymentForm.choosePaymentMethod")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -275,10 +277,10 @@ const PaymentFormModal: React.FC<PaymentFormModalProps> = ({
                 name="reference_number"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>رقم المرجع (اختياري)</FormLabel>
+                    <FormLabel>{t("suppliers:paymentForm.referenceOptional")}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="رقم الشيك أو الحوالة"
+                        placeholder={t("suppliers:paymentForm.referencePlaceholder")}
                         {...field}
                       />
                     </FormControl>
@@ -295,7 +297,7 @@ const PaymentFormModal: React.FC<PaymentFormModalProps> = ({
                 onClick={handleClose}
                 disabled={isSubmitting}
               >
-                إلغاء
+                {t("common:cancel")}
               </Button>
               <Button
                 type="submit"
@@ -305,7 +307,7 @@ const PaymentFormModal: React.FC<PaymentFormModalProps> = ({
                 {isSubmitting ? (
                   <Loader2 className="w-4 h-4 animate-spin ml-2" />
                 ) : (
-                  paymentToEdit ? 'تحديث الدفعة' : 'حفظ الدفعة'
+                  paymentToEdit ? t("suppliers:paymentForm.updateButton") : t("suppliers:paymentForm.saveButton")
                 )}
               </Button>
             </DialogFooter>

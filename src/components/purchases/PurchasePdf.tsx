@@ -12,6 +12,7 @@ import { AppSettings } from "../../services/settingService";
 import { formatNumber } from "@/constants";
 
 import { getPdfFont } from "@/utils/pdfFontRegistry";
+import { useTranslation } from "react-i18next";
 
 const styles = StyleSheet.create({
   page: {
@@ -177,8 +178,9 @@ export const PurchasePdf: React.FC<PurchasePdfProps> = ({
   items,
   settings,
 }) => {
+  const { t, i18n } = useTranslation(["purchases"]);
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("ar-EG");
+    return new Date(dateStr).toLocaleDateString(i18n.language === "ar" ? "ar-EG" : "en-US");
   };
 
   // Calculate totals from the passed items (which might be the full list or filtered)
@@ -233,7 +235,7 @@ export const PurchasePdf: React.FC<PurchasePdfProps> = ({
             </View>
             <View style={styles.companyInfo}>
               <Text style={styles.companyName}>
-                {settings?.company_name || "اسم الشركة"}
+                {settings?.company_name || t("purchases:purchasePdf.defaultCompanyName")}
               </Text>
               {settings?.company_address && (
                 <Text style={styles.companyDetail}>
@@ -242,19 +244,19 @@ export const PurchasePdf: React.FC<PurchasePdfProps> = ({
               )}
               {settings?.company_phone && (
                 <Text style={styles.companyDetail}>
-                  هاتف: {settings.company_phone}
+                  {t("purchases:purchasePdf.phoneLabelInline")}{settings.company_phone}
                 </Text>
               )}
               {settings?.tax_number && (
                 <Text style={styles.companyDetail}>
-                  الرقم الضريبي: {settings.tax_number}
+                  {t("purchases:purchasePdf.taxNumberLabelInline")}{settings.tax_number}
                 </Text>
               )}
             </View>
           </View>
         )}
 
-        <Text style={styles.title}>طلب مشتريات / Purchase Order</Text>
+        <Text style={styles.title}>{t("purchases:purchasePdf.title")}</Text>
 
         <View style={styles.metaSection}>
           <View style={styles.metaColumn}>
@@ -262,38 +264,38 @@ export const PurchasePdf: React.FC<PurchasePdfProps> = ({
               <Text style={styles.metaValue}>
                 {purchase.supplier_name || "—"}
               </Text>
-              <Text style={styles.metaLabel}>المورد:</Text>
+              <Text style={styles.metaLabel}>{t("purchases:purchasePdf.supplierLabel")}</Text>
             </View>
             <View style={styles.metaRow}>
               <Text style={styles.metaValue}>
                 {purchase.status === "received"
-                  ? "مستلم"
+                  ? t("purchases:purchasePdf.statusReceived")
                   : purchase.status === "ordered"
-                  ? "تم الطلب"
-                  : "قيد الانتظار"}
+                  ? t("purchases:purchasePdf.statusOrdered")
+                  : t("purchases:purchasePdf.statusPending")}
               </Text>
-              <Text style={styles.metaLabel}>الحالة:</Text>
+              <Text style={styles.metaLabel}>{t("purchases:purchasePdf.statusLabel")}</Text>
             </View>
           </View>
 
           <View style={styles.metaColumn}>
             <View style={styles.metaRow}>
               <Text style={styles.metaValue}>#{purchase.id}</Text>
-              <Text style={styles.metaLabel}>رقم الطلب:</Text>
+              <Text style={styles.metaLabel}>{t("purchases:purchasePdf.orderNumberLabel")}</Text>
             </View>
             {purchase.reference_number && (
               <View style={styles.metaRow}>
                 <Text style={styles.metaValue}>
                   {purchase.reference_number}
                 </Text>
-                <Text style={styles.metaLabel}>المرجع:</Text>
+                <Text style={styles.metaLabel}>{t("purchases:purchasePdf.referenceLabel")}</Text>
               </View>
             )}
             <View style={styles.metaRow}>
               <Text style={styles.metaValue}>
                 {formatDate(purchase.purchase_date)}
               </Text>
-              <Text style={styles.metaLabel}>التاريخ:</Text>
+              <Text style={styles.metaLabel}>{t("purchases:purchasePdf.dateLabel")}</Text>
             </View>
           </View>
         </View>
@@ -302,10 +304,10 @@ export const PurchasePdf: React.FC<PurchasePdfProps> = ({
         <View style={styles.table}>
           <View style={styles.tableHeader}>
             <Text style={styles.colSeq}>#</Text>
-            <Text style={styles.colProduct}>المنتج</Text>
-            <Text style={styles.colQty}>الكمية</Text>
-            <Text style={styles.colCost}>التكلفة</Text>
-            <Text style={styles.colTotal}>الإجمالي</Text>
+            <Text style={styles.colProduct}>{t("purchases:purchasePdf.colProduct")}</Text>
+            <Text style={styles.colQty}>{t("purchases:purchasePdf.colQty")}</Text>
+            <Text style={styles.colCost}>{t("purchases:purchasePdf.colCost")}</Text>
+            <Text style={styles.colTotal}>{t("purchases:purchasePdf.colTotal")}</Text>
           </View>
 
           {items.map((item, index) => {
@@ -332,18 +334,18 @@ export const PurchasePdf: React.FC<PurchasePdfProps> = ({
           <View style={styles.summaryBox}>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryValue}>{totalQuantity}</Text>
-              <Text style={styles.summaryLabel}>إجمالي الأصناف:</Text>
+              <Text style={styles.summaryLabel}>{t("purchases:purchasePdf.totalItemsLabel")}</Text>
             </View>
             <View style={[styles.summaryRow, styles.grandTotal]}>
               <Text style={styles.summaryValue}>{formatNumber(totalCost)} {currencySymbol}</Text>
-              <Text style={styles.summaryLabel}>إجمالي التكلفة:</Text>
+              <Text style={styles.summaryLabel}>{t("purchases:purchasePdf.totalCostLabel")}</Text>
             </View>
           </View>
         </View>
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text>نسخة إلكترونية - تم إصدارها بواسطة النظام</Text>
+          <Text>{t("purchases:purchasePdf.footerText")}</Text>
         </View>
       </Page>
     </Document>

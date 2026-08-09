@@ -37,6 +37,7 @@ import {
   WarehouseOutlined,
   ErrorOutline,
 } from "@mui/icons-material";
+import { useTranslation } from "react-i18next";
 
 // Services and Types
 import userService, { Role } from "@/services/userService";
@@ -65,7 +66,10 @@ type UserFormValues = {
   allowed_navs: string[];
 };
 
-function getPasswordStrength(password: string): {
+function getPasswordStrength(
+  password: string,
+  labels: { veryWeak: string; weak: string; medium: string; good: string; strong: string },
+): {
   score: number;
   label: string;
   color: "error" | "warning" | "info" | "success";
@@ -78,11 +82,11 @@ function getPasswordStrength(password: string): {
   if (/[0-9]/.test(password)) score++;
   if (/[^A-Za-z0-9]/.test(password)) score++;
 
-  if (score <= 1) return { score, label: "ضعيفة جداً", color: "error" };
-  if (score === 2) return { score, label: "ضعيفة", color: "warning" };
-  if (score === 3) return { score, label: "متوسطة", color: "info" };
-  if (score === 4) return { score, label: "جيدة", color: "info" };
-  return { score, label: "قوية", color: "success" };
+  if (score <= 1) return { score, label: labels.veryWeak, color: "error" };
+  if (score === 2) return { score, label: labels.weak, color: "warning" };
+  if (score === 3) return { score, label: labels.medium, color: "info" };
+  if (score === 4) return { score, label: labels.good, color: "info" };
+  return { score, label: labels.strong, color: "success" };
 }
 
 // Section card wrapper
@@ -137,6 +141,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
   onSaveSuccess,
   availableRoles,
 }) => {
+  const { t } = useTranslation(["users"]);
   const isEditMode = Boolean(userToEdit);
 
   const [showPassword, setShowPassword] = useState(false);
@@ -216,25 +221,25 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
     setServerError(null);
 
     if (!data.name?.trim()) {
-      setError("name", { type: "manual", message: "هذا الحقل مطلوب" });
+      setError("name", { type: "manual", message: t("users:fieldRequired") });
       return;
     }
     if (!data.username?.trim()) {
-      setError("username", { type: "manual", message: "هذا الحقل مطلوب" });
+      setError("username", { type: "manual", message: t("users:fieldRequired") });
       return;
     }
     if (!isEditMode) {
       if (!data.password || data.password.length < 8) {
         setError("password" as any, {
           type: "manual",
-          message: "كلمة المرور يجب أن تكون 8 أحرف على الأقل",
+          message: t("users:passwordMinLength"),
         });
         return;
       }
       if (data.password !== data.password_confirmation) {
         setError("password_confirmation" as any, {
           type: "manual",
-          message: "كلمات المرور غير متطابقة",
+          message: t("users:passwordsMismatch"),
         });
         return;
       }
@@ -242,7 +247,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
     if (!data.roles || data.roles.length === 0) {
       setError("roles", {
         type: "manual",
-        message: "يجب اختيار دور واحد على الأقل",
+        message: t("users:atLeastOneRoleRequired"),
       });
       return;
     }
@@ -276,14 +281,20 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
             setError(field as any, { type: "server", message: messages[0] });
           }
         });
-        setServerError("يرجى التحقق من الحقول المُشار إليها وتصحيحها");
+        setServerError(t("users:pleaseCheckFields"));
       } else {
         setServerError(generalError);
       }
     }
   };
 
-  const pwStrength = getPasswordStrength(passwordValue);
+  const pwStrength = getPasswordStrength(passwordValue, {
+    veryWeak: t("users:passwordStrength.veryWeak"),
+    weak: t("users:passwordStrength.weak"),
+    medium: t("users:passwordStrength.medium"),
+    good: t("users:passwordStrength.good"),
+    strong: t("users:passwordStrength.strong"),
+  });
 
   return (
     <Dialog
@@ -321,13 +332,13 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
           <Box sx={{ flex: 1 }}>
             <Typography variant="subtitle1" fontWeight={700} lineHeight={1.3}>
               {isEditMode
-                ? `تعديل: ${userToEdit?.name}`
-                : "إضافة مستخدم جديد"}
+                ? `${t("users:formModal.editTitlePrefix")}${userToEdit?.name}`
+                : t("users:addUser")}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {isEditMode
-                ? "تعديل بيانات وصلاحيات المستخدم"
-                : "أدخل بيانات المستخدم الجديد وحدد صلاحياته"}
+                ? t("users:formModal.editSubtitle")
+                : t("users:formModal.addSubtitle")}
             </Typography>
           </Box>
           {isEditMode && userToEdit?.roles?.map((r) => (
@@ -354,7 +365,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
           {/* ── Section 1: Basic Info ── */}
           <SectionCard
             icon={<PersonOutline sx={{ fontSize: 16 }} />}
-            title="البيانات الأساسية"
+            title={t("users:formModal.basicInfoSection")}
           >
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 4 }}>
@@ -364,12 +375,12 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
                   render={({ field }) => (
                     <TextField
                       {...field}
-                      label="الاسم الكامل"
+                      label={t("users:nameLabel")}
                       fullWidth
                       size="small"
                       error={!!errors.name}
                       helperText={errors.name?.message}
-                      placeholder="أدخل الاسم الكامل"
+                      placeholder={t("users:formModal.fullNamePlaceholder")}
                     />
                   )}
                 />
@@ -381,7 +392,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
                   render={({ field }) => (
                     <TextField
                       {...field}
-                      label="اسم المستخدم"
+                      label={t("users:formModal.usernameLabel")}
                       fullWidth
                       size="small"
                       error={!!errors.username}
@@ -410,12 +421,12 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
                       <InputLabel>
                         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                           <WarehouseOutlined sx={{ fontSize: 14 }} />
-                          المستودع الرئيسي
+                          {t("users:formModal.mainWarehouseLabel")}
                         </Box>
                       </InputLabel>
                       <Select
                         {...field}
-                        label="المستودع الرئيسي"
+                        label={t("users:formModal.mainWarehouseLabel")}
                         value={field.value?.toString() ?? ""}
                         onChange={(e) =>
                           field.onChange(
@@ -433,7 +444,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
                       >
                         <MenuItem value="">
                           <Typography variant="body2" color="text.secondary">
-                            — غير محدد (افتراضي)
+                            {t("users:formModal.warehouseNotSelected")}
                           </Typography>
                         </MenuItem>
                         {warehouses.map((w) => (
@@ -453,7 +464,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
           {!isEditMode && (
             <SectionCard
               icon={<SecurityOutlined sx={{ fontSize: 16 }} />}
-              title="كلمة المرور"
+              title={t("users:formModal.passwordSection")}
             >
               <Grid container spacing={2}>
                 <Grid size={{ xs: 12, md: 6 }}>
@@ -463,15 +474,15 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
                     render={({ field }) => (
                       <TextField
                         {...field}
-                        label="كلمة المرور"
+                        label={t("users:passwordLabel")}
                         fullWidth
                         size="small"
                         type={showPassword ? "text" : "password"}
                         error={!!errors.password}
                         helperText={
-                          errors.password?.message || "8 أحرف على الأقل"
+                          errors.password?.message || t("users:formModal.passwordMinHint")
                         }
-                        placeholder="أدخل كلمة المرور"
+                        placeholder={t("users:formModal.passwordPlaceholder")}
                         onChange={(e) => {
                           field.onChange(e);
                           setPasswordValue(e.target.value);
@@ -506,7 +517,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
                         sx={{ height: 4, borderRadius: 2 }}
                       />
                       <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
-                        قوة كلمة المرور:{" "}
+                        {t("users:formModal.passwordStrengthLabel")}
                         <Box component="span" fontWeight={600} color="text.primary">
                           {pwStrength.label}
                         </Box>
@@ -521,7 +532,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
                     render={({ field }) => (
                       <TextField
                         {...field}
-                        label="تأكيد كلمة المرور"
+                        label={t("users:confirmPasswordLabel")}
                         fullWidth
                         size="small"
                         type={showConfirmPassword ? "text" : "password"}
@@ -529,7 +540,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
                         helperText={
                           (errors as any).password_confirmation?.message
                         }
-                        placeholder="أعد إدخال كلمة المرور"
+                        placeholder={t("users:formModal.confirmPasswordPlaceholder")}
                         InputProps={{
                           endAdornment: (
                             <InputAdornment position="end">
@@ -561,8 +572,8 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
           {/* ── Section 3: Roles ── */}
           <SectionCard
             icon={<BadgeOutlined sx={{ fontSize: 16 }} />}
-            title="الأدوار الوظيفية"
-            badge={`${availableRoles.length} دور متاح`}
+            title={t("users:formModal.rolesSection")}
+            badge={t("users:formModal.rolesAvailableBadge", { count: availableRoles.length })}
           >
             <Controller
               name="roles"
@@ -626,11 +637,13 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
                       color="text.secondary"
                       sx={{ mt: 0.5, display: "block" }}
                     >
-                      تم اختيار{" "}
+                      {t("users:formModal.selectedCountPrefix")}{" "}
                       <Box component="span" fontWeight={600} color="text.primary">
                         {field.value.length}
                       </Box>{" "}
-                      {field.value.length === 1 ? "دور" : "أدوار"}
+                      {field.value.length === 1
+                        ? t("users:formModal.roleSingular")
+                        : t("users:formModal.rolePlural")}
                     </Typography>
                   )}
                 </>
@@ -641,7 +654,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
           {/* ── Section 4: Navigation Permissions ── */}
           <SectionCard
             icon={<DashboardOutlined sx={{ fontSize: 16 }} />}
-            title="صلاحيات الوصول للصفحات"
+            title={t("users:formModal.navPermissionsSection")}
           >
             <NavigationPermissionsSection
               value={allowedNavs}
@@ -668,7 +681,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
           onClick={onClose}
           disabled={isSubmitting}
         >
-          إلغاء
+          {t("users:formModal.cancel")}
         </Button>
         <Button
           type="submit"
@@ -685,10 +698,10 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
           sx={{ minWidth: 130 }}
         >
           {isSubmitting
-            ? "جاري الحفظ..."
+            ? t("users:formModal.saving")
             : isEditMode
-            ? "حفظ التعديلات"
-            : "إنشاء المستخدم"}
+            ? t("users:formModal.saveChanges")
+            : t("users:formModal.createUser")}
         </Button>
       </DialogActions>
     </Dialog>

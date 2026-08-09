@@ -1,6 +1,7 @@
 import { forwardRef } from "react";
 import { Box, IconButton, Button, Typography, Paper } from "@mui/material";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface PurchaseFormPageHeaderProps {
   onBack: () => void;
@@ -12,7 +13,9 @@ const PurchaseFormPageHeader = forwardRef<
   HTMLDivElement,
   PurchaseFormPageHeaderProps
 >(
-  ({ onBack, onSubmit, isSubmitting }, ref) => (
+  ({ onBack, onSubmit, isSubmitting }, ref) => {
+    const { t } = useTranslation(["purchases"]);
+    return (
     <Paper
       ref={ref}
       elevation={0}
@@ -44,10 +47,10 @@ const PurchaseFormPageHeader = forwardRef<
 
         <Box>
           <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            إضافة مشتريات جديدة
+            {t("purchases:addNewPurchaseTitle")}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            إنشاء عملية شراء سريعة ومضغوطة
+            {t("purchases:addNewPurchaseDesc")}
           </Typography>
         </Box>
       </Box>
@@ -71,10 +74,11 @@ const PurchaseFormPageHeader = forwardRef<
           minWidth: { xs: "100%", sm: 136 },
         }}
       >
-        {isSubmitting ? "جاري الحفظ..." : "إنشاء"}
+        {isSubmitting ? t("purchases:savingEllipsis") : t("purchases:createButton")}
       </Button>
     </Paper>
-  ),
+    );
+  },
 );
 
 PurchaseFormPageHeader.displayName = "PurchaseFormPageHeader";

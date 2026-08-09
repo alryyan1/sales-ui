@@ -24,6 +24,26 @@
   "referencePlaceholder": "مرجع اختياري",
   "description": "الوصف",
   "descriptionPlaceholder": "تفاصيل (اختياري)",
-  "confirmDelete": "هل تريد حذف هذا المصروف؟"
+  "confirmDelete": "هل تريد حذف هذا المصروف؟",
+  "subtitle": "شاشة مصروفات مدمجة وسريعة مع بحث فوري وتصفية احترافية",
+  "loadingText": "جاري التحميل...",
+  "formModal": {
+    "nameRequired": "اسم المصروف مطلوب",
+    "nameLabel": "اسم المصروف",
+    "amountRequired": "المبلغ مطلوب",
+    "categoryLabel": "القسم",
+    "noCategoryOption": "بدون قسم",
+    "addCategoryTooltip": "إضافة قسم جديد",
+    "paymentMethodCash": "نقدي",
+    "paymentMethodBankTransfer": "تحويل بنكي",
+    "paymentMethodVisa": "فيزا",
+    "paymentMethodOther": "أخرى",
+    "addCategoryDialogTitle": "إضافة قسم جديد",
+    "categoryNameLabel": "اسم القسم",
+    "cancelButton": "إلغاء",
+    "addButton": "إضافة",
+    "updateButton": "تحديث",
+    "saveButton": "حفظ"
+  }
 }
 

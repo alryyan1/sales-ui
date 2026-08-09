@@ -1,6 +1,7 @@
 // src/components/settings/PdfReportBrandingSettings.tsx
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import {
   Accordion,
   AccordionDetails,
@@ -83,6 +84,7 @@ function toReportState(s: PdfReportSetting): ReportState {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export const PdfReportBrandingSettings: React.FC = () => {
+  const { t, i18n } = useTranslation(["settings"]);
   const theme = useTheme();
   const { settings, fetchSettings } = useSettings();
 
@@ -142,7 +144,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
         data.forEach((r) => (init[r.report_key] = toReportState(r)));
         setReportStates(init);
       })
-      .catch(() => toast.error("فشل تحميل إعدادات التقارير"))
+      .catch(() => toast.error(t("settings:pdfBranding.fetchReportsError")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -159,9 +161,9 @@ export const PdfReportBrandingSettings: React.FC = () => {
       const updated = await settingService.uploadLogo(file);
       setLogoPreview(updated.company_logo_url ?? null);
       await fetchSettings();
-      toast.success("تم رفع الشعار بنجاح");
+      toast.success(t("settings:pdfBranding.logoUploadSuccess"));
     } catch {
-      toast.error("فشل رفع الشعار");
+      toast.error(t("settings:pdfBranding.logoUploadError"));
     } finally {
       setLogoUploading(false);
       if (logoInputRef.current) logoInputRef.current.value = "";
@@ -176,9 +178,9 @@ export const PdfReportBrandingSettings: React.FC = () => {
       const updated = await settingService.uploadHeader(file);
       setHeaderPreview(updated.company_header_url ?? null);
       await fetchSettings();
-      toast.success("تم رفع الهيدر بنجاح");
+      toast.success(t("settings:pdfBranding.headerUploadSuccess"));
     } catch {
-      toast.error("فشل رفع الهيدر");
+      toast.error(t("settings:pdfBranding.headerUploadError"));
     } finally {
       setHeaderUploading(false);
       if (headerInputRef.current) headerInputRef.current.value = "";
@@ -193,9 +195,9 @@ export const PdfReportBrandingSettings: React.FC = () => {
       const updated = await settingService.uploadStamp(file);
       setStampPreview(updated.company_stamp_url ?? null);
       await fetchSettings();
-      toast.success("تم رفع الختم بنجاح");
+      toast.success(t("settings:pdfBranding.stampUploadSuccess"));
     } catch {
-      toast.error("فشل رفع الختم");
+      toast.error(t("settings:pdfBranding.stampUploadError"));
     } finally {
       setStampUploading(false);
       if (stampInputRef.current) stampInputRef.current.value = "";
@@ -210,9 +212,9 @@ export const PdfReportBrandingSettings: React.FC = () => {
       const updated = await settingService.uploadSignature(file);
       setSignaturePreview(updated.company_signature_url ?? null);
       await fetchSettings();
-      toast.success("تم رفع التوقيع بنجاح");
+      toast.success(t("settings:pdfBranding.signatureUploadSuccess"));
     } catch {
-      toast.error("فشل رفع التوقيع");
+      toast.error(t("settings:pdfBranding.signatureUploadError"));
     } finally {
       setSignatureUploading(false);
       if (signatureInputRef.current) signatureInputRef.current.value = "";
@@ -230,9 +232,9 @@ export const PdfReportBrandingSettings: React.FC = () => {
         pdf_font: global.pdf_font,
       });
       await fetchSettings();
-      toast.success("تم حفظ الإعدادات العامة");
+      toast.success(t("settings:pdfBranding.globalSaveSuccess"));
     } catch {
-      toast.error("فشل حفظ الإعدادات");
+      toast.error(t("settings:pdfBranding.globalSaveError"));
     } finally {
       patchGlobal({ saving: false });
     }
@@ -257,9 +259,9 @@ export const PdfReportBrandingSettings: React.FC = () => {
         show_stamp: s.show_stamp,
         show_signature: s.show_signature,
       });
-      toast.success("تم الحفظ");
+      toast.success(t("settings:pdfBranding.reportSaveSuccess"));
     } catch {
-      toast.error("فشل الحفظ");
+      toast.error(t("settings:pdfBranding.reportSaveError"));
     } finally {
       patchReport(reportKey, { saving: false });
     }
@@ -298,7 +300,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
   }
 
   return (
-    <Stack spacing={2} dir="rtl">
+    <Stack spacing={2} dir={i18n.dir()}>
       {/* ── Section 1: Global Branding ──────────────────────────────────── */}
       <Box sx={cardSx}>
         {/* Header */}
@@ -314,14 +316,14 @@ export const PdfReportBrandingSettings: React.FC = () => {
         >
           <SettingsIcon fontSize="small" color="primary" />
           <Typography fontWeight={600} fontSize={14}>
-            الإعدادات العامة للهيدر
+            {t("settings:pdfBranding.globalHeaderSectionTitle")}
           </Typography>
           <Typography
             fontSize={12}
             color="text.secondary"
             sx={{ mr: "auto" }}
           >
-            تطبّق على جميع التقارير التي لا تملك إعداداً مخصصاً
+            {t("settings:pdfBranding.globalHeaderSectionDesc")}
           </Typography>
         </Box>
 
@@ -332,7 +334,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
               {/* Logo upload */}
               <Box sx={{ flex: 1 }}>
                 <Typography fontSize={12} fontWeight={500} color="text.secondary" mb={0.75}>
-                  صورة الشعار
+                  {t("settings:pdfBranding.logoImageLabel")}
                 </Typography>
                 <Box
                   component="label"
@@ -353,7 +355,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
                   <Stack direction="row" alignItems="center" spacing={0.5}>
                     <UploadIcon sx={{ fontSize: 14, color: "text.secondary" }} />
                     <Typography fontSize={12} color="text.secondary">
-                      {logoPreview ? "تغيير الشعار" : "رفع شعار"}
+                      {logoPreview ? t("settings:pdfBranding.changeLogo") : t("settings:pdfBranding.uploadLogo")}
                     </Typography>
                   </Stack>
                   <input
@@ -369,7 +371,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
               {/* Header image upload */}
               <Box sx={{ flex: 2 }}>
                 <Typography fontSize={12} fontWeight={500} color="text.secondary" mb={0.75}>
-                  صورة الهيدر الكامل (تمتد بعرض الصفحة)
+                  {t("settings:pdfBranding.headerImageLabel")}
                 </Typography>
                 <Box
                   component="label"
@@ -390,7 +392,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
                   <Stack direction="row" alignItems="center" spacing={0.5}>
                     <UploadIcon sx={{ fontSize: 14, color: "text.secondary" }} />
                     <Typography fontSize={12} color="text.secondary">
-                      {headerPreview ? "تغيير الهيدر" : "رفع هيدر"}
+                      {headerPreview ? t("settings:pdfBranding.changeHeader") : t("settings:pdfBranding.uploadHeader")}
                     </Typography>
                   </Stack>
                   <input
@@ -409,7 +411,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
               {/* Stamp upload */}
               <Box sx={{ flex: 1 }}>
                 <Typography fontSize={12} fontWeight={500} color="text.secondary" mb={0.75}>
-                  صورة الختم
+                  {t("settings:pdfBranding.stampImageLabel")}
                 </Typography>
                 <Box
                   component="label"
@@ -430,7 +432,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
                   <Stack direction="row" alignItems="center" spacing={0.5}>
                     <UploadIcon sx={{ fontSize: 14, color: "text.secondary" }} />
                     <Typography fontSize={12} color="text.secondary">
-                      {stampPreview ? "تغيير الختم" : "رفع ختم"}
+                      {stampPreview ? t("settings:pdfBranding.changeStamp") : t("settings:pdfBranding.uploadStamp")}
                     </Typography>
                   </Stack>
                   <input
@@ -446,7 +448,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
               {/* Signature upload */}
               <Box sx={{ flex: 1 }}>
                 <Typography fontSize={12} fontWeight={500} color="text.secondary" mb={0.75}>
-                  صورة التوقيع
+                  {t("settings:pdfBranding.signatureImageLabel")}
                 </Typography>
                 <Box
                   component="label"
@@ -467,7 +469,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
                   <Stack direction="row" alignItems="center" spacing={0.5}>
                     <UploadIcon sx={{ fontSize: 14, color: "text.secondary" }} />
                     <Typography fontSize={12} color="text.secondary">
-                      {signaturePreview ? "تغيير التوقيع" : "رفع توقيع"}
+                      {signaturePreview ? t("settings:pdfBranding.changeSignature") : t("settings:pdfBranding.uploadSignature")}
                     </Typography>
                   </Stack>
                   <input
@@ -488,7 +490,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
               {/* Branding type toggle */}
               <Box>
                 <Typography fontSize={12} fontWeight={500} color="text.secondary" mb={0.75}>
-                  نمط الهيدر الافتراضي
+                  {t("settings:pdfBranding.defaultHeaderStyleLabel")}
                 </Typography>
                 <ToggleButtonGroup
                   exclusive
@@ -497,10 +499,10 @@ export const PdfReportBrandingSettings: React.FC = () => {
                   onChange={(_, v) => v && patchGlobal({ invoice_branding_type: v })}
                 >
                   <ToggleButton value="logo" sx={{ px: 2, fontSize: 12 }}>
-                    شعار ونص
+                    {t("settings:pdfBranding.logoAndTextOption")}
                   </ToggleButton>
                   <ToggleButton value="header" sx={{ px: 2, fontSize: 12 }}>
-                    هيدر كامل
+                    {t("settings:pdfBranding.fullHeaderOption")}
                   </ToggleButton>
                 </ToggleButtonGroup>
               </Box>
@@ -509,24 +511,24 @@ export const PdfReportBrandingSettings: React.FC = () => {
               {global.invoice_branding_type === "logo" && (
                 <>
                   <FormControl size="small" sx={{ minWidth: 120 }}>
-                    <InputLabel sx={{ fontSize: 12 }}>موضع الشعار</InputLabel>
+                    <InputLabel sx={{ fontSize: 12 }}>{t("settings:pdfBranding.logoPositionLabel")}</InputLabel>
                     <Select
-                      label="موضع الشعار"
+                      label={t("settings:pdfBranding.logoPositionLabel")}
                       value={global.logo_position}
                       onChange={(e) =>
                         patchGlobal({ logo_position: e.target.value as "left" | "right" | "center" })
                       }
                       sx={{ fontSize: 13 }}
                     >
-                      <MenuItem value="right">يمين</MenuItem>
-                      <MenuItem value="left">يسار</MenuItem>
-                      <MenuItem value="center">وسط</MenuItem>
+                      <MenuItem value="right">{t("settings:pdfBranding.positionRight")}</MenuItem>
+                      <MenuItem value="left">{t("settings:pdfBranding.positionLeft")}</MenuItem>
+                      <MenuItem value="center">{t("settings:pdfBranding.positionCenter")}</MenuItem>
                     </Select>
                   </FormControl>
 
                   <TextField
                     size="small"
-                    label="العرض (mm)"
+                    label={t("settings:pdfBranding.widthMmLabel")}
                     type="number"
                     value={global.logo_width}
                     onChange={(e) => patchGlobal({ logo_width: Number(e.target.value) })}
@@ -535,7 +537,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
                   />
                   <TextField
                     size="small"
-                    label="الارتفاع (mm)"
+                    label={t("settings:pdfBranding.heightMmLabel")}
                     type="number"
                     value={global.logo_height}
                     onChange={(e) => patchGlobal({ logo_height: Number(e.target.value) })}
@@ -547,17 +549,17 @@ export const PdfReportBrandingSettings: React.FC = () => {
 
               {/* PDF font */}
               <FormControl size="small" sx={{ minWidth: 180 }}>
-                <InputLabel sx={{ fontSize: 12 }}>خط PDF</InputLabel>
+                <InputLabel sx={{ fontSize: 12 }}>{t("settings:pdfBranding.pdfFontLabel")}</InputLabel>
                 <Select
-                  label="خط PDF"
+                  label={t("settings:pdfBranding.pdfFontLabel")}
                   value={global.pdf_font}
                   onChange={(e) => patchGlobal({ pdf_font: e.target.value })}
                   sx={{ fontSize: 13 }}
                 >
-                  <MenuItem value={PDF_FONTS.AMIRI}>Amiri — نسخ كلاسيكي</MenuItem>
-                  <MenuItem value={PDF_FONTS.TAJAWAL}>Tajawal — حديث</MenuItem>
-                  <MenuItem value={PDF_FONTS.IBM_PLEX}>IBM Plex Arabic — عصري</MenuItem>
-                  <MenuItem value={PDF_FONTS.ARIAL}>Arial — قياسي</MenuItem>
+                  <MenuItem value={PDF_FONTS.AMIRI}>{t("settings:pdfBranding.fontAmiriLabel")}</MenuItem>
+                  <MenuItem value={PDF_FONTS.TAJAWAL}>{t("settings:pdfBranding.fontTajawalLabel")}</MenuItem>
+                  <MenuItem value={PDF_FONTS.IBM_PLEX}>{t("settings:pdfBranding.fontIbmPlexLabel")}</MenuItem>
+                  <MenuItem value={PDF_FONTS.ARIAL}>{t("settings:pdfBranding.fontArialLabel")}</MenuItem>
                 </Select>
               </FormControl>
             </Box>
@@ -572,7 +574,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
                 disabled={global.saving}
                 sx={{ minWidth: 120, fontSize: 13 }}
               >
-                حفظ الإعدادات العامة
+                {t("settings:pdfBranding.saveGlobalSettingsButton")}
               </Button>
             </Box>
           </Stack>
@@ -593,10 +595,10 @@ export const PdfReportBrandingSettings: React.FC = () => {
         >
           <TuneIcon fontSize="small" color="primary" />
           <Typography fontWeight={600} fontSize={14}>
-            إعدادات هيدر كل تقرير
+            {t("settings:pdfBranding.perReportSectionTitle")}
           </Typography>
           <Typography fontSize={12} color="text.secondary" sx={{ mr: "auto" }}>
-            يمكن لكل تقرير تجاوز الإعداد العام أو استخدامه
+            {t("settings:pdfBranding.perReportSectionDesc")}
           </Typography>
         </Box>
 
@@ -643,10 +645,10 @@ export const PdfReportBrandingSettings: React.FC = () => {
                       <Chip
                         label={
                           s.branding_type === "logo"
-                            ? "شعار"
+                            ? t("settings:pdfBranding.brandingTypeLogo")
                             : s.branding_type === "header"
-                              ? "هيدر"
-                              : "بدون"
+                              ? t("settings:pdfBranding.brandingTypeHeader")
+                              : t("settings:pdfBranding.brandingTypeNone")
                         }
                         size="small"
                         color="primary"
@@ -655,7 +657,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
                       />
                     )}
                     {hasWatermark && (
-                      <Tooltip title="علامة مائية مفعّلة">
+                      <Tooltip title={t("settings:pdfBranding.watermarkActiveTooltip")}>
                         <WatermarkIcon
                           sx={{ fontSize: 16, color: "info.main" }}
                         />
@@ -676,7 +678,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
                     {/* Branding type */}
                     <Box sx={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 2 }}>
                       <Typography fontSize={12} color="text.secondary" minWidth={80}>
-                        نمط الهيدر
+                        {t("settings:pdfBranding.headerStyleLabel")}
                       </Typography>
                       <ToggleButtonGroup
                         exclusive
@@ -687,16 +689,16 @@ export const PdfReportBrandingSettings: React.FC = () => {
                         }
                       >
                         <ToggleButton value="global" sx={{ px: 1.5, fontSize: 11 }}>
-                          افتراضي
+                          {t("settings:pdfBranding.defaultOption")}
                         </ToggleButton>
                         <ToggleButton value="logo" sx={{ px: 1.5, fontSize: 11 }}>
-                          شعار
+                          {t("settings:pdfBranding.brandingTypeLogo")}
                         </ToggleButton>
                         <ToggleButton value="header" sx={{ px: 1.5, fontSize: 11 }}>
-                          هيدر كامل
+                          {t("settings:pdfBranding.fullHeaderOption")}
                         </ToggleButton>
                         <ToggleButton value="none" sx={{ px: 1.5, fontSize: 11 }}>
-                          بدون
+                          {t("settings:pdfBranding.brandingTypeNone")}
                         </ToggleButton>
                       </ToggleButtonGroup>
                     </Box>
@@ -705,9 +707,9 @@ export const PdfReportBrandingSettings: React.FC = () => {
                     {s.branding_type === "logo" && (
                       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, alignItems: "flex-end" }}>
                         <FormControl size="small" sx={{ minWidth: 110 }}>
-                          <InputLabel sx={{ fontSize: 12 }}>الموضع</InputLabel>
+                          <InputLabel sx={{ fontSize: 12 }}>{t("settings:pdfBranding.positionLabel")}</InputLabel>
                           <Select
-                            label="الموضع"
+                            label={t("settings:pdfBranding.positionLabel")}
                             value={s.logo_position ?? ""}
                             onChange={(e) =>
                               patchReport(report.report_key, {
@@ -719,17 +721,17 @@ export const PdfReportBrandingSettings: React.FC = () => {
                             sx={{ fontSize: 12 }}
                           >
                             <MenuItem value="">
-                              <em>عام ({global.logo_position})</em>
+                              <em>{t("settings:pdfBranding.globalPositionOption", { position: global.logo_position })}</em>
                             </MenuItem>
-                            <MenuItem value="right">يمين</MenuItem>
-                            <MenuItem value="left">يسار</MenuItem>
-                            <MenuItem value="center">وسط</MenuItem>
+                            <MenuItem value="right">{t("settings:pdfBranding.positionRight")}</MenuItem>
+                            <MenuItem value="left">{t("settings:pdfBranding.positionLeft")}</MenuItem>
+                            <MenuItem value="center">{t("settings:pdfBranding.positionCenter")}</MenuItem>
                           </Select>
                         </FormControl>
 
                         <TextField
                           size="small"
-                          label="العرض (mm)"
+                          label={t("settings:pdfBranding.widthMmLabel")}
                           type="number"
                           placeholder={String(global.logo_width)}
                           value={s.logo_width ?? ""}
@@ -743,7 +745,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
                         />
                         <TextField
                           size="small"
-                          label="الارتفاع (mm)"
+                          label={t("settings:pdfBranding.heightMmLabel")}
                           type="number"
                           placeholder={String(global.logo_height)}
                           value={s.logo_height ?? ""}
@@ -773,7 +775,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
                           }
                           label={
                             <Typography fontSize={12} color="text.secondary">
-                              علامة مائية
+                              {t("settings:pdfBranding.watermarkLabel")}
                             </Typography>
                           }
                         />
@@ -789,7 +791,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
                           }
                           label={
                             <Typography fontSize={12} color="text.secondary">
-                              ختم
+                              {t("settings:pdfBranding.stampLabel")}
                             </Typography>
                           }
                         />
@@ -805,7 +807,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
                           }
                           label={
                             <Typography fontSize={12} color="text.secondary">
-                              توقيع
+                              {t("settings:pdfBranding.signatureLabel")}
                             </Typography>
                           }
                         />
@@ -825,7 +827,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
                         disabled={s.saving}
                         sx={{ fontSize: 12, minWidth: 80 }}
                       >
-                        حفظ
+                        {t("settings:pdfBranding.saveButton")}
                       </Button>
                     </Stack>
                   </Stack>

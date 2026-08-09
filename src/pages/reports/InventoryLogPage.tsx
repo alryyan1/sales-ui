@@ -77,35 +77,52 @@ import { PaginatedResponse as LogPaginatedResponse } from "../../services/client
 import { warehouseService, Warehouse } from "../../services/warehouseService";
 import productService, { Product } from "../../services/productService";
 import { formatNumber } from "@/constants";
+import { useTranslation } from "react-i18next";
 
-// --- Zod Schema ---
-const logFilterSchema = z
-  .object({
-    startDate: z.string().optional(),
-    endDate: z.string().optional(),
-    productId: z.string().nullable().optional(),
-    warehouseId: z.string().nullable().optional(),
-    type: z.string().nullable().optional(),
-    search: z.string().optional(),
-  })
-  .refine(
-    (data) =>
-      !data.endDate || !data.startDate || data.endDate >= data.startDate,
-    { message: "تاريخ النهاية يجب أن يكون بعد تاريخ البداية", path: ["endDate"] }
-  );
-type LogFilterValues = z.infer<typeof logFilterSchema>;
-
-const movementTypes = [
-  { value: "purchase", label: "شراء", className: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-  { value: "sale", label: "بيع", className: "bg-red-100 text-red-800 border-red-200" },
-  { value: "adjustment", label: "تعديل مخزني", className: "bg-amber-100 text-amber-800 border-amber-200" },
-  { value: "requisition_issue", label: "صرف طلبية", className: "bg-sky-100 text-sky-800 border-sky-200" },
-];
-
-const getMovementType = (type: string) =>
-  movementTypes.find((m) => m.value === type);
+type LogFilterValues = {
+  startDate?: string;
+  endDate?: string;
+  productId?: string | null;
+  warehouseId?: string | null;
+  type?: string | null;
+  search?: string;
+};
 
 const InventoryLogPage: React.FC = () => {
+  const { t, i18n } = useTranslation(["reports"]);
+
+  const logFilterSchema = React.useMemo(
+    () =>
+      z
+        .object({
+          startDate: z.string().optional(),
+          endDate: z.string().optional(),
+          productId: z.string().nullable().optional(),
+          warehouseId: z.string().nullable().optional(),
+          type: z.string().nullable().optional(),
+          search: z.string().optional(),
+        })
+        .refine(
+          (data) =>
+            !data.endDate || !data.startDate || data.endDate >= data.startDate,
+          { message: t("reports:inventoryLogPage.endDateAfterStartDate"), path: ["endDate"] }
+        ),
+    [t]
+  );
+
+  const movementTypes = React.useMemo(
+    () => [
+      { value: "purchase", label: t("reports:inventoryLogPage.movementTypes.purchase"), className: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+      { value: "sale", label: t("reports:inventoryLogPage.movementTypes.sale"), className: "bg-red-100 text-red-800 border-red-200" },
+      { value: "adjustment", label: t("reports:inventoryLogPage.movementTypes.adjustment"), className: "bg-amber-100 text-amber-800 border-amber-200" },
+      { value: "requisition_issue", label: t("reports:inventoryLogPage.movementTypes.requisition_issue"), className: "bg-sky-100 text-sky-800 border-sky-200" },
+    ],
+    [t]
+  );
+
+  const getMovementType = (type: string) =>
+    movementTypes.find((m) => m.value === type);
+
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -142,7 +159,7 @@ const InventoryLogPage: React.FC = () => {
     warehouseService
       .getAll()
       .then(setWarehouses)
-      .catch(() => toast.error("فشل تحميل المستودعات", { id: "warehouse-fetch-error" }));
+      .catch(() => toast.error(t("reports:inventoryLogPage.loadWarehousesFailed"), { id: "warehouse-fetch-error" }));
   }, []);
 
   // Fetch product suggestions with debounce
@@ -180,8 +197,8 @@ const InventoryLogPage: React.FC = () => {
         });
         setLogData(data);
       } catch (err) {
-        setError("فشل في تحميل السجل");
-        toast.error("فشل في تحميل السجل", { id: "log-fetch-error" });
+        setError(t("reports:inventoryLogPage.loadLogFailed"));
+        toast.error(t("reports:inventoryLogPage.loadLogFailed"), { id: "log-fetch-error" });
       } finally {
         setIsLoading(false);
       }
@@ -251,16 +268,16 @@ const InventoryLogPage: React.FC = () => {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      toast.success("تم إنشاء PDF بنجاح", { id: "pdf-success" });
+      toast.success(t("reports:inventoryLogPage.pdfGeneratedSuccess"), { id: "pdf-success" });
     } catch {
-      toast.error("فشل إنشاء PDF", { id: "pdf-error" });
+      toast.error(t("reports:inventoryLogPage.pdfGenerationFailed"), { id: "pdf-error" });
     } finally {
       setIsGeneratingPdf(false);
     }
   };
 
   return (
-    <div className="p-4 space-y-4 min-h-screen bg-muted/30" dir="rtl">
+    <div className="p-4 space-y-4 min-h-screen bg-muted/30" dir={i18n.dir()}>
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -273,8 +290,8 @@ const InventoryLogPage: React.FC = () => {
             <ArrowLeft size={16} />
           </Button>
           <div>
-            <h1 className="text-xl font-bold text-foreground">سجل حركات المخزون</h1>
-            <p className="text-sm text-muted-foreground">مراقبة حركة المخزون عبر جميع المستودعات</p>
+            <h1 className="text-xl font-bold text-foreground">{t("reports:inventoryLogPage.title")}</h1>
+            <p className="text-sm text-muted-foreground">{t("reports:inventoryLogPage.subtitle")}</p>
           </div>
         </div>
         <Button
@@ -288,7 +305,7 @@ const InventoryLogPage: React.FC = () => {
           ) : (
             <Download size={15} />
           )}
-          {isGeneratingPdf ? "جاري التصدير..." : "تصدير PDF"}
+          {isGeneratingPdf ? t("reports:inventoryLogPage.exportingEllipsis") : t("reports:exportPdf")}
         </Button>
       </div>
 
@@ -301,7 +318,7 @@ const InventoryLogPage: React.FC = () => {
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
               <Filter size={15} />
-              خيارات التصفية
+              {t("reports:inventoryLogPage.filterOptions")}
             </CardTitle>
             {showFilters ? <ChevronUp size={15} className="text-muted-foreground" /> : <ChevronDown size={15} className="text-muted-foreground" />}
           </div>
@@ -313,7 +330,7 @@ const InventoryLogPage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {/* Product Autocomplete */}
                 <div className="sm:col-span-2 space-y-1">
-                  <Label className="text-xs text-muted-foreground">المنتج</Label>
+                  <Label className="text-xs text-muted-foreground">{t("reports:inventoryLogPage.productLabel")}</Label>
                   <Controller
                     control={control}
                     name="productId"
@@ -329,7 +346,7 @@ const InventoryLogPage: React.FC = () => {
                             {selectedProduct ? (
                               <span className="truncate">{selectedProduct.name}</span>
                             ) : (
-                              <span className="text-muted-foreground">ابحث عن منتج...</span>
+                              <span className="text-muted-foreground">{t("reports:inventoryLogPage.searchForProductPlaceholder")}</span>
                             )}
                             <div className="flex items-center gap-1 shrink-0">
                               {selectedProduct && (
@@ -362,7 +379,7 @@ const InventoryLogPage: React.FC = () => {
                         <PopoverContent className="w-[320px] p-0" align="start">
                           <Command shouldFilter={false}>
                             <CommandInput
-                              placeholder="اكتب اسم المنتج..."
+                              placeholder={t("reports:inventoryLogPage.typeProductNamePlaceholder")}
                               value={productInput}
                               onValueChange={setProductInput}
                             />
@@ -373,7 +390,7 @@ const InventoryLogPage: React.FC = () => {
                                 </div>
                               ) : (
                                 <>
-                                  <CommandEmpty>لا توجد منتجات مطابقة</CommandEmpty>
+                                  <CommandEmpty>{t("reports:inventoryLogPage.noMatchingProducts")}</CommandEmpty>
                                   <CommandGroup>
                                     {productOptions.map((p) => (
                                       <CommandItem
@@ -413,18 +430,18 @@ const InventoryLogPage: React.FC = () => {
 
                 {/* General Search (batch, document) */}
                 <div className="sm:col-span-2 space-y-1">
-                  <Label className="text-xs text-muted-foreground">بحث (دفعة / مستند)</Label>
+                  <Label className="text-xs text-muted-foreground">{t("reports:inventoryLogPage.searchBatchDocLabel")}</Label>
                   <Controller
                     control={control}
                     name="search"
                     render={({ field }) => (
                       <div className="relative">
-                        <Search size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <Search size={15} className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                         <Input
                           {...field}
                           value={field.value ?? ""}
-                          placeholder="رقم الدفعة أو المستند..."
-                          className="pr-9 h-9 text-sm"
+                          placeholder={t("reports:inventoryLogPage.batchOrDocPlaceholder")}
+                          className="ps-9 h-9 text-sm"
                         />
                       </div>
                     )}
@@ -433,7 +450,7 @@ const InventoryLogPage: React.FC = () => {
 
                 {/* Warehouse */}
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">المستودع</Label>
+                  <Label className="text-xs text-muted-foreground">{t("reports:inventoryLogPage.warehouseLabel")}</Label>
                   <Controller
                     control={control}
                     name="warehouseId"
@@ -443,10 +460,10 @@ const InventoryLogPage: React.FC = () => {
                         onValueChange={(v) => field.onChange(v === "all" ? null : v)}
                       >
                         <SelectTrigger className="h-9 text-sm">
-                          <SelectValue placeholder="الكل" />
+                          <SelectValue placeholder={t("reports:inventoryLogPage.allOption")} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">الكل</SelectItem>
+                          <SelectItem value="all">{t("reports:inventoryLogPage.allOption")}</SelectItem>
                           {warehouses.map((w) => (
                             <SelectItem key={w.id} value={w.id.toString()}>
                               {w.name}
@@ -460,7 +477,7 @@ const InventoryLogPage: React.FC = () => {
 
                 {/* Type */}
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">نوع الحركة</Label>
+                  <Label className="text-xs text-muted-foreground">{t("reports:inventoryLogPage.movementTypeLabel")}</Label>
                   <Controller
                     control={control}
                     name="type"
@@ -470,13 +487,13 @@ const InventoryLogPage: React.FC = () => {
                         onValueChange={(v) => field.onChange(v === "all" ? null : v)}
                       >
                         <SelectTrigger className="h-9 text-sm">
-                          <SelectValue placeholder="الكل" />
+                          <SelectValue placeholder={t("reports:inventoryLogPage.allOption")} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">الكل</SelectItem>
-                          {movementTypes.map((t) => (
-                            <SelectItem key={t.value} value={t.value}>
-                              {t.label}
+                          <SelectItem value="all">{t("reports:inventoryLogPage.allOption")}</SelectItem>
+                          {movementTypes.map((mt) => (
+                            <SelectItem key={mt.value} value={mt.value}>
+                              {mt.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -487,7 +504,7 @@ const InventoryLogPage: React.FC = () => {
 
                 {/* Start Date */}
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">من تاريخ</Label>
+                  <Label className="text-xs text-muted-foreground">{t("reports:inventoryLogPage.fromDateLabel")}</Label>
                   <Controller
                     control={control}
                     name="startDate"
@@ -504,7 +521,7 @@ const InventoryLogPage: React.FC = () => {
 
                 {/* End Date */}
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">إلى تاريخ</Label>
+                  <Label className="text-xs text-muted-foreground">{t("reports:inventoryLogPage.toDateLabel")}</Label>
                   <Controller
                     control={control}
                     name="endDate"
@@ -522,10 +539,10 @@ const InventoryLogPage: React.FC = () => {
 
               <div className="flex justify-end gap-2 mt-3">
                 <Button type="button" variant="outline" size="sm" onClick={clearFilters}>
-                  مسح
+                  {t("reports:inventoryLogPage.clearButton")}
                 </Button>
                 <Button type="submit" size="sm">
-                  تطبيق
+                  {t("reports:inventoryLogPage.applyButton")}
                 </Button>
               </div>
             </form>
@@ -547,30 +564,30 @@ const InventoryLogPage: React.FC = () => {
         ) : !logData || logData.data.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
             <PackageSearch size={36} />
-            <p className="text-sm">لا توجد سجلات مطابقة</p>
+            <p className="text-sm">{t("reports:inventoryLogPage.noMatchingRecords")}</p>
           </div>
         ) : (
           <>
             {/* Result count */}
             <div className="px-4 py-2 border-b bg-muted/30 flex items-center justify-between">
               <span className="text-xs text-muted-foreground">
-                إجمالي النتائج: <span className="font-semibold text-foreground">{logData.total}</span>
+                {t("reports:inventoryLogPage.totalResultsLabel")} <span className="font-semibold text-foreground">{logData.total}</span>
               </span>
               <span className="text-xs text-muted-foreground">
-                صفحة {currentPage} من {logData.last_page}
+                {t("reports:inventoryLogPage.pageOf", { current: currentPage, total: logData.last_page })}
               </span>
             </div>
 
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30 hover:bg-muted/30">
-                  <TableHead className="text-center text-xs font-semibold py-2">التاريخ</TableHead>
-                  <TableHead className="text-center text-xs font-semibold py-2">العملية</TableHead>
-                  <TableHead className="text-right text-xs font-semibold py-2">المنتج</TableHead>
-                  <TableHead className="text-center text-xs font-semibold py-2">المستودع</TableHead>
-                  <TableHead className="text-center text-xs font-semibold py-2">الكمية</TableHead>
-                  <TableHead className="text-center text-xs font-semibold py-2">المستند</TableHead>
-                  <TableHead className="text-center text-xs font-semibold py-2">بواسطة</TableHead>
+                  <TableHead className="text-center text-xs font-semibold py-2">{t("reports:inventoryLogPage.colDate")}</TableHead>
+                  <TableHead className="text-center text-xs font-semibold py-2">{t("reports:inventoryLogPage.colOperation")}</TableHead>
+                  <TableHead className="text-right text-xs font-semibold py-2">{t("reports:inventoryLogPage.colProduct")}</TableHead>
+                  <TableHead className="text-center text-xs font-semibold py-2">{t("reports:inventoryLogPage.colWarehouse")}</TableHead>
+                  <TableHead className="text-center text-xs font-semibold py-2">{t("reports:inventoryLogPage.colQuantity")}</TableHead>
+                  <TableHead className="text-center text-xs font-semibold py-2">{t("reports:inventoryLogPage.colDocument")}</TableHead>
+                  <TableHead className="text-center text-xs font-semibold py-2">{t("reports:inventoryLogPage.colBy")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -605,7 +622,7 @@ const InventoryLogPage: React.FC = () => {
                           <div className="text-xs text-muted-foreground">{row.product_sku}</div>
                         )}
                         {row.batch_number && (
-                          <div className="text-xs text-sky-600">دفعة: {row.batch_number}</div>
+                          <div className="text-xs text-sky-600">{t("reports:inventoryLogPage.batchColon", { batch: row.batch_number })}</div>
                         )}
                       </TableCell>
 

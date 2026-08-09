@@ -23,5 +23,42 @@
   "errorSelfParent": "Category cannot be its own parent.",
   "errorHasProducts": "Cannot delete category. There are products assigned to it.",
   "errorHasSubcategories": "Cannot delete category. It has subcategories.",
-  "searchPlaceholder": "Search"
+  "searchPlaceholder": "Search",
+  "fieldRequired": "This field is required",
+  "successTitle": "Success",
+  "errorTitle": "Error",
+  "unknownError": "An unknown error occurred",
+  "saveFailed": "Failed to save category",
+  "none": "None",
+  "setAsDefaultCategory": "Set as default category",
+  "cancel": "Cancel",
+  "updateButton": "Update",
+  "createButton": "Create",
+  "formModal": {
+    "editTitle": "Edit Category",
+    "addTitle": "Add Category",
+    "nameLabel": "Category Name",
+    "parentCategoryLabel": "Parent Category",
+    "descriptionLabel": "Description"
+  },
+  "listPage": {
+    "pageTitle": "Categories Management",
+    "addCategoryButton": "Add Category",
+    "searchCategoriesPlaceholder": "Search categories...",
+    "columnCategoryName": "Category Name",
+    "columnParentCategory": "Parent Category",
+    "columnDefault": "Default",
+    "columnProductsCount": "Products Count",
+    "columnActions": "Actions",
+    "noResults": "No results",
+    "notAvailable": "---",
+    "previousButton": "Previous",
+    "nextButton": "Next",
+    "pageOfSummary": "Page {{page}} of {{lastPage}}",
+    "deleteSuccessTitle": "Success",
+    "deleteSuccessDesc": "Category deleted successfully",
+    "deleteConfirmTitle": "Confirm Deletion",
+    "deleteConfirmMessage": "Are you sure you want to delete this category?",
+    "deleteButton": "Delete"
+  }
 } 

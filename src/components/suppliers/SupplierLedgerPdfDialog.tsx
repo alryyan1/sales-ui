@@ -9,6 +9,7 @@ import {
   useTheme,
 } from "@mui/material";
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { PDFViewer } from "@react-pdf/renderer";
 import { SupplierLedgerPdf } from "./SupplierLedgerPdf";
 import { SupplierLedger } from "../../services/supplierPaymentService";
@@ -23,6 +24,7 @@ interface SupplierLedgerPdfDialogProps {
 export const SupplierLedgerPdfDialog: React.FC<
   SupplierLedgerPdfDialogProps
 > = ({ open, onClose, ledger }) => {
+  const { t } = useTranslation(["suppliers"]);
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down("md"));
   const { settings } = useSettings();
@@ -53,7 +55,7 @@ export const SupplierLedgerPdfDialog: React.FC<
           alignItems: "center",
         }}
       >
-        <span>معاينة كشف الحساب (PDF)</span>
+        <span>{t("suppliers:ledgerPdfDialogPreviewTitle")}</span>
         <IconButton
           aria-label="close"
           onClick={onClose}

@@ -34,13 +34,7 @@ import {
 } from "lucide-react";
 import saleReturnService, { SaleReturn } from "@/services/saleReturnService";
 import { formatNumber } from "@/constants";
-
-const METHOD_LABELS: Record<string, string> = {
-  cash: "نقدي",
-  bank_transfer: "تحويل بنكي",
-  visa: "فيزا",
-  other: "أخرى",
-};
+import { useTranslation } from "react-i18next";
 
 const METHOD_COLORS: Record<string, "default" | "success" | "info" | "warning"> = {
   cash: "success",
@@ -50,6 +44,14 @@ const METHOD_COLORS: Record<string, "default" | "success" | "info" | "warning"> 
 };
 
 const SalesReturnsListPage: React.FC = () => {
+  const { t, i18n } = useTranslation(["sales", "common"]);
+  const isRtl = i18n.dir() === "rtl";
+  const METHOD_LABELS: Record<string, string> = {
+    cash: t("sales:returnsListPage.methodLabels.cash"),
+    bank_transfer: t("sales:returnsListPage.methodLabels.bank_transfer"),
+    visa: t("sales:returnsListPage.methodLabels.visa"),
+    other: t("sales:returnsListPage.methodLabels.other"),
+  };
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -139,10 +141,10 @@ const SalesReturnsListPage: React.FC = () => {
 
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="h6" fontWeight={700} noWrap>
-            مردودات المبيعات
+            {t("sales:returnsListPage.title")}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            عرض وإدارة مردودات المبيعات حسب التاريخ والوردية
+            {t("sales:returnsListPage.subtitle")}
           </Typography>
         </Box>
 
@@ -153,13 +155,13 @@ const SalesReturnsListPage: React.FC = () => {
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", sm: "200px 200px" }, gap: 1.5 }}>
         {[
           {
-            label: "عدد المردودات",
+            label: t("sales:returnsListPage.returnsCount"),
             value: formatNumber(meta.total ?? returns.length),
             icon: <PackageX size={18} />,
             color: "warning" as const,
           },
           {
-            label: "إجمالي القيمة",
+            label: t("sales:returnsListPage.totalValue"),
             value: formatNumber(totalAmount),
             icon: <DollarSign size={18} />,
             color: "error" as const,
@@ -205,7 +207,7 @@ const SalesReturnsListPage: React.FC = () => {
               name="startDate"
               type="date"
               size="small"
-              label="من تاريخ"
+              label={t("sales:returnsListPage.fromDate")}
               InputLabelProps={{ shrink: true }}
               defaultValue={startDate}
               sx={{ width: 160 }}
@@ -214,7 +216,7 @@ const SalesReturnsListPage: React.FC = () => {
               name="endDate"
               type="date"
               size="small"
-              label="إلى تاريخ"
+              label={t("sales:returnsListPage.toDate")}
               InputLabelProps={{ shrink: true }}
               defaultValue={endDate}
               sx={{ width: 160 }}
@@ -222,7 +224,7 @@ const SalesReturnsListPage: React.FC = () => {
             <TextField
               name="shiftId"
               size="small"
-              label="رقم الوردية"
+              label={t("sales:returnsListPage.shiftNumber")}
               defaultValue={shiftIdParam || ""}
               sx={{ width: 140 }}
             />
@@ -232,7 +234,7 @@ const SalesReturnsListPage: React.FC = () => {
               size="small"
               sx={{ textTransform: "none", height: 36 }}
             >
-              تطبيق
+              {t("sales:returnsListPage.apply")}
             </Button>
           </Box>
         </CardContent>
@@ -263,7 +265,7 @@ const SalesReturnsListPage: React.FC = () => {
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
             <RotateCcw size={15} style={{ color: "var(--mui-palette-text-secondary)" }} />
             <Typography variant="subtitle2" fontWeight={700}>
-              قائمة المردودات
+              {t("sales:returnsListPage.listTitle")}
             </Typography>
             <Chip
               label={meta.total ?? returns.length}
@@ -271,7 +273,7 @@ const SalesReturnsListPage: React.FC = () => {
               sx={{ height: 20, fontSize: "0.7rem" }}
             />
             <Box sx={{ flex: 1 }} />
-            <Tooltip title="تحديث">
+            <Tooltip title={t("sales:returnsListPage.refresh")}>
               <span>
                 <IconButton size="small" onClick={() => refetch()} disabled={isFetching}>
                   <RefreshCw size={15} className={isFetching ? "animate-spin" : ""} />
@@ -285,27 +287,27 @@ const SalesReturnsListPage: React.FC = () => {
             {isLoading ? (
               <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: 8, gap: 1.5 }}>
                 <CircularProgress size={24} />
-                <Typography color="text.secondary" variant="body2">جاري التحميل...</Typography>
+                <Typography color="text.secondary" variant="body2">{t("common:loading")}</Typography>
               </Box>
             ) : returns.length === 0 ? (
               <Box sx={{ textAlign: "center", py: 8, color: "text.secondary" }}>
                 <PackageX size={40} style={{ opacity: 0.25, marginBottom: 8 }} />
-                <Typography variant="body2">لا توجد مردودات مطابقة للفلاتر الحالية</Typography>
+                <Typography variant="body2">{t("sales:returnsListPage.noReturnsMatchFilters")}</Typography>
               </Box>
             ) : (
               <Table size="small" stickyHeader>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 700, width: 40 }}>م</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>التاريخ</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>#فاتورة</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>رقم الهاتف</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>المستخدم</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>الوردية</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>السبب</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }} align="center">طريقة المردود</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }} align="center">الأصناف</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }} align="right">الإجمالي</TableCell>
+                    <TableCell sx={{ fontWeight: 700, width: 40 }}>{t("sales:returnsListPage.colNumber")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>{t("sales:returnsListPage.colDate")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>{t("sales:returnsListPage.colInvoice")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>{t("sales:returnsListPage.colPhone")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>{t("sales:returnsListPage.colUser")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>{t("sales:returnsListPage.colShift")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>{t("sales:returnsListPage.colReason")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }} align="center">{t("sales:returnsListPage.colReturnMethod")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }} align="center">{t("sales:returnsListPage.colItems")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }} align="right">{t("sales:returnsListPage.colTotal")}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -412,17 +414,17 @@ const SalesReturnsListPage: React.FC = () => {
                   onClick={() => handlePageChange(-1)}
                   disabled={meta.current_page <= 1}
                 >
-                  <ChevronRight size={16} />
+                  {isRtl ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
                 </IconButton>
                 <Typography variant="caption" color="text.secondary">
-                  صفحة {meta.current_page} من {meta.last_page}
+                  {t("sales:returnsListPage.pageOf", { current: meta.current_page, total: meta.last_page })}
                 </Typography>
                 <IconButton
                   size="small"
                   onClick={() => handlePageChange(1)}
                   disabled={meta.current_page >= meta.last_page}
                 >
-                  <ChevronLeft size={16} />
+                  {isRtl ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
                 </IconButton>
               </Stack>
             </>

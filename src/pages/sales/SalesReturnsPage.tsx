@@ -62,8 +62,10 @@ import saleService, {
 import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 import { formatNumber } from "@/constants";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 const SalesReturnsPage: React.FC = () => {
+  const { t } = useTranslation(["sales", "common"]);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
@@ -165,7 +167,7 @@ const SalesReturnsPage: React.FC = () => {
   // Show error if sale from param failed to load
   useEffect(() => {
     if (errorSaleFromParam && saleIdParam) {
-      toast.error("فشل تحميل الفاتورة. يرجى التحقق من رقم الفاتورة.");
+      toast.error(t("sales:returnsPage.loadInvoiceFailed"));
     }
   }, [errorSaleFromParam, saleIdParam]);
 
@@ -175,7 +177,7 @@ const SalesReturnsPage: React.FC = () => {
       return await saleService.createSaleReturn(data);
     },
     onSuccess: () => {
-      toast.success("تم إنشاء طلب الإرجاع بنجاح");
+      toast.success(t("sales:returnsPage.createReturnSuccess"));
       queryClient.invalidateQueries({ queryKey: ["sale-returns"] });
       // Reset form
       handleReset();
@@ -183,7 +185,7 @@ const SalesReturnsPage: React.FC = () => {
     },
     onError: (error: unknown) => {
       const errorMsg =
-        (error as { response?: { data?: { message?: string; errors?: Record<string, unknown[]> } } })?.response?.data?.message || "فشل إنشاء طلب الإرجاع";
+        (error as { response?: { data?: { message?: string; errors?: Record<string, unknown[]> } } })?.response?.data?.message || t("sales:returnsPage.createReturnFailed");
       const errorData = (error as { response?: { data?: { errors?: Record<string, unknown[]> } } })?.response?.data?.errors;
       if (errorData) {
         const firstErr = Object.values(errorData)[0];
@@ -202,7 +204,7 @@ const SalesReturnsPage: React.FC = () => {
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!invoiceNumber.trim()) {
-      toast.error("يرجى إدخال رقم الفاتورة");
+      toast.error(t("sales:returnsPage.enterInvoiceNumber"));
       return;
     }
     setSearchQuery(invoiceNumber.trim());
@@ -295,7 +297,7 @@ const SalesReturnsPage: React.FC = () => {
 
       if (data.quantity > data.maxReturnable) {
         toast.error(
-          `الكمية المرجعة للصنف ${originalItem.product?.name || originalItem.product_name} تتجاوز الكمية المتاحة`
+          t("sales:returnsPage.returnQtyExceedsAvailable", { name: originalItem.product?.name || originalItem.product_name })
         );
         isValid = false;
         return;
@@ -303,7 +305,7 @@ const SalesReturnsPage: React.FC = () => {
 
       if (data.quantity <= 0) {
         toast.error(
-          `الكمية يجب أن تكون أكبر من 0 للصنف ${originalItem.product?.name || originalItem.product_name}`
+          t("sales:returnsPage.qtyMustBeGreaterThanZero", { name: originalItem.product?.name || originalItem.product_name })
         );
         isValid = false;
         return;
@@ -320,14 +322,14 @@ const SalesReturnsPage: React.FC = () => {
 
     if (!isValid) return;
     if (itemsToReturn.length === 0) {
-      toast.warning("يرجى اختيار عنصر واحد على الأقل للإرجاع");
+      toast.warning(t("sales:returnsPage.selectAtLeastOneItem"));
       return;
     }
 
     const payload: CreateSaleReturnData = {
       original_sale_id: saleDetails.id,
       return_date: new Date().toISOString().split("T")[0],
-      return_reason: returnReason || "لا يوجد سبب محدد",
+      return_reason: returnReason || t("sales:returnsPage.noReasonSpecified"),
       notes: notes,
       status: "completed",
       credit_action: creditAction,
@@ -365,10 +367,10 @@ const SalesReturnsPage: React.FC = () => {
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
               <Undo2 className="h-6 w-6 text-blue-600" />
-              مردودات المبيعات
+              {t("sales:returnsListPage.title")}
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              إنشاء طلب إرجاع جديد
+              {t("sales:returnsPage.createNewReturnRequest")}
             </p>
           </div>
         </div>
@@ -378,7 +380,7 @@ const SalesReturnsPage: React.FC = () => {
           className="gap-2"
         >
           <History className="h-4 w-4" />
-          سجل المردودات
+          {t("sales:returnsPage.returnsHistory")}
         </Button>
       </div>
 
@@ -396,10 +398,10 @@ const SalesReturnsPage: React.FC = () => {
             >
               1
             </div>
-            <CardTitle>البحث عن الفاتورة</CardTitle>
+            <CardTitle>{t("sales:returnsPage.searchInvoiceTitle")}</CardTitle>
           </div>
           <CardDescription>
-            أدخل رقم الفاتورة للبحث عن عملية البيع
+            {t("sales:returnsPage.searchInvoiceDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -408,7 +410,7 @@ const SalesReturnsPage: React.FC = () => {
             <div className="mb-4 space-y-2">
               <Skeleton className="h-10 w-full" />
               <p className="text-sm text-muted-foreground text-center">
-                جاري تحميل الفاتورة...
+                {t("sales:returnsPage.loadingInvoiceEllipsis")}
               </p>
             </div>
           )}
@@ -416,11 +418,11 @@ const SalesReturnsPage: React.FC = () => {
           <form onSubmit={handleSearch} className="flex gap-2">
             <div className="flex-1">
               <Label htmlFor="invoice-search" className="sr-only">
-                رقم الفاتورة
+                {t("sales:invoice")}
               </Label>
               <Input
                 id="invoice-search"
-                placeholder="مثال: INV-1001"
+                placeholder={t("sales:returnsPage.invoiceExamplePlaceholder")}
                 value={invoiceNumber}
                 onChange={(e) => setInvoiceNumber(e.target.value)}
                 disabled={isSearching || !!saleDetails || isLoadingSaleFromParam}
@@ -437,7 +439,7 @@ const SalesReturnsPage: React.FC = () => {
               ) : (
                 <Search className="h-4 w-4" />
               )}
-              بحث
+              {t("sales:returnsPage.searchButton")}
             </Button>
           </form>
 
@@ -452,7 +454,7 @@ const SalesReturnsPage: React.FC = () => {
           {searchResults && searchResults.length > 0 && !saleDetails && (
             <div className="mt-4 space-y-2">
               <p className="text-sm text-muted-foreground">
-                تم العثور على {searchResults.length} نتيجة
+                {t("sales:returnsPage.foundResultsCount", { count: searchResults.length })}
               </p>
               {searchResults.map((sale) => (
                 <Card
@@ -467,7 +469,7 @@ const SalesReturnsPage: React.FC = () => {
                           {sale.invoice_number || `#${sale.id}`}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {sale.client?.name || "عميل نقدي"} • {sale.sale_date}
+                          {sale.client?.name || t("sales:returnsPage.cashClient")} • {sale.sale_date}
                         </p>
                       </div>
                       <Badge variant="outline">
@@ -484,7 +486,7 @@ const SalesReturnsPage: React.FC = () => {
             <Alert className="mt-4">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                لم يتم العثور على فاتورة بهذا الرقم
+                {t("sales:returnsPage.invoiceNotFoundByNumber")}
               </AlertDescription>
             </Alert>
           )}
@@ -506,7 +508,7 @@ const SalesReturnsPage: React.FC = () => {
               >
                 2
               </div>
-              <CardTitle>تفاصيل الفاتورة</CardTitle>
+              <CardTitle>{t("sales:returnsPage.invoiceDetailsTitle")}</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
@@ -519,7 +521,7 @@ const SalesReturnsPage: React.FC = () => {
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  فشل تحميل تفاصيل الفاتورة
+                  {t("sales:returnsPage.loadInvoiceDetailsFailed")}
                 </AlertDescription>
               </Alert>
             ) : (
@@ -527,23 +529,23 @@ const SalesReturnsPage: React.FC = () => {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <User className="h-4 w-4" />
-                    العميل
+                    {t("sales:client")}
                   </div>
                   <p className="font-semibold">
-                    {saleDetails.client?.name || "عميل نقدي"}
+                    {saleDetails.client?.name || t("sales:returnsPage.cashClient")}
                   </p>
                 </div>
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4" />
-                    تاريخ البيع
+                    {t("sales:saleDate")}
                   </div>
                   <p className="font-semibold">{saleDetails.sale_date}</p>
                 </div>
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <DollarSign className="h-4 w-4" />
-                    الإجمالي
+                    {t("sales:detailsPage.total")}
                   </div>
                   <p className="font-semibold">
                     {formatCurrency(Number(saleDetails.total_amount))}
@@ -552,7 +554,7 @@ const SalesReturnsPage: React.FC = () => {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <FileText className="h-4 w-4" />
-                    رقم الفاتورة
+                    {t("sales:invoice")}
                   </div>
                   <p className="font-semibold">
                     {saleDetails.invoice_number || `#${saleDetails.id}`}
@@ -579,17 +581,17 @@ const SalesReturnsPage: React.FC = () => {
               >
                 3
               </div>
-              <CardTitle>تحديد الأصناف للإرجاع</CardTitle>
+              <CardTitle>{t("sales:returnsPage.selectItemsToReturnTitle")}</CardTitle>
             </div>
             <CardDescription>
-              قم بتحديد الأصناف التي يرغب العميل بإرجاعها
+              {t("sales:returnsPage.selectItemsDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Alert className="mb-4">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                حدد الأصناف المراد إرجاعها واختر الحالة (سليم/تالف)
+                {t("sales:returnsPage.selectItemsAlert")}
               </AlertDescription>
             </Alert>
 
@@ -598,16 +600,16 @@ const SalesReturnsPage: React.FC = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-12">
-                      <span className="sr-only">اختيار</span>
+                      <span className="sr-only">{t("sales:returnsPage.selectColumn")}</span>
                     </TableHead>
-                    <TableHead>الصنف</TableHead>
-                    <TableHead className="text-center">الكمية المباعة</TableHead>
-                    <TableHead className="text-center">سعر الوحدة</TableHead>
+                    <TableHead>{t("sales:returnsPage.itemColumn")}</TableHead>
+                    <TableHead className="text-center">{t("sales:returnsPage.soldQuantity")}</TableHead>
+                    <TableHead className="text-center">{t("sales:unitPrice")}</TableHead>
                     <TableHead className="text-center w-32">
-                      الكمية المرجعة
+                      {t("sales:returnsPage.returnedQuantity")}
                     </TableHead>
-                    <TableHead className="text-center w-40">الحالة</TableHead>
-                    <TableHead className="text-right">قيمة الإرجاع</TableHead>
+                    <TableHead className="text-center w-40">{t("sales:returnsPage.conditionColumn")}</TableHead>
+                    <TableHead className="text-right">{t("sales:returnsPage.returnValueColumn")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -681,13 +683,13 @@ const SalesReturnsPage: React.FC = () => {
                             disabled={!isSelected}
                           >
                             <SelectTrigger className="w-full">
-                              <SelectValue placeholder="اختر الحالة" />
+                              <SelectValue placeholder={t("sales:returnsPage.selectConditionPlaceholder")} />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="resellable">
-                                سليم (قابل للبيع)
+                                {t("sales:returnsPage.resellableFull")}
                               </SelectItem>
-                              <SelectItem value="damaged">تالف</SelectItem>
+                              <SelectItem value="damaged">{t("sales:condition_damaged")}</SelectItem>
                             </SelectContent>
                           </Select>
                         </TableCell>
@@ -723,10 +725,10 @@ const SalesReturnsPage: React.FC = () => {
               >
                 4
               </div>
-              <CardTitle>ملخص الإرجاع</CardTitle>
+              <CardTitle>{t("sales:returnsPage.returnSummaryTitle")}</CardTitle>
             </div>
             <CardDescription>
-              راجع المعلومات وأكمل عملية الإرجاع
+              {t("sales:returnsPage.reviewAndCompleteDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -734,7 +736,7 @@ const SalesReturnsPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
               <div>
                 <p className="text-sm text-muted-foreground mb-1">
-                  إجمالي قيمة الإرجاع
+                  {t("sales:totalReturnedValue")}
                 </p>
                 <p className="text-2xl font-bold text-red-600 dark:text-red-400">
                   {formatCurrency(totalRefund)}
@@ -742,7 +744,7 @@ const SalesReturnsPage: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground mb-1">
-                  عدد الأصناف
+                  {t("sales:returnsPage.itemsCount")}
                 </p>
                 <p className="text-2xl font-bold">
                   {Object.keys(selectedItems).length}
@@ -750,7 +752,7 @@ const SalesReturnsPage: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground mb-1">
-                  طريقة الإرجاع
+                  {t("sales:returnsPage.returnMethodLabel")}
                 </p>
                 <Select
                   value={creditAction}
@@ -762,8 +764,8 @@ const SalesReturnsPage: React.FC = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="refund">إسترداد نقدي</SelectItem>
-                    <SelectItem value="store_credit">رصيد للعميل</SelectItem>
+                    <SelectItem value="refund">{t("sales:returnsPage.cashRefund")}</SelectItem>
+                    <SelectItem value="store_credit">{t("sales:returnsPage.clientCredit")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -774,19 +776,19 @@ const SalesReturnsPage: React.FC = () => {
             {/* Form Fields */}
             <div className="space-y-4">
               <div>
-                <Label htmlFor="return-reason">سبب الإرجاع</Label>
+                <Label htmlFor="return-reason">{t("sales:returnReasonLabel")}</Label>
                 <Input
                   id="return-reason"
-                  placeholder="مثال: المنتج تالف، العميل غير رأيه..."
+                  placeholder={t("sales:returnsPage.reasonExamplePlaceholder")}
                   value={returnReason}
                   onChange={(e) => setReturnReason(e.target.value)}
                 />
               </div>
               <div>
-                <Label htmlFor="return-notes">ملاحظات إضافية</Label>
+                <Label htmlFor="return-notes">{t("sales:returnsPage.additionalNotes")}</Label>
                 <Textarea
                   id="return-notes"
-                  placeholder="أي ملاحظات إضافية..."
+                  placeholder={t("sales:returnsPage.anyAdditionalNotesPlaceholder")}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={3}
@@ -801,7 +803,7 @@ const SalesReturnsPage: React.FC = () => {
                 onClick={handleReset}
                 disabled={createReturnMutation.isPending}
               >
-                إلغاء
+                {t("common:cancel")}
               </Button>
               <Button
                 onClick={handleSubmit}
@@ -815,7 +817,7 @@ const SalesReturnsPage: React.FC = () => {
                 ) : (
                   <CheckCircle2 className="h-4 w-4" />
                 )}
-                تأكيد الإرجاع
+                {t("sales:returnsPage.confirmReturnButton")}
               </Button>
             </div>
           </CardContent>

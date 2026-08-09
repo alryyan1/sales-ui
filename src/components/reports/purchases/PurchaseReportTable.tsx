@@ -15,6 +15,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 
 interface SummaryStats {
   totalPurchases: number;
@@ -43,12 +44,13 @@ const PurchaseReportTable: React.FC<PurchaseReportTableProps> = ({
   summaryStats,
   onPageChange,
 }) => {
+  const { t, i18n } = useTranslation(["reports", "purchases"]);
   const navigate = useNavigate();
 
   const statusLabels: Record<string, string> = {
-    received: "تم الاستلام",
-    pending: "معلق",
-    ordered: "تم الطلب",
+    received: t("purchases:status_received"),
+    pending: t("purchases:status_pending"),
+    ordered: t("purchases:status_ordered"),
   };
 
   const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
@@ -64,14 +66,15 @@ const PurchaseReportTable: React.FC<PurchaseReportTableProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-4">
           <CardTitle className="text-xl flex items-center gap-2">
             <FileText className="h-5 w-5 text-blue-500" />
-            النتائج
+            {t("reports:purchaseReportPage.resultsTitle")}
           </CardTitle>
           {meta && (
             <Badge variant="outline" className="font-medium">
-              {`${(currentPage - 1) * 15 + 1}-${Math.min(
-                currentPage * 15,
-                meta.total
-              )} من ${meta.total}`}
+              {t("reports:purchaseReportPage.resultsRangeOf", {
+                from: (currentPage - 1) * 15 + 1,
+                to: Math.min(currentPage * 15, meta.total),
+                total: meta.total,
+              })}
             </Badge>
           )}
         </div>
@@ -88,9 +91,9 @@ const PurchaseReportTable: React.FC<PurchaseReportTableProps> = ({
                         <FileText className="h-8 w-8 text-slate-400" />
                       </div>
                       <h3 className="text-lg font-medium text-slate-900 mb-1">
-                        لا توجد مشتريات
+                        {t("reports:purchaseReportPage.noPurchasesTitle")}
                       </h3>
-                      <p>جرب تعديل الفلاتر</p>
+                      <p>{t("reports:purchaseReportPage.tryAdjustingFilters")}</p>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -104,28 +107,28 @@ const PurchaseReportTable: React.FC<PurchaseReportTableProps> = ({
                 <TableHeader>
                   <TableRow className="bg-slate-50 hover:bg-slate-50">
                     <TableHead className="text-right font-semibold">
-                      التاريخ
+                      {t("reports:purchaseReportPage.colDate")}
                     </TableHead>
                     <TableHead className="text-right font-semibold">
-                      رقم الشراء
+                      {t("reports:purchaseReportPage.colPurchaseNumber")}
                     </TableHead>
                     <TableHead className="text-right font-semibold">
-                      المرجع
+                      {t("reports:purchaseReportPage.colReference")}
                     </TableHead>
                     <TableHead className="text-right font-semibold">
-                      المورد
+                      {t("reports:purchaseReportPage.colSupplier")}
                     </TableHead>
                     <TableHead className="text-right font-semibold">
-                      المخزن
+                      {t("reports:purchaseReportPage.colWarehouse")}
                     </TableHead>
                     <TableHead className="text-center font-semibold">
-                      الحالة
+                      {t("reports:purchaseReportPage.colStatus")}
                     </TableHead>
                     <TableHead className="text-right font-semibold">
-                      المبلغ الإجمالي
+                      {t("reports:purchaseReportPage.colTotalAmount")}
                     </TableHead>
                     <TableHead className="text-center font-semibold w-[100px]">
-                      الإجراءات
+                      {t("reports:purchaseReportPage.colActions")}
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -179,7 +182,7 @@ const PurchaseReportTable: React.FC<PurchaseReportTableProps> = ({
                     <TableRow className="bg-muted/30">
                       <TableCell colSpan={6} className="py-4 text-right">
                         <span className="text-sm font-semibold text-muted-foreground">
-                          إجمالي الصفحة
+                          {t("reports:purchaseReportPage.pageTotal")}
                         </span>
                       </TableCell>
                       <TableCell className="py-4 text-right font-bold">
@@ -203,10 +206,10 @@ const PurchaseReportTable: React.FC<PurchaseReportTableProps> = ({
                     disabled={currentPage === 1 || isLoading}
                     className="h-8 w-8 p-0"
                   >
-                    &rarr;
+                    {i18n.dir() === "rtl" ? "→" : "←"}
                   </Button>
                   <div className="px-3 py-1 text-sm font-medium text-slate-600">
-                    صفحة {currentPage} من {meta.last_page}
+                    {t("reports:purchaseReportPage.pageOf", { current: currentPage, total: meta.last_page })}
                   </div>
                   <Button
                     variant="ghost"
@@ -217,7 +220,7 @@ const PurchaseReportTable: React.FC<PurchaseReportTableProps> = ({
                     disabled={currentPage === meta.last_page || isLoading}
                     className="h-8 w-8 p-0"
                   >
-                    &larr;
+                    {i18n.dir() === "rtl" ? "←" : "→"}
                   </Button>
                 </div>
               </div>

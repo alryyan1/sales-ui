@@ -27,6 +27,7 @@ import {
   LastPage,
 } from "@mui/icons-material";
 import { Plus } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import PurchaseItemsTable from "./PurchaseItemsTable";
 import { PurchaseItem } from "@/services/purchaseService";
@@ -78,6 +79,7 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
   currency,
   showBatchNumber = true,
 }) => {
+  const { t } = useTranslation(["purchases"]);
   const [showInlineCreate, setShowInlineCreate] = useState(false);
 
   // Add keyboard shortcut for "+" key to toggle inline create
@@ -185,7 +187,7 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
             <Typography variant="h6">
-              أصناف المشتريات ({paginationData.total})
+              {t("purchases:itemsListPanel.purchaseItemsCountTitle", { count: paginationData.total })}
             </Typography>
             {onInlineCreate && !isReadOnly && (
               <Button
@@ -195,13 +197,13 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                 onClick={() => setShowInlineCreate(!showInlineCreate)}
                 color="primary"
               >
-           اضافه صنف سريع
+           {t("purchases:itemsListPanel.quickAddItem")}
               </Button>
             )}
           </Box>
           <TextField
             size="small"
-            placeholder="بحث باسم المنتج، الرمز، أو رقم الباتش..."
+            placeholder={t("purchases:itemsListPanel.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             InputProps={{
@@ -228,10 +230,10 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
         >
           {/* Rows Per Page Selector */}
           <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel>صفوف لكل صفحة</InputLabel>
+            <InputLabel>{t("purchases:itemsListPanel.rowsPerPage")}</InputLabel>
             <Select
               value={paginationData.perPage}
-              label="صفوف لكل صفحة"
+              label={t("purchases:itemsListPanel.rowsPerPage")}
               disabled={isLoading}
               onChange={(e) => onPerPageChange(Number(e.target.value))}
             >
@@ -244,8 +246,11 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
 
           {/* Pagination Info */}
           <Typography variant="body2" color="text.secondary">
-            عرض {paginationData.from} إلى {paginationData.to} من{" "}
-            {paginationData.total} نتائج
+            {t("purchases:itemsListPanel.showingResults", {
+              from: paginationData.from,
+              to: paginationData.to,
+              total: paginationData.total,
+            })}
           </Typography>
 
           {/* Laravel Pagination Links */}
@@ -261,7 +266,7 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                 size="small"
                 disabled={paginationData.currentPage === 1 || isLoading}
                 onClick={() => handlePageClick(paginationData.firstPageUrl)}
-                aria-label="الصفحة الأولى"
+                aria-label={t("purchases:itemsListPanel.firstPage")}
               >
                 <FirstPage />
               </IconButton>
@@ -273,7 +278,7 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                 size="small"
                 disabled={!paginationData.prevPageUrl || isLoading}
                 onClick={() => handlePageClick(paginationData.prevPageUrl)}
-                aria-label="الصفحة السابقة"
+                aria-label={t("purchases:itemsListPanel.prevPage")}
               >
                 <ChevronRight />
               </IconButton>
@@ -334,7 +339,7 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                             },
                           }),
                         }}
-                        aria-label={`الصفحة ${pageNum}`}
+                        aria-label={t("purchases:itemsListPanel.pageAria", { page: pageNum })}
                         aria-current={link.active ? "page" : undefined}
                       >
                         {pageNum}
@@ -350,7 +355,7 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                 size="small"
                 disabled={!paginationData.nextPageUrl || isLoading}
                 onClick={() => handlePageClick(paginationData.nextPageUrl)}
-                aria-label="الصفحة التالية"
+                aria-label={t("purchases:itemsListPanel.nextPage")}
               >
                 <ChevronLeft />
               </IconButton>
@@ -365,7 +370,7 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
                   isLoading
                 }
                 onClick={() => handlePageClick(paginationData.lastPageUrl)}
-                aria-label="الصفحة الأخيرة"
+                aria-label={t("purchases:itemsListPanel.lastPage")}
               >
                 <LastPage />
               </IconButton>
@@ -405,8 +410,8 @@ const PurchaseItemsList: React.FC<PurchaseItemsListProps> = ({
           <Box sx={{ textAlign: "center", py: 4 }}>
             <Typography color="text.secondary">
               {searchQuery
-                ? "لا توجد نتائج للبحث"
-                : "لا توجد أصناف في هذه المشتريات"}
+                ? t("purchases:itemsListPanel.noSearchResults")
+                : t("purchases:itemsListPanel.noItemsInPurchase")}
             </Typography>
           </Box>
         )}

@@ -117,9 +117,8 @@
   body {
     @apply bg-background text-foreground;
     font-family: "Tajawal", "Arial", sans-serif;
-    direction: rtl;
   }
-  /* RTL input direction is handled per-component; no global override */
+  /* direction is inherited from <html dir="rtl|ltr">, set dynamically in AppRoot.tsx based on the active language */
 }
 
 @keyframes fadeInUp {

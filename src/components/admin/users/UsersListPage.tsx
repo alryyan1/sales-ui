@@ -23,6 +23,7 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Avatar from "@mui/material/Avatar";
+import { useTranslation } from "react-i18next";
 
 import {
   Search,
@@ -61,11 +62,18 @@ function stringToColor(str: string) {
   return `hsl(${h}, 45%, 48%)`;
 }
 
-const COLS = ["المستخدم", "اسم الدخول", "الأدوار", "المستودع", "إجراء"];
-
 const UsersListPage: React.FC = () => {
+  const { t, i18n } = useTranslation(["users"]);
   const [searchParams, setSearchParams] = useSearchParams();
   const { user: currentUser } = useAuthorization();
+
+  const COLS = [
+    t("users:listPage.columnUser"),
+    t("users:listPage.columnLogin"),
+    t("users:listPage.columnRoles"),
+    t("users:listPage.columnWarehouse"),
+    t("users:listPage.columnAction"),
+  ];
 
   const initialSearch = searchParams.get("search") || "";
   const initialPage = Number(searchParams.get("page") || "1");
@@ -132,11 +140,11 @@ const UsersListPage: React.FC = () => {
   const handleSaveSuccess = () => {
     closeModal();
     refetch();
-    toast.success(editingUser ? "تم التحديث بنجاح" : "تم الإنشاء بنجاح");
+    toast.success(editingUser ? t("users:listPage.updatedSuccessfully") : t("users:listPage.createdSuccessfully"));
   };
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1400, mx: "auto" }} dir="rtl">
+    <Box sx={{ p: 3, maxWidth: 1400, mx: "auto" }} dir={i18n.dir()}>
       {/* ── Page Header ── */}
       <Box
         sx={{
@@ -166,16 +174,16 @@ const UsersListPage: React.FC = () => {
           </Box>
           <Box>
             <Typography variant="h6" fontWeight={700} lineHeight={1.2}>
-              إدارة المستخدمين
+              {t("users:listPage.manageTitle")}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              إدارة الحسابات والصلاحيات والمستودعات
+              {t("users:listPage.manageSubtitle")}
             </Typography>
           </Box>
         </Box>
     <TextField
           size="small"
-          placeholder="ابحث بالاسم أو اسم الدخول..."
+          placeholder={t("users:listPage.searchByNameOrLogin")}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           sx={{ flex: 1, maxWidth: { xs: "100%", sm: 300 } }}
@@ -201,7 +209,7 @@ const UsersListPage: React.FC = () => {
           startIcon={<Add />}
           onClick={() => openModal()}
         >
-          مستخدم جديد
+          {t("users:listPage.newUser")}
         </Button>
       </Box>
 
@@ -218,7 +226,7 @@ const UsersListPage: React.FC = () => {
         >
           {error instanceof Error
             ? error.message
-            : "حدث خطأ غير متوقع أثناء الاتصال بالخادم."}
+            : t("users:listPage.unexpectedError")}
         </Alert>
       )}
 
@@ -253,12 +261,12 @@ const UsersListPage: React.FC = () => {
               {isLoading &&
                 Array.from({ length: 6 }).map((_, i) => (
                   <TableRow key={i}>
-                    {COLS.map((col) => (
+                    {COLS.map((col, colIndex) => (
                       <TableCell key={col} align="center" sx={{ py: 1 }}>
                         <Skeleton
                           variant="rounded"
                           height={24}
-                          sx={{ mx: "auto", maxWidth: col === "الأدوار" ? 120 : 80 }}
+                          sx={{ mx: "auto", maxWidth: colIndex === 2 ? 120 : 80 }}
                         />
                       </TableCell>
                     ))}
@@ -279,10 +287,10 @@ const UsersListPage: React.FC = () => {
                         color="text.secondary"
                         fontWeight={600}
                       >
-                        لا توجد نتائج مطابقة
+                        {t("users:listPage.noMatchingResults")}
                       </Typography>
                       <Typography variant="caption" color="text.disabled">
-                        حاول ضبط مصطلحات البحث
+                        {t("users:listPage.tryAdjustingSearch")}
                       </Typography>
                     </TableCell>
                   </TableRow>
@@ -332,7 +340,7 @@ const UsersListPage: React.FC = () => {
                             </Typography>
                             {isSelf && (
                               <Chip
-                                label="أنت"
+                                label={t("users:listPage.you")}
                                 size="small"
                                 color="primary"
                                 sx={{ height: 16, fontSize: "0.65rem", mt: 0.25 }}
@@ -407,7 +415,7 @@ const UsersListPage: React.FC = () => {
 
                       {/* Actions */}
                       <TableCell align="center" sx={{ py: 0.75 }}>
-                        <Tooltip title="تعديل البيانات" placement="right">
+                        <Tooltip title={t("users:listPage.editData")} placement="right">
                           <IconButton
                             size="small"
                             onClick={() => openModal(user)}
@@ -442,8 +450,11 @@ const UsersListPage: React.FC = () => {
               }}
             >
               <Typography variant="caption" color="text.secondary">
-                صفحة {page} من {usersResponse.last_page} —{" "}
-                {usersResponse.total} مستخدم
+                {t("users:listPage.pageSummary", {
+                  page,
+                  lastPage: usersResponse.last_page,
+                  total: usersResponse.total,
+                })}
               </Typography>
               <Pagination
                 count={usersResponse.last_page}

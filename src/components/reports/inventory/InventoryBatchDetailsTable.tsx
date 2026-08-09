@@ -14,6 +14,7 @@ import {
 import { PurchaseItem as PurchaseItemType } from "@/services/purchaseService";
 import { formatNumber } from "@/constants";
 import { useFormatCurrency } from "@/hooks/useFormatCurrency";
+import { useTranslation } from "react-i18next";
 
 interface InventoryBatchDetailsTableProps {
   batches: PurchaseItemType[];
@@ -23,33 +24,34 @@ interface InventoryBatchDetailsTableProps {
 export const InventoryBatchDetailsTable: React.FC<
   InventoryBatchDetailsTableProps
 > = ({ batches, sellableUnitName }) => {
+  const { t } = useTranslation(["reports"]);
   const formatCurrency = useFormatCurrency();
-  
+
   if (!batches || batches.length === 0) {
     return (
       <Box sx={{ px: 2, py: 1 }}>
         <Typography variant="caption" color="text.secondary">
-          لا توجد دفعات متاحة لهذا المنتج
+          {t("reports:noBatchesAvailableForProduct")}
         </Typography>
       </Box>
     );
   }
 
-  const displaySellableUnit = sellableUnitName || "وحدة";
+  const displaySellableUnit = sellableUnitName || t("reports:inventoryBatchDetailsTable.defaultUnit");
 
   return (
     <Table size="small" sx={{ my: 1 }}>
       <TableHead>
         <TableRow sx={{ bgcolor: "grey.100" }}>
-          <TableCell sx={{ fontSize: "0.75rem" }}>رقم الدفعة</TableCell>
+          <TableCell sx={{ fontSize: "0.75rem" }}>{t("reports:inventoryBatchDetailsTable.colBatchNumber")}</TableCell>
           <TableCell align="center" sx={{ fontSize: "0.75rem" }}>
-            الكمية المتبقية ({displaySellableUnit})
+            {t("reports:inventoryBatchDetailsTable.colRemainingQty", { unit: displaySellableUnit })}
           </TableCell>
           <TableCell align="right" sx={{ fontSize: "0.75rem" }}>
-            التكلفة للوحدة ({displaySellableUnit})
+            {t("reports:inventoryBatchDetailsTable.colCostPerUnit", { unit: displaySellableUnit })}
           </TableCell>
           <TableCell align="right" sx={{ fontSize: "0.75rem" }}>
-            {`سعر البيع المقترح (${displaySellableUnit})`}
+            {t("reports:inventoryBatchDetailsTable.colSuggestedSalePrice", { unit: displaySellableUnit })}
           </TableCell>
         </TableRow>
       </TableHead>

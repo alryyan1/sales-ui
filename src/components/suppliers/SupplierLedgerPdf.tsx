@@ -13,6 +13,7 @@ import { formatNumber } from "@/constants";
 import { format } from "date-fns";
 
 import { getPdfFont } from "@/utils/pdfFontRegistry";
+import { useTranslation } from "react-i18next";
 
 const styles = StyleSheet.create({
   page: {
@@ -172,14 +173,15 @@ export const SupplierLedgerPdf: React.FC<SupplierLedgerPdfProps> = ({
   ledger,
   settings,
 }) => {
+  const { t } = useTranslation(["suppliers"]);
   const currencySymbol = settings?.currency_symbol || "OMR";
 
   const getTypeLabel = (type: string) => {
     switch (type) {
       case "purchase":
-        return "شراء";
+        return t("suppliers:ledgerPdf.typePurchase");
       case "payment":
-        return "دفعة";
+        return t("suppliers:ledgerPdf.typePayment");
       default:
         return type;
     }
@@ -228,7 +230,7 @@ export const SupplierLedgerPdf: React.FC<SupplierLedgerPdfProps> = ({
             </View>
             <View style={styles.companyInfo}>
               <Text style={styles.companyName}>
-                {settings?.company_name || "اسم الشركة"}
+                {settings?.company_name || t("suppliers:ledgerPdf.defaultCompanyName")}
               </Text>
               {settings?.company_address && (
                 <Text style={styles.companyDetail}>
@@ -237,37 +239,37 @@ export const SupplierLedgerPdf: React.FC<SupplierLedgerPdfProps> = ({
               )}
               {settings?.company_phone && (
                 <Text style={styles.companyDetail}>
-                  هاتف: {settings.company_phone}
+                  {t("suppliers:ledgerPdf.phoneLabelInline")}{settings.company_phone}
                 </Text>
               )}
               {settings?.tax_number && (
                 <Text style={styles.companyDetail}>
-                  الرقم الضريبي: {settings.tax_number}
+                  {t("suppliers:ledgerPdf.taxNumberLabelInline")}{settings.tax_number}
                 </Text>
               )}
             </View>
           </View>
         )}
 
-        <Text style={styles.title}>كشف حساب مورد / Supplier Statement</Text>
+        <Text style={styles.title}>{t("suppliers:ledgerPdf.title")}</Text>
 
         {/* Supplier Meta */}
         <View style={styles.metaSection}>
           <View style={styles.metaColumn}>
             <View style={styles.metaRow}>
               <Text style={styles.metaValue}>{ledger.supplier.name}</Text>
-              <Text style={styles.metaLabel}>المورد:</Text>
+              <Text style={styles.metaLabel}>{t("suppliers:ledgerPdf.supplierLabel")}</Text>
             </View>
             {ledger.supplier.phone && (
               <View style={styles.metaRow}>
                 <Text style={styles.metaValue}>{ledger.supplier.phone}</Text>
-                <Text style={styles.metaLabel}>الهاتف:</Text>
+                <Text style={styles.metaLabel}>{t("suppliers:ledgerPdf.phoneLabel")}</Text>
               </View>
             )}
             {ledger.supplier.email && (
               <View style={styles.metaRow}>
                 <Text style={styles.metaValue}>{ledger.supplier.email}</Text>
-                <Text style={styles.metaLabel}>البريد:</Text>
+                <Text style={styles.metaLabel}>{t("suppliers:ledgerPdf.emailLabel")}</Text>
               </View>
             )}
             {ledger.supplier.contact_person && (
@@ -275,7 +277,7 @@ export const SupplierLedgerPdf: React.FC<SupplierLedgerPdfProps> = ({
                 <Text style={styles.metaValue}>
                   {ledger.supplier.contact_person}
                 </Text>
-                <Text style={styles.metaLabel}>المسؤول:</Text>
+                <Text style={styles.metaLabel}>{t("suppliers:ledgerPdf.contactPersonLabel")}</Text>
               </View>
             )}
           </View>
@@ -284,7 +286,7 @@ export const SupplierLedgerPdf: React.FC<SupplierLedgerPdfProps> = ({
               <Text style={styles.metaValue}>
                 {format(new Date(), "yyyy-MM-dd")}
               </Text>
-              <Text style={styles.metaLabel}>تاريخ الطباعة:</Text>
+              <Text style={styles.metaLabel}>{t("suppliers:ledgerPdf.printDateLabel")}</Text>
             </View>
           </View>
         </View>
@@ -292,13 +294,13 @@ export const SupplierLedgerPdf: React.FC<SupplierLedgerPdfProps> = ({
         {/* Table */}
         <View style={styles.table}>
           <View style={styles.tableHeader}>
-            <Text style={styles.colDate}>التاريخ</Text>
-            <Text style={styles.colType}>النوع</Text>
-            <Text style={styles.colDesc}>الوصف</Text>
-            <Text style={styles.colDebit}>مدين</Text>
-            <Text style={styles.colCredit}>دائن</Text>
-            <Text style={styles.colBalance}>الرصيد</Text>
-            <Text style={styles.colRef}>المرجع</Text>
+            <Text style={styles.colDate}>{t("suppliers:ledgerPdf.colDate")}</Text>
+            <Text style={styles.colType}>{t("suppliers:ledgerPdf.colType")}</Text>
+            <Text style={styles.colDesc}>{t("suppliers:ledgerPdf.colDesc")}</Text>
+            <Text style={styles.colDebit}>{t("suppliers:ledgerPdf.colDebit")}</Text>
+            <Text style={styles.colCredit}>{t("suppliers:ledgerPdf.colCredit")}</Text>
+            <Text style={styles.colBalance}>{t("suppliers:ledgerPdf.colBalance")}</Text>
+            <Text style={styles.colRef}>{t("suppliers:ledgerPdf.colRef")}</Text>
           </View>
           {ledger.ledger_entries.map((entry, index) => (
             <View key={entry.id || index} style={styles.tableRow}>
@@ -334,13 +336,13 @@ export const SupplierLedgerPdf: React.FC<SupplierLedgerPdfProps> = ({
               <Text style={styles.summaryValue}>
                 {formatNumber(ledger.summary.total_purchases)} {currencySymbol}
               </Text>
-              <Text style={styles.summaryLabel}>إجمالي المشتريات:</Text>
+              <Text style={styles.summaryLabel}>{t("suppliers:ledgerPdf.totalPurchasesLabel")}</Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryValue}>
                 {formatNumber(ledger.summary.total_payments)} {currencySymbol}
               </Text>
-              <Text style={styles.summaryLabel}>إجمالي المدفوعات:</Text>
+              <Text style={styles.summaryLabel}>{t("suppliers:ledgerPdf.totalPaymentsLabel")}</Text>
             </View>
             <View
               style={[
@@ -364,13 +366,13 @@ export const SupplierLedgerPdf: React.FC<SupplierLedgerPdfProps> = ({
               >
                 {formatNumber(ledger.summary.balance)} {currencySymbol}
               </Text>
-              <Text style={styles.summaryLabel}>الرصيد الحالي:</Text>
+              <Text style={styles.summaryLabel}>{t("suppliers:ledgerPdf.currentBalanceLabel")}</Text>
             </View>
           </View>
         </View>
 
         <View style={styles.footer}>
-          <Text>نسخة إلكترونية - تم إصدارها بواسطة النظام</Text>
+          <Text>{t("suppliers:ledgerPdf.footerText")}</Text>
         </View>
       </Page>
     </Document>

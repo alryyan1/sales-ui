@@ -37,8 +37,10 @@ import inventoryCountService, {
 import { warehouseService } from "@/services/warehouseService";
 import InventoryCountDialog from "../../components/inventory/InventoryCountDialog";
 import dayjs from "dayjs";
+import { useTranslation } from "react-i18next";
 
 const InventoryCountPage: React.FC = () => {
+  const { t } = useTranslation(["inventory", "common"]);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -69,11 +71,11 @@ const InventoryCountPage: React.FC = () => {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => inventoryCountService.deleteInventoryCount(id),
     onSuccess: () => {
-      toast.success("تم حذف الجرد بنجاح");
+      toast.success(t("inventory:countPage.deleteSuccess"));
       queryClient.invalidateQueries({ queryKey: ["inventory-counts"] });
     },
     onError: (error) => {
-      toast.error("خطأ", {
+      toast.error(t("common:error"), {
         description: inventoryCountService.getErrorMessage(error),
       });
     },
@@ -82,11 +84,11 @@ const InventoryCountPage: React.FC = () => {
   const approveMutation = useMutation({
     mutationFn: (id: number) => inventoryCountService.approveCount(id),
     onSuccess: () => {
-      toast.success("تم اعتماد الجرد وتعديل المخزون");
+      toast.success(t("inventory:countPage.approveSuccess"));
       queryClient.invalidateQueries({ queryKey: ["inventory-counts"] });
     },
     onError: (error) => {
-      toast.error("خطأ", {
+      toast.error(t("common:error"), {
         description: inventoryCountService.getErrorMessage(error),
       });
     },
@@ -95,11 +97,11 @@ const InventoryCountPage: React.FC = () => {
   const rejectMutation = useMutation({
     mutationFn: (id: number) => inventoryCountService.rejectCount(id),
     onSuccess: () => {
-      toast.success("تم رفض الجرد");
+      toast.success(t("inventory:countPage.rejectSuccess"));
       queryClient.invalidateQueries({ queryKey: ["inventory-counts"] });
     },
     onError: (error) => {
-      toast.error("خطأ", {
+      toast.error(t("common:error"), {
         description: inventoryCountService.getErrorMessage(error),
       });
     },
@@ -112,7 +114,7 @@ const InventoryCountPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ["inventory-counts"] });
     },
     onError: (error) => {
-      toast.error("خطأ", {
+      toast.error(t("common:error"), {
         description: inventoryCountService.getErrorMessage(error),
       });
     },
@@ -120,32 +122,28 @@ const InventoryCountPage: React.FC = () => {
 
   // Handlers
   const handleDelete = (count: InventoryCount) => {
-    if (window.confirm("هل أنت متأكد من حذف هذا الجرد؟")) {
+    if (window.confirm(t("inventory:countPage.confirmDelete"))) {
       deleteMutation.mutate(count.id);
     }
   };
 
   const handleApprove = (count: InventoryCount) => {
     if (
-      window.confirm(
-        "هل أنت متأكد من اعتماد هذا الجرد؟ سيتم تعديل المخزون تلقائياً.",
-      )
+      window.confirm(t("inventory:countPage.confirmApprove"))
     ) {
       approveMutation.mutate(count.id);
     }
   };
 
   const handleReject = (count: InventoryCount) => {
-    if (window.confirm("هل أنت متأكد من رفض هذا الجرد؟")) {
+    if (window.confirm(t("inventory:countPage.confirmReject"))) {
       rejectMutation.mutate(count.id);
     }
   };
 
   const handleImportAllProducts = (count: InventoryCount) => {
     if (
-      window.confirm(
-        "هل تريد استيراد جميع المنتجات من المستودع؟ سيتم إضافة المنتجات التي لم تتم إضافتها مسبقاً.",
-      )
+      window.confirm(t("inventory:countPage.confirmImportAll"))
     ) {
       importAllProductsMutation.mutate(count.id);
     }
@@ -153,11 +151,11 @@ const InventoryCountPage: React.FC = () => {
 
   const getStatusChip = (status: string) => {
     const statusConfig = {
-      draft: { label: "مسودة", color: "default" as const },
-      in_progress: { label: "قيد التنفيذ", color: "info" as const },
-      completed: { label: "مكتمل", color: "warning" as const },
-      approved: { label: "معتمد", color: "success" as const },
-      rejected: { label: "مرفوض", color: "error" as const },
+      draft: { label: t("inventory:countPage.status_draft"), color: "default" as const },
+      in_progress: { label: t("inventory:countPage.status_in_progress"), color: "info" as const },
+      completed: { label: t("inventory:countPage.status_completed"), color: "warning" as const },
+      approved: { label: t("inventory:countPage.status_approved"), color: "success" as const },
+      rejected: { label: t("inventory:countPage.status_rejected"), color: "error" as const },
     };
 
     const config =
@@ -179,7 +177,7 @@ const InventoryCountPage: React.FC = () => {
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           <Assessment sx={{ fontSize: 32, color: "primary.main" }} />
           <Typography variant="h4" fontWeight="bold">
-            جرد المخزون
+            {t("inventory:countPage.title")}
           </Typography>
         </Box>
         <Button
@@ -190,7 +188,7 @@ const InventoryCountPage: React.FC = () => {
             setDialogOpen(true);
           }}
         >
-          جرد جديد
+          {t("inventory:countPage.newCountButton")}
         </Button>
       </Box>
 
@@ -205,7 +203,7 @@ const InventoryCountPage: React.FC = () => {
         >
           <TextField
             select
-            label="المستودع"
+            label={t("inventory:countPage.warehouseLabel")}
             value={filters.warehouse_id || ""}
             onChange={(e) =>
               setFilters({
@@ -215,7 +213,7 @@ const InventoryCountPage: React.FC = () => {
             }
             size="small"
           >
-            <MenuItem value="">الكل</MenuItem>
+            <MenuItem value="">{t("inventory:countPage.allOption")}</MenuItem>
             {warehouses?.map((w: any) => (
               <MenuItem key={w.id} value={w.id}>
                 {w.name}
@@ -225,24 +223,24 @@ const InventoryCountPage: React.FC = () => {
 
           <TextField
             select
-            label="الحالة"
+            label={t("inventory:countPage.statusLabel")}
             value={filters.status || ""}
             onChange={(e) =>
               setFilters({ ...filters, status: e.target.value || undefined })
             }
             size="small"
           >
-            <MenuItem value="">الكل</MenuItem>
-            <MenuItem value="draft">مسودة</MenuItem>
-            <MenuItem value="in_progress">قيد التنفيذ</MenuItem>
-            <MenuItem value="completed">مكتمل</MenuItem>
-            <MenuItem value="approved">معتمد</MenuItem>
-            <MenuItem value="rejected">مرفوض</MenuItem>
+            <MenuItem value="">{t("inventory:countPage.allOption")}</MenuItem>
+            <MenuItem value="draft">{t("inventory:countPage.status_draft")}</MenuItem>
+            <MenuItem value="in_progress">{t("inventory:countPage.status_in_progress")}</MenuItem>
+            <MenuItem value="completed">{t("inventory:countPage.status_completed")}</MenuItem>
+            <MenuItem value="approved">{t("inventory:countPage.status_approved")}</MenuItem>
+            <MenuItem value="rejected">{t("inventory:countPage.status_rejected")}</MenuItem>
           </TextField>
 
           <TextField
             type="date"
-            label="من تاريخ"
+            label={t("inventory:countPage.fromDate")}
             value={filters.start_date || ""}
             onChange={(e) =>
               setFilters({
@@ -256,7 +254,7 @@ const InventoryCountPage: React.FC = () => {
 
           <TextField
             type="date"
-            label="إلى تاريخ"
+            label={t("inventory:countPage.toDate")}
             value={filters.end_date || ""}
             onChange={(e) =>
               setFilters({ ...filters, end_date: e.target.value || undefined })
@@ -272,27 +270,27 @@ const InventoryCountPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow sx={{ bgcolor: "grey.100" }}>
-              <TableCell>#</TableCell>
-              <TableCell>التاريخ</TableCell>
-              <TableCell>المستودع</TableCell>
-              <TableCell>الحالة</TableCell>
-              <TableCell>المستخدم</TableCell>
-              <TableCell align="center">عدد المنتجات</TableCell>
-              <TableCell>الملاحظات</TableCell>
-              <TableCell align="center">الإجراءات</TableCell>
+              <TableCell>{t("inventory:countPage.colNumber")}</TableCell>
+              <TableCell>{t("inventory:countPage.colDate")}</TableCell>
+              <TableCell>{t("inventory:countPage.colWarehouse")}</TableCell>
+              <TableCell>{t("inventory:countPage.colStatus")}</TableCell>
+              <TableCell>{t("inventory:countPage.colUser")}</TableCell>
+              <TableCell align="center">{t("inventory:countPage.colProductsCount")}</TableCell>
+              <TableCell>{t("inventory:countPage.colNotes")}</TableCell>
+              <TableCell align="center">{t("inventory:countPage.colActions")}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={8} align="center">
-                  جاري التحميل...
+                  {t("common:loading")}
                 </TableCell>
               </TableRow>
             ) : countsData?.data?.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} align="center">
-                  لا توجد عمليات جرد
+                  {t("inventory:countPage.noCounts")}
                 </TableCell>
               </TableRow>
             ) : (
@@ -323,7 +321,7 @@ const InventoryCountPage: React.FC = () => {
                         onClick={() => navigate(`/inventory/counts/${count.id}`)}
                         sx={{ fontSize: 11 }}
                       >
-                        عرض
+                        {t("inventory:countPage.viewButton")}
                       </Button>
 
                       {(count.status === "draft" || count.status === "in_progress") && (
@@ -336,7 +334,7 @@ const InventoryCountPage: React.FC = () => {
                           disabled={importAllProductsMutation.isPending}
                           sx={{ fontSize: 11 }}
                         >
-                          استيراد الكل
+                          {t("inventory:countPage.importAllButton")}
                         </Button>
                       )}
 
@@ -349,7 +347,7 @@ const InventoryCountPage: React.FC = () => {
                             onClick={() => { setEditingCount(count); setDialogOpen(true); }}
                             sx={{ fontSize: 11 }}
                           >
-                            تعديل
+                            {t("inventory:countPage.editButton")}
                           </Button>
                           <Button
                             size="small"
@@ -359,7 +357,7 @@ const InventoryCountPage: React.FC = () => {
                             onClick={() => handleDelete(count)}
                             sx={{ fontSize: 11 }}
                           >
-                            حذف
+                            {t("inventory:countPage.deleteButton")}
                           </Button>
                         </>
                       )}
@@ -374,7 +372,7 @@ const InventoryCountPage: React.FC = () => {
                             onClick={() => handleApprove(count)}
                             sx={{ fontSize: 11 }}
                           >
-                            اعتماد
+                            {t("inventory:countPage.approveButton")}
                           </Button>
                           <Button
                             size="small"
@@ -384,7 +382,7 @@ const InventoryCountPage: React.FC = () => {
                             onClick={() => handleReject(count)}
                             sx={{ fontSize: 11 }}
                           >
-                            رفض
+                            {t("inventory:countPage.rejectButton")}
                           </Button>
                         </>
                       )}

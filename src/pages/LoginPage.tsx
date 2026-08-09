@@ -4,6 +4,7 @@ import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
   TrendingUp,
@@ -22,27 +23,30 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import LanguageSwitcher from "@/components/common/LanguageSwitcher";
 
 // Auth
 import authService from "@/services/authService";
 import { useAuth } from "@/context/AuthContext";
 
-const loginSchema = z.object({
-  username: z.string().min(1, { message: "اسم المستخدم مطلوب" }),
-  password: z.string().min(1, { message: "كلمة المرور مطلوبة" }),
-});
-type LoginFormValues = z.infer<typeof loginSchema>;
-
-const features = [
-  { icon: BarChart3, text: "تقارير مبيعات شاملة وتحليلات دقيقة" },
-  { icon: Package, text: "إدارة المخزون عبر متعدد المستودعات" },
-  { icon: ShieldCheck, text: "صلاحيات متعددة المستويات" },
-];
-
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t, i18n } = useTranslation(["login", "common"]);
+  const direction = i18n.dir();
   const { user, isLoading: isAuthLoading, handleLoginSuccess } = useAuth();
+
+  const loginSchema = z.object({
+    username: z.string().min(1, { message: t("login:usernameRequired") }),
+    password: z.string().min(1, { message: t("login:passwordRequired") }),
+  });
+  type LoginFormValues = z.infer<typeof loginSchema>;
+
+  const features = [
+    { icon: BarChart3, text: t("login:feature1") },
+    { icon: Package, text: t("login:feature2") },
+    { icon: ShieldCheck, text: t("login:feature3") },
+  ];
 
   const [serverError, setServerError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -71,10 +75,7 @@ const LoginPage: React.FC = () => {
       const from = location.state?.from?.pathname || "/dashboard";
       navigate(from, { replace: true });
     } catch (err) {
-      const errorMsg = authService.getErrorMessage(
-        err,
-        "فشل تسجيل الدخول. يرجى المحاولة مرة أخرى."
-      );
+      const errorMsg = authService.getErrorMessage(err, t("login:loginFailedRetry"));
       toast.error(errorMsg);
       setServerError(errorMsg);
     }
@@ -89,13 +90,13 @@ const LoginPage: React.FC = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-background" dir="rtl">
-      {/* ── Right panel: Branding (hidden on mobile) ── */}
+    <div className="flex min-h-screen bg-background" dir={direction}>
+      {/* ── Branding panel (hidden on mobile) ── */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/70 flex-col items-center justify-center p-12">
         {/* Decorative circles */}
-        <div className="absolute top-[-80px] right-[-80px] w-72 h-72 rounded-full bg-white/5" />
-        <div className="absolute bottom-[-60px] left-[-60px] w-96 h-96 rounded-full bg-white/5" />
-        <div className="absolute top-1/3 left-[-40px] w-48 h-48 rounded-full bg-white/5" />
+        <div className="absolute top-[-80px] end-[-80px] w-72 h-72 rounded-full bg-white/5" />
+        <div className="absolute bottom-[-60px] start-[-60px] w-96 h-96 rounded-full bg-white/5" />
+        <div className="absolute top-1/3 start-[-40px] w-48 h-48 rounded-full bg-white/5" />
 
         <div className="relative z-10 text-center text-white max-w-sm">
           {/* Logo */}
@@ -105,14 +106,14 @@ const LoginPage: React.FC = () => {
 
           {/* Title */}
           <h1 className="text-3xl font-bold mb-3 tracking-tight">
-            نظام إدارة المبيعات
+            {t("login:systemTitle")}
           </h1>
           <p className="text-white/70 text-sm leading-relaxed mb-10">
-            حل متكامل لإدارة المبيعات والمخزون والتقارير بكفاءة واحترافية
+            {t("login:systemSubtitle")}
           </p>
 
           {/* Feature list */}
-          <div className="space-y-4 text-right">
+          <div className="space-y-4 text-start">
             {features.map(({ icon: Icon, text }) => (
               <div key={text} className="flex items-center gap-3">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/15 border border-white/20">
@@ -126,27 +127,31 @@ const LoginPage: React.FC = () => {
 
         {/* Bottom tagline */}
         <div className="absolute bottom-8 text-white/40 text-xs">
-          © {new Date().getFullYear()} نظام إدارة المبيعات
+          © {new Date().getFullYear()} {t("login:systemTitle")}
         </div>
       </div>
 
-      {/* ── Left panel: Login form ── */}
-      <div className="flex w-full lg:w-1/2 flex-col items-center justify-center p-6 sm:p-10">
+      {/* ── Login form panel ── */}
+      <div className="flex w-full lg:w-1/2 flex-col items-center justify-center p-6 sm:p-10 relative">
+        <div className="absolute top-4 end-4">
+          <LanguageSwitcher />
+        </div>
+
         {/* Mobile header */}
         <div className="mb-8 text-center lg:hidden">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary">
             <TrendingUp size={28} className="text-primary-foreground" />
           </div>
-          <h1 className="text-xl font-bold text-foreground">نظام إدارة المبيعات</h1>
+          <h1 className="text-xl font-bold text-foreground">{t("login:systemTitle")}</h1>
         </div>
 
         {/* Card */}
         <div className="w-full max-w-sm">
           {/* Heading */}
           <div className="mb-7 text-center">
-            <h2 className="text-2xl font-bold text-foreground">تسجيل الدخول</h2>
+            <h2 className="text-2xl font-bold text-foreground">{t("login:heading")}</h2>
             <p className="mt-1.5 text-sm text-muted-foreground">
-              أدخل بياناتك للوصول إلى حسابك
+              {t("login:subheading")}
             </p>
           </div>
 
@@ -162,18 +167,18 @@ const LoginPage: React.FC = () => {
             {/* Username */}
             <div className="space-y-1.5">
               <Label htmlFor="username" className="text-sm font-medium">
-                اسم المستخدم
+                {t("login:usernameLabel")}
               </Label>
               <div className="relative">
                 <User
                   size={15}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground"
                 />
                 <Input
                   id="username"
                   type="text"
-                  placeholder="أدخل اسم المستخدم"
-                  className="pr-9 h-11"
+                  placeholder={t("login:usernamePlaceholder")}
+                  className="ps-9 h-11"
                   disabled={isSubmitting}
                   {...register("username")}
                   aria-invalid={!!errors.username}
@@ -187,18 +192,18 @@ const LoginPage: React.FC = () => {
             {/* Password */}
             <div className="space-y-1.5">
               <Label htmlFor="password" className="text-sm font-medium">
-                كلمة المرور
+                {t("login:passwordLabel")}
               </Label>
               <div className="relative">
                 <Lock
                   size={15}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground"
                 />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
-                  className="pr-9 pl-10 h-11"
+                  className="ps-9 pe-10 h-11"
                   disabled={isSubmitting}
                   {...register("password")}
                   aria-invalid={!!errors.password}
@@ -206,7 +211,7 @@ const LoginPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -225,11 +230,11 @@ const LoginPage: React.FC = () => {
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 size={16} className="animate-spin ml-2" />
-                  جاري التحقق...
+                  <Loader2 size={16} className="animate-spin me-2" />
+                  {t("login:verifying")}
                 </>
               ) : (
-                "تسجيل الدخول"
+                t("login:submitButton")
               )}
             </Button>
           </form>
@@ -237,7 +242,7 @@ const LoginPage: React.FC = () => {
 
         {/* Footer */}
         <p className="mt-10 text-xs text-muted-foreground">
-          © {new Date().getFullYear()} نظام إدارة المبيعات. جميع الحقوق محفوظة.
+          © {new Date().getFullYear()} {t("login:systemTitle")}. {t("login:footerRights")}.
         </p>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { Controller, Control } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import {
   Box,
   Card,
@@ -21,6 +22,7 @@ interface PosSettingsProps {
 }
 
 export const PosSettings = ({ control }: PosSettingsProps) => {
+  const { t } = useTranslation(["settings"]);
   const theme = useTheme();
 
   return (
@@ -40,7 +42,7 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
           gutterBottom
           sx={{ mb: 4, color: "text.primary" }}
         >
-          إعدادات نقاط البيع (POS)
+          {t("settings:posSettingsSectionTitle")}
         </Typography>
         {/* Product Visibility Settings */}
         <Box
@@ -59,7 +61,7 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
               gutterBottom
               sx={{ mb: 2 }}
             >
-              ظهور المنتجات (Product Visibility)
+              {t("settings:productVisibilitySectionTitle")}
             </Typography>
             <Stack spacing={2}>
               <Controller
@@ -76,10 +78,10 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
                     label={
                       <Box>
                         <Typography variant="body1" fontWeight={500}>
-                          عرض المنتجات التي نفد مخزونها
+                          {t("settings:showOutOfStockProductsLabel")}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          عند التفعيل، ستظهر المنتجات التي رصيدها صفراً أو أقل في نتائج بحث نقطة البيع.
+                          {t("settings:showOutOfStockProductsDesc")}
                         </Typography>
                       </Box>
                     }
@@ -106,7 +108,7 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
               gutterBottom
               sx={{ mb: 2 }}
             >
-              إشعارات الواتساب (WhatsApp Notifications)
+              {t("settings:whatsappNotificationsSectionTitle")}
             </Typography>
             <Controller
               name="whatsapp_shift_closure_numbers"
@@ -115,9 +117,9 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
                 <TextField
                   {...field}
                   value={field.value || ""}
-                  label="أرقام استلام تقرير إغلاق الوردية"
-                  placeholder="مثال: 249991961111,249123456789"
-                  helperText="أدخل أرقام الهواتف (مفصولة بفاصلة) التي يجب أن تتلقى رسالة الواتساب عند إغلاق أي وردية. يجب أن تتضمن الرمز الدولي بدون +"
+                  label={t("settings:shiftClosureNumbersLabel")}
+                  placeholder={t("settings:shiftClosureNumbersPlaceholder")}
+                  helperText={t("settings:shiftClosureNumbersHelper")}
                   fullWidth
                   variant="outlined"
                   dir="ltr"
@@ -142,7 +144,7 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
               gutterBottom
               sx={{ mb: 2 }}
             >
-              إعدادات Firebase (Firebase Settings)
+              {t("settings:firebaseSettingsSectionTitle")}
             </Typography>
             <Controller
               name="firebase_collection_name"
@@ -151,9 +153,9 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
                 <TextField
                   {...field}
                   value={field.value || "none"}
-                  label="اسم مجموعة Firebase (Collection Name)"
-                  placeholder="مثال: none"
-                  helperText="اسم المجموعة (Collection) في Firestore حيث يتم تخزين المنتجات والورديات."
+                  label={t("settings:firebaseCollectionNameLabel")}
+                  placeholder={t("settings:firebaseCollectionNamePlaceholder")}
+                  helperText={t("settings:firebaseCollectionNameHelper")}
                   fullWidth
                   variant="outlined"
                   dir="ltr"

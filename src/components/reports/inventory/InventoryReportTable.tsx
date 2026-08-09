@@ -29,6 +29,7 @@ import { Product as ProductType } from "@/services/productService";
 import { PurchaseItem as PurchaseItemType } from "@/services/purchaseService";
 import { formatNumber } from "@/constants";
 import { useFormatCurrency } from "@/hooks/useFormatCurrency";
+import { useTranslation } from "react-i18next";
 
 // Interface for Product with potentially loaded batches
 // This should match the structure of data coming from the API for this report
@@ -51,6 +52,7 @@ export const InventoryReportTable: React.FC<InventoryReportTableProps> = ({
   isLoading = false, // Default to false
   // fetchBatchesForProduct
 }) => {
+  const { t } = useTranslation(["reports"]);
   const formatCurrency = useFormatCurrency();
   const [openRows, setOpenRows] = useState<Record<number, boolean>>({}); // Tracks expanded rows by productId
 
@@ -67,7 +69,7 @@ export const InventoryReportTable: React.FC<InventoryReportTableProps> = ({
     return (
       <Box sx={{ py: 5, textAlign: "center" }}>
         <Typography variant="body2" color="text.secondary">
-          لم يتم العثور على أي منتجات
+          {t("reports:inventoryReportTable.noProductsFound")}
         </Typography>
       </Box>
     );
@@ -78,27 +80,27 @@ export const InventoryReportTable: React.FC<InventoryReportTableProps> = ({
       <TableHead>
         <TableRow sx={{ bgcolor: "grey.50" }}>
           <TableCell sx={{ width: 40, px: 1.5, py: 2 }}></TableCell>
-          <TableCell sx={{ px: 2, py: 2, fontWeight: 600 }}>رمز المنتج (SKU)</TableCell>
+          <TableCell sx={{ px: 2, py: 2, fontWeight: 600 }}>{t("reports:inventoryReportTable.colSku")}</TableCell>
           <TableCell sx={{ px: 2, py: 2, minWidth: 200, fontWeight: 600 }}>
-            اسم المنتج
+            {t("reports:inventoryReportTable.colProductName")}
           </TableCell>
           <TableCell align="center" sx={{ px: 2, py: 2, fontWeight: 600 }}>
-            إجمالي المخزون (وحدة)
+            {t("reports:inventoryReportTable.colTotalStock")}
           </TableCell>
           <TableCell align="center" sx={{ px: 2, py: 2, fontWeight: 600 }}>
-            حد التنبيه
+            {t("reports:inventoryReportTable.colAlertLevel")}
           </TableCell>
           <TableCell align="right" sx={{ px: 2, py: 2, fontWeight: 600 }}>
-            أحدث تكلفة للوحدة
+            {t("reports:inventoryReportTable.colLatestCostPerUnit")}
           </TableCell>
           <TableCell align="right" sx={{ px: 2, py: 2, fontWeight: 600 }}>
-            آخر سعر بيع للوحدة
+            {t("reports:inventoryReportTable.colLastSalePricePerUnit")}
           </TableCell>
           <TableCell align="center" sx={{ px: 2, py: 2, fontWeight: 600 }}>
-            إجمالي المشتريات
+            {t("reports:inventoryReportTable.colTotalPurchased")}
           </TableCell>
           <TableCell align="center" sx={{ px: 2, py: 2, fontWeight: 600 }}>
-            إجمالي المبيعات
+            {t("reports:inventoryReportTable.colTotalSold")}
           </TableCell>
         </TableRow>
       </TableHead>
@@ -111,7 +113,7 @@ export const InventoryReportTable: React.FC<InventoryReportTableProps> = ({
           const hasBatches =
             product.available_batches && product.available_batches.length > 0;
           const isOpen = !!openRows[product.id];
-          const sellableUnitName = product.sellable_unit_name || "وحدة";
+          const sellableUnitName = product.sellable_unit_name || t("reports:inventoryReportTable.defaultUnit");
 
           return (
             <React.Fragment key={product.id}>
@@ -231,7 +233,7 @@ export const InventoryReportTable: React.FC<InventoryReportTableProps> = ({
                             color: "text.primary",
                           }}
                         >
-                          {`تفاصيل الدفعات للمنتج: ${product.name}`}
+                          {t("reports:inventoryReportTable.batchDetailsForProduct", { name: product.name })}
                         </Typography>
                         <InventoryBatchDetailsTable
                           batches={product.available_batches!}

@@ -1,5 +1,6 @@
 // src/components/clients/ClientsTable.tsx
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 import {
   Table,
@@ -59,6 +60,7 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
   onToggleSelect,
   onToggleAll,
 }) => {
+  const { t } = useTranslation(["clients", "common"]);
   const fmt = (n: number) =>
     n.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -75,15 +77,15 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
                 checked={allSelected}
                 data-state={someSelected ? "indeterminate" : allSelected ? "checked" : "unchecked"}
                 onCheckedChange={() => onToggleAll?.(clients)}
-                aria-label="تحديد الكل"
+                aria-label={t("clients:list.selectAllAria")}
               />
             </TableHead>
           )}
-          <TableHead className="text-right text-xs font-semibold text-slate-600 h-9 px-4">العميل</TableHead>
-          <TableHead className="text-right text-xs font-semibold text-slate-600 h-9 px-4">معلومات الاتصال</TableHead>
-          <TableHead className="text-right text-xs font-semibold text-red-500 h-9 px-4">المديونية</TableHead>
-          <TableHead className="text-right text-xs font-semibold text-emerald-600 h-9 px-4">المدفوعات</TableHead>
-          <TableHead className="text-right text-xs font-semibold text-blue-600 h-9 px-4">الرصيد</TableHead>
+          <TableHead className="text-start text-xs font-semibold text-slate-600 h-9 px-4">{t("clients:client")}</TableHead>
+          <TableHead className="text-start text-xs font-semibold text-slate-600 h-9 px-4">{t("clients:list.contactInfo")}</TableHead>
+          <TableHead className="text-start text-xs font-semibold text-red-500 h-9 px-4">{t("clients:list.debtColumn")}</TableHead>
+          <TableHead className="text-start text-xs font-semibold text-emerald-600 h-9 px-4">{t("clients:list.paymentsColumn")}</TableHead>
+          <TableHead className="text-start text-xs font-semibold text-blue-600 h-9 px-4">{t("clients:list.balanceColumn")}</TableHead>
           {!selectionMode && (
             <TableHead className="text-center text-xs font-semibold text-slate-600 h-9 px-4 w-12">⋯</TableHead>
           )}
@@ -112,7 +114,7 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
             <TableCell colSpan={selectionMode ? 6 : 7} className="h-36 text-center">
               <div className="flex flex-col items-center gap-2 text-slate-400">
                 <Users className="h-7 w-7" />
-                <p className="text-sm font-medium text-slate-500">لا يوجد عملاء</p>
+                <p className="text-sm font-medium text-slate-500">{t("clients:list.noClientsShort")}</p>
               </div>
             </TableCell>
           </TableRow>
@@ -144,7 +146,7 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
                     className="px-3 py-2.5 text-center w-10"
                     onClick={(e) => { e.stopPropagation(); onToggleSelect?.(client.id); }}
                   >
-                    <Checkbox checked={isSelected} aria-label={`تحديد ${client.name}`} />
+                    <Checkbox checked={isSelected} aria-label={t("clients:list.selectClientAria", { name: client.name })} />
                   </TableCell>
                 )}
 
@@ -225,7 +227,7 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
                               className="gap-2"
                             >
                               <FileText className="h-3.5 w-3.5 text-blue-500" />
-                              كشف الحساب
+                              {t("clients:list.viewLedgerAction")}
                             </DropdownMenuItem>
                           )}
                           {onEdit && (
@@ -234,7 +236,7 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
                               className="gap-2"
                             >
                               <Pencil className="h-3.5 w-3.5 text-amber-500" />
-                              تعديل
+                              {t("common:edit")}
                             </DropdownMenuItem>
                           )}
                           {onDelete && (
@@ -245,7 +247,7 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
                                 className="gap-2 text-red-600 focus:text-red-700 focus:bg-red-50"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
-                                حذف
+                                {t("common:delete")}
                               </DropdownMenuItem>
                             </>
                           )}

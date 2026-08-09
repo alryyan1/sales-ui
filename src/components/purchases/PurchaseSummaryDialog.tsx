@@ -12,6 +12,7 @@ import {
 import BarChartIcon from "@mui/icons-material/BarChart";
 import CloseIcon from "@mui/icons-material/Close";
 import { formatCurrency, formatNumber } from "@/constants";
+import { useTranslation } from "react-i18next";
 
 export interface PurchaseSummary {
   totalItems: number;
@@ -31,6 +32,7 @@ const PurchaseSummaryDialog: React.FC<PurchaseSummaryDialogProps> = ({
   supplierName,
   onClose,
 }) => {
+  const { t } = useTranslation(["purchases", "common"]);
   return (
     <>
       <DialogTitle
@@ -42,7 +44,7 @@ const PurchaseSummaryDialog: React.FC<PurchaseSummaryDialogProps> = ({
       >
         <Box display="flex" alignItems="center" gap={1}>
           <BarChartIcon color="primary" />
-          <Typography variant="h6">ملخص المشتريات</Typography>
+          <Typography variant="h6">{t("purchases:manageItems.summaryTitle")}</Typography>
         </Box>
         {onClose && (
           <IconButton onClick={onClose} size="small">
@@ -58,7 +60,7 @@ const PurchaseSummaryDialog: React.FC<PurchaseSummaryDialogProps> = ({
               {summary.totalItems}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              عدد الأصناف
+              {t("purchases:manageItems.itemsCount")}
             </Typography>
           </Paper>
 
@@ -68,7 +70,7 @@ const PurchaseSummaryDialog: React.FC<PurchaseSummaryDialogProps> = ({
               {formatCurrency(summary.totalCost)}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              إجمالي التكلفة
+              {t("purchases:manageItems.totalCostLabel")}
             </Typography>
           </Paper>
 
@@ -80,7 +82,7 @@ const PurchaseSummaryDialog: React.FC<PurchaseSummaryDialogProps> = ({
               {formatCurrency(summary.totalSell)}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              إجمالي قيمة البيع
+              {t("purchases:totalSellValue")}
             </Typography>
           </Paper>
 
@@ -90,17 +92,17 @@ const PurchaseSummaryDialog: React.FC<PurchaseSummaryDialogProps> = ({
               {formatNumber(summary.totalQuantity, 0)}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              إجمالي الكمية
+              {t("purchases:manageItems.totalQuantityLabel")}
             </Typography>
           </Paper>
 
           {/* Supplier */}
           <Paper sx={{ p: 2, textAlign: "center", bgcolor: "grey.100" }}>
             <Typography variant="h6" fontWeight="medium" color="text.primary">
-              {supplierName || "غير محدد"}
+              {supplierName || t("common:notSpecified")}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              المورد
+              {t("purchases:supplier")}
             </Typography>
           </Paper>
         </Stack>

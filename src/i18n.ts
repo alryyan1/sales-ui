@@ -27,12 +27,15 @@ import unitsAr from './locales/ar/units.json'; // <-- Import
 import posAr from './locales/ar/pos.json'; // <-- Import
 import analyticsAr from './locales/ar/analytics.json'; // <-- Import
 import expensesAr from './locales/ar/expenses.json';
+import backupAr from './locales/ar/backup.json';
+import warehousesAr from './locales/ar/warehouses.json';
 
 // English imports - only import files that exist
 import commonEN from './locales/en/common.json';
 import validationEN from './locales/en/validation.json';
 import navigationEN from './locales/en/navigation.json';
 import loginEN from './locales/en/login.json';
+import registerEN from './locales/en/register.json';
 import clientsEN from './locales/en/clients.json';
 import supplierEN from './locales/en/suppliers.json';
 import productsEN from './locales/en/products.json';
@@ -47,9 +50,13 @@ import inventoryEN from './locales/en/inventory.json';
 import categoryEN from './locales/en/categories.json';
 import settingsEN from './locales/en/settings.json';
 import paymentMethodsEN from './locales/en/paymentMethods.json';
+import unitsEN from './locales/en/units.json';
 import posEN from './locales/en/pos.json';
 import analyticsEN from './locales/en/analytics.json';
 import expensesEN from './locales/en/expenses.json';
+import backupEN from './locales/en/backup.json';
+import profileEN from './locales/en/profile.json';
+import warehousesEN from './locales/en/warehouses.json';
 
 
 // ... استيراد ملفات أخرى
@@ -82,7 +89,9 @@ const resources = {
     pos:posAr,
     analytics:analyticsAr
     ,expenses:expensesAr
-    
+    ,backup:backupAr
+    ,warehouses:warehousesAr
+
     // ... namespaces أخرى
   },
   en: {
@@ -90,6 +99,7 @@ const resources = {
     validation: validationEN,
     navigation: navigationEN,
     login: loginEN,
+    register: registerEN,
     clients: clientsEN,
     suppliers: supplierEN,
     products: productsEN,
@@ -104,9 +114,13 @@ const resources = {
     categories: categoryEN,
     settings: settingsEN,
     paymentMethods: paymentMethodsEN,
+    units: unitsEN,
     pos: posEN,
     analytics: analyticsEN
     ,expenses: expensesEN
+    ,backup: backupEN
+    ,profile: profileEN
+    ,warehouses: warehousesEN
   }
   // يمكنك إضافة لغات أخرى هنا بنفس الهيكل
 };
@@ -138,19 +152,33 @@ export const namespaces = [
     'pos',
     'analytics'
     ,'expenses'
+    ,'backup'
+    ,'warehouses'
     // ... أسماء namespaces أخرى
 ];
 
+// --- اللغة المحفوظة من زيارة سابقة (localStorage) ---
+export const LANGUAGE_STORAGE_KEY = 'appLanguage';
+
+const getInitialLanguage = (): string => {
+  try {
+    const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    if (stored === 'ar' || stored === 'en') return stored;
+  } catch {
+    // localStorage غير متاح (مثلاً أثناء SSR) - تجاهل
+  }
+  return 'ar';
+};
+
 i18n
-  // .use(LanguageDetector) // كاشف اللغة (اختياري)
   .use(initReactI18next) // تمرير i18n إلى react-i18next
   .init({
     resources, // المصادر مع الـ namespaces
     ns: namespaces, // قائمة بجميع الـ namespaces
     defaultNS: 'common', // تحديد الـ Namespace الافتراضي (مهم!)
 
-    lng: 'ar', // اللغة النشطة الافتراضية - changed to English for better compatibility
-    fallbackLng: 'en', // اللغة الاحتياطية
+    lng: getInitialLanguage(), // اللغة النشطة الافتراضية (محفوظة أو العربية)
+    fallbackLng: 'ar', // اللغة الاحتياطية
 
     interpolation: {
       escapeValue: false // React يحمي بالفعل من XSS
@@ -166,5 +194,14 @@ i18n
     //   useSuspense: true // يفضل استخدامه مع التحميل عند الطلب
     // }
   });
+
+// حفظ اللغة المختارة في localStorage عند تغييرها
+i18n.on('languageChanged', (lng) => {
+  try {
+    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, lng);
+  } catch {
+    // تجاهل أخطاء localStorage
+  }
+});
 
 export default i18n;

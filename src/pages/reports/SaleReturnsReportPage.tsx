@@ -22,8 +22,10 @@ import { formatNumber } from "@/constants";
 import SaleReturnsMonthlyTab from "@/components/reports/sales/SaleReturnsMonthlyTab";
 import SaleReturnsProductsPieTab from "@/components/reports/sales/SaleReturnsProductsPieTab";
 import SaleReturnsPaymentsBreakdownTab from "@/components/reports/sales/SaleReturnsPaymentsBreakdownTab";
+import { useTranslation } from "react-i18next";
 
 const SaleReturnsReportPage: React.FC = () => {
+  const { t } = useTranslation(["reports"]);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [tabIndex, setTabIndex] = useState(0);
@@ -118,14 +120,14 @@ const SaleReturnsReportPage: React.FC = () => {
                 startIcon={<ArrowLeft size={16} />}
                 sx={{ borderRadius: 2, textTransform: "none" }}
               >
-                رجوع
+                {t("reports:saleReturnsReportPage.backButton")}
               </Button>
               <Box>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  تقرير مردودات المبيعات
+                  {t("reports:saleReturnsReportPage.title")}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  عرض مردودات المبيعات حسب التاريخ والوردية
+                  {t("reports:saleReturnsReportPage.subtitle")}
                 </Typography>
               </Box>
             </Stack>
@@ -154,7 +156,7 @@ const SaleReturnsReportPage: React.FC = () => {
                     name="startDate"
                     type="date"
                     size="small"
-                    label="من تاريخ"
+                    label={t("reports:saleReturnsReportPage.fromDateLabel")}
                     InputLabelProps={{ shrink: true }}
                     defaultValue={startDate}
                     fullWidth
@@ -163,7 +165,7 @@ const SaleReturnsReportPage: React.FC = () => {
                     name="endDate"
                     type="date"
                     size="small"
-                    label="إلى تاريخ"
+                    label={t("reports:saleReturnsReportPage.toDateLabel")}
                     InputLabelProps={{ shrink: true }}
                     defaultValue={endDate}
                     fullWidth
@@ -172,7 +174,7 @@ const SaleReturnsReportPage: React.FC = () => {
                     name="startDate"
                     type="date"
                     size="small"
-                    label="من تاريخ"
+                    label={t("reports:saleReturnsReportPage.fromDateLabel")}
                     InputLabelProps={{ shrink: true }}
                     defaultValue={startDate}
                     fullWidth
@@ -181,7 +183,7 @@ const SaleReturnsReportPage: React.FC = () => {
                     name="endDate"
                     type="date"
                     size="small"
-                    label="إلى تاريخ"
+                    label={t("reports:saleReturnsReportPage.toDateLabel")}
                     InputLabelProps={{ shrink: true }}
                     defaultValue={endDate}
                     fullWidth
@@ -192,7 +194,7 @@ const SaleReturnsReportPage: React.FC = () => {
                     getOptionLabel={(option: any) =>
                       option?.name
                         ? `${option.name} (#${option.id})`
-                        : `وردية #${option?.id ?? ""}`
+                        : t("reports:saleReturnsReportPage.shiftHash", { id: option?.id ?? "" })
                     }
                     value={selectedShiftOption}
                     onChange={(_, newValue) => setSelectedShiftOption(newValue)}
@@ -202,8 +204,8 @@ const SaleReturnsReportPage: React.FC = () => {
                     renderInput={(params) => (
                       <TextField
                         {...params}
-                        label="الوردية (اختياري)"
-                        placeholder="اختر الوردية"
+                        label={t("reports:saleReturnsReportPage.shiftOptionalLabel")}
+                        placeholder={t("reports:saleReturnsReportPage.chooseShiftPlaceholder")}
                         fullWidth
                       />
                     )}
@@ -226,7 +228,7 @@ const SaleReturnsReportPage: React.FC = () => {
                       height: 40,
                     }}
                   >
-                    تطبيق الفلاتر
+                    {t("reports:saleReturnsReportPage.applyFiltersButton")}
                   </Button>
                 </Box>
               </Box>
@@ -240,7 +242,7 @@ const SaleReturnsReportPage: React.FC = () => {
                 <Stack direction="row" justifyContent="space-between">
                   <Box>
                     <Typography variant="body2" color="text.secondary">
-                      عدد المردودات
+                      {t("reports:saleReturnsReportPage.returnsCount")}
                     </Typography>
                     <Typography variant="h6" sx={{ fontWeight: 700 }}>
                       {formatNumber(returns.length)}
@@ -253,7 +255,7 @@ const SaleReturnsReportPage: React.FC = () => {
             <Card sx={{ minWidth: 220, flex: 1 }}>
               <CardContent>
                 <Typography variant="body2" color="text.secondary">
-                  إجمالي القيمة
+                  {t("reports:saleReturnsReportPage.totalValue")}
                 </Typography>
                 <Typography variant="h6" sx={{ fontWeight: 700 }}>
                   {formatNumber(totalAmount)}
@@ -266,7 +268,7 @@ const SaleReturnsReportPage: React.FC = () => {
           <Card>
             <CardContent>
               {isLoading ? (
-                <Typography variant="body2">جاري التحميل...</Typography>
+                <Typography variant="body2">{t("reports:saleReturnsReportPage.loadingEllipsis")}</Typography>
               ) : (
                 <>
                   <Tabs
@@ -274,15 +276,15 @@ const SaleReturnsReportPage: React.FC = () => {
                     onChange={(_, newValue) => setTabIndex(newValue)}
                     sx={{ mb: 2 }}
                   >
-                    <Tab label="ملخص شهري حسب اليوم" />
-                    <Tab label="توزيع المنتجات المرتجعة" />
-                    <Tab label="توزيع طرق الدفع للمردودات" />
+                    <Tab label={t("reports:saleReturnsReportPage.tabMonthlySummary")} />
+                    <Tab label={t("reports:saleReturnsReportPage.tabProductsDistribution")} />
+                    <Tab label={t("reports:saleReturnsReportPage.tabPaymentMethodsDistribution")} />
                   </Tabs>
 
                   {returns.length === 0 ? (
                     <Box sx={{ textAlign: "center", py: 6 }}>
                       <Typography variant="body1" color="text.secondary">
-                        لا توجد مردودات في الفترة المحددة
+                        {t("reports:saleReturnsReportPage.noReturnsForPeriod")}
                       </Typography>
                     </Box>
                   ) : (

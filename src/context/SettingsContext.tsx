@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import settingService, { AppSettings } from '@/services/settingService'; // Adjust path
 import { toast } from 'sonner';
+import i18n from '@/i18n';
 
 interface SettingsContextType {
     settings: AppSettings | null;
@@ -43,10 +44,10 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         try {
             const updatedSettings = await settingService.updateSettings(data);
             setSettings(updatedSettings); // Update local context state
-            toast.success('نجح', { description: 'تم تحديث الإعدادات بنجاح'});
+            toast.success(i18n.t('common:success'), { description: i18n.t('settings:settingsSaved')});
             return updatedSettings;
         } catch (error) {
-            toast.error('خطأ', { description: settingService.getErrorMessage(error) });
+            toast.error(i18n.t('common:error'), { description: settingService.getErrorMessage(error) });
             throw error; // Rethrow for form to handle its own state
         }
     };

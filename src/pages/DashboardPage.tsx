@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import BranchDetailsDrawer from "./BranchDetailsDrawer";
 import {
   ResponsiveContainer,
@@ -119,12 +120,22 @@ type Period = "daily" | "weekly" | "monthly";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const ARABIC_MONTHS: Record<string, string> = {
-  "01":"يناير","02":"فبراير","03":"مارس","04":"أبريل",
-  "05":"مايو","06":"يونيو","07":"يوليو","08":"أغسطس",
-  "09":"سبتمبر","10":"أكتوبر","11":"نوفمبر","12":"ديسمبر",
+const MONTH_NAMES: Record<string, Record<string, string>> = {
+  ar: {
+    "01":"يناير","02":"فبراير","03":"مارس","04":"أبريل",
+    "05":"مايو","06":"يونيو","07":"يوليو","08":"أغسطس",
+    "09":"سبتمبر","10":"أكتوبر","11":"نوفمبر","12":"ديسمبر",
+  },
+  en: {
+    "01":"Jan","02":"Feb","03":"Mar","04":"Apr",
+    "05":"May","06":"Jun","07":"Jul","08":"Aug",
+    "09":"Sep","10":"Oct","11":"Nov","12":"Dec",
+  },
 };
-const monthLabel = (key: string) => { const [,m]=key.split("-"); return ARABIC_MONTHS[m]??key; };
+const monthLabel = (key: string, lng: string) => {
+  const [,m]=key.split("-");
+  return (MONTH_NAMES[lng] ?? MONTH_NAMES.ar)[m] ?? key;
+};
 const CHART_COLORS = ["#6366f1","#10b981","#f59e0b","#3b82f6","#ef4444","#06b6d4"];
 const BRANCH_BAR_COLORS = ["bg-indigo-500","bg-emerald-500","bg-amber-500","bg-blue-500","bg-rose-500"];
 
@@ -214,35 +225,40 @@ const ChartTooltip: React.FC<any> = ({ active, payload, label }) => {
 const AlertItemCard: React.FC<{
   title: string; icon: React.ReactNode; accent: string;
   count: number; loading?: boolean; children: React.ReactNode;
-}> = ({ title, icon, accent, count, loading, children }) => (
-  <Card className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-    <div className="flex items-center justify-between px-4 pt-4 pb-2">
-      <div className="flex items-center gap-2">
-        <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${accent}`}>{icon}</div>
-        <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">{title}</span>
+}> = ({ title, icon, accent, count, loading, children }) => {
+  const { t } = useTranslation("dashboard");
+  return (
+    <Card className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+        <div className="flex items-center gap-2">
+          <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${accent}`}>{icon}</div>
+          <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">{title}</span>
+        </div>
+        {count > 0 && (
+          <span className="text-[10px] font-bold bg-red-500 text-white rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+            {count}
+          </span>
+        )}
       </div>
-      {count > 0 && (
-        <span className="text-[10px] font-bold bg-red-500 text-white rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-          {count}
-        </span>
-      )}
-    </div>
-    <Separator className="dark:bg-gray-800" />
-    <div className="px-4 py-3">
-      {loading
-        ? <div className="space-y-2">{[...Array(3)].map((_,i)=><Skeleton key={i} className="h-7 w-full rounded dark:bg-gray-800"/>)}</div>
-        : count === 0
-          ? <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">لا توجد تنبيهات</p>
-          : <div className="space-y-2">{children}</div>
-      }
-    </div>
-  </Card>
-);
+      <Separator className="dark:bg-gray-800" />
+      <div className="px-4 py-3">
+        {loading
+          ? <div className="space-y-2">{[...Array(3)].map((_,i)=><Skeleton key={i} className="h-7 w-full rounded dark:bg-gray-800"/>)}</div>
+          : count === 0
+            ? <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">{t("noAlerts")}</p>
+            : <div className="space-y-2">{children}</div>
+        }
+      </div>
+    </Card>
+  );
+};
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation(["dashboard", "common"]);
+  const direction = i18n.dir();
 
   const today        = new Date().toISOString().split("T")[0];
   const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
@@ -280,7 +296,7 @@ const DashboardPage: React.FC = () => {
       const q = new URLSearchParams({ start_date: startDate, end_date: endDate });
       const r = await apiClient.get<{data:DashboardSummaryData}>(`/dashboard/summary?${q}`);
       setSummaryData(r.data.data);
-    } catch(e) { const m=getErrorMessage(e); setError(m); toast.error("خطأ",{description:m}); }
+    } catch(e) { const m=getErrorMessage(e); setError(m); toast.error(t("common:error"),{description:m}); }
     finally { setLoadSummary(false); }
   }, [startDate, endDate]);
 
@@ -325,28 +341,28 @@ const DashboardPage: React.FC = () => {
   const refresh = () => { fetchSummary(); fetchBranches(); fetchProducts(); fetchAlerts(); fetchTimeseries(period); };
 
   const invoicesCount = summaryData?.sales.filtered_count ?? summaryData?.sales.this_month_count ?? 0;
-  const chartData = timeseries.map(p => ({ ...p, label: period==="monthly" ? monthLabel(p.label) : p.label }));
+  const chartData = timeseries.map(p => ({ ...p, label: period==="monthly" ? monthLabel(p.label, i18n.language) : p.label }));
 
   if (!loadSummary && error) return (
     <div className="p-8 flex flex-col items-center justify-center min-h-[60vh]">
       <Alert variant="destructive" className="max-w-md">
         <AlertCircle className="h-4 w-4" />
-        <AlertTitle>خطأ في جلب البيانات</AlertTitle>
+        <AlertTitle>{t("fetchErrorTitle")}</AlertTitle>
         <AlertDescription>{error}</AlertDescription>
       </Alert>
-      <Button onClick={refresh} variant="outline" className="mt-4">إعادة المحاولة</Button>
+      <Button onClick={refresh} variant="outline" className="mt-4">{t("common:retry")}</Button>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950" dir="rtl">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950" dir={direction}>
       <div className="max-w-[1400px] mx-auto p-4 md:p-6 space-y-6">
 
         {/* ━━━━━━━━━━ HEADER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-1">
           <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">لوحة التحكم</h1>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">نظرة عامة على أداء المبيعات والفروع</p>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">{t("pageTitle")}</h1>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{t("pageSubtitle")}</p>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg px-3 py-2 shadow-sm text-sm">
@@ -368,33 +384,33 @@ const DashboardPage: React.FC = () => {
 
         {/* ━━━━━━━━━━ KPI CARDS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <KpiCard label="مبيعات اليوم"
+          <KpiCard label={t("kpiSalesToday")}
             value={formatCurrency(summaryData?.sales.today_amount ?? 0)}
-            sub={<span className="text-[11px] text-gray-400">{formatNumber(summaryData?.sales.today_count ?? 0)} فاتورة</span>}
+            sub={<span className="text-[11px] text-gray-400">{t("invoiceUnit", { count: formatNumber(summaryData?.sales.today_count ?? 0) })}</span>}
             icon={<CalendarDays className="h-4 w-4 text-blue-600" />}
             color="bg-blue-500" onClick={() => navigate("/sales")} loading={loadSummary} />
 
-          <KpiCard label="مبيعات الشهر"
+          <KpiCard label={t("kpiSalesMonth")}
             value={formatCurrency(summaryData?.sales.this_month_amount ?? 0)}
-            sub={<span className="text-[11px] text-gray-400">{formatNumber(summaryData?.sales.this_month_count ?? 0)} فاتورة</span>}
+            sub={<span className="text-[11px] text-gray-400">{t("invoiceUnit", { count: formatNumber(summaryData?.sales.this_month_count ?? 0) })}</span>}
             icon={<CircleDollarSign className="h-4 w-4 text-indigo-600" />}
             color="bg-indigo-500" onClick={() => navigate("/sales")} loading={loadSummary} />
 
-          <KpiCard label="صافي المبيعات"
+          <KpiCard label={t("kpiNetSales")}
             value={formatCurrency(summaryData?.profit.filtered_profit ?? 0)}
             sub={summaryData ? (
               <div className="flex flex-wrap gap-1">
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 font-medium border border-emerald-100 dark:border-emerald-800">
-                  إيرادات {formatCurrency(summaryData.profit.filtered_net_revenue)}
+                  {t("revenueLabel", { amount: formatCurrency(summaryData.profit.filtered_net_revenue) })}
                 </span>
                 {summaryData.profit.filtered_expenses > 0 && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 font-medium border border-red-100 dark:border-red-800">
-                    مصروفات − {formatCurrency(summaryData.profit.filtered_expenses)}
+                    {t("expensesLabel", { amount: formatCurrency(summaryData.profit.filtered_expenses) })}
                   </span>
                 )}
                 {summaryData.profit.filtered_returns > 0 && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-50 dark:bg-orange-900/20 text-orange-500 dark:text-orange-400 font-medium border border-orange-100 dark:border-orange-800">
-                    مردودات − {formatCurrency(summaryData.profit.filtered_returns)}
+                    {t("returnsLabel", { amount: formatCurrency(summaryData.profit.filtered_returns) })}
                   </span>
                 )}
               </div>
@@ -402,21 +418,21 @@ const DashboardPage: React.FC = () => {
             icon={<TrendingUp className="h-4 w-4 text-emerald-600" />}
             color="bg-emerald-500" loading={loadSummary} />
 
-          <KpiCard label="عدد الفواتير"
+          <KpiCard label={t("kpiInvoicesCount")}
             value={formatNumber(invoicesCount)}
-            sub={<span className="text-[11px] text-gray-400">للفترة المحددة</span>}
+            sub={<span className="text-[11px] text-gray-400">{t("forSelectedPeriod")}</span>}
             icon={<FileText className="h-4 w-4 text-amber-600" />}
             color="bg-amber-500" onClick={() => navigate("/sales")} loading={loadSummary} />
 
-          <KpiCard label="عدد العملاء"
+          <KpiCard label={t("kpiClientsCount")}
             value={formatNumber(summaryData?.entities.total_clients ?? 0)}
-            sub={<span className="text-[11px] text-gray-400">إجمالي المسجلين</span>}
+            sub={<span className="text-[11px] text-gray-400">{t("totalRegistered")}</span>}
             icon={<Users className="h-4 w-4 text-purple-600" />}
             color="bg-purple-500" onClick={() => navigate("/clients")} loading={loadSummary} />
 
-          <KpiCard label="عدد الفروع"
+          <KpiCard label={t("kpiBranchesCount")}
             value={formatNumber(summaryData?.entities.total_warehouses ?? 0)}
-            sub={<span className="text-[11px] text-gray-400">الفروع النشطة</span>}
+            sub={<span className="text-[11px] text-gray-400">{t("activeBranches")}</span>}
             icon={<Warehouse className="h-4 w-4 text-rose-600" />}
             color="bg-rose-500" onClick={() => navigate("/admin/warehouses")} loading={loadSummary} />
         </div>
@@ -427,7 +443,7 @@ const DashboardPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
               <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                 <ShoppingCart className="h-3.5 w-3.5" />
-                ملخص المشتريات
+                {t("purchasesSummaryTitle")}
               </div>
               <Separator orientation="vertical" className="h-8 hidden sm:block dark:bg-gray-800" />
               {loadSummary ? (
@@ -437,10 +453,10 @@ const DashboardPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 flex-1 w-full">
-                  <MiniStat label="إجمالي المشتريات" value={formatCurrency(summaryData?.purchases_summary.total ?? 0)}
+                  <MiniStat label={t("totalPurchases")} value={formatCurrency(summaryData?.purchases_summary.total ?? 0)}
                     color="bg-violet-500" icon={<ShoppingCart className="h-3.5 w-3.5 text-violet-600" />} />
                   <Separator orientation="vertical" className="h-8 hidden sm:block dark:bg-gray-800" />
-                  <MiniStat label="غير مسدَّد (آجل)" value={formatCurrency(summaryData?.purchases_summary.deferred ?? 0)}
+                  <MiniStat label={t("deferredUnpaid")} value={formatCurrency(summaryData?.purchases_summary.deferred ?? 0)}
                     color="bg-red-500" icon={<Timer className="h-3.5 w-3.5 text-red-500" />} />
                 </div>
               )}
@@ -452,15 +468,15 @@ const DashboardPage: React.FC = () => {
         <Card className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm">
           <CardHeader className="px-5 pt-5 pb-0">
             <SectionHeader
-              title="المبيعات حسب الزمن"
-              desc="إجمالي المبيعات وعدد الفواتير"
+              title={t("salesOverTimeTitle")}
+              desc={t("salesOverTimeDesc")}
               right={
                 <div className="flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
                   {(["daily","weekly","monthly"] as Period[]).map(p => (
                     <button key={p} onClick={() => setPeriod(p)}
                       className={`px-3 py-1.5 text-xs font-medium transition-colors
                         ${period===p ? "bg-indigo-600 text-white" : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
-                      {p==="daily"?"يومي":p==="weekly"?"أسبوعي":"شهري"}
+                      {p==="daily"?t("periodDaily"):p==="weekly"?t("periodWeekly"):t("periodMonthly")}
                     </button>
                   ))}
                 </div>
@@ -471,7 +487,7 @@ const DashboardPage: React.FC = () => {
             {loadTimeseries
               ? <Skeleton className="h-56 w-full rounded-lg dark:bg-gray-800" />
               : chartData.length === 0
-                ? <div className="h-56 flex items-center justify-center text-sm text-gray-400">لا توجد بيانات</div>
+                ? <div className="h-56 flex items-center justify-center text-sm text-gray-400">{t("noData")}</div>
                 : (
                   <ResponsiveContainer width="100%" height={220}>
                     <LineChart data={chartData} margin={{ top:6, right:12, left:0, bottom:0 }}>
@@ -487,9 +503,9 @@ const DashboardPage: React.FC = () => {
                       <YAxis yAxisId="r" orientation="right" tickFormatter={v=>String(v)} tick={{ fontSize:10, fill:"#9ca3af" }} tickLine={false} axisLine={false} width={26} />
                       <Tooltip content={<ChartTooltip />} />
                       <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize:11, paddingTop:8 }} />
-                      <Line yAxisId="l" type="monotone" dataKey="total_sales" name="المبيعات"
+                      <Line yAxisId="l" type="monotone" dataKey="total_sales" name={t("salesLineLabel")}
                         stroke="#6366f1" strokeWidth={2.5} dot={false} activeDot={{ r:4, fill:"#6366f1" }} />
-                      <Line yAxisId="r" type="monotone" dataKey="invoices_count" name="الفواتير"
+                      <Line yAxisId="r" type="monotone" dataKey="invoices_count" name={t("invoicesLineLabel")}
                         stroke="#10b981" strokeWidth={2} dot={false} strokeDasharray="5 3" activeDot={{ r:4, fill:"#10b981" }} />
                     </LineChart>
                   </ResponsiveContainer>
@@ -504,13 +520,13 @@ const DashboardPage: React.FC = () => {
           {/* Branch grouped chart */}
           <Card className="lg:col-span-3 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm">
             <CardHeader className="px-5 pt-5 pb-0">
-              <SectionHeader title="مبيعات وأرباح الفروع" desc="للفترة المحددة" />
+              <SectionHeader title={t("branchSalesProfitTitle")} desc={t("forSelectedPeriod")} />
             </CardHeader>
             <CardContent className="px-3 pt-2 pb-3">
               {loadBranches
                 ? <Skeleton className="h-48 w-full rounded-lg dark:bg-gray-800" />
                 : !branchesData || branchesData.branches.length === 0
-                  ? <div className="h-48 flex items-center justify-center text-sm text-gray-400">لا توجد بيانات</div>
+                  ? <div className="h-48 flex items-center justify-center text-sm text-gray-400">{t("noData")}</div>
                   : (
                     <ResponsiveContainer width="100%" height={190}>
                       <BarChart
@@ -521,8 +537,8 @@ const DashboardPage: React.FC = () => {
                         <YAxis tickFormatter={v=>formatNumber(v)} tick={{ fontSize:10, fill:"#9ca3af" }} tickLine={false} axisLine={false} width={52} />
                         <Tooltip content={<ChartTooltip />} />
                         <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize:11, paddingTop:8 }} />
-                        <Bar dataKey="total_sales" name="المبيعات" fill="#6366f1" radius={[4,4,0,0]} />
-                        <Bar dataKey="total_profit" name="صافي المبيعات" fill="#10b981" radius={[4,4,0,0]} />
+                        <Bar dataKey="total_sales" name={t("salesLineLabel")} fill="#6366f1" radius={[4,4,0,0]} />
+                        <Bar dataKey="total_profit" name={t("netSalesLegend")} fill="#10b981" radius={[4,4,0,0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   )
@@ -533,13 +549,13 @@ const DashboardPage: React.FC = () => {
           {/* Top Products */}
           <Card className="lg:col-span-2 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm">
             <CardHeader className="px-5 pt-5 pb-0">
-              <SectionHeader title="أكثر المنتجات مبيعاً" desc="على مستوى الشركة" />
+              <SectionHeader title={t("topProductsTitle")} desc={t("topProductsDesc")} />
             </CardHeader>
             <CardContent className="px-5 pt-2 pb-4">
               {loadProducts
                 ? <div className="space-y-3">{[...Array(6)].map((_,i)=><Skeleton key={i} className="h-8 w-full rounded dark:bg-gray-800" />)}</div>
                 : topProducts.length === 0
-                  ? <div className="py-8 text-center text-sm text-gray-400">لا توجد بيانات</div>
+                  ? <div className="py-8 text-center text-sm text-gray-400">{t("noData")}</div>
                   : (
                     <div className="space-y-2.5">
                       {topProducts.map((p, i) => {
@@ -570,19 +586,19 @@ const DashboardPage: React.FC = () => {
         <Card className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm">
           <CardHeader className="px-5 pt-5 pb-0">
             <SectionHeader
-              title="مقارنة الفروع"
-              desc="أداء كل فرع للفترة المحددة"
+              title={t("branchComparisonTitle")}
+              desc={t("branchComparisonDesc")}
               right={
                 branchesData && !loadBranches && (
                   <div className="flex gap-2">
                     {branchesData.best_branch && (
                       <div className="flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800">
-                        <Trophy className="h-3 w-3" /> الأفضل: {branchesData.best_branch.name}
+                        <Trophy className="h-3 w-3" /> {t("bestBranchWithName", { name: branchesData.best_branch.name })}
                       </div>
                     )}
                     {branchesData.worst_branch && (
                       <div className="flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-800">
-                        <TrendingDown className="h-3 w-3" /> الأقل: {branchesData.worst_branch.name}
+                        <TrendingDown className="h-3 w-3" /> {t("worstBranchWithName", { name: branchesData.worst_branch.name })}
                       </div>
                     )}
                   </div>
@@ -594,13 +610,13 @@ const DashboardPage: React.FC = () => {
             {loadBranches
               ? <div className="space-y-2">{[...Array(3)].map((_,i)=><Skeleton key={i} className="h-11 w-full rounded dark:bg-gray-800" />)}</div>
               : !branchesData || branchesData.branches.length === 0
-                ? <div className="py-10 text-center text-sm text-gray-400"><Warehouse className="h-8 w-8 mx-auto mb-2 text-gray-200 dark:text-gray-700" />لا توجد بيانات</div>
+                ? <div className="py-10 text-center text-sm text-gray-400"><Warehouse className="h-8 w-8 mx-auto mb-2 text-gray-200 dark:text-gray-700" />{t("noData")}</div>
                 : (
                   <Table>
                     <TableHeader>
                       <TableRow className="border-gray-100 dark:border-gray-800 hover:bg-transparent">
-                        {["#","الفرع","المبيعات","صافي المبيعات","الفواتير","المساهمة"].map((h,i) => (
-                          <TableHead key={i} className={`text-right text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 ${i===0?"w-7 pr-2":""} ${i===5?"min-w-[120px]":""}`}>
+                        {["#",t("tableColBranch"),t("tableColSales"),t("tableColNetSales"),t("tableColInvoices"),t("tableColContribution")].map((h,i) => (
+                          <TableHead key={i} className={`text-start text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 ${i===0?"w-7 ps-2":""} ${i===5?"min-w-[120px]":""}`}>
                             {h}
                           </TableHead>
                         ))}
@@ -617,12 +633,12 @@ const DashboardPage: React.FC = () => {
                               ${isBest ? "bg-emerald-50/40 dark:bg-emerald-900/10 hover:bg-emerald-50/70 dark:hover:bg-emerald-900/20"
                               : isWorst ? "bg-red-50/40 dark:bg-red-900/10 hover:bg-red-50/70 dark:hover:bg-red-900/20"
                               : "hover:bg-gray-50/80 dark:hover:bg-gray-800/40"}`}>
-                            <TableCell className="pr-2 pl-0 text-gray-300 dark:text-gray-600 font-bold tabular-nums">{idx+1}</TableCell>
+                            <TableCell className="ps-2 pe-0 text-gray-300 dark:text-gray-600 font-bold tabular-nums">{idx+1}</TableCell>
                             <TableCell className="font-semibold text-gray-700 dark:text-gray-200 py-3">
                               <div className="flex items-center gap-1.5 group">
                                 <span className="group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{b.name}</span>
-                                {isBest && <Badge className="text-[9px] h-4 px-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 border-0 font-semibold">الأفضل</Badge>}
-                                {isWorst && <Badge className="text-[9px] h-4 px-1 bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400 border-0 font-semibold">الأقل</Badge>}
+                                {isBest && <Badge className="text-[9px] h-4 px-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 border-0 font-semibold">{t("bestBranch")}</Badge>}
+                                {isWorst && <Badge className="text-[9px] h-4 px-1 bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400 border-0 font-semibold">{t("worstBranch")}</Badge>}
                                 <ChevronLeft className="h-3 w-3 text-gray-300 dark:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                               </div>
                             </TableCell>
@@ -646,11 +662,11 @@ const DashboardPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-3">
             <AlertCircle className="h-4 w-4 text-amber-500" />
-            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">التنبيهات</h2>
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t("alertsTitle")}</h2>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
 
-            <AlertItemCard title="قاربت على النفاد" accent="bg-orange-50 dark:bg-orange-900/20"
+            <AlertItemCard title={t("alertLowStock")} accent="bg-orange-50 dark:bg-orange-900/20"
               icon={<Package className="h-3.5 w-3.5 text-orange-600" />}
               count={alertsData?.low_stock.length ?? 0} loading={loadAlerts}>
               {alertsData?.low_stock.map(item => (
@@ -663,18 +679,18 @@ const DashboardPage: React.FC = () => {
               ))}
             </AlertItemCard>
 
-            <AlertItemCard title="فروع منخفضة الأداء" accent="bg-red-50 dark:bg-red-900/20"
+            <AlertItemCard title={t("alertLowPerforming")} accent="bg-red-50 dark:bg-red-900/20"
               icon={<TrendingDown className="h-3.5 w-3.5 text-red-500" />}
               count={alertsData?.low_performing_branches.length ?? 0} loading={loadAlerts}>
               {alertsData?.low_performing_branches.map(b => (
                 <div key={b.id} className="flex items-center justify-between py-0.5">
                   <span className="text-xs text-gray-600 dark:text-gray-300 truncate">{b.name}</span>
-                  <span className="text-[10px] font-semibold text-red-500 tabular-nums flex-shrink-0">{b.performance_pct}% من المتوسط</span>
+                  <span className="text-[10px] font-semibold text-red-500 tabular-nums flex-shrink-0">{t("performancePct", { pct: b.performance_pct })}</span>
                 </div>
               ))}
             </AlertItemCard>
 
-            <AlertItemCard title="فواتير آجلة متأخرة" accent="bg-amber-50 dark:bg-amber-900/20"
+            <AlertItemCard title={t("alertOverdueInvoices")} accent="bg-amber-50 dark:bg-amber-900/20"
               icon={<Clock className="h-3.5 w-3.5 text-amber-600" />}
               count={alertsData?.overdue_invoices.length ?? 0} loading={loadAlerts}>
               {alertsData?.overdue_invoices.map(inv => (
@@ -690,13 +706,13 @@ const DashboardPage: React.FC = () => {
               ))}
             </AlertItemCard>
 
-            <AlertItemCard title="مرتجعات مرتفعة" accent="bg-purple-50 dark:bg-purple-900/20"
+            <AlertItemCard title={t("alertHighReturns")} accent="bg-purple-50 dark:bg-purple-900/20"
               icon={<RotateCcw className="h-3.5 w-3.5 text-purple-600" />}
               count={alertsData?.high_returns_branches.length ?? 0} loading={loadAlerts}>
               {alertsData?.high_returns_branches.map(b => (
                 <div key={b.id} className="flex items-center justify-between py-0.5">
                   <span className="text-xs text-gray-600 dark:text-gray-300 truncate">{b.name}</span>
-                  <span className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 tabular-nums flex-shrink-0">{b.return_rate}% مردودات</span>
+                  <span className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 tabular-nums flex-shrink-0">{t("returnsPct", { pct: b.return_rate })}</span>
                 </div>
               ))}
             </AlertItemCard>

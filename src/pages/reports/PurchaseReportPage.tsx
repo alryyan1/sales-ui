@@ -24,26 +24,31 @@ import {
   PurchaseReportTable,
   type ReportFilterValues,
 } from "../../components/reports/purchases";
-
-// --- Zod Schema for Filter Form ---
-const reportFilterSchema = z
-  .object({
-    startDate: z.date().nullable().optional(),
-    endDate: z.date().nullable().optional(),
-    supplierId: z.string().nullable().optional(),
-    status: z.string().nullable().optional(),
-  })
-  .refine(
-    (data) =>
-      !data.endDate || !data.startDate || data.endDate >= data.startDate,
-    {
-      message: "تاريخ الانتهاء يجب أن يكون بعد تاريخ البدء",
-      path: ["endDate"],
-    }
-  );
+import { useTranslation } from "react-i18next";
 
 // --- Component ---
 const PurchaseReportPage: React.FC = () => {
+  const { t, i18n } = useTranslation(["reports", "common"]);
+
+  const reportFilterSchema = React.useMemo(
+    () =>
+      z
+        .object({
+          startDate: z.date().nullable().optional(),
+          endDate: z.date().nullable().optional(),
+          supplierId: z.string().nullable().optional(),
+          status: z.string().nullable().optional(),
+        })
+        .refine(
+          (data) =>
+            !data.endDate || !data.startDate || data.endDate >= data.startDate,
+          {
+            message: t("reports:purchaseReportPage.endDateAfterStartDate"),
+            path: ["endDate"],
+          }
+        ),
+    [t]
+  );
   const [searchParams, setSearchParams] = useSearchParams();
 
   // --- State ---
@@ -76,7 +81,7 @@ const PurchaseReportPage: React.FC = () => {
       const response = await supplierService.getSuppliers(1, "");
       setSuppliers(response.data || []);
     } catch (err) {
-      toast.error("خطأ", {
+      toast.error(t("common:error"), {
         description: supplierService.getErrorMessage(err),
       });
     } finally {
@@ -121,9 +126,9 @@ const PurchaseReportPage: React.FC = () => {
         );
         setReportData(data);
       } catch (err: any) {
-        const errorMsg = getErrorMessage(err) || "حدث خطأ أثناء جلب البيانات";
+        const errorMsg = getErrorMessage(err) || t("reports:purchaseReportPage.fetchDataFailed");
         setError(errorMsg);
-        toast.error("خطأ", { description: errorMsg });
+        toast.error(t("common:error"), { description: errorMsg });
       } finally {
         setIsLoading(false);
       }
@@ -222,7 +227,7 @@ const PurchaseReportPage: React.FC = () => {
 
   // --- Render Page ---
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 md:p-6" dir="rtl">
+    <div className="min-h-screen bg-slate-50/50 p-4 md:p-6" dir={i18n.dir()}>
       <PurchaseReportHeader />
 
       <div className="mx-auto max-w-[1400px]">

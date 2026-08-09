@@ -14,8 +14,10 @@ import {
   SuppliersSummaryHeader,
   SuppliersSummaryTable,
 } from "@/components/reports/suppliers";
+import { useTranslation } from "react-i18next";
 
 const SuppliersSummaryPage: React.FC = () => {
+  const { t, i18n } = useTranslation(["reports", "common"]);
   const navigate = useNavigate();
   const [suppliers, setSuppliers] = useState<SupplierSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,9 +35,9 @@ const SuppliersSummaryPage: React.FC = () => {
       setSuppliers(data);
     } catch (err: any) {
       const errorMsg =
-        getErrorMessage(err) || "حدث خطأ أثناء جلب بيانات الموردين";
+        getErrorMessage(err) || t("reports:suppliersSummary.fetchFailed");
       setError(errorMsg);
-      toast.error("خطأ", { description: errorMsg });
+      toast.error(t("common:error"), { description: errorMsg });
     } finally {
       setIsLoading(false);
     }
@@ -47,7 +49,7 @@ const SuppliersSummaryPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 md:p-6" dir="rtl">
+    <div className="min-h-screen bg-slate-50/50 p-4 md:p-6" dir={i18n.dir()}>
       <SuppliersSummaryHeader />
 
       <div className="mx-auto max-w-[1400px]">
@@ -86,7 +88,7 @@ const SuppliersSummaryPage: React.FC = () => {
               className="mr-auto border-red-200 hover:bg-red-100 text-red-700"
             >
               <RefreshCw className="h-4 w-4 ml-2" />
-              إعادة المحاولة
+              {t("reports:suppliersSummary.retryButton")}
             </Button>
           </div>
         )}
@@ -102,9 +104,9 @@ const SuppliersSummaryPage: React.FC = () => {
                       <Building className="h-8 w-8 text-slate-400" />
                     </div>
                     <h3 className="text-lg font-medium text-slate-900 mb-1">
-                      لا يوجد موردون
+                      {t("reports:suppliersSummary.noSuppliersTitle")}
                     </h3>
-                    <p>لا توجد بيانات موردين لعرضها</p>
+                    <p>{t("reports:suppliersSummary.noSuppliersSubtitle")}</p>
                   </div>
                 ) : (
                   <>

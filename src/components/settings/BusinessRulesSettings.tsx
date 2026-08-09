@@ -1,4 +1,5 @@
 import { Controller, Control } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import {
   Box,
   Card,
@@ -21,6 +22,7 @@ interface BusinessRulesSettingsProps {
 export const BusinessRulesSettings = ({
   control,
 }: BusinessRulesSettingsProps) => {
+  const { t } = useTranslation(["settings"]);
   const theme = useTheme();
 
   const textFieldSx = {
@@ -54,12 +56,12 @@ export const BusinessRulesSettings = ({
           gutterBottom
           sx={{ mb: 4, color: "text.primary" }}
         >
-          الإعدادات المحلية وقواعد العمل
+          {t("settings:businessRulesSectionTitle")}
         </Typography>
         <Stack spacing={4}>
             <Box>
             <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ mb: 2, fontWeight: 500 }}>
-              عرض جدول المنتجات
+              {t("settings:productsTableDisplayLabel")}
             </Typography>
             <Controller
               name="product_row_color_highlight"
@@ -68,9 +70,9 @@ export const BusinessRulesSettings = ({
                 <FormControlLabel
                   control={<Switch checked={!!field.value} onChange={(e) => field.onChange(e.target.checked)} color="primary" />}
                   label={<Box>
-                    <Typography variant="body2" fontWeight={500}>تلوين صفوف المنتجات الناقصة من المخزون</Typography>
+                    <Typography variant="body2" fontWeight={500}>{t("settings:lowStockRowHighlightLabel")}</Typography>
                     <Typography variant="caption" color="text.secondary">
-                      عند التفعيل، تُلوَّن صفوف المنتجات النافدة من المخزون (برتقالي)
+                      {t("settings:lowStockRowHighlightDesc")}
                     </Typography>
                   </Box>}
                 />

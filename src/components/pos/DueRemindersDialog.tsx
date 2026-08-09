@@ -21,6 +21,7 @@ import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import { toast } from "sonner";
 import apiClient from "@/lib/axios";
 import saleReminderService, { DueReminder } from "@/services/saleReminderService";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   open: boolean;
@@ -30,18 +31,19 @@ interface Props {
 }
 
 export const DueRemindersDialog: React.FC<Props> = ({ open, reminders, onDismiss, onClose }) => {
+  const { t } = useTranslation(["pos"]);
   const [sendingId, setSendingId] = useState<number | null>(null);
   const [dismissingId, setDismissingId] = useState<number | null>(null);
 
   const handleSendWhatsApp = async (reminder: DueReminder) => {
     const phone = reminder.sale?.client?.phone;
     if (!phone) {
-      toast.error("لا يوجد رقم هاتف لهذا العميل");
+      toast.error(t("pos:dueRemindersDialog.noClientPhone"));
       return;
     }
     setSendingId(reminder.id);
     try {
-      const clientName = reminder.sale?.client?.name ?? "العميل";
+      const clientName = reminder.sale?.client?.name ?? t("pos:dueRemindersDialog.defaultClientName");
 
       await apiClient.post("/admin/whatsapp-cloud/send-template", {
         to: phone,
@@ -56,9 +58,9 @@ export const DueRemindersDialog: React.FC<Props> = ({ open, reminders, onDismiss
           },
         ],
       });
-      toast.success("تم إرسال رسالة التذكير عبر واتساب");
+      toast.success(t("pos:dueRemindersDialog.whatsappSent"));
     } catch {
-      toast.error("فشل إرسال رسالة الواتساب");
+      toast.error(t("pos:dueRemindersDialog.whatsappSendFailed"));
     } finally {
       setSendingId(null);
     }
@@ -70,7 +72,7 @@ export const DueRemindersDialog: React.FC<Props> = ({ open, reminders, onDismiss
       await saleReminderService.dismissReminder(reminder.id);
       onDismiss(reminder.id);
     } catch {
-      toast.error("فشل في رفض التذكير");
+      toast.error(t("pos:dueRemindersDialog.dismissFailed"));
     } finally {
       setDismissingId(null);
     }
@@ -91,7 +93,7 @@ export const DueRemindersDialog: React.FC<Props> = ({ open, reminders, onDismiss
         }}
       >
         <Typography variant="subtitle1" fontWeight={700} color="white" sx={{ flex: 1 }}>
-          تذكيرات الدفع المستحقة
+          {t("pos:dueRemindersDialog.title")}
         </Typography>
         <IconButton size="small" onClick={onClose} sx={{ color: "white" }}>
           <X size={16} />
@@ -105,10 +107,10 @@ export const DueRemindersDialog: React.FC<Props> = ({ open, reminders, onDismiss
           <TableHead>
             <TableRow>
               <TableCell sx={{ fontWeight: 700 }}>#</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>العميل</TableCell>
-              <TableCell sx={{ fontWeight: 700 }} align="right">المبلغ المتبقي</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>تاريخ التذكير</TableCell>
-              <TableCell sx={{ fontWeight: 700 }} align="center">إجراءات</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>{t("pos:dueRemindersDialog.client")}</TableCell>
+              <TableCell sx={{ fontWeight: 700 }} align="right">{t("pos:dueRemindersDialog.remainingAmount")}</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>{t("pos:dueRemindersDialog.reminderDate")}</TableCell>
+              <TableCell sx={{ fontWeight: 700 }} align="center">{t("pos:dueRemindersDialog.actions")}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -131,7 +133,7 @@ export const DueRemindersDialog: React.FC<Props> = ({ open, reminders, onDismiss
                 </TableCell>
                 <TableCell align="center">
                   <Stack direction="row" gap={0.5} justifyContent="center">
-                    <Tooltip title="إرسال تذكير واتساب">
+                    <Tooltip title={t("pos:dueRemindersDialog.sendWhatsAppTooltip")}>
                       <span>
                         <Button
                           size="small"
@@ -146,11 +148,11 @@ export const DueRemindersDialog: React.FC<Props> = ({ open, reminders, onDismiss
                           }
                           sx={{ textTransform: "none", fontSize: "0.75rem", "& .MuiButton-startIcon": { ml: "4px" } }}
                         >
-                          تذكير واتساب
+                          {t("pos:dueRemindersDialog.whatsAppReminderButton")}
                         </Button>
                       </span>
                     </Tooltip>
-                    <Tooltip title="رفض التذكير">
+                    <Tooltip title={t("pos:dueRemindersDialog.dismissTooltip")}>
                       <span>
                         <Button
                           size="small"
@@ -161,7 +163,7 @@ export const DueRemindersDialog: React.FC<Props> = ({ open, reminders, onDismiss
                           startIcon={dismissingId === reminder.id ? <CircularProgress size={13} color="inherit" /> : null}
                           sx={{ textTransform: "none", fontSize: "0.75rem" }}
                         >
-                          الغاء التذكير
+                          {t("pos:dueRemindersDialog.dismissButton")}
                         </Button>
                       </span>
                     </Tooltip>

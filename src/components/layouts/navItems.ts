@@ -7,43 +7,45 @@ import {
   Settings,
   BarChart3,
 } from "lucide-react";
+import type { TFunction } from "i18next";
 import { NavItem } from "./types";
 
-export const navItems: NavItem[] = [
+/** Builds the sidebar navigation tree with labels translated via i18next. */
+export const getNavItems = (t: TFunction): NavItem[] => [
   // Dashboard
   {
     to: "/dashboard",
-    label: "لوحة التحكم",
+    label: t("navigation:dashboard"),
     icon: LayoutDashboard,
     permission: null,
-    category: "لوحة التحكم",
+    category: t("navigation:dashboard"),
   },
 
   // Sales Group
   {
     to: "#",
-    label: "المبيعات",
+    label: t("navigation:sales"),
     icon: CircleDollarSign,
     permission: null,
-    category: "المبيعات",
+    category: t("navigation:sales"),
     children: [
       {
         to: "/sales/pos-blank",
-        label: "المعرض  ",
+        label: t("navigation:showroom"),
         permission: null,
-        category: "المبيعات",
+        category: t("navigation:sales"),
       },
       {
         to: "/sales/returns",
-        label: "مردودات المبيعات",
+        label: t("navigation:salesReturns"),
         permission: null,
-        category: "المبيعات",
+        category: t("navigation:sales"),
       },
       {
         to: "/clients",
-        label: "العملاء",
+        label: t("navigation:clients"),
         permission: null,
-        category: "المبيعات",
+        category: t("navigation:sales"),
       },
     ],
   },
@@ -51,34 +53,34 @@ export const navItems: NavItem[] = [
   // Inventory Group
   {
     to: "#",
-    label: "المخزون",
+    label: t("navigation:inventory"),
     icon: BoxIcon,
     permission: null,
-    category: "المخزون",
+    category: t("navigation:inventory"),
     children: [
       {
         to: "/products",
-        label: "المعدات",
+        label: t("navigation:products"),
         permission: null,
-        category: "المخزون",
+        category: t("navigation:inventory"),
       },
       {
         to: "/inventory/adjustments",
-        label: "تعديلات المخزون",
+        label: t("navigation:stockAdjustments"),
         permission: null,
-        category: "المخزون",
+        category: t("navigation:inventory"),
       },
       {
         to: "/inventory/transfers",
-        label: "تحويل المخزون",
+        label: t("navigation:stockTransfers"),
         permission: null,
-        category: "المخزون",
+        category: t("navigation:inventory"),
       },
       {
         to: "/inventory/counts",
-        label: "جرد المخزون",
+        label: t("navigation:inventoryCounts"),
         permission: null,
-        category: "المخزون",
+        category: t("navigation:inventory"),
       },
     ],
   },
@@ -86,93 +88,87 @@ export const navItems: NavItem[] = [
   // Purchases Group
   {
     to: "#",
-    label: "الواردات",
+    label: t("navigation:purchasesGroup"),
     icon: ShoppingCart,
     permission: null,
-    category: "المشتريات",
+    category: t("navigation:purchases"),
     children: [
       {
         to: "/suppliers",
-        label: "الموردون",
+        label: t("navigation:suppliers"),
         permission: null,
-        category: "المخزون",
+        category: t("navigation:inventory"),
       },
       {
         to: "/purchases",
-        label: "قائمة المشتريات",
+        label: t("navigation:purchasesList"),
         permission: null,
-        category: "المشتريات",
+        category: t("navigation:purchases"),
       },
-    
     ],
   },
 
   // Reports Group
   {
     to: "#",
-    label: "التقارير",
+    label: t("navigation:reports"),
     icon: BarChart3,
     permission: null,
-    category: "التقارير",
+    category: t("navigation:reports"),
     children: [
-   
       {
         to: "/reports/sales",
-        label: "تقرير المبيعات",
+        label: t("navigation:salesReport"),
         permission: null,
-        category: "التقارير",
+        category: t("navigation:reports"),
       },
-   
       {
         to: "/reports/purchases",
-        label: "تقرير المشتريات",
+        label: t("navigation:purchasesReport"),
         permission: null,
-        category: "التقارير",
+        category: t("navigation:reports"),
       },
-    
       {
         to: "/reports/inventory-log",
-        label: "سجل المخزون",
+        label: t("navigation:inventoryLog"),
         permission: null,
-        category: "التقارير",
+        category: t("navigation:reports"),
       },
- 
       {
         to: "/reports/daily-income",
-        label: "تقرير المبيعات الشهري",
+        label: t("navigation:dailyIncomeReport"),
         permission: null,
-        category: "التقارير",
+        category: t("navigation:reports"),
       },
       {
         to: "/reports/monthly-expenses",
-        label: "تقرير المصروفات الشهرية",
+        label: t("navigation:monthlyExpensesReport"),
         permission: null,
-        category: "التقارير",
+        category: t("navigation:reports"),
       },
-  
       {
         to: "/reports/best-selling-products",
-        label: "المنتجات الأكثر مبيعاً",
+        label: t("navigation:bestSellingProducts"),
         permission: null,
-        category: "التقارير",
+        category: t("navigation:reports"),
       },
       {
         to: "/reports/stagnant-products",
-        label: "المنتجات الراكدة",
+        label: t("navigation:stagnantProducts"),
         permission: null,
-        category: "التقارير",
+        category: t("navigation:reports"),
       },
       {
         to: "/reports/low-stock-products",
-        label: "المنتجات منخفضة المخزون",
+        label: t("navigation:lowStockProducts"),
         permission: null,
-        category: "التقارير",
+        category: t("navigation:reports"),
       },
       {
         to: "/reports/monthly-shifts",
-        label: "تقرير الورديات الشهري",
+        label: t("navigation:monthlyShiftsReport"),
         permission: null,
-        category: "التقارير",
+        category: t("navigation:reports"),
       },
     ],
   },
@@ -180,46 +176,46 @@ export const navItems: NavItem[] = [
   // Admin Group
   {
     to: "#",
-    label: "الإدارة",
+    label: t("navigation:admin"),
     icon: Settings,
     permission: null,
-    category: "الإدارة",
+    category: t("navigation:admin"),
     children: [
       {
         to: "/admin/users",
-        label: "المستخدمون",
+        label: t("navigation:users"),
         permission: null,
-        category: "الإدارة",
+        category: t("navigation:admin"),
       },
       {
         to: "/admin/roles",
-        label: "الأدوار",
+        label: t("navigation:roles"),
         permission: null,
-        category: "الإدارة",
+        category: t("navigation:admin"),
       },
       {
         to: "/admin/expenses",
-        label: "المصروفات",
+        label: t("navigation:expenses"),
         permission: null,
-        category: "الإدارة",
+        category: t("navigation:admin"),
       },
       {
         to: "/admin/settings",
-        label: "الإعدادات",
+        label: t("navigation:settings"),
         permission: null,
-        category: "الإدارة",
+        category: t("navigation:admin"),
       },
       {
         to: "/admin/backups",
-        label: "النسخ الاحتياطي",
+        label: t("navigation:backups"),
         permission: null,
-        category: "الإدارة",
+        category: t("navigation:admin"),
       },
       {
         to: "/admin/warehouses",
-        label: "المخازن",
+        label: t("navigation:warehouses"),
         permission: null,
-        category: "الإدارة",
+        category: t("navigation:admin"),
       },
     ],
   },

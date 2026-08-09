@@ -45,5 +45,48 @@
   "errorUpdatingData": "خطأ في تحديث البيانات",
   "errorDeletingData": "خطأ في حذف البيانات",
   "apply": "تطبيق",
-  "all": "الكل"
+  "all": "الكل",
+  "switchLanguage": "التبديل إلى الإنجليزية",
+  "switchToEnglish": "English",
+  "switchToArabic": "العربية",
+  "logout": "تسجيل الخروج",
+  "retryAction": "إعادة المحاولة",
+  "notSpecified": "غير محدد",
+  "copy": "نسخ",
+  "pdfDownloadSuccess": "تم تنزيل الملف بنجاح",
+  "pdfDownloadError": "فشل في إنشاء ملف PDF",
+  "selectDate": "اختر التاريخ",
+  "pdfViewerDialog": {
+    "defaultTitle": "تقرير المخزون",
+    "downloadButton": "تحميل",
+    "loadError": "خطأ في تحميل ملف PDF",
+    "loadingPdf": "جاري تحميل ملف PDF...",
+    "close": "إغلاق"
+  },
+  "keyboardShortcuts": {
+    "title": "اختصارات لوحة المفاتيح",
+    "close": "إغلاق",
+    "generalCategory": "عام",
+    "posCategory": "نقطة البيع",
+    "openPaymentDialog": "فتح نافذة الدفع / إنشاء عملية بيع جديدة",
+    "createNewSale": "إنشاء عملية بيع جديدة",
+    "saveDraft": "حفظ المسودة"
+  },
+  "toggleTheme": "تبديل المظهر",
+  "themeLight": "فاتح",
+  "themeDark": "داكن",
+  "themeSystem": "النظام",
+  "accessDeniedTitle": "تم رفض الوصول",
+  "accessDeniedDesc": "ليس لديك الصلاحية اللازمة ({{permission}}) لعرض هذه الصفحة.",
+  "notFoundPage": {
+    "unexpectedError": "حدث خطأ غير متوقع",
+    "lostTitle": "عفواً، ضللت الطريق!",
+    "errorTitle": "حدث خطأ غير متوقع",
+    "pathNotFound": "الصفحة المسار {{path}} غير موجودة أو تم نقلها لمكان آخر.",
+    "genericErrorDesc": "نعتذر عن هذا الخلل، الفريق التقني يعمل على حل المشكلة.",
+    "backToHome": "العودة للرئيسية",
+    "refreshPage": "تحديث الصفحة",
+    "technicalDetails": "تفاصيل الخطأ التقنية",
+    "noAdditionalInfo": "لا تتوفر معلومات إضافية عن الخطأ."
+  }
 }

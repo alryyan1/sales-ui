@@ -1,6 +1,7 @@
 // src/pages/warehouses/WarehouseProductsPage.tsx
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   Container,
   Typography,
@@ -41,6 +42,7 @@ import { formatNumber, formatCurrency } from "../../constants";
 import exportService, { exportWarehouseProductsPdf } from "../../services/exportService";
 
 const WarehouseProductsPage: React.FC = () => {
+  const { t } = useTranslation(["warehouses"]);
   const { warehouseId } = useParams<{ warehouseId: string }>();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -88,7 +90,7 @@ const WarehouseProductsPage: React.FC = () => {
         setWarehouse(data);
       } catch (error) {
         console.error("Error fetching warehouse:", error);
-        setError("فشل تحميل بيانات المستودع");
+        setError(t("warehouses:productsPage.fetchWarehouseError"));
       }
     };
     fetchWarehouse();
@@ -137,7 +139,7 @@ const WarehouseProductsPage: React.FC = () => {
       setProducts(productsWithWarehouseQty);
     } catch (error) {
       console.error("Error fetching products:", error);
-      setError("فشل تحميل المنتجات");
+      setError(t("warehouses:productsPage.fetchProductsError"));
     } finally {
       setLoading(false);
     }
@@ -172,7 +174,7 @@ const WarehouseProductsPage: React.FC = () => {
               <InventoryIcon />
               <Box>
                 <Typography variant="h6" fontWeight={600}>
-                  منتجات المستودع
+                  {t("warehouses:productsPage.title")}
                 </Typography>
                 {warehouse && (
                   <Typography variant="caption" sx={{ opacity: 0.9 }}>
@@ -188,7 +190,7 @@ const WarehouseProductsPage: React.FC = () => {
             <TextField
               fullWidth
               size="small"
-              placeholder="البحث في المنتجات..."
+              placeholder={t("warehouses:productsPage.searchProductsPlaceholder")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               InputProps={{
@@ -235,7 +237,7 @@ const WarehouseProductsPage: React.FC = () => {
                     search: debouncedSearchTerm
                   });
                 } catch (error) {
-                  setError('فشل في إنشاء تقرير PDF');
+                  setError(t('warehouses:productsPage.pdfExportError'));
                   console.error('PDF export error:', error);
                 }
               }}
@@ -246,7 +248,7 @@ const WarehouseProductsPage: React.FC = () => {
                 px: 2
               }}
             >
-              طباعة
+              {t('warehouses:productsPage.print')}
             </Button>
 
             <Button
@@ -265,7 +267,7 @@ const WarehouseProductsPage: React.FC = () => {
                 px: 2
               }}
             >
-              استيراد النواقص
+              {t('warehouses:productsPage.importMissing')}
             </Button>
           </Box>
         </Box>
@@ -292,25 +294,25 @@ const WarehouseProductsPage: React.FC = () => {
             <TableHead>
               <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
                 <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
-                  المعرف
+                  {t('warehouses:productsPage.columnId')}
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
-                  اسم المنتج
+                  {t('warehouses:productsPage.columnProductName')}
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
                   SKU
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
-                  الفئة
+                  {t('warehouses:productsPage.columnCategory')}
                 </TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
-                  الكمية
+                  {t('warehouses:productsPage.columnQuantity')}
                 </TableCell>
                 <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
-                  سعر البيع
+                  {t('warehouses:productsPage.columnSalePrice')}
                 </TableCell>
                 <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
-                  التكلفة
+                  {t('warehouses:productsPage.columnCost')}
                 </TableCell>
               </TableRow>
             </TableHead>
@@ -320,7 +322,7 @@ const WarehouseProductsPage: React.FC = () => {
                   <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
                     <CircularProgress size={32} />
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      جاري التحميل...
+                      {t('warehouses:productsPage.loadingEllipsis')}
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -330,8 +332,8 @@ const WarehouseProductsPage: React.FC = () => {
                     <InventoryIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
                     <Typography variant="body1" color="text.secondary">
                       {debouncedSearchTerm
-                        ? "لا توجد منتجات تطابق البحث"
-                        : "لا توجد منتجات في هذا المستودع"}
+                        ? t('warehouses:productsPage.noProductsMatchingSearch')
+                        : t('warehouses:productsPage.noProductsInWarehouse')}
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -411,16 +413,16 @@ const WarehouseProductsPage: React.FC = () => {
       >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <LockIcon color="warning" />
-          تأكيد الاستيراد
+          {t('warehouses:productsPage.importConfirmTitle')}
         </DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
-            سيقوم هذا الإجراء باستيراد جميع المنتجات غير الموجودة في هذا المستودع مع كمياتها الحالية.
+            {t('warehouses:productsPage.importConfirmDesc')}
           </DialogContentText>
           <TextField
             autoFocus
             margin="dense"
-            label="كلمة المرور"
+            label={t('warehouses:productsPage.passwordLabel')}
             type="password"
             fullWidth
             variant="outlined"
@@ -436,12 +438,12 @@ const WarehouseProductsPage: React.FC = () => {
             disabled={importLoading}
             sx={{ borderRadius: 2 }}
           >
-            إلغاء
+            {t('warehouses:productsPage.cancel')}
           </Button>
           <Button
             onClick={async () => {
               if (password !== "alryyan1") {
-                setError("كلمة المرور غير صحيحة");
+                setError(t('warehouses:productsPage.incorrectPassword'));
                 return;
               }
 
@@ -451,12 +453,12 @@ const WarehouseProductsPage: React.FC = () => {
                 setImportDialogOpen(false);
                 fetchProducts();
                 setError(null);
-                setSuccess(res.message || "تم الاستيراد بنجاح");
+                setSuccess(res.message || t('warehouses:productsPage.importSuccess'));
                 // Clear success message after 5 seconds
                 setTimeout(() => setSuccess(null), 5000);
               } catch (err) {
                 console.error(err);
-                setError("فشل الاستيراد");
+                setError(t('warehouses:productsPage.importFailed'));
                 setImportDialogOpen(false);
               } finally {
                 setImportLoading(false);
@@ -466,7 +468,7 @@ const WarehouseProductsPage: React.FC = () => {
             disabled={importLoading || !password}
             sx={{ borderRadius: 2, px: 3 }}
           >
-            {importLoading ? "جاري الاستيراد..." : "تأكيد"}
+            {importLoading ? t('warehouses:productsPage.importingEllipsis') : t('warehouses:productsPage.confirm')}
           </Button>
         </DialogActions>
       </Dialog>

@@ -76,5 +76,10 @@
   "trendAnalysis": "Trend Analysis",
   "periodComparison": "Period Comparison",
   "growthMetrics": "Growth Metrics",
-  "performanceIndicators": "Performance Indicators"
+  "performanceIndicators": "Performance Indicators",
+  "pageSubtitle": "Overview of store and sales performance",
+  "realData": "Real Data",
+  "mockDataBanner": "Notice: Sample data is shown because no connection to the server is available",
+  "salesValueSeries": "Sales Value",
+  "ordersCountSeries": "Orders Count"
 }

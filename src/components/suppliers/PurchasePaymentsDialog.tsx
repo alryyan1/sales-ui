@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { format } from "date-fns";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -41,6 +42,7 @@ export const PurchasePaymentsDialog: React.FC<PurchasePaymentsDialogProps> = ({
   supplierId,
   onSuccess,
 }) => {
+  const { t, i18n } = useTranslation(["suppliers"]);
   const formatCurrency = useFormatCurrency();
   const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
 
@@ -49,10 +51,10 @@ export const PurchasePaymentsDialog: React.FC<PurchasePaymentsDialogProps> = ({
 
   const getMethodLabel = (method: string) => {
     const methods: Record<string, string> = {
-      cash: "نقداً",
-      bank_transfer: "تحويل بنكي",
-      visa: "فيزا",
-      other: "أخرى",
+      cash: t("suppliers:purchasePayments.methodCashAlt"),
+      bank_transfer: t("suppliers:paymentForm.methodBankTransfer"),
+      visa: t("suppliers:paymentForm.methodVisa"),
+      other: t("suppliers:paymentForm.methodOther"),
     };
     return methods[method] || method;
   };
@@ -65,35 +67,35 @@ export const PurchasePaymentsDialog: React.FC<PurchasePaymentsDialogProps> = ({
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" dir={i18n.dir()}>
           <DialogHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
             <div className="flex-1">
               <DialogTitle className="text-2xl font-bold flex items-center gap-2">
                 <Wallet className="h-6 w-6 text-blue-600" />
-                  فاتوره رقم #{purchaseId}
+                  {t("suppliers:purchasePayments.invoiceNumberTitle", { id: purchaseId })}
               </DialogTitle>
-      
+
             </div>
-            <Button 
+            <Button
               onClick={() => setIsAddPaymentOpen(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
             >
               <Plus className="ml-2 h-4 w-4" />
-              إضافة دفعة
+              {t("suppliers:purchasePayments.addPayment")}
             </Button>
           </DialogHeader>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 mt-4">
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-              <p className="text-sm font-medium text-slate-500 mb-1">إجمالي الفاتورة</p>
+              <p className="text-sm font-medium text-slate-500 mb-1">{t("suppliers:purchasePayments.invoiceTotal")}</p>
               <p className="text-xl font-bold text-slate-900">{formatCurrency(purchaseAmount)}</p>
             </div>
             <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
-              <p className="text-sm font-medium text-emerald-600 mb-1">إجمالي المدفوع</p>
+              <p className="text-sm font-medium text-emerald-600 mb-1">{t("suppliers:purchasePayments.totalPaid")}</p>
               <p className="text-xl font-bold text-emerald-700">{formatCurrency(totalPaid)}</p>
             </div>
             <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-              <p className="text-sm font-medium text-blue-600 mb-1">المتبقي</p>
+              <p className="text-sm font-medium text-blue-600 mb-1">{t("suppliers:purchasePayments.remaining")}</p>
               <p className={`text-xl font-bold ${remaining > 0 ? "text-blue-700" : "text-emerald-700"}`}>
                 {formatCurrency(remaining)}
               </p>
@@ -104,18 +106,18 @@ export const PurchasePaymentsDialog: React.FC<PurchasePaymentsDialogProps> = ({
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50/50">
-                  <TableHead className="text-right">التاريخ</TableHead>
-                  <TableHead className="text-right">المبلغ</TableHead>
-                  <TableHead className="text-right">طريقة الدفع</TableHead>
-                  <TableHead className="text-right">المرجع</TableHead>
-                  <TableHead className="text-right">بواسطة</TableHead>
+                  <TableHead className="text-start">{t("suppliers:purchasePayments.colDate")}</TableHead>
+                  <TableHead className="text-start">{t("suppliers:purchasePayments.colAmount")}</TableHead>
+                  <TableHead className="text-start">{t("suppliers:purchasePayments.colMethod")}</TableHead>
+                  <TableHead className="text-start">{t("suppliers:purchasePayments.colReference")}</TableHead>
+                  <TableHead className="text-start">{t("suppliers:purchasePayments.colBy")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {payments.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-32 text-center text-slate-500">
-                      لا توجد مدفوعات مسجلة لهذه الفاتورة بعد.
+                      {t("suppliers:purchasePayments.noPaymentsYet")}
                     </TableCell>
                   </TableRow>
                 ) : (

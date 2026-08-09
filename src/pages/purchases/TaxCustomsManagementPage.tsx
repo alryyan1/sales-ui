@@ -33,6 +33,7 @@ import {
   AccountBalance as TaxIcon,
   LocalShipping as CustomsIcon,
 } from "@mui/icons-material";
+import { useTranslation } from "react-i18next";
 import purchaseService, { Purchase } from "../../services/purchaseService";
 import { formatCurrency } from "../../constants";
 
@@ -58,6 +59,7 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const TaxCustomsManagementPage: React.FC = () => {
+  const { t } = useTranslation(["purchases", "common"]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -90,7 +92,7 @@ const TaxCustomsManagementPage: React.FC = () => {
       console.error("Error fetching purchases:", error);
       setSnackbar({
         open: true,
-        message: "فشل في تحميل المشتريات",
+        message: t("purchases:taxCustoms.loadFailed"),
         severity: "error",
       });
     } finally {
@@ -124,7 +126,7 @@ const TaxCustomsManagementPage: React.FC = () => {
       });
       setSnackbar({
         open: true,
-        message: "تم حفظ التغييرات بنجاح",
+        message: t("purchases:taxCustoms.saveSuccess"),
         severity: "success",
       });
       setEditDialogOpen(false);
@@ -133,7 +135,7 @@ const TaxCustomsManagementPage: React.FC = () => {
       console.error("Error saving tax/customs:", error);
       setSnackbar({
         open: true,
-        message: "فشل في حفظ التغييرات",
+        message: t("purchases:taxCustoms.saveFailed"),
         severity: "error",
       });
     }
@@ -144,14 +146,14 @@ const TaxCustomsManagementPage: React.FC = () => {
       await purchaseService.exportTaxPdf(purchaseId, detailed);
       setSnackbar({
         open: true,
-        message: "تم بدأ تحميل الملف",
+        message: t("purchases:taxCustoms.downloadStarted"),
         severity: "success",
       });
     } catch (error) {
       console.error("Error exporting PDF:", error);
       setSnackbar({
         open: true,
-        message: "فشل في تصدير ملف PDF",
+        message: t("purchases:taxCustoms.exportFailed"),
         severity: "error",
       });
     }
@@ -166,7 +168,7 @@ const TaxCustomsManagementPage: React.FC = () => {
           align="right"
           sx={{ mb: 3, fontWeight: "bold", color: "primary.main" }}
         >
-          إدارة الضرائب والجمارك
+          {t("purchases:taxCustoms.pageTitle")}
         </Typography>
 
         <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
@@ -178,13 +180,13 @@ const TaxCustomsManagementPage: React.FC = () => {
           >
             <Tab
               icon={<TaxIcon />}
-              label="الضرائب"
+              label={t("purchases:taxCustoms.taxesTab")}
               id="tax-customs-tab-0"
               aria-controls="tax-customs-tabpanel-0"
             />
             <Tab
               icon={<CustomsIcon />}
-              label="الجمارك"
+              label={t("purchases:taxCustoms.customsTab")}
               id="tax-customs-tab-1"
               aria-controls="tax-customs-tabpanel-1"
             />
@@ -194,7 +196,7 @@ const TaxCustomsManagementPage: React.FC = () => {
         <Box sx={{ mt: 3, display: "flex", gap: 2 }}>
           <TextField
             fullWidth
-            label="البحث برقم المرجع"
+            label={t("purchases:taxCustoms.searchByReference")}
             variant="outlined"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -207,24 +209,24 @@ const TaxCustomsManagementPage: React.FC = () => {
             onClick={fetchPurchases}
             startIcon={<SearchIcon />}
           >
-            بحث
+            {t("purchases:taxCustoms.searchButton")}
           </Button>
         </Box>
 
         <TabPanel value={tabValue} index={0}>
           <Typography variant="h6" gutterBottom align="right">
-            سجل الضرائب
+            {t("purchases:taxCustoms.taxRecordsTitle")}
           </Typography>
           <TableContainer>
             <Table sx={{ minWidth: 650 }}>
               <TableHead>
                 <TableRow sx={{ bgcolor: "action.hover" }}>
-                  <TableCell align="right">رقم الشراء</TableCell>
-                  <TableCell align="right">المورد</TableCell>
-                  <TableCell align="right">التاريخ</TableCell>
-                  <TableCell align="right">المبلغ الكلي</TableCell>
-                  <TableCell align="right">الضريبة</TableCell>
-                  <TableCell align="center">الإجراءات</TableCell>
+                  <TableCell align="right">{t("purchases:taxCustoms.colPurchaseNumber")}</TableCell>
+                  <TableCell align="right">{t("purchases:taxCustoms.colSupplier")}</TableCell>
+                  <TableCell align="right">{t("purchases:taxCustoms.colDate")}</TableCell>
+                  <TableCell align="right">{t("purchases:taxCustoms.colTotalAmount")}</TableCell>
+                  <TableCell align="right">{t("purchases:taxCustoms.colTax")}</TableCell>
+                  <TableCell align="center">{t("purchases:taxCustoms.colActions")}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -237,7 +239,7 @@ const TaxCustomsManagementPage: React.FC = () => {
                 ) : purchases.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} align="center">
-                      لا توجد سجلات
+                      {t("purchases:taxCustoms.noRecords")}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -257,7 +259,7 @@ const TaxCustomsManagementPage: React.FC = () => {
                         {formatCurrency(purchase.tax_amount)}
                       </TableCell>
                       <TableCell align="center">
-                        <Tooltip title="تعديل">
+                        <Tooltip title={t("purchases:taxCustoms.editTooltip")}>
                           <IconButton
                             onClick={() => handleOpenEdit(purchase)}
                             color="primary"
@@ -265,7 +267,7 @@ const TaxCustomsManagementPage: React.FC = () => {
                             <EditIcon />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="تحميل ملخص PDF">
+                        <Tooltip title={t("purchases:taxCustoms.downloadSummaryPdfTooltip")}>
                           <IconButton
                             onClick={() =>
                               handleDownloadPdf(purchase.id, false)
@@ -275,7 +277,7 @@ const TaxCustomsManagementPage: React.FC = () => {
                             <PdfIcon />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="تحميل تفصيلي PDF">
+                        <Tooltip title={t("purchases:taxCustoms.downloadDetailedPdfTooltip")}>
                           <IconButton
                             onClick={() => handleDownloadPdf(purchase.id, true)}
                             color="info"
@@ -294,18 +296,18 @@ const TaxCustomsManagementPage: React.FC = () => {
 
         <TabPanel value={tabValue} index={1}>
           <Typography variant="h6" gutterBottom align="right">
-            سجل الجمارك
+            {t("purchases:taxCustoms.customsRecordsTitle")}
           </Typography>
           <TableContainer>
             <Table sx={{ minWidth: 650 }}>
               <TableHead>
                 <TableRow sx={{ bgcolor: "action.hover" }}>
-                  <TableCell align="right">رقم الشراء</TableCell>
-                  <TableCell align="right">المورد</TableCell>
-                  <TableCell align="right">التاريخ</TableCell>
-                  <TableCell align="right">المبلغ الكلي</TableCell>
-                  <TableCell align="right">الجمارك</TableCell>
-                  <TableCell align="center">الإجراءات</TableCell>
+                  <TableCell align="right">{t("purchases:taxCustoms.colPurchaseNumber")}</TableCell>
+                  <TableCell align="right">{t("purchases:taxCustoms.colSupplier")}</TableCell>
+                  <TableCell align="right">{t("purchases:taxCustoms.colDate")}</TableCell>
+                  <TableCell align="right">{t("purchases:taxCustoms.colTotalAmount")}</TableCell>
+                  <TableCell align="right">{t("purchases:taxCustoms.colCustoms")}</TableCell>
+                  <TableCell align="center">{t("purchases:taxCustoms.colActions")}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -318,7 +320,7 @@ const TaxCustomsManagementPage: React.FC = () => {
                 ) : purchases.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} align="center">
-                      لا توجد سجلات
+                      {t("purchases:taxCustoms.noRecords")}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -338,7 +340,7 @@ const TaxCustomsManagementPage: React.FC = () => {
                         {formatCurrency(purchase.customs_amount)}
                       </TableCell>
                       <TableCell align="center">
-                        <Tooltip title="تعديل">
+                        <Tooltip title={t("purchases:taxCustoms.editTooltip")}>
                           <IconButton
                             onClick={() => handleOpenEdit(purchase)}
                             color="primary"
@@ -346,7 +348,7 @@ const TaxCustomsManagementPage: React.FC = () => {
                             <EditIcon />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="تحميل PDF">
+                        <Tooltip title={t("purchases:taxCustoms.downloadPdfTooltip")}>
                           <IconButton
                             onClick={() => handleDownloadPdf(purchase.id, true)}
                             color="secondary"
@@ -372,14 +374,14 @@ const TaxCustomsManagementPage: React.FC = () => {
         fullWidth
       >
         <DialogTitle align="right">
-          تعديل الضرائب والجمارك للطلب #{selectedPurchase?.id}
+          {t("purchases:taxCustoms.editDialogTitle", { id: selectedPurchase?.id })}
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="مبلغ الضريبة"
+                label={t("purchases:taxCustoms.taxAmountLabel")}
                 type="number"
                 value={taxAmount}
                 onChange={(e) => setTaxAmount(Number(e.target.value))}
@@ -388,7 +390,7 @@ const TaxCustomsManagementPage: React.FC = () => {
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="مبلغ الجمارك"
+                label={t("purchases:taxCustoms.customsAmountLabel")}
                 type="number"
                 value={customsAmount}
                 onChange={(e) => setCustomsAmount(Number(e.target.value))}
@@ -397,14 +399,14 @@ const TaxCustomsManagementPage: React.FC = () => {
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setEditDialogOpen(false)}>إلغاء</Button>
+          <Button onClick={() => setEditDialogOpen(false)}>{t("common:cancel")}</Button>
           <Button
             onClick={handleSave}
             variant="contained"
             color="primary"
             startIcon={<SaveIcon />}
           >
-            حفظ
+            {t("common:save")}
           </Button>
         </DialogActions>
       </Dialog>

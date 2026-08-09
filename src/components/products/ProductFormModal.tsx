@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 // MUI components
 import {
@@ -139,6 +140,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   onSaveSuccess,
   onDeleteSuccess,
 }) => {
+  const { t, i18n } = useTranslation(["products", "common"]);
   const isEditMode = Boolean(productToEdit);
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -192,8 +194,8 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       const data = await categoryService.getCategories(1, 9999, "", false, true);
       setCategories(data as Category[]);
     } catch (error) {
-      toast.error("خطأ", {
-        description: categoryService.getErrorMessage(error, "فشل تحميل الفئات"),
+      toast.error(t("common:error"), {
+        description: categoryService.getErrorMessage(error, t("products:form.loadCategoriesFailed")),
       });
     } finally {
       setLoadingCategories(false);
@@ -215,8 +217,8 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
         }
       }
     } catch (error) {
-      toast.error("خطأ", {
-        description: unitService.getErrorMessage(error, "فشل تحميل الوحدات"),
+      toast.error(t("common:error"), {
+        description: unitService.getErrorMessage(error, t("products:form.loadUnitsFailed")),
       });
     } finally {
       setLoadingUnits(false);
@@ -260,7 +262,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
             : await productService.getSalesHistory(productId, page);
         setHistoryData(res.data);
       } catch {
-        toast.error("فشل تحميل السجل");
+        toast.error(t("products:form.loadHistoryFailed"));
       } finally {
         setHistoryLoading(false);
       }
@@ -374,15 +376,15 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
             }
           } catch (uploadErr) {
             console.error("Delayed image upload failed:", uploadErr);
-            toast.error("فشل رفع الصورة", {
-              description: "تم حفظ المنتج ولكن فشل رفع الصورة المحددة.",
+            toast.error(t("products:form.uploadFailed"), {
+              description: t("products:form.imageUploadFailedNote"),
             });
           } finally {
             setUploadingImage(false);
           }
         }
       }
-      toast.success(isEditMode ? "تم تحديث المنتج بنجاح" : "تم إنشاء المنتج بنجاح", {
+      toast.success(isEditMode ? t("products:updateSuccess") : t("products:createSuccess"), {
         duration: 3000,
       });
       onSaveSuccess(savedProduct);
@@ -390,7 +392,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     } catch (err) {
       const generalError = productService.getErrorMessage(err);
       const apiErrors = productService.getValidationErrors(err);
-      toast.error("خطأ", { description: generalError, duration: 5000 });
+      toast.error(t("common:error"), { description: generalError, duration: 5000 });
       setServerError(generalError);
       if (apiErrors) {
         Object.entries(apiErrors).forEach(([field, messages]) => {
@@ -399,7 +401,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
             message: Array.isArray(messages) ? messages[0] : String(messages),
           });
         });
-        setServerError("يرجى التحقق من الحقول المدخلة.");
+        setServerError(t("products:form.checkEnteredFields"));
       }
     }
   };
@@ -408,14 +410,14 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
   const handleDelete = async () => {
     if (!productToEdit) return;
-    if (!window.confirm("هل أنت متأكد من حذف هذا المنتج؟ لا يمكن التراجع عن هذا الإجراء.")) return;
+    if (!window.confirm(t("products:form.deleteProductConfirm"))) return;
     try {
       await productService.deleteProduct(productToEdit.id);
-      toast.success("تم حذف المنتج بنجاح");
+      toast.success(t("products:list.productDeletedSuccess"));
       if (onDeleteSuccess) onDeleteSuccess();
       onClose();
     } catch (error) {
-      toast.error("فشل حذف المنتج", {
+      toast.error(t("products:form.deleteProductFailed"), {
         description: productService.getErrorMessage(error),
       });
     }
@@ -441,7 +443,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       onClose={handleClose}
       fullWidth
       maxWidth="md"
-      dir="rtl"
+      dir={i18n.dir()}
       PaperProps={{
         elevation: 8,
         sx: { borderRadius: 3, overflow: "hidden" },
@@ -477,12 +479,12 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           </Box>
           <Box>
             <Typography variant="subtitle1" fontWeight={700} color="white" lineHeight={1.2}>
-              {isEditMode ? "تعديل منتج" : "إضافة منتج جديد"}
+              {isEditMode ? t("products:editProduct") : t("products:addProduct")}
             </Typography>
             <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", fontSize: "0.7rem" }}>
               {isEditMode
-                ? `تعديل: ${productToEdit?.name}`
-                : "أدخل بيانات المنتج بدقة لإدارة المخزون والمبيعات"}
+                ? t("products:form.editingProductName", { name: productToEdit?.name })
+                : t("products:form.formSubtitle")}
             </Typography>
           </Box>
         </Box>
@@ -502,13 +504,13 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
             sx={{ px: 2 }}
           >
             <Tab
-              label="تفاصيل المنتج"
+              label={t("products:form.detailsTab")}
               icon={<Package size={16} />}
               iconPosition="start"
               sx={{ minHeight: 48, gap: 0.5, fontWeight: 600 }}
             />
             <Tab
-              label="سجل الحركات"
+              label={t("products:form.historyTab")}
               icon={<History size={16} />}
               iconPosition="start"
               sx={{ minHeight: 48, gap: 0.5, fontWeight: 600 }}
@@ -526,7 +528,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
             icon={<AlertCircle size={18} />}
             sx={{ mb: 2.5, borderRadius: 2 }}
           >
-            <AlertTitle sx={{ fontWeight: 700, mb: 0 }}>خطأ في الإدخال</AlertTitle>
+            <AlertTitle sx={{ fontWeight: 700, mb: 0 }}>{t("products:form.inputErrorTitle")}</AlertTitle>
             {serverError}
           </Alert>
         )}
@@ -543,8 +545,8 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
             >
               <SectionHeader
                 icon={<Tag size={18} />}
-                title="المعلومات الأساسية"
-                subtitle="اسم المنتج، الرمز، والفئة"
+                title={t("products:form.basicInfoSection")}
+                subtitle={t("products:form.basicInfoDesc")}
               />
 
               <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
@@ -553,14 +555,14 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   control={control}
                   name="name"
                   rules={{
-                    required: "اسم المنتج مطلوب",
-                    minLength: { value: 2, message: "اسم المنتج يجب أن يكون حرفين على الأقل" },
+                    required: t("products:form.nameRequired"),
+                    minLength: { value: 2, message: t("products:form.nameMinLength") },
                   }}
                   render={({ field, fieldState }) => (
                     <TextField
                       {...field}
-                      label="اسم المنتج *"
-                      placeholder="اكتب اسم المنتج"
+                      label={t("products:form.nameLabelRequired")}
+                      placeholder={t("products:form.namePlaceholderShort")}
                       autoFocus={true}
                       size="small"
                       disabled={isSubmitting}
@@ -580,8 +582,8 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       <TextField
                         {...field}
                         value={field.value ?? ""}
-                        label="الرمز (SKU)"
-                        placeholder="(اختياري)"
+                        label={t("products:form.skuLabel")}
+                        placeholder={t("products:form.optional")}
                         size="small"
                         disabled={isSubmitting}
                         error={!!fieldState.error}
@@ -589,7 +591,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         sx={{ ...fieldSx, flexGrow: 1 }}
                         onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault(); }}
                       />
-                      <Tooltip title="توليد رمز عشوائي">
+                      <Tooltip title={t("products:generateSKU")}>
                         <IconButton
                           size="small"
                           onClick={() => field.onChange(generateRandomSKU("PROD", 6))}
@@ -622,16 +624,16 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         renderInput={(params) => (
                           <TextField
                             {...params}
-                            label="الفئة"
-                            placeholder={loadingCategories ? "جاري التحميل..." : "اختر الفئة"}
+                            label={t("products:category")}
+                            placeholder={loadingCategories ? t("common:loading") : t("products:form.chooseCategory")}
                             error={!!fieldState.error}
                             helperText={fieldState.error?.message}
                             sx={{minWidth: 250}}
                           />
                         )}
-                        noOptionsText="لا توجد فئات"
+                        noOptionsText={t("products:form.noCategoriesShort")}
                       />
-                      <Tooltip title="إضافة فئة جديدة">
+                      <Tooltip title={t("products:form.addNewCategory")}>
                         <IconButton
                           size="small"
                           onClick={() => setIsCategoryModalOpen(true)}
@@ -654,8 +656,8 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
             >
               <SectionHeader
                 icon={<Layers size={18} />}
-                title="الوحدات والمخزون"
-                subtitle="وحدات التخزين والبيع وحد التنبيه"
+                title={t("products:form.unitsSection")}
+                subtitle={t("products:form.unitsSectionDesc")}
               />
 
               {/* Single row: all 4 fields */}
@@ -678,13 +680,13 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         onChange={(_, newValue) => field.onChange(newValue ? String(newValue.id) : "")}
                         disabled={isSubmitting || loadingUnits}
                         renderInput={(params) => (
-                          <TextField {...params} label="وحدة التخزين"
-                            placeholder={loadingUnits ? "جاري التحميل..." : "اختر"}
+                          <TextField {...params} label={t("products:stockingUnit")}
+                            placeholder={loadingUnits ? t("common:loading") : t("products:form.choose")}
                             error={!!fieldState.error} helperText={fieldState.error?.message} sx={fieldSx} />
                         )}
-                        noOptionsText="لا توجد وحدات"
+                        noOptionsText={t("products:form.noUnitsShort")}
                       />
-                      <Tooltip title="إضافة وحدة تخزين">
+                      <Tooltip title={t("products:addStockingUnit")}>
                         <IconButton size="small" onClick={() => setIsStockingUnitModalOpen(true)} disabled={isSubmitting}
                           sx={{ mt: 0.5, borderRadius: 1.5, color: "primary.main" }}>
                           <Plus size={15} />
@@ -711,13 +713,13 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         onChange={(_, newValue) => field.onChange(newValue ? String(newValue.id) : "")}
                         disabled={isSubmitting || loadingUnits}
                         renderInput={(params) => (
-                          <TextField {...params} label="وحدة البيع"
-                            placeholder={loadingUnits ? "جاري التحميل..." : "اختر"}
+                          <TextField {...params} label={t("products:sellableUnit")}
+                            placeholder={loadingUnits ? t("common:loading") : t("products:form.choose")}
                             error={!!fieldState.error} helperText={fieldState.error?.message} sx={fieldSx} />
                         )}
-                        noOptionsText="لا توجد وحدات"
+                        noOptionsText={t("products:form.noUnitsShort")}
                       />
-                      <Tooltip title="إضافة وحدة بيع">
+                      <Tooltip title={t("products:addSellableUnit")}>
                         <IconButton size="small" onClick={() => setIsSellableUnitModalOpen(true)} disabled={isSubmitting}
                           sx={{ mt: 0.5, borderRadius: 1.5, color: "primary.main" }}>
                           <Plus size={15} />
@@ -731,13 +733,13 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 <Controller
                   control={control}
                   name="units_per_stocking_unit"
-                  rules={{ required: "الحقل مطلوب", min: { value: 1, message: "يجب أن يكون 1 على الأقل" } }}
+                  rules={{ required: t("products:form.fieldRequired"), min: { value: 1, message: t("products:form.minOne") } }}
                   render={({ field, fieldState }) => (
-                    <TextField {...field} label="الكمية في الوحدة *" type="number" size="small"
+                    <TextField {...field} label={t("products:form.unitsPerItemRequired")} type="number" size="small"
                       sx={{ ...fieldSx, flex: 1 }} inputProps={{ min: 1, step: 1 }}
                       disabled={isSubmitting} onFocus={(e) => e.target.select()}
                       onChange={(e) => field.onChange(Number(e.target.value))}
-                      helperText={fieldState.error?.message || "مثال: 12"} error={!!fieldState.error} />
+                      helperText={fieldState.error?.message || t("products:form.example12")} error={!!fieldState.error} />
                   )}
                 />
 
@@ -745,14 +747,14 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 <Controller
                   control={control}
                   name="stock_alert_level"
-                  rules={{ min: { value: 0, message: "لا يمكن أن يكون أقل من 0" } }}
+                  rules={{ min: { value: 0, message: t("products:form.notLessThanZero") } }}
                   render={({ field, fieldState }) => (
-                    <TextField {...field} label="حد التنبيه" type="number" size="small"
+                    <TextField {...field} label={t("products:stockAlertLevel")} type="number" size="small"
                       sx={{ ...fieldSx, flex: 1 }} inputProps={{ min: 0, step: 1 }}
                       disabled={isSubmitting} onFocus={(e) => e.target.select()}
                       value={field.value ?? ""}
                       onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
-                      helperText={fieldState.error?.message || "(اختياري)"} error={!!fieldState.error} />
+                      helperText={fieldState.error?.message || t("products:form.optional")} error={!!fieldState.error} />
                   )}
                 />
               </Box>
@@ -764,8 +766,8 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
             >
               <SectionHeader
                 icon={<DollarSign size={18} />}
-                title="الأسعار وتاريخ الصلاحية"
-                subtitle="(اختياري) تلغي القيم المحسوبة من المشتريات"
+                title={t("products:form.pricesSection")}
+                subtitle={t("products:form.pricesSectionDesc")}
               />
 
               <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
@@ -773,11 +775,11 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 <Controller
                   control={control}
                   name="cost_price"
-                  rules={{ min: { value: 0, message: "السعر يجب أن يكون 0 أو أكثر" } }}
+                  rules={{ min: { value: 0, message: t("products:form.priceMinZero") } }}
                   render={({ field, fieldState }) => (
                     <TextField
                       {...field}
-                      label="سعر التكلفة"
+                      label={t("products:form.costPriceLabel")}
                       type="number"
                       
                       size="small"
@@ -796,11 +798,11 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 <Controller
                   control={control}
                   name="sale_price"
-                  rules={{ min: { value: 0, message: "السعر يجب أن يكون 0 أو أكثر" } }}
+                  rules={{ min: { value: 0, message: t("products:form.priceMinZero") } }}
                   render={({ field, fieldState }) => (
                     <TextField
                       {...field}
-                      label="سعر البيع"
+                      label={t("products:salePrice")}
                       type="number"
                       size="small"
                       inputProps={{ min: 0, step: "0.01" }}
@@ -813,7 +815,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       InputProps={field.value != null && field.value !== "" ? {
                         endAdornment: (
                           <InputAdornment position="end">
-                            <Tooltip title="إزالة السعر">
+                            <Tooltip title={t("products:form.removePriceTooltip")}>
                               <IconButton
                                 size="small"
                                 edge="end"
@@ -845,7 +847,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 render={({ field }) => (
                   <TextField
                     {...field}
-                    label="الوصف"
+                    label={t("products:form.descriptionLabel")}
                     size="small"
                     multiline
                     rows={3}
@@ -861,8 +863,8 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
             <Paper variant="outlined" sx={{ p: 1.5, mb: 1, borderRadius: 2, bgcolor: "background.paper" }}>
               <SectionHeader
                 icon={<ImageIcon size={18} />}
-                title="صورة المنتج"
-                subtitle="(اختياري)"
+                title={t("products:form.imageSection")}
+                subtitle={t("products:form.optional")}
               />
               <Controller
                 control={control}
@@ -907,11 +909,11 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                               } else {
                                 console.log("No image_url in response:", res.data);
                               }
-                              toast.success("تم الرفع");
+                              toast.success(t("products:form.uploadSuccess"));
                             } catch (error) {
                               console.error("Upload error:", error);
-                              const errorMessage = error?.response?.data?.message || error?.message || "فشل الرفع";
-                              toast.error(`فشل الرفع: ${errorMessage}`);
+                              const errorMessage = error?.response?.data?.message || error?.message || t("products:form.uploadFailed");
+                              toast.error(t("products:form.uploadFailedWithReason", { reason: errorMessage }));
                             } finally {
                               setUploadingImage(false);
                             }
@@ -931,12 +933,12 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                           startIcon={uploadingImage ? <Loader2 className="animate-spin" /> : <Upload />}
                           size="small"
                         >
-                          {uploadingImage ? "جاري الرفع..." : "رفع صورة"}
+                          {uploadingImage ? t("products:form.uploadingImage") : t("products:form.uploadImage")}
                         </Button>
                       </label>
 
                       {(field.value || imagePreviewUrl) && (
-                        <Tooltip title="إزالة الصورة">
+                        <Tooltip title={t("products:form.removeImageTooltip")}>
                           <IconButton
                             size="small"
                             color="error"
@@ -964,7 +966,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
               }}
             >
               <Typography variant="caption" color="text.secondary">
-                الحقول المميزة بـ <span style={{ color: "red" }}>*</span> إلزامية
+                {t("products:form.requiredFieldsNote")}
               </Typography>
               <Box sx={{ display: "flex", gap: 1.5 }}>
                 {isEditMode && (
@@ -977,7 +979,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     startIcon={<Trash2 size={16} />}
                     sx={{ borderRadius: 2 }}
                   >
-                    حذف
+                    {t("products:form.deleteButton")}
                   </Button>
                 )}
                 <Button
@@ -988,7 +990,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   disabled={isSubmitting}
                   sx={{ borderRadius: 2 }}
                 >
-                  إلغاء
+                  {t("common:cancel")}
                 </Button>
                 <Button
                   type="submit"
@@ -1001,7 +1003,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   }
                   sx={{ borderRadius: 2, px: 3, fontWeight: 700 }}
                 >
-                  {isEditMode ? "تحديث" : "حفظ"}
+                  {isEditMode ? t("products:form.updateButton") : t("products:form.saveButton")}
                 </Button>
               </Box>
             </DialogActions>
@@ -1022,13 +1024,13 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
               sx={{ mb: 2, borderBottom: 1 }}
             >
               <Tab
-                label="المشتروات"
+                label={t("products:form.purchasesTab")}
                 icon={<ShoppingCart size={16} />}
                 iconPosition="start"
                 sx={{ fontWeight: 600 }}
               />
               <Tab
-                label="المبيعات"
+                label={t("products:form.salesTab")}
                 icon={<TrendingUp size={16} />}
                 iconPosition="start"
                 sx={{ fontWeight: 600 }}
@@ -1043,17 +1045,17 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 <Table stickyHeader size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell align="center" sx={{ fontWeight: 700, bgcolor: "grey.50" }}>التاريخ</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700, bgcolor: "grey.50" }}>{t("products:form.dateColumn")}</TableCell>
                       <TableCell align="center" sx={{ fontWeight: 700, bgcolor: "grey.50" }}>
-                        {historyTab === 0 ? "المورد" : "العميل"}
+                        {historyTab === 0 ? t("products:list.contextMenu.supplier") : t("products:list.contextMenu.client")}
                       </TableCell>
                       <TableCell align="center" sx={{ fontWeight: 700, bgcolor: "grey.50" }}>
-                        {historyTab === 0 ? "الكمية (تخزين)" : "الكمية (بيع)"}
+                        {historyTab === 0 ? t("products:form.storageQuantity") : t("products:form.saleQuantity")}
                       </TableCell>
                       <TableCell align="center" sx={{ fontWeight: 700, bgcolor: "grey.50" }}>
-                        {historyTab === 0 ? "التكلفة" : "السعر"}
+                        {historyTab === 0 ? t("products:form.costColumn") : t("products:form.priceColumn")}
                       </TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 700, bgcolor: "grey.50" }}>الإجمالي</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700, bgcolor: "grey.50" }}>{t("products:form.totalColumn")}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1062,7 +1064,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
                           <Loader2 size={24} className="animate-spin mx-auto" style={{ color: "var(--primary)" }} />
                           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                            جاري التحميل...
+                            {t("common:loading")}
                           </Typography>
                         </TableCell>
                       </TableRow>
@@ -1070,7 +1072,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       <TableRow>
                         <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
                           <History size={32} style={{ opacity: 0.3, margin: "0 auto 8px" }} />
-                          <Typography variant="body2" color="text.secondary">لا توجد سجلات</Typography>
+                          <Typography variant="body2" color="text.secondary">{t("products:form.noRecords")}</Typography>
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -1109,7 +1111,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
               <Divider />
               <Box sx={{ p: 2, display: "flex", justifyContent: "flex-end" }}>
                 <Button onClick={onClose} variant="outlined" sx={{ borderRadius: 2 }}>
-                  إغلاق
+                  {t("products:list.contextMenu.close")}
                 </Button>
               </Box>
             </Paper>

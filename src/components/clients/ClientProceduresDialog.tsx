@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -46,8 +47,9 @@ const ClientProceduresDialog: React.FC<ClientProceduresDialogProps> = ({
   onDelete,
   onViewLedger,
   onNewSale,
-  companyName = "اسم الشركة",
+  companyName = "",
 }) => {
+  const { t } = useTranslation(["clients"]);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [ledger, setLedger] = useState<ClientLedger | null>(null);
 
@@ -93,7 +95,7 @@ const ClientProceduresDialog: React.FC<ClientProceduresDialogProps> = ({
         }}
       >
         <Typography variant="h6" fontWeight="bold">
-          إجراءات العميل
+          {t("clients:procedures.title")}
         </Typography>
         <IconButton onClick={onClose} size="small">
           <X size={20} />
@@ -124,20 +126,20 @@ const ClientProceduresDialog: React.FC<ClientProceduresDialogProps> = ({
                 },
               }}
             >
-              <Box sx={{ textAlign: "right" }}>
+              <Box sx={{ textAlign: "start" }}>
                 <Typography
                   variant="button"
                   display="block"
                   sx={{ lineHeight: 1.2 }}
                 >
-                  تعديل البيانات
+                  {t("clients:procedures.editData")}
                 </Typography>
                 <Typography
                   variant="caption"
                   color="text.secondary"
                   sx={{ textTransform: "none" }}
                 >
-                  تحديث معلومات العميل
+                  {t("clients:procedures.editDataDesc")}
                 </Typography>
               </Box>
             </Button>
@@ -159,20 +161,20 @@ const ClientProceduresDialog: React.FC<ClientProceduresDialogProps> = ({
                 "&:hover": { borderColor: "info.main", bgcolor: "info.50" },
               }}
             >
-              <Box sx={{ textAlign: "right" }}>
+              <Box sx={{ textAlign: "start" }}>
                 <Typography
                   variant="button"
                   display="block"
                   sx={{ lineHeight: 1.2 }}
                 >
-                  كشف حساب
+                  {t("clients:procedures.ledgerStatement")}
                 </Typography>
                 <Typography
                   variant="caption"
                   color="text.secondary"
                   sx={{ textTransform: "none" }}
                 >
-                  عرض تفاصيل المعاملات
+                  {t("clients:procedures.ledgerStatementDesc")}
                 </Typography>
               </Box>
             </Button>

@@ -1,6 +1,7 @@
 // src/pages/clients/ClientLedgerPage.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import {
   Box,
@@ -61,6 +62,7 @@ import apiClient from "@/lib/axios";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 
 const ClientLedgerPage: React.FC = () => {
+  const { t, i18n } = useTranslation(["clients", "common"]);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const clientId = Number(id);
@@ -167,7 +169,7 @@ const ClientLedgerPage: React.FC = () => {
       setTimeout(() => URL.revokeObjectURL(url), 100);
     } catch (err) {
       console.error("Error generating PDF:", err);
-      toast.error("فشل في إنشاء ملف PDF");
+      toast.error(t("clients:ledgerPage.pdfGenerateFailed"));
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -177,21 +179,21 @@ const ClientLedgerPage: React.FC = () => {
     if (!ledger) return;
     const phone = ledger.client.phone;
     if (!phone) {
-      toast.error("لا يوجد رقم هاتف للعميل");
+      toast.error(t("clients:ledgerPage.noClientPhone"));
       return;
     }
     setIsSendingWhatsApp(true);
     const toastId = `ledger-wa-${clientId}`;
     try {
       // 1. Generate PDF blob
-      toast.loading("جاري تحميل كشف الحساب...", { id: toastId });
+      toast.loading(t("clients:ledgerPage.downloadingLedger"), { id: toastId });
       const pdfResponse = await apiClient.get(`/clients/${clientId}/ledger/pdf`, {
         responseType: "blob",
       });
       const pdfBlob = new Blob([pdfResponse.data], { type: "application/pdf" });
 
       // 2. Upload to Firebase Storage
-      toast.loading("جاري رفع الملف...", { id: toastId });
+      toast.loading(t("clients:ledgerPage.uploadingFile"), { id: toastId });
       const storagePath = `ledgers/${firebaseCollectionName}/ledger_${clientId}.pdf`;
       const downloadUrl = await uploadFileToFirebase(pdfBlob, storagePath);
 
@@ -199,7 +201,7 @@ const ClientLedgerPage: React.FC = () => {
       await saveClientLedgerUrl(clientId, ledger.client.name, downloadUrl, firebaseCollectionName);
 
       // 4. Send template — payload embeds client_id + collection so webhook can find the URL
-      toast.loading("جاري إرسال الواتساب...", { id: toastId });
+      toast.loading(t("clients:ledgerPage.sendingWhatsapp"), { id: toastId });
       await apiClient.post("/admin/whatsapp-cloud/send-template", {
         to: phone,
         template_name: "cleint_ledger",
@@ -223,10 +225,10 @@ const ClientLedgerPage: React.FC = () => {
         ],
       });
 
-      toast.success("✅ تم إرسال كشف الحساب عبر واتساب", { id: toastId, duration: 4000 });
+      toast.success(t("clients:ledgerPage.ledgerSentSuccess"), { id: toastId, duration: 4000 });
     } catch (err) {
       console.error("WhatsApp ledger send error:", err);
-      toast.error("فشل إرسال كشف الحساب عبر واتساب", { id: toastId });
+      toast.error(t("clients:ledgerPage.ledgerSendFailed"), { id: toastId });
     } finally {
       setIsSendingWhatsApp(false);
     }
@@ -242,7 +244,7 @@ const ClientLedgerPage: React.FC = () => {
         method: payAllMethod,
         reference_number: payAllRef || undefined,
       });
-      toast.success("تم سداد جميع المبيعات بنجاح");
+      toast.success(t("clients:ledgerPage.settleAllSuccess"));
       setPayAllOpen(false);
       fetchLedger();
     } catch (err) {
@@ -266,7 +268,7 @@ const ClientLedgerPage: React.FC = () => {
       setPdfDialogOpen(true);
     } catch (err: unknown) {
       console.error("Error loading A4 invoice:", err);
-      toast.error("فشل تحميل فاتورة A4");
+      toast.error(t("clients:ledgerPage.a4InvoiceFailed"));
     } finally {
       setFetchingSaleId(null);
     }
@@ -285,7 +287,7 @@ const ClientLedgerPage: React.FC = () => {
         }}
       >
         <CircularProgress size={28} />
-        <Typography color="text.secondary">جاري التحميل...</Typography>
+        <Typography color="text.secondary">{t("clients:ledgerPage.loadingEllipsis")}</Typography>
       </Box>
     );
   }
@@ -294,10 +296,10 @@ const ClientLedgerPage: React.FC = () => {
     return (
       <Box sx={{ p: 3 }}>
         <Alert severity="error">
-          <AlertTitle>خطأ</AlertTitle>
+          <AlertTitle>{t("clients:ledgerPage.errorTitle")}</AlertTitle>
           {error}
           <Button onClick={fetchLedger} sx={{ mt: 1 }} variant="outlined" size="small">
-            إعادة المحاولة
+            {t("clients:ledgerPage.retry")}
           </Button>
         </Alert>
       </Box>
@@ -307,7 +309,7 @@ const ClientLedgerPage: React.FC = () => {
   if (!ledger) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="info">كشف الحساب غير متوفر لهذا العميل.</Alert>
+        <Alert severity="info">{t("clients:ledgerPage.ledgerNotAvailable")}</Alert>
       </Box>
     );
   }
@@ -325,7 +327,7 @@ const ClientLedgerPage: React.FC = () => {
 
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="h6" fontWeight={700} noWrap>
-            كشف حساب — {client.name}
+            {t("clients:ledgerPage.headerTitle", { name: client.name })}
           </Typography>
           {client.phone && (
             <Typography variant="caption" color="text.secondary">
@@ -341,10 +343,10 @@ const ClientLedgerPage: React.FC = () => {
               <Truck size={18} color="#d97706" />
               <Box>
                 <Typography variant="body2" fontWeight={600} color="warning.dark">
-                  هذا العميل مورد أيضاً
+                  {t("clients:ledgerPage.alsoSupplierTitle")}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  يمكنك عرض كشف حساب مشترياته
+                  {t("clients:ledgerPage.alsoSupplierDesc")}
                 </Typography>
               </Box>
             </Stack>
@@ -356,7 +358,7 @@ const ClientLedgerPage: React.FC = () => {
               startIcon={<ExternalLink size={14} />}
               sx={{ borderRadius: 1.5, textTransform: "none", fontWeight: 600, flexShrink: 0 }}
             >
-              كشف حساب المشتريات
+              {t("clients:ledgerPage.purchasesLedgerButton")}
             </Button>
           </Stack>
         </Paper>
@@ -376,7 +378,7 @@ const ClientLedgerPage: React.FC = () => {
           }}
           sx={{ textTransform: "none", "& .MuiButton-startIcon": { ml: "6px" } }}
         >
-          سداد الكل
+          {t("clients:ledgerPage.settleAll")}
         </Button>
         <Button
           variant="outlined"
@@ -385,7 +387,7 @@ const ClientLedgerPage: React.FC = () => {
           onClick={() => setPaymentsDialogOpen(true)}
           sx={{ textTransform: "none", "& .MuiButton-startIcon": { ml: "6px" } }}
         >
-          المدفوعات
+          {t("clients:ledgerPage.payments")}
         </Button>
         <Button
           variant="outlined"
@@ -395,7 +397,7 @@ const ClientLedgerPage: React.FC = () => {
           disabled={isGeneratingPdf}
           sx={{ textTransform: "none", "& .MuiButton-startIcon": { ml: "6px" } }}
         >
-          {isGeneratingPdf ? "جاري الإنشاء..." : "كشف حساب PDF"}
+          {isGeneratingPdf ? t("clients:ledgerPage.generatingEllipsis") : t("clients:ledgerPage.ledgerPdfButton")}
         </Button>
         <Button
           variant="outlined"
@@ -405,7 +407,7 @@ const ClientLedgerPage: React.FC = () => {
           disabled={isSendingWhatsApp || !ledger?.client.phone}
           sx={{ textTransform: "none", color: "success.main", borderColor: "success.main", "&:hover": { borderColor: "success.dark", bgcolor: "success.50" }, "& .MuiButton-startIcon": { ml: "6px" } }}
         >
-          {isSendingWhatsApp ? "جاري الإرسال..." : "ارسال كشف الحساب"}
+          {isSendingWhatsApp ? t("clients:ledgerPage.sendingEllipsis") : t("clients:ledgerPage.sendLedgerButton")}
         </Button>
       </Box>
 
@@ -415,23 +417,23 @@ const ClientLedgerPage: React.FC = () => {
       {client.is_supplier && client.supplier_id && (
         <Box>
           <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
-            الرصيد الصافي (عميل + مورد)
+            {t("clients:ledgerPage.netBalanceTitle")}
           </Typography>
           {isLoadingSupplierSummary ? (
             <Stack direction="row" alignItems="center" gap={1}>
               <CircularProgress size={16} />
-              <Typography variant="caption" color="text.secondary">جاري تحميل بيانات المورد...</Typography>
+              <Typography variant="caption" color="text.secondary">{t("clients:ledgerPage.loadingSupplierData")}</Typography>
             </Stack>
           ) : (
             <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr 1fr" }, gap: 1.5, width: { xs: "100%", sm: "600px" } }}>
               <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: summary.balance > 0 ? "#fef2f2" : "#f0fdf4", border: "1px solid", borderColor: summary.balance > 0 ? "error.light" : "success.light" }}>
-                <Typography variant="caption" color="text.secondary" display="block">رصيد المبيعات (يدين لنا)</Typography>
+                <Typography variant="caption" color="text.secondary" display="block">{t("clients:ledgerPage.salesBalance")}</Typography>
                 <Typography variant="subtitle2" fontWeight={700} color={summary.balance > 0 ? "error.main" : "success.main"}>
                   {summary.balance.toLocaleString()}
                 </Typography>
               </Box>
               <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: (supplierSummary?.balance ?? 0) > 0 ? "#fef2f2" : "#f0fdf4", border: "1px solid", borderColor: (supplierSummary?.balance ?? 0) > 0 ? "error.light" : "success.light" }}>
-                <Typography variant="caption" color="text.secondary" display="block">رصيد المشتريات (ندين له)</Typography>
+                <Typography variant="caption" color="text.secondary" display="block">{t("clients:ledgerPage.purchasesBalance")}</Typography>
                 <Typography variant="subtitle2" fontWeight={700} color={(supplierSummary?.balance ?? 0) > 0 ? "error.main" : "success.main"}>
                   {supplierSummary ? supplierSummary.balance.toLocaleString() : "—"}
                 </Typography>
@@ -440,9 +442,9 @@ const ClientLedgerPage: React.FC = () => {
                 const net = summary.balance - supplierSummary.balance;
                 return (
                   <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: net > 0 ? "#fef2f2" : net < 0 ? "#f0fdf4" : "#f8fafc", border: "1px solid", borderColor: net > 0 ? "error.light" : net < 0 ? "success.light" : "divider" }}>
-                    <Typography variant="caption" color="text.secondary" display="block">الصافي</Typography>
+                    <Typography variant="caption" color="text.secondary" display="block">{t("clients:ledgerPage.net")}</Typography>
                     <Typography variant="subtitle2" fontWeight={700} color={net > 0 ? "error.main" : net < 0 ? "success.main" : "text.secondary"}>
-                      {net > 0 ? `+${net.toLocaleString()}` : net < 0 ? net.toLocaleString() : "متوازن"}
+                      {net > 0 ? `+${net.toLocaleString()}` : net < 0 ? net.toLocaleString() : t("clients:ledgerPage.balanced")}
                     </Typography>
                   </Box>
                 );
@@ -461,19 +463,19 @@ const ClientLedgerPage: React.FC = () => {
       >
         {[
           {
-            label: "إجمالي المبيعات",
+            label: t("clients:totalSales"),
             value: summary.total_sales.toLocaleString(),
             icon: <TrendingUp size={18} />,
             color: "error" as const,
           },
           {
-            label: "إجمالي الدفعات",
+            label: t("clients:totalPayments"),
             value: summary.total_payments.toLocaleString(),
             icon: <TrendingDown size={18} />,
             color: "success" as const,
           },
           {
-            label: "الرصيد",
+            label: t("clients:balance"),
             value: summary.balance.toLocaleString(),
             icon: <DollarSign size={18} />,
             color: summary.balance > 0 ? ("error" as const) : ("success" as const),
@@ -532,7 +534,7 @@ const ClientLedgerPage: React.FC = () => {
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1, flexWrap: "wrap" }}>
             <Typography variant="subtitle2" fontWeight={700}>
-               المبيعات
+               {t("clients:ledgerPage.salesSectionTitle")}
             </Typography>
             <Chip
               label={selectedProduct ? `${filteredEntries.length} / ${ledger_entries.length}` : ledger_entries.length}
@@ -552,11 +554,11 @@ const ClientLedgerPage: React.FC = () => {
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    placeholder="فلترة حسب المنتج..."
+                    placeholder={t("clients:ledgerPage.filterByProductPlaceholder")}
                     inputProps={{ ...params.inputProps, style: { fontSize: "0.78rem" } }}
                   />
                 )}
-                noOptionsText="لا توجد منتجات"
+                noOptionsText={t("clients:ledgerPage.noProductsShort")}
                 clearOnEscape
                 sx={{ width:200 }}
               />
@@ -568,14 +570,14 @@ const ClientLedgerPage: React.FC = () => {
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 700, width: 36 }}>م</TableCell>
-                  <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>تاريخ البيع / الإنشاء</TableCell>
+                  <TableCell sx={{ fontWeight: 700, width: 36 }}>{t("clients:ledgerPage.colIndex")}</TableCell>
+                  <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>{t("clients:ledgerPage.colSaleDate")}</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>#</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }} align="center">الأصناف</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }} align="right">الإجمالي</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }} align="right">المدفوع</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }} align="right">المتبقي</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }} align="center">إجراءات</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }} align="center">{t("clients:ledgerPage.colItems")}</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }} align="right">{t("clients:ledgerPage.colTotal")}</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }} align="right">{t("clients:ledgerPage.colPaid")}</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }} align="right">{t("clients:ledgerPage.colRemaining")}</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }} align="center">{t("clients:ledgerPage.colActions")}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -623,17 +625,17 @@ const ClientLedgerPage: React.FC = () => {
 
                     <TableCell align="center">
                       <Stack direction="row" spacing={0.5} justifyContent="center">
-                        <Tooltip title="طباعة الفاتورة">
+                        <Tooltip title={t("clients:ledgerPage.printInvoiceTooltip")}>
                           <span>
                             <Button size="small" onClick={() => handleSaleClick(entry)}
                               disabled={fetchingSaleId !== null} color="primary">
                               {fetchingSaleId === entry.sale_id
                                 ? <CircularProgress size={14} />
-                                : 'طباعه فاتوره'}
+                                : t("clients:ledgerPage.printInvoiceButton")}
                             </Button>
                           </span>
                         </Tooltip>
-                        <Tooltip title="تعديل الفاتورة">
+                        <Tooltip title={t("clients:ledgerPage.editInvoiceTooltip")}>
                           <IconButton size="small" color="secondary"
                             onClick={() => { setEditingSaleId(entry.sale_id); setEditorOpen(true); }}>
                             <Edit size={15} />
@@ -650,7 +652,7 @@ const ClientLedgerPage: React.FC = () => {
             {filteredEntries.length === 0 && (
               <Box sx={{ textAlign: "center", py: 6, color: "text.secondary" }}>
                 <Typography variant="body2">
-                  {selectedProduct ? `لا توجد مبيعات تحتوي على "${selectedProduct.product_name}".` : "لا توجد حركات في كشف الحساب."}
+                  {selectedProduct ? t("clients:ledgerPage.noSalesForProduct", { name: selectedProduct.product_name }) : t("clients:ledgerPage.noLedgerEntries")}
                 </Typography>
               </Box>
             )}
@@ -678,7 +680,7 @@ const ClientLedgerPage: React.FC = () => {
           }}
         >
           <Typography variant="subtitle1" fontWeight={700}>
-            معاينة الفاتورة
+            {t("clients:ledgerPage.invoicePreviewTitle")}
           </Typography>
           <IconButton onClick={() => setPdfDialogOpen(false)} size="small">
             <X size={18} />
@@ -727,7 +729,7 @@ const ClientLedgerPage: React.FC = () => {
       >
         <Box sx={{ display: "flex", alignItems: "center", px: 2, py: 1.25, borderBottom: 1, borderColor: "divider" }}>
           <Typography variant="subtitle1" fontWeight={700} sx={{ flex: 1 }}>
-            سداد جميع المبيعات
+            {t("clients:ledgerPage.settleAllSalesTitle")}
           </Typography>
           <IconButton size="small" onClick={() => setPayAllOpen(false)} disabled={payAllLoading}>
             <X size={16} />
@@ -737,7 +739,7 @@ const ClientLedgerPage: React.FC = () => {
         <DialogContent sx={{ pt: 2, pb: 1 }}>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
             <TextField
-              label="المبلغ"
+              label={t("clients:ledgerPage.amountLabel")}
               size="small"
               type="number"
               fullWidth
@@ -747,20 +749,20 @@ const ClientLedgerPage: React.FC = () => {
               slotProps={{ htmlInput: { min: 0 } }}
             />
             <FormControl size="small" fullWidth>
-              <InputLabel>طريقة الدفع</InputLabel>
+              <InputLabel>{t("clients:ledgerPage.paymentMethodLabel")}</InputLabel>
               <Select
-                label="طريقة الدفع"
+                label={t("clients:ledgerPage.paymentMethodLabel")}
                 value={payAllMethod}
                 onChange={(e) => setPayAllMethod(e.target.value)}
               >
-                <MenuItem value="cash">كاش</MenuItem>
-                <MenuItem value="bank_transfer">تحويل بنكي</MenuItem>
-                <MenuItem value="visa">فيزا</MenuItem>
-                <MenuItem value="other">أخرى</MenuItem>
+                <MenuItem value="cash">{t("clients:ledgerPage.methodCash")}</MenuItem>
+                <MenuItem value="bank_transfer">{t("clients:ledgerPage.methodBankTransfer")}</MenuItem>
+                <MenuItem value="visa">{t("clients:ledgerPage.methodVisa")}</MenuItem>
+                <MenuItem value="other">{t("clients:ledgerPage.methodOther")}</MenuItem>
               </Select>
             </FormControl>
             <TextField
-              label="تاريخ الدفع"
+              label={t("clients:ledgerPage.paymentDateLabel")}
               size="small"
               type="date"
               fullWidth
@@ -769,7 +771,7 @@ const ClientLedgerPage: React.FC = () => {
               slotProps={{ inputLabel: { shrink: true } }}
             />
             <TextField
-              label="رقم المرجع (اختياري)"
+              label={t("clients:ledgerPage.referenceOptional")}
               size="small"
               fullWidth
               value={payAllRef}
@@ -785,7 +787,7 @@ const ClientLedgerPage: React.FC = () => {
             onClick={() => setPayAllOpen(false)}
             disabled={payAllLoading}
           >
-            إلغاء
+            {t("common:cancel")}
           </Button>
           <Button
             size="small"
@@ -795,7 +797,7 @@ const ClientLedgerPage: React.FC = () => {
             disabled={payAllLoading || !payAllAmount || Number(payAllAmount) <= 0}
             startIcon={payAllLoading ? <CircularProgress size={14} color="inherit" /> : null}
           >
-            تأكيد السداد
+            {t("clients:ledgerPage.confirmSettlement")}
           </Button>
         </DialogActions>
       </Dialog>

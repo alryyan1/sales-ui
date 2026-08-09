@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Filter, X, Search } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 // --- Zod Schema for Filter Form ---
 const inventoryFilterSchema = z.object({
@@ -42,6 +43,7 @@ export const InventoryReportFilters: React.FC<InventoryReportFiltersProps> = ({
   onClearFilters,
   isLoading /* categories, loadingCategories */,
 }) => {
+  const { t } = useTranslation(["reports"]);
   const form = useForm<InventoryFilterValues>({
     resolver: zodResolver(inventoryFilterSchema),
     defaultValues,
@@ -56,7 +58,7 @@ export const InventoryReportFilters: React.FC<InventoryReportFiltersProps> = ({
   return (
     <div className="mb-4">
       <div className="pb-2">
-        <h3 className="text-lg font-medium">الفلاتر</h3>
+        <h3 className="text-lg font-medium">{t("reports:filters")}</h3>
       </div>
       <Form {...form}>
         <form onSubmit={handleSubmit(onFilterSubmit)}>
@@ -67,10 +69,10 @@ export const InventoryReportFilters: React.FC<InventoryReportFiltersProps> = ({
               render={({ field }) => (
                 <FormItem>
                   {" "}
-                  <FormLabel>بحث</FormLabel>{" "}
+                  <FormLabel>{t("reports:inventoryReportFilters.searchLabel")}</FormLabel>{" "}
                   <FormControl>
                     <Input
-                      placeholder="بحث باسم المنتج أو الباركود"
+                      placeholder={t("reports:inventoryReportFilters.searchPlaceholder")}
                       {...field}
                       value={field.value ?? ""}
                     />
@@ -94,7 +96,7 @@ export const InventoryReportFilters: React.FC<InventoryReportFiltersProps> = ({
                       />
                     </FormControl>{" "}
                     <FormLabel className="font-normal">
-                      عرض المنتجات منخفضة المخزون فقط
+                      {t("reports:showLowStockOnly")}
                     </FormLabel>{" "}
                   </FormItem>
                 )}
@@ -112,7 +114,7 @@ export const InventoryReportFilters: React.FC<InventoryReportFiltersProps> = ({
                       />
                     </FormControl>{" "}
                     <FormLabel className="font-normal">
-                      عرض المنتجات نافدة المخزون فقط
+                      {t("reports:showOutOfStockOnly")}
                     </FormLabel>{" "}
                   </FormItem>
                 )}
@@ -128,7 +130,7 @@ export const InventoryReportFilters: React.FC<InventoryReportFiltersProps> = ({
             >
               {" "}
               <X className="me-2 h-4 w-4" />
-              مسح الفلاتر
+              {t("reports:inventoryReportFilters.clearFilters")}
             </Button>
             <Button type="submit" disabled={isLoading}>
               {" "}
@@ -137,7 +139,7 @@ export const InventoryReportFilters: React.FC<InventoryReportFiltersProps> = ({
               ) : (
                 <Filter className="me-2 h-4 w-4" />
               )}{" "}
-              تطبيق الفلاتر
+              {t("reports:applyFilters")}
             </Button>
           </div>
         </form>

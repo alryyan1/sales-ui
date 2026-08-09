@@ -1,0 +1,23 @@
+{
+    "pageTitle": "Profile",
+    "detailsCardTitle": "Profile Details",
+    "detailsCardDesc": "Update your personal information",
+    "fieldRequired": "This field is required",
+    "successTitle": "Success",
+    "errorTitle": "Error",
+    "profileUpdateSuccessDesc": "Profile updated successfully",
+    "nameLabel": "Name",
+    "usernameLabel": "Username",
+    "saveChangesButton": "Save Changes",
+    "passwordCardTitle": "Change Password",
+    "passwordCardDesc": "Update your password",
+    "passwordMinLength": "Password must be at least 8 characters",
+    "passwordsMismatch": "Passwords do not match",
+    "passwordUpdateSuccessDesc": "Password updated successfully",
+    "pleaseCheckFields": "Please check the fields",
+    "currentPasswordLabel": "Current Password",
+    "newPasswordLabel": "New Password",
+    "confirmNewPasswordLabel": "Confirm Password",
+    "updatePasswordButton": "Update Password",
+    "loadingEllipsis": "Loading..."
+}

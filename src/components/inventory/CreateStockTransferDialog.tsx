@@ -24,6 +24,7 @@ import stockTransferService from "@/services/stockTransferService";
 import productService, { Product } from "@/services/productService";
 import { toast } from "sonner";
 import { ProductImage } from "@/components/products/ProductImage";
+import { useTranslation } from "react-i18next";
 
 interface CreateStockTransferDialogProps {
   onSuccess?: () => void;
@@ -47,6 +48,7 @@ export function CreateStockTransferDialog({
   onSuccess,
   trigger,
 }: CreateStockTransferDialogProps) {
+  const { t } = useTranslation(["inventory", "common"]);
   const [open, setOpen] = useState(false);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
@@ -118,7 +120,7 @@ export function CreateStockTransferDialog({
       setLoadingWarehouses(true);
       setWarehouses(await warehouseService.getAll());
     } catch {
-      toast.error("فشل تحميل المستودعات");
+      toast.error(t("inventory:createTransferDialog.loadWarehousesFailed"));
     } finally {
       setLoadingWarehouses(false);
     }
@@ -175,14 +177,14 @@ export function CreateStockTransferDialog({
 
   const getStockLabel = (p: Product): string => {
     const stock = p.current_stock_quantity ?? p.stock_quantity ?? 0;
-    return `${p.name} (المخزون: ${stock})`;
+    return t("inventory:createTransferDialog.stockLabel", { name: p.name, stock });
   };
 
   const onSubmit = async (values: TransferFormValues) => {
     if (values.from_warehouse_id === values.to_warehouse_id) {
       form.setError("to_warehouse_id", {
         type: "manual",
-        message: "يجب أن يكون المصدر والوجهة مختلفين",
+        message: t("inventory:createTransferDialog.sourceDestSameError"),
       });
       return;
     }
@@ -201,11 +203,11 @@ export function CreateStockTransferDialog({
             quantity: parseFloat(item.quantity),
           })),
       });
-      toast.success("تم تحويل المخزون بنجاح");
+      toast.success(t("inventory:createTransferDialog.createSuccess"));
       setOpen(false);
       onSuccess?.();
     } catch (error: any) {
-      toast.error(error.message || "فشل إنشاء التحويل");
+      toast.error(error.message || t("inventory:createTransferDialog.createFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -214,11 +216,11 @@ export function CreateStockTransferDialog({
   return (
     <>
       <div onClick={() => setOpen(true)}>
-        {trigger || <Button variant="outlined">تحويل جديد</Button>}
+        {trigger || <Button variant="outlined">{t("inventory:createTransferDialog.newTransferButton")}</Button>}
       </div>
 
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>إنشاء تحويل مخزون</DialogTitle>
+        <DialogTitle>{t("inventory:createTransferDialog.title")}</DialogTitle>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogContent dividers>
             <Grid container spacing={2}>
@@ -227,12 +229,12 @@ export function CreateStockTransferDialog({
                 <Controller
                   control={form.control}
                   name="from_warehouse_id"
-                  rules={{ required: "مطلوب" }}
+                  rules={{ required: t("inventory:createTransferDialog.required") }}
                   render={({ field }) => (
                     <TextField
                       {...field}
                       select
-                      label="من المستودع"
+                      label={t("inventory:createTransferDialog.fromWarehouseLabel")}
                       fullWidth
                       size="small"
                       error={!!form.formState.errors.from_warehouse_id}
@@ -252,18 +254,18 @@ export function CreateStockTransferDialog({
                 <Controller
                   control={form.control}
                   name="to_warehouse_id"
-                  rules={{ required: "مطلوب" }}
+                  rules={{ required: t("inventory:createTransferDialog.required") }}
                   render={({ field }) => (
                     <TextField
                       {...field}
                       select
-                      label="إلى المستودع"
+                      label={t("inventory:createTransferDialog.toWarehouseLabel")}
                       fullWidth
                       size="small"
                       error={!!form.formState.errors.to_warehouse_id}
                       helperText={
                         form.formState.errors.to_warehouse_id?.message ||
-                        (!fromWarehouseId && "اختر المستودع المصدر أولاً")
+                        (!fromWarehouseId && t("inventory:createTransferDialog.chooseSourceFirst"))
                       }
                       disabled={loadingWarehouses || !fromWarehouseId}
                     >
@@ -278,8 +280,8 @@ export function CreateStockTransferDialog({
               </Grid>
               <Grid size={6}>
                 <TextField
-                  {...form.register("transfer_date", { required: "مطلوب" })}
-                  label="التاريخ"
+                  {...form.register("transfer_date", { required: t("inventory:createTransferDialog.required") })}
+                  label={t("inventory:createTransferDialog.dateLabel")}
                   type="date"
                   fullWidth
                   size="small"
@@ -291,10 +293,10 @@ export function CreateStockTransferDialog({
               <Grid size={6}>
                 <TextField
                   {...form.register("notes")}
-                  label="ملاحظات"
+                  label={t("inventory:createTransferDialog.notesLabel")}
                   fullWidth
                   size="small"
-                  placeholder="اختياري..."
+                  placeholder={t("inventory:createTransferDialog.optionalPlaceholder")}
                 />
               </Grid>
 
@@ -302,13 +304,13 @@ export function CreateStockTransferDialog({
               <Grid size={12}>
                 <Divider sx={{ mb: 1 }}>
                   <Typography variant="caption" color="text.secondary">
-                    المنتجات
+                    {t("inventory:createTransferDialog.productsLabel")}
                   </Typography>
                 </Divider>
 
                 {!fromWarehouseId && (
                   <Alert severity="info" sx={{ mb: 1 }}>
-                    اختر المستودع المصدر أولاً لإضافة منتجات
+                    {t("inventory:createTransferDialog.chooseSourceToAddProducts")}
                   </Alert>
                 )}
 
@@ -322,7 +324,7 @@ export function CreateStockTransferDialog({
                       <Controller
                         control={form.control}
                         name={`items.${index}.product`}
-                        rules={{ required: "مطلوب" }}
+                        rules={{ required: t("inventory:createTransferDialog.required") }}
                         render={({ field: f, fieldState }) => (
                           <Autocomplete
                             options={productOptions[index] ?? []}
@@ -356,7 +358,7 @@ export function CreateStockTransferDialog({
                             renderInput={(params) => (
                               <TextField
                                 {...params}
-                                label="المنتج"
+                                label={t("inventory:createTransferDialog.productLabel")}
                                 size="small"
                                 error={!!fieldState.error}
                                 helperText={fieldState.error?.message}
@@ -384,10 +386,10 @@ export function CreateStockTransferDialog({
                     <Box sx={{ width: 120 }}>
                       <TextField
                         {...form.register(`items.${index}.quantity`, {
-                          required: "مطلوب",
-                          min: { value: 0.01, message: "> 0" },
+                          required: t("inventory:createTransferDialog.required"),
+                          min: { value: 0.01, message: t("inventory:createTransferDialog.greaterThanZero") },
                         })}
-                        label="الكمية"
+                        label={t("inventory:createTransferDialog.quantityLabel")}
                         type="number"
                         size="small"
                         fullWidth
@@ -420,7 +422,7 @@ export function CreateStockTransferDialog({
                   variant="outlined"
                   sx={{ mt: 0.5 }}
                 >
-                  إضافة منتج
+                  {t("inventory:createTransferDialog.addProductButton")}
                 </Button>
               </Grid>
             </Grid>
@@ -428,7 +430,7 @@ export function CreateStockTransferDialog({
 
           <DialogActions>
             <Button onClick={() => setOpen(false)} color="inherit">
-              إلغاء
+              {t("common:cancel")}
             </Button>
             <Button
               type="submit"
@@ -442,7 +444,7 @@ export function CreateStockTransferDialog({
                 )
               }
             >
-              تحويل المخزون
+              {t("inventory:createTransferDialog.transferStockButton")}
             </Button>
           </DialogActions>
         </form>

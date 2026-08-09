@@ -19,14 +19,8 @@ import {
 } from "@mui/material";
 import { X, Printer, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import clientLedgerService, { ClientPayment } from "@/services/clientLedgerService";
-
-const METHOD_LABELS: Record<string, string> = {
-  cash: "كاش",
-  bank_transfer: "تحويل بنكي",
-  visa: "فيزا",
-  other: "أخرى",
-};
 
 interface Props {
   open: boolean;
@@ -36,6 +30,13 @@ interface Props {
 }
 
 export const ClientPaymentsDialog: React.FC<Props> = ({ open, onClose, clientId, clientName }) => {
+  const { t, i18n } = useTranslation(["clients", "common"]);
+  const METHOD_LABELS: Record<string, string> = {
+    cash: t("clients:paymentsDialog.methodCash"),
+    bank_transfer: t("clients:paymentsDialog.methodBankTransfer"),
+    visa: t("clients:paymentsDialog.methodVisa"),
+    other: t("clients:paymentsDialog.methodOther"),
+  };
   const [payments, setPayments] = useState<ClientPayment[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -49,7 +50,7 @@ export const ClientPaymentsDialog: React.FC<Props> = ({ open, onClose, clientId,
       setPayments(res.payments);
       setTotal(res.total);
     } catch {
-      toast.error("فشل تحميل المدفوعات");
+      toast.error(t("clients:paymentsDialog.loadFailed"));
     } finally {
       setIsLoading(false);
     }
@@ -79,22 +80,23 @@ export const ClientPaymentsDialog: React.FC<Props> = ({ open, onClose, clientId,
         <td>${p.reference_number ?? "—"}</td>
       </tr>`).join("");
 
+    const dir = i18n.dir();
     const filterNote = (dateFrom || dateTo)
-      ? `<p style="font-size:12px;color:#666">الفترة: ${dateFrom || "—"} إلى ${dateTo || "—"}</p>`
+      ? `<p style="font-size:12px;color:#666">${t("clients:paymentsDialog.periodLabel", { from: dateFrom || "—", to: dateTo || "—" })}</p>`
       : "";
 
     const html = `<!DOCTYPE html>
-<html dir="rtl" lang="ar">
+<html dir="${dir}" lang="${i18n.language}">
 <head>
   <meta charset="UTF-8">
-  <title>سجل مدفوعات — ${clientName}</title>
+  <title>${t("clients:paymentsDialog.printTitle", { name: clientName })}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; font-size: 13px; padding: 24px; direction: rtl; }
+    body { font-family: Arial, sans-serif; font-size: 13px; padding: 24px; direction: ${dir}; }
     h2 { font-size: 16px; margin-bottom: 4px; }
     p { margin-bottom: 12px; }
     table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-    th { background: #f3f4f6; padding: 7px 10px; font-size: 12px; border: 1px solid #e5e7eb; text-align: right; }
+    th { background: #f3f4f6; padding: 7px 10px; font-size: 12px; border: 1px solid #e5e7eb; text-align: start; }
     td { padding: 6px 10px; border: 1px solid #e5e7eb; font-size: 12px; }
     tr:nth-child(even) td { background: #f9fafb; }
     .total-row td { font-weight: 700; background: #f0fdf4; border-top: 2px solid #16a34a; }
@@ -102,23 +104,23 @@ export const ClientPaymentsDialog: React.FC<Props> = ({ open, onClose, clientId,
   </style>
 </head>
 <body>
-  <h2>سجل مدفوعات العميل: ${clientName}</h2>
+  <h2>${t("clients:paymentsDialog.printHeading", { name: clientName })}</h2>
   ${filterNote}
   <table>
     <thead>
       <tr>
         <th>#</th>
-        <th>تاريخ الدفع</th>
-        <th>رقم الفاتورة</th>
-        <th>طريقة الدفع</th>
-        <th>المبلغ</th>
-        <th>المرجع</th>
+        <th>${t("clients:paymentsDialog.colPaymentDate")}</th>
+        <th>${t("clients:paymentsDialog.colInvoiceNumber")}</th>
+        <th>${t("clients:paymentsDialog.colPaymentMethod")}</th>
+        <th>${t("clients:paymentsDialog.colAmount")}</th>
+        <th>${t("clients:paymentsDialog.colReference")}</th>
       </tr>
     </thead>
     <tbody>
       ${rows}
       <tr class="total-row">
-        <td colspan="4" style="text-align:left">الإجمالي (${payments.length} دفعة)</td>
+        <td colspan="4" style="text-align:end">${t("clients:paymentsDialog.totalRow", { count: payments.length })}</td>
         <td dir="ltr" style="text-align:right">${fmt(total)}</td>
         <td></td>
       </tr>
@@ -128,7 +130,7 @@ export const ClientPaymentsDialog: React.FC<Props> = ({ open, onClose, clientId,
 </html>`;
 
     const win = window.open("", "_blank", "width=850,height=650");
-    if (!win) { toast.error("تعذّر فتح نافذة الطباعة"); return; }
+    if (!win) { toast.error(t("clients:paymentsDialog.printWindowFailed")); return; }
     win.document.write(html);
     win.document.close();
     win.focus();
@@ -144,11 +146,11 @@ export const ClientPaymentsDialog: React.FC<Props> = ({ open, onClose, clientId,
       {/* Header */}
       <Box sx={{ display: "flex", alignItems: "center", px: 2, py: 1.25, borderBottom: 1, borderColor: "divider", gap: 1.5 }}>
         <Typography variant="subtitle1" fontWeight={700} sx={{ flex: 1 }}>
-          سجل المدفوعات — {clientName}
+          {t("clients:paymentsDialog.title", { name: clientName })}
         </Typography>
         {!isLoading && (
           <Chip
-            label={`${payments.length} دفعة`}
+            label={t("clients:paymentsDialog.paymentCountChip", { count: payments.length })}
             size="small"
             color="primary"
             variant="outlined"
@@ -160,11 +162,11 @@ export const ClientPaymentsDialog: React.FC<Props> = ({ open, onClose, clientId,
 
       {/* Filters */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, px: 2, py: 1.25, borderBottom: 1, borderColor: "divider", flexWrap: "wrap" }}>
-        <Typography variant="caption" color="text.secondary" fontWeight={600}>الفترة:</Typography>
+        <Typography variant="caption" color="text.secondary" fontWeight={600}>{t("clients:paymentsDialog.periodShort")}</Typography>
         <TextField
           size="small"
           type="date"
-          label="من"
+          label={t("clients:paymentsDialog.fromLabel")}
           value={dateFrom}
           onChange={(e) => setDateFrom(e.target.value)}
           InputLabelProps={{ shrink: true }}
@@ -173,7 +175,7 @@ export const ClientPaymentsDialog: React.FC<Props> = ({ open, onClose, clientId,
         <TextField
           size="small"
           type="date"
-          label="إلى"
+          label={t("clients:paymentsDialog.toLabel")}
           value={dateTo}
           onChange={(e) => setDateTo(e.target.value)}
           InputLabelProps={{ shrink: true }}
@@ -182,11 +184,11 @@ export const ClientPaymentsDialog: React.FC<Props> = ({ open, onClose, clientId,
         {(dateFrom || dateTo) && (
           <Button size="small" variant="text" onClick={() => { setDateFrom(""); setDateTo(""); }}
             sx={{ textTransform: "none", fontSize: "0.75rem" }}>
-            مسح الفلتر
+            {t("clients:paymentsDialog.clearFilter")}
           </Button>
         )}
         <Box sx={{ flex: 1 }} />
-        <IconButton size="small" onClick={fetchPayments} disabled={isLoading} title="تحديث">
+        <IconButton size="small" onClick={fetchPayments} disabled={isLoading} title={t("clients:paymentsDialog.refreshTooltip")}>
           <RefreshCw size={15} className={isLoading ? "animate-spin" : ""} />
         </IconButton>
       </Box>
@@ -195,22 +197,22 @@ export const ClientPaymentsDialog: React.FC<Props> = ({ open, onClose, clientId,
         {isLoading ? (
           <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: 6, gap: 1.5 }}>
             <CircularProgress size={22} />
-            <Typography variant="body2" color="text.secondary">جاري التحميل...</Typography>
+            <Typography variant="body2" color="text.secondary">{t("clients:paymentsDialog.loadingEllipsis")}</Typography>
           </Box>
         ) : payments.length === 0 ? (
           <Box sx={{ textAlign: "center", py: 6 }}>
-            <Typography variant="body2" color="text.secondary">لا توجد مدفوعات في هذه الفترة</Typography>
+            <Typography variant="body2" color="text.secondary">{t("clients:paymentsDialog.noPaymentsInPeriod")}</Typography>
           </Box>
         ) : (
           <Table size="small" stickyHeader>
             <TableHead>
               <TableRow sx={{ "& th": { bgcolor: "grey.50", fontWeight: 700, fontSize: "0.75rem" } }}>
                 <TableCell sx={{ width: 40 }}>#</TableCell>
-                <TableCell>تاريخ الدفع</TableCell>
-                <TableCell>فاتورة</TableCell>
-                <TableCell>طريقة الدفع</TableCell>
-                <TableCell align="right">المبلغ</TableCell>
-                <TableCell>المرجع</TableCell>
+                <TableCell>{t("clients:paymentsDialog.colPaymentDate")}</TableCell>
+                <TableCell>{t("clients:paymentsDialog.colInvoiceShort")}</TableCell>
+                <TableCell>{t("clients:paymentsDialog.colPaymentMethod")}</TableCell>
+                <TableCell align="right">{t("clients:paymentsDialog.colAmount")}</TableCell>
+                <TableCell>{t("clients:paymentsDialog.colReference")}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -244,7 +246,7 @@ export const ClientPaymentsDialog: React.FC<Props> = ({ open, onClose, clientId,
       <Box sx={{ borderTop: 1, borderColor: "divider" }}>
         {payments.length > 0 && (
           <Box sx={{ display: "flex", justifyContent: "flex-end", px: 2, py: 1, bgcolor: "grey.50" }}>
-            <Typography variant="body2" color="text.secondary" ml={1}>الإجمالي:</Typography>
+            <Typography variant="body2" color="text.secondary" ml={1}>{t("clients:paymentsDialog.total")}</Typography>
             <Typography variant="body2" fontWeight={700} color="success.dark" dir="ltr" sx={{ minWidth: 100, textAlign: "right" }}>
               {fmt(total)}
             </Typography>
@@ -252,7 +254,7 @@ export const ClientPaymentsDialog: React.FC<Props> = ({ open, onClose, clientId,
         )}
         <Divider />
         <DialogActions sx={{ px: 2, py: 1 }}>
-          <Button size="small" variant="outlined" onClick={onClose}>إغلاق</Button>
+          <Button size="small" variant="outlined" onClick={onClose}>{t("common:close")}</Button>
           <Button
             size="small"
             variant="contained"
@@ -261,7 +263,7 @@ export const ClientPaymentsDialog: React.FC<Props> = ({ open, onClose, clientId,
             disabled={payments.length === 0}
             sx={{ "& .MuiButton-startIcon": { ml: "4px" } }}
           >
-            طباعة / PDF
+            {t("clients:paymentsDialog.printPdfButton")}
           </Button>
         </DialogActions>
       </Box>

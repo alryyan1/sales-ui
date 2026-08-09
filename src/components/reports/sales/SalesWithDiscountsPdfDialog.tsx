@@ -4,6 +4,7 @@ import { PDFViewer } from "@react-pdf/renderer";
 import { X } from "lucide-react";
 import { Sale } from "@/services/saleService";
 import { SalesWithDiscountsPdf } from "./SalesWithDiscountsPdf";
+import { useTranslation } from "react-i18next";
 
 interface SalesWithDiscountsPdfDialogProps {
   open: boolean;
@@ -22,6 +23,7 @@ interface SalesWithDiscountsPdfDialogProps {
 export const SalesWithDiscountsPdfDialog: React.FC<
   SalesWithDiscountsPdfDialogProps
 > = ({ open, onClose, sales, startDate, endDate, totals }) => {
+  const { t } = useTranslation(["reports"]);
   return (
     <Dialog
       open={open}
@@ -56,7 +58,7 @@ export const SalesWithDiscountsPdfDialog: React.FC<
               display: "flex",
             }}
           >
-            تقرير المبيعات المخفضة
+            {t("reports:salesWithDiscountsPage.title")}
           </Box>
         </Box>
         <IconButton onClick={onClose} size="small">

@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 import { Save, X, Search } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 import { Product } from "@/services/productService";
 import { ProductImage } from "@/components/products/ProductImage";
@@ -34,6 +35,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
   markupPercentage = 20,
   showBatchNumber = true,
 }) => {
+  const { t } = useTranslation(["purchases"]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productInputValue, setProductInputValue] = useState("");
   const [productOptions, setProductOptions] = useState<Product[]>([]);
@@ -144,16 +146,22 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
   // Handle save with return value to indicate success
   const handleSave = useCallback(async (): Promise<boolean> => {
     if (!selectedProduct) {
-      toast.error("خطأ", { description: "يرجى اختيار منتج أولاً" });
+      toast.error(t("purchases:inlineCreate.errorTitle"), {
+        description: t("purchases:inlineCreate.chooseProductFirst"),
+      });
       return false;
     }
     if (!quantity || quantity <= 0) {
-      toast.error("خطأ", { description: "يرجى إدخال كمية صحيحة" });
+      toast.error(t("purchases:inlineCreate.errorTitle"), {
+        description: t("purchases:inlineCreate.invalidQuantity"),
+      });
       quantityInputRef.current?.focus();
       return false;
     }
     if (!unitCost || unitCost < 0) {
-      toast.error("خطأ", { description: "يرجى إدخال تكلفة صحيحة" });
+      toast.error(t("purchases:inlineCreate.errorTitle"), {
+        description: t("purchases:inlineCreate.invalidCost"),
+      });
       unitCostInputRef.current?.focus();
       return false;
     }
@@ -220,7 +228,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
           }
           loading={productLoading}
           isOptionEqualToValue={(option, value) => option.id === value.id}
-          noOptionsText="لا توجد نتائج"
+          noOptionsText={t("purchases:addItemDialog.noResults")}
           autoHighlight
           freeSolo
           size="small"

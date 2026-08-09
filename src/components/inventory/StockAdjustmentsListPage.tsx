@@ -40,23 +40,25 @@ import Select, { SelectChangeEvent } from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
-
-// Helper function to get reason label in Arabic
-const getReasonLabel = (reason: string): string => {
-  const reasonMap: Record<string, string> = {
-    damage: "تلف",
-    expiry: "انتهاء صلاحية",
-    theft: "سرقة",
-    loss: "فقدان",
-    adjustment: "تعديل",
-    correction: "تصحيح",
-    other: "أخرى",
-  };
-  return reasonMap[reason] || reason;
-};
+import { useTranslation } from "react-i18next";
 
 // --- Component ---
 const StockAdjustmentsListPage: React.FC = () => {
+  const { t, i18n } = useTranslation(["inventory", "common"]);
+
+  const getReasonLabel = (reason: string): string => {
+    const reasonMap: Record<string, string> = {
+      damage: t("inventory:adjustmentsListPage.reasonLabels.damage"),
+      expiry: t("inventory:adjustmentsListPage.reasonLabels.expiry"),
+      theft: t("inventory:adjustmentsListPage.reasonLabels.theft"),
+      loss: t("inventory:adjustmentsListPage.reasonLabels.loss"),
+      adjustment: t("inventory:adjustmentsListPage.reasonLabels.adjustment"),
+      correction: t("inventory:adjustmentsListPage.reasonLabels.correction"),
+      other: t("inventory:adjustmentsListPage.reasonLabels.other"),
+    };
+    return reasonMap[reason] || reason;
+  };
+
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -132,7 +134,7 @@ const StockAdjustmentsListPage: React.FC = () => {
 
   return (
     <Box
-      sx={{ p: { xs: 2, sm: 3, md: 4 }, direction: "rtl" }}
+      sx={{ p: { xs: 2, sm: 3, md: 4 }, direction: i18n.dir() }}
       className="dark:bg-gray-950 min-h-screen"
     >
       {/* Header */}
@@ -145,20 +147,20 @@ const StockAdjustmentsListPage: React.FC = () => {
           component="h1"
           className="text-gray-800 dark:text-gray-100 font-semibold"
         >
-          سجل تعديلات المخزون
+          {t("inventory:adjustmentsListPage.title")}
         </Typography>
         <Box sx={{ display: "flex", gap: 1, ml: { xs: 0, sm: "auto" }, alignItems: "center", flexWrap: "wrap" }}>
           <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel id="warehouse-select-label">المخزن</InputLabel>
+            <InputLabel id="warehouse-select-label">{t("inventory:adjustmentsListPage.warehouseSelectLabel")}</InputLabel>
             <Select
               labelId="warehouse-select-label"
               id="warehouse-select"
               value={selectedWarehouseId}
-              label="المخزن"
+              label={t("inventory:adjustmentsListPage.warehouseSelectLabel")}
               onChange={handleWarehouseChange}
             >
               <MenuItem value="">
-                <em>الكل</em>
+                <em>{t("inventory:adjustmentsListPage.allOption")}</em>
               </MenuItem>
               {warehouses.map((w) => (
                 <MenuItem key={w.id} value={w.id.toString()}>
@@ -172,7 +174,7 @@ const StockAdjustmentsListPage: React.FC = () => {
             size="small"
             startIcon={<FilterListIcon />}
           >
-            الفلاتر
+            {t("inventory:adjustmentsListPage.filtersButton")}
           </Button>
           <Button
             variant="contained"
@@ -180,7 +182,7 @@ const StockAdjustmentsListPage: React.FC = () => {
             startIcon={<AddIcon />}
             onClick={() => setOpen(true)}
           >
-            إضافة تعديل
+            {t("inventory:adjustmentsListPage.addAdjustmentButton")}
           </Button>
         </Box>
       </Box>
@@ -200,7 +202,7 @@ const StockAdjustmentsListPage: React.FC = () => {
             sx={{ ml: 2 }}
             className="text-gray-600 dark:text-gray-400"
           >
-            جاري التحميل...
+            {t("common:loading")}
           </Typography>
         </Box>
       )}
@@ -218,16 +220,16 @@ const StockAdjustmentsListPage: React.FC = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>التاريخ</TableCell>
+                    <TableCell>{t("inventory:adjustmentsListPage.colDate")}</TableCell>
                     <TableCell sx={{ width: 48, p: 0.5 }} />
-                    <TableCell>المنتج</TableCell>
-                    <TableCell>المخزن</TableCell>
-                    <TableCell>رقم الدفعة</TableCell>
-                    <TableCell align="center">التغيير في الكمية</TableCell>
-                    <TableCell align="center">الكمية قبل التعديل</TableCell>
-                    <TableCell align="center">الكمية بعد التعديل</TableCell>
-                    <TableCell>السبب</TableCell>
-                    <TableCell>سجل بواسطة</TableCell>
+                    <TableCell>{t("inventory:adjustmentsListPage.colProduct")}</TableCell>
+                    <TableCell>{t("inventory:adjustmentsListPage.colWarehouse")}</TableCell>
+                    <TableCell>{t("inventory:adjustmentsListPage.colBatchNumber")}</TableCell>
+                    <TableCell align="center">{t("inventory:adjustmentsListPage.colQuantityChange")}</TableCell>
+                    <TableCell align="center">{t("inventory:adjustmentsListPage.colQuantityBefore")}</TableCell>
+                    <TableCell align="center">{t("inventory:adjustmentsListPage.colQuantityAfter")}</TableCell>
+                    <TableCell>{t("inventory:adjustmentsListPage.colReason")}</TableCell>
+                    <TableCell>{t("inventory:adjustmentsListPage.colRecordedBy")}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -235,7 +237,7 @@ const StockAdjustmentsListPage: React.FC = () => {
                     <TableRow>
                       <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
                         <Typography color="text.secondary">
-                          لا توجد تعديلات مخزون مسجلة.
+                          {t("inventory:adjustmentsListPage.noAdjustments")}
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -271,7 +273,7 @@ const StockAdjustmentsListPage: React.FC = () => {
                         {adj.purchaseItemBatch?.batch_number ??
                           (adj.purchase_item_id
                             ? `Batch ID: ${adj.purchase_item_id}`
-                            : "تعديل المخزون الإجمالي")}
+                            : t("inventory:adjustmentsListPage.totalStockAdjustment"))}
                       </TableCell>
                       <TableCell align="center">
                         <Typography
@@ -324,7 +326,7 @@ const StockAdjustmentsListPage: React.FC = () => {
 
       <StockAdjustmentFormModal
         onSaveSuccess={() => {
-          toast.success("تم حفظ التعديل بنجاح");
+          toast.success(t("inventory:adjustmentsListPage.adjustmentSavedSuccess"));
           fetchAdjustments(currentPage);
         }}
         isOpen={open}

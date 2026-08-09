@@ -9,6 +9,7 @@ import {
   useTheme,
 } from "@mui/material";
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { PDFViewer } from "@react-pdf/renderer";
 import ClientLedgerPdf from "./ClientLedgerPdf";
 import { ClientLedger } from "../../services/clientLedgerService";
@@ -25,6 +26,7 @@ export const ClientLedgerPdfDialog: React.FC<ClientLedgerPdfDialogProps> = ({
   onClose,
   ledger,
 }) => {
+  const { t } = useTranslation(["clients"]);
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down("md"));
   const { settings } = useSettings();
@@ -55,7 +57,7 @@ export const ClientLedgerPdfDialog: React.FC<ClientLedgerPdfDialogProps> = ({
           alignItems: "center",
         }}
       >
-        <span>معاينة كشف الحساب (PDF)</span>
+        <span>{t("clients:ledgerPdfDialogPreviewTitle")}</span>
         <IconButton
           aria-label="close"
           onClick={onClose}
@@ -72,7 +74,7 @@ export const ClientLedgerPdfDialog: React.FC<ClientLedgerPdfDialogProps> = ({
             <ClientLedgerPdf
               client={ledger.client}
               ledgerEntries={ledger.ledger_entries}
-              companyName={settings?.company_name || "اسم الشركة"}
+              companyName={settings?.company_name || t("clients:ledgerPdf.defaultCompanyName")}
             />
           </PDFViewer>
         </Box>

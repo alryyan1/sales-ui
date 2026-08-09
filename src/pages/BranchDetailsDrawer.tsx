@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import apiClient from "@/lib/axios";
 import { formatCurrency, formatNumber } from "@/constants";
+import { useTranslation } from "react-i18next";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -115,6 +116,7 @@ const SectionTitle: React.FC<{ icon: React.ReactNode; title: string }> = ({ icon
 const BranchDetailsDrawer: React.FC<Props> = ({
   open, onClose, warehouseId, startDate, endDate, branchName
 }) => {
+  const { t, i18n } = useTranslation(["dashboard"]);
   const [data, setData]       = useState<BranchDetailsData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
@@ -129,7 +131,7 @@ const BranchDetailsDrawer: React.FC<Props> = ({
       );
       setData(r.data.data);
     } catch {
-      setError("تعذّر تحميل بيانات الفرع");
+      setError(t("dashboard:branchDrawer.loadError"));
     } finally {
       setLoading(false);
     }
@@ -147,7 +149,7 @@ const BranchDetailsDrawer: React.FC<Props> = ({
       <SheetContent
         side="left"
         className="w-full sm:max-w-[640px] p-0 overflow-y-auto bg-gray-50 dark:bg-gray-950 border-l border-gray-200 dark:border-gray-800"
-        dir="rtl"
+        dir={i18n.dir()}
       >
         {/* ── Header ── */}
         <SheetHeader className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-5 py-4 shadow-sm">
@@ -158,7 +160,7 @@ const BranchDetailsDrawer: React.FC<Props> = ({
               </div>
               <div className="min-w-0">
                 <SheetTitle className="text-base font-bold text-gray-900 dark:text-gray-100 truncate">
-                  {d?.branch.name ?? branchName ?? "الفرع"}
+                  {d?.branch.name ?? branchName ?? t("dashboard:branchDrawer.defaultBranchName")}
                 </SheetTitle>
                 <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">
                   {startDate} — {endDate}
@@ -171,7 +173,7 @@ const BranchDetailsDrawer: React.FC<Props> = ({
                   ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
                   : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
               }`}>
-                {d.branch.is_active ? "نشط" : "غير نشط"}
+                {d.branch.is_active ? t("dashboard:branchDrawer.active") : t("dashboard:branchDrawer.inactive")}
               </Badge>
             )}
           </div>
@@ -210,7 +212,7 @@ const BranchDetailsDrawer: React.FC<Props> = ({
                 <div className="flex items-center gap-2 text-sm">
                   <Users className="h-4 w-4 text-gray-400 flex-shrink-0" />
                   <span className="text-gray-600 dark:text-gray-300">
-                    <span className="font-semibold text-gray-700 dark:text-gray-200">{d.branch.employees_count}</span> موظف مسجّل
+                    <span className="font-semibold text-gray-700 dark:text-gray-200">{d.branch.employees_count}</span> {t("dashboard:branchDrawer.registeredEmployeeSuffix")}
                   </span>
                 </div>
               </>
@@ -219,28 +221,28 @@ const BranchDetailsDrawer: React.FC<Props> = ({
 
           {/* Summary KPIs */}
           <div>
-            <SectionTitle icon={<TrendingUp className="h-4 w-4 text-indigo-500" />} title="ملخص الأداء" />
+            <SectionTitle icon={<TrendingUp className="h-4 w-4 text-indigo-500" />} title={t("dashboard:branchDrawer.performanceSummaryTitle")} />
             <div className="grid grid-cols-2 gap-2.5">
-              <SummaryMini label="إجمالي المبيعات" value={formatCurrency(d?.summary.total_sales ?? 0)}
+              <SummaryMini label={t("dashboard:branchDrawer.totalSalesLabel")} value={formatCurrency(d?.summary.total_sales ?? 0)}
                 icon={<CircleDollarSign className="h-4 w-4 text-blue-500" />}
                 color="border-blue-100 bg-blue-50/50 dark:bg-blue-900/10 dark:border-blue-900/30"
                 loading={loading} />
-              <SummaryMini label="صافي المبيعات" value={formatCurrency(d?.summary.total_profit ?? 0)}
+              <SummaryMini label={t("dashboard:branchDrawer.netSalesLabel")} value={formatCurrency(d?.summary.total_profit ?? 0)}
                 icon={<TrendingUp className="h-4 w-4 text-emerald-500" />}
                 color="border-emerald-100 bg-emerald-50/50 dark:bg-emerald-900/10 dark:border-emerald-900/30"
                 loading={loading} />
-              <SummaryMini label="عدد الفواتير" value={formatNumber(d?.summary.invoices_count ?? 0)}
+              <SummaryMini label={t("dashboard:branchDrawer.invoicesCountLabel")} value={formatNumber(d?.summary.invoices_count ?? 0)}
                 icon={<FileText className="h-4 w-4 text-amber-500" />}
                 color="border-amber-100 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-900/30"
                 loading={loading} />
-              <SummaryMini label="متوسط الفاتورة" value={formatCurrency(d?.summary.avg_invoice ?? 0)}
+              <SummaryMini label={t("dashboard:branchDrawer.avgInvoiceLabel")} value={formatCurrency(d?.summary.avg_invoice ?? 0)}
                 icon={<BarChart2 className="h-4 w-4 text-purple-500" />}
                 color="border-purple-100 bg-purple-50/50 dark:bg-purple-900/10 dark:border-purple-900/30"
                 loading={loading} />
             </div>
             {!loading && d && d.summary.total_returns > 0 && (
               <p className="mt-2 text-[11px] text-orange-500 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 px-3 py-1.5 rounded-lg border border-orange-100 dark:border-orange-900/30">
-                إجمالي المردودات: {formatCurrency(d.summary.total_returns)}
+                {t("dashboard:branchDrawer.totalReturnsLabel", { amount: formatCurrency(d.summary.total_returns) })}
               </p>
             )}
           </div>
@@ -249,13 +251,13 @@ const BranchDetailsDrawer: React.FC<Props> = ({
 
           {/* Customers */}
           <div>
-            <SectionTitle icon={<Users className="h-4 w-4 text-purple-500" />} title="العملاء" />
+            <SectionTitle icon={<Users className="h-4 w-4 text-purple-500" />} title={t("dashboard:branchDrawer.customersTitle")} />
 
             <div className="grid grid-cols-3 gap-2.5 mb-4">
               {[
-                { label: "عدد العملاء", value: formatNumber(d?.customers.total_clients ?? 0), icon: <Users className="h-3.5 w-3.5 text-purple-500" />, color: "text-purple-600" },
-                { label: "عملاء جدد", value: formatNumber(d?.customers.new_clients_count ?? 0), icon: <UserPlus className="h-3.5 w-3.5 text-blue-500" />, color: "text-blue-600" },
-                { label: "مديونية العملاء", value: formatCurrency(d?.customers.outstanding_debt ?? 0), icon: <CreditCard className="h-3.5 w-3.5 text-red-500" />, color: "text-red-500" },
+                { label: t("dashboard:branchDrawer.customersCountLabel"), value: formatNumber(d?.customers.total_clients ?? 0), icon: <Users className="h-3.5 w-3.5 text-purple-500" />, color: "text-purple-600" },
+                { label: t("dashboard:branchDrawer.newCustomersLabel"), value: formatNumber(d?.customers.new_clients_count ?? 0), icon: <UserPlus className="h-3.5 w-3.5 text-blue-500" />, color: "text-blue-600" },
+                { label: t("dashboard:branchDrawer.outstandingDebtLabel"), value: formatCurrency(d?.customers.outstanding_debt ?? 0), icon: <CreditCard className="h-3.5 w-3.5 text-red-500" />, color: "text-red-500" },
               ].map((item, i) => (
                 <div key={i} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-3 text-center">
                   <div className="flex justify-center mb-1">{item.icon}</div>
@@ -274,13 +276,13 @@ const BranchDetailsDrawer: React.FC<Props> = ({
 
           {/* Purchases */}
           <div>
-            <SectionTitle icon={<ShoppingCart className="h-4 w-4 text-violet-500" />} title="ملخص المشتريات" />
+            <SectionTitle icon={<ShoppingCart className="h-4 w-4 text-violet-500" />} title={t("dashboard:branchDrawer.purchasesSummaryTitle")} />
             <div className="grid grid-cols-2 gap-2.5">
-              <SummaryMini label="إجمالي المشتريات" value={formatCurrency(d?.purchases.total ?? 0)}
+              <SummaryMini label={t("dashboard:branchDrawer.totalPurchasesLabel")} value={formatCurrency(d?.purchases.total ?? 0)}
                 icon={<ShoppingCart className="h-4 w-4 text-violet-500" />}
                 color="border-violet-100 bg-violet-50/50 dark:bg-violet-900/10 dark:border-violet-900/30"
                 loading={loading} />
-              <SummaryMini label="غير مسدَّد (آجل)" value={formatCurrency(d?.purchases.deferred ?? 0)}
+              <SummaryMini label={t("dashboard:branchDrawer.deferredPurchasesLabel")} value={formatCurrency(d?.purchases.deferred ?? 0)}
                 icon={<Timer className="h-4 w-4 text-red-500" />}
                 color="border-red-100 bg-red-50/50 dark:bg-red-900/10 dark:border-red-900/30"
                 loading={loading} />
@@ -291,22 +293,22 @@ const BranchDetailsDrawer: React.FC<Props> = ({
 
           {/* Employees */}
           <div>
-            <SectionTitle icon={<Users className="h-4 w-4 text-blue-500" />} title="أداء الموظفين" />
+            <SectionTitle icon={<Users className="h-4 w-4 text-blue-500" />} title={t("dashboard:branchDrawer.employeesPerformanceTitle")} />
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
               {loading ? (
                 <div className="p-3 space-y-2">
                   {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 w-full dark:bg-gray-800" />)}
                 </div>
               ) : !d?.employees.length ? (
-                <p className="text-xs text-gray-400 text-center py-4">لا يوجد موظفون مسجّلون في هذا الفرع</p>
+                <p className="text-xs text-gray-400 text-center py-4">{t("dashboard:branchDrawer.noEmployeesRegistered")}</p>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow className="border-gray-100 dark:border-gray-800 hover:bg-transparent">
-                      <TableHead className="text-right text-[10px] font-semibold text-gray-400 uppercase tracking-wide py-2">الموظف</TableHead>
-                      <TableHead className="text-right text-[10px] font-semibold text-gray-400 uppercase tracking-wide py-2">المبيعات</TableHead>
-                      <TableHead className="text-right text-[10px] font-semibold text-gray-400 uppercase tracking-wide py-2">الفواتير</TableHead>
-                      <TableHead className="text-right text-[10px] font-semibold text-gray-400 uppercase tracking-wide py-2">الحصة</TableHead>
+                      <TableHead className="text-right text-[10px] font-semibold text-gray-400 uppercase tracking-wide py-2">{t("dashboard:branchDrawer.colEmployee")}</TableHead>
+                      <TableHead className="text-right text-[10px] font-semibold text-gray-400 uppercase tracking-wide py-2">{t("dashboard:branchDrawer.colSales")}</TableHead>
+                      <TableHead className="text-right text-[10px] font-semibold text-gray-400 uppercase tracking-wide py-2">{t("dashboard:branchDrawer.colInvoices")}</TableHead>
+                      <TableHead className="text-right text-[10px] font-semibold text-gray-400 uppercase tracking-wide py-2">{t("dashboard:branchDrawer.colShare")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -347,23 +349,23 @@ const BranchDetailsDrawer: React.FC<Props> = ({
 
           {/* Recent Invoices */}
           <div>
-            <SectionTitle icon={<Clock className="h-4 w-4 text-amber-500" />} title="آخر الفواتير" />
+            <SectionTitle icon={<Clock className="h-4 w-4 text-amber-500" />} title={t("dashboard:branchDrawer.recentInvoicesTitle")} />
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
               {loading ? (
                 <div className="p-3 space-y-2">
                   {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full dark:bg-gray-800" />)}
                 </div>
               ) : !d?.recent_invoices.length ? (
-                <p className="text-xs text-gray-400 text-center py-4">لا توجد فواتير</p>
+                <p className="text-xs text-gray-400 text-center py-4">{t("dashboard:branchDrawer.noInvoices")}</p>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow className="border-gray-100 dark:border-gray-800 hover:bg-transparent">
                       <TableHead className="text-right text-[10px] font-semibold text-gray-400 uppercase tracking-wide py-2">#</TableHead>
-                      <TableHead className="text-right text-[10px] font-semibold text-gray-400 uppercase tracking-wide py-2">العميل</TableHead>
-                      <TableHead className="text-right text-[10px] font-semibold text-gray-400 uppercase tracking-wide py-2">التاريخ</TableHead>
-                      <TableHead className="text-right text-[10px] font-semibold text-gray-400 uppercase tracking-wide py-2">الإجمالي</TableHead>
-                      <TableHead className="text-right text-[10px] font-semibold text-gray-400 uppercase tracking-wide py-2">الحالة</TableHead>
+                      <TableHead className="text-right text-[10px] font-semibold text-gray-400 uppercase tracking-wide py-2">{t("dashboard:branchDrawer.colClient")}</TableHead>
+                      <TableHead className="text-right text-[10px] font-semibold text-gray-400 uppercase tracking-wide py-2">{t("dashboard:branchDrawer.colDate")}</TableHead>
+                      <TableHead className="text-right text-[10px] font-semibold text-gray-400 uppercase tracking-wide py-2">{t("dashboard:branchDrawer.colTotal")}</TableHead>
+                      <TableHead className="text-right text-[10px] font-semibold text-gray-400 uppercase tracking-wide py-2">{t("dashboard:branchDrawer.colStatus")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -382,7 +384,7 @@ const BranchDetailsDrawer: React.FC<Props> = ({
                             {isPaid ? (
                               <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
                                 <CheckCircle2 className="h-3 w-3" />
-                                <span className="text-[10px] font-semibold">مسدَّد</span>
+                                <span className="text-[10px] font-semibold">{t("dashboard:branchDrawer.paidStatus")}</span>
                               </span>
                             ) : (
                               <span className="flex items-center gap-1 text-amber-500">

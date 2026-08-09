@@ -24,6 +24,26 @@
   "referencePlaceholder": "Optional reference",
   "description": "Description",
   "descriptionPlaceholder": "Details (optional)",
-  "confirmDelete": "Delete this expense?"
+  "confirmDelete": "Delete this expense?",
+  "subtitle": "A fast, integrated expenses screen with instant search and professional filtering",
+  "loadingText": "Loading...",
+  "formModal": {
+    "nameRequired": "Expense name is required",
+    "nameLabel": "Expense Name",
+    "amountRequired": "Amount is required",
+    "categoryLabel": "Category",
+    "noCategoryOption": "No category",
+    "addCategoryTooltip": "Add new category",
+    "paymentMethodCash": "Cash",
+    "paymentMethodBankTransfer": "Bank Transfer",
+    "paymentMethodVisa": "Visa",
+    "paymentMethodOther": "Other",
+    "addCategoryDialogTitle": "Add New Category",
+    "categoryNameLabel": "Category Name",
+    "cancelButton": "Cancel",
+    "addButton": "Add",
+    "updateButton": "Update",
+    "saveButton": "Save"
+  }
 }
 

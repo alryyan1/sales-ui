@@ -1,5 +1,6 @@
 // src/pages/admin/ExpensesPage.tsx
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 // MUI Components
 import {
@@ -47,7 +48,7 @@ type PaginatedResponse<T> =
 type ExpenseTableItem = Expense;
 
 const ExpensesPage: React.FC = () => {
-  // Removed useTranslation
+  const { t, i18n } = useTranslation(["expenses"]);
 
   const [response, setResponse] =
     useState<PaginatedResponse<ExpenseTableItem> | null>(null);
@@ -141,7 +142,7 @@ const ExpensesPage: React.FC = () => {
     fetchCategories();
   };
   const handleDelete = async (expense: ExpenseTableItem) => {
-    if (!window.confirm("هل أنت متأكد من حذف هذه المصروفات؟")) return;
+    if (!window.confirm(t("expenses:confirmDelete"))) return;
     try {
       await expenseService.deleteExpense(expense.id);
       fetchExpenses();
@@ -157,7 +158,7 @@ const ExpensesPage: React.FC = () => {
         maxWidth: 1200,
         mx: "auto",
         p: { xs: 2, md: 3 },
-        direction: "rtl",
+        direction: i18n.dir(),
       }}
     >
       <Paper variant="outlined" sx={{ p: { xs: 2, md: 2.5 }, mb: 2, borderRadius: 3 }}>
@@ -170,10 +171,10 @@ const ExpensesPage: React.FC = () => {
         >
           <Box>
             <Typography variant="h5" component="h1" sx={{ fontWeight: 700 }}>
-              المصروفات
+              {t("expenses:pageTitle")}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              شاشة مصروفات مدمجة وسريعة مع بحث فوري وتصفية احترافية
+              {t("expenses:subtitle")}
             </Typography>
           </Box>
 
@@ -183,14 +184,14 @@ const ExpensesPage: React.FC = () => {
             onClick={openCreateModal}
             sx={{ pt: 1, pb: 1, minWidth: 150 }}
           >
-            إضافة مصروف
+            {t("expenses:add")}
           </Button>
         </Stack>
 
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="flex-end">
           <TextField
             size="small"
-            placeholder="بحث..."
+            placeholder={t("expenses:search")}
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -207,14 +208,14 @@ const ExpensesPage: React.FC = () => {
           />
 
           <FormControl size="small" sx={{ minWidth: 180, flex: 1 }}>
-            <InputLabel>القسم</InputLabel>
+            <InputLabel>{t("expenses:category")}</InputLabel>
             <Select
-              label="القسم"
+              label={t("expenses:category")}
               value={selectedCategory ?? ""}
               onChange={handleCategoryChange}
             >
               <MenuItem value="">
-                <em>كل الأقسام</em>
+                <em>{t("expenses:allCategories")}</em>
               </MenuItem>
               {categories.map((c) => (
                 <MenuItem key={c.id} value={c.id}>
@@ -227,7 +228,7 @@ const ExpensesPage: React.FC = () => {
           <TextField
             type="date"
             size="small"
-            label="من تاريخ"
+            label={t("expenses:fromDate")}
             InputLabelProps={{ shrink: true }}
             value={dateFrom}
             onChange={(e) => {
@@ -240,7 +241,7 @@ const ExpensesPage: React.FC = () => {
           <TextField
             type="date"
             size="small"
-            label="إلى تاريخ"
+            label={t("expenses:toDate")}
             InputLabelProps={{ shrink: true }}
             value={dateTo}
             onChange={(e) => {
@@ -257,7 +258,7 @@ const ExpensesPage: React.FC = () => {
           <Stack direction="row" spacing={2} alignItems="center" sx={{ py: 1 }}>
             <CircularProgress size={20} />
             <Typography variant="body2" color="text.secondary">
-              جاري التحميل...
+              {t("expenses:loadingText")}
             </Typography>
           </Stack>
         </Paper>
@@ -277,12 +278,12 @@ const ExpensesPage: React.FC = () => {
                 <TableHead>
                   <TableRow sx={{ bgcolor: "grey.100" }}>
                     <TableCell sx={{ fontWeight: 700, py: 1 }}>#</TableCell>
-                    <TableCell sx={{ fontWeight: 700, py: 1 }}>التاريخ</TableCell>
-                    <TableCell sx={{ fontWeight: 700, py: 1 }}>العنوان</TableCell>
-                    <TableCell sx={{ fontWeight: 700, py: 1 }}>القسم</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 700, py: 1 }}>المبلغ</TableCell>
-                    <TableCell sx={{ fontWeight: 700, py: 1 }}>المرجع</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 700, py: 1 }}>الإجراءات</TableCell>
+                    <TableCell sx={{ fontWeight: 700, py: 1 }}>{t("expenses:date")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700, py: 1 }}>{t("expenses:title")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700, py: 1 }}>{t("expenses:category")}</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700, py: 1 }}>{t("expenses:amount")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700, py: 1 }}>{t("expenses:reference")}</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, py: 1 }}>{t("expenses:actions")}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -298,7 +299,7 @@ const ExpensesPage: React.FC = () => {
                       <TableCell sx={{ py: 1 }}>{exp.reference || "—"}</TableCell>
                       <TableCell align="center" sx={{ py: 1 }}>
                         <Stack direction="row" spacing={0.5} justifyContent="center">
-                          <Tooltip title="تعديل">
+                          <Tooltip title={t("expenses:edit")}>
                             <IconButton
                               size="small"
                               color="primary"
@@ -308,7 +309,7 @@ const ExpensesPage: React.FC = () => {
                               <EditIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title="حذف">
+                          <Tooltip title={t("expenses:delete")}>
                             <IconButton
                               size="small"
                               color="error"
@@ -326,7 +327,7 @@ const ExpensesPage: React.FC = () => {
                     <TableRow>
                       <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
                         <Typography variant="body2" color="text.secondary">
-                          لا توجد نتائج
+                          {t("expenses:noResults")}
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -343,7 +344,7 @@ const ExpensesPage: React.FC = () => {
                 page={currentPage}
                 onChange={(_, page) => setCurrentPage(page)}
                 color="primary"
-                dir="rtl"
+                dir={i18n.dir()}
               />
             </Box>
           )}

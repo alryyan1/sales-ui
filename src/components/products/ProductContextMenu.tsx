@@ -40,6 +40,7 @@ import { Product } from "../../services/productService";
 import productService from "../../services/productService";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { formatCurrency } from "@/constants";
 import dayjs from "dayjs";
 
@@ -74,6 +75,7 @@ export const ProductContextMenu: React.FC<ProductContextMenuProps> = ({
   onToggleFavorite,
   isFavorite = false,
 }) => {
+  const { t } = useTranslation(["products"]);
   const navigate = useNavigate();
   const [historyDialog, setHistoryDialog] = useState<HistoryDialog>(null);
   const [historyPage, setHistoryPage] = useState(1);
@@ -106,7 +108,7 @@ export const ProductContextMenu: React.FC<ProductContextMenuProps> = ({
           : await productService.getProductSalesHistory(product.id, page);
       setHistoryData(data);
     } catch {
-      toast.error("فشل في تحميل السجل");
+      toast.error(t("products:list.contextMenu.loadHistoryFailed"));
     } finally {
       setHistoryLoading(false);
     }
@@ -140,12 +142,12 @@ export const ProductContextMenu: React.FC<ProductContextMenuProps> = ({
         {/* Primary Actions */}
         <MenuItem onClick={() => handleAction(() => onEdit(product))}>
           <ListItemIcon><Edit size={18} /></ListItemIcon>
-          <ListItemText primary="تعديل المنتج" />
+          <ListItemText primary={t("products:list.contextMenu.editProduct")} />
         </MenuItem>
 
         <MenuItem onClick={() => handleAction(() => onDuplicate(product))}>
           <ListItemIcon><Copy size={18} /></ListItemIcon>
-          <ListItemText primary="نسخ المنتج" />
+          <ListItemText primary={t("products:list.contextMenu.duplicateProduct")} />
         </MenuItem>
 
         <Divider />
@@ -153,12 +155,12 @@ export const ProductContextMenu: React.FC<ProductContextMenuProps> = ({
         {/* History */}
         <MenuItem onClick={() => openHistory("purchase")}>
           <ListItemIcon><History size={18} /></ListItemIcon>
-          <ListItemText primary="سجل المشتريات" />
+          <ListItemText primary={t("products:list.contextMenu.purchaseHistory")} />
         </MenuItem>
 
         <MenuItem onClick={() => openHistory("sales")}>
           <ListItemIcon><TrendingUp size={18} /></ListItemIcon>
-          <ListItemText primary="سجل المبيعات" />
+          <ListItemText primary={t("products:list.contextMenu.salesHistory")} />
         </MenuItem>
 
         <Divider />
@@ -166,7 +168,7 @@ export const ProductContextMenu: React.FC<ProductContextMenuProps> = ({
         {/* Quick Actions */}
         <MenuItem onClick={() => handleAction(() => onBarcodeLabel(product))}>
           <ListItemIcon><Barcode size={18} /></ListItemIcon>
-          <ListItemText primary="طباعة الباركود" />
+          <ListItemText primary={t("products:list.contextMenu.printBarcode")} />
         </MenuItem>
 
         <Divider />
@@ -174,19 +176,19 @@ export const ProductContextMenu: React.FC<ProductContextMenuProps> = ({
         {/* Data Actions */}
         <MenuItem onClick={() => handleAction(() => onCopyInfo(product))}>
           <ListItemIcon><FileText size={18} /></ListItemIcon>
-          <ListItemText primary="نسخ معلومات المنتج" />
+          <ListItemText primary={t("products:list.contextMenu.copyProductInfo")} />
         </MenuItem>
 
         <MenuItem onClick={() => handleAction(() => onExport(product))}>
           <ListItemIcon><FileText size={18} /></ListItemIcon>
-          <ListItemText primary="تصدير بيانات المنتج" />
+          <ListItemText primary={t("products:list.contextMenu.exportProductData")} />
         </MenuItem>
 
         <MenuItem onClick={() => handleAction(() => onToggleFavorite(product))}>
           <ListItemIcon>
             <Star size={18} fill={isFavorite ? "currentColor" : "none"} />
           </ListItemIcon>
-          <ListItemText primary={isFavorite ? "إزالة من المفضلة" : "إضافة للمفضلة"} />
+          <ListItemText primary={isFavorite ? t("products:list.contextMenu.removeFromFavorites") : t("products:list.contextMenu.addToFavorites")} />
         </MenuItem>
 
         <Divider />
@@ -197,14 +199,14 @@ export const ProductContextMenu: React.FC<ProductContextMenuProps> = ({
           sx={{ color: "error.main" }}
         >
           <ListItemIcon sx={{ color: "error.main" }}><Trash2 size={18} /></ListItemIcon>
-          <ListItemText primary="حذف المنتج" />
+          <ListItemText primary={t("products:list.contextMenu.deleteProduct")} />
         </MenuItem>
       </Menu>
 
       {/* Purchase History Dialog */}
       <Dialog open={historyDialog === "purchase"} onClose={closeHistory} maxWidth="lg" fullWidth>
         <DialogTitle>
-          سجل المشتريات — {product.name}
+          {t("products:list.contextMenu.purchaseHistory")} — {product.name}
         </DialogTitle>
         <DialogContent>
           {historyLoading ? (
@@ -213,7 +215,7 @@ export const ProductContextMenu: React.FC<ProductContextMenuProps> = ({
             </Box>
           ) : historyData?.data?.length === 0 ? (
             <Typography color="text.secondary" sx={{ py: 3, textAlign: "center" }}>
-              لا توجد عمليات شراء لهذا المنتج
+              {t("products:list.contextMenu.noPurchasesForProduct")}
             </Typography>
           ) : (
             <>
@@ -221,14 +223,14 @@ export const ProductContextMenu: React.FC<ProductContextMenuProps> = ({
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell>رقم صنف الشراء</TableCell>
-                      <TableCell>التاريخ</TableCell>
-                      <TableCell>المورد</TableCell>
-                      <TableCell align="right">الكمية</TableCell>
-                      <TableCell align="right">تكلفة الوحدة</TableCell>
-                      <TableCell align="right">سعر البيع</TableCell>
-                      <TableCell>رقم الدفعة</TableCell>
-                      <TableCell align="center">عرض الشراء</TableCell>
+                      <TableCell>{t("products:list.contextMenu.purchaseItemId")}</TableCell>
+                      <TableCell>{t("products:list.contextMenu.date")}</TableCell>
+                      <TableCell>{t("products:list.contextMenu.supplier")}</TableCell>
+                      <TableCell align="right">{t("products:list.contextMenu.quantity")}</TableCell>
+                      <TableCell align="right">{t("products:list.contextMenu.unitCost")}</TableCell>
+                      <TableCell align="right">{t("products:list.contextMenu.salePrice")}</TableCell>
+                      <TableCell>{t("products:list.contextMenu.batchNumber")}</TableCell>
+                      <TableCell align="center">{t("products:list.contextMenu.viewPurchase")}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -259,7 +261,7 @@ export const ProductContextMenu: React.FC<ProductContextMenuProps> = ({
                           <IconButton
                             size="small"
                             onClick={() => openPurchaseDetails(item.purchase_id)}
-                            aria-label="عرض المشتريات"
+                            aria-label={t("products:list.contextMenu.viewPurchase")}
                           >
                             <ArrowRight size={18} />
                           </IconButton>
@@ -281,20 +283,20 @@ export const ProductContextMenu: React.FC<ProductContextMenuProps> = ({
                 </Box>
               )}
               <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
-                الإجمالي: {historyData?.meta?.total ?? 0} عملية شراء
+                {t("products:list.contextMenu.totalPurchaseCount", { count: historyData?.meta?.total ?? 0 })}
               </Typography>
             </>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeHistory}>إغلاق</Button>
+          <Button onClick={closeHistory}>{t("products:list.contextMenu.close")}</Button>
         </DialogActions>
       </Dialog>
 
       {/* Sales History Dialog */}
       <Dialog open={historyDialog === "sales"} onClose={closeHistory} maxWidth="md" fullWidth>
         <DialogTitle>
-          سجل المبيعات — {product.name}
+          {t("products:list.contextMenu.salesHistory")} — {product.name}
         </DialogTitle>
         <DialogContent>
           {historyLoading ? (
@@ -303,7 +305,7 @@ export const ProductContextMenu: React.FC<ProductContextMenuProps> = ({
             </Box>
           ) : historyData?.data?.length === 0 ? (
             <Typography color="text.secondary" sx={{ py: 3, textAlign: "center" }}>
-              لا توجد عمليات بيع لهذا المنتج
+              {t("products:list.contextMenu.noSalesForProduct")}
             </Typography>
           ) : (
             <>
@@ -311,13 +313,13 @@ export const ProductContextMenu: React.FC<ProductContextMenuProps> = ({
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell>تاريخ البيع</TableCell>
-                      <TableCell>رقم الفاتورة</TableCell>
-                      <TableCell>العميل</TableCell>
-                      <TableCell>المستخدم</TableCell>
-                      <TableCell align="right">الكمية</TableCell>
-                      <TableCell align="right">سعر الوحدة</TableCell>
-                      <TableCell align="right">الإجمالي</TableCell>
+                      <TableCell>{t("products:list.contextMenu.saleDate")}</TableCell>
+                      <TableCell>{t("products:list.contextMenu.invoiceNumber")}</TableCell>
+                      <TableCell>{t("products:list.contextMenu.client")}</TableCell>
+                      <TableCell>{t("products:list.contextMenu.user")}</TableCell>
+                      <TableCell align="right">{t("products:list.contextMenu.quantity")}</TableCell>
+                      <TableCell align="right">{t("products:list.contextMenu.unitPrice")}</TableCell>
+                      <TableCell align="right">{t("products:list.contextMenu.total")}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -355,13 +357,13 @@ export const ProductContextMenu: React.FC<ProductContextMenuProps> = ({
                 </Box>
               )}
               <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
-                الإجمالي: {historyData?.meta?.total ?? 0} عملية بيع
+                {t("products:list.contextMenu.totalSaleCount", { count: historyData?.meta?.total ?? 0 })}
               </Typography>
             </>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeHistory}>إغلاق</Button>
+          <Button onClick={closeHistory}>{t("products:list.contextMenu.close")}</Button>
         </DialogActions>
       </Dialog>
     </>

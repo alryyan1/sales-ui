@@ -28,6 +28,38 @@
   "roleInUseError": "لا يمكن حذف الصلاحية. يوجد مستخدمون معينون لهذه الصلاحية.",
   "cannotDeleteAdminRole": "لا يمكن حذف صلاحية مدير النظام.",
   "cannotEditAdminRole": "لا يمكن تعديل صلاحية مدير النظام.",
-  "roles": "الصلاحيات" 
-    
+  "roles": "الصلاحيات",
+    "fieldRequired": "هذا الحقل مطلوب",
+    "atLeastOnePermissionRequired": "يجب اختيار صلاحية واحدة على الأقل",
+    "successTitle": "نجح",
+    "errorTitle": "خطأ",
+    "formModal": {
+        "editTitle": "تعديل دور",
+        "addTitle": "إضافة دور",
+        "roleNamePlaceholder": "أدخل اسم الدور",
+        "assignPermissionsTitle": "تعيين الصلاحيات",
+        "assignPermissionsDesc": "اختر الصلاحيات التي سيتم منحها لهذا الدور",
+        "noPermissionsAvailable": "لا توجد صلاحيات متاحة"
+    },
+    "cancel": "إلغاء",
+    "updateButton": "تحديث",
+    "createButton": "إنشاء",
+    "listPage": {
+        "pageTitle": "إدارة الأدوار",
+        "pageSubtitle": "إدارة أدوار المستخدمين وصلاحياتهم في النظام",
+        "addRoleButton": "إضافة دور جديد",
+        "fetchPermissionsErrorTitle": "خطأ في جلب الصلاحيات",
+        "deleteSuccessTitle": "تم بنجاح",
+        "columnRoleName": "اسم الدور",
+        "columnPermissionsCount": "عدد الصلاحيات",
+        "columnUsersCount": "عدد المستخدمين",
+        "columnActions": "إجراءات",
+        "noRolesAvailable": "لا توجد أدوار متاحة حالياً",
+        "permissionUnitLabel": "صلاحية",
+        "editTooltip": "تعديل",
+        "deleteTooltip": "حذف",
+        "deleteConfirmTitle": "تأكيد الحذف",
+        "deleteConfirmMessage": "هل أنت متأكد من حذف هذا الدور؟ هذا الإجراء لا يمكن التراجع عنه.",
+        "deleteButton": "حذف"
+    }
   }

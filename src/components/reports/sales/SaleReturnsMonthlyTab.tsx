@@ -12,6 +12,7 @@ import {
 import { eachDayOfInterval, parseISO, format } from "date-fns";
 import type { SaleReturn } from "@/services/saleReturnService";
 import { formatNumber } from "@/constants";
+import { useTranslation } from "react-i18next";
 
 interface SaleReturnsMonthlyTabProps {
   returns: SaleReturn[];
@@ -24,11 +25,12 @@ const SaleReturnsMonthlyTab: React.FC<SaleReturnsMonthlyTabProps> = ({
   startDate,
   endDate,
 }) => {
+  const { t } = useTranslation(["reports"]);
   if (!returns.length) {
     return (
       <Box sx={{ textAlign: "center", py: 4 }}>
         <Typography variant="body1" color="text.secondary">
-          لا توجد مردودات في الفترة المحددة
+          {t("reports:saleReturnsReportPage.noReturnsForPeriod")}
         </Typography>
       </Box>
     );
@@ -96,12 +98,12 @@ const SaleReturnsMonthlyTab: React.FC<SaleReturnsMonthlyTabProps> = ({
       <Table size="small">
         <TableHead>
           <TableRow>
-            <TableCell>التاريخ</TableCell>
-            <TableCell align="right">عدد المردودات</TableCell>
-            <TableCell align="right">إجمالي القيمة</TableCell>
-            <TableCell align="right">إجمالي مردود نقدي</TableCell>
-            <TableCell align="right">إجمالي مردود تحويل بنكي</TableCell>
-            <TableCell align="right">إجمالي مردود فيزا</TableCell>
+            <TableCell>{t("reports:saleReturnsReportPage.colDate")}</TableCell>
+            <TableCell align="right">{t("reports:saleReturnsReportPage.colReturnsCount")}</TableCell>
+            <TableCell align="right">{t("reports:saleReturnsReportPage.colTotalValue")}</TableCell>
+            <TableCell align="right">{t("reports:saleReturnsReportPage.colTotalCashReturns")}</TableCell>
+            <TableCell align="right">{t("reports:saleReturnsReportPage.colTotalBankTransferReturns")}</TableCell>
+            <TableCell align="right">{t("reports:saleReturnsReportPage.colTotalVisaReturns")}</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>

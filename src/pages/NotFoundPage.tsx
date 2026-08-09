@@ -12,21 +12,23 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 const NotFoundPage: React.FC = () => {
+  const { t, i18n } = useTranslation(['common']);
   const error = useRouteError() as any;
   const location = useLocation();
   const [showDetails, setShowDetails] = useState(false);
 
   // Determine if it's a 404 or a general crashing error
   const is404 = !error || error.status === 404;
-  
-  const errorMessage = error?.message || error?.statusText || "حدث خطأ غير متوقع";
+
+  const errorMessage = error?.message || error?.statusText || t('common:notFoundPage.unexpectedError');
   const errorStack = error?.stack || "";
   const statusCode = error?.status || 404;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-sans" dir="rtl">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-sans" dir={i18n.dir()}>
       <div className="max-w-2xl w-full text-center">
         {/* Animated Icon Container */}
         <motion.div 
@@ -59,12 +61,12 @@ const NotFoundPage: React.FC = () => {
             {statusCode}
           </h1>
           <h2 className="text-3xl font-bold text-slate-800">
-            {is404 ? 'عفواً، ضللت الطريق!' : 'حدث خطأ غير متوقع'}
+            {is404 ? t('common:notFoundPage.lostTitle') : t('common:notFoundPage.errorTitle')}
           </h2>
           <p className="text-slate-500 text-lg max-w-md mx-auto leading-relaxed">
-            {is404 
-              ? `الصفحة المسار ${location.pathname} غير موجودة أو تم نقلها لمكان آخر.` 
-              : 'نعتذر عن هذا الخلل، الفريق التقني يعمل على حل المشكلة.'
+            {is404
+              ? t('common:notFoundPage.pathNotFound', { path: location.pathname })
+              : t('common:notFoundPage.genericErrorDesc')
             }
           </p>
         </motion.div>
@@ -83,7 +85,7 @@ const NotFoundPage: React.FC = () => {
           >
             <Link to="/">
               <Home className="w-5 h-5" />
-              <span>العودة للرئيسية</span>
+              <span>{t('common:notFoundPage.backToHome')}</span>
               <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
             </Link>
           </Button>
@@ -95,7 +97,7 @@ const NotFoundPage: React.FC = () => {
             className="rounded-2xl h-14 px-8 border-slate-200 hover:bg-white hover:border-blue-400 gap-2 transition-all"
           >
             <RefreshCcw className="w-5 h-5 text-slate-400" />
-            <span>تحديث الصفحة</span>
+            <span>{t('common:notFoundPage.refreshPage')}</span>
           </Button>
         </motion.div>
 
@@ -113,7 +115,7 @@ const NotFoundPage: React.FC = () => {
             >
               <div className="flex items-center gap-3">
                 <Terminal className="w-5 h-5 text-slate-400" />
-                <span className="font-semibold">تفاصيل الخطأ التقنية</span>
+                <span className="font-semibold">{t('common:notFoundPage.technicalDetails')}</span>
               </div>
               {showDetails ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
             </button>
@@ -134,7 +136,7 @@ const NotFoundPage: React.FC = () => {
                     {errorStack ? (
                        <pre className="whitespace-pre-wrap break-all opacity-80">{errorStack}</pre>
                     ) : (
-                       <p className="opacity-50 italic">لا تتوفر معلومات إضافية عن الخطأ.</p>
+                       <p className="opacity-50 italic">{t('common:notFoundPage.noAdditionalInfo')}</p>
                     )}
                   </div>
                 </motion.div>

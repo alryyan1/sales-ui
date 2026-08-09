@@ -9,6 +9,7 @@ import {
 import { format, parseISO } from "date-fns";
 import { PDF_FONTS } from "@/utils/pdfFontRegistry";
 import { formatNumber } from "@/constants";
+import { useTranslation } from "react-i18next";
 
 const styles = StyleSheet.create({
   page: {
@@ -168,13 +169,14 @@ export const MonthlyExpensesPdf: React.FC<MonthlyExpensesPdfProps> = ({
   dailyBreakdown,
   monthSummary,
 }) => {
+  const { t } = useTranslation(["reports"]);
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
-            <Text style={styles.title}>تقرير المصروفات الشهري</Text>
+            <Text style={styles.title}>{t("reports:monthlyExpensesPdf.title")}</Text>
             <Text style={styles.subtitle}>
               {monthName} {year}
             </Text>
@@ -183,21 +185,21 @@ export const MonthlyExpensesPdf: React.FC<MonthlyExpensesPdfProps> = ({
 
         {/* Summary Section */}
         <View style={styles.summarySection}>
-          <Text style={styles.summaryTitle}>ملخص الشهر</Text>
+          <Text style={styles.summaryTitle}>{t("reports:monthlyExpensesPdf.monthSummaryTitle")}</Text>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>إجمالي المصروفات:</Text>
+            <Text style={styles.summaryLabel}>{t("reports:monthlyExpensesPdf.totalExpenses")}</Text>
             <Text style={styles.summaryValue}>
               {formatNumber(monthSummary.total, 2)}
             </Text>
           </View>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>المصروفات النقدية:</Text>
+            <Text style={styles.summaryLabel}>{t("reports:monthlyExpensesPdf.cashExpenses")}</Text>
             <Text style={[styles.summaryValue, { color: "#059669" }]}>
               {formatNumber(monthSummary.cash_total, 2)}
             </Text>
           </View>
           <View style={styles.summaryRowLast}>
-            <Text style={styles.summaryLabel}>المصروفات البنكية:</Text>
+            <Text style={styles.summaryLabel}>{t("reports:monthlyExpensesPdf.bankExpenses")}</Text>
             <Text style={[styles.summaryValue, { color: "#1e40af" }]}>
               {formatNumber(monthSummary.bank_total, 2)}
             </Text>
@@ -207,12 +209,12 @@ export const MonthlyExpensesPdf: React.FC<MonthlyExpensesPdfProps> = ({
         {/* Daily Breakdown Table */}
         <View style={styles.tableContainer}>
           <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderText, styles.colDate]}>التاريخ</Text>
+            <Text style={[styles.tableHeaderText, styles.colDate]}>{t("reports:monthlyExpensesPdf.colDate")}</Text>
             <Text style={[styles.tableHeaderText, styles.colTotal]}>
-              الإجمالي
+              {t("reports:monthlyExpensesPdf.colTotal")}
             </Text>
-            <Text style={[styles.tableHeaderText, styles.colCash]}>نقدي</Text>
-            <Text style={[styles.tableHeaderText, styles.colBank]}>بنكي</Text>
+            <Text style={[styles.tableHeaderText, styles.colCash]}>{t("reports:monthlyExpensesPdf.colCash")}</Text>
+            <Text style={[styles.tableHeaderText, styles.colBank]}>{t("reports:monthlyExpensesPdf.colBank")}</Text>
           </View>
 
           {dailyBreakdown.map((day, index) => {
@@ -242,7 +244,7 @@ export const MonthlyExpensesPdf: React.FC<MonthlyExpensesPdfProps> = ({
 
         {/* Footer */}
         <Text style={styles.footer}>
-          تم إنشاء التقرير في {format(new Date(), "yyyy-MM-dd HH:mm")}
+          {t("reports:monthlyExpensesPdf.generatedOn")} {format(new Date(), "yyyy-MM-dd HH:mm")}
         </Text>
       </Page>
     </Document>

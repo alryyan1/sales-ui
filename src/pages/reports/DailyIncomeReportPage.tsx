@@ -57,6 +57,8 @@ import {
   LineChart,
   Line,
 } from "recharts";
+import { useTranslation } from "react-i18next";
+import { enUS } from "date-fns/locale";
 
 // --- Types ---
 interface DailyReportEntry {
@@ -99,7 +101,6 @@ const pdfStyles = StyleSheet.create({
   page: {
     padding: 30,
     fontFamily: "Arial",
-    direction: "rtl",
   },
   header: {
     marginBottom: 20,
@@ -195,18 +196,21 @@ const DailyIncomeReportPDF: React.FC<{
   data: MonthlyRevenueReportData;
   currencySymbol?: string;
 }> = ({ data, currencySymbol = "OMR" }) => {
+  const { t, i18n } = useTranslation(["reports"]);
+  const isRtl = i18n.dir() === "rtl";
+  const dateLocale = isRtl ? arSA : enUS;
   return (
     <Document>
-      <Page size="A4" style={pdfStyles.page}>
+      <Page size="A4" style={[pdfStyles.page, { direction: isRtl ? "rtl" : "ltr" }]}>
         {/* Header */}
         <View style={pdfStyles.header}>
-          <Text style={pdfStyles.title}>تقرير المبيعات الشهري</Text>
+          <Text style={pdfStyles.title}>{t("reports:dailyIncomeReportPage.pdfTitle")}</Text>
           <Text style={pdfStyles.subtitle}>
-            شهر: {data.month_name} {data.year}
+            {t("reports:dailyIncomeReportPage.pdfMonthLabel", { month: data.month_name, year: data.year })}
           </Text>
           <Text style={pdfStyles.subtitle}>
-            تاريخ التوليد:{" "}
-            {format(new Date(), "yyyy-MM-dd HH:mm", { locale: arSA })}
+            {t("reports:dailyIncomeReportPage.pdfGeneratedDateLabel")}{" "}
+            {format(new Date(), "yyyy-MM-dd HH:mm", { locale: dateLocale })}
           </Text>
         </View>
 
@@ -214,13 +218,13 @@ const DailyIncomeReportPDF: React.FC<{
         <View style={pdfStyles.table}>
           {/* Table Header */}
           <View style={pdfStyles.tableHeader}>
-            <Text style={pdfStyles.tableHeaderCell}>التاريخ</Text>
-            <Text style={pdfStyles.tableHeaderCell}>إجمالي المبيعات</Text>
-            <Text style={pdfStyles.tableHeaderCell}>إجمالي المدفوع</Text>
-            <Text style={pdfStyles.tableHeaderCell}>إجمالي النقدي</Text>
-            <Text style={pdfStyles.tableHeaderCell}>إجمالي البنكي</Text>
-            <Text style={pdfStyles.tableHeaderCell}>إجمالي المصروفات</Text>
-            <Text style={pdfStyles.tableHeaderCell}>صافي</Text>
+            <Text style={pdfStyles.tableHeaderCell}>{t("reports:dailyIncomeReportPage.pdfColDate")}</Text>
+            <Text style={pdfStyles.tableHeaderCell}>{t("reports:dailyIncomeReportPage.pdfColTotalSales")}</Text>
+            <Text style={pdfStyles.tableHeaderCell}>{t("reports:dailyIncomeReportPage.pdfColTotalPaid")}</Text>
+            <Text style={pdfStyles.tableHeaderCell}>{t("reports:dailyIncomeReportPage.pdfColTotalCash")}</Text>
+            <Text style={pdfStyles.tableHeaderCell}>{t("reports:dailyIncomeReportPage.pdfColTotalBank")}</Text>
+            <Text style={pdfStyles.tableHeaderCell}>{t("reports:dailyIncomeReportPage.pdfColTotalExpenses")}</Text>
+            <Text style={pdfStyles.tableHeaderCell}>{t("reports:dailyIncomeReportPage.pdfColNet")}</Text>
           </View>
 
           {/* Table Rows */}
@@ -252,7 +256,7 @@ const DailyIncomeReportPDF: React.FC<{
 
           {/* Total Row */}
           <View style={pdfStyles.totalRow}>
-            <Text style={pdfStyles.totalCell}>الإجمالي</Text>
+            <Text style={pdfStyles.totalCell}>{t("reports:dailyIncomeReportPage.pdfTotalRow")}</Text>
             <Text style={pdfStyles.totalCell}>
               {formatCurrency(
                 data.month_summary.total_sales,
@@ -300,7 +304,7 @@ const DailyIncomeReportPDF: React.FC<{
 
         {/* Footer */}
         <View style={pdfStyles.footer}>
-          <Text>تم إنشاء هذا التقرير تلقائياً من نظام إدارة المبيعات</Text>
+          <Text>{t("reports:dailyIncomeReportPage.pdfFooter")}</Text>
         </View>
       </Page>
     </Document>
@@ -308,7 +312,8 @@ const DailyIncomeReportPDF: React.FC<{
 };
 
 const DailyIncomeReportPage: React.FC = () => {
-  // const { t, i18n } = useTranslation(["reports", "common", "months"]);
+  const { t, i18n } = useTranslation(["reports", "common"]);
+  const dateLocale = i18n.language === "ar" ? arSA : enUS;
   const navigate = useNavigate();
   const formatCurrency = useFormatCurrency();
   const currencySymbol = useCurrencySymbol();
@@ -343,8 +348,8 @@ const DailyIncomeReportPage: React.FC = () => {
       setReportData(response.data.data);
     } catch (error: any) {
       console.error("Error fetching monthly sales report:", error);
-      toast.error("خطأ", {
-        description: error?.message || "حدث خطأ أثناء جلب التقرير",
+      toast.error(t("reports:dailyIncomeReportPage.errorTitle"), {
+        description: error?.message || t("reports:dailyIncomeReportPage.fetchReportFailed"),
       });
       setReportData(null);
     } finally {
@@ -365,7 +370,7 @@ const DailyIncomeReportPage: React.FC = () => {
   // Generate and Download PDF
   const handleGeneratePdf = async () => {
     if (!reportData) {
-      toast.error("خطأ", { description: "لا توجد بيانات لتصديرها" });
+      toast.error(t("reports:dailyIncomeReportPage.errorTitle"), { description: t("reports:dailyIncomeReportPage.noDataToExport") });
       return;
     }
 
@@ -382,16 +387,16 @@ const DailyIncomeReportPage: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `تقرير_المبيعات_الشهري_${reportData.month_name}_${reportData.year}.pdf`;
+      link.download = `${t("reports:dailyIncomeReportPage.pdfFilenamePrefix")}_${reportData.month_name}_${reportData.year}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      toast.success("نجح", { description: "تم إنشاء ملف PDF بنجاح" });
+      toast.success(t("reports:dailyIncomeReportPage.pdfCreatedSuccessTitle"), { description: t("reports:dailyIncomeReportPage.pdfCreatedSuccessDescription") });
     } catch (error) {
       console.error("Error generating PDF:", error);
-      toast.error("خطأ", {
-        description: "حدث خطأ أثناء إنشاء ملف PDF",
+      toast.error(t("reports:dailyIncomeReportPage.errorTitle"), {
+        description: t("reports:dailyIncomeReportPage.pdfGenerationFailed"),
       });
     } finally {
       setIsGeneratingPdf(false);
@@ -401,7 +406,7 @@ const DailyIncomeReportPage: React.FC = () => {
   // Export to Excel
   const handleExportExcel = async () => {
     if (!reportData) {
-      toast.error("خطأ", { description: "لا توجد بيانات لتصديرها" });
+      toast.error(t("reports:dailyIncomeReportPage.errorTitle"), { description: t("reports:dailyIncomeReportPage.noDataToExport") });
       return;
     }
 
@@ -426,21 +431,21 @@ const DailyIncomeReportPage: React.FC = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `تقرير_المبيعات_الشهري_${reportData.month_name}_${reportData.year}.xlsx`;
+      link.download = `${t("reports:dailyIncomeReportPage.excelFilenamePrefix")}_${reportData.month_name}_${reportData.year}.xlsx`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      toast.success("نجح", { description: "تم تصدير ملف Excel بنجاح" });
+      toast.success(t("reports:dailyIncomeReportPage.pdfCreatedSuccessTitle"), { description: t("reports:dailyIncomeReportPage.excelExportedSuccessDescription") });
     } catch (error: any) {
       console.error("Error exporting Excel:", error);
       const errorMessage =
         error?.response?.status === 404
-          ? "Endpoint غير موجود. يرجى إنشاء /api/reports/monthly-revenue-excel في الـ backend"
+          ? t("reports:dailyIncomeReportPage.excelEndpointMissing")
           : error?.response?.data?.message ||
             error?.message ||
-            "حدث خطأ أثناء تصدير ملف Excel";
-      toast.error("خطأ", {
+            t("reports:dailyIncomeReportPage.excelExportFailed");
+      toast.error(t("reports:dailyIncomeReportPage.errorTitle"), {
         description: errorMessage,
       });
     } finally {
@@ -481,7 +486,7 @@ const DailyIncomeReportPage: React.FC = () => {
                 letterSpacing: "-0.02em",
               }}
             >
-              تقرير المبيعات الشهري
+              {t("reports:dailyIncomeReportPage.title")}
             </Typography>
           </Stack>
           <Stack
@@ -491,7 +496,7 @@ const DailyIncomeReportPage: React.FC = () => {
             sx={{ pl: 7, mt: 1 }}
           >
             <Typography variant="body2" color="text.secondary">
-              عرض تفاصيل المبيعات الشهرية مع التوزيع اليومي.
+              {t("reports:dailyIncomeReportPage.subtitle")}
             </Typography>
             {reportData && (
               <Stack direction="row" spacing={1.5}>
@@ -512,7 +517,7 @@ const DailyIncomeReportPage: React.FC = () => {
                     fontWeight: 500,
                   }}
                 >
-                  {isExportingExcel ? "جاري التصدير..." : "تصدير Excel"}
+                  {isExportingExcel ? t("reports:dailyIncomeReportPage.exportingEllipsis") : t("reports:dailyIncomeReportPage.exportExcelButton")}
                 </Button>
                 <Button
                   variant="contained"
@@ -531,7 +536,7 @@ const DailyIncomeReportPage: React.FC = () => {
                     fontWeight: 500,
                   }}
                 >
-                  {isGeneratingPdf ? "جاري الإنشاء..." : "تصدير PDF"}
+                  {isGeneratingPdf ? t("reports:dailyIncomeReportPage.generatingEllipsis") : t("reports:dailyIncomeReportPage.exportPdfButton")}
                 </Button>
               </Stack>
             )}
@@ -563,7 +568,7 @@ const DailyIncomeReportPage: React.FC = () => {
                   {months.map((m) => (
                     <MenuItem key={m} value={String(m)}>
                       {format(new Date(2000, m - 1, 1), "MMMM", {
-                        locale: arSA,
+                        locale: dateLocale,
                       })}
                     </MenuItem>
                   ))}
@@ -622,7 +627,7 @@ const DailyIncomeReportPage: React.FC = () => {
                     }
                     onClick={() => setChartType("sales_vs_paid")}
                   >
-                    المبيعات مقابل المدفوع
+                    {t("reports:dailyIncomeReportPage.chartSalesVsPaid")}
                   </Button>
                   <Button
                     variant={
@@ -630,7 +635,7 @@ const DailyIncomeReportPage: React.FC = () => {
                     }
                     onClick={() => setChartType("cash_vs_bank")}
                   >
-                    النقدي مقابل البنكي
+                    {t("reports:dailyIncomeReportPage.chartCashVsBank")}
                   </Button>
                   <Button
                     variant={
@@ -638,7 +643,7 @@ const DailyIncomeReportPage: React.FC = () => {
                     }
                     onClick={() => setChartType("expense_vs_net")}
                   >
-                    المصروفات مقابل الصافي
+                    {t("reports:dailyIncomeReportPage.chartExpenseVsNet")}
                   </Button>
                 </Stack>
 
@@ -657,8 +662,8 @@ const DailyIncomeReportPage: React.FC = () => {
                         <YAxis />
                         <Tooltip
                           wrapperStyle={{
-                            direction: "rtl",
-                            textAlign: "right",
+                            direction: i18n.dir(),
+                            textAlign: i18n.dir() === "rtl" ? "right" : "left",
                           }}
                           formatter={(value: number) => formatCurrency(value)}
                           labelFormatter={(label) =>
@@ -668,13 +673,13 @@ const DailyIncomeReportPage: React.FC = () => {
                         <Legend />
                         <Bar
                           dataKey="total_sales"
-                          name="المبيعات"
+                          name={t("reports:dailyIncomeReportPage.seriesSales")}
                           fill="#1976d2"
                           radius={[4, 4, 0, 0]}
                         />
                         <Bar
                           dataKey="total_paid"
-                          name="المدفوع"
+                          name={t("reports:dailyIncomeReportPage.seriesPaid")}
                           fill="#2e7d32"
                           radius={[4, 4, 0, 0]}
                         />
@@ -692,8 +697,8 @@ const DailyIncomeReportPage: React.FC = () => {
                         <YAxis />
                         <Tooltip
                           wrapperStyle={{
-                            direction: "rtl",
-                            textAlign: "right",
+                            direction: i18n.dir(),
+                            textAlign: i18n.dir() === "rtl" ? "right" : "left",
                           }}
                           formatter={(value: number) => formatCurrency(value)}
                           labelFormatter={(label) =>
@@ -703,13 +708,13 @@ const DailyIncomeReportPage: React.FC = () => {
                         <Legend />
                         <Bar
                           dataKey="total_cash"
-                          name="النقدي"
+                          name={t("reports:dailyIncomeReportPage.seriesCash")}
                           fill="#ed6c02"
                           radius={[4, 4, 0, 0]}
                         />
                         <Bar
                           dataKey="total_bank"
-                          name="البنكي"
+                          name={t("reports:dailyIncomeReportPage.seriesBank")}
                           fill="#9c27b0"
                           radius={[4, 4, 0, 0]}
                         />
@@ -727,8 +732,8 @@ const DailyIncomeReportPage: React.FC = () => {
                         <YAxis />
                         <Tooltip
                           wrapperStyle={{
-                            direction: "rtl",
-                            textAlign: "right",
+                            direction: i18n.dir(),
+                            textAlign: i18n.dir() === "rtl" ? "right" : "left",
                           }}
                           formatter={(value: number) => formatCurrency(value)}
                           labelFormatter={(label) =>
@@ -739,14 +744,14 @@ const DailyIncomeReportPage: React.FC = () => {
                         <Line
                           type="monotone"
                           dataKey="total_expense"
-                          name="المصروفات"
+                          name={t("reports:dailyIncomeReportPage.seriesExpenses")}
                           stroke="#d32f2f"
                           strokeWidth={2}
                         />
                         <Line
                           type="monotone"
                           dataKey="net"
-                          name="الصافي"
+                          name={t("reports:dailyIncomeReportPage.seriesNet")}
                           stroke="#2e7d32"
                           strokeWidth={2}
                         />
@@ -779,43 +784,43 @@ const DailyIncomeReportPage: React.FC = () => {
                           bgcolor: "grey.50",
                         }}
                       >
-                        التاريخ
+                        {t("reports:dailyIncomeReportPage.colDate")}
                       </TableCell>
                       <TableCell
                         align="center"
                         sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
                       >
-                        إجمالي المبيعات
+                        {t("reports:dailyIncomeReportPage.colTotalSales")}
                       </TableCell>
                       <TableCell
                         align="center"
                         sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
                       >
-                        إجمالي المدفوع
+                        {t("reports:dailyIncomeReportPage.colTotalPaid")}
                       </TableCell>
                       <TableCell
                         align="center"
                         sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
                       >
-                        إجمالي النقدي
+                        {t("reports:dailyIncomeReportPage.colTotalCash")}
                       </TableCell>
                       <TableCell
                         align="center"
                         sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
                       >
-                        إجمالي البنكي
+                        {t("reports:dailyIncomeReportPage.colTotalBank")}
                       </TableCell>
                       <TableCell
                         align="center"
                         sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
                       >
-                        إجمالي المصروفات
+                        {t("reports:dailyIncomeReportPage.colTotalExpenses")}
                       </TableCell>
                       <TableCell
                         align="center"
                         sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
                       >
-                        صافي
+                        {t("reports:dailyIncomeReportPage.colNet")}
                       </TableCell>
                     </TableRow>
                   </TableHead>
@@ -910,7 +915,7 @@ const DailyIncomeReportPage: React.FC = () => {
                             color: "primary.main",
                           }}
                         >
-                          الإجمالي
+                          {t("reports:dailyIncomeReportPage.totalRow")}
                         </TableCell>
                         <TableCell
                           align="center"
@@ -985,7 +990,7 @@ const DailyIncomeReportPage: React.FC = () => {
                           sx={{ py: 8, fontSize: "1rem" }}
                         >
                           <Typography variant="body2" color="text.secondary">
-                            لا توجد بيانات متاحة لهذا الشهر.
+                            {t("reports:dailyIncomeReportPage.noDataForMonth")}
                           </Typography>
                         </TableCell>
                       </TableRow>
@@ -1007,10 +1012,10 @@ const DailyIncomeReportPage: React.FC = () => {
         >
           <CardContent>
             <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
-              لا توجد بيانات متاحة
+              {t("reports:dailyIncomeReportPage.noDataTitle")}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              يرجى اختيار شهر وسنة لعرض التقرير.
+              {t("reports:dailyIncomeReportPage.noDataSubtitle")}
             </Typography>
           </CardContent>
         </Card>

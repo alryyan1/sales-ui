@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { CalendarIcon, Loader2, Check, ChevronsUpDown } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import {
   Dialog,
@@ -61,27 +62,22 @@ interface EditPurchaseDialogProps {
   onUpdate: () => void;
 }
 
-const formSchema = z.object({
-  supplier_id: z.number({
-    required_error: "المورد مطلوب",
-  }),
-  purchase_date: z.date({
-    required_error: "تاريخ الشراء مطلوب",
-  }),
-  status: z.enum(["pending", "ordered", "received"], {
-    required_error: "الحالة مطلوبة",
-  }),
-  reference_number: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
-});
+const getFormSchema = (t: (key: string) => string) =>
+  z.object({
+    supplier_id: z.number({
+      required_error: t("purchases:editDialog.supplierRequiredZod"),
+    }),
+    purchase_date: z.date({
+      required_error: t("purchases:editDialog.dateRequiredZod"),
+    }),
+    status: z.enum(["pending", "ordered", "received"], {
+      required_error: t("purchases:editDialog.statusRequiredZod"),
+    }),
+    reference_number: z.string().nullable().optional(),
+    notes: z.string().nullable().optional(),
+  });
 
-type FormValues = z.infer<typeof formSchema>;
-
-const statusOptions = [
-  { value: "pending", label: "قيد الانتظار" },
-  { value: "ordered", label: "تم الطلب" },
-  { value: "received", label: "تم الاستلام" },
-];
+type FormValues = z.infer<ReturnType<typeof getFormSchema>>;
 
 export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
   open,
@@ -90,12 +86,18 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
   suppliers,
   onUpdate,
 }) => {
+  const { t, i18n } = useTranslation(["purchases", "common"]);
+  const statusOptions = [
+    { value: "pending", label: t("purchases:status_pending") },
+    { value: "ordered", label: t("purchases:status_ordered") },
+    { value: "received", label: t("purchases:status_received") },
+  ];
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [supplierSearchInput, setSupplierSearchInput] = useState("");
   const [supplierPopoverOpen, setSupplierPopoverOpen] = useState(false);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(getFormSchema(t)),
     defaultValues: {
       supplier_id: undefined,
       purchase_date: new Date(),
@@ -140,12 +142,12 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
         notes: values.notes || null,
         items: [], // passing empty items as backend doesn't require updating items during header update
       });
-      toast.success("تم التحديث بنجاح");
+      toast.success(t("purchases:editDialog.updatedSuccess"));
       onUpdate();
       onClose();
     } catch (error) {
       console.error("Failed to update purchase", error);
-      toast.error("فشل التحديث", {
+      toast.error(t("purchases:editDialog.updateFailed"), {
         description: purchaseService.getErrorMessage(error),
       });
     } finally {
@@ -155,11 +157,11 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
-      <DialogContent className="max-w-2xl" dir="rtl">
+      <DialogContent className="max-w-2xl" dir={i18n.dir()}>
         <DialogHeader>
-          <DialogTitle>تعديل تفاصيل الشراء</DialogTitle>
+          <DialogTitle>{t("purchases:editDialog.title")}</DialogTitle>
           <DialogDescription>
-            يمكنك تعديل المورد، التاريخ، رقم المرجع، أو الحالة هنا.
+            {t("purchases:editDialog.description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -173,7 +175,7 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>
-                      اختر المورد <span className="text-red-500">*</span>
+                      {t("purchases:editDialog.chooseSupplierRequired")} <span className="text-red-500">*</span>
                     </FormLabel>
                     <Popover
                       open={supplierPopoverOpen}
@@ -195,7 +197,7 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
                           >
                             {selectedSupplier
                               ? selectedSupplier.name
-                              : "اختر مورد"}
+                              : t("purchases:editDialog.chooseSupplierPlaceholder")}
                             <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </FormControl>
@@ -206,14 +208,14 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
                       >
                         <Command shouldFilter={false}>
                           <CommandInput
-                            placeholder="ابحث عن المورد"
+                            placeholder={t("purchases:editDialog.searchForSupplier")}
                             value={supplierSearchInput}
                             onValueChange={setSupplierSearchInput}
                           />
                           <CommandList>
                             {filteredSuppliers.length === 0 &&
                               supplierSearchInput && (
-                                <CommandEmpty>لا توجد نتائج</CommandEmpty>
+                                <CommandEmpty>{t("purchases:editDialog.noResults")}</CommandEmpty>
                               )}
                             <CommandGroup>
                               {filteredSuppliers.map((supplier) => (
@@ -254,7 +256,7 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
                 render={({ field }) => (
                   <FormItem className="flex flex-col justify-end gap-2 pb-[1px]">
                     <FormLabel>
-                      تاريخ الشراء <span className="text-red-500">*</span>
+                      {t("purchases:editDialog.purchaseDateRequired")} <span className="text-red-500">*</span>
                     </FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
@@ -271,7 +273,7 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
                             {field.value ? (
                               format(field.value, "PPP")
                             ) : (
-                              <span>اختر التاريخ</span>
+                              <span>{t("purchases:editDialog.chooseDate")}</span>
                             )}
                           </Button>
                         </FormControl>
@@ -301,10 +303,10 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
                 name="reference_number"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>رقم المرجع</FormLabel>
+                    <FormLabel>{t("purchases:editDialog.referenceNumber")}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="أدخل رقم المرجع"
+                        placeholder={t("purchases:editDialog.enterReferenceNumber")}
                         {...field}
                         value={field.value ?? ""}
                         disabled={isSubmitting}
@@ -322,7 +324,7 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
                 render={({ field, fieldState }) => (
                   <FormItem>
                     <FormLabel>
-                      الحالة <span className="text-red-500">*</span>
+                      {t("purchases:editDialog.statusRequired")} <span className="text-red-500">*</span>
                     </FormLabel>
                     <FormControl>
                       <Autocomplete
@@ -340,7 +342,7 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
                         renderInput={(params) => (
                           <TextField
                             {...params}
-                            placeholder="اختر الحالة"
+                            placeholder={t("purchases:editDialog.chooseStatus")}
                             error={!!fieldState.error}
                             helperText={fieldState.error?.message || ""}
                           />
@@ -358,10 +360,10 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
                 name="notes"
                 render={({ field }) => (
                   <FormItem className="md:col-span-2">
-                    <FormLabel>ملاحظات</FormLabel>
+                    <FormLabel>{t("purchases:editDialog.notes")}</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="أدخل الملاحظات"
+                        placeholder={t("purchases:editDialog.enterNotes")}
                         className="resize-y min-h-[60px]"
                         {...field}
                         value={field.value ?? ""}
@@ -381,16 +383,16 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
                 onClick={onClose}
                 disabled={isSubmitting}
               >
-                إلغاء
+                {t("common:cancel")}
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    جاري الحفظ...
+                    {t("purchases:editDialog.savingEllipsis")}
                   </>
                 ) : (
-                  "حفظ التغييرات"
+                  t("purchases:editDialog.saveChanges")
                 )}
               </Button>
             </DialogFooter>

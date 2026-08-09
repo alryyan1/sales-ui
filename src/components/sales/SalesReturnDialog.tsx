@@ -36,6 +36,7 @@ import saleReturnService, {
 import saleService, { Sale, SaleItem } from "@/services/saleService";
 import { toast } from "sonner";
 import { PastSalesSearchDialog } from "./PastSalesSearchDialog";
+import { useTranslation } from "react-i18next";
 
 interface SalesReturnDialogProps {
   open: boolean;
@@ -55,6 +56,7 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
   onClose,
   shiftId,
 }) => {
+  const { t } = useTranslation(["sales", "common"]);
   const [saleIdInput, setSaleIdInput] = useState("");
   const [fetchedSale, setFetchedSale] = useState<Sale | null>(null);
   const [saleLoadError, setSaleLoadError] = useState<string | null>(null);
@@ -73,7 +75,7 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
 
   const performSearchSale = async (id: number) => {
     if (!id || !Number.isFinite(id)) {
-      setSaleLoadError("أدخل رقم فاتورة صحيح");
+      setSaleLoadError(t("sales:returnDialog.enterValidInvoiceNumber"));
       return;
     }
     setSaleLoadError(null);
@@ -83,14 +85,14 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
       const dueAmount = Number(sale.due_amount) || 0;
       if (dueAmount > 0.01) {
         setFetchedSale(null);
-        setSaleLoadError("لا يمكن إرجاع أصناف من فاتورة غير مسددة بالكامل.");
+        setSaleLoadError(t("sales:returnDialog.cannotReturnUnpaidInvoice"));
         return;
       }
       setFetchedSale(sale);
       setSelectedReturns({});
     } catch {
       setFetchedSale(null);
-      setSaleLoadError("لا توجد فاتورة بهذا الرقم");
+      setSaleLoadError(t("sales:returnDialog.invoiceNotFoundByNumber"));
     } finally {
       setSaleLoading(false);
     }
@@ -134,10 +136,10 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
   );
 
   const handleSubmit = async () => {
-    if (!fetchedSale) { toast.error("ابحث عن الفاتورة أولاً"); return; }
-    if (selectedList.length === 0) { toast.error("اختر صنفاً واحداً على الأقل للإرجاع"); return; }
-    if (!phoneNumber.trim()) { toast.error("رقم الهاتف مطلوب"); return; }
-    if (!reason.trim()) { toast.error("سبب المردود مطلوب"); return; }
+    if (!fetchedSale) { toast.error(t("sales:returnDialog.searchInvoiceFirst")); return; }
+    if (selectedList.length === 0) { toast.error(t("sales:returnDialog.selectAtLeastOneItem")); return; }
+    if (!phoneNumber.trim()) { toast.error(t("sales:returnDialog.phoneNumberRequired")); return; }
+    if (!reason.trim()) { toast.error(t("sales:returnDialog.returnReasonRequired")); return; }
 
     const items: SimpleSaleReturnItemInput[] = selectedList.map((r) => ({
       product_id: r.product_id,
@@ -155,7 +157,7 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
     try {
       setSubmitting(true);
       await saleReturnService.createSaleReturn(payload);
-      toast.success("تم إنشاء مردود المبيعات بنجاح");
+      toast.success(t("sales:returnDialog.createReturnSuccess"));
       setFetchedSale(null);
       setSaleIdInput("");
       setSelectedReturns({});
@@ -165,7 +167,7 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
     } catch (err: unknown) {
       const friendly =
         (err as { friendlyMessage?: string })?.friendlyMessage ||
-        "فشل إنشاء مردود المبيعات. حاول مرة أخرى.";
+        t("sales:returnDialog.createReturnFailed");
       toast.error(friendly);
     } finally {
       setSubmitting(false);
@@ -205,7 +207,7 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
         }}>
           <RotateCcw size={18} />
           <Typography variant="subtitle1" fontWeight={700} sx={{ flex: 1 }}>
-            إنشاء مردود مبيعات
+            {t("sales:returnDialog.title")}
           </Typography>
           <IconButton size="small" onClick={handleDialogClose} disabled={submitting}>
             <X size={16} />
@@ -218,13 +220,13 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
           <Box sx={{ px: 2.5, py: 2, borderBottom: 1, borderColor: "divider" }}>
             <Typography variant="caption" color="text.secondary" fontWeight={600}
               sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 1.5, textTransform: "uppercase", letterSpacing: 0.5 }}>
-              <FileText size={12} /> البحث عن الفاتورة
+              <FileText size={12} /> {t("sales:returnDialog.searchInvoiceLabel")}
             </Typography>
 
             <Stack direction="row" gap={1}>
               <TextField
                 size="small"
-                placeholder="رقم الفاتورة..."
+                placeholder={t("sales:returnDialog.invoiceNumberPlaceholder")}
                 value={saleIdInput}
                 onChange={(e) => { setSaleIdInput(e.target.value); setSaleLoadError(null); }}
                 onKeyDown={(e) => e.key === "Enter" && handleSearchSale()}
@@ -240,12 +242,12 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
               <Button variant="contained" size="small" onClick={handleSearchSale}
                 disabled={saleLoading || !saleIdInput.trim()}
                 sx={{ textTransform: "none", minWidth: 72 }}>
-                {saleLoading ? <CircularProgress size={14} color="inherit" /> : "بحث"}
+                {saleLoading ? <CircularProgress size={14} color="inherit" /> : t("sales:returnDialog.searchButton")}
               </Button>
               <Button variant="outlined" size="small" onClick={() => setPastSalesDialogOpen(true)}
                 startIcon={<History size={14} />}
                 sx={{ textTransform: "none", "& .MuiButton-startIcon": { ml: "4px" } }}>
-                سابقة
+                {t("sales:returnDialog.pastButton")}
               </Button>
             </Stack>
 
@@ -265,16 +267,16 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
                 <CheckCircle2 size={15} color="var(--mui-palette-success-main)" />
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography variant="body2" fontWeight={600} fontSize="0.8rem">
-                    فاتورة #{fetchedSale.id}
+                    {t("sales:returnDialog.invoiceHash", { id: fetchedSale.id })}
                     {fetchedSale.client_name && ` — ${fetchedSale.client_name}`}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {fetchedSale.sale_date} · إجمالي: {Number(fetchedSale.total_amount ?? 0).toFixed(2)}
+                    {fetchedSale.sale_date} · {t("sales:returnDialog.totalColon", { amount: Number(fetchedSale.total_amount ?? 0).toFixed(2) })}
                   </Typography>
                 </Box>
                 <Button size="small" color="inherit" onClick={resetSaleSection}
                   sx={{ textTransform: "none", fontSize: "0.72rem", minWidth: 0, px: 1 }}>
-                  تغيير
+                  {t("sales:returnDialog.changeButton")}
                 </Button>
               </Box>
             )}
@@ -286,10 +288,10 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
               <Box sx={{ px: 2.5, pt: 1.5, pb: 1, display: "flex", alignItems: "center", gap: 1 }}>
                 <Typography variant="caption" color="text.secondary" fontWeight={600}
                   sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}>
-                  الأصناف المراد إرجاعها
+                  {t("sales:returnDialog.itemsToReturnLabel")}
                 </Typography>
                 {selectedList.length > 0 && (
-                  <Chip label={`${selectedList.length} أصناف`} size="small" color="primary"
+                  <Chip label={t("sales:returnDialog.itemsCountChip", { count: selectedList.length })} size="small" color="primary"
                     sx={{ height: 18, fontSize: "0.68rem" }} />
                 )}
               </Box>
@@ -329,16 +331,16 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
                           {item.product?.name ?? item.product_name ?? `#${pid}`}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          الكمية: {maxQty}
-                          {returnedQty > 0 && ` (مرتجع سابقاً: ${returnedQty})`}
-                          &nbsp;·&nbsp;{price.toFixed(2)} / وحدة
+                          {t("sales:returnDialog.quantityColon", { qty: maxQty })}
+                          {returnedQty > 0 && t("sales:returnDialog.returnedPreviously", { qty: returnedQty })}
+                          &nbsp;·&nbsp;{price.toFixed(2)}{t("sales:returnDialog.perUnit")}
                         </Typography>
                       </Box>
                       {selected && (
                         <TextField
                           size="small"
                           type="number"
-                          label="الكمية"
+                          label={t("sales:returnDialog.quantityLabel")}
                           value={selected.returnQuantity}
                           onChange={(e) => setReturnQuantity(pid, Number(e.target.value) || 0)}
                           onClick={(e) => e.stopPropagation()}
@@ -358,7 +360,7 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
                   borderTop: 1, borderColor: "divider",
                   display: "flex", justifyContent: "space-between", alignItems: "center",
                 }}>
-                  <Typography variant="caption" color="text.secondary">إجمالي المردود</Typography>
+                  <Typography variant="caption" color="text.secondary">{t("sales:returnDialog.totalReturnedLabel")}</Typography>
                   <Typography variant="subtitle2" fontWeight={700} color="error.main" dir="ltr">
                     {totalReturnedAmount.toFixed(2)}
                   </Typography>
@@ -372,18 +374,18 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
             <Box sx={{ px: 2.5, py: 2 }}>
               <Typography variant="caption" color="text.secondary" fontWeight={600}
                 sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1.5 }}>
-                تفاصيل المردود
+                {t("sales:returnDialog.detailsLabel")}
               </Typography>
 
               <Stack spacing={1.5}>
                 <Stack direction="row" gap={1.5}>
                   <TextField
                     size="small"
-                    label="رقم الهاتف"
+                    label={t("sales:returnDialog.phoneNumberLabel")}
                     value={phoneNumber}
                     required
                     onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="رقم هاتف العميل"
+                    placeholder={t("sales:returnDialog.clientPhonePlaceholder")}
                     sx={{ flex: 1 }}
                     InputProps={{
                       startAdornment: (
@@ -392,10 +394,10 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
                     }}
                   />
                   <FormControl size="small" sx={{ flex: 1 }}>
-                    <InputLabel>طريقة السداد</InputLabel>
+                    <InputLabel>{t("sales:returnDialog.paymentMethodLabel")}</InputLabel>
                     <Select
                       value={paymentMethod}
-                      label="طريقة السداد"
+                      label={t("sales:returnDialog.paymentMethodLabel")}
                       onChange={(e) => setPaymentMethod(e.target.value as typeof paymentMethod)}
                       startAdornment={
                         <InputAdornment position="start" sx={{ pl: 1 }}>
@@ -403,19 +405,19 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
                         </InputAdornment>
                       }
                     >
-                      <MenuItem value="cash">نقدي</MenuItem>
-                      <MenuItem value="bank_transfer">تحويل بنكي</MenuItem>
-                      <MenuItem value="visa">فيزا</MenuItem>
-                      <MenuItem value="other">أخرى</MenuItem>
+                      <MenuItem value="cash">{t("sales:returnDialog.methodLabels.cash")}</MenuItem>
+                      <MenuItem value="bank_transfer">{t("sales:returnDialog.methodLabels.bank_transfer")}</MenuItem>
+                      <MenuItem value="visa">{t("sales:returnDialog.methodLabels.visa")}</MenuItem>
+                      <MenuItem value="other">{t("sales:returnDialog.methodLabels.other")}</MenuItem>
                     </Select>
                   </FormControl>
                 </Stack>
 
                 <FormControl size="small" fullWidth required>
-                  <InputLabel>سبب الإرجاع</InputLabel>
+                  <InputLabel>{t("sales:returnDialog.returnReasonSelectLabel")}</InputLabel>
                   <Select
                     value={reason}
-                    label="سبب الإرجاع"
+                    label={t("sales:returnDialog.returnReasonSelectLabel")}
                     onChange={(e) => setReason(e.target.value)}
                     startAdornment={
                       <InputAdornment position="start" sx={{ pl: 1 }}>
@@ -423,11 +425,11 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
                       </InputAdornment>
                     }
                   >
-                    <MenuItem value="خطأ تقني / في السيستم">خطأ تقني / في السيستم</MenuItem>
-                    <MenuItem value="إلغاء من العميل">إلغاء من العميل</MenuItem>
-                    <MenuItem value="تالف / معيب">تالف / معيب</MenuItem>
-                    <MenuItem value="خطأ في الطلب">خطأ في الطلب / صنف خاطئ</MenuItem>
-                    <MenuItem value="أخرى">أخرى</MenuItem>
+                    <MenuItem value="خطأ تقني / في السيستم">{t("sales:returnDialog.reasonOptions.technicalError")}</MenuItem>
+                    <MenuItem value="إلغاء من العميل">{t("sales:returnDialog.reasonOptions.clientCancelled")}</MenuItem>
+                    <MenuItem value="تالف / معيب">{t("sales:returnDialog.reasonOptions.damagedDefective")}</MenuItem>
+                    <MenuItem value="خطأ في الطلب">{t("sales:returnDialog.reasonOptions.wrongOrder")}</MenuItem>
+                    <MenuItem value="أخرى">{t("sales:returnDialog.reasonOptions.other")}</MenuItem>
                   </Select>
                 </FormControl>
               </Stack>
@@ -444,7 +446,7 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
         }}>
           <Button onClick={handleDialogClose} disabled={submitting} color="inherit"
             size="small" sx={{ textTransform: "none" }}>
-            إلغاء
+            {t("common:cancel")}
           </Button>
           <Button
             onClick={handleSubmit}
@@ -454,7 +456,7 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
             startIcon={submitting ? <CircularProgress size={13} color="inherit" /> : <RotateCcw size={14} />}
             sx={{ textTransform: "none", "& .MuiButton-startIcon": { ml: "6px" } }}
           >
-            {submitting ? "جاري الحفظ..." : "تأكيد المردود"}
+            {submitting ? t("sales:returnDialog.savingEllipsis") : t("sales:returnDialog.confirmReturnButton")}
           </Button>
         </Box>
       </Dialog>

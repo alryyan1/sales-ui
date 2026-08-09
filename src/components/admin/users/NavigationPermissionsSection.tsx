@@ -1,5 +1,6 @@
 // src/components/admin/users/NavigationPermissionsSection.tsx
 import React, { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   CheckSquare,
   Square,
@@ -7,7 +8,7 @@ import {
   ChevronUp,
   Info,
 } from "lucide-react";
-import { navItems } from "@/components/layouts/navItems";
+import { getNavItems } from "@/components/layouts/navItems";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -39,6 +40,7 @@ interface NavigationPermissionsSectionProps {
 const NavigationPermissionsSection: React.FC<
   NavigationPermissionsSectionProps
 > = ({ value: rawValue, onChange, isSuperadmin = false }) => {
+  const { t } = useTranslation(["navigation", "common"]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(),
   );
@@ -46,9 +48,10 @@ const NavigationPermissionsSection: React.FC<
   // Build navigation structure from navItems.ts
   const buildNavStructure = (): NavigationCategory[] => {
     const categories: Record<string, NavigationItem[]> = {};
+    const navItems = getNavItems(t);
 
     navItems.forEach((item) => {
-      const category = item.category || "غير مصنف";
+      const category = item.category || t("common:all");
 
       // Add parent item if it has a route (not just a parent)
       if (item.to !== "#" && item.to) {
@@ -81,10 +84,10 @@ const NavigationPermissionsSection: React.FC<
     }));
   };
 
-  // Navigation structure built from static navItems.ts (single source of truth)
+  // Navigation structure built from navItems.ts (single source of truth)
   const navigationStructure = useMemo<NavigationCategory[]>(
     () => buildNavStructure(),
-    [],
+    [t],
   );
 
   // Toggle category expansion
@@ -160,15 +163,14 @@ const NavigationPermissionsSection: React.FC<
         <Alert className="mb-4">
           <Info className="h-4 w-4" />
           <AlertDescription>
-            المستخدم لديه صلاحية الوصول الكاملة لجميع صفحات النظام (Superadmin)،
-            ولكن يمكنك تخصيص القائمة الجانبية له.
+            {t("navigation:navPermissions.superadminNotice")}
           </AlertDescription>
         </Alert>
         {/* Render the normal content below the alert */}
         <div className="rounded-lg border p-4 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold">
-              تخصيص القائمة الجانبية المسموحة
+              {t("navigation:navPermissions.customizeSidebarTitle")}
             </h3>
             <Button
               type="button"
@@ -180,19 +182,19 @@ const NavigationPermissionsSection: React.FC<
               {isAllSelected ? (
                 <>
                   <CheckSquare className="mr-2 h-4 w-4" />
-                  إلغاء تحديد الكل
+                  {t("navigation:navPermissions.deselectAll")}
                 </>
               ) : (
                 <>
                   <Square className="mr-2 h-4 w-4" />
-                  تحديد الكل
+                  {t("navigation:navPermissions.selectAll")}
                 </>
               )}
             </Button>
           </div>
 
           <p className="text-sm text-muted-foreground">
-            اختر الصفحات التي تود إظهارها في القائمة الجانبية لهذا المستخدم.
+            {t("navigation:navPermissions.selectPagesToShowHint")}
           </p>
 
           <Separator />
@@ -233,7 +235,7 @@ const NavigationPermissionsSection: React.FC<
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground">
-                        ({category.items.length} صفحة)
+                        {t("navigation:navPermissions.pageCount", { count: category.items.length })}
                       </span>
                       <CollapsibleTrigger asChild>
                         <Button
@@ -295,7 +297,7 @@ const NavigationPermissionsSection: React.FC<
           {value.length > 0 && (
             <div className="pt-2">
               <p className="text-xs text-muted-foreground">
-                تم تحديد {value.length} من {allRoutes.length} صفحة
+                {t("navigation:navPermissions.selectedCountSummary", { selected: value.length, total: allRoutes.length })}
               </p>
             </div>
           )}
@@ -307,7 +309,7 @@ const NavigationPermissionsSection: React.FC<
   return (
     <div className="rounded-lg border p-4 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">صلاحيات الوصول للصفحات</h3>
+        <h3 className="text-sm font-semibold">{t("navigation:navPermissions.pageAccessPermissions")}</h3>
         <Button
           type="button"
           variant="outline"
@@ -318,20 +320,19 @@ const NavigationPermissionsSection: React.FC<
           {isAllSelected ? (
             <>
               <CheckSquare className="mr-2 h-4 w-4" />
-              إلغاء تحديد الكل
+              {t("navigation:navPermissions.deselectAll")}
             </>
           ) : (
             <>
               <Square className="mr-2 h-4 w-4" />
-              تحديد الكل
+              {t("navigation:navPermissions.selectAll")}
             </>
           )}
         </Button>
       </div>
 
       <p className="text-sm text-muted-foreground">
-        اختر الصفحات التي يمكن للمستخدم الوصول إليها. سيتم إخفاء الصفحات غير
-        المحددة من القائمة الجانبية.
+        {t("navigation:navPermissions.selectPagesAccessHint")}
       </p>
 
       <Separator />
@@ -372,7 +373,7 @@ const NavigationPermissionsSection: React.FC<
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">
-                    ({category.items.length} صفحة)
+                    {t("navigation:navPermissions.pageCount", { count: category.items.length })}
                   </span>
                   <CollapsibleTrigger asChild>
                     <Button
@@ -432,7 +433,7 @@ const NavigationPermissionsSection: React.FC<
       {value.length > 0 && (
         <div className="pt-2">
           <p className="text-xs text-muted-foreground">
-            تم تحديد {value.length} من {allRoutes.length} صفحة
+            {t("navigation:navPermissions.selectedCountSummary", { selected: value.length, total: allRoutes.length })}
           </p>
         </div>
       )}

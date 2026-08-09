@@ -12,6 +12,7 @@ import { AppSettings } from "@/services/settingService";
 import { formatNumber } from "@/constants";
 import { format } from "date-fns";
 import { getPdfFont } from "@/utils/pdfFontRegistry";
+import { useTranslation } from "react-i18next";
 
 // ── Color palette ────────────────────────────────────────────────────────────
 const C = {
@@ -225,6 +226,7 @@ interface Props {
 }
 
 export const SupplierSummaryLedgerPdf: React.FC<Props> = ({ suppliers, settings }) => {
+  const { t } = useTranslation(["reports"]);
   const currency = settings?.currency_symbol || "OMR";
   const fmt = (n: number) => `${formatNumber(n)} ${currency}`;
 
@@ -281,17 +283,17 @@ export const SupplierSummaryLedgerPdf: React.FC<Props> = ({ suppliers, settings 
             )}
             <View style={styles.companyInfo}>
               <Text style={styles.companyName}>
-                {settings?.company_name || "اسم الشركة"}
+                {settings?.company_name || t("reports:supplierSummaryPdf.defaultCompanyName")}
               </Text>
               {settings?.company_address && (
                 <Text style={styles.companyDetail}>{settings.company_address}</Text>
               )}
               {settings?.company_phone && (
-                <Text style={styles.companyDetail}>هاتف: {settings.company_phone}</Text>
+                <Text style={styles.companyDetail}>{t("reports:supplierSummaryPdf.phoneLabel")} {settings.company_phone}</Text>
               )}
               {settings?.tax_number && (
                 <Text style={styles.companyDetail}>
-                  الرقم الضريبي: {settings.tax_number}
+                  {t("reports:supplierSummaryPdf.taxNumberLabel")} {settings.tax_number}
                 </Text>
               )}
             </View>
@@ -300,15 +302,15 @@ export const SupplierSummaryLedgerPdf: React.FC<Props> = ({ suppliers, settings 
 
         {/* ── Title Block ── */}
         <View style={styles.titleBlock}>
-          <Text style={styles.title}>كشف حساب الموردين</Text>
+          <Text style={styles.title}>{t("reports:supplierSummaryPdf.title")}</Text>
           <View style={styles.titleMeta}>
             <View style={styles.titleMetaRow}>
               <Text style={styles.metaValue}>{printDate}</Text>
-              <Text style={styles.metaLabel}>  تاريخ الطباعة:</Text>
+              <Text style={styles.metaLabel}>{t("reports:supplierSummaryPdf.printDateLabel")}</Text>
             </View>
             <View style={styles.titleMetaRow}>
               <Text style={styles.metaValue}>{suppliers.length}</Text>
-              <Text style={styles.metaLabel}>  عدد الموردين:</Text>
+              <Text style={styles.metaLabel}>{t("reports:supplierSummaryPdf.suppliersCountLabel")}</Text>
             </View>
           </View>
         </View>
@@ -316,15 +318,15 @@ export const SupplierSummaryLedgerPdf: React.FC<Props> = ({ suppliers, settings 
         {/* ── Summary Cards ── */}
         <View style={styles.cardsRow}>
           <View style={[styles.card, { borderColor: "#fecaca" }]}>
-            <Text style={styles.cardLabel}>إجمالي المدين</Text>
+            <Text style={styles.cardLabel}>{t("reports:supplierSummaryPdf.totalDebit")}</Text>
             <Text style={[styles.cardValue, { color: C.red }]}>{fmt(totals.debit)}</Text>
           </View>
           <View style={[styles.card, { borderColor: "#bbf7d0" }]}>
-            <Text style={styles.cardLabel}>إجمالي الدائن</Text>
+            <Text style={styles.cardLabel}>{t("reports:supplierSummaryPdf.totalCredit")}</Text>
             <Text style={[styles.cardValue, { color: C.green }]}>{fmt(totals.credit)}</Text>
           </View>
           <View style={[styles.card, { borderColor: "#bfdbfe" }]}>
-            <Text style={styles.cardLabel}>صافي الرصيد</Text>
+            <Text style={styles.cardLabel}>{t("reports:supplierSummaryPdf.netBalance")}</Text>
             <Text
               style={[
                 styles.cardValue,
@@ -340,11 +342,11 @@ export const SupplierSummaryLedgerPdf: React.FC<Props> = ({ suppliers, settings 
         <View style={styles.table}>
           {/* Header */}
           <View style={styles.tableHead} fixed>
-            <Text style={[styles.headText, styles.thBal]}>الرصيد</Text>
-            <Text style={[styles.headText, styles.thCredit]}>الدائن</Text>
-            <Text style={[styles.headText, styles.thDebit]}>المدين</Text>
-            <Text style={[styles.headText, styles.thName]}>المورد</Text>
-            <Text style={[styles.headText, styles.thNo]}>#</Text>
+            <Text style={[styles.headText, styles.thBal]}>{t("reports:supplierSummaryPdf.colBalance")}</Text>
+            <Text style={[styles.headText, styles.thCredit]}>{t("reports:supplierSummaryPdf.colCredit")}</Text>
+            <Text style={[styles.headText, styles.thDebit]}>{t("reports:supplierSummaryPdf.colDebit")}</Text>
+            <Text style={[styles.headText, styles.thName]}>{t("reports:supplierSummaryPdf.colSupplier")}</Text>
+            <Text style={[styles.headText, styles.thNo]}>{t("reports:supplierSummaryPdf.colNumber")}</Text>
           </View>
 
           {/* Rows */}
@@ -400,7 +402,7 @@ export const SupplierSummaryLedgerPdf: React.FC<Props> = ({ suppliers, settings 
             <Text style={[styles.cellNum, { fontWeight: "bold", fontSize: 9.5, color: C.red }]}>
               {fmt(totals.debit)}
             </Text>
-            <Text style={[styles.totalLabel]}>الإجمالي</Text>
+            <Text style={[styles.totalLabel]}>{t("reports:supplierSummaryPdf.total")}</Text>
             <Text style={[styles.cellNo]} />
           </View>
         </View>
@@ -408,12 +410,12 @@ export const SupplierSummaryLedgerPdf: React.FC<Props> = ({ suppliers, settings 
         {/* ── Footer ── */}
         <View style={styles.footer} fixed>
           <Text style={styles.footerText}>
-            {settings?.company_name || "نظام إدارة المبيعات"} · طُبع: {printDate}
+            {settings?.company_name || t("reports:supplierSummaryPdf.defaultCompanyFallback")} {t("reports:supplierSummaryPdf.printedLabel")} {printDate}
           </Text>
           <Text
             style={styles.footerText}
             render={({ pageNumber, totalPages }) =>
-              `صفحة ${pageNumber} / ${totalPages}`
+              t("reports:supplierSummaryPdf.pageLabel", { page: pageNumber, total: totalPages })
             }
           />
         </View>

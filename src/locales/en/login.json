@@ -1,10 +1,24 @@
 {
     "title": "Login",
     "emailLabel": "Email",
+    "usernameLabel": "Username",
+    "usernamePlaceholder": "Enter your username",
     "passwordLabel": "Password",
     "submitButton": "Login",
     "submitButtonLoading": "Logging in...",
+    "verifying": "Verifying...",
     "registerPrompt": "Don't have an account?",
     "registerLink": "Create new account",
-    "loginFailed": "Login failed. Please check your email and password."
-} 
+    "loginFailed": "Login failed. Please check your email and password.",
+    "loginFailedRetry": "Login failed. Please try again.",
+    "usernameRequired": "Username is required",
+    "passwordRequired": "Password is required",
+    "systemTitle": "Sales Management System",
+    "systemSubtitle": "An integrated solution to manage sales, inventory and reports efficiently and professionally",
+    "heading": "Login",
+    "subheading": "Enter your credentials to access your account",
+    "footerRights": "All rights reserved",
+    "feature1": "Comprehensive sales reports and accurate analytics",
+    "feature2": "Multi-warehouse inventory management",
+    "feature3": "Multi-level permissions"
+}

@@ -10,6 +10,7 @@ import React, {
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 // MUI Components
 import { Box, Paper, Typography, CircularProgress } from "@mui/material";
@@ -34,6 +35,7 @@ import InventoryImpactDialog from "@/components/purchases/InventoryImpactDialog"
 import { webUrl } from "@/constants";
 
 const ManagePurchaseItemsPage: React.FC = () => {
+  const { t } = useTranslation(["purchases", "common"]);
   const { id: purchaseIdParam } = useParams<{ id: string }>();
   const purchaseId = purchaseIdParam ? Number(purchaseIdParam) : null;
   const navigate = useNavigate();
@@ -101,7 +103,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
       return await purchaseService.addPurchaseItem(purchaseId!, data);
     },
     onSuccess: () => {
-      toast.success("تم بنجاح", { description: "تمت إضافة الصنف بنجاح" });
+      toast.success(t("purchases:manageItems.successTitle"), { description: t("purchases:manageItems.itemAddedDesc") });
       // Invalidate queries instead of manual refetch for better performance
       queryClient.invalidateQueries({ queryKey: ["purchase", purchaseId] });
       queryClient.invalidateQueries({
@@ -110,7 +112,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
       setAddItemDialogOpen(false);
     },
     onError: (error: unknown) => {
-      toast.error("خطأ", {
+      toast.error(t("common:error"), {
         description: purchaseService.getErrorMessage(error),
       });
     },
@@ -135,7 +137,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
       value: unknown;
     }) => {
       const currentItem = purchase?.items?.find((item) => item.id === itemId);
-      if (!currentItem) throw new Error("الصنف غير موجود");
+      if (!currentItem) throw new Error(t("purchases:manageItems.itemNotFound"));
 
       const updatedItemData = {
         product_id: currentItem.product_id,
@@ -171,7 +173,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
       );
     },
     onSuccess: (_data, variables) => {
-      toast.success("تم بنجاح", { description: "تم تحديث الصنف بنجاح" });
+      toast.success(t("purchases:manageItems.successTitle"), { description: t("purchases:manageItems.itemUpdatedDesc") });
 
       // Optimistically update the cache instead of refetching
       // Update the main purchase query cache
@@ -206,7 +208,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
       setUpdatingField(null); // Clear loading state
     },
     onError: (error: unknown) => {
-      toast.error("خطأ", {
+      toast.error(t("common:error"), {
         description: purchaseService.getErrorMessage(error),
       });
       setUpdatingField(null); // Clear loading state on error
@@ -218,14 +220,14 @@ const ManagePurchaseItemsPage: React.FC = () => {
       return await purchaseService.deletePurchaseItem(purchaseId!, itemId);
     },
     onSuccess: () => {
-      toast.success("تم بنجاح", { description: "تم حذف الصنف بنجاح" });
+      toast.success(t("purchases:manageItems.successTitle"), { description: t("purchases:manageItems.itemDeletedDesc") });
       queryClient.invalidateQueries({ queryKey: ["purchase", purchaseId] });
       queryClient.invalidateQueries({
         queryKey: ["purchaseItems", purchaseId],
       });
     },
     onError: (error: unknown) => {
-      toast.error("خطأ", {
+      toast.error(t("common:error"), {
         description: purchaseService.getErrorMessage(error),
       });
     },
@@ -237,14 +239,14 @@ const ManagePurchaseItemsPage: React.FC = () => {
       return response.added_count;
     },
     onSuccess: (count) => {
-      toast.success("تم بنجاح", { description: `تمت إضافة ${count} منتج` });
+      toast.success(t("purchases:manageItems.successTitle"), { description: t("purchases:manageItems.productsAddedDesc", { count }) });
       queryClient.invalidateQueries({ queryKey: ["purchase", purchaseId] });
       queryClient.invalidateQueries({
         queryKey: ["purchaseItems", purchaseId],
       });
     },
     onError: (error: unknown) => {
-      toast.error("خطأ", {
+      toast.error(t("common:error"), {
         description: purchaseService.getErrorMessage(error),
       });
     },
@@ -258,8 +260,8 @@ const ManagePurchaseItemsPage: React.FC = () => {
       return response.deleted_count;
     },
     onSuccess: (count) => {
-      toast.success("تم بنجاح", {
-        description: `تم حذف ${count} صنف بكمية صفر`,
+      toast.success(t("purchases:manageItems.successTitle"), {
+        description: t("purchases:manageItems.zeroQtyDeletedDesc", { count }),
       });
       queryClient.invalidateQueries({ queryKey: ["purchase", purchaseId] });
       queryClient.invalidateQueries({
@@ -267,7 +269,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
       });
     },
     onError: (error: unknown) => {
-      toast.error("خطأ", {
+      toast.error(t("common:error"), {
         description: purchaseService.getErrorMessage(error),
       });
     },
@@ -303,18 +305,18 @@ const ManagePurchaseItemsPage: React.FC = () => {
         // Changing TO received - stock will be ADDED
         const totalQuantity =
           purchase?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
-        inventoryMessage = `تم إضافة ${totalQuantity} وحدة إلى المخزون`;
+        inventoryMessage = t("purchases:manageItems.stockAddedMessage", { count: totalQuantity });
       } else if (previousStatus === "received" && newStatus !== "received") {
         // Changing FROM received - stock will be REMOVED
         const totalQuantity =
           purchase?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
-        inventoryMessage = `تم خصم ${totalQuantity} وحدة من المخزون`;
+        inventoryMessage = t("purchases:manageItems.stockRemovedMessage", { count: totalQuantity });
       } else {
         // No inventory impact (changing between pending/ordered)
-        inventoryMessage = "لم يتأثر المخزون";
+        inventoryMessage = t("purchases:manageItems.stockUnaffectedMessage");
       }
 
-      toast.success("تم تحديث حالة المشتريات", {
+      toast.success(t("purchases:manageItems.statusUpdatedTitle"), {
         description: inventoryMessage,
         duration: 5000,
       });
@@ -329,7 +331,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
       setPendingStatusChange(null);
     },
     onError: (error: unknown) => {
-      toast.error("خطأ", {
+      toast.error(t("common:error"), {
         description: purchaseService.getErrorMessage(error),
       });
       // Close the dialog on error
@@ -377,7 +379,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
 
   const handleItemDelete = useCallback(
     (itemId: number) => {
-      if (window.confirm("هل أنت متأكد من حذف هذا الصنف؟")) {
+      if (window.confirm(t("purchases:manageItems.confirmDeleteItem"))) {
         deleteItemMutation.mutate(itemId);
       }
     },
@@ -502,9 +504,9 @@ const ManagePurchaseItemsPage: React.FC = () => {
         <Paper sx={{ p: 4, textAlign: "center", maxWidth: 400 }}>
           <ErrorOutlineIcon color="error" sx={{ fontSize: 48, mb: 2 }} />
           <Typography variant="h6" color="error" gutterBottom>
-            خطأ
+            {t("common:error")}
           </Typography>
-          <Typography color="text.secondary">رقم المشتريات غير صالح</Typography>
+          <Typography color="text.secondary">{t("purchases:manageItems.invalidPurchaseNumber")}</Typography>
         </Paper>
       </Box>
     );
@@ -520,7 +522,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
         gap={2}
       >
         <CircularProgress />
-        <Typography>جاري التحميل...</Typography>
+        <Typography>{t("common:loading")}</Typography>
       </Box>
     );
   }
@@ -536,7 +538,7 @@ const ManagePurchaseItemsPage: React.FC = () => {
         <Paper sx={{ p: 4, textAlign: "center", maxWidth: 400 }}>
           <ErrorOutlineIcon color="error" sx={{ fontSize: 48, mb: 2 }} />
           <Typography variant="h6" color="error" gutterBottom>
-            خطأ
+            {t("common:error")}
           </Typography>
           <Typography color="text.secondary">
             {purchaseService.getErrorMessage(purchaseError)}

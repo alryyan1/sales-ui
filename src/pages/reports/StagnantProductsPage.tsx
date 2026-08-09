@@ -21,8 +21,10 @@ import {
 import { Loader2, PackageX, AlertCircle, Calendar } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import reportService from "@/services/reportService";
+import { useTranslation } from "react-i18next";
 
 const StagnantProductsPage: React.FC = () => {
+  const { t, i18n } = useTranslation(["reports"]);
   const [months, setMonths] = useState<number>(3);
   const [limit, setLimit] = useState<number>(20);
 
@@ -32,23 +34,23 @@ const StagnantProductsPage: React.FC = () => {
   });
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={i18n.dir()}>
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">المنتجات الراكدة</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t("reports:stagnantProductsPage.title")}</h1>
         <p className="text-muted-foreground mt-2">
-          عرض المنتجات التي تمتلك مخزونًا ولم تُبع خلال فترة زمنية محددة.
+          {t("reports:stagnantProductsPage.subtitle")}
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>فلاتر التقرير</CardTitle>
-          <CardDescription>تخصيص البيانات المعروضة في التقرير</CardDescription>
+          <CardTitle>{t("reports:stagnantProductsPage.reportFiltersTitle")}</CardTitle>
+          <CardDescription>{t("reports:stagnantProductsPage.reportFiltersDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 space-y-2">
-              <Label htmlFor="months">الفترة (بالأشهر)</Label>
+              <Label htmlFor="months">{t("reports:stagnantProductsPage.periodMonthsLabel")}</Label>
               <Input
                 id="months"
                 type="number"
@@ -59,7 +61,7 @@ const StagnantProductsPage: React.FC = () => {
               />
             </div>
             <div className="flex-1 space-y-2">
-              <Label htmlFor="limit">عدد المنتجات</Label>
+              <Label htmlFor="limit">{t("reports:stagnantProductsPage.productsCountLabel")}</Label>
               <Input
                 id="limit"
                 type="number"
@@ -78,42 +80,42 @@ const StagnantProductsPage: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <PackageX className="h-5 w-5 text-destructive" />
-            نتائج التقرير
+            {t("reports:stagnantProductsPage.reportResultsTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-10">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">جاري تحميل البيانات...</p>
+              <p className="text-muted-foreground">{t("reports:stagnantProductsPage.loadingData")}</p>
             </div>
           ) : isError ? (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>خطأ</AlertTitle>
+              <AlertTitle>{t("reports:stagnantProductsPage.errorTitle")}</AlertTitle>
               <AlertDescription>
-                حدث خطأ أثناء تحميل البيانات:{" "}
-                {error instanceof Error ? error.message : "خطأ غير معروف"}
+                {t("reports:stagnantProductsPage.errorLoadingData")}{" "}
+                {error instanceof Error ? error.message : t("reports:stagnantProductsPage.unknownError")}
               </AlertDescription>
             </Alert>
           ) : !data || data.length === 0 ? (
             <div className="text-center py-10 text-muted-foreground">
               <Calendar className="h-12 w-12 mx-auto mb-4 opacity-20" />
-              <p>ممتاز! لا توجد منتجات راكدة مطابقة لهذه الفترة.</p>
+              <p>{t("reports:stagnantProductsPage.noStagnantProducts")}</p>
             </div>
           ) : (
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-right">م</TableHead>
-                    <TableHead className="text-right">المنتج</TableHead>
-                    <TableHead className="text-right">التصنيف</TableHead>
+                    <TableHead className="text-right">{t("reports:stagnantProductsPage.colNumber")}</TableHead>
+                    <TableHead className="text-right">{t("reports:stagnantProductsPage.colProduct")}</TableHead>
+                    <TableHead className="text-right">{t("reports:stagnantProductsPage.colCategory")}</TableHead>
                     <TableHead className="text-right">
-                      المخزون المتكدس
+                      {t("reports:stagnantProductsPage.colStagnantStock")}
                     </TableHead>
                     <TableHead className="text-right">
-                      إجمالي المبيعات (تاريخياً)
+                      {t("reports:stagnantProductsPage.colTotalLifetimeSales")}
                     </TableHead>
                   </TableRow>
                 </TableHeader>

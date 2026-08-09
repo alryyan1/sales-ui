@@ -1,6 +1,7 @@
 // src/components/purchases/manage-items/PurchaseHeader.tsx
 import React from "react";
 import { ArrowLeft, Plus, Receipt, Building2, CalendarDays } from "lucide-react";
+import { useTranslation } from "react-i18next";
 // Shadcn UI Components
 import { Button } from "@/components/ui/button";
 import {
@@ -49,6 +50,7 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
   markupPercentage = 20,
   onMarkupChange,
 }) => {
+  const { t } = useTranslation(["purchases"]);
   const formatCurrency = useFormatCurrency();
 
   return (
@@ -68,7 +70,7 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
           <div>
             <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
               <Receipt className="h-5 w-5 text-blue-600" />
-              إدارة أصناف المشتريات
+              {t("purchases:manageItems.manageItemsHeaderTitle")}
               <span className="text-slate-400 font-normal">#{purchase.id}</span>
             </h1>
             <div className="flex items-center gap-2 text-slate-500 mt-1">
@@ -94,7 +96,7 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
                 {summary.totalItems}
               </span>
               <span className="text-[10px] opacity-80 font-medium">
-                عدد الأصناف
+                {t("purchases:manageItems.itemsCount")}
               </span>
             </div>
             <div className="bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg flex flex-col items-center min-w-[100px]">
@@ -102,7 +104,7 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
                 {formatCurrency(summary.totalCost)}
               </span>
               <span className="text-[10px] opacity-80 font-medium">
-                إجمالي التكلفة
+                {t("purchases:manageItems.totalCostLabel")}
               </span>
             </div>
           </div>
@@ -112,7 +114,7 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
             {/* Markup Percentage Input */}
             <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-md px-2 py-1 h-9">
               <span className="text-xs font-medium text-slate-500 whitespace-nowrap">
-                نسبة الربح %
+                {t("purchases:manageItems.markupPercent")}
               </span>
               <input
                 type="number"
@@ -145,12 +147,12 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
                     "bg-blue-50 text-blue-700 border-blue-200",
                 )}
               >
-                <SelectValue placeholder="الحالة" />
+                <SelectValue placeholder={t("purchases:manageItems.statusPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="pending">قيد الانتظار</SelectItem>
-                <SelectItem value="ordered">تم الطلب</SelectItem>
-                <SelectItem value="received">تم الاستلام</SelectItem>
+                <SelectItem value="pending">{t("purchases:status_pending")}</SelectItem>
+                <SelectItem value="ordered">{t("purchases:status_ordered")}</SelectItem>
+                <SelectItem value="received">{t("purchases:status_received")}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -164,12 +166,12 @@ const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
                   className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
                 >
                   <Plus className="h-4 w-4 ml-1.5" />
-                  إضافة صنف
+                  {t("purchases:manageItems.addItemButton")}
                 </Button>
               </>
             )}
 
-            <Button onClick={onExportPdf}>طباعه الفاتوره</Button>
+            <Button onClick={onExportPdf}>{t("purchases:manageItems.printInvoiceButton")}</Button>
 
             <Dialog
               open={summaryDialogOpen}

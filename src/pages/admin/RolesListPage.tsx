@@ -1,6 +1,7 @@
 // src/pages/admin/RolesListPage.tsx
 import React, { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 // MUI Components
 import {
@@ -48,6 +49,7 @@ import ConfirmationDialog from "../../components/common/ConfirmationDialog";
 import RoleFormModal from "@/components/admin/users/roles/RoleFormModal";
 
 const RolesListPage: React.FC = () => {
+  const { t, i18n } = useTranslation(["roles"]);
   // --- State ---
   const [rolesResponse, setRolesResponse] =
     useState<PaginatedResponse<RoleWithPermissions> | null>(null);
@@ -91,7 +93,7 @@ const RolesListPage: React.FC = () => {
       const data = await roleService.getPermissions();
       setAvailablePermissions(data);
     } catch (err) {
-      toast.error("خطأ في جلب الصلاحيات", {
+      toast.error(t("roles:listPage.fetchPermissionsErrorTitle"), {
         description: roleService.getErrorMessage(err),
       });
     } finally {
@@ -141,7 +143,7 @@ const RolesListPage: React.FC = () => {
     setIsDeleting(true);
     try {
       await roleService.deleteRole(roleToDeleteId);
-      toast.success("تم بنجاح", { description: "تم حذف الدور بنجاح" });
+      toast.success(t("roles:listPage.deleteSuccessTitle"), { description: t("roles:deleteSuccess") });
       closeConfirmDialog();
       // Refetch, potentially adjusting page
       if (rolesResponse && rolesResponse.data.length === 1 && currentPage > 1) {
@@ -150,7 +152,7 @@ const RolesListPage: React.FC = () => {
         fetchRoles(currentPage);
       }
     } catch (err) {
-      toast.error("خطأ", { description: roleService.getErrorMessage(err) });
+      toast.error(t("roles:errorTitle"), { description: roleService.getErrorMessage(err) });
       closeConfirmDialog();
     } finally {
       setIsDeleting(false);
@@ -166,7 +168,7 @@ const RolesListPage: React.FC = () => {
 
   // --- Render ---
   return (
-    <Container maxWidth="xl" dir="rtl" sx={{ py: 4, minHeight: "100vh" }}>
+    <Container maxWidth="xl" dir={i18n.dir()} sx={{ py: 4, minHeight: "100vh" }}>
       {/* Header & Add Button */}
       <Box
         sx={{
@@ -187,10 +189,10 @@ const RolesListPage: React.FC = () => {
             sx={{ display: "flex", alignItems: "center", gap: 1 }}
           >
             <ShieldCheck className="h-8 w-8 text-primary" />
-            إدارة الأدوار
+            {t("roles:listPage.pageTitle")}
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            إدارة أدوار المستخدمين وصلاحياتهم في النظام
+            {t("roles:listPage.pageSubtitle")}
           </Typography>
         </Box>
 
@@ -207,7 +209,7 @@ const RolesListPage: React.FC = () => {
             fontWeight: 600,
           }}
         >
-          إضافة دور جديد
+          {t("roles:listPage.addRoleButton")}
         </Button>
       </Box>
 
@@ -232,7 +234,7 @@ const RolesListPage: React.FC = () => {
           sx={{ mb: 3 }}
           icon={<AlertCircle className="h-4 w-4" />}
         >
-          <AlertTitle>خطأ</AlertTitle>
+          <AlertTitle>{t("roles:errorTitle")}</AlertTitle>
           {error}
         </Alert>
       )}
@@ -259,16 +261,16 @@ const RolesListPage: React.FC = () => {
                   <TableHead sx={{ bgcolor: "action.hover" }}>
                     <TableRow>
                       <TableCell sx={{ fontWeight: "bold",textAlign:'center' }}>
-                        اسم الدور
+                        {t("roles:listPage.columnRoleName")}
                       </TableCell>
                       <TableCell sx={{ fontWeight: "bold" ,textAlign:'center'}}>
-                        عدد الصلاحيات
+                        {t("roles:listPage.columnPermissionsCount")}
                       </TableCell>
                       <TableCell sx={{ fontWeight: "bold" ,textAlign:'center'}}>
-                        عدد المستخدمين
+                        {t("roles:listPage.columnUsersCount")}
                       </TableCell>
                       <TableCell align="center" sx={{ fontWeight: "bold",textAlign:'center' }}>
-                        إجراءات
+                        {t("roles:listPage.columnActions")}
                       </TableCell>
                     </TableRow>
                   </TableHead>
@@ -277,7 +279,7 @@ const RolesListPage: React.FC = () => {
                       <TableRow>
                         <TableCell colSpan={4} align="center" sx={{ py: 8 }}>
                           <Typography variant="body1" color="text.secondary">
-                            لا توجد أدوار متاحة حالياً
+                            {t("roles:listPage.noRolesAvailable")}
                           </Typography>
                         </TableCell>
                       </TableRow>
@@ -319,7 +321,7 @@ const RolesListPage: React.FC = () => {
                               </Box>
                               <Typography variant="body2" fontWeight={500}>
                                 {role.name === "admin"
-                                  ? "مدير النظام"
+                                  ? t("roles:admin")
                                   : role.name}
                               </Typography>
                             </Box>
@@ -349,7 +351,7 @@ const RolesListPage: React.FC = () => {
                                 variant="caption"
                                 color="text.secondary"
                               >
-                                صلاحية
+                                {t("roles:listPage.permissionUnitLabel")}
                               </Typography>
                             </Box>
                           </TableCell>
@@ -373,7 +375,7 @@ const RolesListPage: React.FC = () => {
                               spacing={1}
                               justifyContent="center"
                             >
-                              <Tooltip title="تعديل">
+                              <Tooltip title={t("roles:listPage.editTooltip")}>
                                 <span>
                                   <IconButton
                                     size="small"
@@ -394,7 +396,7 @@ const RolesListPage: React.FC = () => {
                               </Tooltip>
 
                               {role.name !== "admin" && (
-                                <Tooltip title="حذف">
+                                <Tooltip title={t("roles:listPage.deleteTooltip")}>
                                   <IconButton
                                     size="small"
                                     color="error"
@@ -454,10 +456,10 @@ const RolesListPage: React.FC = () => {
         open={isConfirmOpen}
         onClose={closeConfirmDialog}
         onConfirm={handleDeleteConfirm}
-        title="تأكيد الحذف"
-        message="هل أنت متأكد من حذف هذا الدور؟ هذا الإجراء لا يمكن التراجع عنه."
-        confirmText="حذف"
-        cancelText="إلغاء"
+        title={t("roles:listPage.deleteConfirmTitle")}
+        message={t("roles:listPage.deleteConfirmMessage")}
+        confirmText={t("roles:listPage.deleteButton")}
+        cancelText={t("roles:cancel")}
         isLoading={isDeleting}
       />
     </Container>

@@ -28,16 +28,17 @@ import {
 } from "@mui/icons-material";
 import { toast } from "sonner";
 import reportTemplateService, { ReportTemplate } from "@/services/reportTemplateService";
-
-const DEFAULT_CONTENT = `التاريخ: {{date}}
-
-السيد / السيدة:
-
-الموضوع: 
-
-نحيطكم علماً بأنه...`;
+import { useTranslation } from "react-i18next";
 
 const ReportTemplatesPage: React.FC = () => {
+  const { t, i18n } = useTranslation(["reports", "common"]);
+  const DEFAULT_CONTENT = `${t("reports:reportTemplatesPage.defaultContentDatePrefix")}{{date}}
+
+${t("reports:reportTemplatesPage.defaultContentGreeting")}
+
+${t("reports:reportTemplatesPage.defaultContentSubjectLabel")}
+
+${t("reports:reportTemplatesPage.defaultContentBody")}`;
   const [templates, setTemplates] = useState<ReportTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -58,7 +59,7 @@ const ReportTemplatesPage: React.FC = () => {
       const data = await reportTemplateService.getAll();
       setTemplates(data);
     } catch (error) {
-      toast.error("فشل تحميل نماذج التقارير");
+      toast.error(t("reports:reportTemplatesPage.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -86,7 +87,7 @@ const ReportTemplatesPage: React.FC = () => {
 
   const handleSaveTemplate = async () => {
     if (!formState.name.trim() || !formState.content.trim()) {
-      toast.error("يرجى إدخال اسم المحتوى والنص.");
+      toast.error(t("reports:reportTemplatesPage.nameAndContentRequired"));
       return;
     }
 
@@ -99,7 +100,7 @@ const ReportTemplatesPage: React.FC = () => {
         footer_text: formState.footerText,
       });
         setTemplates((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-        toast.success("تم تحديث النموذج بنجاح");
+        toast.success(t("reports:reportTemplatesPage.updateSuccess"));
       } else {
         const created = await reportTemplateService.create({
         name: formState.name,
@@ -107,26 +108,26 @@ const ReportTemplatesPage: React.FC = () => {
         footer_text: formState.footerText,
       });
         setTemplates((prev) => [created, ...prev]);
-        toast.success("تم إنشاء النموذج بنجاح");
+        toast.success(t("reports:reportTemplatesPage.createSuccess"));
       }
       setDialogOpen(false);
     } catch (error) {
-      toast.error("فشل حفظ النموذج");
+      toast.error(t("reports:reportTemplatesPage.saveFailed"));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteTemplate = async (template: ReportTemplate) => {
-    if (!window.confirm("هل متأكد من حذف هذا النموذج؟")) {
+    if (!window.confirm(t("reports:reportTemplatesPage.confirmDelete"))) {
       return;
     }
     try {
       await reportTemplateService.remove(template.id);
       setTemplates((prev) => prev.filter((item) => item.id !== template.id));
-      toast.success("تم حذف النموذج");
+      toast.success(t("reports:reportTemplatesPage.deleteSuccess"));
     } catch (error) {
-      toast.error("فشل حذف النموذج");
+      toast.error(t("reports:reportTemplatesPage.deleteFailed"));
     }
   };
 
@@ -134,23 +135,23 @@ const ReportTemplatesPage: React.FC = () => {
     try {
       await reportTemplateService.downloadPdf(template.id, dateValue);
     } catch (error) {
-      toast.error("فشل طباعة النموذج");
+      toast.error(t("reports:reportTemplatesPage.printFailed"));
     }
   };
 
   return (
-    <Stack spacing={3} dir="rtl">
+    <Stack spacing={3} dir={i18n.dir()}>
       <Box display="flex" justifyContent="space-between" alignItems="center">
         <Box>
           <Typography variant="h5" fontWeight={700} gutterBottom>
-            نماذج التقارير الجاهزة
+            {t("reports:reportTemplatesPage.title")}
           </Typography>
           <Typography color="text.secondary">
-            أنشئ نموذج تقرير جديد، حرر المحتوى، واختر التاريخ لطباعة ملف PDF.
+            {t("reports:reportTemplatesPage.subtitle")}
           </Typography>
         </Box>
         <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
-          إنشاء نموذج جديد
+          {t("reports:reportTemplatesPage.createNewButton")}
         </Button>
       </Box>
 
@@ -158,7 +159,7 @@ const ReportTemplatesPage: React.FC = () => {
         <Stack spacing={2}>
           <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
             <TextField
-              label="تاريخ الطباعة"
+              label={t("reports:reportTemplatesPage.printDateLabel")}
               type="date"
               value={dateValue}
               onChange={(e) => setDateValue(e.target.value)}
@@ -173,36 +174,36 @@ const ReportTemplatesPage: React.FC = () => {
             </Box>
           ) : templates.length === 0 ? (
             <Box textAlign="center" py={6}>
-              <Typography color="text.secondary">لا يوجد نماذج محفوظة بعد.</Typography>
+              <Typography color="text.secondary">{t("reports:reportTemplatesPage.noTemplatesSaved")}</Typography>
             </Box>
           ) : (
             <TableContainer>
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>اسم النموذج</TableCell>
-                    <TableCell>آخر تعديل</TableCell>
-                    <TableCell align="center">الإجراءات</TableCell>
+                    <TableCell>{t("reports:reportTemplatesPage.colTemplateName")}</TableCell>
+                    <TableCell>{t("reports:reportTemplatesPage.colLastModified")}</TableCell>
+                    <TableCell align="center">{t("reports:reportTemplatesPage.colActions")}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {templates.map((template) => (
                     <TableRow key={template.id} hover>
                       <TableCell>{template.name}</TableCell>
-                      <TableCell>{new Date(template.updated_at).toLocaleDateString("ar-SA")}</TableCell>
+                      <TableCell>{new Date(template.updated_at).toLocaleDateString(i18n.language === "ar" ? "ar-SA" : "en-US")}</TableCell>
                       <TableCell align="center">
                         <Stack direction="row" spacing={1} justifyContent="center">
-                          <Tooltip title="تعديل النموذج">
+                          <Tooltip title={t("reports:reportTemplatesPage.editTemplateTooltip")}>
                             <IconButton size="small" onClick={() => openEditDialog(template)}>
                               <EditIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title="طباعة PDF">
+                          <Tooltip title={t("reports:reportTemplatesPage.printPdfTooltip")}>
                             <IconButton size="small" onClick={() => handlePrintTemplate(template)}>
                               <PrintIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title="حذف النموذج">
+                          <Tooltip title={t("reports:reportTemplatesPage.deleteTemplateTooltip")}>
                             <IconButton size="small" onClick={() => handleDeleteTemplate(template)}>
                               <DeleteIcon fontSize="small" />
                             </IconButton>
@@ -219,17 +220,17 @@ const ReportTemplatesPage: React.FC = () => {
       </Paper>
 
       <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth>
-        <DialogTitle>{isEditMode ? "تعديل نموذج التقرير" : "إنشاء نموذج تقرير جديد"}</DialogTitle>
+        <DialogTitle>{isEditMode ? t("reports:reportTemplatesPage.editTemplateTitle") : t("reports:reportTemplatesPage.createTemplateTitle")}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} mt={1}>
             <TextField
-              label="اسم النموذج"
+              label={t("reports:reportTemplatesPage.templateNameLabel")}
               value={formState.name}
               onChange={(e) => handleFormChange("name", e.target.value)}
               fullWidth
             />
             <TextField
-              label="محتوى التقرير"
+              label={t("reports:reportTemplatesPage.reportContentLabel")}
               value={formState.content}
               onChange={(e) => handleFormChange("content", e.target.value)}
               fullWidth
@@ -237,23 +238,23 @@ const ReportTemplatesPage: React.FC = () => {
               minRows={10}
             />
             <TextField
-              label="نص التذييل"
+              label={t("reports:reportTemplatesPage.footerTextLabel")}
               value={formState.footerText}
               onChange={(e) => handleFormChange("footerText", e.target.value)}
               fullWidth
               multiline
               minRows={3}
-              helperText="سيظهر هذا النص في أسفل ملف PDF." 
+              helperText={t("reports:reportTemplatesPage.footerTextHelper")}
             />
             <Typography color="text.secondary" variant="body2">
-              يمكنك استخدام <code>{"{{date}}"}</code> في المحتوى لاستبدال التاريخ المحدد عند الطباعة.
+              {t("reports:reportTemplatesPage.placeholderHintBefore")} <code>{"{{date}}"}</code> {t("reports:reportTemplatesPage.placeholderHintAfter")}
             </Typography>
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>إلغاء</Button>
+          <Button onClick={handleCloseDialog}>{t("common:cancel")}</Button>
           <Button onClick={handleSaveTemplate} variant="contained" disabled={saving}>
-            حفظ
+            {t("reports:reportTemplatesPage.saveButton")}
           </Button>
         </DialogActions>
       </Dialog>

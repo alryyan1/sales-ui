@@ -1,5 +1,6 @@
 // src/components/common/ProductAutocomplete.tsx
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 // MUI Components
 import { 
@@ -68,6 +69,7 @@ export const ProductAutocomplete: React.FC<ProductAutocompleteProps> = React.mem
   className,
   id,
 }) => {
+  const { t } = useTranslation(["products", "common"]);
   // Internal state for this component
   const [productSearchInput, setProductSearchInput] = useState("");
   const [debouncedProductSearch, setDebouncedProductSearch] = useState("");
@@ -210,7 +212,7 @@ export const ProductAutocomplete: React.FC<ProductAutocompleteProps> = React.mem
         inputValue={currentInputValue}
         loading={loadingProducts}
         isOptionEqualToValue={(option, value) => option.id === value.id}
-        noOptionsText="لا توجد نتائج"
+        noOptionsText={t("common:noResultsFound")}
         disabled={disabled}
         freeSolo={true}
         clearOnBlur={true}
@@ -221,7 +223,7 @@ export const ProductAutocomplete: React.FC<ProductAutocompleteProps> = React.mem
         renderInput={(params) => (
           <TextField
             {...params}
-            label={label || 'اسم المنتج'}
+            label={label || t("products:productName")}
             error={error}
             helperText={helperText}
             size={size}
@@ -253,7 +255,7 @@ export const ProductAutocomplete: React.FC<ProductAutocompleteProps> = React.mem
           <Typography variant="caption" color="text.secondary">
             SKU: {value.sku}
           </Typography>
-          <Tooltip title="نسخ">
+          <Tooltip title={t("common:copy")}>
             <IconButton
               size="small"
               onClick={() => handleCopySku(value.sku!)}

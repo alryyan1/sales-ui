@@ -7,12 +7,14 @@ import { useQuery } from "@tanstack/react-query";
 import expenseService from "@/services/expenseService";
 import { usePaymentStats } from "@/hooks/usePaymentStats";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "react-i18next";
 
 interface ReportStatsProps {
   filterValues: ReportFilterValues;
 }
 
 export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
+  const { t } = useTranslation(["reports"]);
   const { getSetting } = useSettings();
   const posMode = getSetting("pos_mode", "shift") as "shift" | "days";
 
@@ -93,13 +95,13 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
   }
 
   const items = [
-    { label: "إجمالي المبيعات", value: stats.totalAmount, sub: `${stats.totalSales} عملية`, color: "text-violet-600" },
-    { label: "المدفوع", value: stats.totalPaid, color: "text-emerald-600" },
-    { label: "نقدي", value: stats.totalCash, color: "text-green-600" },
-    { label: "تحويل بنكي", value: stats.totalBankTransfer, color: "text-blue-600" },
-    { label: "فيزا", value: stats.totalVisa, color: "text-orange-500" },
-    { label: "المستحق", value: stats.totalDue, color: stats.totalDue > 0 ? "text-red-600" : "text-emerald-600" },
-    { label: "المصروفات", value: stats.totalExpenses, color: "text-rose-600" },
+    { label: t("reports:salesReportPage.statTotalSales"), value: stats.totalAmount, sub: t("reports:salesReportPage.statSalesCount", { count: stats.totalSales }), color: "text-violet-600" },
+    { label: t("reports:salesReportPage.statPaid"), value: stats.totalPaid, color: "text-emerald-600" },
+    { label: t("reports:salesReportPage.statCash"), value: stats.totalCash, color: "text-green-600" },
+    { label: t("reports:salesReportPage.statBankTransfer"), value: stats.totalBankTransfer, color: "text-blue-600" },
+    { label: t("reports:salesReportPage.statVisa"), value: stats.totalVisa, color: "text-orange-500" },
+    { label: t("reports:salesReportPage.statDue"), value: stats.totalDue, color: stats.totalDue > 0 ? "text-red-600" : "text-emerald-600" },
+    { label: t("reports:salesReportPage.statExpenses"), value: stats.totalExpenses, color: "text-rose-600" },
   ];
 
   return (

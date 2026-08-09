@@ -1,0 +1,16 @@
+{
+    "title": "Create New Account",
+    "nameLabel": "Name",
+    "usernameLabel": "Username",
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "confirmPasswordLabel": "Confirm Password",
+    "submitButton": "Create Account",
+    "submitButtonLoading": "Creating account...",
+    "loginPrompt": "Already have an account?",
+    "loginLink": "Login",
+    "requiredField": "This field is required",
+    "passwordMinLength": "Password must be at least 8 characters",
+    "passwordMismatch": "Passwords do not match",
+    "checkFields": "Please check the fields"
+}

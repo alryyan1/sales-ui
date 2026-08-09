@@ -9,6 +9,7 @@ import {
 import { PDF_FONTS } from "@/utils/pdfFontRegistry";
 import { formatNumber } from "@/constants";
 import { Sale } from "@/services/saleService";
+import { useTranslation } from "react-i18next";
 
 const styles = StyleSheet.create({
   page: {
@@ -178,10 +179,12 @@ export const SalesWithDiscountsPdf: React.FC<SalesWithDiscountsPdfProps> = ({
   endDate,
   totals,
 }) => {
+  const { t, i18n } = useTranslation(["reports"]);
+  const dateLocale = i18n.language === "ar" ? "ar-SA" : "en-US";
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
-      return date.toLocaleDateString("ar-SA", {
+      return date.toLocaleDateString(dateLocale, {
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
@@ -197,39 +200,39 @@ export const SalesWithDiscountsPdf: React.FC<SalesWithDiscountsPdfProps> = ({
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
-            <Text style={styles.title}>تقرير المبيعات المخفضة</Text>
+            <Text style={styles.title}>{t("reports:salesWithDiscountsPage.pdfTitle")}</Text>
             <Text style={styles.subtitle}>
-              من {formatDate(startDate)} إلى {formatDate(endDate)}
+              {t("reports:salesWithDiscountsPage.pdfPeriod", { start: formatDate(startDate), end: formatDate(endDate) })}
             </Text>
             <Text style={styles.subtitle}>
-              العدد الإجمالي: {sales.length} عملية بيع
+              {t("reports:salesWithDiscountsPage.pdfTotalCount", { count: sales.length })}
             </Text>
           </View>
         </View>
 
         {/* Summary Section */}
         <View style={styles.summarySection}>
-          <Text style={styles.summaryTitle}>ملخص التقرير</Text>
+          <Text style={styles.summaryTitle}>{t("reports:salesWithDiscountsPage.pdfSummaryTitle")}</Text>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>إجمالي المبيعات:</Text>
+            <Text style={styles.summaryLabel}>{t("reports:salesWithDiscountsPage.pdfTotalSales")}</Text>
             <Text style={styles.summaryValue}>
               {formatNumber(totals.totalAmount)}
             </Text>
           </View>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>إجمالي المدفوع:</Text>
+            <Text style={styles.summaryLabel}>{t("reports:salesWithDiscountsPage.pdfTotalPaid")}</Text>
             <Text style={[styles.summaryValue, { color: "#059669" }]}>
               {formatNumber(totals.totalPaid)}
             </Text>
           </View>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>إجمالي الخصم:</Text>
+            <Text style={styles.summaryLabel}>{t("reports:salesWithDiscountsPage.pdfTotalDiscount")}</Text>
             <Text style={[styles.summaryValue, { color: "#dc2626" }]}>
               {formatNumber(totals.totalDiscount)}
             </Text>
           </View>
           <View style={styles.summaryRowLast}>
-            <Text style={styles.summaryLabel}>المستحق:</Text>
+            <Text style={styles.summaryLabel}>{t("reports:salesWithDiscountsPage.pdfTotalDue")}</Text>
             <Text style={styles.summaryValue}>
               {formatNumber(totals.totalDue)}
             </Text>
@@ -239,20 +242,20 @@ export const SalesWithDiscountsPdf: React.FC<SalesWithDiscountsPdfProps> = ({
         {/* Sales Table */}
         <View style={styles.tableContainer}>
           <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderText, styles.colType]}>النوع</Text>
+            <Text style={[styles.tableHeaderText, styles.colType]}>{t("reports:salesWithDiscountsPage.colType")}</Text>
             <Text style={[styles.tableHeaderText, styles.colDiscount]}>
-              الخصم
+              {t("reports:salesWithDiscountsPage.colDiscount")}
             </Text>
             <Text style={[styles.tableHeaderText, styles.colPaid]}>
-              المدفوع
+              {t("reports:salesWithDiscountsPage.colPaid")}
             </Text>
             <Text style={[styles.tableHeaderText, styles.colTotal]}>
-              المجموع
+              {t("reports:salesWithDiscountsPage.colTotal")}
             </Text>
             <Text style={[styles.tableHeaderText, styles.colClient]}>
-              العميل
+              {t("reports:salesWithDiscountsPage.colClient")}
             </Text>
-            <Text style={[styles.tableHeaderText, styles.colDate]}>التاريخ</Text>
+            <Text style={[styles.tableHeaderText, styles.colDate]}>{t("reports:salesWithDiscountsPage.colDate")}</Text>
             <Text style={[styles.tableHeaderText, styles.colId]}>#</Text>
           </View>
 
@@ -289,8 +292,8 @@ export const SalesWithDiscountsPdf: React.FC<SalesWithDiscountsPdfProps> = ({
 
         {/* Footer */}
         <Text style={styles.footer}>
-          تم إنشاء التقرير في{" "}
-          {new Date().toLocaleDateString("ar-SA", {
+          {t("reports:salesWithDiscountsPage.pdfGeneratedOn")}{" "}
+          {new Date().toLocaleDateString(dateLocale, {
             year: "numeric",
             month: "2-digit",
             day: "2-digit",

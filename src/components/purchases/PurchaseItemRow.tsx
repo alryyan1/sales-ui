@@ -1,6 +1,7 @@
 // src/components/purchases/PurchaseItemRow.tsx
 import React, { useCallback, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 
 // MUI Components
 import { 
@@ -72,6 +73,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
   itemCount,
   isPurchaseReceived = false,
 }) => {
+  const { t } = useTranslation(["purchases"]);
   const { watch, setValue, register, formState: { errors } } = useFormContext<PurchaseFormValues>();
   const uniqueId = useMemo(() => `purchase-item-${index}`, [index]);
 
@@ -136,12 +138,12 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
             id={`product-select-${uniqueId}`}
             value={selectedProduct || null}
             onChange={handleProductChange}
-            label="اسم المنتج"
+            label={t("purchases:itemRow.productNameLabel")}
             error={!!getFieldError('product_id')}
             helperText={getFieldError('product_id')}
             disabled={isSubmitting || isPurchaseReceived}
             showSku={true}
-            placeholder="اختر المنتج"
+            placeholder={t("purchases:itemRow.choosProductPlaceholder")}
             required
           />
         </Grid>
@@ -149,7 +151,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
         {/* Batch Number */}
         <Grid xs={12} sm={6} md={1.5}>
           <TextField
-            label="رقم الدفعة"
+            label={t("purchases:itemRow.batchNumberLabel")}
             size="small"
             fullWidth
             error={!!getFieldError('batch_number')}
@@ -162,7 +164,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
         {/* Quantity */}
         <Grid xs={12} sm={6} md={1.5}>
           <TextField
-            label="الكمية"
+            label={t("purchases:itemRow.quantityLabel")}
             type="number"
             size="small"
             fullWidth
@@ -176,7 +178,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
         {/* Unit Cost */}
         <Grid xs={12} sm={6} md={1.5}>
           <TextField
-            label="تكلفة الوحدة"
+            label={t("purchases:itemRow.unitCostLabel")}
             type="number"
             size="small"
             fullWidth
@@ -190,7 +192,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
         {/* Sale Price */}
         <Grid xs={12} sm={6} md={1.5}>
           <TextField
-            label="سعر البيع"
+            label={t("purchases:itemRow.salePriceLabel")}
             type="number"
             size="small"
             fullWidth
@@ -210,7 +212,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
             height: '100%',
             pt: { xs: 0, md: 0.5 }
           }}>
-            <Tooltip title={isPurchaseReceived ? "لا يمكن حذف عنصر تم استلامه" : "حذف"}>
+            <Tooltip title={isPurchaseReceived ? t("purchases:itemRow.cannotDeleteReceivedItem") : t("purchases:itemRow.delete")}>
               <IconButton
                 onClick={handleRemove}
                 disabled={isSubmitting || itemCount <= 1 || isPurchaseReceived}
@@ -250,7 +252,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
           p: 2
         }}>
           <Chip
-            label={`إجمالي وحدات البيع: ${formatNumber(calculatedValues.totalSellableUnitsDisplay)}`}
+            label={t("purchases:itemRow.totalSellableUnits", { count: formatNumber(calculatedValues.totalSellableUnitsDisplay) })}
             size="small"
             variant="outlined"
             sx={{
@@ -261,7 +263,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
             }}
           />
           <Chip
-            label={`إجمالي العنصر: ${formatNumber(calculatedValues.itemTotalCost)}`}
+            label={t("purchases:itemRow.itemTotal", { amount: formatNumber(calculatedValues.itemTotalCost) })}
             size="small"
             variant="outlined"
             sx={{
@@ -273,7 +275,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
           />
           {(selectedProduct.units_per_stocking_unit || 0) > 1 && (
             <Chip
-              label={`الوحدات لكل وحدة تخزين: ${selectedProduct.units_per_stocking_unit || 0}`}
+              label={t("purchases:itemRow.unitsPerStockingUnit", { count: selectedProduct.units_per_stocking_unit || 0 })}
               size="small"
               variant="outlined"
               sx={{
@@ -298,7 +300,8 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
     calculatedValues,
     uniqueId,
     index,
-    register
+    register,
+    t
   ]);
 
   return (
@@ -336,7 +339,7 @@ export const PurchaseItemRow: React.FC<PurchaseItemRowProps> = React.memo(({
             bgcolor: 'warning.main'
           }} />
           <Typography variant="caption" sx={{ fontWeight: 600 }}>
-            تم استلام الشراء - العنصر مقفل
+            {t("purchases:itemRow.purchaseReceivedItemLocked")}
           </Typography>
         </Box>
       )}

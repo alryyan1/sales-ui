@@ -13,6 +13,7 @@ import {
 } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
 import unitService, { Unit, UnitFormData } from "../../services/UnitService";
+import { useTranslation } from "react-i18next";
 
 interface UnitFormModalProps {
   open: boolean;
@@ -27,6 +28,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
   unit,
   onSuccess,
 }) => {
+  const { t } = useTranslation(["units"]);
   const [formData, setFormData] = useState<UnitFormData>({
     name: "",
     description: "",
@@ -99,13 +101,13 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
       <form onSubmit={handleSubmit}>
-        <DialogTitle>{unit ? "تعديل وحدة" : "إضافة وحدة جديدة"}</DialogTitle>
+        <DialogTitle>{unit ? t("units:editTitle") : t("units:createTitle")}</DialogTitle>
         <DialogContent>
           <Stack spacing={3} sx={{ mt: 1 }}>
             {error && <Alert severity="error">{error}</Alert>}
 
             <TextField
-              label="اسم الوحدة"
+              label={t("units:name")}
               value={formData.name}
               onChange={(e) => handleChange("name", e.target.value)}
               required
@@ -122,16 +124,16 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
                   color="primary"
                 />
               }
-              label="تعيين كافتراضي"
+              label={t("units:setAsDefault")}
             />
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={onClose} disabled={isLoading} variant="outlined" color="inherit">
-            إلغاء
+            {t("units:cancel")}
           </Button>
           <Button type="submit" variant="contained" disabled={isLoading} sx={{ minWidth: 100 }}>
-            {isLoading ? "جاري الحفظ..." : unit ? "تحديث" : "حفظ"}
+            {isLoading ? t("units:savingEllipsis") : unit ? t("units:update") : t("units:save")}
           </Button>
         </DialogActions>
       </form>

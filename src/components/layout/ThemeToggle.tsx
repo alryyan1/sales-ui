@@ -9,8 +9,10 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sun, Moon, Laptop } from 'lucide-react'; // Icons
+import { useTranslation } from 'react-i18next';
 
 export const ThemeToggle: React.FC = () => {
+    const { t } = useTranslation(['common']);
     const { theme, setTheme, resolvedTheme } = useTheme();
 
     const getCurrentIcon = () => {
@@ -26,27 +28,27 @@ export const ThemeToggle: React.FC = () => {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" aria-label="تبديل المظهر">
+                <Button variant="outline" size="icon" aria-label={t('common:toggleTheme')}>
                     {/* Display current theme icon */}
                     {/* This icon will change based on theme state, not just resolvedTheme for explicit selection */}
                     {theme === 'light' && <Sun className="h-[1.2rem] w-[1.2rem]" />}
                     {theme === 'dark' && <Moon className="h-[1.2rem] w-[1.2rem]" />}
                     {theme === 'system' && <Laptop className="h-[1.2rem] w-[1.2rem]" />}
-                    <span className="sr-only">تبديل المظهر</span>
+                    <span className="sr-only">{t('common:toggleTheme')}</span>
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => setTheme("light")}>
                     <Sun className="me-2 h-4 w-4" />
-                    فاتح
+                    {t('common:themeLight')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setTheme("dark")}>
                     <Moon className="me-2 h-4 w-4" />
-                    داكن
+                    {t('common:themeDark')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setTheme("system")}>
                     <Laptop className="me-2 h-4 w-4" />
-                    النظام
+                    {t('common:themeSystem')}
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>

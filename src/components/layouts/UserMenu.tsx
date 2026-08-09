@@ -9,6 +9,7 @@ import {
     Divider,
 } from '@mui/material';
 import { LogOut, UserCircle, Settings as SettingsIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 
 interface UserMenuProps {
@@ -17,6 +18,7 @@ interface UserMenuProps {
 }
 
 const UserMenu: React.FC<UserMenuProps> = ({ anchorEl, onClose }) => {
+    const { t } = useTranslation(['navigation']);
     const { handleLogout } = useAuth();
 
     const handleLogoutClick = async () => {
@@ -36,20 +38,20 @@ const UserMenu: React.FC<UserMenuProps> = ({ anchorEl, onClose }) => {
                 <ListItemIcon>
                     <UserCircle size={20} />
                 </ListItemIcon>
-                <ListItemText>الملف الشخصي</ListItemText>
+                <ListItemText>{t('navigation:profile')}</ListItemText>
             </MenuItem>
             <MenuItem component={RouterLink} to="/admin/settings" onClick={onClose}>
                 <ListItemIcon>
                     <SettingsIcon size={20} />
                 </ListItemIcon>
-                <ListItemText>الإعدادات</ListItemText>
+                <ListItemText>{t('navigation:settings')}</ListItemText>
             </MenuItem>
             <Divider />
             <MenuItem onClick={handleLogoutClick} sx={{ color: 'error.main' }}>
                 <ListItemIcon>
                     <LogOut size={20} />
                 </ListItemIcon>
-                <ListItemText>تسجيل الخروج</ListItemText>
+                <ListItemText>{t('navigation:logout')}</ListItemText>
             </MenuItem>
         </Menu>
     );

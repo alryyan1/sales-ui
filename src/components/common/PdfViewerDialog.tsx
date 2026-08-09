@@ -19,6 +19,7 @@ import {
 
 // Lucide Icons
 import { Download, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface PdfViewerDialogProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ export const PdfViewerDialog: React.FC<PdfViewerDialogProps> = ({
   pdfUrl,
   title,
 }) => {
+  const { t } = useTranslation(["common"]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const theme = useTheme();
@@ -60,7 +62,7 @@ export const PdfViewerDialog: React.FC<PdfViewerDialogProps> = ({
 
   const handleIframeError = () => {
     setIsLoading(false);
-    setError("خطأ في تحميل ملف PDF");
+    setError(t("common:pdfViewerDialog.loadError"));
   };
 
   return (
@@ -101,7 +103,7 @@ export const PdfViewerDialog: React.FC<PdfViewerDialogProps> = ({
               fontSize: "1.125rem",
             }}
           >
-            {title || "تقرير المخزون"}
+            {title || t("common:pdfViewerDialog.defaultTitle")}
           </DialogTitle>
           <Stack direction="row" spacing={1.5} alignItems="center">
             <Button
@@ -115,7 +117,7 @@ export const PdfViewerDialog: React.FC<PdfViewerDialogProps> = ({
                 fontWeight: 500,
               }}
             >
-              تحميل
+              {t("common:pdfViewerDialog.downloadButton")}
             </Button>
             <IconButton
               onClick={onClose}
@@ -160,7 +162,7 @@ export const PdfViewerDialog: React.FC<PdfViewerDialogProps> = ({
               <Stack spacing={2} alignItems="center">
                 <CircularProgress size={32} />
                 <Typography variant="body2" color="text.secondary">
-                  جاري تحميل ملف PDF...
+                  {t("common:pdfViewerDialog.loadingPdf")}
                 </Typography>
               </Stack>
             </Box>
@@ -193,7 +195,7 @@ export const PdfViewerDialog: React.FC<PdfViewerDialogProps> = ({
                     textTransform: "none",
                   }}
                 >
-                  إغلاق
+                  {t("common:pdfViewerDialog.close")}
                 </Button>
               </Stack>
             </Box>
@@ -205,7 +207,7 @@ export const PdfViewerDialog: React.FC<PdfViewerDialogProps> = ({
             src={pdfUrl}
             onLoad={handleIframeLoad}
             onError={handleIframeError}
-            title={title || "تقرير المخزون"}
+            title={title || t("common:pdfViewerDialog.defaultTitle")}
             sx={{
               width: "100%",
               height: "100%",

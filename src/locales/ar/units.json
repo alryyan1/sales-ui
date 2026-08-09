@@ -35,5 +35,12 @@
   "nameMaxLength": "اسم الوحدة يجب أن يكون أقل من 255 حرف",
   "descriptionMaxLength": "الوصف يجب أن يكون أقل من 1000 حرف",
   "nameTypeUnique": "وحدة بهذا الاسم والنوع موجودة بالفعل",
-  "cannotDeleteInUse": "لا يمكن حذف الوحدة لأنها مستخدمة في منتجات"
+  "cannotDeleteInUse": "لا يمكن حذف الوحدة لأنها مستخدمة في منتجات",
+  "setAsDefault": "تعيين كافتراضي",
+  "savingEllipsis": "جاري الحفظ...",
+  "update": "تحديث",
+  "namePlaceholderExample": "مثال: حبة، كرتونة، باكت...",
+  "successTitle": "نجح",
+  "errorTitle": "خطأ",
+  "pleaseCheckFields": "يرجى التحقق من الحقول"
 } 

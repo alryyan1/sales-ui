@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useForm, FormProvider, SubmitHandler } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 
 // Import Child Components
@@ -51,6 +52,7 @@ export type PurchaseFormValues = {
 
 // --- Component ---
 const PurchaseFormPage: React.FC = () => {
+  const { t } = useTranslation(["purchases", "common", "validation"]);
   const navigate = useNavigate();
 
   // --- State ---
@@ -101,7 +103,7 @@ const PurchaseFormPage: React.FC = () => {
         setSuppliers(response.data ?? []);
       } catch (error) {
         console.error("Failed to load initial suppliers:", error);
-        toast.error("خطأ", {
+        toast.error(t("common:error"), {
           description: supplierService.getErrorMessage(error),
         });
       } finally {
@@ -139,7 +141,7 @@ const PurchaseFormPage: React.FC = () => {
           );
           setSuppliers((response.data as any).data ?? response.data);
         } catch (error) {
-          toast.error("خطأ", {
+          toast.error(t("common:error"), {
             description: supplierService.getErrorMessage(error),
           });
           setSuppliers([]);
@@ -160,7 +162,7 @@ const PurchaseFormPage: React.FC = () => {
         setWarehouses(data);
       } catch (error) {
         console.error("Failed to fetch warehouses:", error);
-        toast.error("فشل تحميل المخازن");
+        toast.error(t("purchases:loadWarehousesFailed"));
       } finally {
         setLoadingWarehouses(false);
       }
@@ -177,7 +179,7 @@ const PurchaseFormPage: React.FC = () => {
       if (!data.supplier_id || data.supplier_id <= 0) {
         setError("supplier_id", {
           type: "manual",
-          message: "يرجى اختيار مورد",
+          message: t("purchases:supplierRequired"),
         });
         return;
       }
@@ -185,13 +187,13 @@ const PurchaseFormPage: React.FC = () => {
       if (!data.purchase_date) {
         setError("purchase_date", {
           type: "manual",
-          message: "هذا الحقل مطلوب",
+          message: t("validation:required"),
         });
         return;
       }
 
       if (!data.status) {
-        setError("status", { type: "manual", message: "هذا الحقل مطلوب" });
+        setError("status", { type: "manual", message: t("validation:required") });
         return;
       }
 
@@ -203,7 +205,7 @@ const PurchaseFormPage: React.FC = () => {
 
       try {
         const createdPurchase = await purchaseService.createPurchase(apiData);
-        toast.success("نجح", { description: "تم إنشاء المشتريات بنجاح" });
+        toast.success(t("common:success"), { description: t("purchases:purchaseCreatedSuccess") });
 
         if (createdPurchase?.purchase?.id) {
           navigate(`/purchases/${createdPurchase.purchase.id}/manage-items`);
@@ -214,7 +216,7 @@ const PurchaseFormPage: React.FC = () => {
         console.error("Failed to create purchase:", err);
         const generalError = purchaseService.getErrorMessage(err);
         const apiErrors = purchaseService.getValidationErrors(err);
-        toast.error("خطأ", { description: generalError });
+        toast.error(t("common:error"), { description: generalError });
         setServerError(generalError);
         if (apiErrors) {
           Object.entries(apiErrors).forEach(([key, messages]) => {
@@ -225,7 +227,7 @@ const PurchaseFormPage: React.FC = () => {
               });
             }
           });
-          setServerError("يرجى التحقق من الحقول");
+          setServerError(t("purchases:checkFields"));
         }
       }
     },
@@ -267,7 +269,7 @@ const PurchaseFormPage: React.FC = () => {
                 <Box sx={{ p: { xs: 2.5, sm: 3 } }}>
                   {serverError && (
                     <Alert severity="error" sx={{ mb: 3 }}>
-                      <AlertTitle>خطأ</AlertTitle>
+                      <AlertTitle>{t("common:error")}</AlertTitle>
                       {serverError}
                     </Alert>
                   )}

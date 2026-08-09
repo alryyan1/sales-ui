@@ -14,26 +14,28 @@ import {
   Autocomplete,
 } from "@mui/material";
 import { Filter, X } from "lucide-react";
+import { useTranslation, TFunction } from "react-i18next";
 
-export const reportFilterSchema = z
-  .object({
-    startDate: z.string().nullable().optional(),
-    endDate: z.string().nullable().optional(),
-    clientId: z.string().nullable().optional(),
-    userId: z.string().nullable().optional(),
-    shiftId: z.string().nullable().optional(),
-    productId: z.string().nullable().optional(),
-  })
-  .refine(
-    (data) =>
-      !data.endDate || !data.startDate || data.endDate >= data.startDate,
-    {
-      message: "تاريخ الانتهاء يجب أن يكون بعد تاريخ البدء",
-      path: ["endDate"],
-    },
-  );
+const buildReportFilterSchema = (t: TFunction) =>
+  z
+    .object({
+      startDate: z.string().nullable().optional(),
+      endDate: z.string().nullable().optional(),
+      clientId: z.string().nullable().optional(),
+      userId: z.string().nullable().optional(),
+      shiftId: z.string().nullable().optional(),
+      productId: z.string().nullable().optional(),
+    })
+    .refine(
+      (data) =>
+        !data.endDate || !data.startDate || data.endDate >= data.startDate,
+      {
+        message: t("reports:salesReportPage.endDateAfterStartDate"),
+        path: ["endDate"],
+      },
+    );
 
-export type ReportFilterValues = z.infer<typeof reportFilterSchema>;
+export type ReportFilterValues = z.infer<ReturnType<typeof buildReportFilterSchema>>;
 
 interface ReportFiltersProps {
   initialValues: ReportFilterValues;
@@ -58,6 +60,8 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
   loadingFilters,
   posMode,
 }) => {
+  const { t } = useTranslation(["reports"]);
+  const reportFilterSchema = React.useMemo(() => buildReportFilterSchema(t), [t]);
   const form = useForm<ReportFilterValues>({
     resolver: zodResolver(reportFilterSchema),
     defaultValues: initialValues,
@@ -113,7 +117,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
                 fullWidth
                 size="small"
                 type="date"
-                label="من تاريخ"
+                label={t("reports:salesReportPage.fromDateLabel")}
                 InputLabelProps={{ shrink: true }}
                 error={!!fieldState.error}
                 helperText={fieldState.error?.message}
@@ -131,7 +135,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
                 fullWidth
                 size="small"
                 type="date"
-                label="إلى تاريخ"
+                label={t("reports:salesReportPage.toDateLabel")}
                 InputLabelProps={{ shrink: true }}
                 error={!!fieldState.error}
                 helperText={fieldState.error?.message}
@@ -155,7 +159,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
                     field.onChange(newValue ? String(newValue.id) : null);
                   }}
                   renderInput={(params) => (
-                    <TextField {...params} label="العميل" size="small" />
+                    <TextField {...params} label={t("reports:salesReportPage.clientLabel")} size="small" />
                   )}
                   loading={loadingFilters}
                 />
@@ -179,7 +183,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
                     field.onChange(newValue ? String(newValue.id) : null);
                   }}
                   renderInput={(params) => (
-                    <TextField {...params} label="المستخدم" size="small" />
+                    <TextField {...params} label={t("reports:salesReportPage.userLabel")} size="small" />
                   )}
                   loading={loadingFilters}
                 />
@@ -201,9 +205,10 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
                         ? `${option.name} ${
                             option.shift_date ? `(${option.shift_date})` : ""
                           }`
-                        : `الوردية #${option.id} ${
-                            option.shift_date ? `(${option.shift_date})` : ""
-                          }`
+                        : t("reports:salesReportPage.shiftHash", {
+                            id: option.id,
+                            date: option.shift_date ? `(${option.shift_date})` : "",
+                          })
                     }
                     value={
                       shifts.find((s) => String(s.id) === field.value) || null
@@ -212,7 +217,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
                       field.onChange(newValue ? String(newValue.id) : null);
                     }}
                     renderInput={(params) => (
-                      <TextField {...params} label="الوردية" size="small" />
+                      <TextField {...params} label={t("reports:salesReportPage.shiftLabel")} size="small" />
                     )}
                     loading={loadingFilters}
                   />
@@ -230,7 +235,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
               startIcon={<Filter size={18} />}
               sx={{ borderRadius: 2 }}
             >
-              بحث
+              {t("reports:salesReportPage.searchButton")}
             </Button>
             <Button
               fullWidth
@@ -240,7 +245,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
               startIcon={<X size={18} />}
               sx={{ borderRadius: 2 }}
             >
-              مسح
+              {t("reports:salesReportPage.clearButton")}
             </Button>
           </Stack>
         </Box>

@@ -1,6 +1,7 @@
 // src/pages/SuppliersPage.tsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   useQuery,
   useMutation,
@@ -72,6 +73,7 @@ import ConfirmationDialog from "../components/common/ConfirmationDialog";
 import { formatNumber } from "@/constants";
 
 const SuppliersPage: React.FC = () => {
+  const { t, i18n } = useTranslation(["suppliers", "common"]);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { settings, getSetting } = useSettings();
@@ -149,9 +151,9 @@ const SuppliersPage: React.FC = () => {
       }));
 
       await uploadSuppliersToFirestore(suppliersWithFinancials, firebaseCollectionName);
-      toast.success(`تم رفع ${allSuppliers.length} مورد إلى Firebase`);
+      toast.success(t("suppliers:list.syncSuccess", { count: allSuppliers.length }));
     } catch {
-      toast.error("فشل رفع الموردين إلى Firebase");
+      toast.error(t("suppliers:list.syncFailed"));
     } finally {
       setIsSyncing(false);
     }
@@ -175,7 +177,7 @@ const SuppliersPage: React.FC = () => {
   const deleteMutation = useMutation({
     mutationFn: supplierService.deleteSupplier,
     onSuccess: () => {
-      toast.success("تم حذف المورد بنجاح");
+      toast.success(t("suppliers:list.deletedSuccess"));
       setDeleteConfirmation({ isOpen: false, id: null });
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
       if (suppliersResponse && suppliersResponse.data.length === 1 && currentPage > 1) {
@@ -216,7 +218,7 @@ const SuppliersPage: React.FC = () => {
   const totalPages = suppliersResponse?.last_page ?? 1;
 
   return (
-    <div className="min-h-screen bg-slate-50/50" dir="rtl">
+    <div className="min-h-screen bg-slate-50/50" dir={i18n.dir()}>
       {/* Page Header */}
       <div className="bg-white border-b border-slate-200 px-6 py-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -225,8 +227,8 @@ const SuppliersPage: React.FC = () => {
               <Building2 className="h-5 w-5 text-blue-600" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold leading-tight">الموردون</h1>
-              <p className="text-xs text-slate-500 mt-0.5">إدارة الموردين والمشتريات</p>
+              <h1 className="text-lg font-semibold leading-tight">{t("suppliers:list.suppliers")}</h1>
+              <p className="text-xs text-slate-500 mt-0.5">{t("suppliers:list.manageSuppliersAndPurchases")}</p>
             </div>
             {suppliersResponse && (
               <Badge variant="secondary" className="text-xs font-normal">
@@ -237,17 +239,17 @@ const SuppliersPage: React.FC = () => {
 
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative w-full sm:w-60">
-              <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <Search className="absolute end-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <Input
-                placeholder="بحث بالاسم، البريد أو الهاتف..."
+                placeholder={t("suppliers:list.searchPlaceholderShort")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pr-8 h-8 text-sm border-slate-200 focus-visible:ring-blue-500"
+                className="pe-8 h-8 text-sm border-slate-200 focus-visible:ring-blue-500"
               />
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm("")}
-                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute start-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -261,7 +263,7 @@ const SuppliersPage: React.FC = () => {
               disabled={isPdfLoading || isSummaryLoading || !summaryData}
             >
               <FileDown className="h-4 w-4" />
-              {isPdfLoading ? "جاري التصدير..." : "تصدير PDF"}
+              {isPdfLoading ? t("suppliers:list.exportingEllipsis") : t("suppliers:list.exportPdf")}
             </Button>
             <Button
               onClick={handleSyncToFirebase}
@@ -275,7 +277,7 @@ const SuppliersPage: React.FC = () => {
               ) : (
                 <CloudUpload className="h-4 w-4" />
               )}
-              {isSyncing ? "جاري الرفع..." : "رفع إلى Firebase"}
+              {isSyncing ? t("suppliers:list.uploadingEllipsis") : t("suppliers:list.uploadToFirebase")}
             </Button>
             <Button
               onClick={() => handleOpenModal()}
@@ -283,7 +285,7 @@ const SuppliersPage: React.FC = () => {
               className="h-8 bg-blue-600 hover:bg-blue-700 text-white gap-1.5"
             >
               <Plus className="h-4 w-4" />
-              مورد جديد
+              {t("suppliers:list.newSupplier")}
             </Button>
           </div>
         </div>
@@ -294,7 +296,7 @@ const SuppliersPage: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="flex items-center gap-3 bg-red-50 border border-red-100 rounded-lg justify-center px-4 py-2.5">
             <div>
-              <p className="text-[11px] text-red-500 font-medium">إجمالي المدين</p>
+              <p className="text-[11px] text-red-500 font-medium">{t("suppliers:list.totalDebit")}</p>
               {isSummaryLoading ? (
                 <Skeleton className="h-4 w-24 mt-0.5" />
               ) : (
@@ -304,7 +306,7 @@ const SuppliersPage: React.FC = () => {
           </div>
           <div className="flex items-center bg-emerald-50 border border-emerald-100 rounded-lg justify-center px-4 py-2.5 gap-3">
             <div>
-              <p className="text-[11px] text-emerald-500 font-medium">إجمالي الدائن</p>
+              <p className="text-[11px] text-emerald-500 font-medium">{t("suppliers:list.totalCredit")}</p>
               {isSummaryLoading ? (
                 <Skeleton className="h-4 w-24 mt-0.5" />
               ) : (
@@ -314,7 +316,7 @@ const SuppliersPage: React.FC = () => {
           </div>
           <div className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-lg px-4 py-2.5">
             <div>
-              <p className="text-[11px] text-blue-500 font-medium">صافي الرصيد</p>
+              <p className="text-[11px] text-blue-500 font-medium">{t("suppliers:list.netBalance")}</p>
               {isSummaryLoading ? (
                 <Skeleton className="h-4 w-24 mt-0.5" />
               ) : (
@@ -337,7 +339,7 @@ const SuppliersPage: React.FC = () => {
             <p className="flex-1">{supplierService.getErrorMessage(error)}</p>
             <Button variant="ghost" size="sm" onClick={() => refetch()} className="h-7 px-2 text-red-600 hover:bg-red-100">
               <RefreshCw className="h-3.5 w-3.5 ml-1" />
-              إعادة
+              {t("suppliers:list.retry")}
             </Button>
           </div>
         )}
@@ -347,11 +349,11 @@ const SuppliersPage: React.FC = () => {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50 hover:bg-slate-50 border-b border-slate-200">
-                <TableHead className="text-right text-xs font-semibold text-slate-600 h-9 px-4">المورد</TableHead>
-                <TableHead className="text-right text-xs font-semibold text-slate-600 h-9 px-4">معلومات الاتصال</TableHead>
-                <TableHead className="text-right text-xs font-semibold text-red-500 h-9 px-4">المدين</TableHead>
-                <TableHead className="text-right text-xs font-semibold text-emerald-600 h-9 px-4">الدائن</TableHead>
-                <TableHead className="text-right text-xs font-semibold text-blue-600 h-9 px-4">الرصيد</TableHead>
+                <TableHead className="text-start text-xs font-semibold text-slate-600 h-9 px-4">{t("suppliers:list.supplierColumn")}</TableHead>
+                <TableHead className="text-start text-xs font-semibold text-slate-600 h-9 px-4">{t("suppliers:list.contactInfoColumn")}</TableHead>
+                <TableHead className="text-start text-xs font-semibold text-red-500 h-9 px-4">{t("suppliers:list.debitColumn")}</TableHead>
+                <TableHead className="text-start text-xs font-semibold text-emerald-600 h-9 px-4">{t("suppliers:list.creditColumn")}</TableHead>
+                <TableHead className="text-start text-xs font-semibold text-blue-600 h-9 px-4">{t("suppliers:list.balanceColumn")}</TableHead>
                 <TableHead className="text-center text-xs font-semibold text-slate-600 h-9 px-4 w-12">⋯</TableHead>
               </TableRow>
             </TableHeader>
@@ -382,9 +384,9 @@ const SuppliersPage: React.FC = () => {
                   <TableCell colSpan={8} className="h-40 text-center">
                     <div className="flex flex-col items-center justify-center gap-2 text-slate-400">
                       <Building2 className="h-8 w-8" />
-                      <p className="text-sm font-medium text-slate-500">لا يوجد موردين</p>
+                      <p className="text-sm font-medium text-slate-500">{t("suppliers:list.noSuppliersShort")}</p>
                       {debouncedSearchTerm && (
-                        <p className="text-xs">لا توجد نتائج لـ "{debouncedSearchTerm}"</p>
+                        <p className="text-xs">{t("suppliers:list.noResultsFor", { term: debouncedSearchTerm })}</p>
                       )}
                     </div>
                   </TableCell>
@@ -404,7 +406,7 @@ const SuppliersPage: React.FC = () => {
                             <p className="text-sm font-medium leading-tight">{supplier.name}</p>
                             {supplier.is_client && (
                               <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-600 ring-1 ring-inset ring-blue-200">
-                                عميل
+                                {t("suppliers:list.clientBadge")}
                               </span>
                             )}
                           </div>
@@ -481,7 +483,7 @@ const SuppliersPage: React.FC = () => {
                               className="gap-2"
                             >
                               <FileText className="h-3.5 w-3.5 text-blue-500" />
-                              كشف الحساب
+                              {t("suppliers:list.ledgerAction")}
                             </DropdownMenuItem>
                             {supplier.is_client && supplier.client_id && (
                               <DropdownMenuItem
@@ -489,7 +491,7 @@ const SuppliersPage: React.FC = () => {
                                 className="gap-2"
                               >
                                 <ShoppingCart className="h-3.5 w-3.5 text-blue-500" />
-                                كشف مبيعاته
+                                {t("suppliers:list.salesLedgerAction")}
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuItem
@@ -497,7 +499,7 @@ const SuppliersPage: React.FC = () => {
                               className="gap-2"
                             >
                               <Pencil className="h-3.5 w-3.5 text-amber-500" />
-                              تعديل
+                              {t("suppliers:list.editAction")}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -505,7 +507,7 @@ const SuppliersPage: React.FC = () => {
                               className="gap-2 text-red-600 focus:text-red-700 focus:bg-red-50"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
-                              حذف
+                              {t("suppliers:list.deleteAction")}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -521,7 +523,7 @@ const SuppliersPage: React.FC = () => {
           {!isLoading && totalPages > 1 && (
             <div className="flex items-center justify-between px-4 py-2.5 border-t border-slate-100 bg-slate-50/50">
               <p className="text-xs text-slate-500">
-                صفحة {currentPage} من {totalPages}
+                {t("suppliers:list.pageOf", { current: currentPage, total: totalPages })}
               </p>
               <div className="flex items-center gap-1">
                 <Button
@@ -531,7 +533,7 @@ const SuppliersPage: React.FC = () => {
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1 || isLoading}
                 >
-                  <ChevronRight className="h-3.5 w-3.5" />
+                  {i18n.dir() === "rtl" ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
                 </Button>
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   const page = i + Math.max(1, Math.min(currentPage - 2, totalPages - 4));
@@ -554,7 +556,7 @@ const SuppliersPage: React.FC = () => {
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages || isLoading}
                 >
-                  <ChevronLeft className="h-3.5 w-3.5" />
+                  {i18n.dir() === "rtl" ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                 </Button>
               </div>
             </div>
@@ -579,7 +581,7 @@ const SuppliersPage: React.FC = () => {
                   {selectedSupplierDetails?.name}
                 </DialogTitle>
               </DialogHeader>
-              <p className="text-[11px] text-slate-400 mt-0.5">بيانات المورد</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">{t("suppliers:list.supplierData")}</p>
             </div>
           </div>
 
@@ -588,19 +590,19 @@ const SuppliersPage: React.FC = () => {
             {selectedSupplierDetails && (
               <div className="grid grid-cols-3 gap-2">
                 <div className="rounded-lg bg-red-50 border border-red-100 px-3 py-2 text-center">
-                  <p className="text-[10px] text-red-400 font-medium mb-0.5">المدين</p>
+                  <p className="text-[10px] text-red-400 font-medium mb-0.5">{t("suppliers:debit")}</p>
                   <p className="text-xs font-bold text-red-600 tabular-nums">
                     {fmt(summaryMap.get(selectedSupplierDetails.id)?.total_debit ?? 0)}
                   </p>
                 </div>
                 <div className="rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2 text-center">
-                  <p className="text-[10px] text-emerald-500 font-medium mb-0.5">الدائن</p>
+                  <p className="text-[10px] text-emerald-500 font-medium mb-0.5">{t("suppliers:credit")}</p>
                   <p className="text-xs font-bold text-emerald-600 tabular-nums">
                     {fmt(summaryMap.get(selectedSupplierDetails.id)?.total_credit ?? 0)}
                   </p>
                 </div>
                 <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 text-center">
-                  <p className="text-[10px] text-blue-400 font-medium mb-0.5">الرصيد</p>
+                  <p className="text-[10px] text-blue-400 font-medium mb-0.5">{t("suppliers:balance")}</p>
                   {(() => {
                     const bal = summaryMap.get(selectedSupplierDetails.id)?.balance ?? 0;
                     return (
@@ -619,7 +621,7 @@ const SuppliersPage: React.FC = () => {
                 <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-100">
                   <User className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
                   <div>
-                    <p className="text-[10px] text-slate-400">المسؤول</p>
+                    <p className="text-[10px] text-slate-400">{t("suppliers:list.contactPersonLabel")}</p>
                     <p className="text-xs font-medium text-slate-700">{selectedSupplierDetails.contact_person}</p>
                   </div>
                 </div>
@@ -628,7 +630,7 @@ const SuppliersPage: React.FC = () => {
                 <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-100">
                   <Phone className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
                   <div>
-                    <p className="text-[10px] text-slate-400">الهاتف</p>
+                    <p className="text-[10px] text-slate-400">{t("suppliers:list.phoneLabel")}</p>
                     <p className="text-xs font-medium text-slate-700" dir="ltr">{selectedSupplierDetails.phone}</p>
                   </div>
                 </div>
@@ -637,7 +639,7 @@ const SuppliersPage: React.FC = () => {
                 <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-100">
                   <Mail className="h-3.5 w-3.5 text-blue-400 flex-shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-[10px] text-slate-400">البريد الإلكتروني</p>
+                    <p className="text-[10px] text-slate-400">{t("suppliers:list.emailLabel")}</p>
                     <p className="text-xs font-medium text-slate-700 truncate">{selectedSupplierDetails.email}</p>
                   </div>
                 </div>
@@ -646,7 +648,7 @@ const SuppliersPage: React.FC = () => {
                 <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-100">
                   <MapPin className="h-3.5 w-3.5 text-rose-400 flex-shrink-0" />
                   <div>
-                    <p className="text-[10px] text-slate-400">العنوان</p>
+                    <p className="text-[10px] text-slate-400">{t("suppliers:list.addressLabel")}</p>
                     <p className="text-xs font-medium text-slate-700">{selectedSupplierDetails.address}</p>
                   </div>
                 </div>
@@ -661,7 +663,7 @@ const SuppliersPage: React.FC = () => {
                 onClick={() => { if (selectedSupplierDetails) navigate(`/suppliers/${selectedSupplierDetails.id}/ledger`); setDetailsOpen(false); }}
               >
                 <FileText className="h-3.5 w-3.5" />
-                كشف الحساب
+                {t("suppliers:list.ledgerAction")}
               </Button>
               <Button
                 variant="outline"
@@ -670,7 +672,7 @@ const SuppliersPage: React.FC = () => {
                 onClick={() => { if (selectedSupplierDetails) handleOpenModal(selectedSupplierDetails); setDetailsOpen(false); }}
               >
                 <Pencil className="h-3.5 w-3.5 text-amber-500" />
-                تعديل
+                {t("suppliers:list.editAction")}
               </Button>
             </div>
           </div>
@@ -688,10 +690,10 @@ const SuppliersPage: React.FC = () => {
         open={deleteConfirmation.isOpen}
         onClose={() => setDeleteConfirmation({ ...deleteConfirmation, isOpen: false })}
         onConfirm={handleConfirmDelete}
-        title="حذف المورد"
-        message="هل أنت متأكد من حذف هذا المورد؟ لا يمكن التراجع عن هذه العملية."
-        confirmText={deleteMutation.isPending ? "جاري الحذف..." : "حذف"}
-        cancelText="إلغاء"
+        title={t("suppliers:list.deleteTitle")}
+        message={t("suppliers:list.deleteMessageLong")}
+        confirmText={deleteMutation.isPending ? t("suppliers:list.deletingEllipsis") : t("common:delete")}
+        cancelText={t("common:cancel")}
         confirmVariant="destructive"
         isLoading={deleteMutation.isPending}
       />

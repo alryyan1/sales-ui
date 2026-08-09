@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogTitle,
@@ -40,6 +41,7 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
   clientToEdit,
   onSaveSuccess,
 }) => {
+  const { t, i18n } = useTranslation(["clients", "common"]);
   const isEditMode = Boolean(clientToEdit);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -107,10 +109,10 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
       }
       console.log("Save successful:", savedClient);
 
-      toast.success("تم الحفظ بنجاح", {
+      toast.success(t("clients:form.savedSuccessTitle"), {
         description: isEditMode
-          ? "تم تحديث بيانات العميل بنجاح"
-          : "تم إضافة العميل بنجاح",
+          ? t("clients:form.updatedDesc")
+          : t("clients:form.createdDesc"),
         duration: 3000,
       });
 
@@ -121,7 +123,7 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
       const generalError = clientService.getErrorMessage(err);
       const apiErrors = clientService.getValidationErrors(err);
 
-      toast.error("خطأ", {
+      toast.error(t("common:error"), {
         description: generalError,
         duration: 5000,
       });
@@ -137,7 +139,7 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
             });
           }
         });
-        setServerError("يرجى التحقق من الحقول المدخلة.");
+        setServerError(t("clients:form.checkEnteredFields"));
       }
     }
   };
@@ -151,10 +153,10 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
       onClose={onClose}
       fullWidth
       maxWidth="sm"
-      dir="rtl" // Ensure RTL direction if needed for Arabic
+      dir={i18n.dir()}
     >
       <DialogTitle sx={{ fontWeight: 600 }}>
-        {isEditMode ? "تعديل عميل" : "إضافة عميل"}
+        {isEditMode ? t("clients:form.editTitle") : t("clients:form.addTitle")}
       </DialogTitle>
       <DialogContent dividers>
         <Box
@@ -179,12 +181,12 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
           >
             <Box sx={{ gridColumn: { xs: "span 1", sm: "span 2" } }}>
               <TextField
-                label="الاسم"
+                label={t("clients:form.nameLabel")}
                 fullWidth
                 required
-                placeholder="أدخل اسم العميل"
+                placeholder={t("clients:form.namePlaceholder")}
                 disabled={isSubmitting}
-                {...register("name", { required: "الاسم مطلوب" })}
+                {...register("name", { required: t("clients:form.nameRequired") })}
                 error={!!errors.name}
                 helperText={errors.name?.message}
                 size="small"
@@ -192,7 +194,7 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
             </Box>
 
             <TextField
-              label="البريد الإلكتروني"
+              label={t("clients:form.emailLabel")}
               type="email"
               fullWidth
               placeholder="example@email.com"
@@ -200,7 +202,7 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
               {...register("email", {
                 pattern: {
                   value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                  message: "صيغة البريد الإلكتروني غير صحيحة",
+                  message: t("clients:form.emailInvalid"),
                 },
               })}
               error={!!errors.email}
@@ -209,13 +211,13 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
             />
 
             <TextField
-              label="رقم الهاتف"
+              label={t("clients:form.phoneLabel")}
               type="tel"
               fullWidth
               required
-              placeholder="05xxxxxxxx"
+              placeholder={t("clients:form.phonePlaceholder")}
               disabled={isSubmitting}
-              {...register("phone", { required: "رقم الهاتف مطلوب" })}
+              {...register("phone", { required: t("clients:form.phoneRequired") })}
               error={!!errors.phone}
               helperText={errors.phone?.message}
               size="small"
@@ -223,11 +225,11 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
 
             <Box sx={{ gridColumn: { xs: "span 1", sm: "span 2" } }}>
               <TextField
-                label="العنوان"
+                label={t("clients:form.addressLabel")}
                 fullWidth
                 multiline
                 minRows={3}
-                placeholder="أدخل عنوان العميل"
+                placeholder={t("clients:form.addressPlaceholderShort")}
                 disabled={isSubmitting}
                 {...register("address")}
                 error={!!errors.address}
@@ -244,7 +246,7 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
           onClick={onClose}
           disabled={isSubmitting}
         >
-          إلغاء
+          {t("common:cancel")}
         </Button>
         <Button
           type="submit"
@@ -255,7 +257,7 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
             isSubmitting && <CircularProgress size={20} color="inherit" />
           }
         >
-          حفظ
+          {t("common:save")}
         </Button>
       </DialogActions>
     </Dialog>

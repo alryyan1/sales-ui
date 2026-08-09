@@ -4,6 +4,7 @@ import { useAuthorization } from "../../hooks/useAuthorization";
 import { useAuth } from "../../context/AuthContext";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner"; // Using 'sonner' as per the original router file
+import { useTranslation } from "react-i18next";
 
 interface PermissionGuardProps {
   requiredPermission: string | string[]; // Single permission or array of OR permissions
@@ -14,6 +15,7 @@ const PermissionGuard: React.FC<PermissionGuardProps> = ({
   requiredPermission,
   children,
 }) => {
+  const { t } = useTranslation(["common"]);
   const { hasPermission, isLoggedIn } = useAuthorization();
   const { isLoading } = useAuth();
 
@@ -47,13 +49,13 @@ const PermissionGuard: React.FC<PermissionGuardProps> = ({
     // Instead of toast + redirect loop, let's render an Access Denied Message
     return (
       <div className="p-8 text-center text-red-500">
-        <h2 className="text-2xl font-bold mb-2">تم رفض الوصول</h2>
+        <h2 className="text-2xl font-bold mb-2">{t("common:accessDeniedTitle")}</h2>
         <p>
-          ليس لديك الصلاحية اللازمة (
-          {Array.isArray(requiredPermission)
-            ? requiredPermission.join(", ")
-            : requiredPermission}
-          ) لعرض هذه الصفحة.
+          {t("common:accessDeniedDesc", {
+            permission: Array.isArray(requiredPermission)
+              ? requiredPermission.join(", ")
+              : requiredPermission,
+          })}
         </p>
       </div>
     );

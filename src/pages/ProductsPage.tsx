@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useProducts } from "../hooks/useProducts";
 import { useSettings } from "../context/SettingsContext";
 
@@ -64,6 +65,7 @@ import { Button } from "@mui/material";
 // Product type is now used directly from productService
 
 const ProductsPage: React.FC = () => {
+  const { t } = useTranslation(["products", "common"]);
   const { getSetting } = useSettings();
   const firebaseCollectionName = getSetting(
     "firebase_collection_name",
@@ -126,10 +128,10 @@ const ProductsPage: React.FC = () => {
   const COLUMN_KEYS = ["sku", "name", "category", "sellable_unit", "stocking_unit", "units_per_stocking", "stock", "cost", "sale_price", "description"] as const;
   type ColumnKey = typeof COLUMN_KEYS[number];
   const COLUMN_LABELS: Record<ColumnKey, string> = {
-    sku: "SKU", name: "اسم المنتج",
-    category: "الفئة", sellable_unit: "وحدة البيع", stocking_unit: "وحدة التخزين",
-    units_per_stocking: "عدد الوحدات", stock: "المخزون", cost: "تكلفة",
-    sale_price: "سعر البيع", description: "الوصف",
+    sku: t("products:list.columnLabels.sku"), name: t("products:list.columnLabels.name"),
+    category: t("products:list.columnLabels.category"), sellable_unit: t("products:list.columnLabels.sellable_unit"), stocking_unit: t("products:list.columnLabels.stocking_unit"),
+    units_per_stocking: t("products:list.columnLabels.units_per_stocking"), stock: t("products:list.columnLabels.stock"), cost: t("products:list.columnLabels.cost"),
+    sale_price: t("products:list.columnLabels.sale_price"), description: t("products:list.columnLabels.description"),
   };
   const defaultVisibility: Record<ColumnKey, boolean> = {
     sku: true, name: true, category: true,
@@ -246,7 +248,7 @@ const ProductsPage: React.FC = () => {
   const error = isError
     ? queryError instanceof Error
       ? queryError.message
-      : "حدث خطأ أثناء تحميل البيانات"
+      : t("common:errorLoadingData")
     : null;
 
   // Refetch mechanism via QueryClient (imported below)
@@ -341,13 +343,13 @@ const ProductsPage: React.FC = () => {
 
   const handleSaveSuccess = () => {
     closeModal();
-    showSnackbar("تم حفظ المنتج بنجاح", "success");
+    showSnackbar(t("products:list.productSavedSuccess"), "success");
     queryClient.invalidateQueries({ queryKey: ["products"] });
   };
 
   const handleDeleteSuccess = () => {
     closeModal();
-    showSnackbar("تم حذف المنتج بنجاح", "success");
+    showSnackbar(t("products:list.productDeletedSuccess"), "success");
     // Reset queries to force a hard refresh and show loading state
     queryClient.resetQueries({ queryKey: ["products"] });
   };
@@ -356,7 +358,7 @@ const ProductsPage: React.FC = () => {
   const handleDuplicateProduct = async (product: Product) => {
     try {
       const duplicatedData: ProductFormData = {
-        name: `${product.name} (نسخة)`,
+        name: `${product.name} ${t("products:list.duplicateSuffix")}`,
         sku: null, // Will be auto-generated
         description: product.description,
         image_url: product.image_url,
@@ -371,11 +373,11 @@ const ProductsPage: React.FC = () => {
       };
 
       await productService.createProduct(duplicatedData);
-      showSnackbar("تم نسخ المنتج بنجاح", "success");
+      showSnackbar(t("products:list.duplicateSuccess"), "success");
       queryClient.invalidateQueries({ queryKey: ["products"] });
     } catch (error) {
       console.error("Error duplicating product:", error);
-      showSnackbar("فشل في نسخ المنتج", "error");
+      showSnackbar(t("products:list.duplicateFailed"), "error");
     }
   };
 
@@ -406,10 +408,10 @@ const ProductsPage: React.FC = () => {
       link.download = `product_${product.sku || product.id}.csv`;
       link.click();
 
-      showSnackbar("تم تصدير بيانات المنتج بنجاح", "success");
+      showSnackbar(t("products:list.exportProductSuccess"), "success");
     } catch (error) {
       console.error("Error exporting product:", error);
-      showSnackbar("فشل في تصدير بيانات المنتج", "error");
+      showSnackbar(t("products:list.exportProductFailed"), "error");
     }
   };
 
@@ -421,26 +423,27 @@ const ProductsPage: React.FC = () => {
 
   const handleCopyProductInfo = async (product: Product) => {
     try {
+      const notSpecified = t("common:notSpecified");
       const productInfo = `
-المنتج: ${product.name}
+${t("products:product")}: ${product.name}
 ${product.sku ? `SKU: ${product.sku}` : ''}
-الفئة: ${product.category_name || 'غير محدد'}
-المخزون: ${product.current_stock_quantity || product.stock_quantity || 0} ${product.sellable_unit_name || ''}
-التكلفة: ${product.latest_cost_per_sellable_unit ? formatCurrency(Number(product.latest_cost_per_sellable_unit)) : 'غير محدد'}
-السعر: ${product.last_sale_price_per_sellable_unit ? formatCurrency(Number(product.last_sale_price_per_sellable_unit)) : 'غير محدد'}
+${t("products:category")}: ${product.category_name || notSpecified}
+${t("products:stock")}: ${product.current_stock_quantity || product.stock_quantity || 0} ${product.sellable_unit_name || ''}
+${t("products:purchasePrice")}: ${product.latest_cost_per_sellable_unit ? formatCurrency(Number(product.latest_cost_per_sellable_unit)) : notSpecified}
+${t("products:salePrice")}: ${product.last_sale_price_per_sellable_unit ? formatCurrency(Number(product.last_sale_price_per_sellable_unit)) : notSpecified}
       `.trim();
 
       await navigator.clipboard.writeText(productInfo);
-      showSnackbar("تم نسخ معلومات المنتج إلى الحافظة", "success");
+      showSnackbar(t("products:list.copyInfoSuccess"), "success");
     } catch (error) {
       console.error("Error copying product info:", error);
-      showSnackbar("فشل في نسخ معلومات المنتج", "error");
+      showSnackbar(t("products:list.copyInfoFailed"), "error");
     }
   };
 
   const handleToggleFavorite = (product: Product) => {
     // TODO: Implement favorites functionality
-    showSnackbar(`${product.name} ${Math.random() > 0.5 ? 'تم إضافته للمفضلة' : 'تم إزالته من المفضلة'}`, "info");
+    showSnackbar(`${product.name} ${Math.random() > 0.5 ? t("products:list.addedToFavorites") : t("products:list.removedFromFavorites")}`, "info");
   };
 
   const handlePriceUpdate = async (productId: number, field: "sale_price" | "cost_price", value: number | null) => {
@@ -465,7 +468,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
     } catch (error) {
       // Revert on failure
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      showSnackbar("فشل تحديث السعر", "error");
+      showSnackbar(t("products:list.priceUpdateFailed"), "error");
     }
   };
 
@@ -492,7 +495,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
       };
 
       await exportService.exportProductsPdf(filters);
-      showSnackbar("تم تصدير تقرير المنتجات إلى PDF بنجاح", "success");
+      showSnackbar(t("products:list.printReportSuccess"), "success");
     } catch (err) {
       showSnackbar(
         err instanceof Error ? err.message : "Failed to export PDF",
@@ -512,7 +515,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
       };
 
       await exportService.exportProductsExcel(filters);
-      showSnackbar("تم تصدير المنتجات إلى Excel بنجاح", "success");
+      showSnackbar(t("products:list.excelExportSuccess"), "success");
     } catch (err) {
       showSnackbar(
         err instanceof Error ? err.message : "Failed to export Excel",
@@ -528,10 +531,10 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
         category_id: selectedCategory,
         warehouse_id: selectedWarehouse ? Number(selectedWarehouse) : null,
       });
-      showSnackbar("جاري تصدير تقرير ارصده المخازن...", "success");
+      showSnackbar(t("products:list.auditExportStarted"), "success");
     } catch (error) {
       showSnackbar(
-        error instanceof Error ? error.message : "فشل تصدير تقرير ارصده المخازن",
+        error instanceof Error ? error.message : t("products:list.auditExportFailed"),
         "error",
       );
     }
@@ -540,17 +543,17 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
   const handleImportSuccess = () => {
     // Refresh the products list after successful import
     queryClient.invalidateQueries({ queryKey: ["products"] });
-    showSnackbar("تم استيراد المنتجات بنجاح", "success");
+    showSnackbar(t("products:importSuccess"), "success");
   };
 
   const handleProductCreate = async (data: ProductFormData) => {
     try {
       await productService.createProduct(data);
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      showSnackbar("تم إضافة المنتج بنجاح", "success");
+      showSnackbar(t("products:list.productAddedSuccess"), "success");
     } catch (err) {
       showSnackbar(
-        err instanceof Error ? err.message : "فشل إضافة المنتج",
+        err instanceof Error ? err.message : t("products:list.productAddFailed"),
         "error",
       );
       throw err; // Re-throw to let the table know it failed
@@ -559,16 +562,14 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
 
   const handleSyncToFirestore = async () => {
     if (
-      !window.confirm(
-        "هل أنت متأكد من رغبتك في مزامنة جميع المنتجات مع قاعدة بيانات Firebase؟ قد تستغرق هذه العملية بعض الوقت.",
-      )
+      !window.confirm(t("products:list.confirmSyncFirebase"))
     ) {
       return;
     }
 
     try {
       setSyncLoading(true);
-      showSnackbar("جاري جلب المنتجات والمزامنة...", "success");
+      showSnackbar(t("products:list.syncingProducts"), "success");
 
       // 1. Fetch all products (large limit)
       // Note: adjust limit if you have more than 10000 products
@@ -582,7 +583,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
       const allProducts = response.data;
 
       if (allProducts.length === 0) {
-        showSnackbar("لا توجد منتجات للمزامنة", "error");
+        showSnackbar(t("products:list.noProductsToSync"), "error");
         return;
       }
 
@@ -592,10 +593,10 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
         firebaseCollectionName,
       );
 
-      showSnackbar(`تمت مزامنة ${count} منتج بنجاح!`, "success");
+      showSnackbar(t("products:list.syncSuccess", { count }), "success");
     } catch (err) {
       console.error("Sync error:", err);
-      showSnackbar("فشل المزامنة مع Firebase", "error");
+      showSnackbar(t("products:list.syncFailed"), "error");
     } finally {
       setSyncLoading(false);
     }
@@ -603,20 +604,20 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
 
   const handleBulkUpdate = async () => {
     if (!selectedBulkUnit) return;
-    
-    if (!window.confirm("هل أنت متأكد من رغبتك في تحديث وحدة جميع المنتجات؟ سيؤدي هذا لتغيير وحدة البيع ووحدة التخزين لجميع المنتجات في النظام.")) {
+
+    if (!window.confirm(t("products:list.confirmBulkUpdateUnits"))) {
       return;
     }
 
     try {
       setIsBulkUpdating(true);
       await productService.bulkUpdateUnits(selectedBulkUnit as number);
-      showSnackbar("تم تحديث وحدات جميع المنتجات بنجاح", "success");
+      showSnackbar(t("products:list.bulkUpdateUnitsSuccess"), "success");
       setIsBulkUpdateDialogOpen(false);
       setSelectedBulkUnit("");
       queryClient.invalidateQueries({ queryKey: ["products"] });
     } catch (err) {
-      showSnackbar(err instanceof Error ? err.message : "فشل تحديث الوحدات", "error");
+      showSnackbar(err instanceof Error ? err.message : t("products:list.bulkUpdateUnitsFailed"), "error");
     } finally {
       setIsBulkUpdating(false);
     }
@@ -626,7 +627,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
     const pct = parseFloat(bulkSalePricePercentage);
     if (isNaN(pct) || pct <= 0) return;
 
-    if (!window.confirm(`هل أنت متأكد من رفع سعر البيع لجميع المنتجات بنسبة ${pct}%؟`)) {
+    if (!window.confirm(t("products:list.confirmRaisePrices", { pct }))) {
       return;
     }
 
@@ -638,7 +639,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
       setBulkSalePricePercentage("");
       queryClient.invalidateQueries({ queryKey: ["products"] });
     } catch (err) {
-      showSnackbar(err instanceof Error ? err.message : "فشل تحديث أسعار البيع", "error");
+      showSnackbar(err instanceof Error ? err.message : t("products:list.raisePricesFailed"), "error");
     } finally {
       setIsBulkSalePriceUpdating(false);
     }
@@ -665,21 +666,21 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
               component="h1"
               className="text-gray-800 dark:text-gray-100 font-semibold"
             >
-              إدارة المنتجات
+              {t("products:pageTitle")}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              إجمالي المنتجات: {totalProducts.toLocaleString()}
+              {t("products:list.totalProducts", { count: totalProducts.toLocaleString() })}
             </Typography>
           </Box>
           <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
             {/* Columns Toggle */}
             <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <Tooltip title="إظهار/إخفاء الأعمدة">
+              <Tooltip title={t("products:list.toggleColumns")}>
                 <IconButton onClick={(e) => setColumnsAnchor(e.currentTarget)} color="default">
                   <Columns3 className="h-5 w-5" />
                 </IconButton>
               </Tooltip>
-              <Typography variant="caption">الأعمدة</Typography>
+              <Typography variant="caption">{t("products:list.columns")}</Typography>
             </Box>
             <Popover
               open={Boolean(columnsAnchor)}
@@ -689,7 +690,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
               transformOrigin={{ vertical: "top", horizontal: "right" }}
             >
               <Box sx={{ p: 2, minWidth: 200 }}>
-                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>الأعمدة المرئية</Typography>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>{t("products:list.visibleColumns")}</Typography>
                 {COLUMN_KEYS.map((key) => (
                   <Box key={key} sx={{ display: "flex", alignItems: "center" }}>
                     <Checkbox
@@ -712,7 +713,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                 alignItems: "center",
               }}
             >
-              <Tooltip title="مزامنة مع Firebase">
+              <Tooltip title={t("products:list.syncFirebase")}>
                 <IconButton
                   onClick={handleSyncToFirestore}
                   color="warning" // Warning color to stand out but not primary action
@@ -725,7 +726,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                   )}
                 </IconButton>
               </Tooltip>
-              <Typography variant="caption">مزامنة</Typography>
+              <Typography variant="caption">{t("products:list.sync")}</Typography>
             </Box>
 
             {/* Print Products */}
@@ -736,7 +737,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                 alignItems: "center",
               }}
             >
-              <Tooltip title="طباعة تقرير المنتجات">
+              <Tooltip title={t("products:list.printReportTooltip")}>
                 <IconButton
                   onClick={() => handlePrintProducts()}
                   color="default"
@@ -744,7 +745,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                   <Printer className="h-5 w-5" />
                 </IconButton>
               </Tooltip>
-              <Typography variant="caption">طباعة</Typography>
+              <Typography variant="caption">{t("products:list.print")}</Typography>
             </Box>
 
             {/* Price List PDF */}
@@ -755,7 +756,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                 alignItems: "center",
               }}
             >
-              <Tooltip title="قائمة الأسعار PDF">
+              <Tooltip title={t("products:list.priceListPdf")}>
                 <IconButton
                   onClick={() => exportService.exportPriceListPdf()}
                   color="default"
@@ -763,7 +764,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                   <FileText className="h-5 w-5" />
                 </IconButton>
               </Tooltip>
-              <Typography variant="caption">قائمة الأسعار</Typography>
+              <Typography variant="caption">{t("products:list.priceList")}</Typography>
             </Box>
 
             {/* Export to Excel */}
@@ -774,7 +775,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                 alignItems: "center",
               }}
             >
-              <Tooltip title="تصدير إلى Excel">
+              <Tooltip title={t("products:list.exportToExcel")}>
                 <IconButton onClick={() => handleExportExcel()} color="default">
                   <FileSpreadsheet className="h-5 w-5" />
                 </IconButton>
@@ -790,7 +791,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                 alignItems: "center",
               }}
             >
-              <Tooltip title="تصدير تقرير ارصده المخازن">
+              <Tooltip title={t("products:list.auditReportTooltip")}>
                 <IconButton
                   onClick={() => handleExportAuditReport()}
                   color="secondary"
@@ -798,7 +799,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                   <Sparkles className="h-5 w-5" />
                 </IconButton>
               </Tooltip>
-              <Typography variant="caption">تقرير ارصده المخازن</Typography>
+              <Typography variant="caption">{t("products:list.auditReport")}</Typography>
             </Box>
 
             {/* Import from File */}
@@ -809,7 +810,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                 alignItems: "center",
               }}
             >
-              <Tooltip title="استيراد من ملف">
+              <Tooltip title={t("products:list.importFromFile")}>
                 <IconButton
                   onClick={() => setIsImportDialogOpen(true)}
                   color="default"
@@ -817,7 +818,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                   <Upload className="h-5 w-5" />
                 </IconButton>
               </Tooltip>
-              <Typography variant="caption">استيراد</Typography>
+              <Typography variant="caption">{t("products:list.import")}</Typography>
             </Box>
 
             {/* Add Product */}
@@ -828,7 +829,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                 alignItems: "center",
               }}
             >
-              <Tooltip title="إضافة منتج جديد">
+              <Tooltip title={t("products:list.addNewProductTooltip")}>
                 <IconButton
                   onClick={() => openModal()}
                   color="primary"
@@ -841,7 +842,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                   <Plus className="h-5 w-5" />
                 </IconButton>
               </Tooltip>
-              <Typography variant="caption">إضافة</Typography>
+              <Typography variant="caption">{t("products:list.add")}</Typography>
             </Box>
 
             {/* Manage Categories */}
@@ -852,7 +853,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                 alignItems: "center",
               }}
             >
-              <Tooltip title="إدارة الفئات">
+              <Tooltip title={t("products:list.manageCategoriesTooltip")}>
                 <IconButton
                   onClick={() => navigate("/admin/categories")}
                   color="default"
@@ -860,7 +861,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                   <Layers className="h-5 w-5" />
                 </IconButton>
               </Tooltip>
-              <Typography variant="caption">الفئات</Typography>
+              <Typography variant="caption">{t("products:list.categories")}</Typography>
             </Box>
 
             {/* Manage Units */}
@@ -871,7 +872,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                 alignItems: "center",
               }}
             >
-              <Tooltip title="إدارة الوحدات">
+              <Tooltip title={t("products:list.manageUnitsTooltip")}>
                 <IconButton
                   onClick={() => setIsUnitsDialogOpen(true)}
                   color="default"
@@ -879,7 +880,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                   <Layers className="h-5 w-5" />
                 </IconButton>
               </Tooltip>
-              <Typography variant="caption">الوحدات</Typography>
+              <Typography variant="caption">{t("products:list.unitsLabel")}</Typography>
             </Box>
 
             {/* Bulk Update Units */}
@@ -890,7 +891,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                 alignItems: "center",
               }}
             >
-              <Tooltip title="تحديث جماعي للوحدات">
+              <Tooltip title={t("products:list.bulkUpdateUnitsTooltip")}>
                 <IconButton
                   onClick={() => setIsBulkUpdateDialogOpen(true)}
                   color="secondary"
@@ -898,7 +899,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                   <RefreshCcw className="h-5 w-5" />
                 </IconButton>
               </Tooltip>
-              <Typography variant="caption">تحديث جماعي</Typography>
+              <Typography variant="caption">{t("products:list.bulkUpdate")}</Typography>
             </Box>
 
             {/* Bulk Update Sale Price */}
@@ -909,7 +910,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                 alignItems: "center",
               }}
             >
-              <Tooltip title="رفع أسعار البيع بنسبة مئوية">
+              <Tooltip title={t("products:list.raisePricesTooltip")}>
                 <IconButton
                   onClick={() => setIsBulkSalePriceDialogOpen(true)}
                   color="success"
@@ -917,7 +918,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                   <Percent className="h-5 w-5" />
                 </IconButton>
               </Tooltip>
-              <Typography variant="caption">رفع الأسعار</Typography>
+              <Typography variant="caption">{t("products:list.raisePrices")}</Typography>
             </Box>
           </Box>
         </Box>
@@ -936,7 +937,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                 fullWidth
                 variant="outlined"
                 size="small"
-                placeholder="ابحث عن منتج..."
+                placeholder={t("products:list.searchPlaceholder")}
                 value={searchTerm}
                 onChange={handleSearchChange}
                 InputProps={{
@@ -957,16 +958,16 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
             <Box sx={{ flex: { md: 1 } }}>
               <FormControl fullWidth size="small">
                 <InputLabel className="dark:text-gray-300">
-                  تصفية حسب الفئة
+                  {t("products:filterByCategory")}
                 </InputLabel>
                 <Select
                   value={selectedCategory || ""}
                   onChange={handleCategoryChange}
-                  label="تصفية حسب الفئة"
+                  label={t("products:filterByCategory")}
                   disabled={loadingCategories}
                 >
                   <MenuItem value="">
-                    <em>كل الفئات</em>
+                    <em>{t("products:list.allCategoriesOption")}</em>
                   </MenuItem>
                   {categories.map((category) => (
                     <MenuItem key={category.id} value={category.id}>
@@ -980,15 +981,15 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
             {/* Warehouse Filter */}
             <Box sx={{ flex: { md: 1 } }}>
               <FormControl fullWidth size="small">
-                <InputLabel className="dark:text-gray-300">تصفية حسب المخزن</InputLabel>
+                <InputLabel className="dark:text-gray-300">{t("products:list.filterByWarehouse")}</InputLabel>
                 <Select
                   value={selectedWarehouse}
                   onChange={handleWarehouseChange}
-                  label="تصفية حسب المخزن"
+                  label={t("products:list.filterByWarehouse")}
                   disabled={loadingWarehouses}
                 >
                   <MenuItem value="">
-                    <em>كل المخازن</em>
+                    <em>{t("products:list.allWarehousesOption")}</em>
                   </MenuItem>
                   {warehouses.map((warehouse) => (
                     <MenuItem key={warehouse.id} value={warehouse.id}>
@@ -1027,7 +1028,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                     color="primary"
                   />
                 }
-                label="عرض الكميات المنخفضه"
+                label={t("products:list.showLowQuantities")}
               />
             </Box>
           </Box>
@@ -1111,19 +1112,19 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
           maxWidth="xs"
           fullWidth
         >
-          <DialogTitle sx={{ fontWeight: 600 }}>تحديث جماعي لوحدات المنتجات</DialogTitle>
+          <DialogTitle sx={{ fontWeight: 600 }}>{t("products:list.unitsBulkUpdateTitle")}</DialogTitle>
           <DialogContent>
             <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 3 }}>
               <Typography variant="body2" color="text.secondary">
-                اختر الوحدة التي تريد تعيينها كـ "وحدة بيع" و "وحدة تخزين" لكل المنتجات في النظام.
+                {t("products:list.unitsBulkUpdateDesc")}
               </Typography>
-              
+
               <FormControl fullWidth>
-                <InputLabel>اختر الوحدة</InputLabel>
+                <InputLabel>{t("products:list.chooseUnit")}</InputLabel>
                 <Select
                   value={selectedBulkUnit}
                   onChange={(e) => setSelectedBulkUnit(e.target.value as number)}
-                  label="اختر الوحدة"
+                  label={t("products:list.chooseUnit")}
                   disabled={isBulkUpdating}
                 >
                   {sellableUnits.map((u) => (
@@ -1135,11 +1136,11 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
               </FormControl>
 
               <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end", mt: 1 }}>
-                <Button 
-                  onClick={() => setIsBulkUpdateDialogOpen(false)} 
+                <Button
+                  onClick={() => setIsBulkUpdateDialogOpen(false)}
                   disabled={isBulkUpdating}
                 >
-                  إلغاء
+                  {t("common:cancel")}
                 </Button>
                 <Button
                   variant="contained"
@@ -1148,7 +1149,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                   disabled={!selectedBulkUnit || isBulkUpdating}
                   startIcon={isBulkUpdating && <RefreshCcw className="h-4 w-4 animate-spin" />}
                 >
-                  {isBulkUpdating ? "جاري التحديث..." : "تحديث الكل"}
+                  {isBulkUpdating ? t("products:list.updatingEllipsis") : t("products:list.updateAll")}
                 </Button>
               </Box>
             </Box>
@@ -1168,16 +1169,16 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
           maxWidth="xs"
           fullWidth
         >
-          <DialogTitle sx={{ fontWeight: 600 }}>رفع أسعار البيع بنسبة مئوية</DialogTitle>
+          <DialogTitle sx={{ fontWeight: 600 }}>{t("products:list.raisePricesTitle")}</DialogTitle>
           <DialogContent>
             <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 3 }}>
               <Typography variant="body2" color="text.secondary">
-                سيتم رفع سعر البيع لجميع المنتجات بناءً على آخر سعر بيع مسجل مضروباً في النسبة المدخلة.
+                {t("products:list.raisePricesDesc")}
               </Typography>
 
               <TextField
                 fullWidth
-                label="نسبة الزيادة (%)"
+                label={t("products:list.increasePercent")}
                 type="number"
                 value={bulkSalePricePercentage}
                 onChange={(e) => setBulkSalePricePercentage(e.target.value)}
@@ -1193,7 +1194,7 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                   onClick={() => setIsBulkSalePriceDialogOpen(false)}
                   disabled={isBulkSalePriceUpdating}
                 >
-                  إلغاء
+                  {t("common:cancel")}
                 </Button>
                 <Button
                   variant="contained"
@@ -1202,14 +1203,12 @@ ${product.sku ? `SKU: ${product.sku}` : ''}
                   disabled={!bulkSalePricePercentage || parseFloat(bulkSalePricePercentage) <= 0 || isBulkSalePriceUpdating}
                   startIcon={isBulkSalePriceUpdating && <RefreshCcw className="h-4 w-4 animate-spin" />}
                 >
-                  {isBulkSalePriceUpdating ? "جاري التحديث..." : "تطبيق"}
+                  {isBulkSalePriceUpdating ? t("products:list.updatingEllipsis") : t("common:apply")}
                 </Button>
               </Box>
             </Box>
           </DialogContent>
         </Dialog>
-
-        {/* Add deleteConfirm key */}
       </Box>
     </>
   );

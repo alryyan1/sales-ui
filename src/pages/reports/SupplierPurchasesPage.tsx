@@ -19,8 +19,10 @@ import purchaseService, { type Purchase } from "@/services/purchaseService";
 import { formatNumber } from "@/constants";
 import { getErrorMessage } from "@/lib/axios";
 import dayjs from "dayjs";
+import { useTranslation } from "react-i18next";
 
 const SupplierPurchasesPage: React.FC = () => {
+  const { t, i18n } = useTranslation(["reports", "purchases", "common"]);
   const { supplierId } = useParams<{ supplierId: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -35,9 +37,9 @@ const SupplierPurchasesPage: React.FC = () => {
   } | null>(null);
 
   const statusLabels: Record<string, string> = {
-    received: "تم الاستلام",
-    pending: "معلق",
-    ordered: "تم الطلب",
+    received: t("purchases:status_received"),
+    pending: t("purchases:status_pending"),
+    ordered: t("purchases:status_ordered"),
   };
 
   const getStatusVariant = (
@@ -71,9 +73,9 @@ const SupplierPurchasesPage: React.FC = () => {
         setSupplierName(data.data[0].supplier_name);
       }
     } catch (err: any) {
-      const errorMsg = getErrorMessage(err) || "حدث خطأ أثناء جلب المشتريات";
+      const errorMsg = getErrorMessage(err) || t("reports:supplierPurchasesPage.fetchFailed");
       setError(errorMsg);
-      toast.error("خطأ", { description: errorMsg });
+      toast.error(t("common:error"), { description: errorMsg });
     } finally {
       setIsLoading(false);
     }
@@ -96,15 +98,15 @@ const SupplierPurchasesPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 md:p-6" dir="rtl">
+    <div className="min-h-screen bg-slate-50/50 p-4 md:p-6" dir={i18n.dir()}>
       {/* Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-            مشتريات {supplierName || "المورد"}
+            {t("reports:supplierPurchasesPage.titleWithName", { name: supplierName || t("reports:supplierPurchasesPage.defaultSupplierName") })}
           </h1>
           <p className="text-slate-500 mt-1">
-            عرض جميع المشتريات من هذا المورد
+            {t("reports:supplierPurchasesPage.subtitle")}
           </p>
         </div>
 
@@ -114,7 +116,7 @@ const SupplierPurchasesPage: React.FC = () => {
           className="gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
-          العودة إلى ملخص الموردين
+          {t("reports:supplierPurchasesPage.backToSummary")}
         </Button>
       </div>
 
@@ -131,7 +133,7 @@ const SupplierPurchasesPage: React.FC = () => {
               className="mr-auto border-red-200 hover:bg-red-100 text-red-700"
             >
               <RefreshCw className="h-4 w-4 ml-2" />
-              إعادة المحاولة
+              {t("reports:supplierPurchasesPage.retryButton")}
             </Button>
           </div>
         )}
@@ -141,7 +143,7 @@ const SupplierPurchasesPage: React.FC = () => {
           <CardHeader className="pb-4">
             <CardTitle className="text-xl flex items-center gap-2">
               <FileText className="h-5 w-5 text-blue-500" />
-              قائمة المشتريات
+              {t("reports:supplierPurchasesPage.purchasesListTitle")}
             </CardTitle>
           </CardHeader>
 
@@ -178,9 +180,9 @@ const SupplierPurchasesPage: React.FC = () => {
                               <FileText className="h-8 w-8 text-slate-400" />
                             </div>
                             <h3 className="text-lg font-medium text-slate-900 mb-1">
-                              لا توجد مشتريات
+                              {t("reports:supplierPurchasesPage.noPurchasesTitle")}
                             </h3>
-                            <p>لا توجد مشتريات مسجلة لهذا المورد</p>
+                            <p>{t("reports:supplierPurchasesPage.noPurchasesSubtitle")}</p>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -192,19 +194,19 @@ const SupplierPurchasesPage: React.FC = () => {
                       <TableHeader>
                         <TableRow className="bg-slate-50 hover:bg-slate-50">
                           <TableHead className="text-right font-semibold">
-                            التاريخ
+                            {t("reports:supplierPurchasesPage.colDate")}
                           </TableHead>
                           <TableHead className="text-right font-semibold">
-                            رقم الشراء
+                            {t("reports:supplierPurchasesPage.colPurchaseNumber")}
                           </TableHead>
                           <TableHead className="text-right font-semibold">
-                            المرجع
+                            {t("reports:supplierPurchasesPage.colReference")}
                           </TableHead>
                           <TableHead className="text-center font-semibold">
-                            الحالة
+                            {t("reports:supplierPurchasesPage.colStatus")}
                           </TableHead>
                           <TableHead className="text-right font-semibold">
-                            المبلغ الإجمالي
+                            {t("reports:supplierPurchasesPage.colTotalAmount")}
                           </TableHead>
                         </TableRow>
                       </TableHeader>
@@ -249,10 +251,10 @@ const SupplierPurchasesPage: React.FC = () => {
                             disabled={currentPage === 1 || isLoading}
                             className="h-8 w-8 p-0"
                           >
-                            &rarr;
+                            {i18n.dir() === "rtl" ? "→" : "←"}
                           </Button>
                           <div className="px-3 py-1 text-sm font-medium text-slate-600">
-                            صفحة {currentPage} من {meta.last_page}
+                            {t("reports:supplierPurchasesPage.pageOf", { current: currentPage, total: meta.last_page })}
                           </div>
                           <Button
                             variant="ghost"
@@ -263,7 +265,7 @@ const SupplierPurchasesPage: React.FC = () => {
                             disabled={currentPage === meta.last_page || isLoading}
                             className="h-8 w-8 p-0"
                           >
-                            &larr;
+                            {i18n.dir() === "rtl" ? "←" : "→"}
                           </Button>
                         </div>
                       </div>

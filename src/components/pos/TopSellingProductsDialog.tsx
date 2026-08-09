@@ -27,6 +27,7 @@ import SellOutlinedIcon from "@mui/icons-material/SellOutlined";
 import reportService, { BestSellingProduct } from "@/services/reportService";
 import { formatNumber } from "@/constants";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 interface TopSellingProductsDialogProps {
   open: boolean;
@@ -46,6 +47,7 @@ export default function TopSellingProductsDialog({
   onClose,
   onAddProduct,
 }: TopSellingProductsDialogProps) {
+  const { t } = useTranslation(["pos"]);
   const theme = useTheme();
   const [products, setProducts] = useState<BestSellingProduct[]>([]);
   const [loading, setLoading] = useState(false);
@@ -58,7 +60,7 @@ export default function TopSellingProductsDialog({
       setProducts(data || []);
     } catch (err) {
       console.error("Failed to fetch top selling products:", err);
-      toast.error("فشل جلب الأدوية الأكثر مبيعاً");
+      toast.error(t("pos:topSellingDialog.fetchFailed"));
     } finally {
       setLoading(false);
     }
@@ -72,7 +74,7 @@ export default function TopSellingProductsDialog({
 
   const handleAdd = async (product: BestSellingProduct) => {
     if (product.current_stock <= 0) {
-      toast.error("هذا المنتج غير متوفر في المخزون");
+      toast.error(t("pos:topSellingDialog.outOfStock"));
       return;
     }
     try {
@@ -145,13 +147,13 @@ export default function TopSellingProductsDialog({
               color="white"
               sx={{ lineHeight: 1.2 }}
             >
-              الأكثر مبيعاً
+              {t("pos:topSellingDialog.title")}
             </Typography>
             <Typography
               variant="caption"
               sx={{ color: "rgba(255,255,255,0.8)" }}
             >
-              أفضل الأدوية والمنتجات خلال آخر 30 يوماً
+              {t("pos:topSellingDialog.subtitle")}
             </Typography>
           </Box>
         </Box>
@@ -242,10 +244,10 @@ export default function TopSellingProductsDialog({
               <Inventory2OutlinedIcon sx={{ fontSize: 40 }} />
             </Avatar>
             <Typography variant="h6" color="text.secondary" fontWeight="bold">
-              لا توجد بيانات متاحة
+              {t("pos:topSellingDialog.noDataTitle")}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              لم يتم العثور على أي منتجات مبيعة خلال الفترة المحددة.
+              {t("pos:topSellingDialog.noDataSubtitle")}
             </Typography>
           </Box>
         ) : (
@@ -345,7 +347,7 @@ export default function TopSellingProductsDialog({
                           </Typography>
                         </Box>
 
-                        <Tooltip title="الكمية المباعة">
+                        <Tooltip title={t("pos:topSellingDialog.quantitySoldTooltip")}>
                           <Box
                             sx={{
                               display: "flex",
@@ -388,8 +390,9 @@ export default function TopSellingProductsDialog({
                             }
                             fontWeight={isOutOfStock ? "bold" : "regular"}
                           >
-                            المخزون:{" "}
-                            {isOutOfStock ? "نفذت" : product.current_stock}
+                            {t("pos:topSellingDialog.stockLabel", {
+                              value: isOutOfStock ? t("pos:topSellingDialog.outOfStockValue") : product.current_stock,
+                            })}
                           </Typography>
                         </Box>
                       </Stack>
@@ -418,7 +421,7 @@ export default function TopSellingProductsDialog({
                         minWidth: 120,
                       }}
                     >
-                      {isOutOfStock ? "غير متوفر" : "إضافة"}
+                      {isOutOfStock ? t("pos:topSellingDialog.outOfStockButton") : t("pos:topSellingDialog.addButton")}
                     </Button>
                   </Box>
                 </ListItem>
@@ -442,7 +445,7 @@ export default function TopSellingProductsDialog({
           color="inherit"
           sx={{ borderRadius: "8px", px: 3, fontWeight: "bold" }}
         >
-          إغلاق
+          {t("pos:topSellingDialog.close")}
         </Button>
       </DialogActions>
     </Dialog>

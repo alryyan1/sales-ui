@@ -1,6 +1,7 @@
 import { pdf } from "@react-pdf/renderer";
 import { toast } from "sonner";
 import React from "react";
+import i18n from "@/i18n";
 
 /**
  * Downloads a PDF document generated from a React-PDF component
@@ -21,13 +22,13 @@ export const downloadPdf = async (
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    toast.success("تم تنزيل الملف بنجاح", {
+    toast.success(i18n.t("common:pdfDownloadSuccess"), {
       description: filename,
     });
   } catch (error) {
     console.error("Error generating PDF:", error);
-    toast.error("خطأ", {
-      description: "فشل في إنشاء ملف PDF",
+    toast.error(i18n.t("common:error"), {
+      description: i18n.t("common:pdfDownloadError"),
     });
   }
 };

@@ -1,5 +1,6 @@
 // src/components/clients/WhatsAppBulkDialog.tsx
 import React, { useState, useRef, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
@@ -64,6 +65,7 @@ const WhatsAppBulkDialog: React.FC<WhatsAppBulkDialogProps> = ({
   templateName = "pay_notification",
   languageCode = "ar",
 }) => {
+  const { t, i18n } = useTranslation(["clients", "common"]);
   const [states, setStates] = useState<ClientSendState[]>([]);
   const [isSending, setIsSending] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
@@ -115,7 +117,7 @@ const WhatsAppBulkDialog: React.FC<WhatsAppBulkDialogProps> = ({
       const client = clients[i];
 
       if (!client.phone) {
-        updateState(i, "failed", "لا يوجد رقم هاتف");
+        updateState(i, "failed", t("clients:whatsappBulk.noPhoneNumber"));
       } else {
         const result = await whatsappService.sendTemplate(
           client.phone,
@@ -164,7 +166,7 @@ const WhatsAppBulkDialog: React.FC<WhatsAppBulkDialogProps> = ({
       maxWidth="sm"
       fullWidth
       PaperProps={{ sx: { borderRadius: 3 } }}
-      dir="rtl"
+      dir={i18n.dir()}
     >
       {/* ── Header ── */}
       <DialogTitle sx={{ borderBottom: "1px solid", borderColor: "divider", py: 1.5, px: 2.5 }}>
@@ -180,13 +182,13 @@ const WhatsAppBulkDialog: React.FC<WhatsAppBulkDialogProps> = ({
           </Box>
           <Box sx={{ flex: 1 }}>
             <Typography variant="subtitle1" fontWeight={700} lineHeight={1.2}>
-              إرسال إشعار واتساب
+              {t("clients:whatsappBulk.title")}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              القالب: <strong>{templateName}</strong> · اللغة: {languageCode}
+              {t("clients:whatsappBulk.templateLabel", { template: templateName, lang: languageCode })}
             </Typography>
           </Box>
-          <Chip label={`${total} عميل`} size="small" color="primary" variant="outlined" />
+          <Chip label={t("clients:whatsappBulk.clientCountChip", { count: total })} size="small" color="primary" variant="outlined" />
         </Box>
       </DialogTitle>
 
@@ -194,7 +196,7 @@ const WhatsAppBulkDialog: React.FC<WhatsAppBulkDialogProps> = ({
         {/* ── Settings row ── */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, pt: 0.5 }}>
           <TextField
-            label="التأخير بين كل إرسال (ثانية)"
+            label={t("clients:whatsappBulk.delayLabel")}
             type="number"
             size="small"
             value={delaySeconds}
@@ -205,7 +207,7 @@ const WhatsAppBulkDialog: React.FC<WhatsAppBulkDialogProps> = ({
           />
           <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
             {countdown !== null && isSending && (
-              <span>التالي خلال <strong>{countdown}s</strong>...</span>
+              <span>{t("clients:whatsappBulk.nextInSeconds", { count: countdown })}</span>
             )}
           </Typography>
         </Box>
@@ -280,7 +282,7 @@ const WhatsAppBulkDialog: React.FC<WhatsAppBulkDialogProps> = ({
                   ) : (
                     <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                       <PhoneDisabled sx={{ fontSize: 11, color: "text.disabled" }} />
-                      <Typography variant="caption" color="text.disabled">لا يوجد رقم</Typography>
+                      <Typography variant="caption" color="text.disabled">{t("clients:whatsappBulk.noPhone")}</Typography>
                     </Box>
                   )}
                 </Box>
@@ -307,8 +309,8 @@ const WhatsAppBulkDialog: React.FC<WhatsAppBulkDialogProps> = ({
           <Box sx={{ textAlign: "center", py: 0.5 }}>
             <Typography variant="body2" color={failedCount === 0 ? "success.main" : "warning.main"} fontWeight={600}>
               {failedCount === 0
-                ? `✓ تم إرسال جميع الرسائل بنجاح`
-                : `اكتمل الإرسال — ${doneCount} ناجح، ${failedCount} فاشل`}
+                ? t("clients:whatsappBulk.allSentSuccess")
+                : t("clients:whatsappBulk.sendingComplete", { success: doneCount, failed: failedCount })}
             </Typography>
           </Box>
         )}
@@ -323,7 +325,7 @@ const WhatsAppBulkDialog: React.FC<WhatsAppBulkDialogProps> = ({
           disabled={isSending}
           size="small"
         >
-          إغلاق
+          {t("common:close")}
         </Button>
 
         {isSending ? (
@@ -335,7 +337,7 @@ const WhatsAppBulkDialog: React.FC<WhatsAppBulkDialogProps> = ({
             onClick={stopSending}
             sx={{ minWidth: 110 }}
           >
-            إيقاف
+            {t("clients:whatsappBulk.stop")}
           </Button>
         ) : (
           <Button
@@ -347,7 +349,7 @@ const WhatsAppBulkDialog: React.FC<WhatsAppBulkDialogProps> = ({
             disabled={isFinished || total === 0}
             sx={{ minWidth: 110, bgcolor: "#25D366", "&:hover": { bgcolor: "#1ebe59" } }}
           >
-            {isFinished ? "اكتمل" : "بدء الإرسال"}
+            {isFinished ? t("clients:whatsappBulk.completed") : t("clients:whatsappBulk.startSending")}
           </Button>
         )}
       </DialogActions>

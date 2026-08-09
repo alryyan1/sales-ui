@@ -76,5 +76,10 @@
   "trendAnalysis": "تحليل الاتجاهات",
   "periodComparison": "مقارنة الفترات",
   "growthMetrics": "مقاييس النمو",
-  "performanceIndicators": "مؤشرات الأداء"
+  "performanceIndicators": "مؤشرات الأداء",
+  "pageSubtitle": "نظرة عامة على أداء المتجر والمبيعات",
+  "realData": "بيانات حقيقية",
+  "mockDataBanner": "تنبيه: يتم عرض بيانات تجريبية لعدم توفر اتصال بالخادم",
+  "salesValueSeries": "قيمة المبيعات",
+  "ordersCountSeries": "عدد الطلبات"
 }
