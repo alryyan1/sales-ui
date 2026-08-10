@@ -1,6 +1,9 @@
+import { useMemo, useState } from "react";
 import { Controller, Control } from "react-hook-form";
+import { Plus, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SettingsSection } from "./shared/SettingsSection";
 import { SettingsGroup } from "./shared/SettingsGroup";
@@ -9,6 +12,91 @@ import { AppSettings } from "@/services/settingService";
 
 interface PosSettingsProps {
   control: Control<Partial<AppSettings>>;
+}
+
+function parseNumbers(value: string | null | undefined): string[] {
+  return (value ?? "")
+    .split(",")
+    .map((n) => n.trim())
+    .filter(Boolean);
+}
+
+function WhatsappNumbersField({
+  value,
+  onChange,
+}: {
+  value: string | null | undefined;
+  onChange: (value: string) => void;
+}) {
+  const numbers = useMemo(() => parseNumbers(value), [value]);
+  const [draft, setDraft] = useState("");
+
+  const addNumber = () => {
+    const trimmed = draft.trim();
+    if (!trimmed || numbers.includes(trimmed)) {
+      setDraft("");
+      return;
+    }
+    onChange([...numbers, trimmed].join(","));
+    setDraft("");
+  };
+
+  const removeNumber = (number: string) => {
+    onChange(numbers.filter((n) => n !== number).join(","));
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="whatsapp_shift_closure_numbers">أرقام استلام تقرير إغلاق الوردية</Label>
+
+      {numbers.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {numbers.map((number) => (
+            <span
+              key={number}
+              dir="ltr"
+              className="flex items-center gap-1.5 rounded-full border bg-muted px-3 py-1 text-xs font-medium"
+            >
+              {number}
+              <button
+                type="button"
+                onClick={() => removeNumber(number)}
+                className="text-muted-foreground transition-colors hover:text-destructive"
+                aria-label={`إزالة ${number}`}
+              >
+                <X className="size-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        <Input
+          id="whatsapp_shift_closure_numbers"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addNumber();
+            }
+          }}
+          placeholder="مثال: 249991961111"
+          dir="ltr"
+          className="text-left"
+        />
+        <Button type="button" variant="outline" onClick={addNumber} disabled={!draft.trim()} className="gap-1.5 shrink-0">
+          <Plus className="size-4" />
+          إضافة
+        </Button>
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        اكتب رقم الهاتف ثم اضغط "إضافة" أو Enter لإضافته إلى القائمة. يجب أن يتضمن الرمز الدولي بدون +
+      </p>
+    </div>
+  );
 }
 
 export const PosSettings = ({ control }: PosSettingsProps) => {
@@ -46,28 +134,29 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
 
       <Separator />
 
+      <SettingsGroup title="سعر صرف الدولار (USD Conversion)">
+        <Controller
+          name="usd_conversion_enabled"
+          control={control}
+          render={({ field }) => (
+            <SwitchField
+              label="تفعيل تحويل أسعار الدولار"
+              description='عند التعطيل، يُخفى زر سعر الصرف من الشريط العلوي، وتُعرض/تُباع المنتجات المسعّرة بالدولار بقيمتها كما هي بدون ضرب في سعر الصرف.'
+              checked={field.value ?? true}
+              onCheckedChange={field.onChange}
+            />
+          )}
+        />
+      </SettingsGroup>
+
+      <Separator />
+
       <SettingsGroup title="إشعارات الواتساب (WhatsApp Notifications)">
         <Controller
           name="whatsapp_shift_closure_numbers"
           control={control}
           render={({ field }) => (
-            <div className="space-y-2">
-              <Label htmlFor="whatsapp_shift_closure_numbers">
-                أرقام استلام تقرير إغلاق الوردية
-              </Label>
-              <Input
-                id="whatsapp_shift_closure_numbers"
-                {...field}
-                value={field.value || ""}
-                placeholder="مثال: 249991961111,249123456789"
-                dir="ltr"
-                className="text-left"
-              />
-              <p className="text-xs text-muted-foreground">
-                أدخل أرقام الهواتف (مفصولة بفاصلة) التي يجب أن تتلقى رسالة الواتساب عند
-                إغلاق أي وردية. يجب أن تتضمن الرمز الدولي بدون +
-              </p>
-            </div>
+            <WhatsappNumbersField value={field.value} onChange={field.onChange} />
           )}
         />
       </SettingsGroup>

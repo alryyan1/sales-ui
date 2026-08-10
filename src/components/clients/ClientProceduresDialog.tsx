@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   Dialog,
   DialogContent,
@@ -21,11 +21,6 @@ import {
   Wallet,
 } from "lucide-react";
 import { Client } from "../../services/clientService";
-import { PDFDownloadLink } from "@react-pdf/renderer";
-import { ClientLedgerPdf } from "./ClientLedgerPdf";
-import clientLedgerService, {
-  ClientLedger,
-} from "../../services/clientLedgerService";
 
 interface ClientProceduresDialogProps {
   open: boolean;
@@ -48,29 +43,6 @@ const ClientProceduresDialog: React.FC<ClientProceduresDialogProps> = ({
   onNewSale,
   companyName = "اسم الشركة",
 }) => {
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const [ledger, setLedger] = useState<ClientLedger | null>(null);
-
-  // Better approach for "Download PDF": Button that triggers fetch, then renders the download link conditionally.
-  const [readyToDownload, setReadyToDownload] = useState(false);
-
-  const handlePreparePdf = async () => {
-    if (!client) return;
-    setIsGeneratingPdf(true);
-    try {
-      // Fetch ALL ledger entries for the PDF (not paginated ideally, or set high page size)
-      // Function name is 'getLedger' in service, assuming it returns ClientLedger object which has ledger_entries
-      const response = await clientLedgerService.getLedger(client.id);
-      // The service returns the whole object structure, we need ledger_entries
-      setLedger(response);
-      setReadyToDownload(true);
-    } catch (error) {
-      console.error("Failed to fetch ledger for PDF", error);
-    } finally {
-      setIsGeneratingPdf(false);
-    }
-  };
-
   if (!client) return null;
 
   return (

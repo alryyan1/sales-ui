@@ -59,6 +59,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ onDrawerToggle, isSidebarCollapse
   const isPosPage = location.pathname === "/sales/pos-blank";
 
   // USD to SDG factor
+  const usdConversionEnabled = Boolean(getSetting("usd_conversion_enabled", true));
   const usdFactor = getSetting("usd_to_sdg_factor", 1) as number;
   const [localFactor, setLocalFactor] = React.useState(String(usdFactor));
   const [factorPopoverOpen, setFactorPopoverOpen] = React.useState(false);
@@ -307,6 +308,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ onDrawerToggle, isSidebarCollapse
           )}
 
           {/* USD conversion factor */}
+          {usdConversionEnabled && (
           <Popover open={factorPopoverOpen} onOpenChange={setFactorPopoverOpen}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -359,6 +361,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ onDrawerToggle, isSidebarCollapse
               </div>
             </PopoverContent>
           </Popover>
+          )}
 
           {/* Firebase connection indicator */}
           <Tooltip>

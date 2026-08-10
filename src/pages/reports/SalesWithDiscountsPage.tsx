@@ -18,7 +18,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { formatNumber } from "@/constants";
-import { SalesWithDiscountsPdfDialog } from "@/components/reports/sales/SalesWithDiscountsPdfDialog";
+import { exportSalesWithDiscountsPdf } from "@/services/exportService";
 
 const SalesWithDiscountsPage: React.FC = () => {
   // Removed useTranslation
@@ -32,7 +32,7 @@ const SalesWithDiscountsPage: React.FC = () => {
   const [endDate, setEndDate] = useState<string>(toYmd(lastDay));
   const [page, setPage] = useState(1);
   const [perPage] = useState(50);
-  const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
 
   useEffect(() => {
     fetchSales();
@@ -87,8 +87,15 @@ const SalesWithDiscountsPage: React.FC = () => {
     };
   }, [sales]);
 
-  const openPdf = () => {
-    setIsPdfDialogOpen(true);
+  const openPdf = async () => {
+    setIsPdfLoading(true);
+    try {
+      await exportSalesWithDiscountsPdf(startDate, endDate);
+    } catch (e: any) {
+      toast.error("خطأ", { description: e?.message || "حدث خطأ أثناء تصدير ملف PDF" });
+    } finally {
+      setIsPdfLoading(false);
+    }
   };
 
   return (
@@ -98,9 +105,15 @@ const SalesWithDiscountsPage: React.FC = () => {
           <Typography variant="h5" component="h2" sx={{ fontWeight: 700 }}>
             تقرير المبيعات المخفضة
           </Typography>
-          {/* <Button onClick={openPdf} variant="outlined" size="small">
-            معاينة PDF
-          </Button> */}
+          <Button
+            onClick={openPdf}
+            variant="outlined"
+            size="small"
+            disabled={isPdfLoading}
+            startIcon={isPdfLoading ? <CircularProgress size={16} /> : undefined}
+          >
+            تصدير PDF
+          </Button>
         </Stack>
         <Stack direction="row" gap={1} spacing={2} alignItems="flex-end">
           <TextField
@@ -221,16 +234,6 @@ const SalesWithDiscountsPage: React.FC = () => {
           </CardContent>
         </Card>
       </Stack>
-
-      {/* PDF Dialog */}
-      <SalesWithDiscountsPdfDialog
-        open={isPdfDialogOpen}
-        onClose={() => setIsPdfDialogOpen(false)}
-        sales={sales}
-        startDate={startDate}
-        endDate={endDate}
-        totals={totals}
-      />
     </Box>
   );
 };

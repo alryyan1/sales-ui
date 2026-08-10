@@ -13,7 +13,6 @@ import SupplierAr from './locales/ar/suppliers.json';
 import productsAr from './locales/ar/products.json';
 import purchasesAr from './locales/ar/purchases.json';
 import salesAr from './locales/ar/sales.json';
-import dashboardAr from './locales/ar/dashboard.json';
 import reportAr from './locales/ar/reports.json';
 import usersAR from './locales/ar/users.json';     // <-- Import
 import rolesAR from './locales/ar/roles.json';       // <-- Import
@@ -38,7 +37,6 @@ import supplierEN from './locales/en/suppliers.json';
 import productsEN from './locales/en/products.json';
 import purchasesEN from './locales/en/purchases.json';
 import salesEN from './locales/en/sales.json';
-import dashboardEN from './locales/en/dashboard.json';
 import reportEN from './locales/en/reports.json';
 import usersEN from './locales/en/users.json';
 import rolesEN from './locales/en/roles.json';
@@ -68,7 +66,6 @@ const resources = {
     products:productsAr,
     purchases:purchasesAr,
     sales:salesAr,
-    dashboard:dashboardAr,
     reports:reportAr,
     users:usersAR, // <-- Add this line
     roles:rolesAR, // <-- Add this line
@@ -95,7 +92,6 @@ const resources = {
     products: productsEN,
     purchases: purchasesEN,
     sales: salesEN,
-    dashboard: dashboardEN,
     reports: reportEN,
     users: usersEN,
     roles: rolesEN,
@@ -124,7 +120,6 @@ export const namespaces = [
     'products',
     'purchases',
     'sales',
-    'dashboard',
     'reports',
     'users', // <-- Add namespace
     'roles', // <-- Add namespace

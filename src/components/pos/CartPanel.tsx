@@ -268,6 +268,7 @@ export function CartPanel({
     ? computeDraftTotals(ticket)
     : { subtotal: 0, discountAmount: 0, total: 0 };
   const payAmount = dueAmount ?? total;
+  const hasPayments = (payments?.length ?? 0) > 0;
 
   return (
     <div className="flex h-full flex-col">
@@ -285,8 +286,9 @@ export function CartPanel({
           <Button
             variant="ghost"
             size="sm"
-            disabled={isCreatingSale}
+            disabled={isCreatingSale || hasPayments}
             onClick={onClearCart}
+            title={hasPayments ? "يجب إلغاء المدفوعات أولاً قبل إفراغ السلة" : undefined}
             className="gap-1.5 text-muted-foreground"
           >
             <Trash2 className="size-3.5" />

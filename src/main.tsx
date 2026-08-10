@@ -14,10 +14,6 @@ import { getTheme, cacheRtl } from "./theme"; // استيراد Theme الـ MUI
 import { CacheProvider } from "@emotion/react";
 import "./fonts/tajawal.css"; // استيراد خط Tajawal المحلي
 import "./index.css"; // استيراد CSS العام (اختياري)
-import { registerPdfFonts } from "./utils/pdfFontRegistry";
-
-// Register PDF fonts
-registerPdfFonts();
 import router from "./router";
 import { SettingsProvider } from "./context/SettingsContext";
 import { ThemeProvider as TailwindTheme, useTheme as useTailwindTheme } from "./context/ThemeContext";

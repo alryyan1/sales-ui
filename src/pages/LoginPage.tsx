@@ -81,7 +81,7 @@ const LoginPage: React.FC = () => {
         {/* Logo & heading */}
         <div className="mb-8 flex flex-col items-center text-center">
           <img
-            src="/logo.png"
+            src="/logo.jpeg"
             alt="شعار النظام"
             className="mb-4 h-24 w-24 rounded-xl object-contain"
           />

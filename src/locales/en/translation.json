@@ -23,7 +23,6 @@
     },
     "navigation": {
       "home": "Home",
-      "dashboard": "Dashboard",
       "clients": "Clients",
       "suppliers": "Suppliers",
       "products": "Products",

@@ -76,11 +76,9 @@ import { formatNumber } from "@/constants";
 
 import supplierService, { Supplier, SupplierSummary } from "@/services/supplierService";
 import { useSettings } from "@/context/SettingsContext";
+import exportService from "@/services/exportService";
 import { uploadSuppliersToFirestore } from "@/services/firebaseStore";
 import apiClient from "@/lib/axios";
-import { SupplierSummaryLedgerPdf } from "@/components/reports/suppliers/SupplierSummaryLedgerPdf";
-import { downloadPdf } from "@/utils/pdfDownload";
-import { registerPdfFonts } from "@/utils/pdfFontRegistry";
 import SupplierFormModal from "@/components/suppliers/SupplierFormModal";
 
 const PER_PAGE_LABEL = "مورد";
@@ -94,7 +92,7 @@ function balanceTone(balance: number) {
 const SuppliersPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { settings, getSetting } = useSettings();
+  const { getSetting } = useSettings();
 
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
@@ -178,14 +176,9 @@ const SuppliersPage: React.FC = () => {
   };
 
   const handleDownloadPdf = async () => {
-    if (!summaryQuery.data) return;
     setIsPdfLoading(true);
     try {
-      registerPdfFonts();
-      await downloadPdf(
-        <SupplierSummaryLedgerPdf suppliers={summaryQuery.data} settings={settings} />,
-        `suppliers-summary-${new Date().toISOString().slice(0, 10)}.pdf`
-      );
+      await exportService.exportSuppliersSummaryPdf();
     } finally {
       setIsPdfLoading(false);
     }

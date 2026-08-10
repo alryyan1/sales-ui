@@ -102,6 +102,19 @@ export function preciseSum(numbers: number[], decimals: number = 2): number {
 }
 
 /**
+ * Formats a Date as YYYY-MM-DD using its LOCAL calendar fields (year/month/day) —
+ * unlike `date.toISOString().split("T")[0]`, which converts to UTC first and so
+ * rolls a local midnight back to the previous day in any positive-UTC-offset
+ * timezone (e.g. a local Aug 1 00:00 in UTC+4 becomes "2026-07-31").
+ */
+export function toLocalYMD(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/**
  * Formats a date string or Date object into a localized date string.
  *
  * @param dateInput The date to format (string, Date, number, or null/undefined).
@@ -155,18 +168,48 @@ export const formatDate = (
 };
 
 /**
+ * Decimal places to display for money amounts, per currency — drives useFormatCurrency.
+ * SDG (Sudanese Pound) traditionally shows whole amounts only; OMR (Omani Rial) uses
+ * 3 decimals (its smallest unit is 1/1000, the baisa); USD uses the usual 2 (cents).
+ */
+export const CURRENCY_DECIMALS: Record<string, number> = {
+  SDG: 0,
+  OMR: 3,
+  USD: 2,
+};
+
+export type CurrencyCode = keyof typeof CURRENCY_DECIMALS;
+
+/**
+ * App-wide default currency, kept in sync with the "currency_symbol" / "currency_code"
+ * settings by SettingsContext as soon as they're fetched (see setDefaultCurrency below).
+ * Lets every call site that doesn't pass an explicit currency — including the many pages
+ * that import `formatCurrency` directly instead of the settings-aware `useFormatCurrency`
+ * hook — automatically reflect the admin's chosen system currency, with no per-file changes.
+ */
+let defaultCurrencySymbol = "SDG";
+let defaultCurrencyDecimals = CURRENCY_DECIMALS.SDG;
+
+/** Called by SettingsContext whenever settings are loaded/updated. */
+export function setDefaultCurrency(symbol: string | undefined | null, code?: string | null): void {
+  defaultCurrencySymbol = symbol || "SDG";
+  defaultCurrencyDecimals = (code && CURRENCY_DECIMALS[code]) ?? defaultCurrencyDecimals;
+}
+
+/**
  * Formats a number as a currency string.
  *
  * @param value The number to format.
  * @param locale The locale string (e.g., 'en-US', 'ar-SA'). Defaults to browser's locale.
- * @param currencySymbolOrCode The currency symbol (e.g., 'ريال', '$') or ISO 4217 currency code (e.g., 'USD', 'EUR', 'SAR'). Defaults to 'SDG'.
+ * @param currencySymbolOrCode The currency symbol (e.g., 'ريال', '$') or ISO 4217 currency code
+ *   (e.g., 'USD', 'EUR', 'SAR'). Defaults to the system currency configured in Settings.
  * @param options Intl.NumberFormat options for currency.
  * @returns A formatted currency string or a fallback string ('---').
  */
 export const formatCurrency = (
   value: string | number | null | undefined,
   locale?: string, // Example: 'ar-SA' for Arabic (Saudi Arabia)
-  currencySymbolOrCode: string = "SDG", // Default currency set globally to Sudanese Pound
+  currencySymbolOrCode?: string,
   options?: Intl.NumberFormatOptions,
 ): string => {
   if (value === null || value === undefined) return "---";
@@ -177,16 +220,24 @@ export const formatCurrency = (
     return "---";
   }
 
-  // Check if currencySymbolOrCode is a 3-letter currency code (like USD, SAR, EUR)
-  const isCurrencyCode = /^[A-Z]{3}$/.test(currencySymbolOrCode);
+  // No explicit currency passed by the caller — fall back to the system currency.
+  const usingDefaultCurrency = currencySymbolOrCode === undefined;
+  const symbolOrCode = currencySymbolOrCode ?? defaultCurrencySymbol;
+
+  // Check if symbolOrCode is a 3-letter currency code (like USD, SAR, EUR)
+  const isCurrencyCode = /^[A-Z]{3}$/.test(symbolOrCode);
 
   if (isCurrencyCode) {
+    const decimals = usingDefaultCurrency
+      ? defaultCurrencyDecimals
+      : (CURRENCY_DECIMALS[symbolOrCode] ?? 0);
+
     // Use Intl.NumberFormat for standard currency codes
     const defaultOptions: Intl.NumberFormatOptions = {
       style: "currency",
-      currency: currencySymbolOrCode,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      currency: symbolOrCode,
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
     };
 
     // Merge options properly - user options should override defaults
@@ -205,23 +256,23 @@ export const formatCurrency = (
         "Value:",
         value,
         "Currency:",
-        currencySymbolOrCode,
+        symbolOrCode,
       );
       // Fallback to simpler formatting if Intl fails
-      return `${currencySymbolOrCode} ${formatNumber(numberValue)}`;
+      return `${symbolOrCode} ${formatNumber(numberValue)}`;
     }
   } else {
     // For custom currency symbols (like "ريال", "$"), format manually
     const formattedNumber = formatNumber(
       numberValue,
-      options?.maximumFractionDigits ?? 0,
+      options?.maximumFractionDigits ?? (usingDefaultCurrency ? defaultCurrencyDecimals : 0),
     );
     // RTL-aware: Put symbol after number for Arabic, before for English
     const isRTL =
       locale?.startsWith("ar") || document.documentElement.dir === "rtl";
     return isRTL
-      ? `${formattedNumber} ${currencySymbolOrCode}`
-      : `${currencySymbolOrCode} ${formattedNumber}`;
+      ? `${formattedNumber} ${symbolOrCode}`
+      : `${symbolOrCode} ${formattedNumber}`;
   }
 };
 

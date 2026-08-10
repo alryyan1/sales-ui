@@ -2,15 +2,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import { format, getMonth, getYear } from "date-fns";
 import { arSA } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
-import {
-  Document,
-  Page,
-  Text,
-  View,
-  StyleSheet,
-  pdf,
-  Font,
-} from "@react-pdf/renderer";
 
 // MUI Components
 import {
@@ -38,11 +29,8 @@ import {
 import { ArrowLeft, Calendar, FileText, FileSpreadsheet } from "lucide-react";
 
 import apiClient from "@/lib/axios";
-import { formatCurrency, formatDateDDMMYYYY } from "@/constants";
-import {
-  useFormatCurrency,
-  useCurrencySymbol,
-} from "@/hooks/useFormatCurrency";
+import { exportMonthlyRevenuePdf } from "@/services/exportService";
+import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 import { toast } from "sonner";
 import dayjs from "dayjs";
 import {
@@ -84,234 +72,10 @@ interface MonthlyRevenueReportData {
   month_summary: MonthSummary;
 }
 
-// Register Arial Font
-Font.register({
-  family: "Arial",
-  fonts: [
-    {
-      src: "/fonts/ARIAL.ttf",
-    },
-  ],
-});
-
-// PDF Styles
-const pdfStyles = StyleSheet.create({
-  page: {
-    padding: 30,
-    fontFamily: "Arial",
-    direction: "rtl",
-  },
-  header: {
-    marginBottom: 20,
-    borderBottom: "2 solid #1976d2",
-    paddingBottom: 10,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 5,
-    color: "#1976d2",
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 3,
-  },
-  summarySection: {
-    marginBottom: 20,
-    padding: 15,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 5,
-  },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  summaryLabel: {
-    fontSize: 12,
-    color: "#666",
-  },
-  summaryValue: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#1976d2",
-  },
-  table: {
-    marginTop: 20,
-  },
-  tableHeader: {
-    flexDirection: "row",
-    backgroundColor: "#e3f2fd",
-    padding: 8,
-    borderBottom: "1 solid #1976d2",
-  },
-  tableRow: {
-    flexDirection: "row",
-    padding: 8,
-    borderBottom: "1 solid #ddd",
-  },
-  tableCell: {
-    fontSize: 10,
-    padding: 4,
-    flex: 1,
-    textAlign: "center",
-  },
-  tableHeaderCell: {
-    fontSize: 10,
-    fontWeight: "bold",
-    padding: 4,
-    flex: 1,
-    textAlign: "center",
-    color: "#1976d2",
-  },
-  totalRow: {
-    flexDirection: "row",
-    padding: 10,
-    backgroundColor: "#e3f2fd",
-    borderTop: "2 solid #1976d2",
-    marginTop: 5,
-  },
-  totalCell: {
-    fontSize: 12,
-    fontWeight: "bold",
-    padding: 4,
-    flex: 1,
-    textAlign: "center",
-    color: "#1976d2",
-  },
-  footer: {
-    marginTop: 30,
-    paddingTop: 10,
-    borderTop: "1 solid #ddd",
-    fontSize: 10,
-    color: "#666",
-    textAlign: "center",
-  },
-});
-
-// PDF Document Component
-const DailyIncomeReportPDF: React.FC<{
-  data: MonthlyRevenueReportData;
-  currencySymbol?: string;
-}> = ({ data, currencySymbol = "SDG" }) => {
-  return (
-    <Document>
-      <Page size="A4" style={pdfStyles.page}>
-        {/* Header */}
-        <View style={pdfStyles.header}>
-          <Text style={pdfStyles.title}>تقرير المبيعات الشهري</Text>
-          <Text style={pdfStyles.subtitle}>
-            شهر: {data.month_name} {data.year}
-          </Text>
-          <Text style={pdfStyles.subtitle}>
-            تاريخ التوليد:{" "}
-            {format(new Date(), "yyyy-MM-dd HH:mm", { locale: arSA })}
-          </Text>
-        </View>
-
-        {/* Table */}
-        <View style={pdfStyles.table}>
-          {/* Table Header */}
-          <View style={pdfStyles.tableHeader}>
-            <Text style={pdfStyles.tableHeaderCell}>التاريخ</Text>
-            <Text style={pdfStyles.tableHeaderCell}>إجمالي المبيعات</Text>
-            <Text style={pdfStyles.tableHeaderCell}>إجمالي المدفوع</Text>
-            <Text style={pdfStyles.tableHeaderCell}>إجمالي النقدي</Text>
-            <Text style={pdfStyles.tableHeaderCell}>إجمالي البنكي</Text>
-            <Text style={pdfStyles.tableHeaderCell}>إجمالي المصروفات</Text>
-            <Text style={pdfStyles.tableHeaderCell}>صافي</Text>
-          </View>
-
-          {/* Table Rows */}
-          {data.daily_breakdown.map((row) => (
-            <View key={row.date} style={pdfStyles.tableRow}>
-              <Text style={pdfStyles.tableCell}>
-                {formatDateDDMMYYYY(row.date)}
-              </Text>
-              <Text style={pdfStyles.tableCell}>
-                {formatCurrency(row.total_sales, undefined, currencySymbol)}
-              </Text>
-              <Text style={pdfStyles.tableCell}>
-                {formatCurrency(row.total_paid, undefined, currencySymbol)}
-              </Text>
-              <Text style={pdfStyles.tableCell}>
-                {formatCurrency(row.total_cash, undefined, currencySymbol)}
-              </Text>
-              <Text style={pdfStyles.tableCell}>
-                {formatCurrency(row.total_bank, undefined, currencySymbol)}
-              </Text>
-              <Text style={pdfStyles.tableCell}>
-                {formatCurrency(row.total_expense, undefined, currencySymbol)}
-              </Text>
-              <Text style={pdfStyles.tableCell}>
-                {formatCurrency(row.net, undefined, currencySymbol)}
-              </Text>
-            </View>
-          ))}
-
-          {/* Total Row */}
-          <View style={pdfStyles.totalRow}>
-            <Text style={pdfStyles.totalCell}>الإجمالي</Text>
-            <Text style={pdfStyles.totalCell}>
-              {formatCurrency(
-                data.month_summary.total_sales,
-                undefined,
-                currencySymbol,
-              )}
-            </Text>
-            <Text style={pdfStyles.totalCell}>
-              {formatCurrency(
-                data.month_summary.total_paid,
-                undefined,
-                currencySymbol,
-              )}
-            </Text>
-            <Text style={pdfStyles.totalCell}>
-              {formatCurrency(
-                data.month_summary.total_cash,
-                undefined,
-                currencySymbol,
-              )}
-            </Text>
-            <Text style={pdfStyles.totalCell}>
-              {formatCurrency(
-                data.month_summary.total_bank,
-                undefined,
-                currencySymbol,
-              )}
-            </Text>
-            <Text style={pdfStyles.totalCell}>
-              {formatCurrency(
-                data.month_summary.total_expense,
-                undefined,
-                currencySymbol,
-              )}
-            </Text>
-            <Text style={pdfStyles.totalCell}>
-              {formatCurrency(
-                data.month_summary.net,
-                undefined,
-                currencySymbol,
-              )}
-            </Text>
-          </View>
-        </View>
-
-        {/* Footer */}
-        <View style={pdfStyles.footer}>
-          <Text>تم إنشاء هذا التقرير تلقائياً من نظام إدارة المبيعات</Text>
-        </View>
-      </Page>
-    </Document>
-  );
-};
-
 const DailyIncomeReportPage: React.FC = () => {
   // const { t, i18n } = useTranslation(["reports", "common", "months"]);
   const navigate = useNavigate();
   const formatCurrency = useFormatCurrency();
-  const currencySymbol = useCurrencySymbol();
 
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState<number>(
@@ -371,22 +135,7 @@ const DailyIncomeReportPage: React.FC = () => {
 
     try {
       setIsGeneratingPdf(true);
-      const doc = (
-        <DailyIncomeReportPDF
-          data={reportData}
-          currencySymbol={currencySymbol}
-        />
-      );
-      const asPdf = pdf(doc);
-      const blob = await asPdf.toBlob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `تقرير_المبيعات_الشهري_${reportData.month_name}_${reportData.year}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      await exportMonthlyRevenuePdf(selectedYear, selectedMonth);
       toast.success("نجح", { description: "تم إنشاء ملف PDF بنجاح" });
     } catch (error) {
       console.error("Error generating PDF:", error);

@@ -49,6 +49,15 @@ import { PaymentDialog } from "@/components/pos/PaymentDialog";
 import { SaleCompleteDialog } from "@/components/pos/SaleCompleteDialog";
 import { SaleActionsBar } from "@/components/pos/SaleActionsBar";
 import { ShiftSalesColumn } from "@/components/pos/ShiftSalesColumn";
+import { ThemeColorPicker } from "@/components/pos/ThemeColorPicker";
+import {
+  applyPosThemeColor,
+  clearPosThemeColor,
+  getPosThemeColor,
+  loadPosThemeColorId,
+  savePosThemeColorId,
+  type PosThemeColor,
+} from "@/lib/posTheme";
 
 function todayStr() {
   return new Date().toLocaleDateString("en-CA");
@@ -79,7 +88,8 @@ const PosPage: React.FC = () => {
   const posMode = (getSetting("pos_mode", "shift") as "shift" | "days") ?? "shift";
   const showOutOfStock = Boolean(getSetting("pos_show_out_of_stock_products", false));
   const showExpired = Boolean(getSetting("pos_show_expired_products", false));
-  const usdFactor = Number(getSetting("usd_to_sdg_factor", 1) ?? 1);
+  const usdConversionEnabled = Boolean(getSetting("usd_conversion_enabled", true));
+  const usdFactor = usdConversionEnabled ? Number(getSetting("usd_to_sdg_factor", 1) ?? 1) : 1;
 
   const currentShiftQuery = useCurrentShift();
   const shiftId = posMode === "shift" ? currentShiftQuery.data?.id ?? null : null;
@@ -101,6 +111,7 @@ const PosPage: React.FC = () => {
   const [editingSaleId, setEditingSaleId] = useState<number | null>(null);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [loadingSale, setLoadingSale] = useState(false);
+  const [loadingSaleId, setLoadingSaleId] = useState<number | null>(null);
   const [savingSale, setSavingSale] = useState(false);
   const [deletingPaymentId, setDeletingPaymentId] = useState<number | null>(null);
   const isEditingSale = editingSaleId != null;
@@ -125,6 +136,7 @@ const PosPage: React.FC = () => {
   const activeSale = editingSale ?? completedSale;
 
   const [isTogglingQuote, setIsTogglingQuote] = useState(false);
+  const [isChangingSaleDate, setIsChangingSaleDate] = useState(false);
   const [whatsAppLoading, setWhatsAppLoading] = useState(false);
   const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
   const [isDeletingSale, setIsDeletingSale] = useState(false);
@@ -145,6 +157,20 @@ const PosPage: React.FC = () => {
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(t);
+  }, []);
+
+  // User-chosen accent color (persisted per-browser). Applied to <body> — not just a local
+  // wrapper div — so it also reaches the global TopAppBar and Radix portals (Dialog/Popover/
+  // AlertDialog render outside PosPage's own DOM subtree).
+  const [themeColorId, setThemeColorId] = useState(() => loadPosThemeColorId());
+  useEffect(() => {
+    applyPosThemeColor(getPosThemeColor(themeColorId));
+    return () => clearPosThemeColor();
+  }, [themeColorId]);
+
+  const handleSelectThemeColor = useCallback((color: PosThemeColor) => {
+    setThemeColorId(color.id);
+    savePosThemeColorId(color.id);
   }, []);
 
   // ── Restore any drafts left over from a previous session (per-user, this browser only) ──
@@ -553,6 +579,24 @@ const PosPage: React.FC = () => {
     }
   }, [activeSale?.id]);
 
+  const handleChangeSaleDate = useCallback(
+    async (date: string) => {
+      if (!activeSale) return;
+      setIsChangingSaleDate(true);
+      try {
+        const updated = await saleService.updateSale(activeSale.id, { sale_date: date });
+        applyActiveSaleUpdate(updated);
+        queryClient.invalidateQueries({ queryKey: shiftSalesQueryKey });
+        toast.success("تم تحديث تاريخ الفاتورة");
+      } catch (err) {
+        toast.error("فشل تحديث تاريخ الفاتورة", { description: saleService.getErrorMessage(err) });
+      } finally {
+        setIsChangingSaleDate(false);
+      }
+    },
+    [activeSale, applyActiveSaleUpdate, queryClient, shiftSalesQueryKey]
+  );
+
   const handleClosePdfDialog = useCallback(() => {
     setPdfDialogOpen(false);
     if (pdfUrl) {
@@ -618,6 +662,7 @@ const PosPage: React.FC = () => {
   const loadSaleForEditing = useCallback(
     async (saleId: number) => {
       setLoadingSale(true);
+      setLoadingSaleId(saleId);
       try {
         const sale = await saleService.getSaleForPOS(saleId);
         const items = sale.items ?? [];
@@ -665,6 +710,7 @@ const PosPage: React.FC = () => {
         toast.error("تعذر تحميل الفاتورة للتعديل", { description: saleService.getErrorMessage(err) });
       } finally {
         setLoadingSale(false);
+        setLoadingSaleId(null);
       }
     },
     [nextTicketLabel]
@@ -989,11 +1035,58 @@ const PosPage: React.FC = () => {
           {posMode === "shift" && currentShiftQuery.data ? `وردية #${currentShiftQuery.data.id} · ` : ""}
           {user?.name}
         </span>
-        <span className="text-xs tabular-nums text-muted-foreground">
+        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
           {now.toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit" })}
         </span>
 
-        <div className="ms-auto flex items-center gap-2">
+        <Separator orientation="vertical" className="h-5 shrink-0" />
+
+        {/* Held tickets — switch between or hold multiple simultaneous draft carts */}
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
+          {tickets.map((t) => (
+            <div key={t.id} className="group relative shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTicketId(t.id);
+                  setSelectedLineId(null);
+                }}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
+                  t.id === activeTicketId
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:bg-accent"
+                )}
+              >
+                تذكرة {t.label}
+                {t.items.length > 0 && <span className="tabular-nums">({t.items.length})</span>}
+                {t.client != null && <Users className="size-3" />}
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setTicketToDelete(t);
+                }}
+                className="absolute -end-1.5 -top-1.5 hidden size-4 items-center justify-center rounded-full bg-destructive text-white group-hover:flex"
+              >
+                <X className="size-2.5" />
+              </button>
+            </div>
+          ))}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleNewTicket}
+            className="shrink-0 gap-1 text-muted-foreground"
+            disabled={isEditingSale}
+          >
+            <Plus className="size-3.5" />
+            تذكرة جديدة
+          </Button>
+        </div>
+
+        <div className="ms-auto flex shrink-0 items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => setPastSalesOpen(true)} disabled={loadingSale || isEditingSale}>
             المبيعات السابقة
           </Button>
@@ -1047,6 +1140,7 @@ const PosPage: React.FC = () => {
               إغلاق الوردية
             </Button>
           )}
+          <ThemeColorPicker selectedId={themeColorId} onSelect={handleSelectThemeColor} />
         </div>
       </header>
 
@@ -1069,64 +1163,22 @@ const PosPage: React.FC = () => {
         reminderLoading={reminderLoading}
         onSetReminder={handleSetReminder}
         onRemoveReminder={handleRemoveReminder}
+        onChangeSaleDate={handleChangeSaleDate}
+        isChangingSaleDate={isChangingSaleDate}
       />
-
-      {/* Held tickets strip */}
-      <div className="flex shrink-0 items-center gap-2 overflow-x-auto border-b bg-card px-4 py-2">
-        <span className="shrink-0 text-xs font-medium text-muted-foreground">التذاكر المفتوحة</span>
-        {tickets.map((t) => (
-          <div key={t.id} className="group relative shrink-0">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTicketId(t.id);
-                setSelectedLineId(null);
-              }}
-              className={cn(
-                "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
-                t.id === activeTicketId
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border text-muted-foreground hover:bg-accent"
-              )}
-            >
-              تذكرة {t.label}
-              {t.items.length > 0 && <span className="tabular-nums">({t.items.length})</span>}
-              {t.client != null && <Users className="size-3" />}
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setTicketToDelete(t);
-              }}
-              className="absolute -end-1.5 -top-1.5 hidden size-4 items-center justify-center rounded-full bg-destructive text-white group-hover:flex"
-            >
-              <X className="size-2.5" />
-            </button>
-          </div>
-        ))}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleNewTicket}
-          className="shrink-0 gap-1 text-muted-foreground"
-          disabled={isEditingSale}
-        >
-          <Plus className="size-3.5" />
-          تذكرة جديدة
-        </Button>
-      </div>
 
       {/* Main workspace */}
       <div className="flex flex-1 overflow-hidden">
         <ShiftSalesColumn
           sales={shiftSales}
           isLoading={shiftSalesQuery.isLoading}
+          isFetching={shiftSalesQuery.isFetching}
           activeSaleId={activeSale?.id ?? null}
           onSelectSale={(sale) => loadSaleForEditing(sale.id)}
           canDeleteSale={canDeleteSale}
           onDeleteSale={(sale) => setSaleToDelete(sale)}
           deletingSaleId={isDeletingSale ? saleToDelete?.id ?? null : null}
+          loadingSaleId={loadingSaleId}
         />
         <div className="flex-1 overflow-hidden border-e">
           <ProductSearchPanel
@@ -1195,6 +1247,8 @@ const PosPage: React.FC = () => {
         onNewSale={handleStartNewSaleAfterSuccess}
         onPrint={handlePrint}
         printingKind={printingKind}
+        onExportToFinance={handleExportToFinance}
+        isExportingToFinance={isExportingToFinance}
       />
 
       {/* Clear cart confirmation */}

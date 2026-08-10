@@ -9,9 +9,6 @@ import {
   Button,
   Typography,
   Stack,
-  Dialog,
-  DialogTitle,
-  DialogContent,
   Select,
   MenuItem,
   FormControl,
@@ -29,7 +26,6 @@ import {
   Download,
   FileText,
   FileSpreadsheet,
-  X,
 } from "lucide-react";
 
 import apiClient from "@/lib/axios";
@@ -37,8 +33,7 @@ import { formatNumber } from "@/constants";
 import { useMonthlyExpenses } from "@/hooks/useMonthlyExpenses";
 import DailyExpensesTable from "@/components/reports/expenses/DailyExpensesTable";
 import DayExpensesDialog from "@/components/reports/expenses/DayExpensesDialog";
-import { MonthlyExpensesPdf } from "@/components/reports/expenses/MonthlyExpensesPdf";
-import { PDFViewer } from "@react-pdf/renderer";
+import { exportMonthlyExpensesPdf } from "@/services/exportService";
 import { Expense } from "@/services/expenseService";
 import { webUrl } from "@/constants";
 
@@ -54,7 +49,7 @@ const MonthlyExpensesPage: React.FC = () => {
   const [dayDialogOpen, setDayDialogOpen] = useState(false);
   const [selectedDayDate, setSelectedDayDate] = useState<string | null>(null);
   const [selectedDayExpenses, setSelectedDayExpenses] = useState<Expense[]>([]);
-  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
 
   const {
     data: reportData,
@@ -88,9 +83,16 @@ const MonthlyExpensesPage: React.FC = () => {
     }
   };
 
-  const handleExportPdf = () => {
-    if (reportData) {
-      setPdfDialogOpen(true);
+  const handleExportPdf = async () => {
+    setIsPdfLoading(true);
+    try {
+      await exportMonthlyExpensesPdf(selectedYear, selectedMonth);
+    } catch (error: any) {
+      toast.error("خطأ", {
+        description: error?.message || "حدث خطأ أثناء تصدير ملف PDF",
+      });
+    } finally {
+      setIsPdfLoading(false);
     }
   };
 
@@ -184,8 +186,14 @@ const MonthlyExpensesPage: React.FC = () => {
                   onClick={handleExportPdf}
                   variant="contained"
                   size="small"
-                  startIcon={<FileText size={16} />}
-                  disabled={isLoading || !reportData}
+                  startIcon={
+                    isPdfLoading ? (
+                      <CircularProgress size={16} color="inherit" />
+                    ) : (
+                      <FileText size={16} />
+                    )
+                  }
+                  disabled={isLoading || !reportData || isPdfLoading}
                   sx={{
                     borderRadius: 2,
                     textTransform: "none",
@@ -342,40 +350,6 @@ const MonthlyExpensesPage: React.FC = () => {
         date={selectedDayDate}
         expenses={selectedDayExpenses}
       />
-
-      {/* PDF Dialog */}
-      <Dialog
-        open={pdfDialogOpen}
-        onClose={() => setPdfDialogOpen(false)}
-        maxWidth="lg"
-        fullWidth
-      >
-        <DialogTitle
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Typography variant="h6">تقرير المصروفات الشهري - PDF</Typography>
-          <IconButton onClick={() => setPdfDialogOpen(false)}>
-            <X size={18} />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ height: "80vh", p: 0 }}>
-          {reportData && (
-            <PDFViewer width="100%" height="100%" style={{ border: "none" }}>
-              <MonthlyExpensesPdf
-                year={reportData.year}
-                month={reportData.month}
-                monthName={reportData.month_name}
-                dailyBreakdown={reportData.daily_breakdown}
-                monthSummary={reportData.month_summary}
-              />
-            </PDFViewer>
-          )}
-        </DialogContent>
-      </Dialog>
     </Box>
   );
 };

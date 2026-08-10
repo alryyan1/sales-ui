@@ -11,6 +11,7 @@ import { BusinessRulesSettings } from "@/components/settings/BusinessRulesSettin
 import { PosSettings } from "@/components/settings/PosSettings";
 import { PurchaseSettings } from "@/components/settings/PurchaseSettings";
 import { PdfReportBrandingSettings } from "@/components/settings/PdfReportBrandingSettings";
+import { SalesBehaviorSettings } from "@/components/settings/SalesBehaviorSettings";
 
 // shadcn/ui Components
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import {
   Save,
   ShieldCheck,
   ShoppingCart,
+  Tag,
 } from "lucide-react";
 
 // Form values type
@@ -32,9 +34,10 @@ type SettingsFormValues = Partial<AppSettings>;
 const TABS = [
   { value: "company", label: "الشركة", icon: Building2 },
   { value: "business", label: "قواعد العمل", icon: ShieldCheck },
+  { value: "sales", label: "سلوك المبيعات", icon: Tag },
   { value: "pos", label: "نقاط البيع", icon: ShoppingCart },
   { value: "purchases", label: "المشتريات", icon: Receipt },
-  { value: "pdf", label: "تقارير PDF", icon: FileImage },
+  { value: "pdf", label: "شعار الفواتير", icon: FileImage },
 ] as const;
 
 // --- Component ---
@@ -50,11 +53,9 @@ const SettingsPage: React.FC = () => {
       company_phone: "",
       company_email: "",
       currency_symbol: "$",
-      date_format: "YYYY-MM-DD",
+      currency_code: "SDG",
       timezone: "Africa/Khartoum",
       global_low_stock_threshold: 10,
-      invoice_prefix: "INV-",
-      purchase_order_prefix: "PO-",
       default_profit_rate: 20.0,
       tax_number: "",
       pos_mode: "shift",
@@ -63,6 +64,13 @@ const SettingsPage: React.FC = () => {
       firebase_collection_name: "none",
       purchase_use_batch_number: true,
       purchase_use_expiry_date: true,
+      usd_conversion_enabled: true,
+      sales_allow_zero_stock: true,
+      sales_allow_negative_stock: false,
+      sales_require_customer: false,
+      sales_default_customer_id: null,
+      sales_allow_price_edit: true,
+      sales_allow_invoice_date_edit: true,
     },
   });
   const {
@@ -105,6 +113,16 @@ const SettingsPage: React.FC = () => {
           settings.purchase_use_batch_number ?? true,
         purchase_use_expiry_date:
           settings.purchase_use_expiry_date ?? true,
+        currency_code: settings.currency_code || "SDG",
+        usd_conversion_enabled: settings.usd_conversion_enabled ?? true,
+        sales_allow_zero_stock: settings.sales_allow_zero_stock ?? true,
+        sales_allow_negative_stock:
+          settings.sales_allow_negative_stock ?? false,
+        sales_require_customer: settings.sales_require_customer ?? false,
+        sales_default_customer_id: settings.sales_default_customer_id ?? null,
+        sales_allow_price_edit: settings.sales_allow_price_edit ?? true,
+        sales_allow_invoice_date_edit:
+          settings.sales_allow_invoice_date_edit ?? true,
       });
     }
   }, [settings, reset]);
@@ -124,6 +142,13 @@ const SettingsPage: React.FC = () => {
       pos_show_out_of_stock_products: Boolean(data.pos_show_out_of_stock_products),
       purchase_use_batch_number: Boolean(data.purchase_use_batch_number),
       purchase_use_expiry_date: Boolean(data.purchase_use_expiry_date),
+      usd_conversion_enabled: Boolean(data.usd_conversion_enabled),
+      sales_allow_zero_stock: Boolean(data.sales_allow_zero_stock),
+      sales_allow_negative_stock: Boolean(data.sales_allow_negative_stock),
+      sales_require_customer: Boolean(data.sales_require_customer),
+      sales_default_customer_id: data.sales_default_customer_id || null,
+      sales_allow_price_edit: Boolean(data.sales_allow_price_edit),
+      sales_allow_invoice_date_edit: Boolean(data.sales_allow_invoice_date_edit),
     };
 
     try {
@@ -189,6 +214,9 @@ const SettingsPage: React.FC = () => {
               </TabsContent>
               <TabsContent value="business" className="mt-0">
                 <BusinessRulesSettings control={control} />
+              </TabsContent>
+              <TabsContent value="sales" className="mt-0">
+                <SalesBehaviorSettings control={control} />
               </TabsContent>
               <TabsContent value="pos" className="mt-0">
                 <PosSettings control={control} />

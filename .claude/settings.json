@@ -9,10 +9,39 @@
       "Bash(/c/xampp/mysql/bin/mysql.exe -uroot auger -e \"DESCRIBE sales;\")",
       "Bash(curl -s -o /tmp/resp.txt -w \"%{http_code}\\\\n\" \"http://localhost:5174/src/components/pos/ProductSearchPanel.tsx\")",
       "PowerShell(Get-CimInstance Win32_Process -Filter \"Name = 'node.exe'\" | Where-Object { $_.CommandLine -match 'vite' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue })",
-      "Bash(git status *)"
+      "Bash(git status *)",
+      "Bash(node -e \"const i=require\\('lucide-react'\\); ['Settings','Palette','Check','Settings2'].forEach\\(n=>console.log\\(n, typeof i[n]\\)\\)\")",
+      "Bash(php -l c:/xampp/htdocs/sales-api/app/Services/FinanceBridgeService.php)",
+      "Bash(php -l c:/xampp/htdocs/sales-api/app/Services/SettingsService.php)",
+      "Bash(awk 'NR>=1320 && NR<=1519 && /number_format/' \"c:/xampp/htdocs/sales-api/app/Http/Controllers/Api/SaleController.php\")",
+      "Bash(php -l c:/xampp/htdocs/sales-api/app/Services/Pdf/FormatsMoneyForPdf.php)",
+      "Bash(grep -n 'protected $table' 'c:\\\\xampp\\\\htdocs\\\\sales-api\\\\app\\\\Models\\\\Client.php')",
+      "Bash(php -l c:/xampp/htdocs/sales-api/app/Services/InvoicePdfService.php)",
+      "Bash(php -l \"c:/xampp/htdocs/sales-api/config/app_settings.php\")",
+      "Bash(php -l \"c:/xampp/htdocs/sales-api/app/Services/SettingsService.php\")",
+      "Bash(npm uninstall *)",
+      "Bash(npm run *)",
+      "Bash(php -l c:/xampp/htdocs/sales-api/app/Http/Controllers/Api/SaleController.php)",
+      "Bash(awk 'NR==1144,NR==1322' c:/xampp/htdocs/sales-api/app/Http/Controllers/Api/SaleController.php)",
+      "Bash(awk 'NR==1323,NR==1528' c:/xampp/htdocs/sales-api/app/Http/Controllers/Api/SaleController.php)",
+      "Bash(php -l c:/xampp/htdocs/sales-api/database/migrations/2026_08_10_000000_enable_stamp_signature_for_invoice_report.php)",
+      "Bash(grep -rn \"WhatsAppController::class\\\\|Api\\\\\\\\\\\\\\\\WhatsAppController\" \"c:\\\\xampp\\\\htdocs\\\\sales-api\\\\routes\" \"c:\\\\xampp\\\\htdocs\\\\sales-api\\\\app\")",
+      "Bash(grep -n 'signature\\\\|protected $signature' 'c:\\\\xampp\\\\htdocs\\\\sales-api\\\\app\\\\Console\\\\Commands\\\\SendWhatsAppTest.php' 'c:\\\\xampp\\\\htdocs\\\\sales-api\\\\app\\\\Console\\\\Commands\\\\TestWhatsAppScheduler.php')",
+      "Bash(php -l c:/xampp/htdocs/sales-api/config/app_settings.php)",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('c:/xampp/htdocs/sales-ui/src/locales/en/settings.json','utf8'\\)\\); console.log\\('valid json'\\)\")",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('c:/xampp/htdocs/sales-ui/src/locales/ar/settings.json','utf8'\\)\\); console.log\\('valid json'\\)\")",
+      "Bash(php -l app/Services/SettingsService.php)",
+      "Bash(pkill -f \"vite --port 5183\")",
+      "Bash(echo \"TSC_EXIT:$?\")"
     ],
     "additionalDirectories": [
-      "C:\\xampp\\htdocs\\sales-api\\app\\Http\\Controllers\\Api"
+      "C:\\xampp\\htdocs\\sales-api\\app\\Http\\Controllers\\Api",
+      "c:\\xampp\\htdocs\\sales-api\\app\\Services",
+      "c:\\xampp\\htdocs\\sales-api\\app\\Services\\Pdf",
+      "c:\\xampp\\htdocs\\sales-api\\app\\Http\\Controllers\\Api",
+      "c:\\xampp\\htdocs\\sales-api\\routes",
+      "c:\\xampp\\htdocs\\sales-api\\config",
+      "c:\\xampp\\htdocs\\sales-api\\database\\migrations"
     ]
   }
 }

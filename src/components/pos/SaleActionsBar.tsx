@@ -1,6 +1,6 @@
 // src/components/pos/SaleActionsBar.tsx
-import { useState } from "react";
-import { Bell, FileText, Landmark, Loader2, MessageCircle, Printer, Tag, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Bell, CalendarDays, FileText, Landmark, Loader2, MessageCircle, Printer, Tag, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,6 +83,40 @@ function ReminderButton({
   );
 }
 
+function SaleDateEditor({
+  saleDate,
+  isSaving,
+  onChange,
+}: {
+  saleDate: string;
+  isSaving: boolean;
+  onChange: (date: string) => void;
+}) {
+  const [draft, setDraft] = useState(saleDate);
+
+  useEffect(() => {
+    setDraft(saleDate);
+  }, [saleDate]);
+
+  return (
+    <label className="flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-input bg-background px-2.5 text-xs text-foreground has-disabled:opacity-60">
+      <CalendarDays className="size-3.5 text-muted-foreground" />
+      <input
+        type="date"
+        value={draft}
+        disabled={isSaving}
+        onChange={(e) => {
+          const value = e.target.value;
+          setDraft(value);
+          if (value && value !== saleDate) onChange(value);
+        }}
+        className="bg-transparent tabular-nums outline-none [color-scheme:light] dark:[color-scheme:dark]"
+      />
+      {isSaving && <Loader2 className="size-3 shrink-0 animate-spin text-muted-foreground" />}
+    </label>
+  );
+}
+
 interface SaleActionsBarProps {
   sale: Sale | null;
   onPrintThermal: () => void;
@@ -101,6 +135,8 @@ interface SaleActionsBarProps {
   reminderLoading: boolean;
   onSetReminder: (days: number) => void;
   onRemoveReminder: () => void;
+  onChangeSaleDate: (date: string) => void;
+  isChangingSaleDate: boolean;
 }
 
 export function SaleActionsBar({
@@ -121,12 +157,16 @@ export function SaleActionsBar({
   reminderLoading,
   onSetReminder,
   onRemoveReminder,
+  onChangeSaleDate,
+  isChangingSaleDate,
 }: SaleActionsBarProps) {
   if (!sale) return null;
 
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-2 border-b bg-muted/20 px-4 py-2">
       <span className="shrink-0 text-xs font-medium text-muted-foreground">إجراءات الفاتورة #{sale.id}</span>
+
+      <SaleDateEditor saleDate={sale.sale_date} isSaving={isChangingSaleDate} onChange={onChangeSaleDate} />
 
       <Button
         type="button"

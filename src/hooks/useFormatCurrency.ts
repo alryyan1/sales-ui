@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { formatCurrency as formatCurrencyUtil } from "@/constants";
+import { formatCurrency as formatCurrencyUtil, CURRENCY_DECIMALS } from "@/constants";
 import { useSettings } from "@/context/SettingsContext";
 
 /**
@@ -9,6 +9,8 @@ import { useSettings } from "@/context/SettingsContext";
 export const useFormatCurrency = () => {
   const { getSetting } = useSettings();
   const globalCurrencySymbol = getSetting("currency_symbol", "$");
+  const currencyCode = getSetting("currency_code", "SDG");
+  const decimals = CURRENCY_DECIMALS[currencyCode] ?? 0;
 
   return useMemo(
     () =>
@@ -19,9 +21,15 @@ export const useFormatCurrency = () => {
       ) => {
         // Use currency symbol from parameters or settings
         const symbol = overrideCurrency || globalCurrencySymbol;
-        return formatCurrencyUtil(value, undefined, symbol, options);
+        // Decimal count follows the selected currency (SDG=0, OMR=3, USD=2) unless the
+        // caller explicitly overrides it via options.
+        return formatCurrencyUtil(value, undefined, symbol, {
+          minimumFractionDigits: decimals,
+          maximumFractionDigits: decimals,
+          ...options,
+        });
       },
-    [globalCurrencySymbol],
+    [globalCurrencySymbol, decimals],
   );
 };
 

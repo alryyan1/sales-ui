@@ -353,7 +353,9 @@ const PosBlankPage: React.FC = () => {
         return;
       }
       try {
-        const usdFactor = getSetting("usd_to_sdg_factor", 1) as number;
+        const usdFactor = getSetting("usd_conversion_enabled", true)
+          ? (getSetting("usd_to_sdg_factor", 1) as number)
+          : 1;
         for (const item of pkg.items) {
           const basePrice = Number(item.product?.last_sale_price_per_sellable_unit ?? item.product?.sale_price) || 0;
           const unitPrice = item.product?.last_purchase_currency === "USD" ? basePrice * usdFactor : basePrice;
@@ -715,7 +717,9 @@ const PosBlankPage: React.FC = () => {
         return;
       }
 
-      const usdFactor = getSetting("usd_to_sdg_factor", 1) as number;
+      const usdFactor = getSetting("usd_conversion_enabled", true)
+        ? (getSetting("usd_to_sdg_factor", 1) as number)
+        : 1;
       const basePrice = Number(product.last_sale_price_per_sellable_unit ?? product.sale_price) || 0;
       const unitPrice = product.last_purchase_currency === "USD" ? basePrice * usdFactor : basePrice;
       try {

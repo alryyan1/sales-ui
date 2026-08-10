@@ -236,7 +236,7 @@ export function ProductSearchPanel({
                 onSelect={() => handleAdd(product)}
                 className={cn(
                   "flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 data-[selected=true]:ring-1 data-[selected=true]:ring-primary/40",
-                  isAdded && "border border-primary/20 bg-primary/5"
+                  isAdded && "border border-emerald-500/30 bg-emerald-50 dark:border-emerald-400/30 dark:bg-emerald-950/20"
                 )}
               >
                 <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted">
@@ -272,7 +272,7 @@ export function ProductSearchPanel({
                   <span className="shrink-0 text-xs text-muted-foreground">{stock} متوفر</span>
                 )}
 
-                <span className="w-20 shrink-0 text-end text-sm font-semibold tabular-nums text-foreground">
+                <span className="w-25 shrink-0 text-end text-sm font-semibold tabular-nums text-foreground">
                   {formatCurrency(price)}
                 </span>
               </CommandItem>

@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import settingService, { AppSettings } from '@/services/settingService'; // Adjust path
 import { toast } from 'sonner';
+import { setDefaultCurrency } from '@/constants';
 
 interface SettingsContextType {
     settings: AppSettings | null;
@@ -23,6 +24,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         try {
             const fetchedSettings = await settingService.getSettings();
             setSettings(fetchedSettings);
+            setDefaultCurrency(fetchedSettings.currency_symbol, fetchedSettings.currency_code);
             console.log("SettingsProvider: Settings loaded", fetchedSettings);
         } catch (error) {
             console.error("SettingsProvider: Failed to fetch settings", error);
@@ -43,6 +45,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         try {
             const updatedSettings = await settingService.updateSettings(data);
             setSettings(updatedSettings); // Update local context state
+            setDefaultCurrency(updatedSettings.currency_symbol, updatedSettings.currency_code);
             toast.success('نجح', { description: 'تم تحديث الإعدادات بنجاح'});
             return updatedSettings;
         } catch (error) {

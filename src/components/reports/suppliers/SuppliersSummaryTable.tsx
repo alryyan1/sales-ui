@@ -14,10 +14,7 @@ import { FileText, Loader2, Eye } from "lucide-react";
 import { formatNumber } from "@/constants";
 import type { SupplierSummary } from "@/services/supplierService";
 import { cn } from "@/lib/utils";
-import { downloadPdf } from "@/utils/pdfDownload";
-import { SupplierLedgerPdf } from "@/components/suppliers/SupplierLedgerPdf";
-import { useSettings } from "@/context/SettingsContext";
-import supplierPaymentService from "@/services/supplierPaymentService";
+import exportService from "@/services/exportService";
 import { toast } from "sonner";
 
 interface SuppliersSummaryTableProps {
@@ -30,7 +27,6 @@ const SuppliersSummaryTable: React.FC<SuppliersSummaryTableProps> = ({
   onRowClick,
 }) => {
   const navigate = useNavigate();
-  const { settings } = useSettings();
   const [loadingPdfId, setLoadingPdfId] = useState<number | null>(null);
 
   const handleDownloadPdf = async (
@@ -38,25 +34,13 @@ const SuppliersSummaryTable: React.FC<SuppliersSummaryTableProps> = ({
     supplier: SupplierSummary
   ) => {
     e.stopPropagation(); // Prevent row click
-    
+
     setLoadingPdfId(supplier.id);
     try {
-      // Fetch full ledger with all transactions
-      const ledger = await supplierPaymentService.getLedger(supplier.id);
-      
-      const pdfDocument = (
-        <SupplierLedgerPdf ledger={ledger} settings={settings} />
-      );
-      
-      await downloadPdf(
-        pdfDocument,
-        `كشف_حساب_${supplier.name}_${new Date().toISOString().split("T")[0]}.pdf`
-      );
-    } catch (error: any) {
-      console.error("Error fetching ledger:", error);
-      toast.error("خطأ", {
-        description: supplierPaymentService.getErrorMessage(error) || "فشل في جلب بيانات كشف الحساب",
-      });
+      await exportService.exportSupplierLedgerPdf(supplier.id);
+    } catch (error) {
+      console.error("Error opening ledger PDF:", error);
+      toast.error("خطأ", { description: "فشل في فتح كشف الحساب" });
     } finally {
       setLoadingPdfId(null);
     }

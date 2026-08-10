@@ -10,19 +10,10 @@ export interface AppSettings {
   company_email: string;
   company_logo_url: string | null;
   currency_symbol: string;
-  date_format: string; // e.g., 'YYYY-MM-DD', 'MM/DD/YYYY'
   global_low_stock_threshold: number;
-  invoice_prefix: string;
-  purchase_order_prefix: string;
   default_profit_rate: number; // Default profit rate percentage
   timezone: string;
 
-  // WhatsApp API Configuration
-  whatsapp_enabled: boolean;
-  whatsapp_api_url: string;
-  whatsapp_api_token: string;
-  whatsapp_instance_id: string;
-  whatsapp_default_phone: string;
   whatsapp_shift_closure_numbers: string;
 
   // Add other settings as defined in your config
@@ -45,6 +36,8 @@ export interface AppSettings {
   product_images_show_in_reports?: boolean;
   firebase_collection_name?: string;
   usd_to_sdg_factor?: number;
+  /** Master switch for USD→local-currency price conversion (hides the TopAppBar rate widget and disables the multiplication when off). */
+  usd_conversion_enabled?: boolean;
   product_row_color_highlight?: boolean;
   product_scientific_name_visible?: boolean;
   product_scientific_name_required?: boolean;
@@ -53,6 +46,16 @@ export interface AppSettings {
   purchase_use_batch_number?: boolean;
   purchase_use_expiry_date?: boolean;
   default_purchase_currency?: "SDG" | "USD";
+  /** Drives decimal-place display everywhere money amounts are shown — see CURRENCY_DECIMALS in constants.ts. */
+  currency_code?: "SDG" | "OMR" | "USD";
+
+  // Sales Behavior
+  sales_allow_zero_stock?: boolean;
+  sales_allow_negative_stock?: boolean;
+  sales_require_customer?: boolean;
+  sales_default_customer_id?: number | null;
+  sales_allow_price_edit?: boolean;
+  sales_allow_invoice_date_edit?: boolean;
 }
 
 // Type for the update payload (can be partial)

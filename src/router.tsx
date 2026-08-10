@@ -43,6 +43,7 @@ import SuppliersSummaryPage from "./pages/reports/SuppliersSummaryPage";
 import SupplierPurchasesPage from "./pages/reports/SupplierPurchasesPage";
 import MonthlyExpensesPage from "./pages/reports/MonthlyExpensesPage";
 import ProfitLossReportPage from "./pages/reports/ProfitLossReportPage";
+import ProfitOverviewPage from "./pages/reports/ProfitOverviewPage";
 import ReportsDashboardPage from "./pages/reports/ReportsDashboardPage";
 import MonthlyShiftsReportPage from "./pages/reports/MonthlyShiftsReportPage";
 import BestSellingProductsPage from "./pages/reports/BestSellingProductsPage";
@@ -97,14 +98,10 @@ const router = createHashRouter([
         element: <ProtectedRoute />, // Ensures user is logged in
         children: [
           // --- General Access ---
-          { index: true, element: <DashboardPage /> },
+          { index: true, element: <Navigate to="/dashboard" replace /> },
           {
             path: "dashboard",
-            element: (
-              <PermissionGuard requiredPermission="view-dashboard">
-                <DashboardPage />
-              </PermissionGuard>
-            ),
+            element: <DashboardPage />,
           },
           { path: "profile", element: <ProfilePage /> },
 
@@ -362,6 +359,14 @@ const router = createHashRouter([
                 element: (
                   <PermissionGuard requiredPermission="view-reports">
                     <ProfitLossReportPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: "profit-overview",
+                element: (
+                  <PermissionGuard requiredPermission="view-reports">
+                    <ProfitOverviewPage />
                   </PermissionGuard>
                 ),
               },

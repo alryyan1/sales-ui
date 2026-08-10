@@ -1,6 +1,5 @@
 // src/components/layouts/navItems.ts
 import {
-  LayoutDashboard,
   Box as BoxIcon,
   ShoppingCart,
   CircleDollarSign,
@@ -10,15 +9,13 @@ import {
 import { NavItem } from "./types";
 
 export const navItems: NavItem[] = [
-  // Dashboard
   {
     to: "/dashboard",
     label: "لوحة التحكم",
-    icon: LayoutDashboard,
+    icon: BarChart3,
     permission: null,
-    category: "لوحة التحكم",
+    category: "الرئيسية",
   },
-
   // Sales Group
   {
     to: "#",
@@ -167,7 +164,13 @@ export const navItems: NavItem[] = [
         permission: null,
         category: "التقارير",
       },
-  
+      {
+        to: "/reports/profit-overview",
+        label: "ملخص الأرباح",
+        permission: null,
+        category: "التقارير",
+      },
+
       {
         to: "/reports/best-selling-products",
         label: "المنتجات الأكثر مبيعاً",

@@ -1,5 +1,5 @@
 // src/components/pos/SaleCompleteDialog.tsx
-import { CheckCircle2, Loader2, Plus, Printer } from "lucide-react";
+import { CheckCircle2, Landmark, Loader2, Plus, Printer } from "lucide-react";
 
 import {
   Dialog,
@@ -20,6 +20,8 @@ interface SaleCompleteDialogProps {
   onNewSale: () => void;
   onPrint: (kind: "thermal" | "a4") => void;
   printingKind?: "thermal" | "a4" | null;
+  onExportToFinance?: () => void;
+  isExportingToFinance?: boolean;
 }
 
 export function SaleCompleteDialog({
@@ -28,6 +30,8 @@ export function SaleCompleteDialog({
   onNewSale,
   onPrint,
   printingKind,
+  onExportToFinance,
+  isExportingToFinance = false,
 }: SaleCompleteDialogProps) {
   const formatCurrency = useFormatCurrency();
   if (!sale) return null;
@@ -41,7 +45,17 @@ export function SaleCompleteDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onNewSale()}>
-      <DialogContent dir="rtl" className="sm:max-w-sm text-center" showCloseButton={false}>
+      <DialogContent
+        dir="rtl"
+        className="sm:max-w-sm text-center"
+        showCloseButton={false}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            onNewSale();
+          }
+        }}
+      >
         <DialogHeader className="items-center">
           <div className="flex size-14 items-center justify-center rounded-full bg-green-500/10 text-green-600 dark:text-green-400">
             <CheckCircle2 className="size-8" />
@@ -49,6 +63,7 @@ export function SaleCompleteDialog({
           <DialogTitle className="text-lg">تم إتمام البيع بنجاح</DialogTitle>
           <DialogDescription>
             {sale.invoice_number ? `فاتورة رقم ${sale.invoice_number}` : `طلب رقم #${sale.number}`}
+            {" · "}معرّف #{sale.id}
           </DialogDescription>
         </DialogHeader>
 
@@ -103,6 +118,23 @@ export function SaleCompleteDialog({
             فاتورة A4
           </Button>
         </div>
+
+        {onExportToFinance && (
+          <Button
+            type="button"
+            variant="outline"
+            className="gap-1.5"
+            disabled={isExportingToFinance}
+            onClick={onExportToFinance}
+          >
+            {isExportingToFinance ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Landmark className="size-4" />
+            )}
+            {sale.finance_exported_at ? "إعادة التصدير إلى النظام المالي" : "تصدير إلى النظام المالي"}
+          </Button>
+        )}
 
         <Button type="button" size="lg" className="gap-2 text-base font-semibold" onClick={onNewSale}>
           <Plus className="size-5" />

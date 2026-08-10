@@ -1,11 +1,28 @@
 import { Controller, Control } from "react-hook-form";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { SettingsSection } from "./shared/SettingsSection";
+import { SettingsGroup } from "./shared/SettingsGroup";
 import { SwitchField } from "./shared/SwitchField";
 import { AppSettings } from "@/services/settingService";
+import { CURRENCY_DECIMALS } from "@/constants";
 
 interface BusinessRulesSettingsProps {
   control: Control<Partial<AppSettings>>;
 }
+
+const CURRENCY_OPTIONS = [
+  { value: "SDG", label: "SDG — جنيه سوداني" },
+  { value: "OMR", label: "OMR — ريال عماني" },
+  { value: "USD", label: "USD — دولار أمريكي" },
+] as const;
 
 export const BusinessRulesSettings = ({ control }: BusinessRulesSettingsProps) => {
   return (
@@ -13,6 +30,39 @@ export const BusinessRulesSettings = ({ control }: BusinessRulesSettingsProps) =
       title="الإعدادات المحلية وقواعد العمل"
       description="قواعد تحكم في سلوك جدول المنتجات ونموذج إضافته."
     >
+      <SettingsGroup title="العملة">
+        <Controller
+          name="currency_code"
+          control={control}
+          render={({ field }) => {
+            const decimals = CURRENCY_DECIMALS[field.value ?? "SDG"] ?? 0;
+            return (
+              <div className="space-y-2">
+                <Label htmlFor="currency_code">عملة النظام</Label>
+                <Select value={field.value ?? "SDG"} onValueChange={field.onChange}>
+                  <SelectTrigger id="currency_code" className="w-[220px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CURRENCY_OPTIONS.map((c) => (
+                      <SelectItem key={c.value} value={c.value}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  تحدد هذه العملة عدد الخانات العشرية المعروضة لكل المبالغ المالية في النظام —{" "}
+                  {decimals === 0 ? "بدون خانات عشرية" : `${decimals} خانة عشرية`}.
+                </p>
+              </div>
+            );
+          }}
+        />
+      </SettingsGroup>
+
+      <Separator />
+
       <div>
         <h3 className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
           عرض جدول المنتجات

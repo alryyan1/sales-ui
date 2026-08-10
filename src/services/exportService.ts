@@ -177,15 +177,110 @@ const exportService = {
       // Create the URL for the web PDF endpoint (not API)
       const baseUrl = apiClient.defaults.baseURL?.replace('/api', '') || '';
       const pdfUrl = `${baseUrl}/suppliers/${supplierId}/ledger/pdf`;
-      
+
       // Open PDF in new tab
       window.open(pdfUrl, '_blank');
-      
+
     } catch (error) {
       console.error('Error opening PDF:', error);
       throw new Error('Failed to open PDF. Please try again.');
     }
   },
+
+  /**
+   * Export the suppliers summary statement to PDF and open in new tab
+   */
+  exportSuppliersSummaryPdf: async (): Promise<void> => {
+    try {
+      const baseUrl = apiClient.defaults.baseURL?.replace('/api', '') || '';
+      const pdfUrl = `${baseUrl}/suppliers/summary/pdf`;
+      window.open(pdfUrl, '_blank');
+    } catch (error) {
+      console.error('Error opening PDF:', error);
+      throw new Error('Failed to open PDF. Please try again.');
+    }
+  },
+};
+
+/**
+ * Export the monthly expenses report to PDF and open in new tab
+ * @param year The report year
+ * @param month The report month (1-12)
+ * @returns Promise that resolves when PDF opens in new tab
+ */
+export const exportMonthlyExpensesPdf = async (year: number, month: number): Promise<void> => {
+  try {
+    const response = await apiClient.get(`/reports/monthly-expenses-pdf`, {
+      params: { year, month },
+      responseType: 'blob',
+    });
+
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.click();
+
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Failed to generate monthly expenses PDF:', error);
+    throw new Error('Failed to generate PDF report');
+  }
+};
+
+/**
+ * Export the sales-with-discounts report to PDF and open in new tab
+ * @param startDate Start date (YYYY-MM-DD)
+ * @param endDate End date (YYYY-MM-DD)
+ * @returns Promise that resolves when PDF opens in new tab
+ */
+export const exportSalesWithDiscountsPdf = async (startDate: string, endDate: string): Promise<void> => {
+  try {
+    const response = await apiClient.get(`/reports/sales-with-discounts-pdf`, {
+      params: { start_date: startDate, end_date: endDate },
+      responseType: 'blob',
+    });
+
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.click();
+
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Failed to generate sales-with-discounts PDF:', error);
+    throw new Error('Failed to generate PDF report');
+  }
+};
+
+/**
+ * Export the monthly revenue (daily income) report to PDF and open in new tab
+ * @param year The report year
+ * @param month The report month (1-12)
+ * @returns Promise that resolves when PDF opens in new tab
+ */
+export const exportMonthlyRevenuePdf = async (year: number, month: number): Promise<void> => {
+  try {
+    const response = await apiClient.get(`/reports/monthly-revenue-pdf`, {
+      params: { year, month },
+      responseType: 'blob',
+    });
+
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.click();
+
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Failed to generate monthly revenue PDF:', error);
+    throw new Error('Failed to generate PDF report');
+  }
 };
 
 /**
