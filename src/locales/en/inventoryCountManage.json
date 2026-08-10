@@ -1,0 +1,43 @@
+{
+  "statusDraft": "Draft",
+  "statusInProgress": "In Progress",
+  "statusCompleted": "Completed",
+  "statusApproved": "Approved",
+  "statusRejected": "Rejected",
+
+  "productAddedSuccess": "Product added successfully",
+  "productDeletedSuccess": "Product deleted",
+  "statusUpdatedSuccess": "Status updated",
+  "countApprovedSuccess": "Count approved and stock adjusted",
+  "countRejectedSuccess": "Count rejected",
+
+  "countNotFound": "Count not found",
+  "backToList": "Back to list",
+  "countHash": "Count #{{id}}",
+  "createdColon": "Created: {{date}}",
+  "startedColon": "Started: {{date}}",
+  "completedColon": "Completed: {{date}}",
+  "approvedColon": "Approved: {{date}}",
+
+  "itemUnitLabel": "items",
+  "diffLabel": "Diff",
+  "withDiffLabel": "With Diff",
+
+  "startCount": "Start Count",
+  "complete": "Complete",
+  "confirmApprove": "Approve the count and adjust stock?",
+  "approve": "Approve",
+  "confirmReject": "Reject the count?",
+  "reject": "Reject",
+
+  "productsListTitle": "Products List",
+  "searchPlaceholder": "Search...",
+  "expectedQuantityColumn": "Recorded Quantity",
+  "actualQuantityColumn": "Actual Quantity",
+  "differenceColumn": "Difference",
+  "noMatchingProducts": "No matching products",
+
+  "selectProductFirstError": "Please select a product first",
+  "quantityMustBePositiveError": "Quantity must be a positive number",
+  "productNameOrBarcodePlaceholder": "Product (name or barcode)"
+}

@@ -46,6 +46,9 @@ import barcodeLabelPdfDialogAr from './locales/ar/barcodeLabelPdfDialog.json';
 import packageFormModalAr from './locales/ar/packageFormModal.json';
 import editPurchaseDialogAr from './locales/ar/editPurchaseDialog.json';
 import purchaseLedgerDialogAr from './locales/ar/purchaseLedgerDialog.json';
+import inventoryCountAr from './locales/ar/inventoryCount.json';
+import inventoryCountManageAr from './locales/ar/inventoryCountManage.json';
+import transitOrdersAr from './locales/ar/transitOrders.json';
 
 // English imports
 import commonEN from './locales/en/common.json';
@@ -91,6 +94,9 @@ import barcodeLabelPdfDialogEN from './locales/en/barcodeLabelPdfDialog.json';
 import packageFormModalEN from './locales/en/packageFormModal.json';
 import editPurchaseDialogEN from './locales/en/editPurchaseDialog.json';
 import purchaseLedgerDialogEN from './locales/en/purchaseLedgerDialog.json';
+import inventoryCountEN from './locales/en/inventoryCount.json';
+import inventoryCountManageEN from './locales/en/inventoryCountManage.json';
+import transitOrdersEN from './locales/en/transitOrders.json';
 
 
 // ... استيراد ملفات أخرى
@@ -147,6 +153,9 @@ const resources = {
     ,packageFormModal:packageFormModalAr
     ,editPurchaseDialog:editPurchaseDialogAr
     ,purchaseLedgerDialog:purchaseLedgerDialogAr
+    ,inventoryCount:inventoryCountAr
+    ,inventoryCountManage:inventoryCountManageAr
+    ,transitOrders:transitOrdersAr
 
     // ... namespaces أخرى
   },
@@ -194,6 +203,9 @@ const resources = {
     ,packageFormModal: packageFormModalEN
     ,editPurchaseDialog: editPurchaseDialogEN
     ,purchaseLedgerDialog: purchaseLedgerDialogEN
+    ,inventoryCount: inventoryCountEN
+    ,inventoryCountManage: inventoryCountManageEN
+    ,transitOrders: transitOrdersEN
   }
   // يمكنك إضافة لغات أخرى هنا بنفس الهيكل
 };
@@ -244,6 +256,9 @@ export const namespaces = [
     ,'packageFormModal'
     ,'editPurchaseDialog'
     ,'purchaseLedgerDialog'
+    ,'inventoryCount'
+    ,'inventoryCountManage'
+    ,'transitOrders'
     // ... أسماء namespaces أخرى
 ];
 

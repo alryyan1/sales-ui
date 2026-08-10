@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import dayjs from "dayjs";
@@ -9,6 +10,7 @@ import {
   AlertCircle,
   Check,
   ChevronLeft,
+  ChevronRight,
   ClipboardList,
   Loader2,
   MoreHorizontal,
@@ -74,67 +76,71 @@ import inventoryCountService, {
 } from "@/services/inventoryCountService";
 import { warehouseService } from "@/services/warehouseService";
 import InventoryCountDialog from "@/components/inventory/InventoryCountDialog";
+import { useLanguage } from "@/context/LanguageContext";
 
 const PER_PAGE = 15;
 
 type Status = InventoryCount["status"];
 type StatusFilter = "" | Status;
 
-const STATUS_CONFIG: Record<Status, { label: string; badge: "secondary" | "info" | "warning" | "success" | "destructive" }> = {
-  draft: { label: "مسودة", badge: "secondary" },
-  in_progress: { label: "قيد التنفيذ", badge: "info" },
-  completed: { label: "مكتمل", badge: "warning" },
-  approved: { label: "معتمد", badge: "success" },
-  rejected: { label: "مرفوض", badge: "destructive" },
-};
-
-const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
-  { value: "", label: "الكل" },
-  { value: "draft", label: STATUS_CONFIG.draft.label },
-  { value: "in_progress", label: STATUS_CONFIG.in_progress.label },
-  { value: "completed", label: STATUS_CONFIG.completed.label },
-  { value: "approved", label: STATUS_CONFIG.approved.label },
-  { value: "rejected", label: STATUS_CONFIG.rejected.label },
-];
-
 type PendingAction = {
   type: "delete" | "approve" | "reject" | "import";
   count: InventoryCount;
 };
 
-const ACTION_COPY: Record<
-  PendingAction["type"],
-  { title: (c: InventoryCount) => string; description: string; confirmLabel: string; variant: "default" | "destructive" }
-> = {
-  delete: {
-    title: (c) => `حذف الجرد #${c.id}؟`,
-    description: "سيتم حذف هذا الجرد وكل بياناته نهائيًا. هذا الإجراء لا يمكن التراجع عنه.",
-    confirmLabel: "حذف نهائي",
-    variant: "destructive",
-  },
-  approve: {
-    title: (c) => `اعتماد الجرد #${c.id}؟`,
-    description: "سيتم تعديل كميات المخزون تلقائيًا لتطابق نتائج هذا الجرد فور الاعتماد.",
-    confirmLabel: "اعتماد وتعديل المخزون",
-    variant: "default",
-  },
-  reject: {
-    title: (c) => `رفض الجرد #${c.id}؟`,
-    description: "لن يتم تعديل المخزون، ويمكن مراجعة الجرد لاحقًا.",
-    confirmLabel: "رفض الجرد",
-    variant: "destructive",
-  },
-  import: {
-    title: (c) => `استيراد كل منتجات المستودع إلى الجرد #${c.id}؟`,
-    description: "ستتم إضافة كل المنتجات التي لم تُدرج بعد في هذا الجرد بكمياتها المتوقعة الحالية.",
-    confirmLabel: "استيراد",
-    variant: "default",
-  },
-};
-
 const InventoryCountPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { direction } = useLanguage();
+  const { t } = useTranslation("inventoryCount");
+  const { t: tCommon } = useTranslation("common");
+
+  const STATUS_CONFIG: Record<Status, { label: string; badge: "secondary" | "info" | "warning" | "success" | "destructive" }> = {
+    draft: { label: t("status_draft"), badge: "secondary" },
+    in_progress: { label: t("status_in_progress"), badge: "info" },
+    completed: { label: t("status_completed"), badge: "warning" },
+    approved: { label: t("status_approved"), badge: "success" },
+    rejected: { label: t("status_rejected"), badge: "destructive" },
+  };
+
+  const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
+    { value: "", label: tCommon("all") },
+    { value: "draft", label: STATUS_CONFIG.draft.label },
+    { value: "in_progress", label: STATUS_CONFIG.in_progress.label },
+    { value: "completed", label: STATUS_CONFIG.completed.label },
+    { value: "approved", label: STATUS_CONFIG.approved.label },
+    { value: "rejected", label: STATUS_CONFIG.rejected.label },
+  ];
+
+  const ACTION_COPY: Record<
+    PendingAction["type"],
+    { title: (c: InventoryCount) => string; description: string; confirmLabel: string; variant: "default" | "destructive" }
+  > = {
+    delete: {
+      title: (c) => t("deleteTitle", { id: c.id }),
+      description: t("deleteDescription"),
+      confirmLabel: t("deleteConfirmLabel"),
+      variant: "destructive",
+    },
+    approve: {
+      title: (c) => t("approveTitle", { id: c.id }),
+      description: t("approveDescription"),
+      confirmLabel: t("approveConfirmLabel"),
+      variant: "default",
+    },
+    reject: {
+      title: (c) => t("rejectTitle", { id: c.id }),
+      description: t("rejectDescription"),
+      confirmLabel: t("rejectConfirmLabel"),
+      variant: "destructive",
+    },
+    import: {
+      title: (c) => t("importTitle", { id: c.id }),
+      description: t("importDescription"),
+      confirmLabel: t("importConfirmLabel"),
+      variant: "default",
+    },
+  };
 
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
@@ -148,8 +154,8 @@ const InventoryCountPage: React.FC = () => {
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(searchTerm), 400);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 400);
+    return () => clearTimeout(timer);
   }, [searchTerm]);
 
   const startDate = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined;
@@ -185,31 +191,31 @@ const InventoryCountPage: React.FC = () => {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => inventoryCountService.deleteInventoryCount(id),
     onSuccess: () => {
-      toast.success("تم حذف الجرد بنجاح");
+      toast.success(t("deleteSuccess"));
       setPendingAction(null);
       invalidateCounts();
     },
-    onError: (error) => toast.error("تعذر حذف الجرد", { description: inventoryCountService.getErrorMessage(error) }),
+    onError: (error) => toast.error(t("deleteFailed"), { description: inventoryCountService.getErrorMessage(error) }),
   });
 
   const approveMutation = useMutation({
     mutationFn: (id: number) => inventoryCountService.approveCount(id),
     onSuccess: () => {
-      toast.success("تم اعتماد الجرد وتعديل المخزون");
+      toast.success(t("approveSuccess"));
       setPendingAction(null);
       invalidateCounts();
     },
-    onError: (error) => toast.error("تعذر اعتماد الجرد", { description: inventoryCountService.getErrorMessage(error) }),
+    onError: (error) => toast.error(t("approveFailed"), { description: inventoryCountService.getErrorMessage(error) }),
   });
 
   const rejectMutation = useMutation({
     mutationFn: (id: number) => inventoryCountService.rejectCount(id),
     onSuccess: () => {
-      toast.success("تم رفض الجرد");
+      toast.success(t("rejectSuccess"));
       setPendingAction(null);
       invalidateCounts();
     },
-    onError: (error) => toast.error("تعذر رفض الجرد", { description: inventoryCountService.getErrorMessage(error) }),
+    onError: (error) => toast.error(t("rejectFailed"), { description: inventoryCountService.getErrorMessage(error) }),
   });
 
   const importAllProductsMutation = useMutation({
@@ -219,7 +225,7 @@ const InventoryCountPage: React.FC = () => {
       setPendingAction(null);
       invalidateCounts();
     },
-    onError: (error) => toast.error("تعذر الاستيراد", { description: inventoryCountService.getErrorMessage(error) }),
+    onError: (error) => toast.error(t("importFailed"), { description: inventoryCountService.getErrorMessage(error) }),
   });
 
   const isActing =
@@ -266,19 +272,19 @@ const InventoryCountPage: React.FC = () => {
   const actionCopy = pendingAction ? ACTION_COPY[pendingAction.type] : null;
 
   return (
-    <div dir="rtl" className="min-h-screen bg-background">
+    <div dir={direction} className="min-h-screen bg-background">
       <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
         {/* Page header */}
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b pb-5">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">جرد المخزون</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">{t("pageTitle")}</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              أنشئ عمليات جرد للمستودعات، سجّل الكميات الفعلية، واعتمد النتائج لتحديث المخزون
+              {t("pageSubtitle")}
             </p>
           </div>
           <Button onClick={openCreateDialog} className="gap-2">
             <Plus className="size-4" />
-            جرد جديد
+            {t("newCountButton")}
           </Button>
         </div>
 
@@ -290,19 +296,19 @@ const InventoryCountPage: React.FC = () => {
         {/* Toolbar */}
         <div className="mb-4 flex flex-wrap items-end gap-2">
           <div className="relative min-w-[200px] flex-1 sm:max-w-xs">
-            <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="ابحث بالملاحظات..."
-              className="pr-9"
+              placeholder={t("searchByNotesPlaceholder")}
+              className="ps-9"
             />
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm("")}
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                aria-label="مسح البحث"
+                className="absolute end-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label={t("clearSearchAria")}
               >
                 <X className="size-4" />
               </button>
@@ -311,10 +317,10 @@ const InventoryCountPage: React.FC = () => {
 
           <Select value={warehouseId} onValueChange={setWarehouseId}>
             <SelectTrigger className="w-44">
-              <SelectValue placeholder="كل المستودعات" />
+              <SelectValue placeholder={t("allWarehouses")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">كل المستودعات</SelectItem>
+              <SelectItem value="all">{t("allWarehouses")}</SelectItem>
               {(warehousesQuery.data ?? []).map((w) => (
                 <SelectItem key={w.id} value={String(w.id)}>
                   {w.name}
@@ -328,13 +334,13 @@ const InventoryCountPage: React.FC = () => {
           {hasActiveFilters && (
             <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1.5">
               <X className="size-3.5" />
-              مسح الفلاتر
+              {t("clearFiltersButton")}
             </Button>
           )}
 
           {!isInitialLoading && !countsQuery.isError && (
             <p className="ms-auto text-xs text-muted-foreground">
-              {countsQuery.data?.total ?? counts.length} عملية جرد
+              {t("countOperationsLabel", { count: countsQuery.data?.total ?? counts.length })}
             </p>
           )}
         </div>
@@ -343,11 +349,11 @@ const InventoryCountPage: React.FC = () => {
         {countsQuery.isError && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="size-4" />
-            <AlertTitle>تعذر تحميل عمليات الجرد</AlertTitle>
+            <AlertTitle>{t("loadErrorTitle")}</AlertTitle>
             <AlertDescription className="flex items-center justify-between gap-3">
               <span>{inventoryCountService.getErrorMessage(countsQuery.error)}</span>
               <Button size="sm" variant="outline" onClick={() => countsQuery.refetch()}>
-                إعادة المحاولة
+                {tCommon("retry")}
               </Button>
             </AlertDescription>
           </Alert>
@@ -374,26 +380,26 @@ const InventoryCountPage: React.FC = () => {
             <ClipboardList className="size-10 text-muted-foreground" />
             {hasActiveFilters ? (
               <div>
-                <p className="font-medium text-foreground">لا توجد نتائج مطابقة للفلاتر الحالية</p>
+                <p className="font-medium text-foreground">{t("noResultsMatchFilters")}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  حاول تعديل البحث أو الحالة أو المستودع أو نطاق التاريخ
+                  {t("tryAdjustingFilters")}
                 </p>
                 <Button variant="link" size="sm" onClick={clearFilters}>
-                  مسح الفلاتر
+                  {t("clearFiltersButton")}
                 </Button>
               </div>
             ) : (
               <div>
-                <p className="font-medium text-foreground">لا توجد عمليات جرد بعد</p>
+                <p className="font-medium text-foreground">{t("noCountsYet")}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  ابدأ أول عملية جرد لمراجعة كميات المخزون الفعلية
+                  {t("startFirstCountHint")}
                 </p>
               </div>
             )}
             {!hasActiveFilters && (
               <Button onClick={openCreateDialog} className="mt-2 gap-2">
                 <Plus className="size-4" />
-                إنشاء أول جرد
+                {t("createFirstCountButton")}
               </Button>
             )}
           </div>
@@ -406,14 +412,14 @@ const InventoryCountPage: React.FC = () => {
               <Table>
                 <TableHeader className="bg-muted/40">
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="text-start">التاريخ</TableHead>
-                    <TableHead className="text-start">المستودع</TableHead>
-                    <TableHead className="text-start">الحالة</TableHead>
-                    <TableHead className="text-start">المستخدم</TableHead>
-                    <TableHead className="text-center">المنتجات</TableHead>
-                    <TableHead className="text-start">الملاحظات</TableHead>
+                    <TableHead className="text-start">{t("dateColumn")}</TableHead>
+                    <TableHead className="text-start">{t("warehouseColumn")}</TableHead>
+                    <TableHead className="text-start">{t("statusColumn")}</TableHead>
+                    <TableHead className="text-start">{t("userColumn")}</TableHead>
+                    <TableHead className="text-center">{t("productsColumn")}</TableHead>
+                    <TableHead className="text-start">{t("notesColumn")}</TableHead>
                     <TableHead className="w-40">
-                      <span className="sr-only">إجراءات</span>
+                      <span className="sr-only">{t("actionsColumn")}</span>
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -471,7 +477,7 @@ const InventoryCountPage: React.FC = () => {
                                   onClick={() => setPendingAction({ type: "approve", count })}
                                 >
                                   <Check className="size-3.5" />
-                                  اعتماد
+                                  {t("approveButton")}
                                 </Button>
                                 <Button
                                   size="xs"
@@ -480,7 +486,7 @@ const InventoryCountPage: React.FC = () => {
                                   onClick={() => setPendingAction({ type: "reject", count })}
                                 >
                                   <X className="size-3.5" />
-                                  رفض
+                                  {t("rejectButton")}
                                 </Button>
                               </>
                             )}
@@ -490,21 +496,21 @@ const InventoryCountPage: React.FC = () => {
                                 <DropdownMenuTrigger asChild>
                                   <Button variant="ghost" size="icon" className="size-8">
                                     <MoreHorizontal className="size-4" />
-                                    <span className="sr-only">إجراءات</span>
+                                    <span className="sr-only">{t("actionsColumn")}</span>
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start">
                                   {count.status === "draft" && (
                                     <DropdownMenuItem onSelect={() => openEditDialog(count)}>
                                       <Pencil className="size-4" />
-                                      تعديل
+                                      {tCommon("edit")}
                                     </DropdownMenuItem>
                                   )}
                                   <DropdownMenuItem
                                     onSelect={() => setPendingAction({ type: "import", count })}
                                   >
                                     <Upload className="size-4" />
-                                    استيراد كل المنتجات
+                                    {t("importAllProductsMenuItem")}
                                   </DropdownMenuItem>
                                   {count.status === "draft" && (
                                     <DropdownMenuItem
@@ -512,14 +518,18 @@ const InventoryCountPage: React.FC = () => {
                                       onSelect={() => setPendingAction({ type: "delete", count })}
                                     >
                                       <Trash2 className="size-4" />
-                                      حذف
+                                      {tCommon("delete")}
                                     </DropdownMenuItem>
                                   )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             )}
 
-                            <ChevronLeft className="size-4 shrink-0 text-muted-foreground" />
+                            {direction === "rtl" ? (
+                              <ChevronLeft className="size-4 shrink-0 text-muted-foreground" />
+                            ) : (
+                              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -611,7 +621,7 @@ const InventoryCountPage: React.FC = () => {
           if (!open && !isActing) setPendingAction(null);
         }}
       >
-        <AlertDialogContent dir="rtl">
+        <AlertDialogContent dir={direction}>
           {pendingAction && actionCopy && (
             <>
               <AlertDialogHeader>
@@ -625,7 +635,7 @@ const InventoryCountPage: React.FC = () => {
                   disabled={isActing}
                   onClick={() => setPendingAction(null)}
                 >
-                  إلغاء
+                  {tCommon("cancel")}
                 </Button>
                 <Button
                   type="button"

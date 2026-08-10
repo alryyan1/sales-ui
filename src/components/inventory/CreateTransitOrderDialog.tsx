@@ -18,6 +18,7 @@ import {
   Box,
 } from "@mui/material";
 import { Plus, Trash2, Save } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { warehouseService, Warehouse } from "@/services/warehouseService";
 import transitOrderService from "@/services/transitOrderService";
@@ -51,6 +52,8 @@ export function CreateTransitOrderDialog({
   onSuccess,
   trigger,
 }: CreateTransitOrderDialogProps) {
+  const { t } = useTranslation("transitOrders");
+  const { t: tCommon } = useTranslation("common");
   const [open, setOpen] = useState(false);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
@@ -130,7 +133,7 @@ export function CreateTransitOrderDialog({
       setLoadingWarehouses(true);
       setWarehouses(await warehouseService.getAll());
     } catch {
-      toast.error("فشل تحميل المستودعات");
+      toast.error(t("failedToLoadWarehousesTO"));
     } finally {
       setLoadingWarehouses(false);
     }
@@ -142,7 +145,7 @@ export function CreateTransitOrderDialog({
       const response = await supplierService.getSuppliers(1, search);
       setSuppliers(response.data ?? []);
     } catch {
-      toast.error("فشل تحميل الموردين");
+      toast.error(t("failedToLoadSuppliers"));
     } finally {
       setLoadingSuppliers(false);
     }
@@ -202,7 +205,7 @@ export function CreateTransitOrderDialog({
 
   const getStockLabel = (p: Product): string => {
     const stock = p.current_stock_quantity ?? p.stock_quantity ?? 0;
-    return `${p.name} (المخزون: ${stock})`;
+    return `${p.name} ${t("stockColonSuffix", { stock })}`;
   };
 
   const getCurrentStock = (index: number): number => {
@@ -231,11 +234,11 @@ export function CreateTransitOrderDialog({
             quantity: parseFloat(item.quantity),
           })),
       });
-      toast.success("تم إنشاء الطلب بنجاح");
+      toast.success(t("orderCreatedSuccess"));
       setOpen(false);
       onSuccess?.();
     } catch (error: any) {
-      toast.error(error.message || "فشل إنشاء الطلب");
+      toast.error(error.message || t("failedToCreateOrder"));
     } finally {
       setIsSubmitting(false);
     }
@@ -244,11 +247,11 @@ export function CreateTransitOrderDialog({
   return (
     <>
       <div onClick={() => setOpen(true)}>
-        {trigger || <Button variant="contained">New Transit Order</Button>}
+        {trigger || <Button variant="contained">{t("newTransitOrderButton")}</Button>}
       </div>
 
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Create Transit Order</DialogTitle>
+        <DialogTitle>{t("createTransitOrderTitle")}</DialogTitle>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogContent dividers>
             <Grid container spacing={2}>
@@ -256,12 +259,12 @@ export function CreateTransitOrderDialog({
                 <Controller
                   control={form.control}
                   name="warehouse_id"
-                  rules={{ required: "مطلوب" }}
+                  rules={{ required: t("requiredField") }}
                   render={({ field }) => (
                     <TextField
                       {...field}
                       select
-                      label="المستودع الوجهة"
+                      label={t("destinationWarehouseColumn")}
                       fullWidth
                       size="small"
                       error={!!form.formState.errors.warehouse_id}
@@ -295,9 +298,9 @@ export function CreateTransitOrderDialog({
                       renderInput={(params) => (
                         <TextField
                           {...params}
-                          label="المورد"
+                          label={t("supplierColumn")}
                           size="small"
-                          placeholder="اختياري..."
+                          placeholder={t("optionalPlaceholder")}
                           slotProps={{
                             input: {
                               ...params.InputProps,
@@ -319,8 +322,8 @@ export function CreateTransitOrderDialog({
               </Grid>
               <Grid size={6}>
                 <TextField
-                  {...form.register("order_date", { required: "مطلوب" })}
-                  label="تاريخ الطلب"
+                  {...form.register("order_date", { required: t("requiredField") })}
+                  label={t("orderDateColumn")}
                   type="date"
                   fullWidth
                   size="small"
@@ -332,7 +335,7 @@ export function CreateTransitOrderDialog({
               <Grid size={6}>
                 <TextField
                   {...form.register("eta_date")}
-                  label="تاريخ الوصول المتوقع (ETA)"
+                  label={t("etaDateFieldLabel")}
                   type="date"
                   fullWidth
                   size="small"
@@ -342,10 +345,10 @@ export function CreateTransitOrderDialog({
               <Grid size={12}>
                 <TextField
                   {...form.register("notes")}
-                  label="ملاحظات"
+                  label={t("notesLabel")}
                   fullWidth
                   size="small"
-                  placeholder="اختياري..."
+                  placeholder={t("optionalPlaceholder")}
                 />
               </Grid>
 
@@ -353,13 +356,13 @@ export function CreateTransitOrderDialog({
               <Grid size={12}>
                 <Divider sx={{ mb: 1 }}>
                   <Typography variant="caption" color="text.secondary">
-                    الأصناف
+                    {t("itemsLabel")}
                   </Typography>
                 </Divider>
 
                 {!warehouseId && (
                   <Alert severity="info" sx={{ mb: 1 }}>
-                    اختر المستودع الوجهة أولاً لإضافة أصناف
+                    {t("selectWarehouseFirstToAddItems")}
                   </Alert>
                 )}
 
@@ -368,17 +371,17 @@ export function CreateTransitOrderDialog({
                     <Box sx={{ flex: 1 }} />
                     <Box sx={{ width: 110 }}>
                       <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                        المخزون الحالي
+                        {t("currentStockColumn")}
                       </Typography>
                     </Box>
                     <Box sx={{ width: 100 }}>
                       <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                        الكمية المدخلة
+                        {t("enteredQuantityLabel")}
                       </Typography>
                     </Box>
                     <Box sx={{ width: 110 }}>
                       <Typography variant="caption" color="primary.main" fontWeight={700}>
-                        المجموع (الحالي + المدخل)
+                        {t("totalCurrentPlusEnteredLabel")}
                       </Typography>
                     </Box>
                     <Box sx={{ width: 36 }} />
@@ -395,7 +398,7 @@ export function CreateTransitOrderDialog({
                       <Controller
                         control={form.control}
                         name={`items.${index}.product`}
-                        rules={{ required: "مطلوب" }}
+                        rules={{ required: t("requiredField") }}
                         render={({ field: f, fieldState }) => (
                           <Autocomplete
                             options={productOptions[index] ?? []}
@@ -438,7 +441,7 @@ export function CreateTransitOrderDialog({
                                   if (typeof originalRef === "function") originalRef(el);
                                   else if (originalRef) originalRef.current = el;
                                 }}
-                                label="الصنف"
+                                label={t("itemColumn")}
                                 size="small"
                                 error={!!fieldState.error}
                                 helperText={fieldState.error?.message}
@@ -477,8 +480,8 @@ export function CreateTransitOrderDialog({
                     <Box sx={{ width: 100 }}>
                       <TextField
                         {...form.register(`items.${index}.quantity`, {
-                          required: "مطلوب",
-                          min: { value: 0.01, message: "> 0" },
+                          required: t("requiredField"),
+                          min: { value: 0.01, message: t("minQuantityValidation") },
                         })}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
@@ -537,7 +540,7 @@ export function CreateTransitOrderDialog({
                   variant="outlined"
                   sx={{ mt: 0.5 }}
                 >
-                  إضافة صنف
+                  {t("addItemButton")}
                 </Button>
               </Grid>
             </Grid>
@@ -545,7 +548,7 @@ export function CreateTransitOrderDialog({
 
           <DialogActions>
             <Button onClick={() => setOpen(false)} color="inherit">
-              إلغاء
+              {tCommon("cancel")}
             </Button>
             <Button
               type="submit"
@@ -559,7 +562,7 @@ export function CreateTransitOrderDialog({
                 )
               }
             >
-              حفظ الطلب
+              {t("saveOrderButton")}
             </Button>
           </DialogActions>
         </form>

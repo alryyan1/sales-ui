@@ -23,6 +23,7 @@ import transitOrderService, {
 } from "@/services/transitOrderService";
 import { Loader2, Truck, PackageCheck } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { ProductImage } from "@/components/products/ProductImage";
 import {
   Pagination,
@@ -39,6 +40,7 @@ interface OrderItemRow {
 }
 
 export default function TransitOrdersPage() {
+  const { t } = useTranslation("transitOrders");
   const [orders, setOrders] = useState<TransitOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -51,7 +53,7 @@ export default function TransitOrdersPage() {
       setOrders(data.data || []);
       setTotalPages(data.last_page || 1);
     } catch (error) {
-      toast.error("فشل تحميل الطلبات");
+      toast.error(t("failedToLoadOrders"));
       setOrders([]);
       setTotalPages(1);
     } finally {
@@ -75,8 +77,8 @@ export default function TransitOrdersPage() {
         <div className="flex items-center gap-2">
           <Truck className="h-5 w-5 text-muted-foreground" />
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">Transit Orders</h1>
-            <p className="text-xs text-muted-foreground">إدارة الشحنات الواردة قيد النقل من الموردين</p>
+            <h1 className="text-xl font-semibold tracking-tight">{t("pageTitle")}</h1>
+            <p className="text-xs text-muted-foreground">{t("pageSubtitle")}</p>
           </div>
         </div>
         <CreateTransitOrderDialog onSuccess={() => { setPage(1); loadOrders(); }} />
@@ -93,24 +95,24 @@ export default function TransitOrdersPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50 hover:bg-muted/50">
-                    <TableHead className="text-center text-xs font-semibold py-2 w-20">رقم الطلب</TableHead>
-                    <TableHead className="text-center text-xs font-semibold py-2 w-28">تاريخ الطلب</TableHead>
-                    <TableHead className="text-center text-xs font-semibold py-2 w-28">تاريخ الوصول المتوقع</TableHead>
-                    <TableHead className="text-center text-xs font-semibold py-2">المستودع الوجهة</TableHead>
-                    <TableHead className="text-center text-xs font-semibold py-2">المورد</TableHead>
-                    <TableHead className="text-center text-xs font-semibold py-2">الصنف</TableHead>
-                    <TableHead className="text-center text-xs font-semibold py-2">المخزون الحالي</TableHead>
-                    <TableHead className="text-center text-xs font-semibold py-2">الكمية</TableHead>
-                    <TableHead className="text-center text-xs font-semibold py-2">المجموع</TableHead>
-                    <TableHead className="text-center text-xs font-semibold py-2">الحالة</TableHead>
-                    <TableHead className="text-center text-xs font-semibold py-2">استلام</TableHead>
+                    <TableHead className="text-center text-xs font-semibold py-2 w-20">{t("orderNumberColumn")}</TableHead>
+                    <TableHead className="text-center text-xs font-semibold py-2 w-28">{t("orderDateColumn")}</TableHead>
+                    <TableHead className="text-center text-xs font-semibold py-2 w-28">{t("etaDateColumn")}</TableHead>
+                    <TableHead className="text-center text-xs font-semibold py-2">{t("destinationWarehouseColumn")}</TableHead>
+                    <TableHead className="text-center text-xs font-semibold py-2">{t("supplierColumn")}</TableHead>
+                    <TableHead className="text-center text-xs font-semibold py-2">{t("itemColumn")}</TableHead>
+                    <TableHead className="text-center text-xs font-semibold py-2">{t("currentStockColumn")}</TableHead>
+                    <TableHead className="text-center text-xs font-semibold py-2">{t("quantityColumn")}</TableHead>
+                    <TableHead className="text-center text-xs font-semibold py-2">{t("totalColumn")}</TableHead>
+                    <TableHead className="text-center text-xs font-semibold py-2">{t("statusColumn")}</TableHead>
+                    <TableHead className="text-center text-xs font-semibold py-2">{t("receiveColumn")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {rows.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={11} className="text-center h-32 text-sm text-muted-foreground">
-                        لا توجد طلبات مسجلة.
+                        {t("noOrdersRecorded")}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -178,7 +180,7 @@ export default function TransitOrdersPage() {
                               variant={isReceived ? "default" : "secondary"}
                               className="text-xs font-normal"
                             >
-                              {isReceived ? "تم الاستلام" : "قيد النقل"}
+                              {isReceived ? t("received") : t("inTransit")}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-center py-2">
@@ -192,12 +194,12 @@ export default function TransitOrdersPage() {
                                     disabled={isReceived}
                                   >
                                     <PackageCheck className="h-3.5 w-3.5" />
-                                    استلام
+                                    {t("receiveColumn")}
                                   </Button>
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent>
-                                هذه الميزة قيد التطوير ولا تنفذ أي إجراء حالياً
+                                {t("featureInDevelopmentTooltip")}
                               </TooltipContent>
                             </Tooltip>
                           </TableCell>

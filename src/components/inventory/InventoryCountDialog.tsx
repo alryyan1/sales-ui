@@ -3,6 +3,7 @@ import { useForm, Controller } from "react-hook-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2, Lock } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import {
   Dialog,
@@ -29,6 +30,7 @@ import inventoryCountService, {
   InventoryCountFormData,
 } from "@/services/inventoryCountService";
 import { warehouseService } from "@/services/warehouseService";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface InventoryCountDialogProps {
   open: boolean;
@@ -52,6 +54,9 @@ const InventoryCountDialog: React.FC<InventoryCountDialogProps> = ({
   onSuccess,
 }) => {
   const isEdit = !!count;
+  const { direction } = useLanguage();
+  const { t } = useTranslation("inventoryCount");
+  const { t: tCommon } = useTranslation("common");
 
   const {
     control,
@@ -72,11 +77,11 @@ const InventoryCountDialog: React.FC<InventoryCountDialogProps> = ({
         ? inventoryCountService.updateInventoryCount(count.id, data)
         : inventoryCountService.createInventoryCount(data),
     onSuccess: () => {
-      toast.success(isEdit ? "تم تحديث الجرد بنجاح" : "تم إنشاء الجرد بنجاح");
+      toast.success(isEdit ? t("updateSuccess") : t("createSuccess"));
       onSuccess();
     },
     onError: (error) => {
-      toast.error("تعذر الحفظ", {
+      toast.error(t("failedToSave"), {
         description: inventoryCountService.getErrorMessage(error),
       });
     },
@@ -110,35 +115,35 @@ const InventoryCountDialog: React.FC<InventoryCountDialogProps> = ({
         if (!next && !mutation.isPending) onClose();
       }}
     >
-      <DialogContent dir="rtl" className="sm:max-w-md">
+      <DialogContent dir={direction} className="sm:max-w-md">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <DialogHeader>
-            <DialogTitle>{isEdit ? "تعديل الجرد" : "جرد جديد"}</DialogTitle>
+            <DialogTitle>{isEdit ? t("editCountTitle") : t("newCountButton")}</DialogTitle>
             <DialogDescription>
               {isEdit
-                ? "حدّث تاريخ الجرد أو ملاحظاته. المستودع غير قابل للتغيير بعد الإنشاء."
-                : "حدد المستودع وتاريخ بدء الجرد لإنشاء عملية جرد جديدة."}
+                ? t("editCountDescription")
+                : t("createCountDescription")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="count-warehouse">المستودع</Label>
+              <Label htmlFor="count-warehouse">{t("warehouseColumn")}</Label>
               {isEdit ? (
                 <div className="flex h-9 items-center gap-2 rounded-md border bg-muted/40 px-3 text-sm text-muted-foreground">
                   <Lock className="size-3.5 shrink-0" />
-                  {count?.warehouse?.name ?? `مستودع #${count?.warehouse_id}`}
+                  {count?.warehouse?.name ?? t("warehouseHashFallback", { id: count?.warehouse_id })}
                 </div>
               ) : (
                 <Controller
                   control={control}
                   name="warehouse_id"
-                  rules={{ required: "المستودع مطلوب" }}
+                  rules={{ required: t("warehouseRequiredValidation") }}
                   render={({ field, fieldState }) => (
                     <>
                       <Select value={field.value} onValueChange={field.onChange} disabled={mutation.isPending}>
                         <SelectTrigger id="count-warehouse" className="w-full" aria-invalid={!!fieldState.error}>
-                          <SelectValue placeholder="اختر المستودع..." />
+                          <SelectValue placeholder={t("selectWarehousePlaceholder")} />
                         </SelectTrigger>
                         <SelectContent>
                           {(warehouses ?? []).map((w) => (
@@ -158,11 +163,11 @@ const InventoryCountDialog: React.FC<InventoryCountDialogProps> = ({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="count-date">تاريخ الجرد</Label>
+              <Label htmlFor="count-date">{t("countDateLabel")}</Label>
               <Controller
                 control={control}
                 name="count_date"
-                rules={{ required: "التاريخ مطلوب" }}
+                rules={{ required: t("dateRequiredValidation") }}
                 render={({ field, fieldState }) => (
                   <>
                     <Input
@@ -181,7 +186,7 @@ const InventoryCountDialog: React.FC<InventoryCountDialogProps> = ({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="count-notes">ملاحظات (اختياري)</Label>
+              <Label htmlFor="count-notes">{t("notesOptionalLabel")}</Label>
               <Controller
                 control={control}
                 name="notes"
@@ -189,7 +194,7 @@ const InventoryCountDialog: React.FC<InventoryCountDialogProps> = ({
                   <Textarea
                     id="count-notes"
                     rows={3}
-                    placeholder="أي تفاصيل إضافية حول هذا الجرد..."
+                    placeholder={t("notesPlaceholder")}
                     disabled={mutation.isPending}
                     {...field}
                   />
@@ -200,11 +205,11 @@ const InventoryCountDialog: React.FC<InventoryCountDialogProps> = ({
 
           <DialogFooter>
             <Button type="button" variant="outline" disabled={mutation.isPending} onClick={onClose}>
-              إلغاء
+              {tCommon("cancel")}
             </Button>
             <Button type="submit" disabled={mutation.isPending} className="min-w-24 gap-2">
               {mutation.isPending && <Loader2 className="size-4 animate-spin" />}
-              {isEdit ? "حفظ التغييرات" : "إنشاء الجرد"}
+              {isEdit ? t("saveChangesButton") : t("createCountButton")}
             </Button>
           </DialogFooter>
         </form>

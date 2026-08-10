@@ -1,0 +1,43 @@
+{
+  "statusDraft": "مسودة",
+  "statusInProgress": "قيد التنفيذ",
+  "statusCompleted": "مكتمل",
+  "statusApproved": "معتمد",
+  "statusRejected": "مرفوض",
+
+  "productAddedSuccess": "تم إضافة المنتج بنجاح",
+  "productDeletedSuccess": "تم حذف المنتج",
+  "statusUpdatedSuccess": "تم تحديث الحالة",
+  "countApprovedSuccess": "تم اعتماد الجرد وتعديل المخزون",
+  "countRejectedSuccess": "تم رفض الجرد",
+
+  "countNotFound": "الجرد غير موجود",
+  "backToList": "العودة للقائمة",
+  "countHash": "جرد #{{id}}",
+  "createdColon": "إنشاء: {{date}}",
+  "startedColon": "بدأ: {{date}}",
+  "completedColon": "اكتمل: {{date}}",
+  "approvedColon": "اعتمد: {{date}}",
+
+  "itemUnitLabel": "صنف",
+  "diffLabel": "فرق",
+  "withDiffLabel": "بفروق",
+
+  "startCount": "بدء الجرد",
+  "complete": "إكمال",
+  "confirmApprove": "اعتماد الجرد وتعديل المخزون؟",
+  "approve": "اعتماد",
+  "confirmReject": "رفض الجرد؟",
+  "reject": "رفض",
+
+  "productsListTitle": "قائمة المنتجات",
+  "searchPlaceholder": "بحث...",
+  "expectedQuantityColumn": "الكمية المسجلة",
+  "actualQuantityColumn": "الكمية الفعلية",
+  "differenceColumn": "الفرق",
+  "noMatchingProducts": "لا توجد منتجات مطابقة",
+
+  "selectProductFirstError": "يرجى اختيار منتج أولاً",
+  "quantityMustBePositiveError": "الكمية يجب أن تكون رقماً موجباً",
+  "productNameOrBarcodePlaceholder": "المنتج (الاسم أو الباركود)"
+}
