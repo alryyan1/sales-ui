@@ -47,6 +47,8 @@ const PAYMENT_METHODS = [
   { value: "bankak", label: "بنكك" },
   { value: "fawry", label: "فوري" },
   { value: "ocash", label: "أوكاش" },
+  { value: "bank_transfer", label: "تحويل بنكي" },
+  { value: "card", label: "بطاقة" },
 ];
 
 const getToday = () => {

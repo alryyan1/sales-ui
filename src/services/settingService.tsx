@@ -30,6 +30,8 @@ export interface AppSettings {
   pdf_font?: string;
   pos_mode?: "shift" | "days"; // POS operation mode: shift-based or day-based
   pos_filter_sales_by_user?: boolean; // Filter sales by logged-in user in POS
+  /** Comma-separated PaymentMethod list — which payment methods show up in the POS payment dialog. See PAYMENT_METHODS in lib/paymentMethods.ts. */
+  pos_active_payment_methods?: string;
   product_images_show_in_list?: boolean;
   product_images_show_in_pos?: boolean;
   product_images_show_in_invoices?: boolean;
@@ -45,7 +47,7 @@ export interface AppSettings {
   pos_show_out_of_stock_products?: boolean;
   purchase_use_batch_number?: boolean;
   purchase_use_expiry_date?: boolean;
-  default_purchase_currency?: "SDG" | "USD";
+  default_purchase_currency?: "SDG" | "OMR" | "USD";
   /** Drives decimal-place display everywhere money amounts are shown — see CURRENCY_DECIMALS in constants.ts. */
   currency_code?: "SDG" | "OMR" | "USD";
 

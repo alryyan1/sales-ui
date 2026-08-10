@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { formatNumber } from "@/constants";
+import { formatNumber, CURRENCY_DECIMALS } from "@/constants";
 import { useSalesReport } from "@/hooks/useSalesReport";
 import { useSettings } from "@/context/SettingsContext";
 import { ReportFilterValues } from "./ReportFilters";
@@ -17,6 +17,7 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
   const { t } = useTranslation("reports");
   const { getSetting } = useSettings();
   const posMode = getSetting("pos_mode", "shift") as "shift" | "days";
+  const currencyDecimals = CURRENCY_DECIMALS[getSetting("currency_code", "SDG")] ?? 0;
 
   const { data: reportData, isLoading } = useSalesReport({
     page: 1,
@@ -67,7 +68,10 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
     const expenses = expensesData?.data || [];
 
     const totalCash = byMethod["cash"] ?? 0;
-    const totalBankak = byMethod["bankak"] ?? 0;
+    // Bank/electronic bucket: bankak plus bank_transfer/card rolled in, since
+    // those don't get their own stat tile (see ShiftResource's equivalent rollup).
+    const totalBankak =
+      (byMethod["bankak"] ?? 0) + (byMethod["bank_transfer"] ?? 0) + (byMethod["card"] ?? 0);
     const totalFawry = byMethod["fawry"] ?? 0;
     const totalOcash = byMethod["ocash"] ?? 0;
 
@@ -100,7 +104,7 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
     { label: t("totalSales"), value: stats.totalAmount, sub: t("operationsCountSuffix", { count: stats.totalSales }), color: "text-violet-600" },
     { label: t("totalPaidLabel"), value: stats.totalPaid, color: "text-emerald-600" },
     { label: t("paymentMethodCash"), value: stats.totalCash, color: "text-green-600" },
-    { label: t("paymentMethodBankak"), value: stats.totalBankak, color: "text-blue-600" },
+    { label: t("paymentMethodBankElectronic"), value: stats.totalBankak, color: "text-blue-600" },
     { label: t("paymentMethodFawry"), value: stats.totalFawry, color: "text-orange-500" },
     { label: t("paymentMethodOcash"), value: stats.totalOcash, color: "text-purple-500" },
     { label: t("totalDue"), value: stats.totalDue, color: stats.totalDue > 0 ? "text-red-600" : "text-emerald-600" },
@@ -116,7 +120,7 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
         >
           <span className="text-xs text-muted-foreground leading-tight">{item.label}</span>
           <span className={`text-sm font-bold tabular-nums ${item.color}`}>
-            {formatNumber(item.value)}
+            {formatNumber(item.value, currencyDecimals)}
           </span>
           {item.sub && (
             <span className="text-xs text-muted-foreground">{item.sub}</span>

@@ -4,6 +4,7 @@ import { useForm, FormProvider, SubmitHandler } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useTranslation } from "react-i18next";
 
 // Import Child Components
 import { PurchaseHeaderFormSection } from "../components/purchases/PurchaseHeaderFormSection";
@@ -46,7 +47,7 @@ export type PurchaseFormValues = {
   supplier_id: number;
   purchase_date: Date;
   status: "received" | "pending" | "ordered";
-  currency: "SDG" | "USD";
+  currency: "SDG" | "OMR" | "USD";
   reference_number?: string | null;
   notes?: string | null;
 };
@@ -54,7 +55,9 @@ export type PurchaseFormValues = {
 // --- Component ---
 const PurchaseFormPage: React.FC = () => {
   const navigate = useNavigate();
-  const { getSetting } = useSettings();
+  const { getSetting, isLoadingSettings } = useSettings();
+  const { t } = useTranslation("purchases");
+  const { t: tCommon } = useTranslation("common");
 
   // --- State ---
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -83,7 +86,7 @@ const PurchaseFormPage: React.FC = () => {
       supplier_id: undefined as any,
       purchase_date: new Date(),
       status: "pending" as const, // Default "pending"
-      currency: (getSetting("default_purchase_currency") ?? "SDG") as "SDG" | "USD",
+      currency: (getSetting("default_purchase_currency") ?? getSetting("currency_code") ?? "SDG") as "SDG" | "OMR" | "USD",
       reference_number: "",
       notes: "",
     },
@@ -92,9 +95,20 @@ const PurchaseFormPage: React.FC = () => {
 
   const {
     handleSubmit,
-    formState: { isSubmitting },
+    formState: { isSubmitting, dirtyFields },
     setError,
+    setValue,
   } = formMethods;
+
+  // `defaultValues` above runs before settings finish loading, so it can't see
+  // `default_purchase_currency` / `currency_code` yet — sync it once settings
+  // arrive, unless the user has already picked a currency themselves.
+  useEffect(() => {
+    if (isLoadingSettings || dirtyFields.currency) return;
+    const defaultCurrency =
+      getSetting("default_purchase_currency") ?? getSetting("currency_code") ?? "SDG";
+    setValue("currency", defaultCurrency as "SDG" | "OMR" | "USD");
+  }, [isLoadingSettings, getSetting, setValue, dirtyFields.currency]);
 
   // --- Initial suppliers load ---
   useEffect(() => {
@@ -105,7 +119,7 @@ const PurchaseFormPage: React.FC = () => {
         setSuppliers(response.data ?? []);
       } catch (error) {
         console.error("Failed to load initial suppliers:", error);
-        toast.error("خطأ", {
+        toast.error(tCommon("error"), {
           description: supplierService.getErrorMessage(error),
         });
       } finally {
@@ -143,7 +157,7 @@ const PurchaseFormPage: React.FC = () => {
           );
           setSuppliers((response.data as any).data ?? response.data);
         } catch (error) {
-          toast.error("خطأ", {
+          toast.error(tCommon("error"), {
             description: supplierService.getErrorMessage(error),
           });
           setSuppliers([]);
@@ -164,7 +178,7 @@ const PurchaseFormPage: React.FC = () => {
         setWarehouses(data);
       } catch (error) {
         console.error("Failed to fetch warehouses:", error);
-        toast.error("فشل تحميل المخازن");
+        toast.error(t("failedToLoadWarehouses"));
       } finally {
         setLoadingWarehouses(false);
       }
@@ -181,7 +195,7 @@ const PurchaseFormPage: React.FC = () => {
       if (!data.supplier_id || data.supplier_id <= 0) {
         setError("supplier_id", {
           type: "manual",
-          message: "يرجى اختيار مورد",
+          message: t("supplierRequiredError"),
         });
         return;
       }
@@ -189,18 +203,18 @@ const PurchaseFormPage: React.FC = () => {
       if (!data.purchase_date) {
         setError("purchase_date", {
           type: "manual",
-          message: "هذا الحقل مطلوب",
+          message: t("purchaseDateRequiredError"),
         });
         return;
       }
 
       if (!data.status) {
-        setError("status", { type: "manual", message: "هذا الحقل مطلوب" });
+        setError("status", { type: "manual", message: t("statusRequiredError") });
         return;
       }
 
       if (!data.currency) {
-        setError("currency", { type: "manual", message: "هذا الحقل مطلوب" });
+        setError("currency", { type: "manual", message: t("currencyRequiredError") });
         return;
       }
 
@@ -212,7 +226,7 @@ const PurchaseFormPage: React.FC = () => {
 
       try {
         const createdPurchase = await purchaseService.createPurchase(apiData);
-        toast.success("نجح", { description: "تم إنشاء المشتريات بنجاح" });
+        toast.success(tCommon("success"), { description: t("purchaseCreatedSuccess") });
 
         if (createdPurchase?.purchase?.id) {
           navigate(`/purchases/${createdPurchase.purchase.id}/manage-items`);
@@ -223,7 +237,7 @@ const PurchaseFormPage: React.FC = () => {
         console.error("Failed to create purchase:", err);
         const generalError = purchaseService.getErrorMessage(err);
         const apiErrors = purchaseService.getValidationErrors(err);
-        toast.error("خطأ", { description: generalError });
+        toast.error(tCommon("error"), { description: generalError });
         setServerError(generalError);
         if (apiErrors) {
           Object.entries(apiErrors).forEach(([key, messages]) => {
@@ -234,7 +248,7 @@ const PurchaseFormPage: React.FC = () => {
               });
             }
           });
-          setServerError("يرجى التحقق من الحقول");
+          setServerError(t("checkFieldsError"));
         }
       }
     },
@@ -276,7 +290,7 @@ const PurchaseFormPage: React.FC = () => {
                 <Box sx={{ p: { xs: 2.5, sm: 3 } }}>
                   {serverError && (
                     <Alert severity="error" sx={{ mb: 3 }}>
-                      <AlertTitle>خطأ</AlertTitle>
+                      <AlertTitle>{tCommon("error")}</AlertTitle>
                       {serverError}
                     </Alert>
                   )}

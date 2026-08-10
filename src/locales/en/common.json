@@ -46,5 +46,8 @@
   "errorDeletingData": "Error deleting data",
   "apply": "Apply",
   "all": "All",
-  "userAccount": "User Account"
+  "userAccount": "User Account",
+  "notSpecified": "Not specified",
+  "toWord": "to",
+  "optionalPlaceholder": "Optional"
 }

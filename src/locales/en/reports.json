@@ -97,6 +97,8 @@
     "paymentMethodOcash": "Ocash",
     "paymentMethodBank": "Bank",
     "paymentMethodBankTransfer": "Bank Transfer",
+    "paymentMethodCard": "Card",
+    "paymentMethodBankElectronic": "Bank/Electronic",
     "paymentMethodVisa": "Visa",
     "errorLoadingDataDefault": "An error occurred while loading the data",
     "noPaymentsFound": "No payments found",

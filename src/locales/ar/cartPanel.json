@@ -3,6 +3,8 @@
   "paymentMethodBankak": "بنكك",
   "paymentMethodFawry": "فوري",
   "paymentMethodOcash": "أوكاش",
+  "paymentMethodBankTransfer": "تحويل بنكي",
+  "paymentMethodCard": "بطاقة",
   "editDiscount": "تعديل الخصم",
   "addDiscount": "إضافة خصم",
   "percentageOption": "نسبة %",

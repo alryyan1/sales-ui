@@ -74,6 +74,8 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
   bankak: "بنكك",
   fawry: "فوري",
   ocash: "أوكاش",
+  bank_transfer: "تحويل بنكي",
+  card: "بطاقة",
 };
 
 const ExpensesPage: React.FC = () => {

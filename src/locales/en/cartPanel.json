@@ -3,6 +3,8 @@
   "paymentMethodBankak": "Bankak",
   "paymentMethodFawry": "Fawry",
   "paymentMethodOcash": "OCash",
+  "paymentMethodBankTransfer": "Bank Transfer",
+  "paymentMethodCard": "Card",
   "editDiscount": "Edit Discount",
   "addDiscount": "Add Discount",
   "percentageOption": "% Percentage",

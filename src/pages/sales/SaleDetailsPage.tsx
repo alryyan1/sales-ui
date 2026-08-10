@@ -45,9 +45,13 @@ import { url } from "@/constants";
 // Payment method labels in Arabic
 const paymentMethodLabels: Record<string, string> = {
   cash: "نقدي",
+  bankak: "بنكك",
+  fawry: "فوري",
+  ocash: "أوكاش",
   visa: "فيزا",
   mastercard: "ماستركارد",
   bank_transfer: "تحويل بنكي",
+  card: "بطاقة",
   mada: "مدى",
   other: "أخرى",
   store_credit: "رصيد متجر",

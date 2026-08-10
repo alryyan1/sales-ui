@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { FileText, Loader2, Plus, ShieldCheck, Users, X } from "lucide-react";
+import { FileText, Loader2, Plus, RotateCcw, ShieldCheck, Users, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -36,6 +36,7 @@ import { Client } from "@/services/clientService";
 import { ProductSearchPanel } from "@/components/pos/ProductSearchPanel";
 import { PastSalesSearchDialog } from "@/components/sales/PastSalesSearchDialog";
 import { DEFAULT_PAYMENT_METHOD, PRODUCT_SEARCH_INPUT_ID, resolveUnitPrice, stockOf } from "@/lib/pos";
+import { parseActivePaymentMethods, resolveDefaultActiveMethod } from "@/lib/paymentMethods";
 import { playAddItemSound, playErrorSound, playRemoveItemSound, playSaleCompleteSound } from "@/lib/sound";
 import {
   DraftCartItem,
@@ -95,6 +96,10 @@ const PosPage: React.FC = () => {
   const showExpired = Boolean(getSetting("pos_show_expired_products", false));
   const usdConversionEnabled = Boolean(getSetting("usd_conversion_enabled", true));
   const usdFactor = usdConversionEnabled ? Number(getSetting("usd_to_sdg_factor", 1) ?? 1) : 1;
+  const defaultPaymentMethod = resolveDefaultActiveMethod(
+    parseActivePaymentMethods(getSetting("pos_active_payment_methods")),
+    DEFAULT_PAYMENT_METHOD
+  );
 
   const currentShiftQuery = useCurrentShift();
   const shiftId = posMode === "shift" ? currentShiftQuery.data?.id ?? null : null;
@@ -130,6 +135,7 @@ const PosPage: React.FC = () => {
 
   const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
+  const [confirmResetCacheOpen, setConfirmResetCacheOpen] = useState(false);
 
   const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -244,6 +250,25 @@ const PosPage: React.FC = () => {
     setEditingSale(null);
     setPaymentOpen(false);
   }, [nextTicketLabel]);
+
+  // Wipes every locally-cached POS draft (all users on this browser) and starts
+  // a fresh ticket — needed after a backend reset (e.g. `migrate:fresh --seed`)
+  // leaves stale carts pointing at product/client/sale IDs that no longer exist.
+  const handleResetLocalCache = useCallback(() => {
+    try {
+      const staleKeys: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith("pos-drafts:")) staleKeys.push(key);
+      }
+      staleKeys.forEach((key) => localStorage.removeItem(key));
+    } catch {
+      // Ignore storage access errors.
+    }
+    clearEditing();
+    setConfirmResetCacheOpen(false);
+    toast.success(t("resetLocalCacheSuccess"));
+  }, [clearEditing, t]);
 
   const ensureAtLeastOneTicket = useCallback(
     (list: DraftTicket[]): { list: DraftTicket[]; activeId: string } => {
@@ -917,13 +942,13 @@ const PosPage: React.FC = () => {
       if (!saved) return;
       const due = Math.max(0, Number(saved.due_amount ?? 0));
       if (due <= 0) return;
-      await handleAddPaymentToEditingSale([{ method: DEFAULT_PAYMENT_METHOD, amount: due }]);
+      await handleAddPaymentToEditingSale([{ method: defaultPaymentMethod, amount: due }]);
       return;
     }
     if (!activeTicket) return;
     const { total } = computeDraftTotals(activeTicket);
     if (total <= 0) return;
-    handleCompleteSale([{ method: DEFAULT_PAYMENT_METHOD, amount: total }]);
+    handleCompleteSale([{ method: defaultPaymentMethod, amount: total }]);
   }, [
     isCreatingSale,
     savingSale,
@@ -933,6 +958,7 @@ const PosPage: React.FC = () => {
     handleAddPaymentToEditingSale,
     activeTicket,
     handleCompleteSale,
+    defaultPaymentMethod,
   ]);
 
   // ── Keyboard shortcuts ──
@@ -1033,121 +1059,137 @@ const PosPage: React.FC = () => {
   return (
     <div dir={direction} className="flex h-screen flex-col overflow-hidden bg-background">
       {/* Header */}
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-card px-4">
-        <span className="text-sm font-semibold text-foreground">{t("title")}</span>
-        <Separator orientation="vertical" className="h-5" />
-        <span className="text-xs text-muted-foreground">
-          {posMode === "shift" && currentShiftQuery.data
-            ? t("shiftHashPrefix", { id: currentShiftQuery.data.id })
-            : ""}
-          {user?.name}
-        </span>
-        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-          {now.toLocaleTimeString(direction === "rtl" ? "ar" : "en-US", { hour: "2-digit", minute: "2-digit" })}
-        </span>
-
-        <Separator orientation="vertical" className="h-5 shrink-0" />
-
-        {/* Held tickets — switch between or hold multiple simultaneous draft carts */}
-        <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
-          {tickets.map((ticket) => (
-            <div key={ticket.id} className="group relative shrink-0">
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTicketId(ticket.id);
-                  setSelectedLineId(null);
-                }}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
-                  ticket.id === activeTicketId
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border text-muted-foreground hover:bg-accent"
-                )}
-              >
-                {t("ticketLabel", { label: ticket.label })}
-                {ticket.items.length > 0 && <span className="tabular-nums">({ticket.items.length})</span>}
-                {ticket.client != null && <Users className="size-3" />}
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setTicketToDelete(ticket);
-                }}
-                className="absolute -end-1.5 -top-1.5 hidden size-4 items-center justify-center rounded-full bg-destructive text-white group-hover:flex"
-              >
-                <X className="size-2.5" />
-              </button>
-            </div>
-          ))}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleNewTicket}
-            className="shrink-0 gap-1 text-muted-foreground"
-            disabled={isEditingSale}
-          >
-            <Plus className="size-3.5" />
-            {t("newTicket")}
-          </Button>
+      <header className="flex h-14 shrink-0 items-center border-b bg-card">
+        {/* Fixed-width to match ShiftSalesColumn below, so the border-e lines up into one straight line */}
+        <div className="flex h-full w-24 shrink-0 items-center justify-center border-e px-1 text-center">
+          <span className="text-sm font-semibold leading-tight text-foreground">{t("title")}</span>
         </div>
 
-        <div className="ms-auto flex shrink-0 items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setPastSalesOpen(true)} disabled={loadingSale || isEditingSale}>
-            {t("previousSales")}
-          </Button>
-          {editingSale && (
-            <>
-              <span className="text-xs text-foreground">{t("editingSaleHash", { id: editingSale.id })}</span>
-              <Button variant="secondary" size="sm" disabled={savingSale} onClick={saveEditingSale} className="gap-1">
-                {savingSale ? <Loader2 className="size-3 animate-spin" /> : null}
-                {t("saveEdits")}
-              </Button>
-              <Button variant="outline" size="sm" disabled={loadingSale || savingSale} onClick={clearEditing}>
-                {t("cancelEdit")}
-              </Button>
-            </>
-          )}
-          {posMode === "shift" && currentShiftQuery.data && (
-            <Popover open={shiftSummaryOpen} onOpenChange={setShiftSummaryOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1.5">
-                  <FileText className="size-3.5" />
-                  {t("shiftSummaryHash", { id: currentShiftQuery.data.id })}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-[520px] p-0" dir={direction}>
-                <div className="border-b px-3 py-2">
-                  <p className="text-sm font-semibold text-foreground">{t("shiftHash", { id: currentShiftQuery.data.id })}</p>
-                </div>
-                <ShiftFinancialTable shiftId={currentShiftQuery.data.id} />
-                <div className="border-t p-2">
-                  <Button
-                    className="w-full gap-2"
-                    disabled={shiftReportLoading}
-                    onClick={handleShiftReportPdf}
-                  >
-                    {shiftReportLoading ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />}
-                    {t("shiftReportPdf")}
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-          )}
-          <CustomerPicker
-            open={customerPickerOpen}
-            onOpenChange={setCustomerPickerOpen}
-            client={activeTicket?.client ?? null}
-            onSelect={handleSelectCustomer}
-            disabled={!activeTicket}
-          />
-          {posMode === "shift" && canCloseShift && (
-            <Button variant="outline" size="sm" disabled={shiftActionBusy} onClick={handleCloseShift}>
-              {t("closeShift")}
+        <div className="flex h-full min-w-0 flex-1 items-center gap-3 px-4">
+          <span className="text-xs text-muted-foreground">
+            {posMode === "shift" && currentShiftQuery.data
+              ? t("shiftHashPrefix", { id: currentShiftQuery.data.id })
+              : ""}
+            {user?.name}
+          </span>
+          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+            {now.toLocaleTimeString(direction === "rtl" ? "ar" : "en-US", { hour: "2-digit", minute: "2-digit" })}
+          </span>
+
+          <Separator orientation="vertical" className="h-5 shrink-0" />
+
+          {/* Held tickets — switch between or hold multiple simultaneous draft carts */}
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
+            {tickets.map((ticket) => (
+              <div key={ticket.id} className="group relative shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTicketId(ticket.id);
+                    setSelectedLineId(null);
+                  }}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
+                    ticket.id === activeTicketId
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:bg-accent"
+                  )}
+                >
+                  {t("ticketLabel", { label: ticket.label })}
+                  {ticket.items.length > 0 && <span className="tabular-nums">({ticket.items.length})</span>}
+                  {ticket.client != null && <Users className="size-3" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setTicketToDelete(ticket);
+                  }}
+                  className="absolute -end-1.5 -top-1.5 hidden size-4 items-center justify-center rounded-full bg-destructive text-white group-hover:flex"
+                >
+                  <X className="size-2.5" />
+                </button>
+              </div>
+            ))}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleNewTicket}
+              className="shrink-0 gap-1 text-muted-foreground"
+              disabled={isEditingSale}
+            >
+              <Plus className="size-3.5" />
+              {t("newTicket")}
             </Button>
-          )}
-          <ThemeColorPicker selectedId={themeColorId} onSelect={handleSelectThemeColor} />
+          </div>
+
+          <div className="ms-auto flex shrink-0 items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPastSalesOpen(true)} disabled={loadingSale || isEditingSale}>
+              {t("previousSales")}
+            </Button>
+            {editingSale && (
+              <>
+                <span className="text-xs text-foreground">{t("editingSaleHash", { id: editingSale.id })}</span>
+                <Button variant="secondary" size="sm" disabled={savingSale} onClick={saveEditingSale} className="gap-1">
+                  {savingSale ? <Loader2 className="size-3 animate-spin" /> : null}
+                  {t("saveEdits")}
+                </Button>
+                <Button variant="outline" size="sm" disabled={loadingSale || savingSale} onClick={clearEditing}>
+                  {t("cancelEdit")}
+                </Button>
+              </>
+            )}
+            {posMode === "shift" && currentShiftQuery.data && (
+              <Popover open={shiftSummaryOpen} onOpenChange={setShiftSummaryOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1.5">
+                    <FileText className="size-3.5" />
+                    {t("shiftSummaryHash", { id: currentShiftQuery.data.id })}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-[520px] p-0" dir={direction}>
+                  <div className="border-b px-3 py-2">
+                    <p className="text-sm font-semibold text-foreground">{t("shiftHash", { id: currentShiftQuery.data.id })}</p>
+                  </div>
+                  <ShiftFinancialTable shiftId={currentShiftQuery.data.id} />
+                  <div className="border-t p-2">
+                    <Button
+                      className="w-full gap-2"
+                      disabled={shiftReportLoading}
+                      onClick={handleShiftReportPdf}
+                    >
+                      {shiftReportLoading ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />}
+                      {t("shiftReportPdf")}
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
+            <CustomerPicker
+              open={customerPickerOpen}
+              onOpenChange={setCustomerPickerOpen}
+              client={activeTicket?.client ?? null}
+              onSelect={handleSelectCustomer}
+              disabled={!activeTicket}
+            />
+            {posMode === "shift" && canCloseShift && (
+              <Button variant="outline" size="sm" disabled={shiftActionBusy} onClick={handleCloseShift}>
+                {t("closeShift")}
+              </Button>
+            )}
+            <ThemeColorPicker selectedId={themeColorId} onSelect={handleSelectThemeColor} />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="size-9 shrink-0"
+              aria-label={t("resetLocalCache")}
+              title={t("resetLocalCache")}
+              onClick={() => setConfirmResetCacheOpen(true)}
+            >
+              <RotateCcw className="size-4" />
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -1198,7 +1240,7 @@ const PosPage: React.FC = () => {
             onAddProduct={handleAddProduct}
           />
         </div>
-        <div className="w-[380px] shrink-0 overflow-hidden">
+        <div className="w-[520px] shrink-0 overflow-hidden">
           <CartPanel
             ticket={activeTicket}
             selectedLineId={selectedLineId}
@@ -1271,6 +1313,24 @@ const PosPage: React.FC = () => {
             </Button>
             <Button type="button" variant="destructive" onClick={handleClearCart}>
               {t("clearCartAction")}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset local POS cache confirmation */}
+      <AlertDialog open={confirmResetCacheOpen} onOpenChange={setConfirmResetCacheOpen}>
+        <AlertDialogContent dir={direction}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("resetLocalCacheTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("resetLocalCacheDescription")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button type="button" variant="outline" onClick={() => setConfirmResetCacheOpen(false)}>
+              {tCommon("cancel")}
+            </Button>
+            <Button type="button" variant="destructive" onClick={handleResetLocalCache}>
+              {t("resetLocalCacheAction")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

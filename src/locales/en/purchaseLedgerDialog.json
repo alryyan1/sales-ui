@@ -25,6 +25,8 @@
     "methodBankak": "Bankak",
     "methodFawry": "Fawry",
     "methodOcash": "O Cash",
+    "methodBankTransfer": "Bank Transfer",
+    "methodCard": "Card",
     "methodOther": "Other",
     "fetchPaymentsError": "Failed to fetch previous payments",
     "paymentAddedSuccess": "Payment added successfully",

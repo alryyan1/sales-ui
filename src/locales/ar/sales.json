@@ -250,6 +250,8 @@
       "paymentMethodBankak": "بنكك",
       "paymentMethodFawry": "فوري",
       "paymentMethodOcash": "أوكاش",
+      "paymentMethodBankTransfer": "تحويل بنكي",
+      "paymentMethodCard": "بطاقة",
 
       "invoiceHash": "فاتورة #{{id}}",
       "invoiceDetailsTitle": "تفاصيل الفاتورة",

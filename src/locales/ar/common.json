@@ -46,5 +46,8 @@
   "errorDeletingData": "خطأ في حذف البيانات",
   "apply": "تطبيق",
   "all": "الكل",
-  "userAccount": "حساب المستخدم"
+  "userAccount": "حساب المستخدم",
+  "notSpecified": "غير محدد",
+  "toWord": "إلى",
+  "optionalPlaceholder": "اختياري"
 }

@@ -60,6 +60,7 @@ const SettingsPage: React.FC = () => {
       tax_number: "",
       pos_mode: "shift",
       pos_filter_sales_by_user: false,
+      pos_active_payment_methods: "cash,bankak,fawry,ocash,bank_transfer,card",
       whatsapp_shift_closure_numbers: "",
       firebase_collection_name: "none",
       purchase_use_batch_number: true,
@@ -95,6 +96,8 @@ const SettingsPage: React.FC = () => {
         tax_number: settings.tax_number || "",
         pos_mode: settings.pos_mode || "shift",
         pos_filter_sales_by_user: settings.pos_filter_sales_by_user || false,
+        pos_active_payment_methods:
+          settings.pos_active_payment_methods || "cash,bankak,fawry,ocash,bank_transfer,card",
         whatsapp_shift_closure_numbers:
           settings.whatsapp_shift_closure_numbers || "",
         firebase_collection_name:

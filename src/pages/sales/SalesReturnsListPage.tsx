@@ -43,6 +43,8 @@ const METHOD_COLORS: Record<string, "default" | "success" | "info" | "warning"> 
   bankak: "info",
   fawry: "warning",
   ocash: "default",
+  bank_transfer: "info",
+  card: "info",
 };
 
 const SalesReturnsListPage: React.FC = () => {
@@ -57,6 +59,8 @@ const SalesReturnsListPage: React.FC = () => {
     bankak: t("paymentMethodBankak"),
     fawry: t("paymentMethodFawry"),
     ocash: t("paymentMethodOcash"),
+    bank_transfer: t("paymentMethodBankTransfer"),
+    card: t("paymentMethodCard"),
   };
 
   const today = format(new Date(), "yyyy-MM-dd");

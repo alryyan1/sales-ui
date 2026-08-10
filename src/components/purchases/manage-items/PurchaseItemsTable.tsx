@@ -24,7 +24,7 @@ import {
 import { DeleteIcon } from "lucide-react";
 
 import InstantTextField from "@/components/purchases/InstantTextField";
-import { formatCurrency, formatNumber } from "@/constants";
+import { CURRENCY_DECIMALS, formatCurrency, formatNumber } from "@/constants";
 import { PurchaseItem } from "@/services/purchaseService";
 import { ProductUnitsMap } from "./types";
 import { ProductImage } from "@/components/products/ProductImage";
@@ -65,6 +65,8 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
   showBatchNumber = true,
   showExpiryDate = true,
 }) => {
+  const currencyDecimals = CURRENCY_DECIMALS[currency ?? "SDG"] ?? 0;
+
   // Helper to check if a specific field is being updated
   const isFieldUpdating = useCallback(
     (itemId: number, fieldName: string) => {
@@ -377,6 +379,7 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
             <Typography variant="body2" fontWeight="700" color="primary.main">
               {formatNumber(
                 item.quantity * Number(item.unit_cost),
+                currencyDecimals,
               )}
             </Typography>
           );
@@ -393,7 +396,7 @@ const PurchaseItemsTable: React.FC<PurchaseItemsTableProps> = ({
           const totalRetail = item.quantity * Number(item.sale_price || 0);
           return (
             <Typography variant="body2" fontWeight="700" color="success.main">
-              {formatNumber(totalRetail)}
+              {formatNumber(totalRetail, currencyDecimals)}
             </Typography>
           );
         },

@@ -26,5 +26,7 @@
   "paymentMethodCash": "نقدي",
   "paymentMethodBankak": "بنكك",
   "paymentMethodFawry": "فوري",
-  "paymentMethodOcash": "أوكاش"
+  "paymentMethodOcash": "أوكاش",
+  "paymentMethodBankTransfer": "تحويل بنكي",
+  "paymentMethodCard": "بطاقة"
 }

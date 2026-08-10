@@ -266,6 +266,8 @@
       "paymentMethodBankak": "Bankak",
       "paymentMethodFawry": "Fawry",
       "paymentMethodOcash": "OCash",
+      "paymentMethodBankTransfer": "Bank Transfer",
+      "paymentMethodCard": "Card",
 
       "invoiceHash": "Invoice #{{id}}",
       "invoiceDetailsTitle": "Invoice Details",

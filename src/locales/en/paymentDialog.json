@@ -3,6 +3,8 @@
   "methodBankak": "Bankak",
   "methodFawry": "Fawry",
   "methodOcash": "Ocash",
+  "methodBankTransfer": "Bank Transfer",
+  "methodCard": "Card",
   "titleWithTicket": "Payment — Ticket #{{label}}",
   "addPaymentDescription": "Record one or more payments for this invoice",
   "createSaleDescription": "Record one or more payments to create the sale",

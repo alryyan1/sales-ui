@@ -97,6 +97,8 @@
     "paymentMethodOcash": "أوكاش",
     "paymentMethodBank": "بنك",
     "paymentMethodBankTransfer": "تحويل بنكي",
+    "paymentMethodCard": "بطاقة",
+    "paymentMethodBankElectronic": "بنك/إلكتروني",
     "paymentMethodVisa": "فيزا",
     "errorLoadingDataDefault": "حدث خطأ أثناء تحميل البيانات",
     "noPaymentsFound": "لا توجد مدفوعات",

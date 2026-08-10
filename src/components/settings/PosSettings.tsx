@@ -9,6 +9,16 @@ import { SettingsSection } from "./shared/SettingsSection";
 import { SettingsGroup } from "./shared/SettingsGroup";
 import { SwitchField } from "./shared/SwitchField";
 import { AppSettings } from "@/services/settingService";
+import { PAYMENT_METHODS, PaymentMethod, parseActivePaymentMethods } from "@/lib/paymentMethods";
+
+const PAYMENT_METHOD_LABELS_AR: Record<PaymentMethod, string> = {
+  cash: "نقدي",
+  bankak: "بنكك",
+  fawry: "فوري",
+  ocash: "أوكاش",
+  bank_transfer: "تحويل بنكي",
+  card: "بطاقة",
+};
 
 interface PosSettingsProps {
   control: Control<Partial<AppSettings>>;
@@ -99,6 +109,40 @@ function WhatsappNumbersField({
   );
 }
 
+function ActivePaymentMethodsField({
+  value,
+  onChange,
+}: {
+  value: string | null | undefined;
+  onChange: (value: string) => void;
+}) {
+  const activeMethods = parseActivePaymentMethods(value);
+
+  const toggleMethod = (method: PaymentMethod, checked: boolean) => {
+    const next = checked
+      ? [...activeMethods, method]
+      : activeMethods.filter((m) => m !== method);
+    if (next.length === 0) return; // at least one method must stay active
+    onChange(PAYMENT_METHODS.filter((m) => next.includes(m)).join(","));
+  };
+
+  return (
+    <div className="space-y-1">
+      {PAYMENT_METHODS.map((method) => (
+        <SwitchField
+          key={method}
+          label={PAYMENT_METHOD_LABELS_AR[method]}
+          checked={activeMethods.includes(method)}
+          onCheckedChange={(checked) => toggleMethod(method, checked)}
+        />
+      ))}
+      <p className="pt-1 text-xs text-muted-foreground">
+        يجب أن تبقى طريقة دفع واحدة على الأقل مفعّلة.
+      </p>
+    </div>
+  );
+}
+
 export const PosSettings = ({ control }: PosSettingsProps) => {
   return (
     <SettingsSection
@@ -128,6 +172,18 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
               checked={Boolean(field.value)}
               onCheckedChange={field.onChange}
             />
+          )}
+        />
+      </SettingsGroup>
+
+      <Separator />
+
+      <SettingsGroup title="طرق الدفع في نقطة البيع (Payment Methods)">
+        <Controller
+          name="pos_active_payment_methods"
+          control={control}
+          render={({ field }) => (
+            <ActivePaymentMethodsField value={field.value} onChange={field.onChange} />
           )}
         />
       </SettingsGroup>

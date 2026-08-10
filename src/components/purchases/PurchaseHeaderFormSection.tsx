@@ -1,6 +1,7 @@
 // src/components/purchases/PurchaseHeaderFormSection.tsx
 import React from "react";
 import { useFormContext, Controller } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 
 // MUI Components
 import {
@@ -27,6 +28,7 @@ import CurrencyExchangeIcon from "@mui/icons-material/CurrencyExchange";
 // Types
 import { Supplier } from "../../services/supplierService";
 import { Warehouse } from "../../services/warehouseService";
+import { CURRENCY_LABELS } from "@/constants";
 
 interface PurchaseHeaderFormSectionProps {
   suppliers: Supplier[];
@@ -94,6 +96,8 @@ export const PurchaseHeaderFormSection: React.FC<
   loadingWarehouses,
 }) => {
   const { control } = useFormContext();
+  const { t } = useTranslation("purchases");
+  const { t: tCommon } = useTranslation("common");
 
   const inputStyles = {
     "& .MuiOutlinedInput-root": {
@@ -149,7 +153,7 @@ export const PurchaseHeaderFormSection: React.FC<
           }}
         >
           <InventoryOutlinedIcon sx={{ fontSize: 20, color: "primary.main" }} />
-          معلومات الطلب
+          {t("orderInformation")}
         </Typography>
       </Box>
 
@@ -176,7 +180,7 @@ export const PurchaseHeaderFormSection: React.FC<
             render={({ field, fieldState }) => (
               <Box>
                 <FieldLabel required icon={<InventoryOutlinedIcon />}>
-                  المخزن
+                  {t("warehouseLabel")}
                 </FieldLabel>
                 <Autocomplete
                   options={warehouses || []}
@@ -192,7 +196,7 @@ export const PurchaseHeaderFormSection: React.FC<
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      placeholder="اختر المخزن"
+                      placeholder={t("selectWarehousePlaceholder")}
                       error={!!fieldState.error}
                       helperText={fieldState.error?.message}
                       size="small"
@@ -210,7 +214,7 @@ export const PurchaseHeaderFormSection: React.FC<
             render={({ field, fieldState }) => (
               <Box>
                 <FieldLabel required icon={<LocalShippingOutlinedIcon />}>
-                  المورد
+                  {t("supplier")}
                 </FieldLabel>
                 <Autocomplete
                   options={suppliers}
@@ -227,12 +231,12 @@ export const PurchaseHeaderFormSection: React.FC<
                   loading={loadingSuppliers}
                   disabled={isDisabled}
                   size="small"
-                  noOptionsText="لا توجد نتائج"
-                  loadingText="جاري البحث..."
+                  noOptionsText={tCommon("noResultsFound")}
+                  loadingText={t("searchingEllipsis")}
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      placeholder="ابحث عن مورد..."
+                      placeholder={t("searchSupplierEllipsis")}
                       error={!!fieldState.error}
                       helperText={fieldState.error?.message}
                       sx={inputStyles}
@@ -279,7 +283,7 @@ export const PurchaseHeaderFormSection: React.FC<
             render={({ field, fieldState }) => (
               <Box>
                 <FieldLabel required icon={<CalendarTodayOutlinedIcon />}>
-                  تاريخ الفاتوره
+                  {t("purchaseDate")}
                 </FieldLabel>
                 <DatePicker
                   value={field.value ?? null}
@@ -311,7 +315,7 @@ export const PurchaseHeaderFormSection: React.FC<
             render={({ field, fieldState }) => (
               <Box>
                 <FieldLabel required icon={<CurrencyExchangeIcon />}>
-                  العملة
+                  {t("currencyLabel")}
                 </FieldLabel>
                 <FormControl size="small" fullWidth error={!!fieldState.error}>
                   <Select
@@ -321,8 +325,11 @@ export const PurchaseHeaderFormSection: React.FC<
                     fullWidth
                     sx={inputStyles}
                   >
-                    <MenuItem value="SDG">SDG — جنيه سوداني</MenuItem>
-                    <MenuItem value="USD">USD — دولار أمريكي</MenuItem>
+                    {Object.entries(CURRENCY_LABELS).map(([code, label]) => (
+                      <MenuItem key={code} value={code}>
+                        {label}
+                      </MenuItem>
+                    ))}
                   </Select>
                   {fieldState.error && (
                     <Typography variant="caption" color="error" sx={{ mt: 0.5, mx: 1.75 }}>

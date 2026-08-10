@@ -1,5 +1,8 @@
 // Sale/cart types (moved from components/pos)
 import { Product } from "../services/productService";
+import type { PaymentMethod } from "@/lib/paymentMethods";
+
+export type { PaymentMethod } from "@/lib/paymentMethods";
 
 // Cart Item Type
 export interface CartItem {
@@ -49,9 +52,6 @@ export interface Sale {
   items: CartItem[];
   payments?: SalePayment[];
 }
-
-// Payment Method Type
-export type PaymentMethod = 'cash' | 'bankak' | 'fawry' | 'ocash';
 
 // Payment Method Data Type (for payment objects with amount and reference)
 export interface PaymentMethodData {

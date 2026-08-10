@@ -25,6 +25,8 @@
     "methodBankak": "بنكك",
     "methodFawry": "فوري",
     "methodOcash": "أوكاش",
+    "methodBankTransfer": "تحويل بنكي",
+    "methodCard": "بطاقة",
     "methodOther": "أخرى",
     "fetchPaymentsError": "فشل في جلب الدفعات السابقة",
     "paymentAddedSuccess": "تم إضافة الدفعة بنجاح",

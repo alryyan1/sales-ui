@@ -36,6 +36,7 @@ import saleReturnService, {
 import saleService, { Sale, SaleItem } from "@/services/saleService";
 import { toast } from "sonner";
 import { PastSalesSearchDialog } from "./PastSalesSearchDialog";
+import type { PaymentMethod } from "@/lib/paymentMethods";
 
 interface SalesReturnDialogProps {
   open: boolean;
@@ -62,7 +63,7 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
   const [selectedReturns, setSelectedReturns] = useState<Record<number, SelectedReturn>>({});
   const [phoneNumber, setPhoneNumber] = useState("");
   const [reason, setReason] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "bankak" | "fawry" | "ocash">("cash");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [submitting, setSubmitting] = useState(false);
   const [pastSalesDialogOpen, setPastSalesDialogOpen] = useState(false);
 
@@ -407,6 +408,8 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
                       <MenuItem value="bankak">بنكك</MenuItem>
                       <MenuItem value="fawry">فوري</MenuItem>
                       <MenuItem value="ocash">أوكاش</MenuItem>
+                      <MenuItem value="bank_transfer">تحويل بنكي</MenuItem>
+                      <MenuItem value="card">بطاقة</MenuItem>
                     </Select>
                   </FormControl>
                 </Stack>

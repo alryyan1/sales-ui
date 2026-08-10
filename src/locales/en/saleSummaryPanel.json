@@ -26,5 +26,7 @@
   "paymentMethodCash": "Cash",
   "paymentMethodBankak": "Bankak",
   "paymentMethodFawry": "Fawry",
-  "paymentMethodOcash": "O Cash"
+  "paymentMethodOcash": "O Cash",
+  "paymentMethodBankTransfer": "Bank Transfer",
+  "paymentMethodCard": "Card"
 }

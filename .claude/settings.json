@@ -32,7 +32,17 @@
       "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('c:/xampp/htdocs/sales-ui/src/locales/ar/settings.json','utf8'\\)\\); console.log\\('valid json'\\)\")",
       "Bash(php -l app/Services/SettingsService.php)",
       "Bash(pkill -f \"vite --port 5183\")",
-      "Bash(echo \"TSC_EXIT:$?\")"
+      "Bash(echo \"TSC_EXIT:$?\")",
+      "Bash(curl -s -o \"C:\\\\Users\\\\ryyan\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--xampp-htdocs-sales-ui\\\\e9a28e5a-f183-4773-99f2-6793eb685e93\\\\scratchpad\\\\supplier_summary_fixed.pdf\" \"http://127.0.0.1/sales-api/public/suppliers/summary/pdf\" -w \"%{http_code}\\\\n\")",
+      "Bash(chromium-cli --help)",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"console.log\\(Object.keys\\(require\\('./src/locales/ar/pos.json'\\)\\).length\\)\")",
+      "Bash(npx vite *)",
+      "Bash(python3 -c ' *)",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('src/locales/en/products.json','utf8'\\)\\); JSON.parse\\(require\\('fs'\\).readFileSync\\('src/locales/ar/products.json','utf8'\\)\\); console.log\\('OK'\\)\")",
+      "Bash(tasklist)",
+      "Bash(php -l app/Http/Controllers/Api/PurchaseController.php)",
+      "Bash(php -l app/Http/Controllers/Api/SettingController.php)"
     ],
     "additionalDirectories": [
       "C:\\xampp\\htdocs\\sales-api\\app\\Http\\Controllers\\Api",

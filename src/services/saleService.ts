@@ -14,6 +14,7 @@ import { Product } from "./productService";
 import { Client } from "./clientService";
 import { User } from "./authService";
 import { PurchaseItem as BatchType } from "./purchaseService"; // Batch is a PurchaseItem
+import type { PaymentMethod } from "@/lib/paymentMethods";
 
 // --- Interfaces for Sales Module ---
 
@@ -22,7 +23,7 @@ export interface Payment {
   sale_id?: number; // Backend usually sets this
   user_id?: number | null;
   user_name?: string;
-  method: "cash" | "bankak" | "fawry" | "ocash";
+  method: PaymentMethod;
   amount: string | number; // String from form, number for API
   payment_date: string; // YYYY-MM-DD
   reference_number?: string | null;

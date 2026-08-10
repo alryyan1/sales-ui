@@ -183,7 +183,7 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
               {tPos("paymentMethodCash")}
             </TableCell>
             <TableCell align="center" sx={{ fontWeight: 600 }}>
-              {tPos("paymentMethodBankak")}
+              {tPos("paymentMethodBankElectronic")}
             </TableCell>
             <TableCell align="center" sx={{ fontWeight: 600 }}>
               {tPos("paymentMethodFawry")}

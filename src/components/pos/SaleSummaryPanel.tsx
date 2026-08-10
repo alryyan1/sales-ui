@@ -91,6 +91,8 @@ const METHOD_LABEL_KEYS: Record<string, string> = {
   bankak: "paymentMethodBankak",
   fawry: "paymentMethodFawry",
   ocash: "paymentMethodOcash",
+  bank_transfer: "paymentMethodBankTransfer",
+  card: "paymentMethodCard",
 };
 
 // Tiny labeled row used in the financials block
@@ -605,6 +607,8 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                     <MenuItem value="bankak" sx={{ fontSize: "0.75rem" }}>{tSummary("paymentMethodBankak")}</MenuItem>
                     <MenuItem value="fawry" sx={{ fontSize: "0.75rem" }}>{tSummary("paymentMethodFawry")}</MenuItem>
                     <MenuItem value="ocash" sx={{ fontSize: "0.75rem" }}>{tSummary("paymentMethodOcash")}</MenuItem>
+                    <MenuItem value="bank_transfer" sx={{ fontSize: "0.75rem" }}>{tSummary("paymentMethodBankTransfer")}</MenuItem>
+                    <MenuItem value="card" sx={{ fontSize: "0.75rem" }}>{tSummary("paymentMethodCard")}</MenuItem>
                   </Select>
                 </FormControl>
                 <TextField

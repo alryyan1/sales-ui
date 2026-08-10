@@ -7,6 +7,7 @@ import apiClient, {
 import { AxiosError } from "axios";
 import { Product } from "./productService";
 import { User } from "./authService";
+import type { PaymentMethod } from "@/lib/paymentMethods";
 
 // --- Interfaces for simple POS sale returns ---
 
@@ -21,7 +22,7 @@ export interface CreateSaleReturnData {
   phone_number?: string | null;
   reason?: string | null;
   shift_id?: number | null;
-  returned_payment_method: "cash" | "bankak" | "fawry" | "ocash";
+  returned_payment_method: PaymentMethod;
   items: SimpleSaleReturnItemInput[];
 }
 

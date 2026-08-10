@@ -4,6 +4,7 @@ import { Banknote, Loader2, Plus, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useLanguage } from "@/context/LanguageContext";
+import { useSettings } from "@/context/SettingsContext";
 import {
   Dialog,
   DialogContent,
@@ -28,8 +29,7 @@ import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 
 import type { Payment } from "@/services/saleService";
 import { DEFAULT_PAYMENT_METHOD } from "@/lib/pos";
-
-const METHOD_VALUES: Payment["method"][] = ["cash", "bankak", "fawry", "ocash"];
+import { parseActivePaymentMethods, resolveDefaultActiveMethod } from "@/lib/paymentMethods";
 
 type DraftLine = { id: string; method: Payment["method"]; amount: string };
 
@@ -77,6 +77,7 @@ export function PaymentDialog({
 }: PaymentDialogProps) {
   const formatCurrency = useFormatCurrency();
   const { direction } = useLanguage();
+  const { getSetting } = useSettings();
   const { t } = useTranslation("pos");
   const { t: tCommon } = useTranslation("common");
   const { t: tPayment } = useTranslation("paymentDialog");
@@ -87,15 +88,19 @@ export function PaymentDialog({
     bankak: tPayment("methodBankak"),
     fawry: tPayment("methodFawry"),
     ocash: tPayment("methodOcash"),
+    bank_transfer: tPayment("methodBankTransfer"),
+    card: tPayment("methodCard"),
   };
-  const METHODS = METHOD_VALUES.map((value) => ({ value, label: METHOD_LABELS[value] }));
+  const activeMethods = parseActivePaymentMethods(getSetting("pos_active_payment_methods"));
+  const METHODS = activeMethods.map((value) => ({ value, label: METHOD_LABELS[value] }));
+  const defaultMethod = resolveDefaultActiveMethod(activeMethods, DEFAULT_PAYMENT_METHOD);
 
   const [lines, setLines] = useState<DraftLine[]>([]);
 
   useEffect(() => {
     if (!open) return;
-    setLines([{ id: crypto.randomUUID(), method: DEFAULT_PAYMENT_METHOD, amount: due > 0 ? String(due) : "0" }]);
-  }, [open, due]);
+    setLines([{ id: crypto.randomUUID(), method: defaultMethod, amount: due > 0 ? String(due) : "0" }]);
+  }, [open, due, defaultMethod]);
 
   const { rows, totalApplied, totalChange, remaining } = useMemo(
     () => computePayments(lines, due),
@@ -110,7 +115,7 @@ export function PaymentDialog({
   };
   const addLine = () => {
     const usedMethods = new Set(lines.map((l) => l.method));
-    const nextMethod = METHODS.find((m) => !usedMethods.has(m.value))?.value ?? DEFAULT_PAYMENT_METHOD;
+    const nextMethod = METHODS.find((m) => !usedMethods.has(m.value))?.value ?? defaultMethod;
     setLines((prev) => [...prev, { id: crypto.randomUUID(), method: nextMethod, amount: "0" }]);
   };
 
@@ -123,6 +128,13 @@ export function PaymentDialog({
   return (
     <Dialog open={open} onOpenChange={(next) => !isSubmitting && onOpenChange(next)}>
       <DialogContent dir={direction} className="sm:max-w-md">
+      <form
+        className="grid gap-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleConfirm();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{ticketLabel ? tPayment("titleWithTicket", { label: ticketLabel }) : t("payment")}</DialogTitle>
           <DialogDescription>
@@ -244,9 +256,8 @@ export function PaymentDialog({
             {tCommon("cancel")}
           </Button>
           <Button
-            type="button"
+            type="submit"
             disabled={isSubmitting || totalApplied <= 0}
-            onClick={handleConfirm}
             className="min-w-32 gap-2"
           >
             {isSubmitting && <Loader2 className="size-4 animate-spin" />}
@@ -259,6 +270,7 @@ export function PaymentDialog({
                 : tPayment("createSale")}
           </Button>
         </DialogFooter>
+      </form>
       </DialogContent>
     </Dialog>
   );

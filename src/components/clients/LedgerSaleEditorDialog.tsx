@@ -622,6 +622,8 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
                 <MenuItem value="bankak">بنكك</MenuItem>
                 <MenuItem value="fawry">فوري</MenuItem>
                 <MenuItem value="ocash">أوكاش</MenuItem>
+                <MenuItem value="bank_transfer">تحويل بنكي</MenuItem>
+                <MenuItem value="card">بطاقة</MenuItem>
               </Select>
             </FormControl>
             <TextField

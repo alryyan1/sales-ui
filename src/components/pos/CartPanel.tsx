@@ -22,6 +22,8 @@ const PAYMENT_METHOD_LABEL_KEYS: Record<string, string> = {
   bankak: "paymentMethodBankak",
   fawry: "paymentMethodFawry",
   ocash: "paymentMethodOcash",
+  bank_transfer: "paymentMethodBankTransfer",
+  card: "paymentMethodCard",
 };
 
 interface CartPanelProps {
@@ -279,12 +281,12 @@ export function CartPanel({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b px-4 py-3">
-        <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <Receipt className="size-4 text-muted-foreground" />
+      <div className="flex items-center justify-between rounded-lg border-b bg-primary px-4 py-3">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-primary-foreground">
+          <Receipt className="size-4 text-primary-foreground/70" />
           {tCartPanel("cartTitle")}
           {items.length > 0 && (
-            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+            <span className="rounded-full bg-primary-foreground/15 px-2 py-0.5 text-xs font-medium text-primary-foreground">
               {items.length}
             </span>
           )}
@@ -296,7 +298,7 @@ export function CartPanel({
             disabled={isCreatingSale || hasPayments}
             onClick={onClearCart}
             title={hasPayments ? tCartPanel("mustCancelPaymentsBeforeClear") : undefined}
-            className="gap-1.5 text-muted-foreground"
+            className="gap-1.5 text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground"
           >
             <Trash2 className="size-3.5" />
             {t("clearAll")}

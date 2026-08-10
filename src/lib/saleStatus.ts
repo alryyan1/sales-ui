@@ -34,6 +34,8 @@ export const PAYMENT_METHOD_LABELS: Record<string, string> = {
   bankak: "بنكك",
   fawry: "فوري",
   ocash: "أوكاش",
+  bank_transfer: "تحويل بنكي",
+  card: "بطاقة",
 };
 
 export function paymentMethodLabel(method: string | null | undefined): string {
@@ -61,6 +63,8 @@ const PAYMENT_METHOD_KEY: Record<string, string> = {
   bankak: "paymentMethodBankak",
   fawry: "paymentMethodFawry",
   ocash: "paymentMethodOcash",
+  bank_transfer: "paymentMethodBankTransfer",
+  card: "paymentMethodCard",
 };
 
 export function translatePaymentMethod(t: TFunction, method: string | null | undefined): string {

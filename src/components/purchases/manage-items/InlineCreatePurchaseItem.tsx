@@ -15,6 +15,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { Save, X, Search } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 import { Product } from "@/services/productService";
 import { ProductImage } from "@/components/products/ProductImage";
@@ -39,6 +40,8 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
   showBatchNumber = true,
   showExpiryDate = true,
 }) => {
+  const { t } = useTranslation("purchases");
+  const { t: tCommon } = useTranslation("common");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productInputValue, setProductInputValue] = useState("");
   const [productOptions, setProductOptions] = useState<Product[]>([]);
@@ -163,16 +166,16 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
   // Handle save with return value to indicate success
   const handleSave = useCallback(async (): Promise<boolean> => {
     if (!selectedProduct) {
-      toast.error("خطأ", { description: "يرجى اختيار منتج أولاً" });
+      toast.error(tCommon("error"), { description: t("selectProductFirst") });
       return false;
     }
     if (!quantity || quantity <= 0) {
-      toast.error("خطأ", { description: "يرجى إدخال كمية صحيحة" });
+      toast.error(tCommon("error"), { description: t("enterValidQuantityError") });
       quantityInputRef.current?.focus();
       return false;
     }
     if (!unitCost || unitCost < 0) {
-      toast.error("خطأ", { description: "يرجى إدخال تكلفة صحيحة" });
+      toast.error(tCommon("error"), { description: t("enterValidCostError") });
       unitCostInputRef.current?.focus();
       return false;
     }
@@ -241,7 +244,6 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
           }
           loading={productLoading}
           isOptionEqualToValue={(option, value) => option.id === value.id}
-          noOptionsText="لا توجد نتائج"
           autoHighlight
           freeSolo
           size="small"
@@ -249,7 +251,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
           renderInput={(params) => (
             <TextField
               {...params}
-              placeholder="Product or Barcode..."
+              placeholder={t("productOrBarcodePlaceholder")}
               autoFocus
               inputRef={productInputRef}
               onKeyDown={async (e) => {
@@ -309,8 +311,8 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
                       setProductOptions(products);
                     } else {
                       // Optional: play error sound or strict notification
-                      toast.error("Not found", {
-                        description: `No product found with barcode: ${barcode}`,
+                      toast.error(t("productNotFoundTitle"), {
+                        description: t("noProductWithBarcode", { barcode }),
                       });
                     }
                   } catch (error) {
@@ -365,7 +367,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
             );
           }}
           noOptionsText={
-            productInputValue.trim() ? "No results" : "Type to search"
+            productInputValue.trim() ? tCommon("noResultsFound") : t("typeToSearchPrompt")
           }
         />
       </Box>
@@ -374,7 +376,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
       {showBatchNumber && (
         <TextField
           size="small"
-          placeholder="Batch No"
+          placeholder={t("batchNoShort")}
           inputRef={batchNumberInputRef}
           value={batchNumber}
           onChange={(e) => setBatchNumber(e.target.value)}
@@ -415,7 +417,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
             slotProps={{
               textField: {
                 size: "small",
-                placeholder: "Expiry Date",
+                placeholder: t("expiryDate"),
                 sx: { width: 140 },
                 inputRef: expiryDateInputRef,
                 onKeyDown: (e) => {
@@ -435,7 +437,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
       <TextField
         size="small"
         type="number"
-        placeholder="Cost"
+        placeholder={t("costShort")}
         inputRef={unitCostInputRef}
         onFocus={(e) => {
           e.target.select();
@@ -457,7 +459,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
       <TextField
         size="small"
         type="number"
-        placeholder="Retail"
+        placeholder={t("retailShort")}
         inputRef={salePriceInputRef}
         onFocus={(e) => {
           e.target.select();
@@ -479,7 +481,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
       <TextField
         size="small"
         type="number"
-        placeholder="Qty"
+        placeholder={t("qtyShort")}
         inputRef={quantityInputRef}
         onFocus={(e) => {
           e.target.select();
@@ -515,7 +517,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
 
       {/* Actions - 9 */}
       <Box sx={{ display: "flex", gap: 0.5 }}>
-        <Tooltip title="Save">
+        <Tooltip title={tCommon("save")}>
           <IconButton
             size="small"
             onClick={handleSave}
@@ -526,7 +528,7 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
           </IconButton>
         </Tooltip>
 
-        <Tooltip title="Cancel">
+        <Tooltip title={tCommon("cancel")}>
           <IconButton size="small" onClick={onCancel} disabled={isLoading}>
             <X size={18} />
           </IconButton>

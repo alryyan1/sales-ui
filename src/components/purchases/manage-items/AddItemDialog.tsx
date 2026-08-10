@@ -29,6 +29,7 @@ import {
   RefreshCw, // Import RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 import apiClient from "@/lib/axios";
 import purchaseService from "@/services/purchaseService";
@@ -61,6 +62,8 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
   const { settings, getSetting } = useSettings();
   const showBatchNumber = getSetting("purchase_use_batch_number", true) ?? true;
   const showExpiryDate = getSetting("purchase_use_expiry_date", true) ?? true;
+  const { t } = useTranslation("purchases");
+  const { t: tCommon } = useTranslation("common");
 
   // Form state
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -119,11 +122,11 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
       setAllProducts(uniqueProducts);
 
       if (forceRefresh) {
-        toast.success("تم تحديث قائمة المنتجات");
+        toast.success(t("productsListRefreshedSuccess"));
       }
     } catch (error) {
       console.error("Error fetching products:", error);
-      toast.error("خطأ", { description: "فشل تحميل قائمة المنتجات" });
+      toast.error(tCommon("error"), { description: t("failedToLoadProductsList") });
     } finally {
       setProductLoading(false);
     }
@@ -255,11 +258,11 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
   // Handle add item
   const handleAddItem = useCallback(async () => {
     if (!selectedProduct) {
-      toast.error("خطأ", { description: "يرجى اختيار منتج أولاً" });
+      toast.error(tCommon("error"), { description: t("selectProductFirst") });
       return;
     }
     if (quantity <= 0 || unitCost < 0) {
-      toast.error("خطأ", { description: "الكمية أو التكلفة غير صالحة" });
+      toast.error(tCommon("error"), { description: t("invalidQuantityOrCost") });
       return;
     }
 
@@ -297,7 +300,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
       onAddItem(data);
     } catch (error) {
       console.error("Error updating product units:", error);
-      toast.error("خطأ", { description: "فشل تحديث بيانات المنتج" });
+      toast.error(tCommon("error"), { description: t("failedToUpdateProductData") });
     }
   }, [
     selectedProduct,
@@ -383,17 +386,17 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
               variant="h6"
               sx={{ fontWeight: 700, color: "grey.800" }}
             >
-              إضافة صنف جديد
+              {t("addNewItem")}
             </Typography>
             <Typography variant="body2" sx={{ color: "grey.500" }}>
-              أضف منتجًا إلى عملية الشراء
+              {t("addProductToPurchaseSubtitle")}
             </Typography>
           </Box>
         </Box>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <IconButton
             onClick={() => fetchAllProducts(true)}
-            title="تحديث قائمة المنتجات"
+            title={t("refreshProductsListTooltip")}
             disabled={productLoading}
             sx={{
               bgcolor: "grey.100",
@@ -435,7 +438,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
               }}
             >
               <Package size={16} />
-              اسم المنتج
+              {t("fields.productName")}
             </Typography>
             <Autocomplete
               options={allProducts}
@@ -454,7 +457,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
               }
               loading={productLoading}
               isOptionEqualToValue={(option, value) => option.id === value.id}
-              noOptionsText="لا توجد نتائج"
+              noOptionsText={tCommon("noResultsFound")}
               autoHighlight // Automatically highlight keys for better Enter selection
               // Custom filter to match Name OR SKU
               filterOptions={(options, state) => {
@@ -474,7 +477,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  placeholder="ابحث بالاسم أو الباركود..."
+                  placeholder={t("searchByNameOrBarcodePlaceholder")}
                   fullWidth
                   autoFocus
                   InputProps={{
@@ -517,7 +520,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                         </Typography>
                         {option.sku && (
                           <Typography variant="caption" sx={{ color: "grey.500" }}>
-                            باركود: {option.sku}
+                            {t("barcodeColonValue", { value: option.sku })}
                           </Typography>
                         )}
                       </Box>
@@ -537,9 +540,9 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                   <Chip
                     icon={<Layers size={16} />}
                     label={`1 ${
-                      selectedProduct.stocking_unit_name || "وحدة تخزين"
+                      selectedProduct.stocking_unit_name || t("stockingUnitFallback")
                     } = ${unitsPerStockingUnit} ${
-                      selectedProduct.sellable_unit_name || "وحدة بيع"
+                      selectedProduct.sellable_unit_name || t("sellableUnitFallback")
                     }`}
                     sx={{
                       bgcolor: "info.50",
@@ -574,7 +577,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                       }}
                     >
                       <Hash size={16} />
-                      الكمية{" "}
+                      {t("quantity")}{" "}
                       {selectedProduct?.stocking_unit_name && (
                         <Chip
                           label={selectedProduct.stocking_unit_name}
@@ -611,7 +614,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                       }}
                     >
                       <DollarSign size={16} />
-                      سعر التكلفة{" "}
+                      {t("unitCost")}{" "}
                       {selectedProduct?.stocking_unit_name && (
                         <Chip
                           label={selectedProduct.stocking_unit_name}
@@ -660,8 +663,9 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                       }}
                     >
                       <Layers size={16} />
-                      عدد الوحدات داخل{" "}
-                      {selectedProduct?.stocking_unit_name || "وحدة التخزين"}
+                      {t("unitsCountInsideLabel", {
+                        unit: selectedProduct?.stocking_unit_name || t("stockingUnitFallback"),
+                      })}
                     </Typography>
                     <TextField
                       type="number"
@@ -677,11 +681,10 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                       sx={{
                         "& .MuiOutlinedInput-root": { borderRadius: 2 },
                       }}
-                      placeholder={`عدد الـ ${
-                        selectedProduct?.sellable_unit_name || "وحدات بيع"
-                      } لكل ${
-                        selectedProduct?.stocking_unit_name || "وحدة تخزين"
-                      }`}
+                      placeholder={t("unitsPerStockingPlaceholder", {
+                        sellable: selectedProduct?.sellable_unit_name || t("sellableUnitFallback"),
+                        stocking: selectedProduct?.stocking_unit_name || t("stockingUnitFallback"),
+                      })}
                     />
                   </Box>
                   <Box>
@@ -697,7 +700,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                       }}
                     >
                       <Tag size={16} />
-                      نسبة الربح (%)
+                      {t("profitMarginPercentLabel")}
                     </Typography>
                     <TextField
                       type="number"
@@ -751,8 +754,9 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                       }}
                     >
                       <Tag size={16} />
-                      سعر البيع (
-                      {selectedProduct?.sellable_unit_name || "وحدة بيع"})
+                      {t("salePricePerUnitLabel", {
+                        unit: selectedProduct?.sellable_unit_name || t("sellableUnitFallback"),
+                      })}
                       <span style={{ color: "#ef4444" }}>*</span>
                     </Typography>
                     <TextField
@@ -793,8 +797,9 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                       }}
                     >
                       <Tag size={16} />
-                      سعر البيع (
-                      {selectedProduct?.stocking_unit_name || "وحدة تخزين"})
+                      {t("salePricePerUnitLabel", {
+                        unit: selectedProduct?.stocking_unit_name || t("stockingUnitFallback"),
+                      })}
                     </Typography>
                     <TextField
                       type="number"
@@ -844,14 +849,14 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                           }}
                         >
                           <Hash size={16} />
-                          رقم الدفعة
+                          {t("batchNumber")}
                         </Typography>
                         <TextField
                           value={batchNumber}
                           onChange={(e) => setBatchNumber(e.target.value)}
                           size="small"
                           fullWidth
-                          placeholder="اختياري"
+                          placeholder={tCommon("optionalPlaceholder")}
                           onKeyDown={handleFormInputKeyDown}
                           sx={{
                             "& .MuiOutlinedInput-root": { borderRadius: 2 },
@@ -874,7 +879,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                           }}
                         >
                           <Calendar size={16} />
-                          تاريخ الانتهاء
+                          {t("expiryDate")}
                         </Typography>
                         <TextField
                           type="date"
@@ -940,7 +945,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
             "&:hover": { borderColor: "grey.400", bgcolor: "grey.100" },
           }}
         >
-          إلغاء
+          {tCommon("cancel")}
         </Button>
         <Button
           variant="contained"
@@ -970,7 +975,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
             },
           }}
         >
-          إضافة الصنف
+          {t("addItem")}
         </Button>
       </Box>
     </Dialog>

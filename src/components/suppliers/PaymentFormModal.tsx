@@ -65,6 +65,8 @@ const PAYMENT_METHODS = [
   { id: "bankak", name: "بنكك" },
   { id: "fawry", name: "فوري" },
   { id: "ocash", name: "أوكاش" },
+  { id: "bank_transfer", name: "تحويل بنكي" },
+  { id: "card", name: "بطاقة" },
   { id: "other", name: "أخرى" },
 ];
 

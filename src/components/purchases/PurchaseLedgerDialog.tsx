@@ -63,7 +63,7 @@ function createPaymentSchema(tLedger: (key: string) => string) {
 
 type PaymentFormValues = z.infer<ReturnType<typeof createPaymentSchema>>;
 
-const PAYMENT_METHOD_IDS = ["cash", "bankak", "fawry", "ocash", "other"] as const;
+const PAYMENT_METHOD_IDS = ["cash", "bankak", "fawry", "ocash", "bank_transfer", "card", "other"] as const;
 
 export function PurchaseLedgerDialog({
   open,
@@ -79,7 +79,12 @@ export function PurchaseLedgerDialog({
     () =>
       PAYMENT_METHOD_IDS.map((id) => ({
         id,
-        name: tLedger(`method${id.charAt(0).toUpperCase()}${id.slice(1)}`),
+        name: tLedger(
+          `method${id
+            .split("_")
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+            .join("")}`,
+        ),
       })),
     [tLedger],
   );

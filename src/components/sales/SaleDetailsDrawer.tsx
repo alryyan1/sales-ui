@@ -18,12 +18,12 @@ import {
 import { format } from "date-fns";
 
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -163,23 +163,26 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="left" dir={direction} className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
-          <SheetHeader className="border-b px-5 py-4">
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent
+          dir={direction}
+          className="flex max-h-[85vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl"
+        >
+          <DialogHeader className="border-b px-5 py-4">
             {sale ? (
               <>
                 <div className="flex flex-wrap items-center gap-2">
-                  <SheetTitle className="text-base">{t("invoiceHash", { id: sale.number ?? sale.id })}</SheetTitle>
+                  <DialogTitle className="text-base">{t("invoiceHash", { id: sale.number ?? sale.id })}</DialogTitle>
                   {status && <Badge variant={status.variant}>{translateSaleStatus(t, status.kind)}</Badge>}
                 </div>
-                <SheetDescription>
+                <DialogDescription>
                   {format(new Date(sale.created_at), "dd MMM yyyy, HH:mm")}
-                </SheetDescription>
+                </DialogDescription>
               </>
             ) : (
-              <SheetTitle className="text-base">{t("invoiceDetailsTitle")}</SheetTitle>
+              <DialogTitle className="text-base">{t("invoiceDetailsTitle")}</DialogTitle>
             )}
-          </SheetHeader>
+          </DialogHeader>
 
           <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5">
             {saleQuery.isLoading && (
@@ -438,8 +441,8 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
               </div>
             </div>
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={confirmDeleteOpen} onOpenChange={(o) => !isDeleting && setConfirmDeleteOpen(o)}>
         <AlertDialogContent dir={direction}>
