@@ -6,5 +6,16 @@
     "submitButtonLoading": "Logging in...",
     "registerPrompt": "Don't have an account?",
     "registerLink": "Create new account",
-    "loginFailed": "Login failed. Please check your email and password."
-} 
+    "loginFailed": "Login failed. Please check your email and password.",
+    "appTitle": "Sales Management System",
+    "appSubtitle": "Sign in to continue",
+    "logoAlt": "System Logo",
+    "usernameLabel": "Username",
+    "usernamePlaceholder": "Enter your username",
+    "usernameRequiredValidation": "Username is required",
+    "passwordRequiredValidation": "Password is required",
+    "submitButtonLabel": "Sign In",
+    "submitButtonVerifying": "Verifying...",
+    "loginFailedDefault": "Login failed. Please try again.",
+    "footerCopyright": "© {{year}} Sales Management System. All rights reserved."
+}

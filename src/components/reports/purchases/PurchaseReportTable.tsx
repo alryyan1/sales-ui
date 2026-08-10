@@ -1,8 +1,10 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, FileText } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { Purchase } from "../../../services/purchaseService";
 import { formatNumber } from "@/constants";
+import { useLanguage } from "@/context/LanguageContext";
 import dayjs from "dayjs";
 import {
   Table,
@@ -43,12 +45,14 @@ const PurchaseReportTable: React.FC<PurchaseReportTableProps> = ({
   summaryStats,
   onPageChange,
 }) => {
+  const { t } = useTranslation("reports");
+  const { direction } = useLanguage();
   const navigate = useNavigate();
 
   const statusLabels: Record<string, string> = {
-    received: "تم الاستلام",
-    pending: "معلق",
-    ordered: "تم الطلب",
+    received: t("statusReceived"),
+    pending: t("statusPending"),
+    ordered: t("statusOrdered"),
   };
 
   const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
@@ -64,14 +68,15 @@ const PurchaseReportTable: React.FC<PurchaseReportTableProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-4">
           <CardTitle className="text-xl flex items-center gap-2">
             <FileText className="h-5 w-5 text-blue-500" />
-            النتائج
+            {t("results")}
           </CardTitle>
           {meta && (
             <Badge variant="outline" className="font-medium">
-              {`${(currentPage - 1) * 15 + 1}-${Math.min(
-                currentPage * 15,
-                meta.total
-              )} من ${meta.total}`}
+              {t("rangeOfTotalBadge", {
+                from: (currentPage - 1) * 15 + 1,
+                to: Math.min(currentPage * 15, meta.total),
+                total: meta.total,
+              })}
             </Badge>
           )}
         </div>
@@ -88,9 +93,9 @@ const PurchaseReportTable: React.FC<PurchaseReportTableProps> = ({
                         <FileText className="h-8 w-8 text-slate-400" />
                       </div>
                       <h3 className="text-lg font-medium text-slate-900 mb-1">
-                        لا توجد مشتريات
+                        {t("noPurchasesFound")}
                       </h3>
-                      <p>جرب تعديل الفلاتر</p>
+                      <p>{t("tryAdjustingFiltersShort")}</p>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -103,32 +108,32 @@ const PurchaseReportTable: React.FC<PurchaseReportTableProps> = ({
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50 hover:bg-slate-50">
-                    <TableHead className="text-right font-semibold">
-                      التاريخ
+                    <TableHead className="text-start font-semibold">
+                      {t("dateColumn")}
                     </TableHead>
-                    <TableHead className="text-right font-semibold">
-                      رقم الشراء
+                    <TableHead className="text-start font-semibold">
+                      {t("purchaseNumberColumn")}
                     </TableHead>
-                    <TableHead className="text-right font-semibold">
-                      المرجع
+                    <TableHead className="text-start font-semibold">
+                      {t("referenceColumn")}
                     </TableHead>
-                    <TableHead className="text-right font-semibold">
-                      المورد
+                    <TableHead className="text-start font-semibold">
+                      {t("supplierLabel")}
                     </TableHead>
-                    <TableHead className="text-right font-semibold">
-                      المخزن
+                    <TableHead className="text-start font-semibold">
+                      {t("warehouseColumn")}
                     </TableHead>
                     <TableHead className="text-center font-semibold">
-                      الحالة
+                      {t("statusLabel")}
                     </TableHead>
-                    <TableHead className="text-right font-semibold">
-                      العملة
+                    <TableHead className="text-start font-semibold">
+                      {t("currencyColumn")}
                     </TableHead>
-                    <TableHead className="text-right font-semibold">
-                      المبلغ الإجمالي
+                    <TableHead className="text-start font-semibold">
+                      {t("totalAmountColumn")}
                     </TableHead>
                     <TableHead className="text-center font-semibold w-[100px]">
-                      الإجراءات
+                      {t("actionsColumn")}
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -162,10 +167,10 @@ const PurchaseReportTable: React.FC<PurchaseReportTableProps> = ({
                           {statusLabels[purchase.status] || purchase.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="py-4 text-right">
+                      <TableCell className="py-4 text-start">
                         {purchase.currency || "SDG"}
                       </TableCell>
-                      <TableCell className="py-4 text-right font-medium">
+                      <TableCell className="py-4 text-start font-medium">
                         {formatNumber(purchase.total_amount)}
                       </TableCell>
                       <TableCell className="py-4 text-center">
@@ -183,12 +188,12 @@ const PurchaseReportTable: React.FC<PurchaseReportTableProps> = ({
                   {/* Page total row */}
                   {summaryStats && (
                     <TableRow className="bg-muted/30">
-                      <TableCell colSpan={7} className="py-4 text-right">
+                      <TableCell colSpan={7} className="py-4 text-start">
                         <span className="text-sm font-semibold text-muted-foreground">
-                          إجمالي الصفحة
+                          {t("pageTotalLabel")}
                         </span>
                       </TableCell>
-                      <TableCell className="py-4 text-right font-bold">
+                      <TableCell className="py-4 text-start font-bold">
                         {formatNumber(summaryStats.totalAmount)}
                       </TableCell>
                       <TableCell />
@@ -209,10 +214,10 @@ const PurchaseReportTable: React.FC<PurchaseReportTableProps> = ({
                     disabled={currentPage === 1 || isLoading}
                     className="h-8 w-8 p-0"
                   >
-                    &rarr;
+                    {direction === "rtl" ? <>&rarr;</> : <>&larr;</>}
                   </Button>
                   <div className="px-3 py-1 text-sm font-medium text-slate-600">
-                    صفحة {currentPage} من {meta.last_page}
+                    {t("pageOfTotalLabel", { current: currentPage, total: meta.last_page })}
                   </div>
                   <Button
                     variant="ghost"
@@ -223,7 +228,7 @@ const PurchaseReportTable: React.FC<PurchaseReportTableProps> = ({
                     disabled={currentPage === meta.last_page || isLoading}
                     className="h-8 w-8 p-0"
                   >
-                    &larr;
+                    {direction === "rtl" ? <>&larr;</> : <>&rarr;</>}
                   </Button>
                 </div>
               </div>

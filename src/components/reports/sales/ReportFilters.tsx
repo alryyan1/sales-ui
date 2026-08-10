@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -14,26 +14,28 @@ import {
   Autocomplete,
 } from "@mui/material";
 import { Filter, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
-export const reportFilterSchema = z
-  .object({
-    startDate: z.string().nullable().optional(),
-    endDate: z.string().nullable().optional(),
-    clientId: z.string().nullable().optional(),
-    userId: z.string().nullable().optional(),
-    shiftId: z.string().nullable().optional(),
-    productId: z.string().nullable().optional(),
-  })
-  .refine(
-    (data) =>
-      !data.endDate || !data.startDate || data.endDate >= data.startDate,
-    {
-      message: "تاريخ الانتهاء يجب أن يكون بعد تاريخ البدء",
-      path: ["endDate"],
-    },
-  );
+const buildReportFilterSchema = (t: (key: string) => string) =>
+  z
+    .object({
+      startDate: z.string().nullable().optional(),
+      endDate: z.string().nullable().optional(),
+      clientId: z.string().nullable().optional(),
+      userId: z.string().nullable().optional(),
+      shiftId: z.string().nullable().optional(),
+      productId: z.string().nullable().optional(),
+    })
+    .refine(
+      (data) =>
+        !data.endDate || !data.startDate || data.endDate >= data.startDate,
+      {
+        message: t("endDateAfterStartDateValidation"),
+        path: ["endDate"],
+      },
+    );
 
-export type ReportFilterValues = z.infer<typeof reportFilterSchema>;
+export type ReportFilterValues = z.infer<ReturnType<typeof buildReportFilterSchema>>;
 
 interface ReportFiltersProps {
   initialValues: ReportFilterValues;
@@ -58,6 +60,10 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
   loadingFilters,
   posMode,
 }) => {
+  const { t } = useTranslation("reports");
+  const { t: tCommon } = useTranslation("common");
+  const reportFilterSchema = useMemo(() => buildReportFilterSchema(t), [t]);
+
   const form = useForm<ReportFilterValues>({
     resolver: zodResolver(reportFilterSchema),
     defaultValues: initialValues,
@@ -113,7 +119,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
                 fullWidth
                 size="small"
                 type="date"
-                label="من تاريخ"
+                label={t("startDateLabel")}
                 InputLabelProps={{ shrink: true }}
                 error={!!fieldState.error}
                 helperText={fieldState.error?.message}
@@ -131,7 +137,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
                 fullWidth
                 size="small"
                 type="date"
-                label="إلى تاريخ"
+                label={t("endDateLabel")}
                 InputLabelProps={{ shrink: true }}
                 error={!!fieldState.error}
                 helperText={fieldState.error?.message}
@@ -155,7 +161,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
                     field.onChange(newValue ? String(newValue.id) : null);
                   }}
                   renderInput={(params) => (
-                    <TextField {...params} label="العميل" size="small" />
+                    <TextField {...params} label={t("clientLabel")} size="small" />
                   )}
                   loading={loadingFilters}
                 />
@@ -179,7 +185,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
                     field.onChange(newValue ? String(newValue.id) : null);
                   }}
                   renderInput={(params) => (
-                    <TextField {...params} label="المستخدم" size="small" />
+                    <TextField {...params} label={t("user")} size="small" />
                   )}
                   loading={loadingFilters}
                 />
@@ -201,7 +207,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
                         ? `${option.name} ${
                             option.shift_date ? `(${option.shift_date})` : ""
                           }`
-                        : `الوردية #${option.id} ${
+                        : `${t("shiftNumberFallback", { id: option.id })} ${
                             option.shift_date ? `(${option.shift_date})` : ""
                           }`
                     }
@@ -212,7 +218,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
                       field.onChange(newValue ? String(newValue.id) : null);
                     }}
                     renderInput={(params) => (
-                      <TextField {...params} label="الوردية" size="small" />
+                      <TextField {...params} label={t("shiftLabel")} size="small" />
                     )}
                     loading={loadingFilters}
                   />
@@ -230,7 +236,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
               startIcon={<Filter size={18} />}
               sx={{ borderRadius: 2 }}
             >
-              بحث
+              {tCommon("search")}
             </Button>
             <Button
               fullWidth
@@ -240,7 +246,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
               startIcon={<X size={18} />}
               sx={{ borderRadius: 2 }}
             >
-              مسح
+              {tCommon("clear")}
             </Button>
           </Stack>
         </Box>

@@ -1,11 +1,12 @@
 // src/pages/LoginPage.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
-import { User, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
+import { User, Lock, Eye, EyeOff, Loader2, Languages } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 // shadcn UI
 import { Button } from "@/components/ui/button";
@@ -16,20 +17,27 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 // Auth
 import authService from "@/services/authService";
 import { useAuth } from "@/context/AuthContext";
-
-const loginSchema = z.object({
-  username: z.string().min(1, { message: "اسم المستخدم مطلوب" }),
-  password: z.string().min(1, { message: "كلمة المرور مطلوبة" }),
-});
-type LoginFormValues = z.infer<typeof loginSchema>;
+import { useLanguage } from "@/context/LanguageContext";
 
 const LoginPage: React.FC = () => {
+  const { t } = useTranslation("login");
+  const { language, direction, setLanguage } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isLoading: isAuthLoading, handleLoginSuccess } = useAuth();
 
   const [serverError, setServerError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+
+  const loginSchema = useMemo(
+    () =>
+      z.object({
+        username: z.string().min(1, { message: t("usernameRequiredValidation") }),
+        password: z.string().min(1, { message: t("passwordRequiredValidation") }),
+      }),
+    [t]
+  );
+  type LoginFormValues = z.infer<typeof loginSchema>;
 
   const {
     handleSubmit,
@@ -57,7 +65,7 @@ const LoginPage: React.FC = () => {
     } catch (err) {
       const errorMsg = authService.getErrorMessage(
         err,
-        "فشل تسجيل الدخول. يرجى المحاولة مرة أخرى."
+        t("loginFailedDefault")
       );
       toast.error(errorMsg);
       setServerError(errorMsg);
@@ -74,22 +82,33 @@ const LoginPage: React.FC = () => {
 
   return (
     <div
-      className="flex min-h-screen items-center justify-center bg-background p-6"
-      dir="rtl"
+      className="relative flex min-h-screen items-center justify-center bg-background p-6"
+      dir={direction}
     >
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="absolute top-4 end-4 size-9"
+        aria-label={language === "ar" ? "Switch to English" : "التبديل إلى العربية"}
+        onClick={() => setLanguage(language === "ar" ? "en" : "ar")}
+      >
+        <Languages className="size-[18px]" />
+      </Button>
+
       <div className="w-full max-w-sm">
         {/* Logo & heading */}
         <div className="mb-8 flex flex-col items-center text-center">
           <img
             src="/logo.jpeg"
-            alt="شعار النظام"
+            alt={t("logoAlt")}
             className="mb-4 h-24 w-24 rounded-xl object-contain"
           />
           <h1 className="text-xl font-bold text-foreground">
-            نظام إدارة المبيعات
+            {t("appTitle")}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            سجّل الدخول للمتابعة
+            {t("appSubtitle")}
           </p>
         </div>
 
@@ -105,18 +124,18 @@ const LoginPage: React.FC = () => {
           {/* Username */}
           <div className="space-y-1.5">
             <Label htmlFor="username" className="text-sm font-medium">
-              اسم المستخدم
+              {t("usernameLabel")}
             </Label>
             <div className="relative">
               <User
                 size={15}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground"
               />
               <Input
                 id="username"
                 type="text"
-                placeholder="أدخل اسم المستخدم"
-                className="pr-9 h-11"
+                placeholder={t("usernamePlaceholder")}
+                className="ps-9 h-11"
                 disabled={isSubmitting}
                 {...register("username")}
                 aria-invalid={!!errors.username}
@@ -130,18 +149,18 @@ const LoginPage: React.FC = () => {
           {/* Password */}
           <div className="space-y-1.5">
             <Label htmlFor="password" className="text-sm font-medium">
-              كلمة المرور
+              {t("passwordLabel")}
             </Label>
             <div className="relative">
               <Lock
                 size={15}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground"
               />
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
-                className="pr-9 pl-10 h-11"
+                className="ps-9 pe-10 h-11"
                 disabled={isSubmitting}
                 {...register("password")}
                 aria-invalid={!!errors.password}
@@ -149,7 +168,7 @@ const LoginPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 tabIndex={-1}
               >
                 {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -168,18 +187,18 @@ const LoginPage: React.FC = () => {
           >
             {isSubmitting ? (
               <>
-                <Loader2 size={16} className="animate-spin ml-2" />
-                جاري التحقق...
+                <Loader2 size={16} className="animate-spin me-2" />
+                {t("submitButtonVerifying")}
               </>
             ) : (
-              "تسجيل الدخول"
+              t("submitButtonLabel")
             )}
           </Button>
         </form>
 
         {/* Footer */}
         <p className="mt-8 text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} نظام إدارة المبيعات. جميع الحقوق محفوظة.
+          {t("footerCopyright", { year: new Date().getFullYear() })}
         </p>
       </div>
     </div>

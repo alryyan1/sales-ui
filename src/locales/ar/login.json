@@ -6,5 +6,16 @@
     "submitButtonLoading": "جاري الدخول...",
     "registerPrompt": "ليس لديك حساب؟",
     "registerLink": "إنشاء حساب جديد",
-    "loginFailed": "فشل تسجيل الدخول. يرجى التحقق من بريدك الإلكتروني وكلمة المرور."   
+    "loginFailed": "فشل تسجيل الدخول. يرجى التحقق من بريدك الإلكتروني وكلمة المرور.",
+    "appTitle": "نظام إدارة المبيعات",
+    "appSubtitle": "سجّل الدخول للمتابعة",
+    "logoAlt": "شعار النظام",
+    "usernameLabel": "اسم المستخدم",
+    "usernamePlaceholder": "أدخل اسم المستخدم",
+    "usernameRequiredValidation": "اسم المستخدم مطلوب",
+    "passwordRequiredValidation": "كلمة المرور مطلوبة",
+    "submitButtonLabel": "تسجيل الدخول",
+    "submitButtonVerifying": "جاري التحقق...",
+    "loginFailedDefault": "فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.",
+    "footerCopyright": "© {{year}} نظام إدارة المبيعات. جميع الحقوق محفوظة."
   }

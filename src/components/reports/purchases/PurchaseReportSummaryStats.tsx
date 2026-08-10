@@ -1,5 +1,6 @@
 import React from "react";
 import { Package, DollarSign, TrendingUp } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/constants";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,7 @@ interface PurchaseReportSummaryStatsProps {
 const PurchaseReportSummaryStats: React.FC<PurchaseReportSummaryStatsProps> = ({
   stats,
 }) => {
+  const { t } = useTranslation("reports");
   return (
     <div className="mb-6 flex flex-wrap gap-5">
       {/* Total Purchases Card */}
@@ -27,7 +29,7 @@ const PurchaseReportSummaryStats: React.FC<PurchaseReportSummaryStatsProps> = ({
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-muted-foreground">
-                  عدد المشتريات
+                  {t("purchasesCountLabel")}
                 </p>
                 <div className="flex items-center text-primary">
                   <Package size={18} />
@@ -48,7 +50,7 @@ const PurchaseReportSummaryStats: React.FC<PurchaseReportSummaryStatsProps> = ({
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-muted-foreground">
-                  إجمالي المبلغ
+                  {t("totalAmount")}
                 </p>
                 <div className="flex items-center text-green-600 dark:text-green-400">
                   <DollarSign size={18} />
@@ -74,7 +76,7 @@ const PurchaseReportSummaryStats: React.FC<PurchaseReportSummaryStatsProps> = ({
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-muted-foreground">
-                  المشتريات المعلقة
+                  {t("pendingPurchasesLabel")}
                 </p>
                 <div
                   className={cn(
@@ -109,7 +111,7 @@ const PurchaseReportSummaryStats: React.FC<PurchaseReportSummaryStatsProps> = ({
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-muted-foreground">
-                  متوسط قيمة الشراء
+                  {t("averagePurchaseValueLabel")}
                 </p>
               </div>
               <h3 className="text-3xl font-bold leading-none">

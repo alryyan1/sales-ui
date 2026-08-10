@@ -7,12 +7,14 @@ import { useQuery } from "@tanstack/react-query";
 import expenseService from "@/services/expenseService";
 import { usePaymentStats } from "@/hooks/usePaymentStats";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "react-i18next";
 
 interface ReportStatsProps {
   filterValues: ReportFilterValues;
 }
 
 export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
+  const { t } = useTranslation("reports");
   const { getSetting } = useSettings();
   const posMode = getSetting("pos_mode", "shift") as "shift" | "days";
 
@@ -95,14 +97,14 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
   }
 
   const items = [
-    { label: "إجمالي المبيعات", value: stats.totalAmount, sub: `${stats.totalSales} عملية`, color: "text-violet-600" },
-    { label: "المدفوع", value: stats.totalPaid, color: "text-emerald-600" },
-    { label: "نقدي", value: stats.totalCash, color: "text-green-600" },
-    { label: "بنكك", value: stats.totalBankak, color: "text-blue-600" },
-    { label: "فوري", value: stats.totalFawry, color: "text-orange-500" },
-    { label: "أوكاش", value: stats.totalOcash, color: "text-purple-500" },
-    { label: "المستحق", value: stats.totalDue, color: stats.totalDue > 0 ? "text-red-600" : "text-emerald-600" },
-    { label: "المصروفات", value: stats.totalExpenses, color: "text-rose-600" },
+    { label: t("totalSales"), value: stats.totalAmount, sub: t("operationsCountSuffix", { count: stats.totalSales }), color: "text-violet-600" },
+    { label: t("totalPaidLabel"), value: stats.totalPaid, color: "text-emerald-600" },
+    { label: t("paymentMethodCash"), value: stats.totalCash, color: "text-green-600" },
+    { label: t("paymentMethodBankak"), value: stats.totalBankak, color: "text-blue-600" },
+    { label: t("paymentMethodFawry"), value: stats.totalFawry, color: "text-orange-500" },
+    { label: t("paymentMethodOcash"), value: stats.totalOcash, color: "text-purple-500" },
+    { label: t("totalDue"), value: stats.totalDue, color: stats.totalDue > 0 ? "text-red-600" : "text-emerald-600" },
+    { label: t("expensesLabel"), value: stats.totalExpenses, color: "text-rose-600" },
   ];
 
   return (

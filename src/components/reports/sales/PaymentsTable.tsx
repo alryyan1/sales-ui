@@ -29,16 +29,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-
-const METHOD_LABELS: Record<string, { label: string; color: string }> = {
-  cash:          { label: "نقدي",        color: "bg-green-100 text-green-800 border-green-200" },
-  bankak:        { label: "بنكك",        color: "bg-blue-100 text-blue-800 border-blue-200" },
-  fawry:         { label: "فوري",        color: "bg-orange-100 text-orange-800 border-orange-200" },
-  ocash:         { label: "أوكاش",       color: "bg-purple-100 text-purple-800 border-purple-200" },
-  bank:          { label: "بنك",         color: "bg-sky-100 text-sky-800 border-sky-200" },
-  bank_transfer: { label: "تحويل بنكي", color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
-  visa:          { label: "فيزا",        color: "bg-cyan-100 text-cyan-800 border-cyan-200" },
-};
+import { useTranslation } from "react-i18next";
 
 interface PaymentsTableProps {
   filterValues: ReportFilterValues;
@@ -53,9 +44,21 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({
   onPageChange,
   onViewSale,
 }) => {
+  const { t } = useTranslation("reports");
+  const { t: tCommon } = useTranslation("common");
   const navigate = useNavigate();
   const { getSetting } = useSettings();
   const posMode = getSetting("pos_mode", "shift") as "shift" | "days";
+
+  const METHOD_LABELS: Record<string, { label: string; color: string }> = {
+    cash:          { label: t("paymentMethodCash"),        color: "bg-green-100 text-green-800 border-green-200" },
+    bankak:        { label: t("paymentMethodBankak"),      color: "bg-blue-100 text-blue-800 border-blue-200" },
+    fawry:         { label: t("paymentMethodFawry"),       color: "bg-orange-100 text-orange-800 border-orange-200" },
+    ocash:         { label: t("paymentMethodOcash"),       color: "bg-purple-100 text-purple-800 border-purple-200" },
+    bank:          { label: t("paymentMethodBank"),        color: "bg-sky-100 text-sky-800 border-sky-200" },
+    bank_transfer: { label: t("paymentMethodBankTransfer"), color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
+    visa:          { label: t("paymentMethodVisa"),        color: "bg-cyan-100 text-cyan-800 border-cyan-200" },
+  };
 
   const { data, isLoading, error } = usePayments(
     {
@@ -96,9 +99,9 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({
     return (
       <Alert variant="destructive" className="mb-6">
         <AlertCircle className="h-4 w-4" />
-        <AlertTitle className="font-semibold">خطأ</AlertTitle>
+        <AlertTitle className="font-semibold">{tCommon("error")}</AlertTitle>
         <AlertDescription>
-          {(error as Error)?.message || "حدث خطأ أثناء تحميل البيانات"}
+          {(error as Error)?.message || t("errorLoadingDataDefault")}
         </AlertDescription>
       </Alert>
     );
@@ -113,15 +116,15 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({
           <div className="inline-flex p-4 bg-muted rounded-xl mb-4">
             <CreditCard size={32} className="opacity-40" />
           </div>
-          <h3 className="text-lg font-semibold mb-1">لا توجد مدفوعات</h3>
-          <p className="text-sm text-muted-foreground">جرب تعديل الفلاتر</p>
+          <h3 className="text-lg font-semibold mb-1">{t("noPaymentsFound")}</h3>
+          <p className="text-sm text-muted-foreground">{t("tryAdjustingFiltersShort")}</p>
         </div>
       ) : (
         <>
           {/* Table header with count */}
           <div className="px-4 py-3 border-b flex items-center justify-between bg-muted/30">
             <span className="text-sm font-medium text-muted-foreground">
-              {data.total} دفعة
+              {t("paymentsCountSuffix", { count: data.total })}
             </span>
           </div>
 
@@ -130,14 +133,14 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-center w-16">#</TableHead>
-                  <TableHead className="text-center">التاريخ</TableHead>
-                  <TableHead className="text-center">طريقة الدفع</TableHead>
-                  <TableHead className="text-center">المبلغ</TableHead>
-                  <TableHead className="text-center">المرجع</TableHead>
-                  <TableHead className="text-center">العميل</TableHead>
-                  <TableHead className="text-center">المستخدم</TableHead>
-                  <TableHead className="text-center">رصيد العملية</TableHead>
-                  <TableHead className="text-center">الفاتورة</TableHead>
+                  <TableHead className="text-center">{t("dateColumn")}</TableHead>
+                  <TableHead className="text-center">{t("paymentMethodColumn")}</TableHead>
+                  <TableHead className="text-center">{t("amountColumn")}</TableHead>
+                  <TableHead className="text-center">{t("referenceColumn")}</TableHead>
+                  <TableHead className="text-center">{t("clientLabel")}</TableHead>
+                  <TableHead className="text-center">{t("userColumn")}</TableHead>
+                  <TableHead className="text-center">{t("saleBalanceColumn")}</TableHead>
+                  <TableHead className="text-center">{t("invoiceColumn")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -186,7 +189,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({
                             {payment.client_name}
                           </button>
                         ) : (
-                          <span className="text-sm text-muted-foreground">نقدي</span>
+                          <span className="text-sm text-muted-foreground">{t("paymentMethodCash")}</span>
                         )}
                       </TableCell>
 
@@ -197,11 +200,11 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({
                       <TableCell className="text-center">
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="text-xs text-muted-foreground">
-                            إجمالي: <span className="font-semibold text-foreground">{formatNumber(payment.sale_total)}</span>
+                            {t("totalColonPrefix")} <span className="font-semibold text-foreground">{formatNumber(payment.sale_total)}</span>
                           </span>
                           {payment.sale_due > 0 && (
                             <span className="text-xs text-red-600 font-semibold">
-                              متبقي: {formatNumber(payment.sale_due)}
+                              {t("remainingColonPrefix")} {formatNumber(payment.sale_due)}
                             </span>
                           )}
                         </div>

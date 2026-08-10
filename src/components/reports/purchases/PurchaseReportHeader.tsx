@@ -2,6 +2,7 @@ import React from "react";
 import { FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 interface PurchaseReportHeaderProps {
   onExportPdf?: () => void;
@@ -12,16 +13,17 @@ const PurchaseReportHeader: React.FC<PurchaseReportHeaderProps> = ({
   onExportPdf,
   onExportExcel,
 }) => {
+  const { t } = useTranslation("reports");
   const navigate = useNavigate();
 
   return (
     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-          تقرير المشتريات
+          {t("purchaseReportTitle")}
         </h1>
         <p className="text-slate-500 mt-1">
-          تقرير رسمي لمتابعة عمليات الشراء حسب الفترة، المورد والحالة.
+          {t("purchaseReportSubtitle")}
         </p>
       </div>
 
@@ -35,7 +37,7 @@ const PurchaseReportHeader: React.FC<PurchaseReportHeaderProps> = ({
           className="gap-2"
         >
           <FileText size={14} />
-          تصدير PDF
+          {t("exportPdf")}
         </Button>
         <Button
           variant="outline"
@@ -45,7 +47,7 @@ const PurchaseReportHeader: React.FC<PurchaseReportHeaderProps> = ({
           className="gap-2"
         >
           <FileText size={14} />
-          تصدير Excel
+          {t("exportExcelButton")}
         </Button>
       </div>
     </div>

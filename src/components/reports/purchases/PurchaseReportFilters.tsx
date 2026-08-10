@@ -1,6 +1,7 @@
 import React from "react";
 import { Control } from "react-hook-form";
 import { Filter, X, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { Supplier } from "../../../services/supplierService";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,6 +45,8 @@ const PurchaseReportFilters: React.FC<PurchaseReportFiltersProps> = ({
   suppliers,
   loadingSuppliers,
 }) => {
+  const { t } = useTranslation("reports");
+  const { t: tCommon } = useTranslation("common");
   return (
     <Card className="mb-6 border-0 shadow-sm bg-white">
       <CardContent className="p-5">
@@ -56,12 +59,12 @@ const PurchaseReportFilters: React.FC<PurchaseReportFiltersProps> = ({
                 name="startDate"
                 render={({ field, fieldState }) => (
                   <FormItem>
-                    <FormLabel>تاريخ البدء</FormLabel>
+                    <FormLabel>{t("startDateFieldLabel")}</FormLabel>
                     <FormControl>
                       <DatePicker
                         value={field.value ?? null}
                         onChange={field.onChange}
-                        placeholder="اختر تاريخ البدء"
+                        placeholder={t("selectStartDatePlaceholder")}
                         disabled={isLoading}
                         error={!!fieldState?.error}
                       />
@@ -79,12 +82,12 @@ const PurchaseReportFilters: React.FC<PurchaseReportFiltersProps> = ({
                 name="endDate"
                 render={({ field, fieldState }) => (
                   <FormItem>
-                    <FormLabel>تاريخ الانتهاء</FormLabel>
+                    <FormLabel>{t("endDateFieldLabel")}</FormLabel>
                     <FormControl>
                       <DatePicker
                         value={field.value ?? null}
                         onChange={field.onChange}
-                        placeholder="اختر تاريخ الانتهاء"
+                        placeholder={t("selectEndDatePlaceholder")}
                         disabled={isLoading}
                         error={!!fieldState?.error}
                       />
@@ -102,7 +105,7 @@ const PurchaseReportFilters: React.FC<PurchaseReportFiltersProps> = ({
                 name="supplierId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>المورد</FormLabel>
+                    <FormLabel>{t("supplierLabel")}</FormLabel>
                     <Select
                       value={field.value ?? ""}
                       onValueChange={field.onChange}
@@ -110,11 +113,11 @@ const PurchaseReportFilters: React.FC<PurchaseReportFiltersProps> = ({
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="جميع الموردين" />
+                          <SelectValue placeholder={t("allSuppliersPlaceholder")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value=" ">جميع الموردين</SelectItem>
+                        <SelectItem value=" ">{t("allSuppliersPlaceholder")}</SelectItem>
                         {suppliers.map((s) => (
                           <SelectItem key={s.id} value={String(s.id)}>
                             {s.name}
@@ -135,7 +138,7 @@ const PurchaseReportFilters: React.FC<PurchaseReportFiltersProps> = ({
                 name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>الحالة</FormLabel>
+                    <FormLabel>{t("statusLabel")}</FormLabel>
                     <Select
                       value={field.value ?? ""}
                       onValueChange={field.onChange}
@@ -143,14 +146,14 @@ const PurchaseReportFilters: React.FC<PurchaseReportFiltersProps> = ({
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="جميع الحالات" />
+                          <SelectValue placeholder={t("allStatusesPlaceholder")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value=" ">جميع الحالات</SelectItem>
-                        <SelectItem value="received">تم الاستلام</SelectItem>
-                        <SelectItem value="pending">معلق</SelectItem>
-                        <SelectItem value="ordered">تم الطلب</SelectItem>
+                        <SelectItem value=" ">{t("allStatusesPlaceholder")}</SelectItem>
+                        <SelectItem value="received">{t("statusReceived")}</SelectItem>
+                        <SelectItem value="pending">{t("statusPending")}</SelectItem>
+                        <SelectItem value="ordered">{t("statusOrdered")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -160,7 +163,7 @@ const PurchaseReportFilters: React.FC<PurchaseReportFiltersProps> = ({
             </div>
 
             {/* Actions */}
-            <div className="flex gap-2 pt-0 md:ml-auto md:pt-0">
+            <div className="flex gap-2 pt-0 md:me-auto md:pt-0">
               <Button
                 type="submit"
                 disabled={isLoading}
@@ -171,7 +174,7 @@ const PurchaseReportFilters: React.FC<PurchaseReportFiltersProps> = ({
                 ) : (
                   <Filter size={16} />
                 )}
-                تطبيق
+                {t("applyButton")}
               </Button>
               <Button
                 type="button"
@@ -181,7 +184,7 @@ const PurchaseReportFilters: React.FC<PurchaseReportFiltersProps> = ({
                 className="gap-2 px-6"
               >
                 <X size={16} />
-                مسح
+                {tCommon("clear")}
               </Button>
             </div>
           </div>

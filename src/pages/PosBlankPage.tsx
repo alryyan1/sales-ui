@@ -23,6 +23,7 @@ import {
   Chip,
 } from "@mui/material";
 import { CloudUploadIcon, FileText, SearchIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import RequestQuoteIcon from "@mui/icons-material/RequestQuote";
@@ -48,6 +49,7 @@ import ExpenseFormModal from "@/components/admin/expenses/ExpenseFormModal";
 import { PdfViewerDialog } from "@/components/common/PdfViewerDialog";
 import SalesReturnDialog from "@/components/sales/SalesReturnDialog";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { useAuthorization } from "@/hooks/useAuthorization";
 import ExpiryProductsDialog, { PurchaseItem } from "@/components/pos/ExpiryProductsDialog";
 import TopSellingProductsDialog from "@/components/pos/TopSellingProductsDialog";
@@ -122,6 +124,8 @@ interface Shift {
 }
 
 const PosBlankPage: React.FC = () => {
+  const { t } = useTranslation("pos");
+  const { language, direction } = useLanguage();
   const { user } = useAuth();
   const { getSetting } = useSettings();
   const { hasPermission } = useAuthorization();
@@ -301,7 +305,7 @@ const PosBlankPage: React.FC = () => {
       setProductOptions([]);
       return;
     }
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       setProductSearchLoading(true);
       const showExpired = getSetting("pos_show_expired_products", false);
       const showOutOfStock = getSetting("pos_show_out_of_stock_products", false);
@@ -338,18 +342,18 @@ const PosBlankPage: React.FC = () => {
         .catch(() => setProductOptions([]))
         .finally(() => setProductSearchLoading(false));
     }, 300);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [productInputValue, user?.warehouse_id, getSetting, selectedSale?.is_quote]);
 
   // Handle Package addition from TopAppBar
   const handleAddPackageToSale = useCallback(
     async (pkg: Package) => {
       if (!selectedSale) {
-        toast.error("اختر عملية بيع أولاً");
+        toast.error(t("selectSaleFirstToast"));
         return;
       }
       if (!pkg.items || pkg.items.length === 0) {
-        toast.error("هذه المجموعة فارغة");
+        toast.error(t("packageEmpty"));
         return;
       }
       try {
@@ -371,7 +375,7 @@ const PosBlankPage: React.FC = () => {
             );
           }
         }
-        toast.success(`تم إضافة مجموعة "${pkg.name}" بنجاح`);
+        toast.success(t("packageAddedSuccess", { name: pkg.name }));
         window.dispatchEvent(
           new CustomEvent("package-addition-status", {
             detail: { isAdding: false, success: true },
@@ -410,7 +414,7 @@ const PosBlankPage: React.FC = () => {
       if (!selectedSale?.id) return;
 
       if (!client && (selectedSale.payments?.length ?? 0) > 0) {
-        toast.error("لا يمكن إزالة العميل لوجود مدفوعات مرتبطة بالبيع");
+        toast.error(t("cannotRemoveClientHasPayments"));
         return;
       }
 
@@ -431,7 +435,7 @@ const PosBlankPage: React.FC = () => {
         setSales((prev) =>
           prev.map((s) => (s.id === updated.id ? updated : s)),
         );
-        toast.success(client ? "تم تحديث العميل" : "تم إلغاء العميل");
+        toast.success(client ? t("clientUpdatedToast") : t("clientRemovedToast"));
       } catch (err) {
         toast.error(saleService.getErrorMessage(err));
       }
@@ -448,7 +452,7 @@ const PosBlankPage: React.FC = () => {
       const updated = await saleService.updateSale(selectedSale.id, { sale_date: date });
       setSelectedSale(updated);
       setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
-      toast.success("تم تحديث تاريخ الفاتورة");
+      toast.success(t("saleDateUpdatedToast"));
     } catch (err) {
       toast.error(saleService.getErrorMessage(err));
     } finally {
@@ -469,11 +473,11 @@ const PosBlankPage: React.FC = () => {
     if (due <= 0) return;
     const amount = Number(newPaymentAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
-      toast.error("أدخل مبلغاً صحيحاً");
+      toast.error(t("enterValidAmountToast"));
       return;
     }
     if (amount > due) {
-      toast.error("المبلغ أكبر من المتبقي");
+      toast.error(t("amountExceedsRemainingToast"));
       return;
     }
     try {
@@ -495,7 +499,7 @@ const PosBlankPage: React.FC = () => {
       setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
       syncSaleToFirestore(updated);
       setNewPaymentAmount("");
-      toast.success("تمت إضافة الدفعة");
+      toast.success(t("paymentAddedToast"));
     } catch (err) {
       toast.error(saleService.getErrorMessage(err));
     } finally {
@@ -544,7 +548,7 @@ const PosBlankPage: React.FC = () => {
         setSales((prev) =>
           prev.map((s) => (s.id === updated.id ? updated : s)),
         );
-        toast.success("تم حذف الدفعة");
+        toast.success(t("paymentDeletedToast"));
       } catch (err) {
         toast.error(saleService.getErrorMessage(err));
       } finally {
@@ -564,7 +568,7 @@ const PosBlankPage: React.FC = () => {
       return;
     const qty = parseFloat(batchQuantity);
     if (isNaN(qty) || qty <= 0) {
-      toast.error("يرجى إدخال كمية صالحة");
+      toast.error(t("enterValidQuantityToast"));
       return;
     }
 
@@ -589,7 +593,7 @@ const PosBlankPage: React.FC = () => {
       }
 
       if (successCount > 0) {
-        toast.success(`تم تحديث ${successCount} صنف بنجاح`);
+        toast.success(t("itemsUpdatedSuccessCount", { count: successCount }));
         // Refresh the specific sale to update the UI
         const updated = await saleService.getSale(selectedSale.id);
         setSelectedSale(updated);
@@ -601,7 +605,7 @@ const PosBlankPage: React.FC = () => {
         setBatchQuantity("");
       }
       if (failCount > 0) {
-        toast.error(`فشل تحديث ${failCount} صنف`);
+        toast.error(t("itemsUpdateFailedCount", { count: failCount }));
       }
     } catch (err) {
       toast.error(saleService.getErrorMessage(err));
@@ -621,7 +625,7 @@ const PosBlankPage: React.FC = () => {
           Number(selectedSale.paid_amount ?? 0),
         );
     if (due <= 0) {
-      toast.info("البيع مدفوع بالكامل");
+      toast.info(t("saleFullyPaidInfo"));
       return;
     }
     try {
@@ -645,7 +649,7 @@ const PosBlankPage: React.FC = () => {
       setSelectedSale(updated);
       setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
       syncSaleToFirestore(updated);
-      toast.success("تم التسديد بالكامل");
+      toast.success(t("fullPaymentCompletedToast"));
     } catch (err) {
       toast.error(saleService.getErrorMessage(err));
     } finally {
@@ -670,7 +674,7 @@ const PosBlankPage: React.FC = () => {
         setSales((prev) =>
           prev.map((s) => (s.id === updated.id ? updated : s)),
         );
-        toast.success("تم تحديث الكمية");
+        toast.success(t("quantityUpdated"));
       } catch (err) {
         toast.error(saleService.getErrorMessage(err));
       }
@@ -695,7 +699,7 @@ const PosBlankPage: React.FC = () => {
         setSales((prev) =>
           prev.map((s) => (s.id === updated.id ? updated : s)),
         );
-        toast.success("تم تحديث السعر");
+        toast.success(t("priceUpdatedToast"));
       } catch (err) {
         toast.error(saleService.getErrorMessage(err));
       }
@@ -706,14 +710,14 @@ const PosBlankPage: React.FC = () => {
   const handleAddProductToSale = useCallback(
     async (product: Product) => {
       if (!selectedSale) {
-        toast.error("اختر عملية بيع أولاً");
+        toast.error(t("selectSaleFirstToast"));
         return;
       }
 
       const total = Number(selectedSale.total_amount ?? 0);
       const paid = Number(selectedSale.paid_amount ?? 0);
       if (total > 0 && total === paid) {
-        toast.error("لا يمكن إضافة منتجات لعملية بيع مدفوعة بالكامل");
+        toast.error(t("cannotAddProductsFullyPaid"));
         return;
       }
 
@@ -735,7 +739,7 @@ const PosBlankPage: React.FC = () => {
             prev.map((s) => (s.id === res.sale.id ? res.sale : s)),
           );
         }
-        toast.success("تمت إضافة المنتج");
+        toast.success(t("productAddedToast"));
         setSelectedProduct(null);
         setProductInputValue("");
         setTimeout(() => productInputRef.current?.focus(), 0);
@@ -773,10 +777,10 @@ const PosBlankPage: React.FC = () => {
         } else if (list.length === 1) {
           await handleAddProductToSale(list[0]);
         } else {
-          toast.error("لم يتم العثور على منتج بهذا الباركود");
+          toast.error(t("productNotFoundByBarcode"));
         }
       } catch {
-        toast.error("لم يتم العثور على منتج بهذا الباركود");
+        toast.error(t("productNotFoundByBarcode"));
       } finally {
         setAddProductLoading(false);
       }
@@ -791,10 +795,10 @@ const PosBlankPage: React.FC = () => {
       const res = await apiClient.post("/shifts/open");
       const d = res.data.data ?? res.data;
       setShift({ ...d, is_open: true });
-      toast.success("تم فتح الوردية");
+      toast.success(t("shiftOpened"));
     } catch (err) {
       console.error("Failed to open shift:", err);
-      toast.error("فشل فتح الوردية");
+      toast.error(t("shiftOpenFailed"));
     } finally {
       setShiftLoading(false);
     }
@@ -803,7 +807,7 @@ const PosBlankPage: React.FC = () => {
   const handleSearchSaleById = useCallback(async () => {
     const id = Number(saleSearchInput.trim());
     if (!id || !Number.isFinite(id)) {
-      toast.error("أدخل رقم فاتورة صحيح");
+      toast.error(t("enterValidInvoiceNumberToast"));
       return;
     }
     setSaleSearchLoading(true);
@@ -812,7 +816,7 @@ const PosBlankPage: React.FC = () => {
       setSelectedSale(sale);
       setSaleSearchInput("");
     } catch {
-      toast.error("لا توجد فاتورة بهذا الرقم");
+      toast.error(t("noInvoiceWithThisNumber"));
     } finally {
       setSaleSearchLoading(false);
     }
@@ -831,7 +835,7 @@ const PosBlankPage: React.FC = () => {
           .map((s) => s.id)
           .filter((id): id is number => id != null);
         toast.custom(
-          (t) => (
+          (toastId) => (
             <Paper
               elevation={3}
               sx={{
@@ -851,19 +855,19 @@ const PosBlankPage: React.FC = () => {
                 }}
               >
                 <Typography fontWeight={600} sx={{ color: "black", flex: 1 }}>
-                  لا يمكن إغلاق الوردية
+                  {t("cannotCloseShiftTitle")}
                   <br />
                   <Typography
                     component="span"
                     variant="caption"
                     sx={{ color: "error.main" }}
                   >
-                    توجد مبيعات غير مسددة
+                    {t("unpaidSalesExist")}
                   </Typography>
                 </Typography>
                 <IconButton
                   size="small"
-                  onClick={() => toast.dismiss(t)}
+                  onClick={() => toast.dismiss(toastId)}
                   sx={{ mt: -0.5, mr: -0.5 }}
                 >
                   <CloseIcon fontSize="small" />
@@ -874,7 +878,7 @@ const PosBlankPage: React.FC = () => {
                 color="text.secondary"
                 sx={{ mb: 1.5 }}
               >
-                ({unpaidSales.length}) عملية: #{saleIds.join(", #")}
+                {t("unpaidSalesCountPrefix", { count: unpaidSales.length })} #{saleIds.join(", #")}
               </Typography>
               <Stack direction="row" flexWrap="wrap" gap={0.75}>
                 {unpaidSales.map((sale) => (
@@ -884,10 +888,10 @@ const PosBlankPage: React.FC = () => {
                     variant="outlined"
                     onClick={() => {
                       setSelectedSale(sale);
-                      toast.dismiss(t);
+                      toast.dismiss(toastId);
                     }}
                   >
-                    بيع #{sale.id}
+                    {t("saleHashShort", { id: sale.id })}
                   </Button>
                 ))}
               </Stack>
@@ -906,7 +910,7 @@ const PosBlankPage: React.FC = () => {
       const closedShiftStats = closedShiftData?.stats ?? undefined;
 
       // Check for WhatsApp status in meta (Removed from API, moved to upload step)
-      toast.success("تم إغلاق الوردية");
+      toast.success(t("shiftClosed"));
 
       // Automatically generate & upload all PDFs to Firebase
       // Pass the fresh stats from the API response so Firestore doesn't get zeros
@@ -922,8 +926,8 @@ const PosBlankPage: React.FC = () => {
         // alert(errorMessage)
         toast.error(errorMessage)
       }else{
-        
-        toast.error("فشل إغلاق الوردية");
+
+        toast.error(t("shiftCloseFailed"));
       }
       
     } finally {
@@ -936,8 +940,8 @@ const PosBlankPage: React.FC = () => {
   // Focus product autocomplete when a sale is selected
   useEffect(() => {
     if (!selectedSale) return;
-    const t = setTimeout(() => productInputRef.current?.focus(), 0);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => productInputRef.current?.focus(), 0);
+    return () => clearTimeout(timer);
   }, [selectedSale?.id]);
 
   // Calculate totals for current shift (legacy local calculation - now using shift.stats from backend)
@@ -975,7 +979,7 @@ const PosBlankPage: React.FC = () => {
         setExpiryItems(res.data.data || []);
       } catch (err) {
         console.error("Failed to fetch expiry products:", err);
-        toast.error("فشل تحميل المنتجات");
+        toast.error(t("failedToLoadProducts"));
         setExpiryItems([]);
       } finally {
         setExpiryItemsLoading(false);
@@ -1024,16 +1028,16 @@ const PosBlankPage: React.FC = () => {
   const handleAddExpiryProductToCart = useCallback(
     async (productId: number, productName: string) => {
       if (!selectedSale) {
-        toast.error("الرجاء اختيار عملية بيع أولاً");
+        toast.error(t("selectSaleFirstPolite"));
         return;
       }
       try {
         const product = await productService.getProduct(productId);
         await handleAddProductToSale(product);
-        toast.success(`تمت إضافة ${productName} إلى السلة`);
+        toast.success(t("productAddedToCartNamed", { name: productName }));
       } catch (err) {
         console.error("Failed to add product:", err);
-        toast.error("فشل إضافة المنتج");
+        toast.error(t("addProductFailedToast"));
       }
     },
     [selectedSale, handleAddProductToSale],
@@ -1044,7 +1048,7 @@ const PosBlankPage: React.FC = () => {
       try {
         setExpiryItemsLoading(true);
         await reportService.moveExpiredProduct(purchaseItemId);
-        toast.success("تم نقل المنتج بنجاح وتحديث المخزون");
+        toast.success(t("moveProductSuccess"));
 
         // Refresh the dialog list
         if (expiryDialogType) {
@@ -1054,7 +1058,7 @@ const PosBlankPage: React.FC = () => {
         fetchExpiryCounts();
       } catch (err: any) {
         toast.error(
-          err.response?.data?.message || err.message || "فشل نقل المنتج",
+          err.response?.data?.message || err.message || t("moveProductFailed"),
         );
       } finally {
         setExpiryItemsLoading(false);
@@ -1069,9 +1073,9 @@ const PosBlankPage: React.FC = () => {
       const updated = await saleService.toggleQuote(selectedSale.id);
       setSelectedSale(updated);
       setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
-      toast.success(updated.is_quote ? "تم التحويل لوضع التسعيره" : "تم التحويل لفاتورة عادية");
+      toast.success(updated.is_quote ? t("convertedToQuote") : t("convertedToInvoice"));
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || "فشل تغيير وضع التسعيره");
+      toast.error(err?.response?.data?.message || t("quoteModeChangeFailed"));
     }
   }, [selectedSale]);
 
@@ -1083,9 +1087,9 @@ const PosBlankPage: React.FC = () => {
       const updated = await saleService.exportToFinance(selectedSale.id);
       setSelectedSale(updated);
       setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
-      toast.success("تم إرسال القيد إلى النظام المالي");
+      toast.success(t("journalEntrySent"));
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || "فشل التصدير إلى النظام المالي");
+      toast.error(err?.response?.data?.message || t("journalExportFailed"));
     } finally {
       setIsExportingToFinance(false);
     }
@@ -1098,7 +1102,7 @@ const PosBlankPage: React.FC = () => {
         client_id: null,
         notes: null,
       });
-      toast.success("تم إنشاء عملية بيع جديدة");
+      toast.success(t("newSaleCreatedToast"));
       setSelectedSale(created);
       const list = await fetchSales();
       const updated = list.find((s) => s.id === created.id) ?? created;
@@ -1133,16 +1137,16 @@ const PosBlankPage: React.FC = () => {
 
   const handleRemoveAllSaleItems = useCallback(async () => {
     if (!selectedSale?.items?.length) {
-      toast.info("لا توجد عناصر في البيع");
+      toast.info(t("noItemsInCurrentSaleToast"));
       return;
     }
     if ((selectedSale.payments?.length ?? 0) > 0) {
-      toast.error("لا يمكن إزالة الأصناف عند وجود مدفوعات");
+      toast.error(t("cannotRemoveItemsHasPayments"));
       return;
     }
     if (
       !window.confirm(
-        "إزالة كل الأصناف من عملية البيع؟ سيتم إرجاع الكميات للمخزون.",
+        t("confirmRemoveAllItems"),
       )
     )
       return;
@@ -1158,7 +1162,7 @@ const PosBlankPage: React.FC = () => {
       const updated = await saleService.getSale(selectedSale.id);
       setSelectedSale(updated);
       setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
-      toast.success("تمت إزالة كل الأصناف");
+      toast.success(t("allItemsRemovedToast"));
     } catch (err) {
       toast.error(saleService.getErrorMessage(err));
     } finally {
@@ -1170,17 +1174,17 @@ const PosBlankPage: React.FC = () => {
   const handleDeleteSale = useCallback(
     async (sale: Sale) => {
       if ((sale.payments?.length ?? 0) > 0) {
-        toast.error("لا يمكن حذف الفاتورة لوجود مدفوعات مرتبطة بها");
+        toast.error(t("cannotDeleteSaleHasPayments"));
         return;
       }
-      if (!window.confirm(`هل أنت متأكد من حذف الفاتورة رقم ${sale.number}؟ لا يمكن التراجع عن هذه العملية.`))
+      if (!window.confirm(t("confirmDeleteInvoiceNumber", { number: sale.number })))
         return;
       try {
         setDeletingSaleId(sale.id);
         await saleService.deleteSale(sale.id);
         setSales((prev) => prev.filter((s) => s.id !== sale.id));
         setSelectedSale((prev) => (prev?.id === sale.id ? null : prev));
-        toast.success("تم حذف الفاتورة بنجاح");
+        toast.success(t("saleDeletedSuccessfully"));
       } catch (err) {
         toast.error(saleService.getErrorMessage(err));
       } finally {
@@ -1206,7 +1210,7 @@ const PosBlankPage: React.FC = () => {
       setThermalPdfDialogOpen(true);
     } catch (err) {
       console.error("Failed to load thermal invoice:", err);
-      toast.error("فشل تحميل فاتورة الحراري");
+      toast.error(t("failedToLoadThermalInvoice"));
     } finally {
       setThermalPdfLoading(false);
     }
@@ -1236,7 +1240,7 @@ const PosBlankPage: React.FC = () => {
       setA4PdfDialogOpen(true);
     } catch (err) {
       console.error("Failed to load A4 invoice:", err);
-      toast.error("فشل تحميل فاتورة A4");
+      toast.error(t("failedToLoadA4Invoice"));
     } finally {
       setA4PdfLoading(false);
     }
@@ -1279,9 +1283,9 @@ const PosBlankPage: React.FC = () => {
     try {
       const r = await saleReminderService.setReminder(selectedSale.id, days);
       setReminderDate(r.remind_at);
-      toast.success(`تم تعيين التذكير بعد ${days} أيام`);
+      toast.success(t("reminderSetAfterDays", { days }));
     } catch {
-      toast.error("فشل في تعيين التذكير");
+      toast.error(t("reminderSetFailed"));
     } finally {
       setReminderLoading(false);
     }
@@ -1293,9 +1297,9 @@ const PosBlankPage: React.FC = () => {
     try {
       await saleReminderService.removeReminder(selectedSale.id);
       setReminderDate(null);
-      toast.success("تم إلغاء التذكير");
+      toast.success(t("reminderCancelled"));
     } catch {
-      toast.error("فشل في إلغاء التذكير");
+      toast.error(t("reminderCancelFailed"));
     } finally {
       setReminderLoading(false);
     }
@@ -1328,7 +1332,7 @@ const PosBlankPage: React.FC = () => {
     }
 
     if (!phone) {
-      toast.error("لا يوجد رقم هاتف للعميل");
+      toast.error(t("noClientPhone"));
       return;
     }
 
@@ -1339,7 +1343,7 @@ const PosBlankPage: React.FC = () => {
       const filename = `invoice_${selectedSale.id}.pdf`;
 
       // Step 1 — fetch the PDF blob from the backend
-      toast.loading("جاري تحميل الفاتورة...", { id: toastId });
+      toast.loading(t("loadingInvoice"), { id: toastId });
       const pdfResponse = await apiClient.get(
         `/sales/${selectedSale.id}/a4-invoice-pdf/view`,
         { responseType: "blob" },
@@ -1347,12 +1351,12 @@ const PosBlankPage: React.FC = () => {
       const pdfBlob = new Blob([pdfResponse.data], { type: "application/pdf" });
 
       // Step 2 — upload to Firebase Storage under invoices/{collection}/
-      toast.loading("جاري رفع الفاتورة إلى Firebase...", { id: toastId });
+      toast.loading(t("uploadingToFirebase"), { id: toastId });
       const storagePath = `invoices/${firebaseCollectionName}/${filename}`;
       const downloadUrl = await uploadFileToFirebase(pdfBlob, storagePath);
 
       // Step 3 — send WhatsApp template with the Firebase download URL
-      toast.loading("جاري إرسال الواتساب...", { id: toastId });
+      toast.loading(t("sendingWhatsapp"), { id: toastId });
       await apiClient.post("/admin/whatsapp-cloud/send-template", {
         to: phone,
         template_name: "invoice_ar",
@@ -1382,10 +1386,10 @@ const PosBlankPage: React.FC = () => {
         ],
       });
 
-      toast.success("✅ تم إرسال الفاتورة عبر واتساب بنجاح", { id: toastId, duration: 4000 });
+      toast.success(`✅ ${t("invoiceSentViaWhatsapp")}`, { id: toastId, duration: 4000 });
     } catch (err) {
       console.error("WhatsApp send error:", err);
-      toast.error("فشل إرسال الفاتورة عبر واتساب", { id: toastId });
+      toast.error(t("invoiceWhatsappSendFailed"), { id: toastId });
     } finally {
       setWhatsAppLoading(false);
     }
@@ -1442,7 +1446,7 @@ const PosBlankPage: React.FC = () => {
 
           // Run upload pipeline in background with step-by-step toast updates
           (async () => {
-            const toastId = toast.loading("⏳ جاري تحضير تقارير الوردية...");
+            const toastId = toast.loading(t("preparingShiftReportsToast"));
             const urls: {
               mainUrl?: string;
               costUrl?: string;
@@ -1452,7 +1456,7 @@ const PosBlankPage: React.FC = () => {
 
             // 1. Upload main shift report
             try {
-              toast.loading("📊 جاري رفع تقرير المبيعات (1/4)...", {
+              toast.loading(t("uploadingSalesReportStep"), {
                 id: toastId,
               });
               urls.mainUrl = await uploadFileToFirebase(
@@ -1460,11 +1464,11 @@ const PosBlankPage: React.FC = () => {
                 `${basePath}/shift_report.pdf`,
               );
               toast.loading(
-                "✅ تقرير المبيعات — تم | ⏳ جاري رفع تقرير المصروفات (2/4)...",
+                t("salesReportDoneUploadingExpensesStep"),
                 { id: toastId },
               );
             } catch {
-              toast.loading("⚠️ فشل تقرير المبيعات | جاري المتابعة...", {
+              toast.loading(t("salesReportFailedContinuing"), {
                 id: toastId,
               });
             }
@@ -1477,17 +1481,17 @@ const PosBlankPage: React.FC = () => {
                   `${basePath}/cost_report.pdf`,
                 );
                 toast.loading(
-                  "✅ تقرير المصروفات — تم | ⏳ جاري رفع الأصناف المباعة (3/4)...",
+                  t("expensesReportDoneUploadingSoldItemsStep"),
                   { id: toastId },
                 );
               } catch {
-                toast.loading("⚠️ فشل تقرير المصروفات | جاري المتابعة...", {
+                toast.loading(t("expensesReportFailedContinuing"), {
                   id: toastId,
                 });
               }
             } else {
               toast.loading(
-                "⏭️ لا توجد مصروفات — تخطي | ⏳ جاري رفع الأصناف المباعة (3/4)...",
+                t("noExpensesSkippingSoldItemsStep"),
                 { id: toastId },
               );
             }
@@ -1500,17 +1504,17 @@ const PosBlankPage: React.FC = () => {
                   `${basePath}/sold_items_report.pdf`,
                 );
                 toast.loading(
-                  "✅ الأصناف المباعة — تم | ⏳ جاري رفع المردودات (4/4)...",
+                  t("soldItemsDoneUploadingReturnsStep"),
                   { id: toastId },
                 );
               } catch {
-                toast.loading("⚠️ فشل الأصناف المباعة | جاري المتابعة...", {
+                toast.loading(t("soldItemsFailedContinuing"), {
                   id: toastId,
                 });
               }
             } else {
               toast.loading(
-                "⏭️ لا توجد أصناف — تخطي | ⏳ جاري رفع المردودات (4/4)...",
+                t("noItemsSkippingReturnsStep"),
                 { id: toastId },
               );
             }
@@ -1523,7 +1527,7 @@ const PosBlankPage: React.FC = () => {
                   `${basePath}/returns_report.pdf`,
                 );
               } catch {
-                toast.loading("⚠️ فشل تقرير المردودات | جاري الحفظ...", {
+                toast.loading(t("returnsReportFailedSaving"), {
                   id: toastId,
                 });
               }
@@ -1531,7 +1535,7 @@ const PosBlankPage: React.FC = () => {
 
             // 5. Save to Firestore and 6. Notify
             try {
-              toast.loading("☁️ جاري حفظ البيانات في Firestore...", {
+              toast.loading(t("savingToFirestoreToast"), {
                 id: toastId,
               });
               await saveShiftToFirestore(
@@ -1550,7 +1554,7 @@ const PosBlankPage: React.FC = () => {
                 firebaseCollectionName,
               );
 
-              toast.loading("📱 جاري إرسال إشعارات الإغلاق...", {
+              toast.loading(t("sendingClosingNotificationsToast"), {
                 id: toastId,
               });
               const notifyRes = await apiClient.post(
@@ -1560,25 +1564,25 @@ const PosBlankPage: React.FC = () => {
 
               if (notifyData?.whatsapp_status === "success") {
                 toast.success(
-                  "✅ تم رفع التقارير، حفظ البيانات، وإرسال الواتساب بنجاح!",
+                  t("allReportsUploadedWhatsappSent"),
                   { id: toastId, duration: 5000 },
                 );
               } else if (notifyData?.whatsapp_status === "failed") {
-                toast.warning("⚠️ تم رفع التقارير، لكن فشل إرسال الواتساب", {
+                toast.warning(t("reportsUploadedWhatsappFailed"), {
                   id: toastId,
-                  description: notifyData.whatsapp_message || "خطأ غير معروف",
+                  description: notifyData.whatsapp_message || t("unknownErrorText"),
                   duration: 8000,
                 });
               } else {
                 toast.success(
-                  "✅ تم رفع جميع التقارير وحفظ بيانات الوردية بنجاح!",
+                  t("allReportsAndShiftDataSaved"),
                   { id: toastId, duration: 5000 },
                 );
               }
             } catch (err: unknown) {
               console.error("Firestore/Notify Error:", err);
               toast.error(
-                "⚠️ تم رفع الملفات لكن حدث خطأ أثناء الحفظ أو الإشعار",
+                t("filesUploadedButErrorSavingOrNotifying"),
                 { id: toastId, duration: 5000 },
               );
             }
@@ -1586,7 +1590,7 @@ const PosBlankPage: React.FC = () => {
         }
       } catch (err) {
         console.error("Failed to load shift report PDF:", err);
-        toast.error("فشل تحميل تقرير الوردية PDF");
+        toast.error(t("shiftReportPdfLoadFailed"));
       } finally {
         setShiftPdfLoading(false);
       }
@@ -1606,7 +1610,7 @@ const PosBlankPage: React.FC = () => {
     async (item: SaleItem) => {
       if (!selectedSale || item.id == null) return;
       if ((selectedSale.payments?.length ?? 0) > 0) {
-        toast.error("لا يمكن حذف الأصناف عند وجود مدفوعات");
+        toast.error(t("cannotDeleteItemsHasPayments"));
         return;
       }
       try {
@@ -1617,7 +1621,7 @@ const PosBlankPage: React.FC = () => {
         setSales((prev) =>
           prev.map((s) => (s.id === updated.id ? updated : s)),
         );
-        toast.success("تم حذف الصنف");
+        toast.success(t("itemDeletedToast"));
       } catch (err) {
         toast.error(saleService.getErrorMessage(err));
       } finally {
@@ -1631,11 +1635,11 @@ const PosBlankPage: React.FC = () => {
     if (!selectedSale?.id) return;
     const num = Number(discountValue);
     if (!Number.isFinite(num) || num < 0) {
-      toast.error("أدخل قيمة خصم صحيحة");
+      toast.error(t("enterValidDiscountToast"));
       return;
     }
     if (discountType === "percentage" && (num > 100 || num < 0)) {
-      toast.error("النسبة المئوية بين 0 و 100");
+      toast.error(t("percentageBetween0And100"));
       return;
     }
     try {
@@ -1647,7 +1651,7 @@ const PosBlankPage: React.FC = () => {
       setSelectedSale(updated);
       setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
       setDiscountValue("");
-      toast.success("تم تطبيق الخصم");
+      toast.success(t("discountApplied"));
     } catch (err) {
       toast.error(saleService.getErrorMessage(err));
     } finally {
@@ -1666,7 +1670,7 @@ const PosBlankPage: React.FC = () => {
       setSelectedSale(updated);
       setSales((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
       setDiscountValue("");
-      toast.success("تم إلغاء الخصم");
+      toast.success(t("discountRemovedToast"));
     } catch (err) {
       toast.error(saleService.getErrorMessage(err));
     } finally {
@@ -1676,6 +1680,7 @@ const PosBlankPage: React.FC = () => {
 
   return (
     <Box
+      dir={direction}
       sx={{
         height: "calc(100vh - 100px)",
         display: "flex",
@@ -1717,7 +1722,7 @@ const PosBlankPage: React.FC = () => {
             size="small"
             color="primary"
             disabled={!shift?.id || shiftPdfLoading}
-            title="رفع التقرير ومزامنة البيانات"
+            title={t("syncReportTooltip")}
             sx={{
               border: "1px solid",
               borderColor: "divider",
@@ -1749,7 +1754,7 @@ const PosBlankPage: React.FC = () => {
                   color: "text.secondary",
                 }}
               >
-                ملخص وردية #{shift.id}
+                {t("shiftSummaryHash", { id: shift.id })}
               </Button>
               <Popover
                 open={summaryOpen}
@@ -1771,16 +1776,16 @@ const PosBlankPage: React.FC = () => {
                   >
                     <Stack gap={0.5}>
                       <Typography variant="subtitle2" fontWeight={700}>
-                        وردية #{shift.id}
+                        {t("shiftHash", { id: shift.id })}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {shift.user_name && `فتح بواسطة: ${shift.user_name}`}
+                        {shift.user_name && t("openedByLabel", { name: shift.user_name })}
                       </Typography>
                     </Stack>
                     <Stack gap={0.5} alignItems="flex-end">
                       <Typography variant="caption" color="text.secondary">
                         {shift.opened_at &&
-                          new Date(shift.opened_at).toLocaleString("ar-EG", {
+                          new Date(shift.opened_at).toLocaleString(language === "ar" ? "ar-EG" : "en-US", {
                             dateStyle: "short",
                             timeStyle: "short",
                           })}
@@ -1808,8 +1813,8 @@ const PosBlankPage: React.FC = () => {
                       sx={{ textTransform: "none", fontWeight: 600 }}
                     >
                       {shiftPdfLoading
-                        ? "جاري التحميل..."
-                        : "تقرير الوردية PDF"}
+                        ? t("loadingEllipsis")
+                        : t("shiftReportPdf")}
                     </Button>
                   </Box>
                 </Stack>
@@ -1823,14 +1828,14 @@ const PosBlankPage: React.FC = () => {
             onClick={() => setSalesReturnDialogOpen(true)}
             sx={{ textTransform: "none", fontWeight: 600 }}
           >
-            إرجاع مبيعات
+            {t("salesReturnButton")}
           </Button>
 
           {/* Sale ID search */}
           <Box sx={{ width: 140 }}>
             <TextField
               size="small"
-              placeholder="بحث برقم "
+              placeholder={t("searchByNumberPlaceholder")}
               value={saleSearchInput}
               onChange={(e) => setSaleSearchInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearchSaleById()}
@@ -1892,7 +1897,7 @@ const PosBlankPage: React.FC = () => {
                         prev as React.MutableRefObject<HTMLInputElement | null>
                       ).current = el;
                   }}
-                  placeholder="ابحث عن منتج أو الباركود..."
+                  placeholder={t("searchProductOrBarcodePlaceholder")}
                   size="small"
                   InputProps={{
                     ...params.InputProps,
@@ -1910,9 +1915,9 @@ const PosBlankPage: React.FC = () => {
                       ? (() => {
                         const showExpired = getSetting("pos_show_expired_products", false);
                         const showOutOfStock = getSetting("pos_show_out_of_stock_products", false);
-                        if (!showExpired && !showOutOfStock) return "المنتجات المنتهية أو التي نفد مخزونها مخفية";
-                        if (!showExpired) return "المنتجات المنتهية مخفية";
-                        if (!showOutOfStock) return "المنتجات التي نفد مخزونها مخفية";
+                        if (!showExpired && !showOutOfStock) return t("hiddenExpiredAndOutOfStockHelper");
+                        if (!showExpired) return t("hiddenExpiredHelper");
+                        if (!showOutOfStock) return t("hiddenOutOfStockHelper");
                         return undefined;
                       })()
                       : undefined
@@ -1968,7 +1973,7 @@ const PosBlankPage: React.FC = () => {
                             }
                             fontWeight="bold"
                           >
-                            {`الكمية: ${formatNumber(
+                            {`${t("quantityColonLabel")} ${formatNumber(
                               option.current_stock_quantity ??
                               option.stock_quantity ??
                               0,
@@ -1987,7 +1992,7 @@ const PosBlankPage: React.FC = () => {
                         {option.last_sale_price_per_sellable_unit != null ? (
                           <Stack direction="row" spacing={0.4} alignItems="center">
                             <Typography variant="caption" color="text.secondary">
-                              {`السعر: ${formatNumber(Number(option.last_sale_price_per_sellable_unit))}`}
+                              {`${t("priceColonLabel")} ${formatNumber(Number(option.last_sale_price_per_sellable_unit))}`}
                             </Typography>
                             <Typography
                               variant="caption"
@@ -2009,7 +2014,7 @@ const PosBlankPage: React.FC = () => {
 
                         {option.earliest_expiry_date && (
                           <Typography variant="caption" color="warning.dark">
-                            {`ينتهي: ${option.earliest_expiry_date}`}
+                            {`${t("expiresColonLabel")} ${option.earliest_expiry_date}`}
                           </Typography>
                         )}
                       </Box>
@@ -2018,7 +2023,7 @@ const PosBlankPage: React.FC = () => {
                 );
               }}
               noOptionsText={
-                productInputValue.trim() ? "لا توجد نتائج" : "اكتب للبحث"
+                productInputValue.trim() ? t("noResultsText") : t("typeToSearchShort")
               }
               sx={{ width: "100%" }}
             />
@@ -2026,7 +2031,7 @@ const PosBlankPage: React.FC = () => {
 
           {/* Quote mode toggle */}
           {selectedSale && (
-            <Tooltip title={selectedSale.is_quote ? "تحويل لفاتورة عادية" : "تحويل لتسعيره"}>
+            <Tooltip title={selectedSale.is_quote ? t("convertToInvoiceAction") : t("convertToQuoteAction")}>
               <span>
                 <IconButton
                   onClick={handleToggleQuote}
@@ -2039,7 +2044,7 @@ const PosBlankPage: React.FC = () => {
             </Tooltip>
           )}
           {selectedSale?.is_quote && (
-            <Chip label="تسعيره" color="warning" size="small" sx={{ fontWeight: 700 }} />
+            <Chip label={t("quoteChipLabel")} color="warning" size="small" sx={{ fontWeight: 700 }} />
           )}
 
           {/* Export to finance */}
@@ -2047,10 +2052,10 @@ const PosBlankPage: React.FC = () => {
             <Tooltip
               title={
                 selectedSale.finance_export_error
-                  ? `فشل آخر تصدير: ${selectedSale.finance_export_error}`
+                  ? t("lastExportFailedPrefix", { error: selectedSale.finance_export_error })
                   : selectedSale.finance_exported_at
-                  ? "تم التصدير — اضغط لإعادة الإرسال"
-                  : "تصدير إلى النظام المالي"
+                  ? t("exportedClickToResend")
+                  : t("exportToFinanceAction")
               }
             >
               <span>
@@ -2093,7 +2098,7 @@ const PosBlankPage: React.FC = () => {
             {createSaleLoading ? (
               <CircularProgress size={20} color="inherit" />
             ) : (
-              "بيع جديد"
+              t("newSale")
             )}
           </Button>
 
@@ -2108,7 +2113,7 @@ const PosBlankPage: React.FC = () => {
               borderRadius: 2,
             }}
           >
-            إضافة مصروف
+            {t("addExpenseButton")}
           </Button>
 
           {/* Open / Close shift button */}
@@ -2126,9 +2131,9 @@ const PosBlankPage: React.FC = () => {
             {shiftLoading ? (
               <CircularProgress size={20} color="inherit" />
             ) : isShiftOpen ? (
-              "إغلاق وردية"
+              t("closeShiftButton")
             ) : (
-              "فتح وردية"
+              t("openShiftButton")
             )}
           </Button>
         </Toolbar>
@@ -2178,7 +2183,7 @@ const PosBlankPage: React.FC = () => {
                 }}
               >
                 <Typography variant="body1" fontWeight={700}>
-                  تنبيه: لم يتم تعيين مخزن لحسابك. يرجى التواصل مع المسؤول لتعيين مخزن لتتمكن من استخدام نقطة البيع.
+                  {t("noWarehouseAssignedWarning")}
                 </Typography>
               </Box>
             )}
@@ -2207,14 +2212,14 @@ const PosBlankPage: React.FC = () => {
                       color="text.secondary"
                       sx={{ fontWeight: 600 }}
                     >
-                      عناصر البيع #{selectedSale.id}
+                      {t("saleItemsHash", { id: selectedSale.id })}
                     </Typography>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       {selectedSale.items && selectedSale.items.length > 0 && (
                         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mr: 1 }}>
                           <TextField
                             size="small"
-                            placeholder="الكمية للكل..."
+                            placeholder={t("quantityForAllPlaceholder")}
                             type="number"
                             value={batchQuantity}
                             onChange={(e) => setBatchQuantity(e.target.value)}
@@ -2230,7 +2235,7 @@ const PosBlankPage: React.FC = () => {
                             onClick={handleBatchQuantityUpdate}
                             disabled={isBatchUpdating || !batchQuantity || (selectedSale.payments?.length ?? 0) > 0}
                           >
-                            {isBatchUpdating ? <CircularProgress size={20} color="inherit" /> : "تحديث الكل"}
+                            {isBatchUpdating ? <CircularProgress size={20} color="inherit" /> : t("updateAllButton")}
                           </Button>
                         </Box>
                       )}
@@ -2245,9 +2250,9 @@ const PosBlankPage: React.FC = () => {
                             isBatchUpdating ||
                             (selectedSale.payments?.length ?? 0) > 0
                           }
-                          aria-label="إزالة كل الأصناف"
+                          aria-label={t("removeAllItemsButton")}
                         >
-                          {removeAllItemsLoading ? "جاري..." : "إزالة كل الأصناف"}
+                          {removeAllItemsLoading ? t("loadingShort") : t("removeAllItemsButton")}
                         </Button>
                       )}
                       {canDeleteSale && (
@@ -2260,9 +2265,9 @@ const PosBlankPage: React.FC = () => {
                             deletingSaleId === selectedSale.id ||
                             (selectedSale.payments?.length ?? 0) > 0
                           }
-                          aria-label="حذف الفاتورة"
+                          aria-label={t("deleteInvoiceButton")}
                         >
-                          {deletingSaleId === selectedSale.id ? "جاري الحذف..." : "حذف الفاتورة"}
+                          {deletingSaleId === selectedSale.id ? t("deletingEllipsis") : t("deleteInvoiceButton")}
                         </Button>
                       )}
                     </Box>
@@ -2289,8 +2294,7 @@ const PosBlankPage: React.FC = () => {
                   color="text.secondary"
                   sx={{ py: 2, display: "block" }}
                 >
-                  اختر عملية بيع من القائمة لتفعيل إضافة المنتجات (استخدم البحث
-                  في الأعلى)
+                  {t("selectSaleToActivateHelper")}
                 </Typography>
               )}
             </Paper>
@@ -2365,8 +2369,8 @@ const PosBlankPage: React.FC = () => {
         pdfUrl={thermalPdfUrl ?? ""}
         title={
           selectedSale
-            ? `فاتورة حراري #${selectedSale.number ?? selectedSale.id}`
-            : "فاتورة حراري"
+            ? t("thermalInvoiceHash", { number: selectedSale.number ?? selectedSale.id })
+            : t("thermalInvoiceTitle")
         }
       />
 
@@ -2377,8 +2381,8 @@ const PosBlankPage: React.FC = () => {
         pdfUrl={a4PdfUrl ?? ""}
         title={
           selectedSale
-            ? `فاتورة A4 #${selectedSale.number ?? selectedSale.id}`
-            : "فاتورة A4"
+            ? t("a4InvoiceHash", { number: selectedSale.number ?? selectedSale.id })
+            : t("a4InvoiceTitle")
         }
       />
 
@@ -2387,7 +2391,7 @@ const PosBlankPage: React.FC = () => {
         isOpen={shiftPdfDialogOpen && !!shiftPdfUrl}
         onClose={handleCloseShiftPdfDialog}
         pdfUrl={shiftPdfUrl ?? ""}
-        title={shift ? `تقرير الوردية #${shift.id}` : "تقرير الوردية"}
+        title={shift ? t("shiftReportHash", { id: shift.id }) : t("shiftReportTitle")}
       />
 
       {/* Add expense dialog */}
@@ -2396,7 +2400,7 @@ const PosBlankPage: React.FC = () => {
         onClose={() => setExpenseDialogOpen(false)}
         expenseToEdit={null}
         onSaveSuccess={() => {
-          toast.success("تمت إضافة المصروف");
+          toast.success(t("expenseAddedToast"));
           setExpenseDialogOpen(false);
           fetchCurrentShift();
         }}
