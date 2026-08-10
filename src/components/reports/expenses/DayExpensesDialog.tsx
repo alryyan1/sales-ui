@@ -15,6 +15,7 @@ import {
   Chip,
 } from "@mui/material";
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Expense } from "@/services/expenseService";
 import { formatNumber } from "@/constants";
 
@@ -31,6 +32,7 @@ const DayExpensesDialog: React.FC<DayExpensesDialogProps> = ({
   date,
   expenses,
 }) => {
+  const { t } = useTranslation("reports");
   const formattedDate = date || "";
 
   return (
@@ -43,7 +45,7 @@ const DayExpensesDialog: React.FC<DayExpensesDialogProps> = ({
         }}
       >
         <Typography variant="h6">
-          مصروفات يوم {formattedDate}
+          {t("expensesForDayLabel", { date: formattedDate })}
         </Typography>
         <IconButton onClick={onClose} size="small">
           <X size={18} />
@@ -53,22 +55,22 @@ const DayExpensesDialog: React.FC<DayExpensesDialogProps> = ({
         {expenses.length === 0 ? (
           <Box sx={{ py: 4, textAlign: "center" }}>
             <Typography variant="body2" color="text.secondary">
-              لا توجد مصروفات في هذا اليوم
+              {t("noExpensesThisDay")}
             </Typography>
           </Box>
         ) : (
           <Table size="small">
             <TableHead>
               <TableRow sx={{ bgcolor: "grey.100" }}>
-                <TableCell sx={{ fontWeight: "bold" }}>العنوان</TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>القسم</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>{t("titleColumn")}</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>{t("categoryColumn")}</TableCell>
                 <TableCell sx={{ fontWeight: "bold" }} align="center">
-                  المبلغ
+                  {t("amountColumn")}
                 </TableCell>
                 <TableCell sx={{ fontWeight: "bold" }} align="center">
-                  طريقة الدفع
+                  {t("paymentMethodColumn")}
                 </TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>المرجع</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>{t("referenceColumn")}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -83,7 +85,7 @@ const DayExpensesDialog: React.FC<DayExpensesDialogProps> = ({
                   </TableCell>
                   <TableCell align="center">
                     <Chip
-                      label={expense.payment_method === "cash" ? "نقدي" : expense.payment_method === "bank" ? "بنكي" : "—"}
+                      label={expense.payment_method === "cash" ? t("paymentMethodCash") : expense.payment_method === "bank" ? t("bankShortLabel") : "—"}
                       size="small"
                       color={
                         expense.payment_method === "cash"

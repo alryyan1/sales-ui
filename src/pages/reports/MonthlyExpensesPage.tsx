@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, getMonth, getYear } from "date-fns";
+import { arSA, enUS } from "date-fns/locale";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "@/context/LanguageContext";
 
 // MUI Components
 import {
@@ -23,6 +26,7 @@ import {
 // Lucide Icons
 import {
   ArrowLeft,
+  ArrowRight,
   Download,
   FileText,
   FileSpreadsheet,
@@ -38,6 +42,9 @@ import { Expense } from "@/services/expenseService";
 import { webUrl } from "@/constants";
 
 const MonthlyExpensesPage: React.FC = () => {
+  const { t } = useTranslation("reports");
+  const { t: tCommon } = useTranslation("common");
+  const { direction, language } = useLanguage();
   const navigate = useNavigate();
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState<number>(
@@ -74,11 +81,11 @@ const MonthlyExpensesPage: React.FC = () => {
 
       const excelUrl = `${webUrl}/reports/monthly-expenses-excel?${params.toString()}`;
       window.open(excelUrl, "_blank");
-      toast.success("تم فتح ملف Excel في تبويب جديد");
+      toast.success(t("excelOpenedNewTab"));
     } catch (error: any) {
       console.error("Error exporting Excel:", error);
-      toast.error("خطأ", {
-        description: error?.message || "حدث خطأ أثناء تصدير ملف Excel",
+      toast.error(tCommon("error"), {
+        description: error?.message || t("errorExportingExcelDefault"),
       });
     }
   };
@@ -88,28 +95,19 @@ const MonthlyExpensesPage: React.FC = () => {
     try {
       await exportMonthlyExpensesPdf(selectedYear, selectedMonth);
     } catch (error: any) {
-      toast.error("خطأ", {
-        description: error?.message || "حدث خطأ أثناء تصدير ملف PDF",
+      toast.error(tCommon("error"), {
+        description: error?.message || t("errorExportingPdfDefault"),
       });
     } finally {
       setIsPdfLoading(false);
     }
   };
 
-  const monthNames = [
-    "يناير",
-    "فبراير",
-    "مارس",
-    "أبريل",
-    "مايو",
-    "يونيو",
-    "يوليو",
-    "أغسطس",
-    "سبتمبر",
-    "أكتوبر",
-    "نوفمبر",
-    "ديسمبر",
-  ];
+  const monthNames = Array.from({ length: 12 }, (_, i) =>
+    format(new Date(2000, i, 1), "MMMM", {
+      locale: language === "ar" ? arSA : enUS,
+    }),
+  );
 
   const years = Array.from({ length: 10 }, (_, i) => getYear(currentDate) - i);
 
@@ -145,7 +143,7 @@ const MonthlyExpensesPage: React.FC = () => {
                     "&:hover": { bgcolor: "action.hover" },
                   }}
                 >
-                  <ArrowLeft size={18} />
+                  {direction === "rtl" ? <ArrowRight size={18} /> : <ArrowLeft size={18} />}
                 </IconButton>
                 <Box>
                   <Typography
@@ -153,14 +151,14 @@ const MonthlyExpensesPage: React.FC = () => {
                     component="h1"
                     sx={{ fontWeight: 600, lineHeight: 1.3 }}
                   >
-                    تقرير المصروفات الشهري
+                    {t("monthlyExpensesReportTitle")}
                   </Typography>
                   <Typography
                     variant="body2"
                     color="text.secondary"
                     sx={{ mt: 0.25 }}
                   >
-                    عرض وتصدير تقارير المصروفات الشهرية
+                    {t("monthlyExpensesReportSubtitle")}
                   </Typography>
                 </Box>
               </Stack>
@@ -180,7 +178,7 @@ const MonthlyExpensesPage: React.FC = () => {
                     fontWeight: 500,
                   }}
                 >
-                  تصدير Excel
+                  {t("exportExcelButton")}
                 </Button>
                 <Button
                   onClick={handleExportPdf}
@@ -204,7 +202,7 @@ const MonthlyExpensesPage: React.FC = () => {
                     "&:hover": { boxShadow: "0 2px 8px rgba(0,0,0,0.15)" },
                   }}
                 >
-                  تصدير PDF
+                  {t("exportPdf")}
                 </Button>
               </Stack>
             </Stack>
@@ -212,10 +210,10 @@ const MonthlyExpensesPage: React.FC = () => {
             {/* Month/Year Selectors */}
             <Stack direction="row" spacing={2} alignItems="center">
               <FormControl size="small" sx={{ minWidth: 120 }}>
-                <InputLabel>الشهر</InputLabel>
+                <InputLabel>{t("monthLabel")}</InputLabel>
                 <Select
                   value={selectedMonth}
-                  label="الشهر"
+                  label={t("monthLabel")}
                   onChange={(e) => setSelectedMonth(Number(e.target.value))}
                 >
                   {monthNames.map((name, index) => (
@@ -226,10 +224,10 @@ const MonthlyExpensesPage: React.FC = () => {
                 </Select>
               </FormControl>
               <FormControl size="small" sx={{ minWidth: 100 }}>
-                <InputLabel>السنة</InputLabel>
+                <InputLabel>{t("yearLabel")}</InputLabel>
                 <Select
                   value={selectedYear}
-                  label="السنة"
+                  label={t("yearLabel")}
                   onChange={(e) => setSelectedYear(Number(e.target.value))}
                 >
                   {years.map((year) => (
@@ -263,7 +261,7 @@ const MonthlyExpensesPage: React.FC = () => {
                     color="text.secondary"
                     gutterBottom
                   >
-                    إجمالي المصروفات
+                    {t("totalExpensesColumn")}
                   </Typography>
                   <Typography variant="h5" fontWeight="bold">
                     {formatNumber(reportData.month_summary.total)}
@@ -279,7 +277,7 @@ const MonthlyExpensesPage: React.FC = () => {
                     color="text.secondary"
                     gutterBottom
                   >
-                    المصروفات النقدية
+                    {t("cashExpensesLabel")}
                   </Typography>
                   <Typography
                     variant="h5"
@@ -299,7 +297,7 @@ const MonthlyExpensesPage: React.FC = () => {
                     color="text.secondary"
                     gutterBottom
                   >
-                    المصروفات البنكية
+                    {t("bankExpensesLabel")}
                   </Typography>
                   <Typography
                     variant="h5"
@@ -325,7 +323,7 @@ const MonthlyExpensesPage: React.FC = () => {
         {error && (
           <Box sx={{ py: 4, textAlign: "center" }}>
             <Typography variant="body2" color="error">
-              حدث خطأ أثناء تحميل البيانات
+              {t("errorLoadingDataGeneric")}
             </Typography>
           </Box>
         )}

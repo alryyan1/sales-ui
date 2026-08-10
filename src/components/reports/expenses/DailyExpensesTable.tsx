@@ -10,6 +10,7 @@ import {
   Typography,
   Box,
 } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/constants";
 
 interface DailyExpenseEntry {
@@ -29,11 +30,12 @@ const DailyExpensesTable: React.FC<DailyExpensesTableProps> = ({
   dailyBreakdown,
   onDayClick,
 }) => {
+  const { t } = useTranslation("reports");
   if (dailyBreakdown.length === 0) {
     return (
       <Box sx={{ py: 4, textAlign: "center" }}>
         <Typography variant="body2" color="text.secondary">
-          لا توجد مصروفات في هذا الشهر
+          {t("noExpensesThisMonth")}
         </Typography>
       </Box>
     );
@@ -44,15 +46,15 @@ const DailyExpensesTable: React.FC<DailyExpensesTableProps> = ({
       <Table>
         <TableHead>
           <TableRow sx={{ bgcolor: "grey.100" }}>
-            <TableCell sx={{ fontWeight: "bold" }}>التاريخ</TableCell>
+            <TableCell sx={{ fontWeight: "bold" }}>{t("dateColumn")}</TableCell>
             <TableCell sx={{ fontWeight: "bold" }} align="center">
-              إجمالي المصروفات
+              {t("totalExpensesColumn")}
             </TableCell>
             <TableCell sx={{ fontWeight: "bold" }} align="center">
-              نقدي
+              {t("paymentMethodCash")}
             </TableCell>
             <TableCell sx={{ fontWeight: "bold" }} align="center">
-              بنكي
+              {t("bankShortLabel")}
             </TableCell>
           </TableRow>
         </TableHead>

@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { format, getMonth, getYear } from "date-fns";
-import { arSA } from "date-fns/locale";
+import { arSA, enUS } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "@/context/LanguageContext";
 
 // MUI Components
 import {
@@ -26,7 +28,7 @@ import {
 } from "@mui/material";
 
 // Lucide Icons
-import { ArrowLeft, Calendar, FileText, FileSpreadsheet } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calendar, FileText, FileSpreadsheet } from "lucide-react";
 
 import apiClient from "@/lib/axios";
 import { exportMonthlyRevenuePdf } from "@/services/exportService";
@@ -73,7 +75,9 @@ interface MonthlyRevenueReportData {
 }
 
 const DailyIncomeReportPage: React.FC = () => {
-  // const { t, i18n } = useTranslation(["reports", "common", "months"]);
+  const { t } = useTranslation("reports");
+  const { t: tCommon } = useTranslation("common");
+  const { direction, language } = useLanguage();
   const navigate = useNavigate();
   const formatCurrency = useFormatCurrency();
 
@@ -107,14 +111,14 @@ const DailyIncomeReportPage: React.FC = () => {
       setReportData(response.data.data);
     } catch (error: any) {
       console.error("Error fetching monthly sales report:", error);
-      toast.error("خطأ", {
-        description: error?.message || "حدث خطأ أثناء جلب التقرير",
+      toast.error(tCommon("error"), {
+        description: error?.message || t("errorFetchingReportDefault"),
       });
       setReportData(null);
     } finally {
       setIsLoading(false);
     }
-  }, [selectedMonth, selectedYear]);
+  }, [selectedMonth, selectedYear, t, tCommon]);
 
   useEffect(() => {
     fetchReport();
@@ -129,18 +133,18 @@ const DailyIncomeReportPage: React.FC = () => {
   // Generate and Download PDF
   const handleGeneratePdf = async () => {
     if (!reportData) {
-      toast.error("خطأ", { description: "لا توجد بيانات لتصديرها" });
+      toast.error(tCommon("error"), { description: t("noDataToExport") });
       return;
     }
 
     try {
       setIsGeneratingPdf(true);
       await exportMonthlyRevenuePdf(selectedYear, selectedMonth);
-      toast.success("نجح", { description: "تم إنشاء ملف PDF بنجاح" });
+      toast.success(tCommon("success"), { description: t("pdfCreatedSuccess") });
     } catch (error) {
       console.error("Error generating PDF:", error);
-      toast.error("خطأ", {
-        description: "حدث خطأ أثناء إنشاء ملف PDF",
+      toast.error(tCommon("error"), {
+        description: t("errorGeneratingPdfFile"),
       });
     } finally {
       setIsGeneratingPdf(false);
@@ -150,7 +154,7 @@ const DailyIncomeReportPage: React.FC = () => {
   // Export to Excel
   const handleExportExcel = async () => {
     if (!reportData) {
-      toast.error("خطأ", { description: "لا توجد بيانات لتصديرها" });
+      toast.error(tCommon("error"), { description: t("noDataToExport") });
       return;
     }
 
@@ -175,21 +179,21 @@ const DailyIncomeReportPage: React.FC = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `تقرير_المبيعات_الشهري_${reportData.month_name}_${reportData.year}.xlsx`;
+      link.download = `${t("excelFilenameBase")}_${reportData.month_name}_${reportData.year}.xlsx`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      toast.success("نجح", { description: "تم تصدير ملف Excel بنجاح" });
+      toast.success(tCommon("success"), { description: t("excelExportedSuccess") });
     } catch (error: any) {
       console.error("Error exporting Excel:", error);
       const errorMessage =
         error?.response?.status === 404
-          ? "Endpoint غير موجود. يرجى إنشاء /api/reports/monthly-revenue-excel في الـ backend"
+          ? t("endpointNotFoundExcel")
           : error?.response?.data?.message ||
             error?.message ||
-            "حدث خطأ أثناء تصدير ملف Excel";
-      toast.error("خطأ", {
+            t("errorExportingExcelDefault");
+      toast.error(tCommon("error"), {
         description: errorMessage,
       });
     } finally {
@@ -220,7 +224,7 @@ const DailyIncomeReportPage: React.FC = () => {
                 },
               }}
             >
-              <ArrowLeft size={20} />
+              {direction === "rtl" ? <ArrowRight size={20} /> : <ArrowLeft size={20} />}
             </IconButton>
             <Typography
               variant="h4"
@@ -230,17 +234,17 @@ const DailyIncomeReportPage: React.FC = () => {
                 letterSpacing: "-0.02em",
               }}
             >
-              تقرير المبيعات الشهري
+              {t("dailyIncomeReportTitle")}
             </Typography>
           </Stack>
           <Stack
             direction="row"
             alignItems="center"
             spacing={2}
-            sx={{ pl: 7, mt: 1 }}
+            sx={{ paddingInlineStart: (theme) => theme.spacing(7), mt: 1 }}
           >
             <Typography variant="body2" color="text.secondary">
-              عرض تفاصيل المبيعات الشهرية مع التوزيع اليومي.
+              {t("dailyIncomeReportSubtitle")}
             </Typography>
             {reportData && (
               <Stack direction="row" spacing={1.5}>
@@ -261,7 +265,7 @@ const DailyIncomeReportPage: React.FC = () => {
                     fontWeight: 500,
                   }}
                 >
-                  {isExportingExcel ? "جاري التصدير..." : "تصدير Excel"}
+                  {isExportingExcel ? t("exportingEllipsis") : t("exportExcelButton")}
                 </Button>
                 <Button
                   variant="contained"
@@ -280,7 +284,7 @@ const DailyIncomeReportPage: React.FC = () => {
                     fontWeight: 500,
                   }}
                 >
-                  {isGeneratingPdf ? "جاري الإنشاء..." : "تصدير PDF"}
+                  {isGeneratingPdf ? t("generatingEllipsis") : t("exportPdf")}
                 </Button>
               </Stack>
             )}
@@ -312,7 +316,7 @@ const DailyIncomeReportPage: React.FC = () => {
                   {months.map((m) => (
                     <MenuItem key={m} value={String(m)}>
                       {format(new Date(2000, m - 1, 1), "MMMM", {
-                        locale: arSA,
+                        locale: language === "ar" ? arSA : enUS,
                       })}
                     </MenuItem>
                   ))}
@@ -371,7 +375,7 @@ const DailyIncomeReportPage: React.FC = () => {
                     }
                     onClick={() => setChartType("sales_vs_paid")}
                   >
-                    المبيعات مقابل المدفوع
+                    {t("chartSalesVsPaid")}
                   </Button>
                   <Button
                     variant={
@@ -379,7 +383,7 @@ const DailyIncomeReportPage: React.FC = () => {
                     }
                     onClick={() => setChartType("cash_vs_bank")}
                   >
-                    النقدي مقابل البنكي
+                    {t("chartCashVsBank")}
                   </Button>
                   <Button
                     variant={
@@ -387,7 +391,7 @@ const DailyIncomeReportPage: React.FC = () => {
                     }
                     onClick={() => setChartType("expense_vs_net")}
                   >
-                    المصروفات مقابل الصافي
+                    {t("chartExpenseVsNet")}
                   </Button>
                 </Stack>
 
@@ -406,8 +410,8 @@ const DailyIncomeReportPage: React.FC = () => {
                         <YAxis />
                         <Tooltip
                           wrapperStyle={{
-                            direction: "rtl",
-                            textAlign: "right",
+                            direction,
+                            textAlign: direction === "rtl" ? "right" : "left",
                           }}
                           formatter={(value: number) => formatCurrency(value)}
                           labelFormatter={(label) =>
@@ -417,13 +421,13 @@ const DailyIncomeReportPage: React.FC = () => {
                         <Legend />
                         <Bar
                           dataKey="total_sales"
-                          name="المبيعات"
+                          name={t("salesLegend")}
                           fill="#1976d2"
                           radius={[4, 4, 0, 0]}
                         />
                         <Bar
                           dataKey="total_paid"
-                          name="المدفوع"
+                          name={t("totalPaidLabel")}
                           fill="#2e7d32"
                           radius={[4, 4, 0, 0]}
                         />
@@ -441,8 +445,8 @@ const DailyIncomeReportPage: React.FC = () => {
                         <YAxis />
                         <Tooltip
                           wrapperStyle={{
-                            direction: "rtl",
-                            textAlign: "right",
+                            direction,
+                            textAlign: direction === "rtl" ? "right" : "left",
                           }}
                           formatter={(value: number) => formatCurrency(value)}
                           labelFormatter={(label) =>
@@ -452,13 +456,13 @@ const DailyIncomeReportPage: React.FC = () => {
                         <Legend />
                         <Bar
                           dataKey="total_cash"
-                          name="النقدي"
+                          name={t("cashLegend")}
                           fill="#ed6c02"
                           radius={[4, 4, 0, 0]}
                         />
                         <Bar
                           dataKey="total_bank"
-                          name="البنكي"
+                          name={t("bankLegend")}
                           fill="#9c27b0"
                           radius={[4, 4, 0, 0]}
                         />
@@ -476,8 +480,8 @@ const DailyIncomeReportPage: React.FC = () => {
                         <YAxis />
                         <Tooltip
                           wrapperStyle={{
-                            direction: "rtl",
-                            textAlign: "right",
+                            direction,
+                            textAlign: direction === "rtl" ? "right" : "left",
                           }}
                           formatter={(value: number) => formatCurrency(value)}
                           labelFormatter={(label) =>
@@ -488,14 +492,14 @@ const DailyIncomeReportPage: React.FC = () => {
                         <Line
                           type="monotone"
                           dataKey="total_expense"
-                          name="المصروفات"
+                          name={t("expensesLabel")}
                           stroke="#d32f2f"
                           strokeWidth={2}
                         />
                         <Line
                           type="monotone"
                           dataKey="net"
-                          name="الصافي"
+                          name={t("netLegend")}
                           stroke="#2e7d32"
                           strokeWidth={2}
                         />
@@ -528,43 +532,43 @@ const DailyIncomeReportPage: React.FC = () => {
                           bgcolor: "grey.50",
                         }}
                       >
-                        التاريخ
+                        {t("dateColumn")}
                       </TableCell>
                       <TableCell
                         align="center"
                         sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
                       >
-                        إجمالي المبيعات
+                        {t("totalSales")}
                       </TableCell>
                       <TableCell
                         align="center"
                         sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
                       >
-                        إجمالي المدفوع
+                        {t("totalPaidColumn")}
                       </TableCell>
                       <TableCell
                         align="center"
                         sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
                       >
-                        إجمالي النقدي
+                        {t("totalCashColumn")}
                       </TableCell>
                       <TableCell
                         align="center"
                         sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
                       >
-                        إجمالي البنكي
+                        {t("totalBankColumn")}
                       </TableCell>
                       <TableCell
                         align="center"
                         sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
                       >
-                        إجمالي المصروفات
+                        {t("totalExpensesColumn")}
                       </TableCell>
                       <TableCell
                         align="center"
                         sx={{ fontWeight: 600, py: 2.5, fontSize: "1rem" }}
                       >
-                        صافي
+                        {t("netColumn")}
                       </TableCell>
                     </TableRow>
                   </TableHead>
@@ -659,7 +663,7 @@ const DailyIncomeReportPage: React.FC = () => {
                             color: "primary.main",
                           }}
                         >
-                          الإجمالي
+                          {t("totalRowLabel")}
                         </TableCell>
                         <TableCell
                           align="center"
@@ -734,7 +738,7 @@ const DailyIncomeReportPage: React.FC = () => {
                           sx={{ py: 8, fontSize: "1rem" }}
                         >
                           <Typography variant="body2" color="text.secondary">
-                            لا توجد بيانات متاحة لهذا الشهر.
+                            {t("noDataForThisMonth")}
                           </Typography>
                         </TableCell>
                       </TableRow>
@@ -756,10 +760,10 @@ const DailyIncomeReportPage: React.FC = () => {
         >
           <CardContent>
             <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
-              لا توجد بيانات متاحة
+              {t("noDataAvailable")}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              يرجى اختيار شهر وسنة لعرض التقرير.
+              {t("selectMonthYearToViewReport")}
             </Typography>
           </CardContent>
         </Card>

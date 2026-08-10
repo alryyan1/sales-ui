@@ -20,12 +20,16 @@ import {
   ArrowLeft,
   ArrowRight,
 } from "lucide-react";
+import { format } from "date-fns";
+import { arSA, enUS } from "date-fns/locale";
 import apiClient from "@/lib/axios";
 import { ShiftFinancialTable } from "@/components/sales/ShiftFinancialTable";
 import { uploadFileToFirebase } from "@/services/firebaseStorage";
 import { saveShiftToFirestore } from "@/services/firebaseStore";
 import { useSettings } from "@/context/SettingsContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { CloudUpload as CloudUploadIcon } from "lucide-react";
 
 interface ShiftSummary {
@@ -39,32 +43,6 @@ interface ShiftSummary {
 // grouped: { "2026-02-01": [ShiftSummary, ...], ... }
 type GroupedShifts = Record<string, ShiftSummary[]>;
 
-const ARABIC_MONTHS = [
-  "",
-  "يناير",
-  "فبراير",
-  "مارس",
-  "إبريل",
-  "مايو",
-  "يونيو",
-  "يوليو",
-  "أغسطس",
-  "سبتمبر",
-  "أكتوبر",
-  "نوفمبر",
-  "ديسمبر",
-];
-
-const ARABIC_WEEKDAYS = [
-  "الأحد",
-  "الاثنين",
-  "الثلاثاء",
-  "الأربعاء",
-  "الخميس",
-  "الجمعة",
-  "السبت",
-];
-
 function getDaysInMonth(year: number, month: number): string[] {
   const count = new Date(year, month, 0).getDate();
   return Array.from({ length: count }, (_, i) => {
@@ -73,15 +51,19 @@ function getDaysInMonth(year: number, month: number): string[] {
   });
 }
 
-function formatDateAr(dateStr: string): string {
+function formatDateLocalized(dateStr: string, language: "ar" | "en"): string {
   const d = new Date(dateStr);
-  const weekday = ARABIC_WEEKDAYS[d.getDay()];
-  return `${weekday}، ${d.getDate()} ${ARABIC_MONTHS[d.getMonth() + 1]} ${d.getFullYear()}`;
+  return format(d, language === "ar" ? "EEEE، d MMMM yyyy" : "EEEE, d MMMM yyyy", {
+    locale: language === "ar" ? arSA : enUS,
+  });
 }
 
-function formatTime(isoStr: string | null | undefined): string {
+function formatTime(
+  isoStr: string | null | undefined,
+  language: "ar" | "en",
+): string {
   if (!isoStr) return "—";
-  return new Date(isoStr).toLocaleTimeString("ar-EG", {
+  return new Date(isoStr).toLocaleTimeString(language === "ar" ? "ar-EG" : "en-US", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
@@ -89,6 +71,9 @@ function formatTime(isoStr: string | null | undefined): string {
 }
 
 const MonthlyShiftsReportPage: React.FC = () => {
+  const { t } = useTranslation("reports");
+  const { t: tPos } = useTranslation("pos");
+  const { direction, language } = useLanguage();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -117,7 +102,7 @@ const MonthlyShiftsReportPage: React.FC = () => {
     if (uploadingShiftId) return;
 
     const toastId = toast.loading(
-      `⏳ جاري تحضير تقارير الوردية #${shift.id}...`,
+      t("preparingShiftReportsHashToast", { id: shift.id }),
     );
     setUploadingShiftId(shift.id);
 
@@ -158,7 +143,7 @@ const MonthlyShiftsReportPage: React.FC = () => {
       const soldItemsBlob = getBlob(soldItemsRes);
       const returnsBlob = getBlob(returnsRes);
 
-      if (!mainBlob) throw new Error("فشل في تحميل تقرير المبيعات الأساسي");
+      if (!mainBlob) throw new Error(t("failedToLoadMainSalesReport"));
 
       const basePath = `pharmacies/${firebaseCollectionName}/shifts/${shift.id}`;
       const urls: {
@@ -168,7 +153,7 @@ const MonthlyShiftsReportPage: React.FC = () => {
         returnsUrl?: string;
       } = {};
 
-      toast.loading("📊 جاري رفع تقرير المبيعات (1/4)...", { id: toastId });
+      toast.loading(tPos("uploadingSalesReportStep"), { id: toastId });
       urls.mainUrl = await uploadFileToFirebase(
         mainBlob,
         `${basePath}/shift_report.pdf`,
@@ -176,7 +161,7 @@ const MonthlyShiftsReportPage: React.FC = () => {
 
       if (costBlob) {
         toast.loading(
-          "✅ تقرير المبيعات — تم | ⏳ جاري رفع تقرير المصروفات (2/4)...",
+          tPos("salesReportDoneUploadingExpensesStep"),
           { id: toastId },
         );
         urls.costUrl = await uploadFileToFirebase(
@@ -187,7 +172,7 @@ const MonthlyShiftsReportPage: React.FC = () => {
 
       if (soldItemsBlob) {
         toast.loading(
-          "✅ تقرير المصروفات — تم | ⏳ جاري رفع الأصناف المباعة (3/4)...",
+          tPos("expensesReportDoneUploadingSoldItemsStep"),
           { id: toastId },
         );
         urls.soldItemsUrl = await uploadFileToFirebase(
@@ -198,7 +183,7 @@ const MonthlyShiftsReportPage: React.FC = () => {
 
       if (returnsBlob) {
         toast.loading(
-          "✅ الأصناف المباعة — تم | ⏳ جاري رفع المردودات (4/4)...",
+          tPos("soldItemsDoneUploadingReturnsStep"),
           { id: toastId },
         );
         urls.returnsUrl = await uploadFileToFirebase(
@@ -207,7 +192,7 @@ const MonthlyShiftsReportPage: React.FC = () => {
         );
       }
 
-      toast.loading("☁️ جاري حفظ البيانات في Firestore...", { id: toastId });
+      toast.loading(tPos("savingToFirestoreToast"), { id: toastId });
 
       await saveShiftToFirestore(
         {
@@ -225,26 +210,26 @@ const MonthlyShiftsReportPage: React.FC = () => {
         firebaseCollectionName,
       );
 
-      toast.loading("📱 جاري إرسال إشعارات الإغلاق...", { id: toastId });
+      toast.loading(tPos("sendingClosingNotificationsToast"), { id: toastId });
       const notifyRes = await apiClient.post(`/shifts/${shift.id}/notify`);
       const notifyData = notifyRes.data;
 
       if (notifyData?.whatsapp_status === "success") {
         toast.success(
-          "✅ تم رفع التقارير، حفظ البيانات، وإرسال الواتساب بنجاح!",
+          tPos("allReportsUploadedWhatsappSent"),
           {
             id: toastId,
             duration: 5000,
           },
         );
       } else if (notifyData?.whatsapp_status === "failed") {
-        toast.warning("⚠️ تم رفع التقارير، لكن فشل إرسال الواتساب", {
+        toast.warning(tPos("reportsUploadedWhatsappFailed"), {
           id: toastId,
-          description: notifyData.whatsapp_message || "خطأ غير معروف",
+          description: notifyData.whatsapp_message || t("unknownErrorText"),
           duration: 8000,
         });
       } else {
-        toast.success("✅ تم رفع جميع التقارير وحفظ بيانات الوردية بنجاح!", {
+        toast.success(tPos("allReportsAndShiftDataSaved"), {
           id: toastId,
           duration: 5000,
         });
@@ -252,8 +237,8 @@ const MonthlyShiftsReportPage: React.FC = () => {
     } catch (err: unknown) {
       console.error(err);
       const errorMessage =
-        err instanceof Error ? err.message : "حدث خطأ غير معروف";
-      toast.error(`⚠️ فشل الرفع: ${errorMessage}`, {
+        err instanceof Error ? err.message : t("unknownErrorText");
+      toast.error(t("uploadFailedPrefix", { message: errorMessage }), {
         id: toastId,
         duration: 5000,
       });
@@ -275,7 +260,7 @@ const MonthlyShiftsReportPage: React.FC = () => {
         });
         if (mounted) setGrouped(res.data?.data ?? {});
       } catch {
-        if (mounted) setError("فشل في جلب بيانات الورديات");
+        if (mounted) setError(t("failedToFetchShiftsData"));
       } finally {
         if (mounted) setLoading(false);
       }
@@ -284,7 +269,7 @@ const MonthlyShiftsReportPage: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, [year, month]);
+  }, [year, month, t]);
 
   const prevMonth = () => {
     if (month === 1) {
@@ -325,23 +310,23 @@ const MonthlyShiftsReportPage: React.FC = () => {
             <BarChart2 size={28} />
             <Box>
               <Typography variant="h5" fontWeight={700} lineHeight={1.2}>
-                تقرير الورديات الشهري
+                {t("monthlyShiftsReportTitle")}
               </Typography>
               <Typography variant="caption" sx={{ opacity: 0.85 }}>
-                إجمالي الورديات: {totalShifts}
+                {t("totalShiftsColonLabel", { count: totalShifts })}
               </Typography>
             </Box>
           </Stack>
 
           {/* Month Navigator */}
           <Stack direction="row" alignItems="center" gap={1}>
-            <Tooltip title="الشهر التالي">
+            <Tooltip title={t("nextMonthTooltip")}>
               <IconButton
                 size="small"
                 onClick={nextMonth}
                 sx={{ color: "#fff" }}
               >
-                <ArrowLeft size={20} />
+                {direction === "rtl" ? <ArrowLeft size={20} /> : <ArrowRight size={20} />}
               </IconButton>
             </Tooltip>
             <Typography
@@ -355,15 +340,17 @@ const MonthlyShiftsReportPage: React.FC = () => {
                 textAlign: "center",
               }}
             >
-              {ARABIC_MONTHS[month]} {year}
+              {format(new Date(year, month - 1, 1), "MMMM yyyy", {
+                locale: language === "ar" ? arSA : enUS,
+              })}
             </Typography>
-            <Tooltip title="الشهر السابق">
+            <Tooltip title={t("previousMonthTooltip")}>
               <IconButton
                 size="small"
                 onClick={prevMonth}
                 sx={{ color: "#fff" }}
               >
-                <ArrowRight size={20} />
+                {direction === "rtl" ? <ArrowRight size={20} /> : <ArrowLeft size={20} />}
               </IconButton>
             </Tooltip>
           </Stack>
@@ -432,19 +419,19 @@ const MonthlyShiftsReportPage: React.FC = () => {
                         color={hasShifts ? "#1976d2" : "#9e9e9e"}
                       />
                       <Typography fontWeight={600} fontSize={15}>
-                        {formatDateAr(dayStr)}
+                        {formatDateLocalized(dayStr, language)}
                       </Typography>
                     </Stack>
                     {hasShifts ? (
                       <Chip
-                        label={`${shifts.length} وردية`}
+                        label={t("shiftsCountBadge", { count: shifts.length })}
                         size="small"
                         color="primary"
                         variant="outlined"
                       />
                     ) : (
                       <Chip
-                        label="لا توجد ورديات"
+                        label={t("noShiftsLabel")}
                         size="small"
                         variant="outlined"
                       />
@@ -491,7 +478,7 @@ const MonthlyShiftsReportPage: React.FC = () => {
                                 gap={1}
                               >
                                 <Typography fontWeight={600} variant="body2">
-                                  وردية #{shift.id}
+                                  {tPos("shiftHash", { id: shift.id })}
                                 </Typography>
                                 <Typography
                                   variant="caption"
@@ -509,23 +496,23 @@ const MonthlyShiftsReportPage: React.FC = () => {
                                   variant="caption"
                                   color="text.secondary"
                                 >
-                                  فتح: {formatTime(shift.opened_at)}
+                                  {t("openedAtLabel")} {formatTime(shift.opened_at, language)}
                                 </Typography>
                                 {shift.closed_at ? (
                                   <Typography
                                     variant="caption"
                                     color="text.secondary"
                                   >
-                                    · إغلاق: {formatTime(shift.closed_at)}
+                                    {t("closedAtLabel")} {formatTime(shift.closed_at, language)}
                                   </Typography>
                                 ) : (
                                   <Chip
-                                    label="مفتوحة"
+                                    label={t("openShiftChipLabel")}
                                     size="small"
                                     color="success"
                                   />
                                 )}
-                                <Tooltip title="رفع إلى Firebase">
+                                <Tooltip title={t("uploadToFirebaseTooltip")}>
                                   <span>
                                     <IconButton
                                       size="small"
@@ -535,7 +522,7 @@ const MonthlyShiftsReportPage: React.FC = () => {
                                         handleUploadToFirebase(e, shift)
                                       }
                                       sx={{
-                                        ml: 1,
+                                        marginInlineEnd: (theme) => theme.spacing(1),
                                         bgcolor: "primary.50",
                                         width: 28,
                                         height: 28,

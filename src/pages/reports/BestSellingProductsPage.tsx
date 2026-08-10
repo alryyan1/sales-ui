@@ -20,9 +20,14 @@ import {
 } from "@/components/ui/table";
 import { Loader2, TrendingUp, Package, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "@/context/LanguageContext";
 import reportService from "@/services/reportService";
 
 const BestSellingProductsPage: React.FC = () => {
+  const { t } = useTranslation("reports");
+  const { t: tCommon } = useTranslation("common");
+  const { direction } = useLanguage();
   const [days, setDays] = useState<number>(30);
   const [limit, setLimit] = useState<number>(10);
 
@@ -32,25 +37,25 @@ const BestSellingProductsPage: React.FC = () => {
   });
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={direction}>
       <div>
         <h1 className="text-3xl font-bold tracking-tight">
-          المنتجات الأكثر مبيعاً
+          {t("bestSellingProductsTitle")}
         </h1>
         <p className="text-muted-foreground mt-2">
-          عرض المنتجات الأكثر مبيعاً خلال فترة زمنية محددة.
+          {t("bestSellingProductsSubtitle")}
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>فلاتر التقرير</CardTitle>
-          <CardDescription>تخصيص البيانات المعروضة في التقرير</CardDescription>
+          <CardTitle>{t("reportFiltersTitle")}</CardTitle>
+          <CardDescription>{t("reportFiltersDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 space-y-2">
-              <Label htmlFor="days">الفترة (بالأيام)</Label>
+              <Label htmlFor="days">{t("periodInDaysLabel")}</Label>
               <Input
                 id="days"
                 type="number"
@@ -61,7 +66,7 @@ const BestSellingProductsPage: React.FC = () => {
               />
             </div>
             <div className="flex-1 space-y-2">
-              <Label htmlFor="limit">عدد المنتجات</Label>
+              <Label htmlFor="limit">{t("productsCountLabel")}</Label>
               <Input
                 id="limit"
                 type="number"
@@ -80,42 +85,42 @@ const BestSellingProductsPage: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-primary" />
-            نتائج التقرير
+            {t("reportResultsTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-10">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">جاري تحميل البيانات...</p>
+              <p className="text-muted-foreground">{t("loadingDataEllipsis")}</p>
             </div>
           ) : isError ? (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>خطأ</AlertTitle>
+              <AlertTitle>{tCommon("error")}</AlertTitle>
               <AlertDescription>
-                حدث خطأ أثناء تحميل البيانات:{" "}
-                {error instanceof Error ? error.message : "خطأ غير معروف"}
+                {t("errorLoadingDataPrefix")}{" "}
+                {error instanceof Error ? error.message : t("unknownErrorText")}
               </AlertDescription>
             </Alert>
           ) : !data || data.length === 0 ? (
             <div className="text-center py-10 text-muted-foreground">
               <Package className="h-12 w-12 mx-auto mb-4 opacity-20" />
-              <p>لا توجد بيانات متاحة لهذه الفترة.</p>
+              <p>{t("noDataForThisPeriod")}</p>
             </div>
           ) : (
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-right">م</TableHead>
-                    <TableHead className="text-right">المنتج</TableHead>
-                    <TableHead className="text-right">التصنيف</TableHead>
-                    <TableHead className="text-right">الكمية المباعة</TableHead>
-                    <TableHead className="text-right">
-                      إجمالي المبيعات
+                    <TableHead className="text-start">{t("rowNumberColumn")}</TableHead>
+                    <TableHead className="text-start">{t("productLabel")}</TableHead>
+                    <TableHead className="text-start">{t("productCategoryColumn")}</TableHead>
+                    <TableHead className="text-start">{t("quantitySoldColumn")}</TableHead>
+                    <TableHead className="text-start">
+                      {t("totalSales")}
                     </TableHead>
-                    <TableHead className="text-right">المخزون الحالي</TableHead>
+                    <TableHead className="text-start">{t("currentStockColumn")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

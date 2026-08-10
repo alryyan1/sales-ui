@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "@/context/LanguageContext";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   AlertCircle,
+  ArrowLeft,
   ArrowRight,
   CalendarDays,
   RefreshCw,
@@ -51,8 +54,8 @@ const StatCard: React.FC<{
   loading?: boolean;
 }> = ({ label, value, icon, color, sign, hint, loading }) => (
   <Card className="relative overflow-hidden bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm">
-    <div className={`absolute right-0 inset-y-0 w-1 ${color}`} />
-    <CardContent className="p-5 pr-6">
+    <div className={`absolute start-0 inset-y-0 w-1 ${color}`} />
+    <CardContent className="p-5 ps-6">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
@@ -79,6 +82,9 @@ const StatCard: React.FC<{
 );
 
 const ProfitOverviewPage: React.FC = () => {
+  const { t } = useTranslation("reports");
+  const { t: tCommon } = useTranslation("common");
+  const { direction } = useLanguage();
   const navigate = useNavigate();
 
   const [startDate, setStartDate] = useState(firstOfMonthISO());
@@ -98,7 +104,7 @@ const ProfitOverviewPage: React.FC = () => {
     } catch (e) {
       const m = getErrorMessage(e);
       setError(m);
-      toast.error("خطأ", { description: m });
+      toast.error(tCommon("error"), { description: m });
     } finally {
       setLoading(false);
     }
@@ -111,7 +117,7 @@ const ProfitOverviewPage: React.FC = () => {
   const isProfit = (data?.profit ?? 0) >= 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950" dir="rtl">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950" dir={direction}>
       <div className="max-w-5xl mx-auto p-4 md:p-8 space-y-6">
         {/* ━━━━━━━━━━ HEADER ━━━━━━━━━━ */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -122,12 +128,12 @@ const ProfitOverviewPage: React.FC = () => {
               onClick={() => navigate("/dashboard")}
               className="h-9 w-9 border-gray-200 dark:border-gray-800 dark:bg-gray-900 shadow-sm"
             >
-              <ArrowRight className="h-4 w-4 text-gray-500" />
+              {direction === "rtl" ? <ArrowRight className="h-4 w-4 text-gray-500" /> : <ArrowLeft className="h-4 w-4 text-gray-500" />}
             </Button>
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">ملخص الأرباح</h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">{t("profitSummaryTitle")}</h1>
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                إجمالي المبيعات، المدفوع منها، المصروفات، وتكلفة المبيعات للفترة المحددة
+                {t("profitSummarySubtitle")}
               </p>
             </div>
           </div>
@@ -164,7 +170,7 @@ const ProfitOverviewPage: React.FC = () => {
         {error && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>خطأ في جلب البيانات</AlertTitle>
+            <AlertTitle>{t("errorFetchingDataTitle")}</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
@@ -187,7 +193,7 @@ const ProfitOverviewPage: React.FC = () => {
                 <TrendingDown className="h-4 w-4 text-red-500" />
               )}
               <span className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
-                صافي الأرباح
+                {t("netProfitsLabel")}
               </span>
             </div>
             {loading ? (
@@ -202,7 +208,7 @@ const ProfitOverviewPage: React.FC = () => {
               </p>
             )}
             <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-2">
-              المبيعات المدفوعة − المصروفات − تكلفة المبيعات
+              {t("profitFormulaHint")}
             </p>
           </CardContent>
         </Card>
@@ -210,15 +216,15 @@ const ProfitOverviewPage: React.FC = () => {
         {/* ━━━━━━━━━━ BREAKDOWN ━━━━━━━━━━ */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <StatCard
-            label="إجمالي المبيعات"
+            label={t("totalSales")}
             value={data?.total_sales_amount ?? 0}
             icon={<FileText className="h-4 w-4 text-indigo-600" />}
             color="bg-indigo-500"
-            hint="قيمة الفواتير كاملة (شامل الآجل)"
+            hint={t("totalSalesFullHint")}
             loading={loading}
           />
           <StatCard
-            label="إجمالي المبيعات المدفوعة"
+            label={t("totalPaidSalesLabel")}
             value={data?.paid_sales_amount ?? 0}
             icon={<Wallet className="h-4 w-4 text-blue-600" />}
             color="bg-blue-500"
@@ -226,7 +232,7 @@ const ProfitOverviewPage: React.FC = () => {
             loading={loading}
           />
           <StatCard
-            label="المصروفات"
+            label={t("expensesLabel")}
             value={data?.expenses_amount ?? 0}
             icon={<Receipt className="h-4 w-4 text-amber-600" />}
             color="bg-amber-500"
@@ -234,7 +240,7 @@ const ProfitOverviewPage: React.FC = () => {
             loading={loading}
           />
           <StatCard
-            label="تكلفة المبيعات"
+            label={t("costOfSalesLabel")}
             value={data?.cost_of_sales_amount ?? 0}
             icon={<PackageMinus className="h-4 w-4 text-rose-600" />}
             color="bg-rose-500"
@@ -245,7 +251,7 @@ const ProfitOverviewPage: React.FC = () => {
 
         {!loading && data && (
           <p className="text-center text-[11px] text-gray-400 dark:text-gray-500">
-            الفترة: {data.start_date} — {data.end_date}
+            {t("periodRangeLabel", { start: data.start_date, end: data.end_date })}
           </p>
         )}
       </div>

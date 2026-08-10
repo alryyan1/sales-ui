@@ -13,6 +13,8 @@ import {
   Stack,
 } from "@mui/material";
 import { Receipt, ArrowDownRight, ShoppingBag } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "@/context/LanguageContext";
 import { formatNumber } from "@/constants";
 import apiClient from "@/lib/axios";
 import { toast } from "sonner";
@@ -55,6 +57,10 @@ interface ShiftFinancialTableProps {
 export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
   shiftId,
 }) => {
+  const { t } = useTranslation("reports");
+  const { t: tPos } = useTranslation("pos");
+  const { direction } = useLanguage();
+  const startAlign = direction === "rtl" ? "right" : "left";
   const [stats, setStats] = useState<ShiftStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -90,12 +96,12 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
 
     const title =
       type === "cost"
-        ? "المصروفات"
+        ? t("expensesLabel")
         : type === "returns"
-          ? "مردودات المبيعات"
+          ? t("salesReturnsLabel")
           : type === "items"
-            ? "الأصناف المباعة"
-            : "أثر المخزون";
+            ? t("soldItemsLabel")
+            : t("inventoryEffectLabel");
 
     try {
       setLoader(true);
@@ -105,12 +111,12 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       window.open(url, "_blank");
-      toast.success(`تم تحميل تقرير ${title} بنجاح`);
+      toast.success(t("reportDownloadedSuccess", { title }));
 
       // We don't revoke URL here as the new tab needs it; the browser will garbage collect it generally when the tab is closed
     } catch (err) {
       console.error(`Failed to download ${title} PDF`, err);
-      toast.error(`فشل تحميل تقرير ${title}`);
+      toast.error(t("reportDownloadFailed", { title }));
     } finally {
       setLoader(false);
     }
@@ -129,7 +135,7 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
           setStats(res.data.data.stats);
         }
       } catch {
-        if (isMounted) setError("فشل في جلب إحصائيات الوردية");
+        if (isMounted) setError(t("failedToFetchShiftStats"));
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -140,7 +146,7 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [shiftId]);
+  }, [shiftId, t]);
 
   if (loading) {
     return (
@@ -170,23 +176,23 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
       >
         <TableHead>
           <TableRow sx={{ bgcolor: "action.hover" }}>
-            <TableCell align="right" sx={{ fontWeight: 600 }}>
-              البيان
+            <TableCell align={startAlign} sx={{ fontWeight: 600 }}>
+              {t("statementLabel")}
             </TableCell>
             <TableCell align="center" sx={{ fontWeight: 600 }}>
-              نقدي
+              {tPos("paymentMethodCash")}
             </TableCell>
             <TableCell align="center" sx={{ fontWeight: 600 }}>
-              بنكك
+              {tPos("paymentMethodBankak")}
             </TableCell>
             <TableCell align="center" sx={{ fontWeight: 600 }}>
-              فوري
+              {tPos("paymentMethodFawry")}
             </TableCell>
             <TableCell align="center" sx={{ fontWeight: 600 }}>
-              أوكاش
+              {tPos("paymentMethodOcash")}
             </TableCell>
             <TableCell align="center" sx={{ fontWeight: 600 }}>
-              الإجمالي
+              {t("totalRowLabel")}
             </TableCell>
           </TableRow>
         </TableHead>
@@ -196,10 +202,10 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
             <TableCell
               component="th"
               scope="row"
-              align="right"
+              align={startAlign}
               sx={{ fontWeight: 500 }}
             >
-              الإيرادات
+              {t("revenueLabel")}
             </TableCell>
             <TableCell align="center">
               {formatNumber(stats?.sales?.cash ?? 0)}
@@ -223,10 +229,10 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
             <TableCell
               component="th"
               scope="row"
-              align="right"
+              align={startAlign}
               sx={{ fontWeight: 500 }}
             >
-              المصروفات
+              {t("expensesLabel")}
             </TableCell>
             <TableCell align="center">
               {formatNumber(stats?.expenses?.cash ?? 0)}
@@ -253,10 +259,10 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
             <TableCell
               component="th"
               scope="row"
-              align="right"
+              align={startAlign}
               sx={{ fontWeight: 500 }}
             >
-              مردودات المبيعات
+              {t("salesReturnsLabel")}
             </TableCell>
             <TableCell align="center">
               {formatNumber(stats?.returns?.cash ?? 0)}
@@ -283,10 +289,10 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
             <TableCell
               component="th"
               scope="row"
-              align="right"
+              align={startAlign}
               sx={{ fontWeight: 700, color: "primary.main" }}
             >
-              الصافي
+              {t("netLegend")}
             </TableCell>
             <TableCell
               align="center"
@@ -336,7 +342,7 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
           onClick={() => handleDownloadPdf("cost")}
           sx={{ fontWeight: 600 }}
         >
-          {downloadingCost ? "جاري التحميل..." : " المصروفات PDF"}
+          {downloadingCost ? tPos("loadingEllipsis") : `${t("expensesLabel")} PDF`}
         </Button>
 
         <Button
@@ -347,7 +353,7 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
           onClick={() => handleDownloadPdf("returns")}
           sx={{ fontWeight: 600 }}
         >
-          {downloadingReturns ? "جاري التحميل..." : " المردودات PDF"}
+          {downloadingReturns ? tPos("loadingEllipsis") : `${t("salesReturnsLabel")} PDF`}
         </Button>
 
         <Button
@@ -358,7 +364,7 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
           onClick={() => handleDownloadPdf("items")}
           sx={{ fontWeight: 600 }}
         >
-          {downloadingItems ? "جاري التحميل..." : "الأصناف  PDF"}
+          {downloadingItems ? tPos("loadingEllipsis") : `${t("soldItemsLabel")} PDF`}
         </Button>
 
         <Button
@@ -369,7 +375,7 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
           onClick={() => handleDownloadPdf("inventory_effects")}
           sx={{ fontWeight: 600 }}
         >
-          {downloadingInventoryEffects ? "جاري التحميل..." : "أثر المخزون PDF"}
+          {downloadingInventoryEffects ? tPos("loadingEllipsis") : `${t("inventoryEffectLabel")} PDF`}
         </Button>
       </Stack>
     </TableContainer>

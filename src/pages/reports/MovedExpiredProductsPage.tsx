@@ -22,9 +22,11 @@ import {
 } from "lucide-react";
 import reportService from "@/services/reportService";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { formatDate } from "@/constants";
 
 function MovedExpiredProductsPage() {
+  const { t } = useTranslation("reports");
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -47,12 +49,12 @@ function MovedExpiredProductsPage() {
       toast.error(
         err.response?.data?.message ||
           err.message ||
-          "فشل جلب المنتجات التالفة",
+          t("failedToFetchDamagedProducts"),
       );
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, searchQuery]);
+  }, [page, rowsPerPage, searchQuery, t]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -102,11 +104,10 @@ function MovedExpiredProductsPage() {
           </Box>
           <Box>
             <Typography variant="h5" fontWeight="bold">
-              المنتجات التالفة / المنتهية
+              {t("damagedExpiredProductsTitle")}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              قائمة بالمنتجات التي تم إخراجها من المخزون بسبب التلف أو انتهاء
-              الصلاحية
+              {t("damagedExpiredProductsSubtitle")}
             </Typography>
           </Box>
         </Box>
@@ -120,14 +121,14 @@ function MovedExpiredProductsPage() {
             fontWeight: "bold",
           }}
         >
-          طباعة التقرير
+          {t("printReport")}
         </Button>
       </Box>
 
       <Paper sx={{ p: 2, mb: 3 }}>
         <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mb: 2 }}>
           <TextField
-            placeholder="بحث باسم المنتج، الباركود، أو رقم الدفعة..."
+            placeholder={t("searchByNameBarcodeBatchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             size="small"
@@ -146,12 +147,12 @@ function MovedExpiredProductsPage() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>المنتج</TableCell>
-                <TableCell>الباركود</TableCell>
-                <TableCell>الدفعة</TableCell>
-                <TableCell>تاريخ الانتهاء</TableCell>
-                <TableCell align="center">الكمية المسحوبة</TableCell>
-                <TableCell>تاريخ السحب</TableCell>
+                <TableCell>{t("productLabel")}</TableCell>
+                <TableCell>{t("barcodeColumn")}</TableCell>
+                <TableCell>{t("batchColumn")}</TableCell>
+                <TableCell>{t("expiryDateColumn")}</TableCell>
+                <TableCell align="center">{t("withdrawnQuantityColumn")}</TableCell>
+                <TableCell>{t("withdrawalDateColumn")}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -165,7 +166,7 @@ function MovedExpiredProductsPage() {
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
                     <Typography color="text.secondary">
-                      لا توجد منتجات مسحوبة
+                      {t("noWithdrawnProductsFound")}
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -173,7 +174,7 @@ function MovedExpiredProductsPage() {
                 items.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell sx={{ fontWeight: "medium" }}>
-                      {item.product_name || "منتج غير معروف"}
+                      {item.product_name || t("unknownProductLabel")}
                     </TableCell>
                     <TableCell>{item.product_sku || "-"}</TableCell>
                     <TableCell>{item.batch_number || "-"}</TableCell>
@@ -202,9 +203,13 @@ function MovedExpiredProductsPage() {
           page={page}
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
-          labelRowsPerPage="عنصر لكل صفحة:"
+          labelRowsPerPage={t("itemsPerPageLabel")}
           labelDisplayedRows={({ from, to, count }) =>
-            `${from}–${to} من ${count !== -1 ? count : `أكثر من ${to}`}`
+            t("rangeOfCountLabel", {
+              from,
+              to,
+              count: count !== -1 ? count : t("moreThanLabel", { to }),
+            })
           }
         />
       </Paper>
