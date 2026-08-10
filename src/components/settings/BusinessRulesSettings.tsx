@@ -12,17 +12,15 @@ import { SettingsSection } from "./shared/SettingsSection";
 import { SettingsGroup } from "./shared/SettingsGroup";
 import { SwitchField } from "./shared/SwitchField";
 import { AppSettings } from "@/services/settingService";
-import { CURRENCY_DECIMALS } from "@/constants";
+import { CURRENCY_DECIMALS, CURRENCY_LABELS } from "@/constants";
 
 interface BusinessRulesSettingsProps {
   control: Control<Partial<AppSettings>>;
 }
 
-const CURRENCY_OPTIONS = [
-  { value: "SDG", label: "SDG — جنيه سوداني" },
-  { value: "OMR", label: "OMR — ريال عماني" },
-  { value: "USD", label: "USD — دولار أمريكي" },
-] as const;
+const CURRENCY_OPTIONS = (Object.keys(CURRENCY_LABELS) as Array<keyof typeof CURRENCY_LABELS>).map(
+  (value) => ({ value, label: CURRENCY_LABELS[value] })
+);
 
 export const BusinessRulesSettings = ({ control }: BusinessRulesSettingsProps) => {
   return (

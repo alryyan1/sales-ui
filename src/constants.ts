@@ -170,6 +170,13 @@ export const CURRENCY_DECIMALS: Record<string, number> = {
 
 export type CurrencyCode = keyof typeof CURRENCY_DECIMALS;
 
+/** Arabic display labels for the system currency, keyed by ISO code. */
+export const CURRENCY_LABELS: Record<string, string> = {
+  SDG: "SDG — جنيه سوداني",
+  OMR: "OMR — ريال عماني",
+  USD: "USD — دولار أمريكي",
+};
+
 /**
  * App-wide default currency, kept in sync with the "currency_symbol" / "currency_code"
  * settings by SettingsContext as soon as they're fetched (see setDefaultCurrency below).

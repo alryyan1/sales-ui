@@ -17,6 +17,7 @@ import {
   Box,
   CircularProgress,
   TextField,
+  InputAdornment,
   Select,
   MenuItem,
   FormControl,
@@ -128,31 +129,26 @@ const InlineEditCell: React.FC<{
   onNext?: () => void;
   onSave: (value: number | null) => Promise<void>;
 }> = ({ value, highlight = false, forceOpen = false, onOpen, onNext, onSave }) => {
-  const [editing, setEditing] = useState(false);
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState(value != null ? String(value) : "");
   const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Open when forceOpen flips to true from outside
+  // Keep local input in sync with the server value, unless the user is actively typing in it
+  useEffect(() => {
+    if (document.activeElement !== inputRef.current) {
+      setInput(value != null ? String(value) : "");
+    }
+  }, [value]);
+
+  // Move focus here when asked to from outside (e.g. Enter pressed in the previous row)
   useEffect(() => {
     if (forceOpen) {
-      setInput(value != null ? String(value) : "");
-      setEditing(true);
       setTimeout(() => inputRef.current?.select(), 0);
     }
   }, [forceOpen]);
 
-  const startEdit = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setInput(value != null ? String(value) : "");
-    setEditing(true);
-    onOpen?.();
-    setTimeout(() => inputRef.current?.select(), 0);
-  };
-
   const commit = (andNext = false) => {
     const parsed = input.trim() === "" ? null : parseFloat(input);
-    setEditing(false);
     if (andNext) onNext?.();           // move instantly, don't await
     if (parsed === value || (parsed == null && value == null)) return;
     setSaving(true);
@@ -161,46 +157,40 @@ const InlineEditCell: React.FC<{
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") { e.preventDefault(); commit(true); }
-    if (e.key === "Escape") setEditing(false);
+    if (e.key === "Escape") { setInput(value != null ? String(value) : ""); inputRef.current?.blur(); }
   };
 
-  if (editing) {
-    return (
-      <TextField
-        inputRef={inputRef}
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onBlur={() => commit(false)}
-        onKeyDown={handleKeyDown}
-        type="number"
-        size="small"
-        slotProps={{ htmlInput: { step: "0.01" } }}
-        sx={{ width: 90, "& input": { textAlign: "center", py: 0.4, px: 0.5, fontSize: "0.8rem" } }}
-        onClick={(e) => e.stopPropagation()}
-      />
-    );
-  }
-
   return (
-    <Box
-      onClick={startEdit}
-      sx={{ cursor: "text", display: "inline-flex", alignItems: "center", gap: 0.5,
-        px: 0.5, py: 0.2, borderRadius: 1,
-        "&:hover": { bgcolor: "action.hover" },
+    <TextField
+      inputRef={inputRef}
+      value={input}
+      onChange={(e) => setInput(e.target.value)}
+      onFocus={() => onOpen?.()}
+      onBlur={() => commit(false)}
+      onKeyDown={handleKeyDown}
+      type="number"
+      size="small"
+      placeholder="---"
+      slotProps={{
+        htmlInput: { step: "0.01" },
+        input: {
+          endAdornment: saving ? (
+            <InputAdornment position="end">
+              <CircularProgress size={10} thickness={5} />
+            </InputAdornment>
+          ) : undefined,
+        },
       }}
-    >
-      {saving && <CircularProgress size={10} thickness={5} />}
-      {value != null ? (
-        <Typography
-          variant="body2"
-          sx={{ fontWeight: highlight ? 700 : 400, color: highlight ? "primary.main" : "text.primary", fontSize: "0.85rem" }}
-        >
-          {formatNumber(Number(value), 2)}
-        </Typography>
-      ) : (
-        <Typography variant="body2" sx={{ color: "text.disabled", fontSize: "0.78rem" }}>---</Typography>
-      )}
-    </Box>
+      sx={{
+        width: 90,
+        "& input": {
+          textAlign: "center", py: 0.4, px: 0.5, fontSize: "0.8rem",
+          fontWeight: highlight ? 700 : 400,
+          color: highlight ? "primary.main" : "text.primary",
+        },
+      }}
+      onClick={(e) => e.stopPropagation()}
+    />
   );
 };
 
@@ -272,7 +262,8 @@ const ProductRow: React.FC<ProductRowProps> = ({
     : false;
 
   const { getSetting } = useSettings();
-  const colorHighlight = getSetting("product_row_color_highlight", true);
+  const colorHighlight = getSetting("product_row_color_highlight", false);
+  const usdConversionEnabled = Boolean(getSetting("usd_conversion_enabled", true));
 
   const prevStockRef = useRef<number>(stockQty);
   const [animationClass, setAnimationClass] = useState("");
@@ -461,38 +452,40 @@ const ProductRow: React.FC<ProductRowProps> = ({
           </Typography>
         </TableCell>
       )}
-      <TableCell align="center">
-        <Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
-          {(["SDG", "USD"] as const).map((cur) => {
-            const active = product.preferred_currency === cur;
-            const isLastPurchase = !product.preferred_currency && product.last_purchase_currency === cur;
-            return (
-              <Typography
-                key={cur}
-                onClick={(e) => { e.stopPropagation(); onCurrencyChange?.(product.id, active ? null : cur); }}
-                variant="caption"
-                sx={{
-                  cursor: "pointer",
-                  fontWeight: 700,
-                  fontSize: "0.62rem",
-                  px: 0.6,
-                  py: 0.15,
-                  borderRadius: 0.75,
-                  lineHeight: 1.6,
-                  bgcolor: active ? (cur === "USD" ? "success.main" : "info.main") : "action.hover",
-                  color: active ? "#fff" : "text.secondary",
-                  outline: isLastPurchase ? "1.5px solid" : "none",
-                  outlineColor: isLastPurchase ? "error.main" : "transparent",
-                  "&:hover": { opacity: 0.8 },
-                  transition: "all 0.15s",
-                }}
-              >
-                {cur}
-              </Typography>
-            );
-          })}
-        </Stack>
-      </TableCell>
+      {usdConversionEnabled && (
+        <TableCell align="center">
+          <Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
+            {(["SDG", "USD"] as const).map((cur) => {
+              const active = product.preferred_currency === cur;
+              const isLastPurchase = !product.preferred_currency && product.last_purchase_currency === cur;
+              return (
+                <Typography
+                  key={cur}
+                  onClick={(e) => { e.stopPropagation(); onCurrencyChange?.(product.id, active ? null : cur); }}
+                  variant="caption"
+                  sx={{
+                    cursor: "pointer",
+                    fontWeight: 700,
+                    fontSize: "0.62rem",
+                    px: 0.6,
+                    py: 0.15,
+                    borderRadius: 0.75,
+                    lineHeight: 1.6,
+                    bgcolor: active ? (cur === "USD" ? "success.main" : "info.main") : "action.hover",
+                    color: active ? "#fff" : "text.secondary",
+                    outline: isLastPurchase ? "1.5px solid" : "none",
+                    outlineColor: isLastPurchase ? "error.main" : "transparent",
+                    "&:hover": { opacity: 0.8 },
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {cur}
+                </Typography>
+              );
+            })}
+          </Stack>
+        </TableCell>
+      )}
       <TableCell align="center" sx={{ p: 0.5, width: 36 }}>
         <Tooltip title={tCommon("edit")}>
           <IconButton
@@ -820,6 +813,8 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
   sortingLoading,
 }) => {
   const { t } = useTranslation("products");
+  const { getSetting } = useSettings();
+  const usdConversionEnabled = Boolean(getSetting("usd_conversion_enabled", true));
   const vis = vc;
   const [copiedSku, setCopiedSku] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -1132,9 +1127,11 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                     </Box>
                   </TableCell>
                 )}
-                <TableCell align="center" sx={{ whiteSpace: 'nowrap', minWidth: 100 }}>
-                  {t("currencyColumn")}
-                </TableCell>
+                {usdConversionEnabled && (
+                  <TableCell align="center" sx={{ whiteSpace: 'nowrap', minWidth: 100 }}>
+                    {t("currencyColumn")}
+                  </TableCell>
+                )}
                 <TableCell align="center" sx={{ width: 36 }} />
               </TableRow>
             </TableHead>

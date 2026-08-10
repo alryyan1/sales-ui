@@ -40,7 +40,7 @@ import saleReminderService, { DueReminder } from "@/services/saleReminderService
 import packageService, { Package } from "@/services/packageService";
 import { db } from "@/firebase";
 import { collection, limit, onSnapshot, query } from "firebase/firestore";
-import { formatNumber } from "@/constants";
+import { CURRENCY_LABELS, formatNumber } from "@/constants";
 
 const COLLAPSED_DRAWER_WIDTH = 72;
 
@@ -60,6 +60,10 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ onDrawerToggle, isSidebarCollapse
   const [shortcutsDialogOpen, setShortcutsDialogOpen] = React.useState(false);
 
   const isPosPage = location.pathname === "/sales/pos-blank";
+
+  // System currency
+  const currencyCode = getSetting("currency_code", "SDG") as string;
+  const currencyLabel = CURRENCY_LABELS[currencyCode] ?? currencyCode;
 
   // USD to SDG factor
   const usdConversionEnabled = Boolean(getSetting("usd_conversion_enabled", true));
@@ -309,6 +313,19 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ onDrawerToggle, isSidebarCollapse
               </PopoverContent>
             </Popover>
           )}
+
+          {/* System currency */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge
+                variant="outline"
+                className="h-7 items-center gap-1 rounded-md px-2.5 text-xs font-semibold"
+              >
+                {currencyCode}
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>{currencyLabel}</TooltipContent>
+          </Tooltip>
 
           {/* USD conversion factor */}
           {usdConversionEnabled && (

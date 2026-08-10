@@ -100,7 +100,7 @@ const SettingsPage: React.FC = () => {
         firebase_collection_name:
           settings.firebase_collection_name || "none",
         product_row_color_highlight:
-          settings.product_row_color_highlight ?? true,
+          settings.product_row_color_highlight ?? false,
         product_scientific_name_visible:
           settings.product_scientific_name_visible ?? true,
         product_scientific_name_required:

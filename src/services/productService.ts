@@ -544,32 +544,6 @@ const productService = {
     return response.data;
   },
 
-  bulkUpdateUnits: async (unitId: number): Promise<{ message: string }> => {
-    try {
-      const response = await apiClient.post<{ message: string }>(
-        "/products/bulk-update-units",
-        { unit_id: unitId },
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error bulk updating product units:", error);
-      throw error;
-    }
-  },
-
-  bulkUpdateSalePrice: async (percentage: number): Promise<{ message: string; updated_count: number }> => {
-    try {
-      const response = await apiClient.post<{ message: string; updated_count: number }>(
-        "/products/bulk-update-sale-price",
-        { percentage },
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error bulk updating sale prices:", error);
-      throw error;
-    }
-  },
-
   // --- Error Helpers (Imported from axios.ts) ---
   getValidationErrors,
   getErrorMessage,

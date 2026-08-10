@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useProducts } from "../hooks/useProducts";
-import { useSettings } from "../context/SettingsContext";
 import { useLanguage } from "@/context/LanguageContext";
 
 // MUI Components
@@ -20,9 +19,6 @@ import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import Select, { SelectChangeEvent } from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
-import Dialog from "@mui/material/Dialog";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Switch from "@mui/material/Switch";
 import Tabs from "@mui/material/Tabs";
@@ -38,13 +34,9 @@ import {
   Printer,
   FileSpreadsheet,
   FileText,
-  Upload,
   Search,
   Layers,
-  CloudUpload,
   Columns3,
-  RefreshCcw,
-  Percent,
   Package as PackageIcon,
   Edit,
   Trash2,
@@ -61,30 +53,22 @@ import productService, {
 import unitService, { Unit } from "../services/UnitService"; // Import unit service
 import categoryService, { Category } from "../services/CategoryService"; // Import category service
 import exportService, { exportInventoryAuditPdf } from "../services/exportService"; // Import export service
-import { uploadProductsToFirestore } from "../services/firebaseStore"; // Import Firestore service
 import { warehouseService, Warehouse } from "../services/warehouseService";
 
 // Custom Components
 import { ProductsTable } from "../components/products/ProductsTable"; // Use ProductsTable named export
 import ProductFormModal from "../components/products/ProductFormModal"; // Use ProductFormModal
-import ProductImportDialog from "../components/products/ProductImportDialog"; // Import dialog
 import BarcodeLabelPdfDialog from "../components/products/BarcodeLabelPdfDialog";
 import PackageFormModal from "../components/products/PackageFormModal";
 import packageService, { Package } from "../services/packageService";
 import { toast } from "sonner";
-import UnitsPage from "../pages/UnitsPage"; // Import UnitsPage
 import { Button } from "@mui/material";
 
 // Product type is now used directly from productService
 
 const ProductsPage: React.FC = () => {
-  const { getSetting } = useSettings();
   const { direction } = useLanguage();
   const { t } = useTranslation("products");
-  const firebaseCollectionName = getSetting(
-    "firebase_collection_name",
-    "put here the colloection name if not present in the settings",
-  );
   // --- State ---
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
@@ -98,7 +82,6 @@ const ProductsPage: React.FC = () => {
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
   const [selectedWarehouse, setSelectedWarehouse] = useState<number | "">("");
-  const [syncLoading, setSyncLoading] = useState(false);
   const [showOnlyInStock, setShowOnlyInStock] = useState(false);
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [sortBy, setSortBy] = useState<string>("id");
@@ -165,15 +148,7 @@ const ProductsPage: React.FC = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null); // Use Product type directly
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [isUnitsDialogOpen, setIsUnitsDialogOpen] = useState(false);
-  const [isBulkUpdateDialogOpen, setIsBulkUpdateDialogOpen] = useState(false);
-  const [selectedBulkUnit, setSelectedBulkUnit] = useState<number | "">("");
-  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
 
-  const [isBulkSalePriceDialogOpen, setIsBulkSalePriceDialogOpen] = useState(false);
-  const [bulkSalePricePercentage, setBulkSalePricePercentage] = useState<string>("");
-  const [isBulkSalePriceUpdating, setIsBulkSalePriceUpdating] = useState(false);
 
   const [barcodeLabelProduct, setBarcodeLabelProduct] = useState<{ id: number; name: string; sku: string | null } | null>(null);
 
@@ -598,12 +573,6 @@ ${t("copyLabelPrice")} ${product.last_sale_price_per_sellable_unit ? formatCurre
     }
   };
 
-  const handleImportSuccess = () => {
-    // Refresh the products list after successful import
-    queryClient.invalidateQueries({ queryKey: ["products"] });
-    showSnackbar(t("importSuccess"), "success");
-  };
-
   const handleProductCreate = async (data: ProductFormData) => {
     try {
       await productService.createProduct(data);
@@ -615,93 +584,6 @@ ${t("copyLabelPrice")} ${product.last_sale_price_per_sellable_unit ? formatCurre
         "error",
       );
       throw err; // Re-throw to let the table know it failed
-    }
-  };
-
-  const handleSyncToFirestore = async () => {
-    if (
-      !window.confirm(
-        t("confirmSyncFirebase"),
-      )
-    ) {
-      return;
-    }
-
-    try {
-      setSyncLoading(true);
-      showSnackbar(t("syncFetchingInProgress"), "success");
-
-      // 1. Fetch all products (large limit)
-      // Note: adjust limit if you have more than 10000 products
-      const response = await productService.getProducts(
-        1,
-        "",
-        "id",
-        "asc",
-        9999,
-      );
-      const allProducts = response.data;
-
-      if (allProducts.length === 0) {
-        showSnackbar(t("noProductsToSync"), "error");
-        return;
-      }
-
-      // 2. Upload to Firestore
-      const count = await uploadProductsToFirestore(
-        allProducts,
-        firebaseCollectionName,
-      );
-
-      showSnackbar(t("syncSuccessCount", { count }), "success");
-    } catch (err) {
-      console.error("Sync error:", err);
-      showSnackbar(t("syncFailed"), "error");
-    } finally {
-      setSyncLoading(false);
-    }
-  };
-
-  const handleBulkUpdate = async () => {
-    if (!selectedBulkUnit) return;
-    
-    if (!window.confirm(t("confirmBulkUpdateUnits"))) {
-      return;
-    }
-
-    try {
-      setIsBulkUpdating(true);
-      await productService.bulkUpdateUnits(selectedBulkUnit as number);
-      showSnackbar(t("bulkUnitsUpdatedSuccess"), "success");
-      setIsBulkUpdateDialogOpen(false);
-      setSelectedBulkUnit("");
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-    } catch (err) {
-      showSnackbar(err instanceof Error ? err.message : t("unitsUpdateFailed"), "error");
-    } finally {
-      setIsBulkUpdating(false);
-    }
-  };
-
-  const handleBulkUpdateSalePrice = async () => {
-    const pct = parseFloat(bulkSalePricePercentage);
-    if (isNaN(pct) || pct <= 0) return;
-
-    if (!window.confirm(t("confirmBulkPriceIncrease", { pct }))) {
-      return;
-    }
-
-    try {
-      setIsBulkSalePriceUpdating(true);
-      const result = await productService.bulkUpdateSalePrice(pct);
-      showSnackbar(result.message, "success");
-      setIsBulkSalePriceDialogOpen(false);
-      setBulkSalePricePercentage("");
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-    } catch (err) {
-      showSnackbar(err instanceof Error ? err.message : t("salePricesUpdateFailed"), "error");
-    } finally {
-      setIsBulkSalePriceUpdating(false);
     }
   };
 
@@ -775,29 +657,6 @@ ${t("copyLabelPrice")} ${product.last_sale_price_per_sellable_unit ? formatCurre
                 ))}
               </Box>
             </Popover>
-            {/* Sync to Firestore */}
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-              }}
-            >
-              <Tooltip title={t("syncFirebaseTooltip")}>
-                <IconButton
-                  onClick={handleSyncToFirestore}
-                  color="warning" // Warning color to stand out but not primary action
-                  disabled={syncLoading || isLoading}
-                >
-                  {syncLoading ? (
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  ) : (
-                    <CloudUpload className="h-5 w-5" />
-                  )}
-                </IconButton>
-              </Tooltip>
-              <Typography variant="caption">{t("syncLabel")}</Typography>
-            </Box>
 
             {/* Print Products */}
             <Box
@@ -872,25 +731,6 @@ ${t("copyLabelPrice")} ${product.last_sale_price_per_sellable_unit ? formatCurre
               <Typography variant="caption">{t("auditReportLabel")}</Typography>
             </Box>
 
-            {/* Import from File */}
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-              }}
-            >
-              <Tooltip title={t("importFromFileTooltip")}>
-                <IconButton
-                  onClick={() => setIsImportDialogOpen(true)}
-                  color="default"
-                >
-                  <Upload className="h-5 w-5" />
-                </IconButton>
-              </Tooltip>
-              <Typography variant="caption">{t("importLabel")}</Typography>
-            </Box>
-
             {/* Add Product */}
             <Box
               sx={{
@@ -932,63 +772,6 @@ ${t("copyLabelPrice")} ${product.last_sale_price_per_sellable_unit ? formatCurre
                 </IconButton>
               </Tooltip>
               <Typography variant="caption">{t("categoriesLabel")}</Typography>
-            </Box>
-
-            {/* Manage Units */}
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-              }}
-            >
-              <Tooltip title={t("manageUnitsTooltip")}>
-                <IconButton
-                  onClick={() => setIsUnitsDialogOpen(true)}
-                  color="default"
-                >
-                  <Layers className="h-5 w-5" />
-                </IconButton>
-              </Tooltip>
-              <Typography variant="caption">{t("units")}</Typography>
-            </Box>
-
-            {/* Bulk Update Units */}
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-              }}
-            >
-              <Tooltip title={t("bulkUpdateUnitsTooltip")}>
-                <IconButton
-                  onClick={() => setIsBulkUpdateDialogOpen(true)}
-                  color="secondary"
-                >
-                  <RefreshCcw className="h-5 w-5" />
-                </IconButton>
-              </Tooltip>
-              <Typography variant="caption">{t("bulkUpdateLabel")}</Typography>
-            </Box>
-
-            {/* Bulk Update Sale Price */}
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-              }}
-            >
-              <Tooltip title={t("raisePricesTooltip")}>
-                <IconButton
-                  onClick={() => setIsBulkSalePriceDialogOpen(true)}
-                  color="success"
-                >
-                  <Percent className="h-5 w-5" />
-                </IconButton>
-              </Tooltip>
-              <Typography variant="caption">{t("raisePricesLabel")}</Typography>
             </Box>
           </Box>
         </Box>
@@ -1214,11 +997,6 @@ ${t("copyLabelPrice")} ${product.last_sale_price_per_sellable_unit ? formatCurre
           onSaveSuccess={handleSaveSuccess}
           onDeleteSuccess={handleDeleteSuccess}
         />
-        <ProductImportDialog
-          open={isImportDialogOpen}
-          onClose={() => setIsImportDialogOpen(false)}
-          onImportSuccess={handleImportSuccess}
-        />
         <PackageFormModal
           isOpen={isPackageModalOpen}
           onClose={closePackageModal}
@@ -1232,122 +1010,12 @@ ${t("copyLabelPrice")} ${product.last_sale_price_per_sellable_unit ? formatCurre
           onClose={handleSnackbarClose}
           message={snackbar.message}
         />
-        {/* Units Management Dialog */}
-        <Dialog
-          open={isUnitsDialogOpen}
-          onClose={() => setIsUnitsDialogOpen(false)}
-          maxWidth="lg"
-          fullWidth
-        >
-          <DialogContent>
-            <UnitsPage />
-          </DialogContent>
-        </Dialog>
-
-        {/* Bulk Update Units Dialog */}
-        <Dialog
-          open={isBulkUpdateDialogOpen}
-          onClose={() => !isBulkUpdating && setIsBulkUpdateDialogOpen(false)}
-          maxWidth="xs"
-          fullWidth
-        >
-          <DialogTitle sx={{ fontWeight: 600 }}>{t("bulkUpdateUnitsDialogTitle")}</DialogTitle>
-          <DialogContent>
-            <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 3 }}>
-              <Typography variant="body2" color="text.secondary">
-                {t("bulkUpdateUnitsDialogDesc")}
-              </Typography>
-
-              <FormControl fullWidth>
-                <InputLabel>{t("chooseUnitLabel")}</InputLabel>
-                <Select
-                  value={selectedBulkUnit}
-                  onChange={(e) => setSelectedBulkUnit(e.target.value as number)}
-                  label={t("chooseUnitLabel")}
-                  disabled={isBulkUpdating}
-                >
-                  {sellableUnits.map((u) => (
-                    <MenuItem key={u.id} value={u.id}>
-                      {u.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end", mt: 1 }}>
-                <Button
-                  onClick={() => setIsBulkUpdateDialogOpen(false)}
-                  disabled={isBulkUpdating}
-                >
-                  {t("cancel")}
-                </Button>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleBulkUpdate}
-                  disabled={!selectedBulkUnit || isBulkUpdating}
-                  startIcon={isBulkUpdating && <RefreshCcw className="h-4 w-4 animate-spin" />}
-                >
-                  {isBulkUpdating ? t("updatingEllipsis") : t("updateAllButton")}
-                </Button>
-              </Box>
-            </Box>
-          </DialogContent>
-        </Dialog>
         {/* Barcode Label PDF Dialog */}
         <BarcodeLabelPdfDialog
           open={barcodeLabelProduct !== null}
           onClose={() => setBarcodeLabelProduct(null)}
           product={barcodeLabelProduct}
         />
-
-        {/* Bulk Update Sale Price Dialog */}
-        <Dialog
-          open={isBulkSalePriceDialogOpen}
-          onClose={() => !isBulkSalePriceUpdating && setIsBulkSalePriceDialogOpen(false)}
-          maxWidth="xs"
-          fullWidth
-        >
-          <DialogTitle sx={{ fontWeight: 600 }}>{t("raisePricesDialogTitle")}</DialogTitle>
-          <DialogContent>
-            <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 3 }}>
-              <Typography variant="body2" color="text.secondary">
-                {t("raisePricesDialogDesc")}
-              </Typography>
-
-              <TextField
-                fullWidth
-                label={t("increasePercentageLabel")}
-                type="number"
-                value={bulkSalePricePercentage}
-                onChange={(e) => setBulkSalePricePercentage(e.target.value)}
-                disabled={isBulkSalePriceUpdating}
-                inputProps={{ min: 0, step: 0.1 }}
-                InputProps={{
-                  endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                }}
-              />
-
-              <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end", mt: 1 }}>
-                <Button
-                  onClick={() => setIsBulkSalePriceDialogOpen(false)}
-                  disabled={isBulkSalePriceUpdating}
-                >
-                  {t("cancel")}
-                </Button>
-                <Button
-                  variant="contained"
-                  color="success"
-                  onClick={handleBulkUpdateSalePrice}
-                  disabled={!bulkSalePricePercentage || parseFloat(bulkSalePricePercentage) <= 0 || isBulkSalePriceUpdating}
-                  startIcon={isBulkSalePriceUpdating && <RefreshCcw className="h-4 w-4 animate-spin" />}
-                >
-                  {isBulkSalePriceUpdating ? t("updatingEllipsis") : t("applyButton")}
-                </Button>
-              </Box>
-            </Box>
-          </DialogContent>
-        </Dialog>
 
         {/* Add deleteConfirm key */}
       </Box>
