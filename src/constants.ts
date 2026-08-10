@@ -1,23 +1,13 @@
-// export const host = 'sahara-pharma.com'
-export const schema = "http";
-export const host = "127.0.0.1";
-// export const host = "backend.lifcaresd.com";
-// export const host = "app-backend.augersd.com";
-// const hostname = window.location.hostname;
+// Backend connection settings come from Vite env vars (see .env / .env.production)
+// so switching hosts for deployment doesn't require touching source code.
+export const schema = import.meta.env.VITE_API_SCHEMA;
+export const host = import.meta.env.VITE_API_HOST;
+export const projectFolder = import.meta.env.VITE_PROJECT_FOLDER;
 
- //const parts = hostname.split('.')
-// parts[0] = `${parts[0]}-backend`
-// export const host = parts.join('.')
-// console.log(host, 'host')
-export const projectFolder = "sales-api";
-// export const host = 'server1'مركز النعيم
 export function blurForNoramlUsers() {
   // return classname has filter properties
   return "blurForNormalUsers";
 }
-// export const url = `${schema}://${host}/system/${projectFolder}/public/api/`;
-// export const webUrl = `${schema}://${host}/system/${projectFolder}/public/`;
-// export const imagesUrl = `${schema}://${host}/system/${projectFolder}/public/`;
 export const url = `${schema}://${host}/${projectFolder}/public/api`;
 export const webUrl = `${schema}://${host}/${projectFolder}/public`;
 export const imagesUrl = `${schema}://${host}/${projectFolder}/public`;
