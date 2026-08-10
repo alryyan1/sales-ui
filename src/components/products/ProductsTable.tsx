@@ -1,5 +1,6 @@
 // src/components/products/ProductsTable.tsx
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Paper,
   IconButton,
@@ -256,6 +257,8 @@ const ProductRow: React.FC<ProductRowProps> = ({
   onFieldNext,
   isFavorite = false,
 }) => {
+  const { t } = useTranslation("products");
+  const { t: tCommon } = useTranslation("common");
   const stockQty = Number(
     product.current_stock_quantity ?? product.stock_quantity ?? 0,
   );
@@ -360,7 +363,7 @@ const ProductRow: React.FC<ProductRowProps> = ({
           <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center">
             <Typography variant="body2" component="span">{product.sku || "---"}</Typography>
             {product.sku && (
-              <Tooltip title={copiedSku === product.sku ? "تم النسخ" : "نسخ SKU"}>
+              <Tooltip title={copiedSku === product.sku ? t("copiedLabel") : t("copySku")}>
                 <IconButton size="small" onClick={(e) => { e.stopPropagation(); copyToClipboard(product.sku!); }}
                   disabled={isLoading} sx={{ width: 24, height: 24, p: 0 }}>
                   {copiedSku === product.sku
@@ -376,7 +379,7 @@ const ProductRow: React.FC<ProductRowProps> = ({
         <TableCell align="center">
           <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center">
             <Typography variant="body2" fontWeight={600}>{product.name}</Typography>
-            <Tooltip title="طباعة باركود">
+            <Tooltip title={t("printBarcode")}>
               <IconButton
                 size="small"
                 onClick={(e) => { e.stopPropagation(); onBarcodeLabel(product); }}
@@ -413,7 +416,7 @@ const ProductRow: React.FC<ProductRowProps> = ({
           <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center">
             <Typography variant="body1" fontWeight={600}>{formatNumber(stockQty)}</Typography>
             {(isLow || isOutOfStock) && (
-              <Tooltip title={isOutOfStock ? "نفاد المخزون" : "تنبيه: المخزون منخفض"}>
+              <Tooltip title={isOutOfStock ? t("outOfStockTooltip") : t("lowStockWarning")}>
                 <AlertTriangle style={{ width: 16, height: 16,
                   color: isOutOfStock ? "var(--mui-palette-error-main)" : "var(--mui-palette-warning-main)" }} />
               </Tooltip>
@@ -444,7 +447,7 @@ const ProductRow: React.FC<ProductRowProps> = ({
               onSave={(val) => onPriceUpdate?.(product.id, "sale_price", val) ?? Promise.resolve()}
             />
             {product.sale_price != null && (
-              <Tooltip title="سعر البيع مُحدد يدوياً على المنتج">
+              <Tooltip title={t("manualSalePriceTooltip")}>
                 <Tag style={{ width: 13, height: 13, color: "var(--mui-palette-primary-main)" }} />
               </Tooltip>
             )}
@@ -491,7 +494,7 @@ const ProductRow: React.FC<ProductRowProps> = ({
         </Stack>
       </TableCell>
       <TableCell align="center" sx={{ p: 0.5, width: 36 }}>
-        <Tooltip title="تعديل">
+        <Tooltip title={tCommon("edit")}>
           <IconButton
             size="small"
             onClick={(e) => { e.stopPropagation(); onEdit(product); }}
@@ -816,6 +819,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
   onSort,
   sortingLoading,
 }) => {
+  const { t } = useTranslation("products");
   const vis = vc;
   const [copiedSku, setCopiedSku] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -985,14 +989,14 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                     onClick={() => onSort?.('name')}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      اسم المنتج
+                      {t("productName")}
                       {renderSortIcon('name')}
                     </Box>
                   </TableCell>
                 )}
                 {vis.description !== false && (
                   <TableCell align="center" sx={{ minWidth: 150 }}>
-                    الوصف
+                    {t("descriptionColumn")}
                   </TableCell>
                 )}
                 {vis.scientific_name !== false && (
@@ -1006,7 +1010,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                     onClick={() => onSort?.('scientific_name')}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      الاسم العلمي
+                      {t("scientificName")}
                       {renderSortIcon('scientific_name')}
                     </Box>
                   </TableCell>
@@ -1022,7 +1026,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                     onClick={() => onSort?.('category_name')}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      الفئة
+                      {t("categoryColumnShort")}
                       {renderSortIcon('category_name')}
                     </Box>
                   </TableCell>
@@ -1038,7 +1042,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                     onClick={() => onSort?.('sellable_unit_name')}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      وحدة البيع
+                      {t("sellableUnit")}
                       {renderSortIcon('sellable_unit_name')}
                     </Box>
                   </TableCell>
@@ -1054,7 +1058,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                     onClick={() => onSort?.('stocking_unit_name')}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      وحدة التخزين
+                      {t("stockingUnit")}
                       {renderSortIcon('stocking_unit_name')}
                     </Box>
                   </TableCell>
@@ -1070,7 +1074,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                     onClick={() => onSort?.('units_per_stocking_unit')}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      عدد الوحدات
+                      {t("unitsCountColumn")}
                       {renderSortIcon('units_per_stocking_unit')}
                     </Box>
                   </TableCell>
@@ -1083,7 +1087,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                     onClick={() => !sortingLoading && onSort?.('stock_quantity')}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      المخزون
+                      {t("stock")}
                       {renderSortIcon('stock_quantity')}
                     </Box>
                   </TableCell>
@@ -1095,7 +1099,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                     onClick={() => !sortingLoading && onSort?.('latest_cost_per_sellable_unit')}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      تكلفة
+                      {t("costColumn")}
                       {renderSortIcon('latest_cost_per_sellable_unit')}
                     </Box>
                   </TableCell>
@@ -1107,7 +1111,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                     onClick={() => !sortingLoading && onSort?.('suggested_sale_price_per_sellable_unit')}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      سعر البيع
+                      {t("salePrice")}
                       {renderSortIcon('suggested_sale_price_per_sellable_unit')}
                     </Box>
                   </TableCell>
@@ -1123,13 +1127,13 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                     onClick={() => onSort?.('expire_date')}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      الصلاحية
+                      {t("expiryDateColumn")}
                       {renderSortIcon('expire_date')}
                     </Box>
                   </TableCell>
                 )}
                 <TableCell align="center" sx={{ whiteSpace: 'nowrap', minWidth: 100 }}>
-                  العملة
+                  {t("currencyColumn")}
                 </TableCell>
                 <TableCell align="center" sx={{ width: 36 }} />
               </TableRow>
@@ -1150,7 +1154,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                 <TableRow>
                   <TableCell colSpan={13} align="center" sx={{ py: 3 }}>
                     <Typography variant="body1" color="text.secondary">
-                      لا توجد منتجات لعرضها
+                      {t("noProductsToShow")}
                     </Typography>
                   </TableCell>
                 </TableRow>

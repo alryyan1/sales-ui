@@ -1,5 +1,6 @@
 // src/components/common/ConfirmationDialog.tsx
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 // MUI components
 import {
@@ -45,6 +46,7 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   confirmVariant = "destructive",
   isLoading = false,
 }) => {
+  const { t } = useTranslation("common");
   const handleClose = () => {
     if (isLoading) return;
     if (onOpenChange) {
@@ -98,7 +100,7 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
           variant="outlined"
           color="inherit"
         >
-          {cancelText || "إلغاء"}
+          {cancelText || t("cancel")}
         </Button>
         <Button
           onClick={handleConfirm}
@@ -110,7 +112,7 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
             isLoading ? <CircularProgress size={16} color="inherit" /> : null
           }
         >
-          {confirmText || "تأكيد"}
+          {confirmText || t("confirm")}
         </Button>
       </DialogActions>
     </Dialog>

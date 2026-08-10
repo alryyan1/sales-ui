@@ -1,9 +1,10 @@
 // src/components/suppliers/SupplierFormModal.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { Loader2, AlertCircle } from "lucide-react";
 
 import {
@@ -23,22 +24,25 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 import supplierService, { Supplier, SupplierFormData } from "@/services/supplierService";
+import { useLanguage } from "@/context/LanguageContext";
 
-const supplierFormSchema = z.object({
-  name: z.string().min(1, { message: "اسم المورد مطلوب" }),
-  contact_person: z.string().nullable().optional(),
-  email: z
-    .string()
-    .email({ message: "صيغة البريد الإلكتروني غير صحيحة" })
-    .nullable()
-    .or(z.literal(""))
-    .optional(),
-  phone: z.string().nullable().optional(),
-  address: z.string().nullable().optional(),
-  is_client: z.boolean().optional(),
-});
+function createSupplierFormSchema(t: (key: string) => string) {
+  return z.object({
+    name: z.string().min(1, { message: t("nameRequired") }),
+    contact_person: z.string().nullable().optional(),
+    email: z
+      .string()
+      .email({ message: t("invalidEmailFormat") })
+      .nullable()
+      .or(z.literal(""))
+      .optional(),
+    phone: z.string().nullable().optional(),
+    address: z.string().nullable().optional(),
+    is_client: z.boolean().optional(),
+  });
+}
 
-type SupplierFormValues = z.infer<typeof supplierFormSchema>;
+type SupplierFormValues = z.infer<ReturnType<typeof createSupplierFormSchema>>;
 
 const FORM_FIELD_KEYS: (keyof SupplierFormValues)[] = [
   "name",
@@ -64,6 +68,10 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
 }) => {
   const isEditMode = Boolean(supplierToEdit);
   const [serverError, setServerError] = useState<string | null>(null);
+  const { direction } = useLanguage();
+  const { t } = useTranslation("suppliers");
+  const { t: tCommon } = useTranslation("common");
+  const supplierFormSchema = useMemo(() => createSupplierFormSchema(t), [t]);
 
   const {
     handleSubmit,
@@ -124,16 +132,16 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
       } else {
         await supplierService.createSupplier(dataToSend);
       }
-      toast.success("تم الحفظ بنجاح", {
-        description: isEditMode ? "تم تحديث بيانات المورد بنجاح" : "تم إضافة المورد بنجاح",
+      toast.success(t("savedSuccessfully"), {
+        description: isEditMode ? t("supplierUpdatedSuccess") : t("supplierAddedSuccess"),
       });
       onSaveSuccess();
       onClose();
     } catch (err) {
       const generalError = supplierService.getErrorMessage(err);
       const apiErrors = supplierService.getValidationErrors(err);
-      toast.error("تعذر الحفظ", { description: generalError });
-      setServerError(apiErrors ? "يرجى التحقق من الحقول المدخلة." : generalError);
+      toast.error(t("failedToSave"), { description: generalError });
+      setServerError(apiErrors ? t("checkFieldsError") : generalError);
       if (apiErrors) {
         Object.entries(apiErrors).forEach(([field, messages]) => {
           if (FORM_FIELD_KEYS.includes(field as keyof SupplierFormValues)) {
@@ -154,32 +162,32 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
         if (!open && !isSubmitting) onClose();
       }}
     >
-      <DialogContent dir="rtl" className="sm:max-w-lg">
+      <DialogContent dir={direction} className="sm:max-w-lg">
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
           <DialogHeader>
-            <DialogTitle>{isEditMode ? "تعديل مورد" : "إضافة مورد"}</DialogTitle>
+            <DialogTitle>{isEditMode ? t("editSupplierShort") : t("addSupplierShort")}</DialogTitle>
             <DialogDescription>
               {isEditMode
-                ? "حدّث بيانات التواصل الخاصة بهذا المورد."
-                : "أدخل بيانات المورد الجديد. يمكن ربطه بحساب عميل إذا كان يشتري منكم أيضًا."}
+                ? t("updateContactInfoDesc")
+                : t("enterNewSupplierDataDesc")}
             </DialogDescription>
           </DialogHeader>
 
           {serverError && (
             <Alert variant="destructive">
               <AlertCircle className="size-4" />
-              <AlertTitle>تعذر الحفظ</AlertTitle>
+              <AlertTitle>{t("failedToSave")}</AlertTitle>
               <AlertDescription>{serverError}</AlertDescription>
             </Alert>
           )}
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="supplier-name">اسم المورد</Label>
+              <Label htmlFor="supplier-name">{t("nameFieldLabel")}</Label>
               <Input
                 id="supplier-name"
                 autoFocus
-                placeholder="أدخل اسم المورد"
+                placeholder={t("enterSupplierNamePlaceholder")}
                 disabled={isSubmitting}
                 aria-invalid={!!errors.name}
                 {...register("name")}
@@ -188,17 +196,17 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="supplier-contact">مسؤول التواصل</Label>
+              <Label htmlFor="supplier-contact">{t("contactPersonFieldLabel")}</Label>
               <Input
                 id="supplier-contact"
-                placeholder="اسم الشخص المسؤول"
+                placeholder={t("contactPersonPlaceholderShort")}
                 disabled={isSubmitting}
                 {...register("contact_person")}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="supplier-email">البريد الإلكتروني</Label>
+              <Label htmlFor="supplier-email">{t("email")}</Label>
               <Input
                 id="supplier-email"
                 type="email"
@@ -211,7 +219,7 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
             </div>
 
             <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="supplier-phone">رقم الهاتف</Label>
+              <Label htmlFor="supplier-phone">{t("phone")}</Label>
               <Input
                 id="supplier-phone"
                 type="tel"
@@ -222,11 +230,11 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
             </div>
 
             <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="supplier-address">العنوان</Label>
+              <Label htmlFor="supplier-address">{t("address")}</Label>
               <Textarea
                 id="supplier-address"
                 rows={3}
-                placeholder="أدخل عنوان المورد"
+                placeholder={t("enterSupplierAddressPlaceholder")}
                 disabled={isSubmitting}
                 {...register("address")}
               />
@@ -241,9 +249,9 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
             render={({ field }) => (
               <label className="flex cursor-pointer items-start justify-between gap-4 rounded-lg -mx-2 px-2 py-1.5">
                 <div className="space-y-0.5">
-                  <p className="text-sm font-medium text-foreground">هذا المورد عميل أيضًا</p>
+                  <p className="text-sm font-medium text-foreground">{t("supplierIsAlsoClient")}</p>
                   <p className="text-xs text-muted-foreground">
-                    سيتم إنشاء سجل عميل مرتبط لتتبع المبيعات
+                    {t("clientRecordWillBeCreatedDesc")}
                   </p>
                 </div>
                 <Switch
@@ -258,17 +266,17 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
 
           {isEditMode && supplierToEdit?.is_client && (
             <p className="text-xs text-muted-foreground">
-              مرتبط بحساب عميل — يمكن عرض كشف مبيعاته من صفحة المورد
+              {t("linkedToClientAccountHint")}
             </p>
           )}
 
           <DialogFooter>
             <Button type="button" variant="outline" disabled={isSubmitting} onClick={onClose}>
-              إلغاء
+              {tCommon("cancel")}
             </Button>
             <Button type="submit" disabled={isSubmitting} className="min-w-24 gap-2">
               {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-              حفظ
+              {tCommon("save")}
             </Button>
           </DialogFooter>
         </form>

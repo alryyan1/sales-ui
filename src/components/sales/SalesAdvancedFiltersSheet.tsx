@@ -1,6 +1,7 @@
 // src/components/sales/SalesAdvancedFiltersSheet.tsx
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Loader2, User, UserX } from "lucide-react";
 
 import {
@@ -32,6 +33,7 @@ import {
 import clientService, { Client } from "@/services/clientService";
 import apiClient from "@/lib/axios";
 import { useShifts } from "@/hooks/useShifts";
+import { useLanguage } from "@/context/LanguageContext";
 
 export interface SalesAdvancedFilterValues {
   clientId: string;
@@ -55,6 +57,8 @@ export function SalesAdvancedFiltersSheet({
   values,
   onApply,
 }: SalesAdvancedFiltersSheetProps) {
+  const { direction } = useLanguage();
+  const { t } = useTranslation("sales");
   const [draft, setDraft] = useState<SalesAdvancedFilterValues>(values);
   const [clientSearch, setClientSearch] = useState("");
 
@@ -102,21 +106,21 @@ export function SalesAdvancedFiltersSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" dir="rtl" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+      <SheetContent side="left" dir={direction} className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
         <SheetHeader className="border-b px-5 py-4">
-          <SheetTitle className="text-base">فلاتر متقدمة</SheetTitle>
-          <SheetDescription>تصفية المبيعات حسب العميل أو الكاشير أو الوردية</SheetDescription>
+          <SheetTitle className="text-base">{t("advancedFilters")}</SheetTitle>
+          <SheetDescription>{t("advancedFiltersDescription")}</SheetDescription>
         </SheetHeader>
 
         <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
           <div className="space-y-1.5">
-            <Label>العميل</Label>
+            <Label>{t("client")}</Label>
             {draft.clientId ? (
               <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span className="font-medium">{draft.clientName || `عميل #${draft.clientId}`}</span>
+                <span className="font-medium">{draft.clientName || t("clientHash", { id: draft.clientId })}</span>
                 <Button type="button" variant="ghost" size="sm" onClick={() => selectClient(null)}>
                   <UserX className="size-3.5" />
-                  إزالة
+                  {t("remove")}
                 </Button>
               </div>
             ) : (
@@ -124,20 +128,20 @@ export function SalesAdvancedFiltersSheet({
                 <CommandInput
                   value={clientSearch}
                   onValueChange={setClientSearch}
-                  placeholder="ابحث بالاسم أو الهاتف..."
+                  placeholder={t("clientSearchPlaceholder")}
                 />
                 <CommandList className="max-h-48">
                   {clientSearch.trim() === "" ? (
-                    <p className="p-3 text-center text-xs text-muted-foreground">اكتب للبحث عن عميل</p>
+                    <p className="p-3 text-center text-xs text-muted-foreground">{t("typeToSearchClient")}</p>
                   ) : clientResultsQuery.isLoading ? (
                     <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
                       <Loader2 className="size-4 animate-spin" />
-                      جاري البحث...
+                      {t("searching")}
                     </div>
                   ) : (
                     <CommandGroup>
                       {(clientResultsQuery.data ?? []).length === 0 ? (
-                        <CommandEmpty>لا يوجد عملاء مطابقون</CommandEmpty>
+                        <CommandEmpty>{t("noMatchingClients")}</CommandEmpty>
                       ) : (
                         clientResultsQuery.data?.map((c) => (
                           <CommandItem key={c.id} value={String(c.id)} onSelect={() => selectClient(c)}>
@@ -154,16 +158,16 @@ export function SalesAdvancedFiltersSheet({
           </div>
 
           <div className="space-y-1.5">
-            <Label>الكاشير</Label>
+            <Label>{t("cashierColumn")}</Label>
             <Select
               value={draft.userId || "all"}
               onValueChange={(v) => setDraft((p) => ({ ...p, userId: v === "all" ? "" : v }))}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="كل الكاشيرين" />
+                <SelectValue placeholder={t("allCashiers")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">كل الكاشيرين</SelectItem>
+                <SelectItem value="all">{t("allCashiers")}</SelectItem>
                 {(usersQuery.data ?? []).map((u) => (
                   <SelectItem key={u.id} value={String(u.id)}>
                     {u.name}
@@ -175,19 +179,19 @@ export function SalesAdvancedFiltersSheet({
 
           {posMode === "shift" && (
             <div className="space-y-1.5">
-              <Label>الوردية</Label>
+              <Label>{t("shiftLabel")}</Label>
               <Select
                 value={draft.shiftId || "all"}
                 onValueChange={(v) => setDraft((p) => ({ ...p, shiftId: v === "all" ? "" : v }))}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="كل الورديات" />
+                  <SelectValue placeholder={t("allShifts")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">كل الورديات</SelectItem>
+                  <SelectItem value="all">{t("allShifts")}</SelectItem>
                   {(shiftsQuery.data ?? []).map((s) => (
                     <SelectItem key={s.id} value={String(s.id)}>
-                      {s.name ? s.name : `وردية #${s.id}`}
+                      {s.name ? s.name : t("shiftHashFilter", { id: s.id })}
                       {s.shift_date ? ` (${s.shift_date})` : ""}
                     </SelectItem>
                   ))}
@@ -199,10 +203,10 @@ export function SalesAdvancedFiltersSheet({
 
         <SheetFooter className="flex-row justify-end gap-2 border-t px-5 py-3.5">
           <Button type="button" variant="outline" onClick={handleReset}>
-            إعادة تعيين
+            {t("resetButton")}
           </Button>
           <Button type="button" onClick={handleApply}>
-            تطبيق الفلاتر
+            {t("applyFilters")}
           </Button>
         </SheetFooter>
       </SheetContent>

@@ -1,0 +1,18 @@
+{
+    "productAlreadyInPackage": "هذا المنتج موجود بالفعل في المجموعة",
+    "createSuccess": "تم إنشاء المجموعة بنجاح، يمكنك الآن إضافة منتجات",
+    "genericError": "حدث خطأ ما",
+    "nameRequired": "يرجى إدخال اسم المجموعة",
+    "editPackageTitle": "تعديل مجموعة: {{name}}",
+    "createPackageTitle": "إنشاء مجموعة جديدة",
+    "packageName": "اسم المجموعة",
+    "creating": "جاري الإنشاء...",
+    "create": "إنشاء",
+    "change": "تغيير",
+    "productsInPackage": "المنتجات في المجموعة",
+    "searchProductToAdd": "ابحث عن منتج لإضافته...",
+    "unnamedProduct": "منتج #{{id}}",
+    "unitPrice": "سعر الوحدة: {{price}}",
+    "noProductsAdded": "لم يتم إضافة منتجات بعد",
+    "close": "إغلاق"
+}

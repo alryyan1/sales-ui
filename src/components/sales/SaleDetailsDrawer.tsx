@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import {
   AlertCircle,
   Building2,
@@ -47,8 +48,9 @@ import {
 import { PdfViewerDialog } from "@/components/common/PdfViewerDialog";
 import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 import { useAuthorization } from "@/hooks/useAuthorization";
+import { useLanguage } from "@/context/LanguageContext";
 import apiClient from "@/lib/axios";
-import { getSaleStatus, paymentMethodLabel } from "@/lib/saleStatus";
+import { getSaleStatus, translatePaymentMethod, translateSaleStatus } from "@/lib/saleStatus";
 
 import saleService from "@/services/saleService";
 
@@ -64,6 +66,9 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
   const queryClient = useQueryClient();
   const formatCurrency = useFormatCurrency();
   const { hasPermission } = useAuthorization();
+  const { direction } = useLanguage();
+  const { t } = useTranslation("sales");
+  const { t: tCommon } = useTranslation("common");
   const canDelete = hasPermission("حذف فاتورة");
   const canReturn = hasPermission("view-sales-returns");
 
@@ -105,7 +110,7 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
       setPdfUrl(window.URL.createObjectURL(blob));
       setPdfDialogOpen(true);
     } catch {
-      toast.error("فشل تحميل الفاتورة");
+      toast.error(t("failedToLoadSale"));
     } finally {
       setPrintingKind(null);
     }
@@ -124,13 +129,13 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
     setIsDeleting(true);
     try {
       await saleService.deleteSale(sale.id);
-      toast.success("تم حذف الفاتورة بنجاح");
+      toast.success(t("saleDeletedSuccessfully"));
       setConfirmDeleteOpen(false);
       onOpenChange(false);
       queryClient.invalidateQueries({ queryKey: ["sales-list"] });
       onChanged?.();
     } catch (err) {
-      toast.error("تعذر حذف الفاتورة", { description: saleService.getErrorMessage(err) });
+      toast.error(t("failedToDeleteSale"), { description: saleService.getErrorMessage(err) });
     } finally {
       setIsDeleting(false);
     }
@@ -141,10 +146,10 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
     setIsExporting(true);
     try {
       await saleService.exportToFinance(sale.id);
-      toast.success("تم إرسال القيد إلى النظام المالي");
+      toast.success(t("journalEntrySent"));
       queryClient.invalidateQueries({ queryKey: ["sale-detail", sale.id] });
     } catch (err) {
-      toast.error("فشل التصدير إلى النظام المالي", { description: saleService.getErrorMessage(err) });
+      toast.error(t("journalExportFailed"), { description: saleService.getErrorMessage(err) });
     } finally {
       setIsExporting(false);
     }
@@ -159,20 +164,20 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="left" dir="rtl" className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
+        <SheetContent side="left" dir={direction} className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
           <SheetHeader className="border-b px-5 py-4">
             {sale ? (
               <>
                 <div className="flex flex-wrap items-center gap-2">
-                  <SheetTitle className="text-base">فاتورة #{sale.number ?? sale.id}</SheetTitle>
-                  {status && <Badge variant={status.variant}>{status.label}</Badge>}
+                  <SheetTitle className="text-base">{t("invoiceHash", { id: sale.number ?? sale.id })}</SheetTitle>
+                  {status && <Badge variant={status.variant}>{translateSaleStatus(t, status.kind)}</Badge>}
                 </div>
                 <SheetDescription>
                   {format(new Date(sale.created_at), "dd MMM yyyy, HH:mm")}
                 </SheetDescription>
               </>
             ) : (
-              <SheetTitle className="text-base">تفاصيل الفاتورة</SheetTitle>
+              <SheetTitle className="text-base">{t("invoiceDetailsTitle")}</SheetTitle>
             )}
           </SheetHeader>
 
@@ -189,9 +194,9 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
               <Alert variant="destructive">
                 <AlertCircle className="size-4" />
                 <AlertDescription className="flex items-center justify-between gap-3">
-                  <span>تعذر تحميل بيانات الفاتورة</span>
+                  <span>{t("loadSaleDataError")}</span>
                   <Button size="sm" variant="outline" onClick={() => saleQuery.refetch()}>
-                    إعادة المحاولة
+                    {tCommon("retry")}
                   </Button>
                 </AlertDescription>
               </Alert>
@@ -204,49 +209,49 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
                   <div className="space-y-1">
                     <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <User className="size-3.5" />
-                      العميل
+                      {t("client")}
                     </p>
                     {sale.client_id ? (
                       <a
                         href={`#/clients/${sale.client_id}/ledger`}
                         className="font-medium text-primary hover:underline"
                       >
-                        {sale.client_name ?? `عميل #${sale.client_id}`}
+                        {sale.client_name ?? t("clientHash", { id: sale.client_id })}
                       </a>
                     ) : (
-                      <p className="font-medium text-foreground">عميل نقدي</p>
+                      <p className="font-medium text-foreground">{t("cashClient")}</p>
                     )}
                   </div>
                   <div className="space-y-1">
                     <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <User className="size-3.5" />
-                      الكاشير
+                      {t("cashierColumn")}
                     </p>
                     <p className="font-medium text-foreground">{sale.user_name ?? "—"}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Building2 className="size-3.5" />
-                      المستودع
+                      {t("warehouseLabel")}
                     </p>
                     <p className="font-medium text-foreground">{sale.warehouse?.name ?? "—"}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Calendar className="size-3.5" />
-                      تاريخ البيع
+                      {t("saleDate")}
                     </p>
                     <p className="font-medium text-foreground">{sale.sale_date}</p>
                   </div>
                   {sale.shift_id != null && (
                     <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">الوردية</p>
+                      <p className="text-xs text-muted-foreground">{t("shiftLabel")}</p>
                       <p className="font-medium text-foreground">#{sale.shift_id}</p>
                     </div>
                   )}
                   {sale.notes && (
                     <div className="col-span-2 space-y-1">
-                      <p className="text-xs text-muted-foreground">ملاحظات</p>
+                      <p className="text-xs text-muted-foreground">{t("notes")}</p>
                       <p className="whitespace-pre-wrap text-sm text-foreground">{sale.notes}</p>
                     </div>
                   )}
@@ -257,16 +262,16 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
                 {/* Items */}
                 <div>
                   <h3 className="mb-2 text-sm font-semibold text-foreground">
-                    الأصناف ({sale.items?.length ?? 0})
+                    {t("itemsCountHeading", { count: sale.items?.length ?? 0 })}
                   </h3>
                   <div className="overflow-hidden rounded-lg border">
                     <Table>
                       <TableHeader className="bg-muted/40">
                         <TableRow className="hover:bg-transparent">
-                          <TableHead className="text-start">المنتج</TableHead>
-                          <TableHead className="text-center">الكمية</TableHead>
-                          <TableHead className="text-end">السعر</TableHead>
-                          <TableHead className="text-end">الإجمالي</TableHead>
+                          <TableHead className="text-start">{t("product")}</TableHead>
+                          <TableHead className="text-center">{t("quantity")}</TableHead>
+                          <TableHead className="text-end">{t("priceColumn")}</TableHead>
+                          <TableHead className="text-end">{t("totalColumn")}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -274,7 +279,7 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
                           <TableRow key={item.id ?? `${item.product_id}-${item.quantity}`}>
                             <TableCell>
                               <p className="font-medium text-foreground">
-                                {item.product_name ?? `منتج #${item.product_id}`}
+                                {item.product_name ?? t("productHash", { id: item.product_id })}
                               </p>
                               {item.product_sku && (
                                 <p className="font-mono text-xs text-muted-foreground">{item.product_sku}</p>
@@ -294,7 +299,7 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
                         {(sale.items ?? []).length === 0 && (
                           <TableRow>
                             <TableCell colSpan={4} className="py-6 text-center text-sm text-muted-foreground">
-                              لا توجد أصناف
+                              {t("noItems")}
                             </TableCell>
                           </TableRow>
                         )}
@@ -306,29 +311,29 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
                 {/* Summary */}
                 <div className="space-y-1.5 rounded-lg bg-muted/30 px-4 py-3 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">المجموع الفرعي</span>
+                    <span className="text-muted-foreground">{t("subtotalLabel")}</span>
                     <span className="tabular-nums">{formatCurrency(subtotal)}</span>
                   </div>
                   {discount > 0 && (
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">الخصم</span>
+                      <span className="text-muted-foreground">{t("discount")}</span>
                       <span className="tabular-nums text-destructive">- {formatCurrency(discount)}</span>
                     </div>
                   )}
                   <Separator className="my-1.5" />
                   <div className="flex items-center justify-between text-base font-semibold">
-                    <span>الإجمالي</span>
+                    <span>{t("totalColumn")}</span>
                     <span className="tabular-nums text-primary">{formatCurrency(total)}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">المدفوع</span>
+                    <span className="text-muted-foreground">{t("paidColumn")}</span>
                     <span className="tabular-nums text-green-600 dark:text-green-400">
                       {formatCurrency(paid)}
                     </span>
                   </div>
                   {due > 0 && (
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">المتبقي</span>
+                      <span className="text-muted-foreground">{t("dueColumn")}</span>
                       <span className="font-medium tabular-nums text-destructive">{formatCurrency(due)}</span>
                     </div>
                   )}
@@ -336,10 +341,10 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
 
                 {/* Payments */}
                 <div>
-                  <h3 className="mb-2 text-sm font-semibold text-foreground">المدفوعات</h3>
+                  <h3 className="mb-2 text-sm font-semibold text-foreground">{t("paymentsMadeTitle")}</h3>
                   {(sale.payments ?? []).length === 0 ? (
                     <p className="rounded-lg border border-dashed py-4 text-center text-sm text-muted-foreground">
-                      لا توجد مدفوعات مسجلة
+                      {t("noPaymentsRecorded")}
                     </p>
                   ) : (
                     <div className="space-y-1.5">
@@ -349,7 +354,7 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
                           className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm"
                         >
                           <div className="flex items-center gap-2">
-                            <Badge variant="secondary">{paymentMethodLabel(payment.method)}</Badge>
+                            <Badge variant="secondary">{translatePaymentMethod(t, payment.method)}</Badge>
                             <span className="text-xs text-muted-foreground">{payment.payment_date}</span>
                             {payment.reference_number && (
                               <span className="font-mono text-xs text-muted-foreground">
@@ -382,7 +387,7 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
                 ) : (
                   <Printer className="size-3.5" />
                 )}
-                إيصال حراري
+                {t("thermalReceiptTitle")}
               </Button>
               <Button
                 type="button"
@@ -397,7 +402,7 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
                 ) : (
                   <Printer className="size-3.5" />
                 )}
-                فاتورة A4
+                {t("a4InvoiceButton")}
               </Button>
               <Button
                 type="button"
@@ -408,14 +413,14 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
                 className="gap-1.5"
               >
                 {isExporting ? <Loader2 className="size-3.5 animate-spin" /> : <Landmark className="size-3.5" />}
-                {sale.finance_exported_at ? "إعادة التصدير" : "تصدير مالي"}
+                {sale.finance_exported_at ? t("reExportFinance") : t("exportFinance")}
               </Button>
 
               <div className="ms-auto flex items-center gap-2">
                 {canReturn && !sale.is_returned && paid > 0 && (
                   <Button type="button" variant="outline" size="sm" onClick={handleRefund} className="gap-1.5">
                     <RotateCcw className="size-3.5" />
-                    مرتجع
+                    {t("refund")}
                   </Button>
                 )}
                 {canDelete && (sale.payments?.length ?? 0) === 0 && (
@@ -427,7 +432,7 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
                     className="gap-1.5 text-destructive hover:text-destructive"
                   >
                     <Trash2 className="size-3.5" />
-                    حذف
+                    {tCommon("delete")}
                   </Button>
                 )}
               </div>
@@ -437,25 +442,25 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
       </Sheet>
 
       <AlertDialog open={confirmDeleteOpen} onOpenChange={(o) => !isDeleting && setConfirmDeleteOpen(o)}>
-        <AlertDialogContent dir="rtl">
+        <AlertDialogContent dir={direction}>
           <AlertDialogHeader>
-            <AlertDialogTitle>حذف الفاتورة "#{sale?.number ?? sale?.id}"؟</AlertDialogTitle>
-            <AlertDialogDescription>هذا الإجراء لا يمكن التراجع عنه.</AlertDialogDescription>
+            <AlertDialogTitle>{t("deleteSaleConfirmTitle", { id: sale?.number ?? sale?.id })}</AlertDialogTitle>
+            <AlertDialogDescription>{t("actionCannotBeUndoneFull")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <Button type="button" variant="outline" disabled={isDeleting} onClick={() => setConfirmDeleteOpen(false)}>
-              إلغاء
+              {tCommon("cancel")}
             </Button>
             <Button type="button" variant="destructive" disabled={isDeleting} onClick={handleDelete} className="gap-2">
               {isDeleting && <Loader2 className="size-4 animate-spin" />}
-              حذف نهائي
+              {t("deletePermanently")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       {pdfUrl && (
-        <PdfViewerDialog isOpen={pdfDialogOpen} onClose={handleClosePdfDialog} pdfUrl={pdfUrl} title="فاتورة البيع" />
+        <PdfViewerDialog isOpen={pdfDialogOpen} onClose={handleClosePdfDialog} pdfUrl={pdfUrl} title={t("saleInvoiceTitle")} />
       )}
     </>
   );

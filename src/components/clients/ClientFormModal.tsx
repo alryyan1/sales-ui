@@ -2,6 +2,8 @@
 import React, { useEffect, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "@/context/LanguageContext";
 
 import {
   Dialog,
@@ -60,6 +62,9 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
 }) => {
   const isEditMode = Boolean(clientToEdit);
   const [serverError, setServerError] = useState<string | null>(null);
+  const { direction } = useLanguage();
+  const { t } = useTranslation("clients");
+  const { t: tCommon } = useTranslation("common");
 
   const form = useForm<ClientFormValues>({
     defaultValues: {
@@ -122,10 +127,10 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
         savedClient = await clientService.createClient(dataToSend);
       }
 
-      toast.success("تم الحفظ بنجاح", {
+      toast.success(t("savedSuccessfully"), {
         description: isEditMode
-          ? "تم تحديث بيانات العميل بنجاح"
-          : "تم إضافة العميل بنجاح",
+          ? t("clientUpdatedSuccess")
+          : t("clientAddedSuccess"),
         duration: 3000,
       });
 
@@ -136,7 +141,7 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
       const generalError = clientService.getErrorMessage(err);
       const apiErrors = clientService.getValidationErrors(err);
 
-      toast.error("خطأ", {
+      toast.error(tCommon("error"), {
         description: generalError,
         duration: 5000,
       });
@@ -152,18 +157,18 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
             });
           }
         });
-        setServerError("يرجى التحقق من الحقول المدخلة.");
+        setServerError(t("checkFieldsError"));
       }
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !isSubmitting && !open && onClose()}>
-      <DialogContent className="sm:max-w-lg" dir="rtl">
+      <DialogContent className="sm:max-w-lg" dir={direction}>
         <DialogHeader>
-          <DialogTitle>{isEditMode ? "تعديل عميل" : "إضافة عميل"}</DialogTitle>
+          <DialogTitle>{isEditMode ? t("editClientShort") : t("addClientShort")}</DialogTitle>
           <DialogDescription>
-            {isEditMode ? "تعديل بيانات العميل" : "أدخل بيانات العميل الجديد"}
+            {isEditMode ? t("editClient") : t("enterNewClientData")}
           </DialogDescription>
         </DialogHeader>
 
@@ -179,12 +184,12 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
               <FormField
                 control={control}
                 name="name"
-                rules={{ required: "الاسم مطلوب" }}
+                rules={{ required: t("nameRequired") }}
                 render={({ field }) => (
                   <FormItem className="sm:col-span-2">
-                    <FormLabel>الاسم</FormLabel>
+                    <FormLabel>{t("name")}</FormLabel>
                     <FormControl>
-                      <Input placeholder="أدخل اسم العميل" disabled={isSubmitting} {...field} />
+                      <Input placeholder={t("enterClientNamePlaceholder")} disabled={isSubmitting} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -197,12 +202,12 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
                 rules={{
                   pattern: {
                     value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: "صيغة البريد الإلكتروني غير صحيحة",
+                    message: t("invalidEmailFormat"),
                   },
                 }}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>البريد الإلكتروني</FormLabel>
+                    <FormLabel>{t("email")}</FormLabel>
                     <FormControl>
                       <Input
                         type="email"
@@ -221,10 +226,10 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
               <FormField
                 control={control}
                 name="phone"
-                rules={{ required: "رقم الهاتف مطلوب" }}
+                rules={{ required: t("phoneRequired") }}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>رقم الهاتف</FormLabel>
+                    <FormLabel>{t("phone")}</FormLabel>
                     <FormControl>
                       <Input
                         type="tel"
@@ -244,10 +249,10 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
                 name="address"
                 render={({ field }) => (
                   <FormItem className="sm:col-span-2">
-                    <FormLabel>العنوان</FormLabel>
+                    <FormLabel>{t("address")}</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="أدخل عنوان العميل"
+                        placeholder={t("enterClientAddressPlaceholder")}
                         rows={3}
                         disabled={isSubmitting}
                         {...field}
@@ -263,11 +268,11 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-            إلغاء
+            {tCommon("cancel")}
           </Button>
           <Button type="submit" form="client-form" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-            حفظ
+            {tCommon("save")}
           </Button>
         </DialogFooter>
       </DialogContent>

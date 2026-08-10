@@ -1,0 +1,7 @@
+{
+    "generateFailed": "Failed to generate barcode. Make sure the product has a valid SKU.",
+    "printBarcodeTitle": "Print Barcode: {{productName}}",
+    "widthMm": "Width (mm)",
+    "heightMm": "Height (mm)",
+    "copies": "Number of Copies"
+}

@@ -10,6 +10,7 @@ import {
   Alert,
   Stack,
 } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import apiClient from "@/lib/axios";
 
 interface BarcodeLabelPdfDialogProps {
@@ -23,6 +24,7 @@ const BarcodeLabelPdfDialog: React.FC<BarcodeLabelPdfDialogProps> = ({
   onClose,
   product,
 }) => {
+  const { t } = useTranslation("barcodeLabelPdfDialog");
   const [labelWidthMm, setLabelWidthMm]   = useState(39);
   const [labelHeightMm, setLabelHeightMm] = useState(25);
   const [copies, setCopies]               = useState(1);
@@ -70,7 +72,7 @@ const BarcodeLabelPdfDialog: React.FC<BarcodeLabelPdfDialogProps> = ({
         setPdfUrl(url);
       } catch (err: any) {
         if (err.name !== "CanceledError") {
-          setError("فشل توليد الباركود. تأكد من وجود SKU صالح للمنتج.");
+          setError(t("generateFailed"));
         }
       } finally {
         setLoading(false);
@@ -78,9 +80,9 @@ const BarcodeLabelPdfDialog: React.FC<BarcodeLabelPdfDialogProps> = ({
     };
 
     // Debounce 400 ms so rapid slider changes don't spam the server
-    const t = setTimeout(fetchPdf, 400);
+    const debounceTimer = setTimeout(fetchPdf, 400);
     return () => {
-      clearTimeout(t);
+      clearTimeout(debounceTimer);
       controller.abort();
     };
   }, [open, product, labelWidthMm, labelHeightMm, copies]);
@@ -91,12 +93,12 @@ const BarcodeLabelPdfDialog: React.FC<BarcodeLabelPdfDialogProps> = ({
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ pb: 1 }}>
         <Typography variant="subtitle1" fontWeight={600}>
-          طباعة باركود: {product.name}
+          {t("printBarcodeTitle", { productName: product.name })}
         </Typography>
 
         <Stack direction="row" gap={2} mt={1.5} flexWrap="wrap">
           <TextField
-            label="العرض (mm)"
+            label={t("widthMm")}
             type="number"
             size="small"
             value={labelWidthMm}
@@ -105,7 +107,7 @@ const BarcodeLabelPdfDialog: React.FC<BarcodeLabelPdfDialogProps> = ({
             sx={{ width: 120 }}
           />
           <TextField
-            label="الارتفاع (mm)"
+            label={t("heightMm")}
             type="number"
             size="small"
             value={labelHeightMm}
@@ -114,7 +116,7 @@ const BarcodeLabelPdfDialog: React.FC<BarcodeLabelPdfDialogProps> = ({
             sx={{ width: 120 }}
           />
           <TextField
-            label="عدد النسخ"
+            label={t("copies")}
             type="number"
             size="small"
             value={copies}

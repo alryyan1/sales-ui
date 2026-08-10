@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { format, startOfMonth, startOfWeek, subDays } from "date-fns";
 import type { DateRange } from "react-day-picker";
+import { useTranslation } from "react-i18next";
 import {
   AlertCircle,
   Filter,
@@ -49,13 +50,14 @@ import {
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { cn } from "@/lib/utils";
 import { getPageNumbers } from "@/lib/pagination";
-import { getSaleStatus, paymentMethodLabel } from "@/lib/saleStatus";
 import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 import { useSettings } from "@/context/SettingsContext";
 import { useAuthorization } from "@/hooks/useAuthorization";
+import { useLanguage } from "@/context/LanguageContext";
 import { webUrl } from "@/constants";
 
 import saleService, { Sale } from "@/services/saleService";
+import { getSaleStatus, translatePaymentMethod, translateSaleStatus } from "@/lib/saleStatus";
 import { SaleDetailsDrawer } from "@/components/sales/SaleDetailsDrawer";
 import {
   SalesAdvancedFiltersSheet,
@@ -66,13 +68,13 @@ const PER_PAGE_OPTIONS = [25, 50, 100];
 
 type DatePreset = "today" | "yesterday" | "week" | "month" | "custom" | "all";
 
-const DATE_PRESET_LABELS: Record<DatePreset, string> = {
-  today: "اليوم",
-  yesterday: "أمس",
-  week: "هذا الأسبوع",
-  month: "هذا الشهر",
-  custom: "مخصص",
-  all: "كل التواريخ",
+const DATE_PRESET_KEYS: Record<DatePreset, string> = {
+  today: "datePresetToday",
+  yesterday: "datePresetYesterday",
+  week: "datePresetWeek",
+  month: "datePresetMonth",
+  custom: "datePresetCustom",
+  all: "datePresetAll",
 };
 
 function fmt(d: Date) {
@@ -110,6 +112,9 @@ const SalesListPage: React.FC = () => {
   const formatCurrency = useFormatCurrency();
   const { getSetting } = useSettings();
   const { hasPermission } = useAuthorization();
+  const { direction } = useLanguage();
+  const { t } = useTranslation("sales");
+  const { t: tCommon } = useTranslation("common");
   const posMode = (getSetting("pos_mode", "shift") as "shift" | "days") ?? "shift";
   const canCreateSale = hasPermission("view-pos");
 
@@ -205,26 +210,26 @@ const SalesListPage: React.FC = () => {
   };
 
   return (
-    <div dir="rtl" className="min-h-screen bg-background">
+    <div dir={direction} className="min-h-screen bg-background">
       <div className="mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-10">
         {/* Header */}
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b pb-5">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">المبيعات</h1>
-            <p className="mt-1 text-sm text-muted-foreground">عرض وإدارة جميع عمليات البيع</p>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">{t("pageTitle")}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{t("pageSubtitle")}</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={() => salesQuery.refetch()} title="تحديث">
+            <Button variant="outline" size="icon" onClick={() => salesQuery.refetch()} title={tCommon("refresh")}>
               <RefreshCw className={cn("size-4", salesQuery.isFetching && "animate-spin")} />
             </Button>
             <Button variant="outline" size="sm" onClick={handleExport} className="gap-1.5">
               <FileDown className="size-4" />
-              تصدير
+              {t("export")}
             </Button>
             {canCreateSale && (
               <Button size="sm" onClick={() => navigate("/sales/pos")} className="gap-1.5">
                 <Plus className="size-4" />
-                بيع جديد
+                {t("newSale")}
               </Button>
             )}
           </div>
@@ -233,19 +238,19 @@ const SalesListPage: React.FC = () => {
         {/* Toolbar */}
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <div className="relative min-w-[220px] flex-1 sm:max-w-sm">
-            <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="ابحث برقم الفاتورة أو اسم العميل..."
-              className="pr-9"
+              placeholder={t("searchPlaceholder")}
+              className="ps-9"
             />
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm("")}
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                aria-label="مسح البحث"
+                className="absolute end-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label={t("clearSearch")}
               >
                 <X className="size-4" />
               </button>
@@ -257,9 +262,9 @@ const SalesListPage: React.FC = () => {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {(Object.keys(DATE_PRESET_LABELS) as DatePreset[]).map((p) => (
+              {(Object.keys(DATE_PRESET_KEYS) as DatePreset[]).map((p) => (
                 <SelectItem key={p} value={p}>
-                  {DATE_PRESET_LABELS[p]}
+                  {t(DATE_PRESET_KEYS[p])}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -271,19 +276,19 @@ const SalesListPage: React.FC = () => {
 
           <Button variant="outline" size="sm" onClick={() => setAdvancedOpen(true)} className="gap-1.5">
             <SlidersHorizontal className="size-4" />
-            فلاتر متقدمة
+            {t("advancedFilters")}
           </Button>
 
           {hasActiveFilters && (
             <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1.5 text-muted-foreground">
               <Filter className="size-3.5" />
-              مسح الفلاتر
+              {t("clearFiltersButton")}
             </Button>
           )}
 
           {!isInitialLoading && !salesQuery.isError && (
             <p className="ms-auto text-xs text-muted-foreground">
-              {salesQuery.data?.total ?? sales.length} عملية بيع
+              {t("salesCount", { count: salesQuery.data?.total ?? sales.length })}
             </p>
           )}
         </div>
@@ -293,7 +298,7 @@ const SalesListPage: React.FC = () => {
           <div className="mb-4 flex flex-wrap items-center gap-1.5">
             {datePreset !== "today" && (
               <Badge variant="secondary" className="gap-1.5">
-                {DATE_PRESET_LABELS[datePreset]}
+                {t(DATE_PRESET_KEYS[datePreset])}
                 <button type="button" onClick={() => setDatePreset("today")} className="hover:text-destructive">
                   <X className="size-3" />
                 </button>
@@ -302,7 +307,7 @@ const SalesListPage: React.FC = () => {
             {advanced.clientId && (
               <Badge variant="secondary" className="gap-1.5">
                 <User className="size-3" />
-                {advanced.clientName || `عميل #${advanced.clientId}`}
+                {advanced.clientName || t("clientHash", { id: advanced.clientId })}
                 <button
                   type="button"
                   onClick={() => setAdvanced((p) => ({ ...p, clientId: "", clientName: "" }))}
@@ -314,7 +319,7 @@ const SalesListPage: React.FC = () => {
             )}
             {advanced.userId && (
               <Badge variant="secondary" className="gap-1.5">
-                كاشير محدد
+                {t("selectedCashierFilter")}
                 <button
                   type="button"
                   onClick={() => setAdvanced((p) => ({ ...p, userId: "" }))}
@@ -326,7 +331,7 @@ const SalesListPage: React.FC = () => {
             )}
             {advanced.shiftId && (
               <Badge variant="secondary" className="gap-1.5">
-                وردية #{advanced.shiftId}
+                {t("shiftHashFilter", { id: advanced.shiftId })}
                 <button
                   type="button"
                   onClick={() => setAdvanced((p) => ({ ...p, shiftId: "" }))}
@@ -343,11 +348,11 @@ const SalesListPage: React.FC = () => {
         {salesQuery.isError && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="size-4" />
-            <AlertTitle>تعذر تحميل المبيعات</AlertTitle>
+            <AlertTitle>{t("loadErrorTitle")}</AlertTitle>
             <AlertDescription className="flex items-center justify-between gap-3">
-              <span>حدث خطأ أثناء الاتصال بالخادم</span>
+              <span>{t("loadErrorDescription")}</span>
               <Button size="sm" variant="outline" onClick={() => salesQuery.refetch()}>
-                إعادة المحاولة
+                {tCommon("retry")}
               </Button>
             </AlertDescription>
           </Alert>
@@ -375,28 +380,28 @@ const SalesListPage: React.FC = () => {
           <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-16 text-center">
             <Receipt className="size-10 text-muted-foreground" />
             <div>
-              <p className="font-medium text-foreground">لا توجد مبيعات</p>
+              <p className="font-medium text-foreground">{t("emptyTitle")}</p>
               <p className="mt-1 text-sm text-muted-foreground">
                 {hasActiveFilters
-                  ? "لم يتم العثور على مبيعات تطابق الفلاتر الحالية"
-                  : "لم يتم تسجيل أي عملية بيع بعد"}
+                  ? t("emptyDescriptionFiltered")
+                  : t("emptyDescriptionNoFilter")}
               </p>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2">
               {hasActiveFilters && (
                 <Button variant="outline" size="sm" onClick={clearFilters}>
-                  مسح الفلاتر
+                  {t("clearFiltersButton")}
                 </Button>
               )}
               {datePreset !== "all" && (
                 <Button variant="outline" size="sm" onClick={() => setDatePreset("all")}>
-                  عرض كل التواريخ
+                  {t("showAllDates")}
                 </Button>
               )}
               {canCreateSale && (
                 <Button size="sm" onClick={() => navigate("/sales/pos")} className="gap-1.5">
                   <Plus className="size-4" />
-                  بيع جديد
+                  {t("newSale")}
                 </Button>
               )}
             </div>
@@ -411,16 +416,16 @@ const SalesListPage: React.FC = () => {
                 <Table>
                   <TableHeader className="sticky top-0 z-10 bg-muted/40">
                     <TableRow className="hover:bg-transparent">
-                      <TableHead className="text-start">الفاتورة</TableHead>
-                      <TableHead className="text-start">التاريخ</TableHead>
-                      <TableHead className="text-start">العميل</TableHead>
-                      <TableHead className="text-center">الأصناف</TableHead>
-                      <TableHead className="text-end">الإجمالي</TableHead>
-                      <TableHead className="text-end">المدفوع</TableHead>
-                      <TableHead className="text-end">المتبقي</TableHead>
-                      <TableHead className="text-start">الدفع</TableHead>
-                      <TableHead className="text-start">الحالة</TableHead>
-                      <TableHead className="text-start">الكاشير</TableHead>
+                      <TableHead className="text-start">{t("invoiceColumn")}</TableHead>
+                      <TableHead className="text-start">{t("date")}</TableHead>
+                      <TableHead className="text-start">{t("client")}</TableHead>
+                      <TableHead className="text-center">{t("itemsColumn")}</TableHead>
+                      <TableHead className="text-end">{t("totalColumn")}</TableHead>
+                      <TableHead className="text-end">{t("paidColumn")}</TableHead>
+                      <TableHead className="text-end">{t("dueColumn")}</TableHead>
+                      <TableHead className="text-start">{t("paymentColumn")}</TableHead>
+                      <TableHead className="text-start">{t("status")}</TableHead>
+                      <TableHead className="text-start">{t("cashierColumn")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -436,9 +441,11 @@ const SalesListPage: React.FC = () => {
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span>
-                  عرض {(salesQuery.data?.from ?? 0).toLocaleString("en-US")}–
-                  {(salesQuery.data?.to ?? 0).toLocaleString("en-US")} من{" "}
-                  {(salesQuery.data?.total ?? 0).toLocaleString("en-US")}
+                  {t("showingRange", {
+                    from: (salesQuery.data?.from ?? 0).toLocaleString("en-US"),
+                    to: (salesQuery.data?.to ?? 0).toLocaleString("en-US"),
+                    total: (salesQuery.data?.total ?? 0).toLocaleString("en-US"),
+                  })}
                 </span>
                 <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v)); setPage(1); }}>
                   <SelectTrigger className="h-7 w-20 text-xs">
@@ -447,7 +454,7 @@ const SalesListPage: React.FC = () => {
                   <SelectContent>
                     {PER_PAGE_OPTIONS.map((n) => (
                       <SelectItem key={n} value={String(n)}>
-                        {n}/صفحة
+                        {t("perPageSuffix", { count: n })}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -538,6 +545,8 @@ function SaleRow({
   onOpen: () => void;
   formatCurrency: (v: string | number | null | undefined) => string;
 }) {
+  const { t } = useTranslation("sales");
+  const { direction } = useLanguage();
   const status = getSaleStatus(sale);
   const total = Number(sale.total_amount ?? 0);
   const paid = Number(sale.paid_amount ?? 0);
@@ -559,7 +568,7 @@ function SaleRow({
         </button>
       </TableCell>
       <TableCell className="text-sm text-muted-foreground">
-        {new Date(sale.created_at).toLocaleString("ar", {
+        {new Date(sale.created_at).toLocaleString(direction === "rtl" ? "ar" : "en-US", {
           day: "2-digit",
           month: "short",
           year: "numeric",
@@ -571,10 +580,10 @@ function SaleRow({
         {sale.client_id ? (
           <span className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground">
             <User className="size-3.5 text-muted-foreground" />
-            {sale.client_name ?? `عميل #${sale.client_id}`}
+            {sale.client_name ?? t("clientHash", { id: sale.client_id })}
           </span>
         ) : (
-          <span className="text-sm text-muted-foreground">عميل نقدي</span>
+          <span className="text-sm text-muted-foreground">{t("cashClient")}</span>
         )}
       </TableCell>
       <TableCell className="text-center text-sm text-muted-foreground">{sale.items?.length ?? 0}</TableCell>
@@ -591,11 +600,11 @@ function SaleRow({
         {methods.length === 0
           ? "—"
           : methods.length === 1
-          ? paymentMethodLabel(methods[0])
-          : "متعدد"}
+          ? translatePaymentMethod(t, methods[0])
+          : t("multiplePaymentMethods")}
       </TableCell>
       <TableCell>
-        <Badge variant={status.variant}>{status.label}</Badge>
+        <Badge variant={status.variant}>{translateSaleStatus(t, status.kind)}</Badge>
       </TableCell>
       <TableCell className="text-sm text-muted-foreground">{sale.user_name ?? "—"}</TableCell>
     </TableRow>

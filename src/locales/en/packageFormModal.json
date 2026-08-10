@@ -1,0 +1,18 @@
+{
+    "productAlreadyInPackage": "This product is already in the package",
+    "createSuccess": "Package created successfully, you can now add products",
+    "genericError": "Something went wrong",
+    "nameRequired": "Please enter a package name",
+    "editPackageTitle": "Edit Package: {{name}}",
+    "createPackageTitle": "Create New Package",
+    "packageName": "Package Name",
+    "creating": "Creating...",
+    "create": "Create",
+    "change": "Change",
+    "productsInPackage": "Products in Package",
+    "searchProductToAdd": "Search for a product to add...",
+    "unnamedProduct": "Product #{{id}}",
+    "unitPrice": "Unit price: {{price}}",
+    "noProductsAdded": "No products added yet",
+    "close": "Close"
+}

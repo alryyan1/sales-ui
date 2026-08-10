@@ -40,6 +40,10 @@ import expiryProductsDialogAr from './locales/ar/expiryProductsDialog.json';
 import dueRemindersDialogAr from './locales/ar/dueRemindersDialog.json';
 import shiftSalesColumnAr from './locales/ar/shiftSalesColumn.json';
 import topSellingProductsDialogAr from './locales/ar/topSellingProductsDialog.json';
+import productFormModalAr from './locales/ar/productFormModal.json';
+import productImportDialogAr from './locales/ar/productImportDialog.json';
+import barcodeLabelPdfDialogAr from './locales/ar/barcodeLabelPdfDialog.json';
+import packageFormModalAr from './locales/ar/packageFormModal.json';
 
 // English imports
 import commonEN from './locales/en/common.json';
@@ -79,6 +83,10 @@ import expiryProductsDialogEN from './locales/en/expiryProductsDialog.json';
 import dueRemindersDialogEN from './locales/en/dueRemindersDialog.json';
 import shiftSalesColumnEN from './locales/en/shiftSalesColumn.json';
 import topSellingProductsDialogEN from './locales/en/topSellingProductsDialog.json';
+import productFormModalEN from './locales/en/productFormModal.json';
+import productImportDialogEN from './locales/en/productImportDialog.json';
+import barcodeLabelPdfDialogEN from './locales/en/barcodeLabelPdfDialog.json';
+import packageFormModalEN from './locales/en/packageFormModal.json';
 
 
 // ... استيراد ملفات أخرى
@@ -129,6 +137,10 @@ const resources = {
     ,dueRemindersDialog:dueRemindersDialogAr
     ,shiftSalesColumn:shiftSalesColumnAr
     ,topSellingProductsDialog:topSellingProductsDialogAr
+    ,productFormModal:productFormModalAr
+    ,productImportDialog:productImportDialogAr
+    ,barcodeLabelPdfDialog:barcodeLabelPdfDialogAr
+    ,packageFormModal:packageFormModalAr
 
     // ... namespaces أخرى
   },
@@ -170,6 +182,10 @@ const resources = {
     ,dueRemindersDialog: dueRemindersDialogEN
     ,shiftSalesColumn: shiftSalesColumnEN
     ,topSellingProductsDialog: topSellingProductsDialogEN
+    ,productFormModal: productFormModalEN
+    ,productImportDialog: productImportDialogEN
+    ,barcodeLabelPdfDialog: barcodeLabelPdfDialogEN
+    ,packageFormModal: packageFormModalEN
   }
   // يمكنك إضافة لغات أخرى هنا بنفس الهيكل
 };
@@ -214,6 +230,10 @@ export const namespaces = [
     ,'dueRemindersDialog'
     ,'shiftSalesColumn'
     ,'topSellingProductsDialog'
+    ,'productFormModal'
+    ,'productImportDialog'
+    ,'barcodeLabelPdfDialog'
+    ,'packageFormModal'
     // ... أسماء namespaces أخرى
 ];
 

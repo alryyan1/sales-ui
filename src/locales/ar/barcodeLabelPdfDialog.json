@@ -1,0 +1,7 @@
+{
+    "generateFailed": "فشل توليد الباركود. تأكد من وجود SKU صالح للمنتج.",
+    "printBarcodeTitle": "طباعة باركود: {{productName}}",
+    "widthMm": "العرض (mm)",
+    "heightMm": "الارتفاع (mm)",
+    "copies": "عدد النسخ"
+}

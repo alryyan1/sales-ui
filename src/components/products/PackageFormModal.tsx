@@ -17,6 +17,7 @@ import {
 } from "@mui/material";
 import { Trash2 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import packageService, { Package, PackageItem } from "@/services/packageService";
 import productService, { Product } from "@/services/productService";
 import { toast } from "sonner";
@@ -32,6 +33,7 @@ const PackageFormModal: React.FC<PackageFormModalProps> = ({
   onClose,
   packageToEdit,
 }) => {
+  const { t } = useTranslation("packageFormModal");
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [items, setItems] = useState<PackageItem[]>([]);
@@ -81,7 +83,7 @@ const PackageFormModal: React.FC<PackageFormModalProps> = ({
   const handleAddItem = (product: Product) => {
     const existing = items.find((item) => item.product_id === product.id);
     if (existing) {
-      toast.info("هذا المنتج موجود بالفعل في المجموعة");
+      toast.info(t("productAlreadyInPackage"));
       return;
     }
     
@@ -126,19 +128,19 @@ const PackageFormModal: React.FC<PackageFormModalProps> = ({
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["packages"] });
       if (!activePackage) {
-        toast.success("تم إنشاء المجموعة بنجاح، يمكنك الآن إضافة منتجات");
+        toast.success(t("createSuccess"));
         setIsCreated(true);
         setActivePackage(data);
       }
     },
     onError: (error: { response?: { data?: { message?: string } } }) => {
-      toast.error(error.response?.data?.message || "حدث خطأ ما");
+      toast.error(error.response?.data?.message || t("genericError"));
     },
   });
 
   const handleCreatePackage = () => {
     if (!name.trim()) {
-      toast.error("يرجى إدخال اسم المجموعة");
+      toast.error(t("nameRequired"));
       return;
     }
     mutation.mutate({ name });
@@ -147,14 +149,14 @@ const PackageFormModal: React.FC<PackageFormModalProps> = ({
   return (
     <Dialog open={isOpen} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
-        {activePackage ? `تعديل مجموعة: ${name}` : "إنشاء مجموعة جديدة"}
+        {activePackage ? t("editPackageTitle", { name }) : t("createPackageTitle")}
       </DialogTitle>
       <DialogContent dividers>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
           {/* Step 1: Basic Info */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <TextField
-              label="اسم المجموعة"
+              label={t("packageName")}
               fullWidth
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -169,12 +171,12 @@ const PackageFormModal: React.FC<PackageFormModalProps> = ({
                 disabled={mutation.isPending}
                 sx={{ whiteSpace: "nowrap" }}
               >
-                {mutation.isPending ? "جاري الإنشاء..." : "إنشاء"}
+                {mutation.isPending ? t("creating") : t("create")}
               </Button>
             )}
             {isCreated && activePackage && (
-              <Button 
-                size="small" 
+              <Button
+                size="small"
                 onClick={() => {
                   setIsCreated(false);
                   setActivePackage(null);
@@ -182,7 +184,7 @@ const PackageFormModal: React.FC<PackageFormModalProps> = ({
                 variant="outlined"
                 color="inherit"
               >
-                تغيير
+                {t("change")}
               </Button>
             )}
           </Box>
@@ -190,10 +192,10 @@ const PackageFormModal: React.FC<PackageFormModalProps> = ({
           {isCreated && (
             <>
               <Divider />
-              
+
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <Typography variant="subtitle1" fontWeight="bold">
-                  المنتجات في المجموعة
+                  {t("productsInPackage")}
                 </Typography>
 
                 <Autocomplete
@@ -205,7 +207,7 @@ const PackageFormModal: React.FC<PackageFormModalProps> = ({
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="ابحث عن منتج لإضافته..."
+                      label={t("searchProductToAdd")}
                       size="small"
                       InputProps={{
                         ...params.InputProps,
@@ -226,10 +228,10 @@ const PackageFormModal: React.FC<PackageFormModalProps> = ({
                       <Box sx={{ display: "flex", width: "100%", alignItems: "center", justifyContent: "space-between", gap: 2 }}>
                         <Box sx={{ flex: 1 }}>
                           <Typography variant="body1" fontWeight="medium">
-                            {item.product?.name || `منتج #${item.product_id}`}
+                            {item.product?.name || t("unnamedProduct", { id: item.product_id })}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            سعر الوحدة: {item.product?.sale_price || 0}
+                            {t("unitPrice", { price: item.product?.sale_price || 0 })}
                           </Typography>
                         </Box>
                         <IconButton
@@ -244,7 +246,7 @@ const PackageFormModal: React.FC<PackageFormModalProps> = ({
                   ))}
                   {items.length === 0 && (
                     <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 2 }}>
-                      لم يتم إضافة منتجات بعد
+                      {t("noProductsAdded")}
                     </Typography>
                   )}
                 </List>
@@ -255,7 +257,7 @@ const PackageFormModal: React.FC<PackageFormModalProps> = ({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} variant="outlined" color="inherit">
-          إغلاق
+          {t("close")}
         </Button>
       </DialogActions>
     </Dialog>

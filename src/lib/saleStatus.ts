@@ -3,6 +3,7 @@
 // sale details drawer. Every field read here is real (Sale has no literal
 // "status" column — it was dropped server-side — so this derives a
 // meaningful status purely from is_returned/is_quote/paid/due amounts).
+import type { TFunction } from "i18next";
 import type { Sale } from "@/services/saleService";
 
 export type SaleStatusKind = "returned" | "quote" | "paid" | "partial" | "unpaid";
@@ -38,4 +39,32 @@ export const PAYMENT_METHOD_LABELS: Record<string, string> = {
 export function paymentMethodLabel(method: string | null | undefined): string {
   if (!method) return "—";
   return PAYMENT_METHOD_LABELS[method] ?? method;
+}
+
+// i18next-aware variants, for callers that have a `t` bound to the "sales"
+// namespace (see src/locales/{ar,en}/sales.json) — the plain versions above
+// stay as-is for callers that haven't been converted yet.
+const SALE_STATUS_KEY: Record<SaleStatusKind, string> = {
+  returned: "saleStatusReturned",
+  quote: "saleStatusQuote",
+  paid: "saleStatusPaid",
+  partial: "saleStatusPartial",
+  unpaid: "saleStatusUnpaid",
+};
+
+export function translateSaleStatus(t: TFunction, kind: SaleStatusKind): string {
+  return t(SALE_STATUS_KEY[kind]);
+}
+
+const PAYMENT_METHOD_KEY: Record<string, string> = {
+  cash: "paymentMethodCash",
+  bankak: "paymentMethodBankak",
+  fawry: "paymentMethodFawry",
+  ocash: "paymentMethodOcash",
+};
+
+export function translatePaymentMethod(t: TFunction, method: string | null | undefined): string {
+  if (!method) return "—";
+  const key = PAYMENT_METHOD_KEY[method];
+  return key ? t(key) : method;
 }

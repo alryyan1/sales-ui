@@ -1,6 +1,7 @@
 // src/pages/ClientsPage.tsx
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { CircularProgress } from "@mui/material";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ import {
 } from "lucide-react";
 import { MessageSquare } from "lucide-react";
 import { useSettings } from "../context/SettingsContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { uploadClientsToFirestore } from "../services/firebaseStore";
 import apiClient from "../lib/axios";
 import { toast } from "sonner";
@@ -37,7 +39,10 @@ import { toast } from "sonner";
 const ClientsPage: React.FC = () => {
   const navigate = useNavigate();
   const { getSetting } = useSettings();
-  const companyName = getSetting("company_name", "اسم الشركة") as string;
+  const { direction } = useLanguage();
+  const { t } = useTranslation("clients");
+  const { t: tCommon } = useTranslation("common");
+  const companyName = getSetting("company_name", t("companyNameDefault")) as string;
   const firebaseCollectionName = getSetting("firebase_collection_name", "none") as string;
 
   const [clientsResponse, setClientsResponse] = useState<PaginatedResponse<Client> | null>(null);
@@ -67,11 +72,11 @@ const ClientsPage: React.FC = () => {
 
   // Debounce search
   useEffect(() => {
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       setDebouncedSearch(searchTerm);
       setCurrentPage(1);
     }, 400);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [searchTerm]);
 
   const fetchClients = useCallback(async (page: number, search: string) => {
@@ -144,9 +149,9 @@ const ClientsPage: React.FC = () => {
         page++;
       } while (page <= lastPage);
       await uploadClientsToFirestore(allClients, firebaseCollectionName);
-      toast.success(`تم رفع ${allClients.length} عميل إلى Firebase`);
+      toast.success(t("firebaseUploadSuccess", { count: allClients.length }));
     } catch {
-      toast.error("فشل رفع العملاء إلى Firebase");
+      toast.error(t("firebaseUploadFailed"));
     } finally {
       setIsSyncing(false);
     }
@@ -187,13 +192,13 @@ const ClientsPage: React.FC = () => {
   const selectedClients = clients.filter((c) => selectedIds.has(c.id));
 
   return (
-    <div className="p-4 space-y-3" dir="rtl">
+    <div className="p-4 space-y-3" dir={direction}>
 
       {/* ── Header ───────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Users className="h-5 w-5 text-slate-500" />
-          <h1 className="text-lg font-semibold text-slate-800">العملاء</h1>
+          <h1 className="text-lg font-semibold text-slate-800">{t("pageHeading")}</h1>
           {!isLoading && (
             <span className="text-xs text-slate-400 font-normal">({total})</span>
           )}
@@ -220,7 +225,7 @@ const ClientsPage: React.FC = () => {
             className={`h-8 gap-1.5 text-xs ${selectionMode ? "" : "text-blue-600 border-blue-200 hover:bg-blue-50"}`}
           >
             <CheckSquare className="h-3.5 w-3.5" />
-            {selectionMode ? "إلغاء التحديد" : "تحديد متعدد"}
+            {selectionMode ? t("exitSelectionMode") : t("selectMultiple")}
           </Button>
 
           <Button
@@ -229,19 +234,19 @@ const ClientsPage: React.FC = () => {
             className="h-8 gap-1.5 text-xs"
           >
             <PlusIcon className="h-3.5 w-3.5" />
-            إضافة عميل
+            {t("addClientShort")}
           </Button>
         </div>
       </div>
 
       {/* ── Search ───────────────────────────────────────────── */}
       <div className="relative max-w-sm">
-        <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+        <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
         <Input
-          placeholder="بحث بالاسم أو الهاتف أو البريد..."
+          placeholder={t("searchPlaceholder")}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="h-8 pr-8 text-sm"
+          className="h-8 ps-8 text-sm"
         />
       </div>
 
@@ -249,10 +254,10 @@ const ClientsPage: React.FC = () => {
       {selectionMode && (
         <div className="flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2">
           <span className="text-xs font-semibold text-blue-700">
-            تم تحديد {selectedIds.size} عميل
+            {t("selectedCount", { count: selectedIds.size })}
           </span>
 
-          <div className="flex items-center gap-1.5 mr-auto">
+          <div className="flex items-center gap-1.5 ms-auto">
             {selectedIds.size > 0 && (
               <Button
                 size="sm"
@@ -260,7 +265,7 @@ const ClientsPage: React.FC = () => {
                 onClick={() => setIsBulkWaOpen(true)}
               >
                 <MessageSquare className="h-3.5 w-3.5" />
-                إرسال واتساب ({selectedIds.size})
+                {t("sendWhatsappCount", { count: selectedIds.size })}
               </Button>
             )}
             <Button
@@ -279,8 +284,8 @@ const ClientsPage: React.FC = () => {
       {!isLoading && error && (
         <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
           {error}
-          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs ml-auto" onClick={() => fetchClients(currentPage, debouncedSearch)}>
-            <RefreshCw className="h-3 w-3 ml-1" /> إعادة المحاولة
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs me-auto" onClick={() => fetchClients(currentPage, debouncedSearch)}>
+            <RefreshCw className="h-3 w-3 me-1" /> {tCommon("retry")}
           </Button>
         </div>
       )}
@@ -307,7 +312,7 @@ const ClientsPage: React.FC = () => {
         {!isLoading && totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-2.5 border-t border-slate-100 bg-slate-50/50">
             <p className="text-xs text-slate-500">
-              صفحة {currentPage} من {totalPages}
+              {t("pageOfTotal", { page: currentPage, total: totalPages })}
             </p>
             <div className="flex items-center gap-1">
               <Button
@@ -317,7 +322,7 @@ const ClientsPage: React.FC = () => {
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
               >
-                <ChevronRight className="h-3.5 w-3.5" />
+                {direction === "rtl" ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
               </Button>
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                 const page = i + Math.max(1, Math.min(currentPage - 2, totalPages - 4));
@@ -340,7 +345,7 @@ const ClientsPage: React.FC = () => {
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
               >
-                <ChevronLeft className="h-3.5 w-3.5" />
+                {direction === "rtl" ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
               </Button>
             </div>
           </div>
@@ -359,10 +364,10 @@ const ClientsPage: React.FC = () => {
         open={isConfirmOpen}
         onClose={closeConfirmDialog}
         onConfirm={handleDeleteConfirm}
-        title="تأكيد الحذف"
-        message="هل أنت متأكد من حذف هذا العميل؟ لا يمكن التراجع عن هذه العملية."
-        confirmText="حذف"
-        cancelText="إلغاء"
+        title={t("confirmDeleteTitle")}
+        message={t("deleteClientConfirmFull")}
+        confirmText={tCommon("delete")}
+        cancelText={tCommon("cancel")}
         isLoading={isDeleting}
       />
 
