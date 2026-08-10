@@ -22,8 +22,10 @@ import {
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
+  ArrowRight,
   RefreshCw,
   RotateCcw,
   Plus,
@@ -34,13 +36,7 @@ import {
 } from "lucide-react";
 import saleReturnService, { SaleReturn } from "@/services/saleReturnService";
 import { formatNumber } from "@/constants";
-
-const METHOD_LABELS: Record<string, string> = {
-  cash: "نقدي",
-  bankak: "بنكك",
-  fawry: "فوري",
-  ocash: "أوكاش",
-};
+import { useLanguage } from "@/context/LanguageContext";
 
 const METHOD_COLORS: Record<string, "default" | "success" | "info" | "warning"> = {
   cash: "success",
@@ -52,6 +48,16 @@ const METHOD_COLORS: Record<string, "default" | "success" | "info" | "warning"> 
 const SalesReturnsListPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { direction } = useLanguage();
+  const { t } = useTranslation("sales");
+  const { t: tCommon } = useTranslation("common");
+
+  const METHOD_LABELS: Record<string, string> = {
+    cash: t("paymentMethodCash"),
+    bankak: t("paymentMethodBankak"),
+    fawry: t("paymentMethodFawry"),
+    ocash: t("paymentMethodOcash"),
+  };
 
   const today = format(new Date(), "yyyy-MM-dd");
   const startDate = searchParams.get("startDate") || today;
@@ -134,15 +140,15 @@ const SalesReturnsListPage: React.FC = () => {
       {/* Header */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
         <IconButton onClick={() => navigate("/sales/pos-blank")} size="small">
-          <ArrowLeft size={18} />
+          {direction === "rtl" ? <ArrowRight size={18} /> : <ArrowLeft size={18} />}
         </IconButton>
 
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="h6" fontWeight={700} noWrap>
-            مردودات المبيعات
+            {t("returnsPageHeading")}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            عرض وإدارة مردودات المبيعات حسب التاريخ والوردية
+            {t("returnsPageSubtitle")}
           </Typography>
         </Box>
 
@@ -153,13 +159,13 @@ const SalesReturnsListPage: React.FC = () => {
       <Box sx={{ display: "grid", gridTemplateColumns: "200px 200px", gap: 1.5 }}>
         {[
           {
-            label: "عدد المردودات",
+            label: t("returnsCountLabel"),
             value: formatNumber(meta.total ?? returns.length),
             icon: <PackageX size={18} />,
             color: "warning" as const,
           },
           {
-            label: "إجمالي القيمة",
+            label: t("totalValueLabel"),
             value: formatNumber(totalAmount),
             icon: <DollarSign size={18} />,
             color: "error" as const,
@@ -205,7 +211,7 @@ const SalesReturnsListPage: React.FC = () => {
               name="startDate"
               type="date"
               size="small"
-              label="من تاريخ"
+              label={t("fromDateLabel")}
               InputLabelProps={{ shrink: true }}
               defaultValue={startDate}
               sx={{ width: 160 }}
@@ -214,7 +220,7 @@ const SalesReturnsListPage: React.FC = () => {
               name="endDate"
               type="date"
               size="small"
-              label="إلى تاريخ"
+              label={t("toDateLabel")}
               InputLabelProps={{ shrink: true }}
               defaultValue={endDate}
               sx={{ width: 160 }}
@@ -222,7 +228,7 @@ const SalesReturnsListPage: React.FC = () => {
             <TextField
               name="shiftId"
               size="small"
-              label="رقم الوردية"
+              label={t("shiftNumberLabel")}
               defaultValue={shiftIdParam || ""}
               sx={{ width: 140 }}
             />
@@ -232,7 +238,7 @@ const SalesReturnsListPage: React.FC = () => {
               size="small"
               sx={{ textTransform: "none", height: 36 }}
             >
-              تطبيق
+              {t("applyButtonShort")}
             </Button>
           </Box>
         </CardContent>
@@ -263,7 +269,7 @@ const SalesReturnsListPage: React.FC = () => {
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
             <RotateCcw size={15} style={{ color: "var(--mui-palette-text-secondary)" }} />
             <Typography variant="subtitle2" fontWeight={700}>
-              قائمة المردودات
+              {t("returnsListLabel")}
             </Typography>
             <Chip
               label={meta.total ?? returns.length}
@@ -271,7 +277,7 @@ const SalesReturnsListPage: React.FC = () => {
               sx={{ height: 20, fontSize: "0.7rem" }}
             />
             <Box sx={{ flex: 1 }} />
-            <Tooltip title="تحديث">
+            <Tooltip title={tCommon("refresh")}>
               <span>
                 <IconButton size="small" onClick={() => refetch()} disabled={isFetching}>
                   <RefreshCw size={15} className={isFetching ? "animate-spin" : ""} />
@@ -285,27 +291,27 @@ const SalesReturnsListPage: React.FC = () => {
             {isLoading ? (
               <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: 8, gap: 1.5 }}>
                 <CircularProgress size={24} />
-                <Typography color="text.secondary" variant="body2">جاري التحميل...</Typography>
+                <Typography color="text.secondary" variant="body2">{tCommon("loading")}</Typography>
               </Box>
             ) : returns.length === 0 ? (
               <Box sx={{ textAlign: "center", py: 8, color: "text.secondary" }}>
                 <PackageX size={40} style={{ opacity: 0.25, marginBottom: 8 }} />
-                <Typography variant="body2">لا توجد مردودات مطابقة للفلاتر الحالية</Typography>
+                <Typography variant="body2">{t("noReturnsMatchFilters")}</Typography>
               </Box>
             ) : (
               <Table size="small" stickyHeader>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 700, width: 40 }}>م</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>التاريخ</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>#فاتورة</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>رقم الهاتف</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>المستخدم</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>الوردية</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>السبب</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }} align="center">طريقة المردود</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }} align="center">الأصناف</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }} align="right">الإجمالي</TableCell>
+                    <TableCell sx={{ fontWeight: 700, width: 40 }}>{t("rowNumberColumn")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>{t("date")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>{t("invoiceHashColumn")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>{t("phoneNumberColumn")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>{t("user")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>{t("shiftColumn")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>{t("reasonColumn")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }} align="center">{t("returnMethodColumn")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }} align="center">{t("itemsColumnShort")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }} align="right">{t("totalColumn")}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -412,17 +418,17 @@ const SalesReturnsListPage: React.FC = () => {
                   onClick={() => handlePageChange(-1)}
                   disabled={meta.current_page <= 1}
                 >
-                  <ChevronRight size={16} />
+                  {direction === "rtl" ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
                 </IconButton>
                 <Typography variant="caption" color="text.secondary">
-                  صفحة {meta.current_page} من {meta.last_page}
+                  {t("pageOfTotalShort", { page: meta.current_page, total: meta.last_page })}
                 </Typography>
                 <IconButton
                   size="small"
                   onClick={() => handlePageChange(1)}
                   disabled={meta.current_page >= meta.last_page}
                 >
-                  <ChevronLeft size={16} />
+                  {direction === "rtl" ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
                 </IconButton>
               </Stack>
             </>

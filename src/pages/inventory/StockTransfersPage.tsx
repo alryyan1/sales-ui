@@ -14,6 +14,7 @@ import { CreateStockTransferDialog } from "@/components/inventory/CreateStockTra
 import stockTransferService, { StockTransfer } from "@/services/stockTransferService";
 import { Loader2, ArrowRightLeft } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { ProductImage } from "@/components/products/ProductImage";
 import {
   Pagination,
@@ -25,6 +26,7 @@ import {
 } from "@/components/ui/pagination";
 
 export default function StockTransfersPage() {
+  const { t } = useTranslation("inventory");
   const [transfers, setTransfers] = useState<StockTransfer[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -38,7 +40,7 @@ export default function StockTransfersPage() {
       setTransfers(data.data || []);
       setTotalPages(data.last_page || 1);
     } catch (error) {
-      toast.error("فشل تحميل التحويلات");
+      toast.error(t("failedToLoadTransfers"));
       setTransfers([]);
       setTotalPages(1);
     } finally {
@@ -56,8 +58,8 @@ export default function StockTransfersPage() {
         <div className="flex items-center gap-2">
           <ArrowRightLeft className="h-5 w-5 text-muted-foreground" />
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">تحويلات المخزون</h1>
-            <p className="text-xs text-muted-foreground">إدارة حركة المخزون بين المستودعات</p>
+            <h1 className="text-xl font-semibold tracking-tight">{t("transfersPageTitle")}</h1>
+            <p className="text-xs text-muted-foreground">{t("transfersPageSubtitle")}</p>
           </div>
         </div>
         <CreateStockTransferDialog onSuccess={() => { setPage(1); loadTransfers(); }} />
@@ -74,19 +76,19 @@ export default function StockTransfersPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50 hover:bg-muted/50">
-                    <TableHead className="text-center text-xs font-semibold py-2 w-28">التاريخ</TableHead>
-                    <TableHead className="text-center text-xs font-semibold py-2">من المستودع</TableHead>
-                    <TableHead className="text-center text-xs font-semibold py-2">إلى المستودع</TableHead>
-                    <TableHead className="text-center text-xs font-semibold py-2">المنتجات</TableHead>
-                    <TableHead className="text-center text-xs font-semibold py-2">المستخدم</TableHead>
-                    <TableHead className="text-center text-xs font-semibold py-2">ملاحظات</TableHead>
+                    <TableHead className="text-center text-xs font-semibold py-2 w-28">{t("dateColumn")}</TableHead>
+                    <TableHead className="text-center text-xs font-semibold py-2">{t("fromWarehouseColumn")}</TableHead>
+                    <TableHead className="text-center text-xs font-semibold py-2">{t("toWarehouseColumn")}</TableHead>
+                    <TableHead className="text-center text-xs font-semibold py-2">{t("productsColumn")}</TableHead>
+                    <TableHead className="text-center text-xs font-semibold py-2">{t("userColumn")}</TableHead>
+                    <TableHead className="text-center text-xs font-semibold py-2">{t("notes")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {transfers.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center h-32 text-sm text-muted-foreground">
-                        لا توجد تحويلات مسجلة.
+                        {t("noTransfersRecorded")}
                       </TableCell>
                     </TableRow>
                   ) : (

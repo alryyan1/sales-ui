@@ -44,6 +44,8 @@ import productFormModalAr from './locales/ar/productFormModal.json';
 import productImportDialogAr from './locales/ar/productImportDialog.json';
 import barcodeLabelPdfDialogAr from './locales/ar/barcodeLabelPdfDialog.json';
 import packageFormModalAr from './locales/ar/packageFormModal.json';
+import editPurchaseDialogAr from './locales/ar/editPurchaseDialog.json';
+import purchaseLedgerDialogAr from './locales/ar/purchaseLedgerDialog.json';
 
 // English imports
 import commonEN from './locales/en/common.json';
@@ -87,6 +89,8 @@ import productFormModalEN from './locales/en/productFormModal.json';
 import productImportDialogEN from './locales/en/productImportDialog.json';
 import barcodeLabelPdfDialogEN from './locales/en/barcodeLabelPdfDialog.json';
 import packageFormModalEN from './locales/en/packageFormModal.json';
+import editPurchaseDialogEN from './locales/en/editPurchaseDialog.json';
+import purchaseLedgerDialogEN from './locales/en/purchaseLedgerDialog.json';
 
 
 // ... استيراد ملفات أخرى
@@ -141,6 +145,8 @@ const resources = {
     ,productImportDialog:productImportDialogAr
     ,barcodeLabelPdfDialog:barcodeLabelPdfDialogAr
     ,packageFormModal:packageFormModalAr
+    ,editPurchaseDialog:editPurchaseDialogAr
+    ,purchaseLedgerDialog:purchaseLedgerDialogAr
 
     // ... namespaces أخرى
   },
@@ -186,6 +192,8 @@ const resources = {
     ,productImportDialog: productImportDialogEN
     ,barcodeLabelPdfDialog: barcodeLabelPdfDialogEN
     ,packageFormModal: packageFormModalEN
+    ,editPurchaseDialog: editPurchaseDialogEN
+    ,purchaseLedgerDialog: purchaseLedgerDialogEN
   }
   // يمكنك إضافة لغات أخرى هنا بنفس الهيكل
 };
@@ -234,6 +242,8 @@ export const namespaces = [
     ,'productImportDialog'
     ,'barcodeLabelPdfDialog'
     ,'packageFormModal'
+    ,'editPurchaseDialog'
+    ,'purchaseLedgerDialog'
     // ... أسماء namespaces أخرى
 ];
 

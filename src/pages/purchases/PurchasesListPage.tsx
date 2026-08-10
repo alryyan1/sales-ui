@@ -1,6 +1,7 @@
 // src/pages/PurchasesListPage.tsx
 import React, { useState, useEffect, useCallback } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import {
   Box,
@@ -73,15 +74,17 @@ interface PurchaseFilters {
   product_id?: number;
 }
 
-const STATUS_CONFIG = {
-  pending:  { label: "قيد الانتظار", color: "warning"  as const, Icon: AccessTimeIcon },
-  ordered:  { label: "تم الطلب",     color: "info"     as const, Icon: LocalShippingIcon },
-  received: { label: "تم الاستلام",  color: "success"  as const, Icon: CheckCircleIcon },
-};
-
 const PurchasesListPage: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
+  const { t } = useTranslation("purchases");
+  const { t: tCommon } = useTranslation("common");
+
+  const STATUS_CONFIG = {
+    pending:  { label: t("status_pending"),  color: "warning" as const, Icon: AccessTimeIcon },
+    ordered:  { label: t("status_ordered"),  color: "info"    as const, Icon: LocalShippingIcon },
+    received: { label: t("status_received"), color: "success" as const, Icon: CheckCircleIcon },
+  };
 
   const [purchasesResponse, setPurchasesResponse] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -211,12 +214,12 @@ const PurchasesListPage: React.FC = () => {
     setIsDeleting(true);
     try {
       await purchaseService.deletePurchase(purchaseToDelete);
-      toast.success("تم حذف الشراء بنجاح");
+      toast.success(t("deleteSuccess"));
       setDeleteDialogOpen(false);
       setPurchaseToDelete(null);
       fetchPurchases(currentPage, filters);
     } catch (err) {
-      toast.error("فشل حذف الشراء", { description: purchaseService.getErrorMessage(err) });
+      toast.error(t("failedToDeletePurchase"), { description: purchaseService.getErrorMessage(err) });
     } finally { setIsDeleting(false); }
   };
 
@@ -233,7 +236,7 @@ const PurchasesListPage: React.FC = () => {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <Box dir="rtl" sx={{ minHeight: "100vh", bgcolor: "grey.50", p: { xs: 2, md: 3 } }}>
+    <Box dir={theme.direction} sx={{ minHeight: "100vh", bgcolor: "grey.50", p: { xs: 2, md: 3 } }}>
 
       {/* ── Page header ── */}
       <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2} mb={2}>
@@ -242,8 +245,8 @@ const PurchasesListPage: React.FC = () => {
             <ShoppingCartIcon sx={{ color: "white", fontSize: 22 }} />
           </Box>
           <Box>
-            <Typography variant="h6" fontWeight={700} lineHeight={1.2}>المشتريات</Typography>
-            <Typography variant="caption" color="text.secondary">إدارة عمليات الشراء والمخزون</Typography>
+            <Typography variant="h6" fontWeight={700} lineHeight={1.2}>{t("pageHeading")}</Typography>
+            <Typography variant="caption" color="text.secondary">{t("pageSubtitle")}</Typography>
           </Box>
         </Stack>
 
@@ -255,13 +258,13 @@ const PurchasesListPage: React.FC = () => {
             onClick={handleFilterToggle}
             endIcon={activeFilterCount > 0 ? <Chip label={activeFilterCount} size="small" color="primary" sx={{ height: 18, fontSize: "0.65rem" }} /> : undefined}
           >
-            الفلاتر
+            {t("filtersButton")}
           </Button>
           <Button variant="outlined" size="small" startIcon={<TableViewIcon />} onClick={handleExportExcel}>
-            تصدير
+            {t("exportButton")}
           </Button>
           <Button variant="contained" size="small" startIcon={<AddIcon />} component={RouterLink} to="/purchases/add">
-            فاتوره شراء
+            {t("newPurchaseButton")}
           </Button>
         </Stack>
       </Stack>
@@ -270,14 +273,14 @@ const PurchasesListPage: React.FC = () => {
         open={Boolean(filterAnchorEl)}
         anchorEl={filterAnchorEl}
         onClose={handleFilterClose}
-        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-        transformOrigin={{ vertical: "top", horizontal: "left" }}
+        anchorOrigin={{ vertical: "bottom", horizontal: theme.direction === "rtl" ? "left" : "right" }}
+        transformOrigin={{ vertical: "top", horizontal: theme.direction === "rtl" ? "left" : "right" }}
         PaperProps={{ sx: { width: 420, maxWidth: "90vw", p: 2, borderRadius: 2, boxShadow: 8 } }}
       >
         <Stack direction="column" gap={2}>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Typography variant="subtitle2" fontWeight={700}>بحث وفلترة</Typography>
-            <Button size="small" onClick={handleFilterClose}>إغلاق</Button>
+            <Typography variant="subtitle2" fontWeight={700}>{t("searchAndFilterTitle")}</Typography>
+            <Button size="small" onClick={handleFilterClose}>{tCommon("close")}</Button>
           </Stack>
 
           <Autocomplete
@@ -287,7 +290,7 @@ const PurchasesListPage: React.FC = () => {
             onChange={(_, v) => handleFilterChange("supplier_id", v?.id)}
             loading={loadingSuppliers}
             size="small"
-            renderInput={(params) => <TextField {...params} label="المورد" />}
+            renderInput={(params) => <TextField {...params} label={t("supplier")} />}
           />
 
           <Autocomplete
@@ -297,26 +300,26 @@ const PurchasesListPage: React.FC = () => {
             onChange={(_, v) => handleFilterChange("product_id", v?.id)}
             loading={loadingProducts}
             size="small"
-            renderInput={(params) => <TextField {...params} label="المنتج" />}
+            renderInput={(params) => <TextField {...params} label={t("product")} />}
           />
 
           <FormControl size="small" fullWidth>
-            <InputLabel>الحالة</InputLabel>
+            <InputLabel>{t("status")}</InputLabel>
             <Select
               value={filters.status || ""}
-              label="الحالة"
+              label={t("status")}
               onChange={(e) => handleFilterChange("status", e.target.value || undefined)}
             >
-              <MenuItem value="">الكل</MenuItem>
-              <MenuItem value="pending">قيد الانتظار</MenuItem>
-              <MenuItem value="ordered">تم الطلب</MenuItem>
-              <MenuItem value="received">تم الاستلام</MenuItem>
+              <MenuItem value="">{tCommon("all")}</MenuItem>
+              <MenuItem value="pending">{t("status_pending")}</MenuItem>
+              <MenuItem value="ordered">{t("status_ordered")}</MenuItem>
+              <MenuItem value="received">{t("status_received")}</MenuItem>
             </Select>
           </FormControl>
 
           <TextField
             size="small"
-            label="تاريخ الشراء"
+            label={t("purchaseDate")}
             type="date"
             value={filters.purchase_date || ""}
             onChange={(e) => handleFilterChange("purchase_date", e.target.value)}
@@ -327,7 +330,7 @@ const PurchasesListPage: React.FC = () => {
 
           <TextField
             size="small"
-            label="تاريخ الإنشاء"
+            label={t("createdAt")}
             type="date"
             value={filters.created_at || ""}
             onChange={(e) => handleFilterChange("created_at", e.target.value)}
@@ -338,10 +341,10 @@ const PurchasesListPage: React.FC = () => {
 
           <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1} flexWrap="wrap">
             <Button size="small" variant="outlined" color="error" onClick={clearFilters} disabled={!hasActiveFilters}>
-              مسح الكل
+              {t("clearAllFilters")}
             </Button>
             <Button size="small" variant="contained" onClick={handleFilterClose}>
-              تطبيق
+              {t("applyFilters")}
             </Button>
           </Stack>
         </Stack>
@@ -369,7 +372,7 @@ const PurchasesListPage: React.FC = () => {
           severity="error"
           action={
             <Button size="small" startIcon={<RefreshIcon />} onClick={() => fetchPurchases(currentPage, filters)}>
-              إعادة المحاولة
+              {tCommon("retry")}
             </Button>
           }
           sx={{ borderRadius: 2 }}
@@ -399,13 +402,13 @@ const PurchasesListPage: React.FC = () => {
                 >
                   {[
                     { label: "#",           width: 60  },
-                    { label: "التاريخ",      width: 120 },
-                    { label: "المورد",       width: "auto" },
-                    { label: "المرجع",       width: 130 },
-                    { label: "الحالة",       width: 130 },
-                    { label: "الأصناف",     width: 70  },
-                    { label: "العملة",       width: 70  },
-                    { label: "الإجمالي",    width: 120 },
+                    { label: t("date"),      width: 120 },
+                    { label: t("supplier"),  width: "auto" },
+                    { label: t("reference"), width: 130 },
+                    { label: t("status"),    width: 130 },
+                    { label: t("itemsColumn"), width: 70  },
+                    { label: t("currencyColumn"), width: 70  },
+                    { label: t("totalColumn"), width: 120 },
                     { label: "",            width: 48  },
                   ].map(({ label, width }, i) => (
                     <TableCell
@@ -438,9 +441,9 @@ const PurchasesListPage: React.FC = () => {
                         <Box sx={{ p: 2, borderRadius: "50%", bgcolor: alpha(theme.palette.primary.main, 0.06) }}>
                           <ShoppingCartIcon sx={{ fontSize: 40, color: alpha(theme.palette.primary.main, 0.3) }} />
                         </Box>
-                        <Typography variant="body2" color="text.secondary">لا توجد عمليات شراء</Typography>
+                        <Typography variant="body2" color="text.secondary">{t("noPurchasesFound")}</Typography>
                         <Button variant="contained" size="small" startIcon={<AddIcon />} component={RouterLink} to="/purchases/add">
-                          إضافة شراء
+                          {t("addPurchaseShort")}
                         </Button>
                       </Stack>
                     </TableCell>
@@ -586,7 +589,7 @@ const PurchasesListPage: React.FC = () => {
 
                         {/* Actions */}
                         <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                          <Tooltip title="الإجراءات" placement="left">
+                          <Tooltip title={t("actionsTooltip")} placement="left">
                             <IconButton
                               size="small"
                               onClick={(e) => handleMenuOpen(e, purchase)}
@@ -605,8 +608,8 @@ const PurchasesListPage: React.FC = () => {
                             open={Boolean(anchorEl) && activeMenuPurchase?.id === purchase.id}
                             onClose={() => handleMenuClose()}
                             onClick={(e) => e.stopPropagation()}
-                            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                            transformOrigin={{ vertical: "top", horizontal: "right" }}
+                            anchorOrigin={{ vertical: "bottom", horizontal: theme.direction === "rtl" ? "right" : "left" }}
+                            transformOrigin={{ vertical: "top", horizontal: theme.direction === "rtl" ? "right" : "left" }}
                             PaperProps={{
                               elevation: 3,
                               sx: { minWidth: 200, borderRadius: 2, border: `1px solid ${theme.palette.divider}` },
@@ -614,29 +617,29 @@ const PurchasesListPage: React.FC = () => {
                           >
                             <Box sx={{ px: 2, py: 1 }}>
                               <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                                فاتورة #{purchase.id}
+                                {t("invoiceHash", { id: purchase.id })}
                               </Typography>
                             </Box>
                             <Divider />
 
                             <MenuItem onClick={(e) => { handleMenuClose(e); setPurchaseForLedger(purchase); setLedgerDialogOpen(true); }}>
                               <ListItemIcon><AccountBalanceWalletIcon fontSize="small" /></ListItemIcon>
-                              <ListItemText primary="دفتر الأستاذ" />
+                              <ListItemText primary={t("ledgerMenuItem")} />
                             </MenuItem>
 
                             <MenuItem onClick={(e) => { handleMenuClose(e); setPurchaseToEdit(purchase); setEditDialogOpen(true); }}>
                               <ListItemIcon><EditOutlinedIcon fontSize="small" /></ListItemIcon>
-                              <ListItemText primary="تعديل" />
+                              <ListItemText primary={tCommon("edit")} />
                             </MenuItem>
 
                             <MenuItem onClick={(e) => { handleMenuClose(e); navigate(`/purchases/${purchase.id}/manage-items`); }}>
                               <ListItemIcon><InventoryIcon fontSize="small" /></ListItemIcon>
-                              <ListItemText primary="إدارة البنود" />
+                              <ListItemText primary={t("manageItemsMenuItem")} />
                             </MenuItem>
 
                             <MenuItem onClick={(e) => { handleMenuClose(e); handleViewPdfReport(purchase.id); }}>
                               <ListItemIcon><DescriptionIcon fontSize="small" /></ListItemIcon>
-                              <ListItemText primary="عرض PDF" />
+                              <ListItemText primary={t("viewPdf")} />
                             </MenuItem>
 
                             {filters.product_id && (
@@ -646,7 +649,7 @@ const PurchasesListPage: React.FC = () => {
                                 if (p) handleViewProductHistory(p);
                               }}>
                                 <ListItemIcon><HistoryIcon fontSize="small" /></ListItemIcon>
-                                <ListItemText primary="سجل المنتج" />
+                                <ListItemText primary={t("productHistoryMenuItem")} />
                               </MenuItem>
                             )}
 
@@ -659,8 +662,8 @@ const PurchasesListPage: React.FC = () => {
                             >
                               <ListItemIcon sx={{ color: "inherit" }}><DeleteOutlineIcon fontSize="small" /></ListItemIcon>
                               <ListItemText
-                                primary="حذف"
-                                secondary={purchase.status === "received" ? "لا يمكن حذف مشتريات تم استلامها" : undefined}
+                                primary={tCommon("delete")}
+                                secondary={purchase.status === "received" ? t("cannotDeleteReceivedPurchases") : undefined}
                                 secondaryTypographyProps={{ fontSize: "0.68rem" }}
                               />
                             </MenuItem>
@@ -683,7 +686,7 @@ const PurchasesListPage: React.FC = () => {
                   >
                     <TableCell colSpan={5} align="right" sx={{ border: "none" }}>
                       <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                        الإجمالي — {rows.length} فاتورة
+                        {t("totalInvoicesSummary", { count: rows.length })}
                       </Typography>
                     </TableCell>
 
@@ -768,10 +771,10 @@ const PurchasesListPage: React.FC = () => {
         open={deleteDialogOpen}
         onClose={() => { if (!isDeleting) { setDeleteDialogOpen(false); setPurchaseToDelete(null); } }}
         onConfirm={handleConfirmDelete}
-        title="⚠️ تأكيد حذف الشراء"
-        message="هل أنت متأكد من حذف هذا الشراء؟ سيتم حذف جميع بنوده بشكل نهائي ولا يمكن التراجع عن هذه العملية."
-        confirmText="نعم، احذف"
-        cancelText="إلغاء"
+        title={t("confirmDeletePurchaseTitle")}
+        message={t("confirmDeletePurchaseMessage")}
+        confirmText={t("yesDeleteButton")}
+        cancelText={tCommon("cancel")}
         confirmVariant="destructive"
         isLoading={isDeleting}
       />

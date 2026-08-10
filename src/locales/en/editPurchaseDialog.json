@@ -1,0 +1,22 @@
+{
+    "title": "Edit Purchase Details",
+    "description": "You can edit the supplier, date, reference number, or status here.",
+    "supplierRequired": "Supplier is required",
+    "purchaseDateRequired": "Purchase date is required",
+    "statusRequired": "Status is required",
+    "updateSuccess": "Updated successfully",
+    "updateFailed": "Update failed",
+    "chooseSupplierPlaceholder": "Choose a supplier",
+    "searchSupplierPlaceholder": "Search for supplier",
+    "noResults": "No results found",
+    "selectDatePlaceholder": "Select date",
+    "referenceNumberLabel": "Reference Number",
+    "referenceNumberPlaceholder": "Enter reference number",
+    "currencyLabel": "Currency",
+    "selectCurrencyPlaceholder": "Select currency",
+    "currencySDG": "SDG — Sudanese Pound",
+    "currencyUSD": "USD — US Dollar",
+    "notesLabel": "Notes",
+    "notesPlaceholder": "Enter notes",
+    "saveChanges": "Save Changes"
+}

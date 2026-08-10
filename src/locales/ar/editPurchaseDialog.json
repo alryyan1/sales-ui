@@ -1,0 +1,22 @@
+{
+    "title": "تعديل تفاصيل الشراء",
+    "description": "يمكنك تعديل المورد، التاريخ، رقم المرجع، أو الحالة هنا.",
+    "supplierRequired": "المورد مطلوب",
+    "purchaseDateRequired": "تاريخ الشراء مطلوب",
+    "statusRequired": "الحالة مطلوبة",
+    "updateSuccess": "تم التحديث بنجاح",
+    "updateFailed": "فشل التحديث",
+    "chooseSupplierPlaceholder": "اختر مورد",
+    "searchSupplierPlaceholder": "ابحث عن المورد",
+    "noResults": "لا توجد نتائج",
+    "selectDatePlaceholder": "اختر التاريخ",
+    "referenceNumberLabel": "رقم المرجع",
+    "referenceNumberPlaceholder": "أدخل رقم المرجع",
+    "currencyLabel": "العملة",
+    "selectCurrencyPlaceholder": "اختر العملة",
+    "currencySDG": "SDG — جنيه سوداني",
+    "currencyUSD": "USD — دولار أمريكي",
+    "notesLabel": "ملاحظات",
+    "notesPlaceholder": "أدخل الملاحظات",
+    "saveChanges": "حفظ التغييرات"
+}

@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import * as z from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { CalendarIcon, Loader2, Check, ChevronsUpDown } from "lucide-react";
 
 import {
@@ -52,6 +53,7 @@ import TextField from "@mui/material/TextField";
 import purchaseService, { Purchase } from "../../services/purchaseService";
 import { Supplier } from "../../services/supplierService";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface EditPurchaseDialogProps {
   open: boolean;
@@ -61,28 +63,24 @@ interface EditPurchaseDialogProps {
   onUpdate: () => void;
 }
 
-const formSchema = z.object({
-  supplier_id: z.number({
-    required_error: "المورد مطلوب",
-  }),
-  purchase_date: z.date({
-    required_error: "تاريخ الشراء مطلوب",
-  }),
-  status: z.enum(["pending", "ordered", "received"], {
-    required_error: "الحالة مطلوبة",
-  }),
-  reference_number: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
-  currency: z.string().optional(),
-});
+function createFormSchema(tEdit: (key: string) => string) {
+  return z.object({
+    supplier_id: z.number({
+      required_error: tEdit("supplierRequired"),
+    }),
+    purchase_date: z.date({
+      required_error: tEdit("purchaseDateRequired"),
+    }),
+    status: z.enum(["pending", "ordered", "received"], {
+      required_error: tEdit("statusRequired"),
+    }),
+    reference_number: z.string().nullable().optional(),
+    notes: z.string().nullable().optional(),
+    currency: z.string().optional(),
+  });
+}
 
-type FormValues = z.infer<typeof formSchema>;
-
-const statusOptions = [
-  { value: "pending", label: "قيد الانتظار" },
-  { value: "ordered", label: "تم الطلب" },
-  { value: "received", label: "تم الاستلام" },
-];
+type FormValues = z.infer<ReturnType<typeof createFormSchema>>;
 
 export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
   open,
@@ -91,9 +89,25 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
   suppliers,
   onUpdate,
 }) => {
+  const { direction } = useLanguage();
+  const { t } = useTranslation("purchases");
+  const { t: tEdit } = useTranslation("editPurchaseDialog");
+  const { t: tCommon } = useTranslation("common");
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [supplierSearchInput, setSupplierSearchInput] = useState("");
   const [supplierPopoverOpen, setSupplierPopoverOpen] = useState(false);
+
+  const formSchema = useMemo(() => createFormSchema(tEdit), [tEdit]);
+
+  const statusOptions = useMemo(
+    () => [
+      { value: "pending", label: t("status_pending") },
+      { value: "ordered", label: t("status_ordered") },
+      { value: "received", label: t("status_received") },
+    ],
+    [t],
+  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -144,12 +158,12 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
         currency: values.currency,
         items: [], // passing empty items as backend doesn't require updating items during header update
       });
-      toast.success("تم التحديث بنجاح");
+      toast.success(tEdit("updateSuccess"));
       onUpdate();
       onClose();
     } catch (error) {
       console.error("Failed to update purchase", error);
-      toast.error("فشل التحديث", {
+      toast.error(tEdit("updateFailed"), {
         description: purchaseService.getErrorMessage(error),
       });
     } finally {
@@ -159,12 +173,10 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
-      <DialogContent className="max-w-2xl" dir="rtl">
+      <DialogContent className="max-w-2xl" dir={direction}>
         <DialogHeader>
-          <DialogTitle>تعديل تفاصيل الشراء</DialogTitle>
-          <DialogDescription>
-            يمكنك تعديل المورد، التاريخ، رقم المرجع، أو الحالة هنا.
-          </DialogDescription>
+          <DialogTitle>{tEdit("title")}</DialogTitle>
+          <DialogDescription>{tEdit("description")}</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -177,7 +189,8 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>
-                      اختر المورد <span className="text-red-500">*</span>
+                      {t("selectSupplier")}{" "}
+                      <span className="text-red-500">*</span>
                     </FormLabel>
                     <Popover
                       open={supplierPopoverOpen}
@@ -199,7 +212,7 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
                           >
                             {selectedSupplier
                               ? selectedSupplier.name
-                              : "اختر مورد"}
+                              : tEdit("chooseSupplierPlaceholder")}
                             <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </FormControl>
@@ -210,14 +223,16 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
                       >
                         <Command shouldFilter={false}>
                           <CommandInput
-                            placeholder="ابحث عن المورد"
+                            placeholder={tEdit("searchSupplierPlaceholder")}
                             value={supplierSearchInput}
                             onValueChange={setSupplierSearchInput}
                           />
                           <CommandList>
                             {filteredSuppliers.length === 0 &&
                               supplierSearchInput && (
-                                <CommandEmpty>لا توجد نتائج</CommandEmpty>
+                                <CommandEmpty>
+                                  {tEdit("noResults")}
+                                </CommandEmpty>
                               )}
                             <CommandGroup>
                               {filteredSuppliers.map((supplier) => (
@@ -258,7 +273,8 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
                 render={({ field }) => (
                   <FormItem className="flex flex-col justify-end gap-2 pb-[1px]">
                     <FormLabel>
-                      تاريخ الشراء <span className="text-red-500">*</span>
+                      {t("purchaseDate")}{" "}
+                      <span className="text-red-500">*</span>
                     </FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
@@ -275,7 +291,7 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
                             {field.value ? (
                               format(field.value, "PPP")
                             ) : (
-                              <span>اختر التاريخ</span>
+                              <span>{tEdit("selectDatePlaceholder")}</span>
                             )}
                           </Button>
                         </FormControl>
@@ -305,10 +321,10 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
                 name="reference_number"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>رقم المرجع</FormLabel>
+                    <FormLabel>{tEdit("referenceNumberLabel")}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="أدخل رقم المرجع"
+                        placeholder={tEdit("referenceNumberPlaceholder")}
                         {...field}
                         value={field.value ?? ""}
                         disabled={isSubmitting}
@@ -326,7 +342,7 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
                 render={({ field, fieldState }) => (
                   <FormItem>
                     <FormLabel>
-                      الحالة <span className="text-red-500">*</span>
+                      {t("status")} <span className="text-red-500">*</span>
                     </FormLabel>
                     <FormControl>
                       <Autocomplete
@@ -344,7 +360,7 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
                         renderInput={(params) => (
                           <TextField
                             {...params}
-                            placeholder="اختر الحالة"
+                            placeholder={t("selectStatus")}
                             error={!!fieldState.error}
                             helperText={fieldState.error?.message || ""}
                           />
@@ -362,7 +378,7 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
                 name="currency"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>العملة</FormLabel>
+                    <FormLabel>{tEdit("currencyLabel")}</FormLabel>
                     <Select
                       value={field.value ?? "SDG"}
                       onValueChange={field.onChange}
@@ -370,12 +386,18 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="اختر العملة" />
+                          <SelectValue
+                            placeholder={tEdit("selectCurrencyPlaceholder")}
+                          />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="SDG">SDG — جنيه سوداني</SelectItem>
-                        <SelectItem value="USD">USD — دولار أمريكي</SelectItem>
+                        <SelectItem value="SDG">
+                          {tEdit("currencySDG")}
+                        </SelectItem>
+                        <SelectItem value="USD">
+                          {tEdit("currencyUSD")}
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -389,10 +411,10 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
                 name="notes"
                 render={({ field }) => (
                   <FormItem className="md:col-span-2">
-                    <FormLabel>ملاحظات</FormLabel>
+                    <FormLabel>{tEdit("notesLabel")}</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="أدخل الملاحظات"
+                        placeholder={tEdit("notesPlaceholder")}
                         className="resize-y min-h-[60px]"
                         {...field}
                         value={field.value ?? ""}
@@ -412,16 +434,16 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
                 onClick={onClose}
                 disabled={isSubmitting}
               >
-                إلغاء
+                {tCommon("cancel")}
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    جاري الحفظ...
+                    {tCommon("saving")}
                   </>
                 ) : (
-                  "حفظ التغييرات"
+                  tEdit("saveChanges")
                 )}
               </Button>
             </DialogFooter>

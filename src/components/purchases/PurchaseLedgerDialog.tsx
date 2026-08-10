@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,7 @@ import { ar } from "date-fns/locale";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,24 +50,20 @@ interface PurchaseLedgerDialogProps {
   onUpdate: () => void; // Callback to refresh the parent list
 }
 
-const paymentSchema = z.object({
-  amount: z.coerce.number().min(0.01, "يجب أن يكون المبلغ أكبر من 0"),
-  method: z.string().min(1, "طريقة الدفع مطلوبة"),
-  payment_date: z.date({
-    required_error: "تاريخ الدفع مطلوب",
-  }),
-  reference_number: z.string().optional(),
-});
+function createPaymentSchema(tLedger: (key: string) => string) {
+  return z.object({
+    amount: z.coerce.number().min(0.01, tLedger("amountMustBeGreaterThanZero")),
+    method: z.string().min(1, tLedger("paymentMethodRequired")),
+    payment_date: z.date({
+      required_error: tLedger("paymentDateRequired"),
+    }),
+    reference_number: z.string().optional(),
+  });
+}
 
-type PaymentFormValues = z.infer<typeof paymentSchema>;
+type PaymentFormValues = z.infer<ReturnType<typeof createPaymentSchema>>;
 
-const PAYMENT_METHODS = [
-  { id: "cash", name: "كاش" },
-  { id: "bankak", name: "بنكك" },
-  { id: "fawry", name: "فوري" },
-  { id: "ocash", name: "أوكاش" },
-  { id: "other", name: "أخرى" },
-];
+const PAYMENT_METHOD_IDS = ["cash", "bankak", "fawry", "ocash", "other"] as const;
 
 export function PurchaseLedgerDialog({
   open,
@@ -74,6 +71,21 @@ export function PurchaseLedgerDialog({
   purchase,
   onUpdate,
 }: PurchaseLedgerDialogProps) {
+  const { t: tLedger } = useTranslation("purchaseLedgerDialog");
+  const { t: tSuppliers } = useTranslation("suppliers");
+  const { t: tCommon } = useTranslation("common");
+
+  const PAYMENT_METHODS = useMemo(
+    () =>
+      PAYMENT_METHOD_IDS.map((id) => ({
+        id,
+        name: tLedger(`method${id.charAt(0).toUpperCase()}${id.slice(1)}`),
+      })),
+    [tLedger],
+  );
+
+  const paymentSchema = useMemo(() => createPaymentSchema(tLedger), [tLedger]);
+
   const [payments, setPayments] = useState<PurchasePayment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -117,7 +129,7 @@ export function PurchaseLedgerDialog({
       const data = await purchaseService.getPayments(purchaseId);
       setPayments(data);
     } catch (error) {
-      toast.error("فشل في جلب الدفعات السابقة");
+      toast.error(tLedger("fetchPaymentsError"));
     } finally {
       setIsLoading(false);
     }
@@ -151,13 +163,13 @@ export function PurchaseLedgerDialog({
         reference_number: values.reference_number || null,
       });
 
-      toast.success("تم إضافة الدفعة بنجاح");
+      toast.success(tLedger("paymentAddedSuccess"));
       setShowAddForm(false);
       reset();
-      fetchPayments(purchase.id); 
+      fetchPayments(purchase.id);
       onUpdate();
     } catch (error: any) {
-      toast.error(error.message || "فشل في إضافة الدفعة");
+      toast.error(error.message || tLedger("paymentAddError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -176,28 +188,30 @@ export function PurchaseLedgerDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center text-xl gap-2 text-primary">
             <Wallet className="w-5 h-5" />
-            دفتر الأستاذ - فاتورة مشتريات #
-            {purchase.reference_number || purchase.id}
+            {tLedger("title", {
+              reference: purchase.reference_number || purchase.id,
+            })}
           </DialogTitle>
           <DialogDescription>
-            سجل المدفوعات والمتبقي للمورد:{" "}
-            {purchase.supplier_name || "غير محدد"}
+            {tLedger("description", {
+              supplierName: purchase.supplier_name || tLedger("notSpecified"),
+            })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-3 gap-4 my-4">
           <div className="bg-slate-50 p-4 rounded-xl border flex flex-col items-center justify-center">
-            <p className="text-sm text-slate-500 mb-1">إجمالي الفاتورة</p>
+            <p className="text-sm text-slate-500 mb-1">{tLedger("totalInvoice")}</p>
             <p className="text-2xl font-bold">{formatCurrency(totalAmount)}</p>
           </div>
           <div className="bg-green-50 p-4 rounded-xl border flex flex-col items-center justify-center">
-            <p className="text-sm text-green-700 mb-1">المدفوع</p>
+            <p className="text-sm text-green-700 mb-1">{tLedger("paidLabel")}</p>
             <p className="text-2xl font-bold text-green-600">
               {formatCurrency(totalPaid)}
             </p>
           </div>
           <div className="bg-red-50 p-4 rounded-xl border flex flex-col items-center justify-center">
-            <p className="text-sm text-red-700 mb-1">المتبقي (الرصيد)</p>
+            <p className="text-sm text-red-700 mb-1">{tLedger("remainingBalance")}</p>
             <p className="text-2xl font-bold text-red-600">
               {formatCurrency(balance)}
             </p>
@@ -208,11 +222,11 @@ export function PurchaseLedgerDialog({
           <Table>
             <TableHeader className="bg-slate-50">
               <TableRow>
-                <TableHead>التاريخ</TableHead>
-                <TableHead>المبلغ</TableHead>
-                <TableHead>الطريقة</TableHead>
-                <TableHead>رقم المرجع</TableHead>
-                <TableHead>بواسطة</TableHead>
+                <TableHead>{tLedger("dateColumn")}</TableHead>
+                <TableHead>{tSuppliers("amount")}</TableHead>
+                <TableHead>{tLedger("methodColumn")}</TableHead>
+                <TableHead>{tSuppliers("referenceNumber")}</TableHead>
+                <TableHead>{tLedger("byColumn")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -221,7 +235,7 @@ export function PurchaseLedgerDialog({
                   <TableCell colSpan={5} className="text-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
                     <p className="text-sm text-muted-foreground mt-2">
-                      جاري التحميل...
+                      {tCommon("loading")}
                     </p>
                   </TableCell>
                 </TableRow>
@@ -231,7 +245,7 @@ export function PurchaseLedgerDialog({
                     colSpan={5}
                     className="text-center py-8 text-muted-foreground"
                   >
-                    لا توجد مدفوعات مسجلة لهذه الفاتورة
+                    {tLedger("noPaymentsRecorded")}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -259,7 +273,7 @@ export function PurchaseLedgerDialog({
           {!showAddForm ? (
             <div className="flex justify-between items-center">
               <p className="text-sm text-muted-foreground">
-                يمكنك إضافة مدفوعات جزئية أو كاملة للفاتورة.
+                {tLedger("addPaymentsHint")}
               </p>
               <Button
                 onClick={() => {
@@ -270,7 +284,7 @@ export function PurchaseLedgerDialog({
                 className="gap-2"
               >
                 <Plus className="w-4 h-4" />
-                إضافة دفعة جديدة
+                {tLedger("addNewPayment")}
               </Button>
             </div>
           ) : (
@@ -280,12 +294,12 @@ export function PurchaseLedgerDialog({
             >
               <h4 className="font-semibold mb-2 flex items-center gap-2">
                 <FileText className="w-4 h-4" />
-                تفاصيل الدفعة الجديدة
+                {tLedger("newPaymentDetails")}
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>
-                    المبلغ <span className="text-red-500">*</span>
+                    {tSuppliers("amount")} <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     type="number"
@@ -302,7 +316,7 @@ export function PurchaseLedgerDialog({
 
                 <div className="space-y-2">
                   <Label>
-                    تاريخ الدفع <span className="text-red-500">*</span>
+                    {tSuppliers("paymentDate")} <span className="text-red-500">*</span>
                   </Label>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -318,7 +332,7 @@ export function PurchaseLedgerDialog({
                         {paymentDate ? (
                           format(paymentDate, "dd MMMM yyyy", { locale: ar })
                         ) : (
-                          <span>اختر التاريخ</span>
+                          <span>{tLedger("selectDate")}</span>
                         )}
                       </Button>
                     </PopoverTrigger>
@@ -342,7 +356,7 @@ export function PurchaseLedgerDialog({
 
                 <div className="space-y-2">
                   <Label>
-                    طريقة الدفع <span className="text-red-500">*</span>
+                    {tSuppliers("paymentMethod")} <span className="text-red-500">*</span>
                   </Label>
                   <Select
                     value={watch("method")}
@@ -351,7 +365,7 @@ export function PurchaseLedgerDialog({
                     <SelectTrigger
                       className={errors.method ? "border-red-500" : ""}
                     >
-                      <SelectValue placeholder="اختر طريقة الدفع" />
+                      <SelectValue placeholder={tLedger("selectPaymentMethodPlaceholder")} />
                     </SelectTrigger>
                     <SelectContent>
                       {PAYMENT_METHODS.map((method) => (
@@ -369,10 +383,10 @@ export function PurchaseLedgerDialog({
                 </div>
 
                 <div className="space-y-2">
-                  <Label>رقم المرجع (اختياري)</Label>
+                  <Label>{tLedger("referenceNumberOptionalLabel")}</Label>
                   <Input
                     {...register("reference_number")}
-                    placeholder="رقم الشيك أو الحوالة"
+                    placeholder={tLedger("checkOrTransferNumberPlaceholder")}
                   />
                 </div>
               </div>
@@ -384,7 +398,7 @@ export function PurchaseLedgerDialog({
                   onClick={() => setShowAddForm(false)}
                   disabled={isSubmitting}
                 >
-                  إلغاء
+                  {tCommon("cancel")}
                 </Button>
                 <Button
                   type="submit"
@@ -394,7 +408,7 @@ export function PurchaseLedgerDialog({
                   {isSubmitting ? (
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
                   ) : (
-                    "حفظ الدفعة"
+                    tLedger("savePayment")
                   )}
                 </Button>
               </div>
