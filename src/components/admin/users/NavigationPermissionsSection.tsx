@@ -7,6 +7,7 @@ import {
   ChevronUp,
   Info,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { navItems } from "@/components/layouts/navItems";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -42,6 +43,7 @@ const NavigationPermissionsSection: React.FC<
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(),
   );
+  const { t } = useTranslation("sidebar");
 
   // Build navigation structure from navItems.ts
   const buildNavStructure = (): NavigationCategory[] => {
@@ -57,7 +59,7 @@ const NavigationPermissionsSection: React.FC<
         }
         categories[category].push({
           route: item.to,
-          label: item.label,
+          label: t(item.label),
         });
       }
 
@@ -69,7 +71,7 @@ const NavigationPermissionsSection: React.FC<
           }
           categories[category].push({
             route: child.to,
-            label: child.label,
+            label: t(child.label),
           });
         });
       }
@@ -84,7 +86,7 @@ const NavigationPermissionsSection: React.FC<
   // Navigation structure built from static navItems.ts (single source of truth)
   const navigationStructure = useMemo<NavigationCategory[]>(
     () => buildNavStructure(),
-    [],
+    [t],
   );
 
   // Toggle category expansion

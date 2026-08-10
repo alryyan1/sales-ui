@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Plus, User, UserCheck, UserX } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +38,7 @@ export function CustomerPicker({
   onSelect,
   disabled,
 }: CustomerPickerProps) {
+  const { t: tCustomerPicker } = useTranslation("customerPicker");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -73,7 +75,7 @@ export function CustomerPicker({
             ) : (
               <User className="size-4 shrink-0 text-muted-foreground" />
             )}
-            <span className="truncate text-sm">{client ? client.name : "عميل نقدي"}</span>
+            <span className="truncate text-sm">{client ? client.name : tCustomerPicker("walkInCustomer")}</span>
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-80 p-0">
@@ -81,7 +83,7 @@ export function CustomerPicker({
             <CommandInput
               value={search}
               onValueChange={setSearch}
-              placeholder="ابحث بالاسم أو الهاتف..."
+              placeholder={tCustomerPicker("searchByNameOrPhone")}
             />
             <CommandList>
               <CommandGroup>
@@ -93,7 +95,7 @@ export function CustomerPicker({
                   }}
                 >
                   <UserX className="size-4 text-muted-foreground" />
-                  عميل نقدي (بدون تسجيل)
+                  {tCustomerPicker("walkInCustomerNoRegistration")}
                 </CommandItem>
                 <CommandItem
                   value="create-new"
@@ -103,21 +105,21 @@ export function CustomerPicker({
                   }}
                 >
                   <Plus className="size-4 text-primary" />
-                  إنشاء عميل جديد...
+                  {tCustomerPicker("createNewCustomer")}
                 </CommandItem>
               </CommandGroup>
 
               {debouncedSearch && (
                 <>
                   <CommandSeparator />
-                  <CommandGroup heading="نتائج البحث">
+                  <CommandGroup heading={tCustomerPicker("searchResults")}>
                     {resultsQuery.isLoading ? (
                       <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
                         <Loader2 className="size-4 animate-spin" />
-                        جاري البحث...
+                        {tCustomerPicker("searching")}
                       </div>
                     ) : results.length === 0 ? (
-                      <CommandEmpty>لا يوجد عملاء مطابقون</CommandEmpty>
+                      <CommandEmpty>{tCustomerPicker("noMatchingCustomers")}</CommandEmpty>
                     ) : (
                       results.map((c) => (
                         <CommandItem

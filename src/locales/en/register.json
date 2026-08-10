@@ -1,0 +1,11 @@
+{
+    "title": "Create a New Account",
+    "nameLabel": "Name",
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "confirmPasswordLabel": "Confirm Password",
+    "submitButton": "Register",
+    "submitButtonLoading": "Registering...",
+    "loginPrompt": "Already have an account?",
+    "loginLink": "Login"
+}

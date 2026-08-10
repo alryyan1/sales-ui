@@ -1,0 +1,9 @@
+{
+  "searchOrScanPlaceholder": "Search by name or SKU, or scan barcode... ( / )",
+  "productNotFoundBySku": "No product found with this SKU/barcode",
+  "productSearchFailed": "Failed to search for product",
+  "noMatchingProducts": "No matching products",
+  "outOfStockBadge": "Out of Stock",
+  "stockRemaining": "{{count}} left",
+  "stockAvailable": "{{count}} available"
+}

@@ -1,6 +1,8 @@
 // src/components/pos/SaleCompleteDialog.tsx
 import { CheckCircle2, Landmark, Loader2, Plus, Printer } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
+import { useLanguage } from "@/context/LanguageContext";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +36,9 @@ export function SaleCompleteDialog({
   isExportingToFinance = false,
 }: SaleCompleteDialogProps) {
   const formatCurrency = useFormatCurrency();
+  const { direction } = useLanguage();
+  const { t } = useTranslation("pos");
+  const { t: tSaleComplete } = useTranslation("saleCompleteDialog");
   if (!sale) return null;
 
   const due = Math.max(
@@ -46,7 +51,7 @@ export function SaleCompleteDialog({
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onNewSale()}>
       <DialogContent
-        dir="rtl"
+        dir={direction}
         className="sm:max-w-sm text-center"
         showCloseButton={false}
         onKeyDown={(e) => {
@@ -60,20 +65,23 @@ export function SaleCompleteDialog({
           <div className="flex size-14 items-center justify-center rounded-full bg-green-500/10 text-green-600 dark:text-green-400">
             <CheckCircle2 className="size-8" />
           </div>
-          <DialogTitle className="text-lg">تم إتمام البيع بنجاح</DialogTitle>
+          <DialogTitle className="text-lg">{tSaleComplete("saleCompletedTitle")}</DialogTitle>
           <DialogDescription>
-            {sale.invoice_number ? `فاتورة رقم ${sale.invoice_number}` : `طلب رقم #${sale.number}`}
-            {" · "}معرّف #{sale.id}
+            {sale.invoice_number
+              ? tSaleComplete("invoiceNumberLabel", { number: sale.invoice_number })
+              : tSaleComplete("orderNumberLabel", { number: sale.number })}
+            {" · "}
+            {tSaleComplete("idLabel", { id: sale.id })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-lg border bg-muted/30 px-3 py-2.5">
-            <p className="text-[11px] text-muted-foreground">الإجمالي</p>
+            <p className="text-[11px] text-muted-foreground">{tSaleComplete("totalLabel")}</p>
             <p className="text-lg font-bold tabular-nums">{formatCurrency(sale.total_amount)}</p>
           </div>
           <div className="rounded-lg border bg-muted/30 px-3 py-2.5">
-            <p className="text-[11px] text-muted-foreground">المدفوع</p>
+            <p className="text-[11px] text-muted-foreground">{tSaleComplete("paidLabel")}</p>
             <p className="text-lg font-bold tabular-nums text-green-600 dark:text-green-400">
               {formatCurrency(sale.paid_amount)}
             </p>
@@ -82,7 +90,7 @@ export function SaleCompleteDialog({
 
         {due > 0 && (
           <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm font-medium text-destructive">
-            متبقٍ على العميل: {formatCurrency(due)}
+            {tSaleComplete("customerOwes", { amount: formatCurrency(due) })}
           </div>
         )}
 
@@ -101,7 +109,7 @@ export function SaleCompleteDialog({
             ) : (
               <Printer className="size-4" />
             )}
-            إيصال حراري
+            {tSaleComplete("thermalReceipt")}
           </Button>
           <Button
             type="button"
@@ -115,7 +123,7 @@ export function SaleCompleteDialog({
             ) : (
               <Printer className="size-4" />
             )}
-            فاتورة A4
+            {tSaleComplete("invoiceA4")}
           </Button>
         </div>
 
@@ -132,13 +140,13 @@ export function SaleCompleteDialog({
             ) : (
               <Landmark className="size-4" />
             )}
-            {sale.finance_exported_at ? "إعادة التصدير إلى النظام المالي" : "تصدير إلى النظام المالي"}
+            {sale.finance_exported_at ? tSaleComplete("reExportToFinance") : tSaleComplete("exportToFinance")}
           </Button>
         )}
 
         <Button type="button" size="lg" className="gap-2 text-base font-semibold" onClick={onNewSale}>
           <Plus className="size-5" />
-          بيع جديد
+          {t("newSale")}
         </Button>
       </DialogContent>
     </Dialog>

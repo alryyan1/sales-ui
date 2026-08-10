@@ -1,0 +1,14 @@
+{
+  "nearExpiringTitle": "منتجات قريبة من الانتهاء",
+  "expiredTitle": "منتجات منتهية الصلاحية",
+  "expiredSinceDays": "منتهي منذ {{days}} يوم",
+  "expiresToday": "ينتهي اليوم",
+  "expiresTomorrow": "ينتهي غداً",
+  "daysRemaining": "{{days}} يوم متبقي",
+  "noProducts": "لا توجد منتجات",
+  "barcodeHeader": "الباركود",
+  "statusHeader": "الحالة",
+  "actionHeader": "الإجراء",
+  "moveProductTooltip": "نقل المنتج من الرفوف لتسوية المخزون",
+  "cannotSellExpiredTooltip": "لا يمكن بيع منتج منتهي الصلاحية"
+}

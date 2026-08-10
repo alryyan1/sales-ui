@@ -1,0 +1,12 @@
+{
+  "title": "Due Payment Reminders",
+  "reminderSentViaWhatsapp": "Reminder message sent via WhatsApp",
+  "whatsappSendFailed": "Failed to send WhatsApp message",
+  "dismissReminderFailed": "Failed to dismiss reminder",
+  "remainingAmountHeader": "Remaining Amount",
+  "reminderDateHeader": "Reminder Date",
+  "sendWhatsappReminderTooltip": "Send WhatsApp reminder",
+  "whatsappReminderButton": "WhatsApp Reminder",
+  "dismissReminderTooltip": "Dismiss reminder",
+  "cancelReminderButton": "Cancel Reminder"
+}

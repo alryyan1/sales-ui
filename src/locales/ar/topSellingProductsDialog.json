@@ -1,0 +1,12 @@
+{
+  "fetchFailed": "فشل جلب الأدوية الأكثر مبيعاً",
+  "productOutOfStock": "هذا المنتج غير متوفر في المخزون",
+  "title": "الأكثر مبيعاً",
+  "subtitle": "أفضل الأدوية والمنتجات خلال آخر 30 يوماً",
+  "noDataTitle": "لا توجد بيانات متاحة",
+  "noDataDescription": "لم يتم العثور على أي منتجات مبيعة خلال الفترة المحددة.",
+  "quantitySoldTooltip": "الكمية المباعة",
+  "stockLabel": "المخزون: {{value}}",
+  "outOfStockValue": "نفذت",
+  "notAvailable": "غير متوفر"
+}

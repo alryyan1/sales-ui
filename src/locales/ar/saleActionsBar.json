@@ -1,0 +1,14 @@
+{
+  "reminder": "تذكير",
+  "reminderSetForDate": "تذكير بتاريخ {{date}}",
+  "setPaymentReminder": "تعيين تذكير دفع",
+  "numberOfDaysPlaceholder": "عدد الأيام",
+  "saleActionsHash": "إجراءات الفاتورة #{{id}}",
+  "printThermalButton": "طباعة حراري",
+  "whatsapp": "واتساب",
+  "reExport": "إعادة التصدير",
+  "exportToFinanceSystem": "تصدير لنظام الماليه",
+  "convertToInvoice": "تحويل لفاتورة",
+  "convertToQuote": "تحويل لتسعيرة",
+  "deleteInvoiceButton": "حذف الفاتورة"
+}

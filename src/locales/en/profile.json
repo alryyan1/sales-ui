@@ -1,0 +1,18 @@
+{
+    "pageTitle": "Profile & Account Settings",
+    "detailsTitle": "Edit Profile Details",
+    "detailsDesc": "Update your name and email address.",
+    "nameLabel": "Full Name",
+    "emailLabel": "Email",
+    "updateSuccess": "Your profile was updated successfully.",
+    "updateError": "Failed to update profile.",
+
+    "passwordTitle": "Change Password",
+    "passwordDesc": "Update your password. Make sure to use a strong password.",
+    "currentPasswordLabel": "Current Password",
+    "newPasswordLabel": "New Password",
+    "confirmPasswordLabel": "Confirm New Password",
+    "updatePasswordButton": "Update Password",
+    "passwordUpdateSuccess": "Password updated successfully.",
+    "passwordUpdateError": "Failed to update password."
+}

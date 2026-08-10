@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import type { DateRange } from "react-day-picker";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -76,67 +77,68 @@ const StockProductsCard: React.FC<{
   products: Product[];
   loading: boolean;
   onViewAll: () => void;
-}> = ({ title, description, emptyLabel, products, loading, onViewAll }) => (
-  <Card className="min-w-0">
-    <CardHeader>
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <CardTitle>{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
+}> = ({ title, description, emptyLabel, products, loading, onViewAll }) => {
+  const { t } = useTranslation("dashboard");
+  return (
+    <Card className="min-w-0">
+      <CardHeader>
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <CardTitle>{title}</CardTitle>
+            <CardDescription>{description}</CardDescription>
+          </div>
+          <Button variant="outline" size="sm" className="flex-shrink-0" onClick={onViewAll}>
+            {t("viewAll")}
+          </Button>
         </div>
-        <Button variant="outline" size="sm" className="flex-shrink-0" onClick={onViewAll}>
-          عرض الكل
-        </Button>
-      </div>
-    </CardHeader>
-    <CardContent>
-      {loading ? (
-        <div className="space-y-2">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-10 w-full" />
-          ))}
-        </div>
-      ) : products.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-10 text-center text-sm text-muted-foreground">
-          <PackageX className="mb-2 h-8 w-8 text-muted-foreground/50" />
-          {emptyLabel}
-        </div>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="text-center">المنتج</TableHead>
-              {/* <TableHead>التصنيف</TableHead> */}
-              <TableHead className="text-center">المخزون الحالي</TableHead>
-              {/* <TableHead>حد التنبيه</TableHead> */}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {products.map((product) => (
-              <TableRow key={product.id}>
-                <TableCell className="font-medium">
-                  <div>{product.name}</div>
-                  {product.sku && <div className="text-xs text-muted-foreground">{product.sku}</div>}
-                </TableCell>
-                {/* <TableCell className="text-muted-foreground">{product.category_name ?? product.category?.name ?? "—"}</TableCell> */}
-                <TableCell>
-                  <Badge variant={product.stock_quantity <= 0 ? "destructive" : "secondary"} className="tabular-nums">
-                    {product.stock_quantity}
-                  </Badge>
-                </TableCell>
-                {/* <TableCell className="tabular-nums text-muted-foreground">{product.stock_alert_level ?? "—"}</TableCell> */}
-              </TableRow>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="space-y-2">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full" />
             ))}
-          </TableBody>
-        </Table>
-      )}
-    </CardContent>
-  </Card>
-);
+          </div>
+        ) : products.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 text-center text-sm text-muted-foreground">
+            <PackageX className="mb-2 h-8 w-8 text-muted-foreground/50" />
+            {emptyLabel}
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-center">{t("productColumn")}</TableHead>
+                <TableHead className="text-center">{t("currentStockColumn")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {products.map((product) => (
+                <TableRow key={product.id}>
+                  <TableCell className="font-medium">
+                    <div>{product.name}</div>
+                    {product.sku && <div className="text-xs text-muted-foreground">{product.sku}</div>}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={product.stock_quantity <= 0 ? "destructive" : "secondary"} className="tabular-nums">
+                      {product.stock_quantity}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const formatCurrency = useFormatCurrency();
+  const { t } = useTranslation("dashboard");
+  const { t: tCommon } = useTranslation("common");
 
   const today = useMemo(() => new Date(), []);
   const firstOfMonth = useMemo(() => new Date(today.getFullYear(), today.getMonth(), 1), [today]);
@@ -159,11 +161,11 @@ const DashboardPage: React.FC = () => {
     } catch (e) {
       const m = getErrorMessage(e);
       setError(m);
-      toast.error("خطأ", { description: m });
+      toast.error(tCommon("error"), { description: m });
     } finally {
       setLoading(false);
     }
-  }, [startDate, endDate]);
+  }, [startDate, endDate, tCommon]);
 
   useEffect(() => {
     fetchData();
@@ -211,8 +213,8 @@ const DashboardPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">لوحة التحكم</h1>
-          <p className="text-sm text-muted-foreground">نظرة عامة على الإيرادات والمدفوعات والأرباح.</p>
+          <h1 className="text-2xl font-semibold text-foreground">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
@@ -224,7 +226,7 @@ const DashboardPage: React.FC = () => {
               fetchLowStock();
               fetchOutOfStock();
             }}
-            title="تحديث"
+            title={t("refresh")}
           >
             <RefreshCw className="h-4 w-4" />
           </Button>
@@ -234,44 +236,44 @@ const DashboardPage: React.FC = () => {
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>خطأ في جلب البيانات</AlertTitle>
+          <AlertTitle>{t("fetchErrorTitle")}</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <StatCard
-          title="إجمالي الإيرادات"
+          title={t("totalRevenue")}
           value={formatCurrency(data?.total_sales_amount ?? 0)}
-          description="قيمة الفواتير كاملة للفترة المحددة"
+          description={t("totalRevenueDesc")}
           icon={FileText}
           loading={loading}
         />
         <StatCard
-          title="إجمالي المدفوعات"
+          title={t("totalPayments")}
           value={formatCurrency(data?.paid_sales_amount ?? 0)}
-          description="المبالغ المحصلة فعلياً"
+          description={t("totalPaymentsDesc")}
           icon={Wallet}
           loading={loading}
         />
         <StatCard
-          title="إجمالي تكلفة المبيعات"
+          title={t("totalCostOfSales")}
           value={formatCurrency(data?.cost_of_sales_amount ?? 0)}
-          description="تكلفة البضاعة المباعة"
+          description={t("totalCostOfSalesDesc")}
           icon={PackageMinus}
           loading={loading}
         />
         <StatCard
-          title="إجمالي المصروفات"
+          title={t("totalExpenses")}
           value={formatCurrency(data?.expenses_amount ?? 0)}
-          description="مصروفات الفترة المحددة"
+          description={t("totalExpensesDesc")}
           icon={Receipt}
           loading={loading}
         />
         <StatCard
-          title="الأرباح"
+          title={t("profit")}
           value={formatCurrency(data?.profit ?? 0)}
-          description="المدفوعات − المصروفات − التكلفة"
+          description={t("profitDesc")}
           icon={TrendingUp}
           loading={loading}
           emphasize
@@ -280,17 +282,17 @@ const DashboardPage: React.FC = () => {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <StockProductsCard
-          title="المنتجات منخفضة المخزون"
-          description="المنتجات التي وصلت أو اقتربت من حد التنبيه"
-          emptyLabel="لا توجد منتجات منخفضة المخزون حالياً"
+          title={t("lowStockTitle")}
+          description={t("lowStockDesc")}
+          emptyLabel={t("lowStockEmpty")}
           products={lowStockProducts}
           loading={loadingLowStock}
           onViewAll={() => navigate("/products")}
         />
         <StockProductsCard
-          title="المنتجات التي نفذ مخزونها"
-          description="المنتجات التي وصل مخزونها إلى صفر"
-          emptyLabel="لا توجد منتجات نافذة المخزون حالياً"
+          title={t("outOfStockTitle")}
+          description={t("outOfStockDesc")}
+          emptyLabel={t("outOfStockEmpty")}
           products={outOfStockProducts}
           loading={loadingOutOfStock}
           onViewAll={() => navigate("/products")}

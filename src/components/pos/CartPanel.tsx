@@ -1,6 +1,7 @@
 // src/components/pos/CartPanel.tsx
 import { useEffect, useState } from "react";
 import { Loader2, Minus, Percent, Plus, Receipt, Tag, Trash2, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,11 +17,11 @@ import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 import { DraftCartItem, DraftTicket, DiscountType, computeDraftTotals } from "@/lib/posCart";
 import type { Payment } from "@/services/saleService";
 
-const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  cash: "نقدي",
-  bankak: "بنكك",
-  fawry: "فوري",
-  ocash: "أوكاش",
+const PAYMENT_METHOD_LABEL_KEYS: Record<string, string> = {
+  cash: "paymentMethodCash",
+  bankak: "paymentMethodBankak",
+  fawry: "paymentMethodFawry",
+  ocash: "paymentMethodOcash",
 };
 
 interface CartPanelProps {
@@ -57,6 +58,9 @@ function DiscountPopover({
   onApply: (type: DiscountType, amount: number) => void;
   onRemove: () => void;
 }) {
+  const { t } = useTranslation("pos");
+  const { t: tCommon } = useTranslation("common");
+  const { t: tCartPanel } = useTranslation("cartPanel");
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<DiscountType>(ticket.discountType);
   const [value, setValue] = useState(ticket.discountAmount ? String(ticket.discountAmount) : "");
@@ -70,7 +74,7 @@ function DiscountPopover({
           className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
         >
           <Tag className="size-3" />
-          {hasDiscount ? "تعديل الخصم" : "إضافة خصم"}
+          {hasDiscount ? tCartPanel("editDiscount") : tCartPanel("addDiscount")}
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-64 space-y-3">
@@ -83,7 +87,7 @@ function DiscountPopover({
               type === "percentage" ? "bg-background shadow-sm" : "text-muted-foreground"
             )}
           >
-            نسبة %
+            {tCartPanel("percentageOption")}
           </button>
           <button
             type="button"
@@ -93,7 +97,7 @@ function DiscountPopover({
               type === "fixed" ? "bg-background shadow-sm" : "text-muted-foreground"
             )}
           >
-            مبلغ ثابت
+            {tCartPanel("fixedAmountOption")}
           </button>
         </div>
         <div className="relative">
@@ -103,7 +107,7 @@ function DiscountPopover({
             max={type === "percentage" ? 100 : undefined}
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            placeholder={type === "percentage" ? "مثال: 10" : "مثال: 500"}
+            placeholder={type === "percentage" ? tCartPanel("percentagePlaceholder") : tCartPanel("fixedAmountPlaceholder")}
             className="pe-8"
             autoFocus
           />
@@ -124,7 +128,7 @@ function DiscountPopover({
                 setOpen(false);
               }}
             >
-              إزالة
+              {t("remove")}
             </Button>
           )}
           <Button
@@ -137,7 +141,7 @@ function DiscountPopover({
               setOpen(false);
             }}
           >
-            تطبيق
+            {tCommon("apply")}
           </Button>
         </div>
       </PopoverContent>
@@ -160,6 +164,7 @@ function CartLine({
   onQuantityChange: (quantity: number) => void;
   onRemove: () => void;
 }) {
+  const { t: tCartPanel } = useTranslation("cartPanel");
   const formatCurrency = useFormatCurrency();
   const [qtyDraft, setQtyDraft] = useState(String(item.quantity));
   const lineTotal = item.unitPrice * item.quantity;
@@ -181,7 +186,7 @@ function CartLine({
         <p className="truncate text-xs text-muted-foreground">
           {item.product.sku && <span className="font-mono">{item.product.sku}</span>}
           {item.product.sku && " · "}
-          {formatCurrency(item.unitPrice)} / وحدة
+          {formatCurrency(item.unitPrice)} {tCartPanel("perUnitSuffix")}
         </p>
       </div>
 
@@ -234,7 +239,7 @@ function CartLine({
           onRemove();
         }}
         className="shrink-0 rounded-md p-1 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-destructive"
-        aria-label="إزالة الصنف"
+        aria-label={tCartPanel("removeLineItem")}
       >
         <X className="size-4" />
       </button>
@@ -262,6 +267,8 @@ export function CartPanel({
   deletingPaymentId = null,
   onDeletePayment,
 }: CartPanelProps) {
+  const { t } = useTranslation("pos");
+  const { t: tCartPanel } = useTranslation("cartPanel");
   const formatCurrency = useFormatCurrency();
   const items = ticket?.items ?? [];
   const { subtotal, discountAmount, total } = ticket
@@ -275,7 +282,7 @@ export function CartPanel({
       <div className="flex items-center justify-between border-b px-4 py-3">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
           <Receipt className="size-4 text-muted-foreground" />
-          السلة
+          {tCartPanel("cartTitle")}
           {items.length > 0 && (
             <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
               {items.length}
@@ -288,11 +295,11 @@ export function CartPanel({
             size="sm"
             disabled={isCreatingSale || hasPayments}
             onClick={onClearCart}
-            title={hasPayments ? "يجب إلغاء المدفوعات أولاً قبل إفراغ السلة" : undefined}
+            title={hasPayments ? tCartPanel("mustCancelPaymentsBeforeClear") : undefined}
             className="gap-1.5 text-muted-foreground"
           >
             <Trash2 className="size-3.5" />
-            مسح الكل
+            {t("clearAll")}
           </Button>
         )}
       </div>
@@ -301,9 +308,9 @@ export function CartPanel({
         {items.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center">
             <Receipt className="size-8 text-muted-foreground/50" />
-            <p className="text-sm font-medium text-foreground">السلة فارغة</p>
+            <p className="text-sm font-medium text-foreground">{tCartPanel("cartEmpty")}</p>
             <p className="text-xs text-muted-foreground">
-              ابحث عن منتج أو امسح الباركود لإضافته إلى الفاتورة
+              {tCartPanel("emptyCartHint")}
             </p>
           </div>
         ) : (
@@ -324,7 +331,7 @@ export function CartPanel({
       {items.length > 0 && (
         <div className="space-y-2.5 border-t bg-muted/20 px-4 py-3">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">المجموع الفرعي</span>
+            <span className="text-muted-foreground">{t("subtotal")}</span>
             <span className="tabular-nums">{formatCurrency(subtotal)}</span>
           </div>
 
@@ -337,7 +344,7 @@ export function CartPanel({
                 onRemove={onRemoveDiscount}
               />
             ) : (
-              <span className="text-muted-foreground">الخصم</span>
+              <span className="text-muted-foreground">{t("discount")}</span>
             )}
             {discountAmount > 0 && (
               <span className="tabular-nums text-destructive">- {formatCurrency(discountAmount)}</span>
@@ -347,25 +354,25 @@ export function CartPanel({
           <Separator />
 
           <div className="flex items-end justify-between">
-            <span className="text-sm font-medium text-muted-foreground">الإجمالي</span>
+            <span className="text-sm font-medium text-muted-foreground">{tCartPanel("grandTotal")}</span>
             <span className="text-3xl font-bold tabular-nums text-primary">{formatCurrency(total)}</span>
           </div>
 
           {dueAmount != null && dueAmount !== total && (
             <>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">مدفوع مسبقًا</span>
+                <span className="text-muted-foreground">{tCartPanel("alreadyPaid")}</span>
                 <span className="tabular-nums">{formatCurrency(Math.max(0, total - dueAmount))}</span>
               </div>
               <div className="flex items-center justify-between text-sm font-medium">
-                <span className="text-muted-foreground">المتبقي للدفع</span>
+                <span className="text-muted-foreground">{tCartPanel("remainingToPay")}</span>
                 <span
                   className={cn(
                     "tabular-nums",
                     dueAmount > 0 ? "text-destructive" : "text-green-600 dark:text-green-400"
                   )}
                 >
-                  {dueAmount > 0 ? formatCurrency(dueAmount) : "مسدد بالكامل"}
+                  {dueAmount > 0 ? formatCurrency(dueAmount) : tCartPanel("fullyPaid")}
                 </span>
               </div>
             </>
@@ -373,13 +380,15 @@ export function CartPanel({
 
           {payments != null && payments.length > 0 && (
             <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground">المدفوعات</p>
+              <p className="text-xs font-medium text-muted-foreground">{t("payments")}</p>
               {payments.map((p) => (
                 <div
                   key={p.id ?? `${p.method}-${p.amount}-${p.payment_date}`}
                   className="flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs"
                 >
-                  <span className="text-muted-foreground">{PAYMENT_METHOD_LABELS[p.method] ?? p.method}</span>
+                  <span className="text-muted-foreground">
+                    {PAYMENT_METHOD_LABEL_KEYS[p.method] ? tCartPanel(PAYMENT_METHOD_LABEL_KEYS[p.method]) : p.method}
+                  </span>
                   <div className="flex items-center gap-1.5">
                     <span className="font-semibold tabular-nums text-foreground">{formatCurrency(Number(p.amount))}</span>
                     {p.id != null && onDeletePayment && (
@@ -388,7 +397,7 @@ export function CartPanel({
                         disabled={!canCancelPayment || deletingPaymentId === p.id}
                         onClick={() => onDeletePayment(p.id!)}
                         className="text-muted-foreground transition-colors hover:text-destructive disabled:pointer-events-none disabled:opacity-40"
-                        aria-label="حذف الدفعة"
+                        aria-label={tCartPanel("deletePayment")}
                       >
                         {deletingPaymentId === p.id ? (
                           <Loader2 className="size-3 animate-spin" />
@@ -411,7 +420,7 @@ export function CartPanel({
               onClick={onOpenPayment}
               className="w-full gap-2 text-base font-semibold"
             >
-              الدفع
+              {t("payment")}
               <kbd className="rounded bg-primary-foreground/15 px-1.5 py-0.5 font-mono text-[10px] font-normal">F8</kbd>
             </Button>
             <Button
@@ -423,7 +432,7 @@ export function CartPanel({
               className="w-full gap-1.5 text-muted-foreground"
             >
               {isCreatingSale ? <Loader2 className="size-3.5 animate-spin" /> : null}
-              دفع سريع (المبلغ بالكامل)
+              {tCartPanel("quickPayFullAmount")}
               <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">F10</kbd>
             </Button>
           </div>

@@ -1,0 +1,12 @@
+{
+  "fetchFailed": "Failed to fetch best-selling products",
+  "productOutOfStock": "This product is out of stock",
+  "title": "Best Selling",
+  "subtitle": "Top medicines and products over the last 30 days",
+  "noDataTitle": "No data available",
+  "noDataDescription": "No sold products were found for the selected period.",
+  "quantitySoldTooltip": "Quantity sold",
+  "stockLabel": "Stock: {{value}}",
+  "outOfStockValue": "Out of stock",
+  "notAvailable": "Not available"
+}

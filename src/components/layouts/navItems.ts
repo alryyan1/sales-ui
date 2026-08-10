@@ -8,10 +8,13 @@ import {
 } from "lucide-react";
 import { NavItem } from "./types";
 
+// `label` holds an i18next key within the "sidebar" namespace (see
+// src/locales/{ar,en}/sidebar.json), not literal display text — SidebarPro
+// and NavigationPermissionsSection both translate it via t(item.label).
 export const navItems: NavItem[] = [
   {
     to: "/dashboard",
-    label: "لوحة التحكم",
+    label: "dashboard",
     icon: BarChart3,
     permission: null,
     category: "الرئيسية",
@@ -19,38 +22,38 @@ export const navItems: NavItem[] = [
   // Sales Group
   {
     to: "#",
-    label: "المبيعات",
+    label: "sales",
     icon: CircleDollarSign,
     permission: null,
     category: "المبيعات",
     children: [
       {
         to: "/sales/pos",
-        label: "نقطة البيع",
+        label: "pos",
         permission: null,
         category: "المبيعات",
       },
       {
         to: "/sales/pos-blank",
-        label: "المعرض",
+        label: "gallery",
         permission: null,
         category: "المبيعات",
       },
       {
         to: "/sales/list",
-        label: "قائمة المبيعات",
+        label: "salesList",
         permission: null,
         category: "المبيعات",
       },
       {
         to: "/sales/returns",
-        label: "مردودات المبيعات",
+        label: "salesReturns",
         permission: null,
         category: "المبيعات",
       },
       {
         to: "/clients",
-        label: "العملاء",
+        label: "clients",
         permission: null,
         category: "المبيعات",
       },
@@ -60,32 +63,32 @@ export const navItems: NavItem[] = [
   // Inventory Group
   {
     to: "#",
-    label: "المخزون",
+    label: "inventory",
     icon: BoxIcon,
     permission: null,
     category: "المخزون",
     children: [
       {
         to: "/products",
-        label: "المعدات",
+        label: "products",
         permission: null,
         category: "المخزون",
       },
       {
         to: "/inventory/adjustments",
-        label: "تعديلات المخزون",
+        label: "inventoryAdjustments",
         permission: null,
         category: "المخزون",
       },
       {
         to: "/inventory/transfers",
-        label: "تحويل المخزون",
+        label: "inventoryTransfers",
         permission: null,
         category: "المخزون",
       },
       {
         to: "/inventory/counts",
-        label: "جرد المخزون",
+        label: "inventoryCounts",
         permission: null,
         category: "المخزون",
       },
@@ -95,26 +98,26 @@ export const navItems: NavItem[] = [
   // Purchases Group
   {
     to: "#",
-    label: "الواردات",
+    label: "purchasesGroup",
     icon: ShoppingCart,
     permission: null,
     category: "المشتريات",
     children: [
       {
         to: "/suppliers",
-        label: "الموردون",
+        label: "suppliers",
         permission: null,
         category: "المخزون",
       },
       {
         to: "/purchases",
-        label: "قائمة المشتريات",
+        label: "purchasesList",
         permission: null,
         category: "المشتريات",
       },
       {
         to: "/inventory/transit-orders",
-        label: "Transit Orders",
+        label: "transitOrders",
         permission: null,
         category: "المشتريات",
       },
@@ -125,91 +128,91 @@ export const navItems: NavItem[] = [
   // Reports Group
   {
     to: "#",
-    label: "التقارير",
+    label: "reportsGroup",
     icon: BarChart3,
     permission: null,
     category: "التقارير",
     children: [
-   
+
       {
         to: "/reports/sales",
-        label: "تقرير المبيعات",
+        label: "salesReport",
         permission: null,
         category: "التقارير",
       },
-   
+
       {
         to: "/reports/purchases",
-        label: "تقرير المشتريات",
+        label: "purchaseReport",
         permission: null,
         category: "التقارير",
       },
-    
+
       {
         to: "/reports/inventory-log",
-        label: "سجل المخزون",
+        label: "inventoryLogReport",
         permission: null,
         category: "التقارير",
       },
- 
+
       {
         to: "/reports/daily-income",
-        label: "تقرير المبيعات الشهري",
+        label: "dailyIncomeReport",
         permission: null,
         category: "التقارير",
       },
       {
         to: "/reports/monthly-expenses",
-        label: "تقرير المصروفات الشهرية",
+        label: "monthlyExpensesReport",
         permission: null,
         category: "التقارير",
       },
       {
         to: "/reports/profit-overview",
-        label: "ملخص الأرباح",
+        label: "profitOverview",
         permission: null,
         category: "التقارير",
       },
 
       {
         to: "/reports/best-selling-products",
-        label: "المنتجات الأكثر مبيعاً",
+        label: "bestSellingProducts",
         permission: null,
         category: "التقارير",
       },
       {
         to: "/reports/stagnant-products",
-        label: "المنتجات الراكدة",
+        label: "stagnantProducts",
         permission: null,
         category: "التقارير",
       },
       {
         to: "/reports/low-stock-products",
-        label: "المنتجات منخفضة المخزون",
+        label: "lowStockProducts",
         permission: null,
         category: "التقارير",
       },
       {
         to: "/reports/shortages",
-        label: "الطلبية ",
+        label: "shortages",
         permission: null,
         category: "التقارير",
       },
       {
         to: "/reports/moved-expired-products",
-        label: "المنتجات التالفة/المنتهية",
+        label: "movedExpiredProducts",
         permission: null,
         category: "التقارير",
       },
       {
         to: "/reports/monthly-shifts",
-        label: "تقرير الورديات الشهري",
+        label: "monthlyShiftsReport",
         permission: null,
         category: "التقارير",
       },
       {
         to: "/reports/templates",
-        label: "نماذج التقارير",
+        label: "reportTemplates",
         permission: null,
         category: "التقارير",
       },
@@ -219,50 +222,50 @@ export const navItems: NavItem[] = [
   // Admin Group
   {
     to: "#",
-    label: "الإدارة",
+    label: "adminGroup",
     icon: Settings,
     permission: null,
     category: "الإدارة",
     children: [
       {
         to: "/admin/users",
-        label: "المستخدمون",
+        label: "users",
         permission: null,
         category: "الإدارة",
       },
       {
         to: "/admin/roles",
-        label: "الأدوار",
+        label: "roles",
         permission: null,
         category: "الإدارة",
       },
       {
         to: "/admin/expenses",
-        label: "المصروفات",
+        label: "expenses",
         permission: null,
         category: "الإدارة",
       },
       {
         to: "/admin/settings",
-        label: "الإعدادات",
+        label: "settings",
         permission: null,
         category: "الإدارة",
       },
       {
         to: "/admin/backups",
-        label: "النسخ الاحتياطي",
+        label: "backups",
         permission: null,
         category: "الإدارة",
       },
       {
         to: "/admin/warehouses",
-        label: "المخازن",
+        label: "warehouses",
         permission: null,
         category: "الإدارة",
       },
       {
         to: "/admin/whatsapp-test",
-        label: "تجربة الواتساب",
+        label: "whatsappTest",
         permission: null,
         category: "الإدارة",
       },

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Box,
   Paper,
@@ -85,11 +86,11 @@ interface SaleSummaryPanelProps {
   reminderLoading: boolean;
 }
 
-const METHOD_LABELS: Record<string, string> = {
-  cash: "نقدي",
-  bankak: "بنكك",
-  fawry: "فوري",
-  ocash: "أوكاش",
+const METHOD_LABEL_KEYS: Record<string, string> = {
+  cash: "paymentMethodCash",
+  bankak: "paymentMethodBankak",
+  fawry: "paymentMethodFawry",
+  ocash: "paymentMethodOcash",
 };
 
 // Tiny labeled row used in the financials block
@@ -164,6 +165,9 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
   canCancelPayment = true,
   canDiscount = true,
 }) => {
+  const { t } = useTranslation("pos");
+  const { t: tSummary } = useTranslation("saleSummaryPanel");
+  const { t: tCommon } = useTranslation("common");
   const [dateEditing, setDateEditing] = useState(false);
   const [tempDate, setTempDate] = useState("");
   const [bellAnchor, setBellAnchor] = useState<HTMLButtonElement | null>(null);
@@ -192,7 +196,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
         >
           <ReceiptLongIcon sx={{ fontSize: 32, color: "grey.300" }} />
           <Typography variant="caption" color="text.disabled" fontWeight={500}>
-            اختر فاتورة لعرض التفاصيل
+            {tSummary("selectSaleToViewDetails")}
           </Typography>
         </Paper>
       </Box>
@@ -237,11 +241,11 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
         >
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Typography sx={{ fontSize: "0.8rem" }} fontWeight={700} color="white">
-              فاتورة #{selectedSale.id}
+              {tSummary("invoiceHash", { id: selectedSale.id })}
             </Typography>
             <Stack direction="row" alignItems="center" gap={0.5}>
               <Chip
-                label={isFullyPaid ? "مسددة" : "غير مسددة"}
+                label={isFullyPaid ? tSummary("paidStatus") : tSummary("unpaidStatus")}
                 size="small"
                 sx={{
                   height: 18,
@@ -252,7 +256,13 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                 }}
               />
               {!isFullyPaid && (
-                <Tooltip title={reminderDate ? `تذكير بتاريخ ${dayjs(reminderDate).format("YYYY-MM-DD")}` : "تعيين تذكير دفع"}>
+                <Tooltip
+                  title={
+                    reminderDate
+                      ? tSummary("reminderSetForDate", { date: dayjs(reminderDate).format("YYYY-MM-DD") })
+                      : tSummary("setPaymentReminder")
+                  }
+                >
                   <IconButton
                     size="small"
                     onClick={(e) => setBellAnchor(e.currentTarget)}
@@ -275,7 +285,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
             slotProps={{ paper: { sx: { p: 1.5, width: 200 } } }}
           >
             <Typography variant="caption" fontWeight={700} display="block" mb={1}>
-              تذكير بعد (أيام)
+              {tSummary("reminderAfterDays")}
             </Typography>
             <TextField
               size="small"
@@ -309,7 +319,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                 }}
                 sx={{ textTransform: "none", fontSize: "0.75rem" }}
               >
-                حفظ
+                {tCommon("save")}
               </Button>
               {reminderDate && (
                 <Button
@@ -324,7 +334,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                   }}
                   sx={{ textTransform: "none", fontSize: "0.75rem" }}
                 >
-                  إلغاء
+                  {tCommon("cancel")}
                 </Button>
               )}
             </Stack>
@@ -412,7 +422,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
               const { inputValue } = params;
               const isExisting = options.some((o) => inputValue === o.name);
               if (inputValue !== "" && !isExisting) {
-                filtered.push({ inputValue, name: `إضافة "${inputValue}"` });
+                filtered.push({ inputValue, name: tSummary("addClientOption", { value: inputValue }) });
               }
               return filtered;
             }}
@@ -437,7 +447,11 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
             }}
             renderOption={(props, option) => {
               const { key, ...rest } = props;
-              return <li key={key} {...rest}>{`${option.is_supplier ? "مورد" : "عميل"}: ${option.name}`}</li>;
+              return (
+                <li key={key} {...rest}>{`${
+                  option.is_supplier ? tSummary("supplierOptionLabel") : tSummary("clientOptionLabel")
+                }: ${option.name}`}</li>
+              );
             }}
             isOptionEqualToValue={(option, value) => option.id === value.id}
             loading={clientSearchLoading}
@@ -450,8 +464,8 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
             renderInput={(params) => (
               <TextField
                 {...params}
-                placeholder="عميل / زبون..."
-                label="العميل"
+                placeholder={tSummary("clientSearchPlaceholder")}
+                label={t("client")}
                 InputProps={{
                   ...params.InputProps,
                   endAdornment: (
@@ -465,21 +479,21 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                 inputProps={{ ...params.inputProps, style: { fontSize: "0.8rem" } }}
               />
             )}
-            noOptionsText={clientInputValue.trim() ? "لا توجد نتائج" : "اكتب للبحث"}
+            noOptionsText={clientInputValue.trim() ? tSummary("noResults") : tSummary("typeToSearchGeneric")}
           />
 
           {/* ── Financials ── */}
           <Box sx={{ borderRadius: 1, border: "1px solid", borderColor: "grey.200", overflow: "hidden" }}>
-            <FinRow label="المجموع الفرعي" value={formatNumber(subtotal)} bg="#f8fafc" />
+            <FinRow label={t("subtotal")} value={formatNumber(subtotal)} bg="#f8fafc" />
             {discountAmt > 0 && (
-              <FinRow label="الخصم" value={`− ${formatNumber(discountAmt, 2)}`} color="error.main" bg="#fff5f5" bold />
+              <FinRow label={t("discount")} value={`− ${formatNumber(discountAmt, 2)}`} color="error.main" bg="#fff5f5" bold />
             )}
             <Divider />
-            <FinRow label="الإجمالي" value={formatNumber(total, 2)} bold color="success.dark" />
+            <FinRow label={tSummary("totalLabel")} value={formatNumber(total, 2)} bold color="success.dark" />
             <Divider />
-            <FinRow label="المدفوع" value={formatNumber(paid, 2)} color="success.main" />
+            <FinRow label={tSummary("paidLabel")} value={formatNumber(paid, 2)} color="success.main" />
             <FinRow
-              label="المتبقي"
+              label={tSummary("remainingLabel")}
               value={formatNumber(due, 2)}
               bold
               color={isFullyPaid ? "success.dark" : "error.dark"}
@@ -488,21 +502,21 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
           </Box>
           {!selectedSale?.payments?.length > 0 && <Stack direction="row" alignItems="center" gap={0.5}>
             <FormControl size="small" sx={{ minWidth: 80 }}>
-              <InputLabel sx={{ fontSize: "0.75rem" }}>الخصم</InputLabel>
+              <InputLabel sx={{ fontSize: "0.75rem" }}>{t("discount")}</InputLabel>
               <Select
                 value={discountType}
-                label="الخصم"
+                label={t("discount")}
                 onChange={(e) => setDiscountType(e.target.value as "percentage" | "fixed")}
                 sx={{ fontSize: "0.75rem" }}
               >
-                <MenuItem value="fixed" sx={{ fontSize: "0.75rem" }}>مبلغ</MenuItem>
-                <MenuItem value="percentage" sx={{ fontSize: "0.75rem" }}>٪</MenuItem>
+                <MenuItem value="fixed" sx={{ fontSize: "0.75rem" }}>{tSummary("fixedAmountOption")}</MenuItem>
+                <MenuItem value="percentage" sx={{ fontSize: "0.75rem" }}>{tSummary("percentSign")}</MenuItem>
               </Select>
             </FormControl>
             <TextField
               size="small"
               type="number"
-              placeholder={discountType === "percentage" ? "٪" : "0"}
+              placeholder={discountType === "percentage" ? tSummary("percentSign") : "0"}
               value={discountValue}
               onChange={(e) => setDiscountValue(e.target.value)}
               inputProps={{ min: 0, max: discountType === "percentage" ? 100 : undefined, step: discountType === "percentage" ? 1 : 0.01 }}
@@ -525,7 +539,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                 disabled={!canDiscount || discountLoading || (selectedSale.payments?.length ?? 0) > 0}
                 sx={{ fontSize: "0.65rem", px: 0.5, minWidth: 0, whiteSpace: "nowrap" }}
               >
-                إلغاء
+                {tCommon("cancel")}
               </Button>
             )}
           </Stack>}
@@ -534,7 +548,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
           {(selectedSale.payments?.length ?? 0) > 0 && (
             <Box>
               <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: "block", mb: 0.4, fontSize: "0.68rem" }}>
-                المدفوعات
+                {t("payments")}
               </Typography>
               <Stack gap={0.4}>
                 {selectedSale.payments!.map((p) => (
@@ -548,7 +562,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                     <Stack direction="row" alignItems="center" gap={0.5}>
                       <PaymentsIcon sx={{ fontSize: 12, color: "primary.main" }} />
                       <Typography sx={{ fontSize: "0.7rem" }} color="text.secondary">
-                        {METHOD_LABELS[p.method] ?? p.method}
+                        {METHOD_LABEL_KEYS[p.method] ? tSummary(METHOD_LABEL_KEYS[p.method]) : p.method}
                       </Typography>
                     </Stack>
                     <Stack direction="row" alignItems="center" gap={0.25}>
@@ -573,30 +587,30 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
           {!isFullyPaid && (
             <Box sx={{ borderRadius: 1, border: "1px solid", borderColor: "primary.200", bgcolor: "#eff6ff", p: 1 }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.6}>
-                <Typography sx={{ fontSize: "0.7rem" }} color="primary.dark" fontWeight={700}>إضافة دفعة</Typography>
+                <Typography sx={{ fontSize: "0.7rem" }} color="primary.dark" fontWeight={700}>{t("addPayment")}</Typography>
                 <Typography sx={{ fontSize: "0.7rem" }} color="error.main" fontWeight={800}>
-                  المتبقي: {formatNumber(due)}
+                  {tSummary("remainingColon", { amount: formatNumber(due) })}
                 </Typography>
               </Stack>
               <Stack direction="row" alignItems="center" gap={0.5}>
                 <FormControl size="small" sx={{ minWidth: 78 }}>
-                  <InputLabel sx={{ fontSize: "0.75rem" }}>طريقة</InputLabel>
+                  <InputLabel sx={{ fontSize: "0.75rem" }}>{tSummary("methodLabel")}</InputLabel>
                   <Select
                     value={newPaymentMethod}
-                    label="طريقة"
+                    label={tSummary("methodLabel")}
                     onChange={(e) => setNewPaymentMethod(e.target.value as Payment["method"])}
                     sx={{ fontSize: "0.75rem" }}
                   >
-                    <MenuItem value="cash" sx={{ fontSize: "0.75rem" }}>نقدي</MenuItem>
-                    <MenuItem value="bankak" sx={{ fontSize: "0.75rem" }}>بنكك</MenuItem>
-                    <MenuItem value="fawry" sx={{ fontSize: "0.75rem" }}>فوري</MenuItem>
-                    <MenuItem value="ocash" sx={{ fontSize: "0.75rem" }}>أوكاش</MenuItem>
+                    <MenuItem value="cash" sx={{ fontSize: "0.75rem" }}>{tSummary("paymentMethodCash")}</MenuItem>
+                    <MenuItem value="bankak" sx={{ fontSize: "0.75rem" }}>{tSummary("paymentMethodBankak")}</MenuItem>
+                    <MenuItem value="fawry" sx={{ fontSize: "0.75rem" }}>{tSummary("paymentMethodFawry")}</MenuItem>
+                    <MenuItem value="ocash" sx={{ fontSize: "0.75rem" }}>{tSummary("paymentMethodOcash")}</MenuItem>
                   </Select>
                 </FormControl>
                 <TextField
                   size="small"
                   type="number"
-                  placeholder="المبلغ"
+                  placeholder={t("amount")}
                   value={newPaymentAmount}
                   onFocus={(e) => e.target.select()}
                   onChange={(e) => setNewPaymentAmount(e.target.value)}
@@ -635,7 +649,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                 onClick={handlePrintThermalInvoice}
                 sx={{ textTransform: "none", fontSize: "0.7rem", fontWeight: 600, py: 0.5 }}
               >
-                {thermalPdfLoading ? "..." : "طباعة"}
+                {thermalPdfLoading ? "..." : tSummary("printLabel")}
               </Button>
               <Button
                 fullWidth variant="outlined" size="small"
@@ -653,7 +667,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                 onClick={handleSendWhatsApp}
                 sx={{ textTransform: "none", fontSize: "0.7rem", fontWeight: 600, py: 0.5, color: "success.main", borderColor: "success.main", "&:hover": { borderColor: "success.dark", bgcolor: "success.50" } }}
               >
-                {whatsAppLoading ? "..." : "واتساب"}
+                {whatsAppLoading ? "..." : tSummary("whatsappLabel")}
               </Button>
             </Stack>
 
@@ -669,7 +683,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
             >
               {fullPaymentLoading
                 ? <CircularProgress size={16} color="inherit" />
-                : isFullyPaid ? "✓ تم التسديد" : "تسديد كامل"}
+                : isFullyPaid ? tSummary("fullyPaidLabel") : tSummary("fullPaymentLabel")}
             </Button>
           </Box>
         </Box>

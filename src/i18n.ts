@@ -26,12 +26,27 @@ import unitsAr from './locales/ar/units.json'; // <-- Import
 import posAr from './locales/ar/pos.json'; // <-- Import
 import analyticsAr from './locales/ar/analytics.json'; // <-- Import
 import expensesAr from './locales/ar/expenses.json';
+import dashboardAr from './locales/ar/dashboard.json';
+import sidebarAr from './locales/ar/sidebar.json';
+import cartPanelAr from './locales/ar/cartPanel.json';
+import saleActionsBarAr from './locales/ar/saleActionsBar.json';
+import themeColorPickerAr from './locales/ar/themeColorPicker.json';
+import saleSummaryPanelAr from './locales/ar/saleSummaryPanel.json';
+import paymentDialogAr from './locales/ar/paymentDialog.json';
+import saleCompleteDialogAr from './locales/ar/saleCompleteDialog.json';
+import customerPickerAr from './locales/ar/customerPicker.json';
+import productSearchPanelAr from './locales/ar/productSearchPanel.json';
+import expiryProductsDialogAr from './locales/ar/expiryProductsDialog.json';
+import dueRemindersDialogAr from './locales/ar/dueRemindersDialog.json';
+import shiftSalesColumnAr from './locales/ar/shiftSalesColumn.json';
+import topSellingProductsDialogAr from './locales/ar/topSellingProductsDialog.json';
 
-// English imports - only import files that exist
+// English imports
 import commonEN from './locales/en/common.json';
 import validationEN from './locales/en/validation.json';
 import navigationEN from './locales/en/navigation.json';
 import loginEN from './locales/en/login.json';
+import registerEN from './locales/en/register.json';
 import clientsEN from './locales/en/clients.json';
 import supplierEN from './locales/en/suppliers.json';
 import productsEN from './locales/en/products.json';
@@ -40,17 +55,38 @@ import salesEN from './locales/en/sales.json';
 import reportEN from './locales/en/reports.json';
 import usersEN from './locales/en/users.json';
 import rolesEN from './locales/en/roles.json';
+import profileEN from './locales/en/profile.json';
 import permissionsEN from './locales/en/permissions.json';
 import inventoryEN from './locales/en/inventory.json';
 import categoryEN from './locales/en/categories.json';
 import settingsEN from './locales/en/settings.json';
 import paymentMethodsEN from './locales/en/paymentMethods.json';
+import unitsEN from './locales/en/units.json';
 import posEN from './locales/en/pos.json';
 import analyticsEN from './locales/en/analytics.json';
 import expensesEN from './locales/en/expenses.json';
+import dashboardEN from './locales/en/dashboard.json';
+import sidebarEN from './locales/en/sidebar.json';
+import cartPanelEN from './locales/en/cartPanel.json';
+import saleActionsBarEN from './locales/en/saleActionsBar.json';
+import themeColorPickerEN from './locales/en/themeColorPicker.json';
+import saleSummaryPanelEN from './locales/en/saleSummaryPanel.json';
+import paymentDialogEN from './locales/en/paymentDialog.json';
+import saleCompleteDialogEN from './locales/en/saleCompleteDialog.json';
+import customerPickerEN from './locales/en/customerPicker.json';
+import productSearchPanelEN from './locales/en/productSearchPanel.json';
+import expiryProductsDialogEN from './locales/en/expiryProductsDialog.json';
+import dueRemindersDialogEN from './locales/en/dueRemindersDialog.json';
+import shiftSalesColumnEN from './locales/en/shiftSalesColumn.json';
+import topSellingProductsDialogEN from './locales/en/topSellingProductsDialog.json';
 
 
 // ... استيراد ملفات أخرى
+
+// Read the persisted language choice synchronously so the very first render
+// (and the flash-prevention script in index.html) agree with i18next from the start.
+const storedLanguage =
+  (typeof window !== 'undefined' && localStorage.getItem('app-language')) || 'ar';
 
 // --- تعريف الموارد ---
 // الآن، كل لغة تحتوي على كائنات تمثل الـ namespaces
@@ -79,7 +115,21 @@ const resources = {
     pos:posAr,
     analytics:analyticsAr
     ,expenses:expensesAr
-    
+    ,dashboard:dashboardAr
+    ,sidebar:sidebarAr
+    ,cartPanel:cartPanelAr
+    ,saleActionsBar:saleActionsBarAr
+    ,themeColorPicker:themeColorPickerAr
+    ,saleSummaryPanel:saleSummaryPanelAr
+    ,paymentDialog:paymentDialogAr
+    ,saleCompleteDialog:saleCompleteDialogAr
+    ,customerPicker:customerPickerAr
+    ,productSearchPanel:productSearchPanelAr
+    ,expiryProductsDialog:expiryProductsDialogAr
+    ,dueRemindersDialog:dueRemindersDialogAr
+    ,shiftSalesColumn:shiftSalesColumnAr
+    ,topSellingProductsDialog:topSellingProductsDialogAr
+
     // ... namespaces أخرى
   },
   en: {
@@ -87,6 +137,7 @@ const resources = {
     validation: validationEN,
     navigation: navigationEN,
     login: loginEN,
+    register: registerEN,
     clients: clientsEN,
     suppliers: supplierEN,
     products: productsEN,
@@ -95,14 +146,30 @@ const resources = {
     reports: reportEN,
     users: usersEN,
     roles: rolesEN,
+    profile: profileEN,
     permissions: permissionsEN,
     inventory: inventoryEN,
     categories: categoryEN,
     settings: settingsEN,
     paymentMethods: paymentMethodsEN,
+    units: unitsEN,
     pos: posEN,
     analytics: analyticsEN
     ,expenses: expensesEN
+    ,dashboard: dashboardEN
+    ,sidebar: sidebarEN
+    ,cartPanel: cartPanelEN
+    ,saleActionsBar: saleActionsBarEN
+    ,themeColorPicker: themeColorPickerEN
+    ,saleSummaryPanel: saleSummaryPanelEN
+    ,paymentDialog: paymentDialogEN
+    ,saleCompleteDialog: saleCompleteDialogEN
+    ,customerPicker: customerPickerEN
+    ,productSearchPanel: productSearchPanelEN
+    ,expiryProductsDialog: expiryProductsDialogEN
+    ,dueRemindersDialog: dueRemindersDialogEN
+    ,shiftSalesColumn: shiftSalesColumnEN
+    ,topSellingProductsDialog: topSellingProductsDialogEN
   }
   // يمكنك إضافة لغات أخرى هنا بنفس الهيكل
 };
@@ -133,6 +200,20 @@ export const namespaces = [
     'pos',
     'analytics'
     ,'expenses'
+    ,'dashboard'
+    ,'sidebar'
+    ,'cartPanel'
+    ,'saleActionsBar'
+    ,'themeColorPicker'
+    ,'saleSummaryPanel'
+    ,'paymentDialog'
+    ,'saleCompleteDialog'
+    ,'customerPicker'
+    ,'productSearchPanel'
+    ,'expiryProductsDialog'
+    ,'dueRemindersDialog'
+    ,'shiftSalesColumn'
+    ,'topSellingProductsDialog'
     // ... أسماء namespaces أخرى
 ];
 
@@ -144,7 +225,7 @@ i18n
     ns: namespaces, // قائمة بجميع الـ namespaces
     defaultNS: 'common', // تحديد الـ Namespace الافتراضي (مهم!)
 
-    lng: 'ar', // اللغة النشطة الافتراضية - changed to English for better compatibility
+    lng: storedLanguage, // اللغة النشطة الافتراضية، مقروءة من التخزين المحلي
     fallbackLng: 'en', // اللغة الاحتياطية
 
     interpolation: {

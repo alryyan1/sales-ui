@@ -1,0 +1,9 @@
+{
+  "searchOrScanPlaceholder": "ابحث بالاسم أو الرمز، أو امسح الباركود... ( / )",
+  "productNotFoundBySku": "لم يتم العثور على منتج بهذا الرمز/الباركود",
+  "productSearchFailed": "تعذر البحث عن المنتج",
+  "noMatchingProducts": "لا توجد منتجات مطابقة",
+  "outOfStockBadge": "نفذ المخزون",
+  "stockRemaining": "{{count}} متبقي",
+  "stockAvailable": "{{count}} متوفر"
+}

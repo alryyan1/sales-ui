@@ -1,5 +1,6 @@
 // src/components/pos/ExpiryProductsDialog.tsx
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogTitle,
@@ -59,10 +60,14 @@ const ExpiryProductsDialog: React.FC<ExpiryProductsDialogProps> = ({
   onAddToCart,
   onMoveProduct,
 }) => {
+  const { t } = useTranslation("pos");
+  const { t: tCommon } = useTranslation("common");
+  const { t: tExpiry } = useTranslation("expiryProductsDialog");
+
   const title =
     type === "near_expiring"
-      ? "منتجات قريبة من الانتهاء"
-      : "منتجات منتهية الصلاحية";
+      ? tExpiry("nearExpiringTitle")
+      : tExpiry("expiredTitle");
 
   const getExpiryColor = (expiryDate: string) => {
     const today = new Date();
@@ -84,10 +89,19 @@ const ExpiryProductsDialog: React.FC<ExpiryProductsDialogProps> = ({
       (expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
     );
 
-    if (diffDays < 0) return `منتهي منذ ${Math.abs(diffDays)} يوم`;
-    if (diffDays === 0) return "ينتهي اليوم";
-    if (diffDays === 1) return "ينتهي غداً";
-    return `${diffDays} يوم متبقي`;
+    if (diffDays < 0) return tExpiry("expiredSinceDays", { days: Math.abs(diffDays) });
+    if (diffDays === 0) return tExpiry("expiresToday");
+    if (diffDays === 1) return tExpiry("expiresTomorrow");
+    return tExpiry("daysRemaining", { days: diffDays });
+  };
+
+  const isExpired = (expiryDate: string) => {
+    const today = new Date();
+    const expiry = new Date(expiryDate);
+    const diffDays = Math.ceil(
+      (expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    return diffDays < 0;
   };
 
   return (
@@ -132,7 +146,7 @@ const ExpiryProductsDialog: React.FC<ExpiryProductsDialogProps> = ({
           </Box>
         ) : items.length === 0 ? (
           <Box sx={{ textAlign: "center", py: 4 }}>
-            <Typography color="text.secondary">لا توجد منتجات</Typography>
+            <Typography color="text.secondary">{tExpiry("noProducts")}</Typography>
           </Box>
         ) : (
           <TableContainer component={Paper} elevation={0}>
@@ -140,22 +154,22 @@ const ExpiryProductsDialog: React.FC<ExpiryProductsDialogProps> = ({
               <TableHead>
                 <TableRow>
                   <TableCell>
-                    <strong>المنتج</strong>
+                    <strong>{t("product")}</strong>
                   </TableCell>
                   <TableCell>
-                    <strong>الباركود</strong>
+                    <strong>{tExpiry("barcodeHeader")}</strong>
                   </TableCell>
                   <TableCell>
-                    <strong>الدفعة</strong>
+                    <strong>{t("batch")}</strong>
                   </TableCell>
                   <TableCell>
-                    <strong>تاريخ الانتهاء</strong>
+                    <strong>{t("expiryDate")}</strong>
                   </TableCell>
                   <TableCell>
-                    <strong>الحالة</strong>
+                    <strong>{tExpiry("statusHeader")}</strong>
                   </TableCell>
                   <TableCell align="center">
-                    <strong>الإجراء</strong>
+                    <strong>{tExpiry("actionHeader")}</strong>
                   </TableCell>
                 </TableRow>
               </TableHead>
@@ -192,9 +206,9 @@ const ExpiryProductsDialog: React.FC<ExpiryProductsDialogProps> = ({
                       </TableCell>
                       <TableCell align="center">
                         {getExpiryColor(item.expiry_date) === "error" &&
-                        getDaysRemaining(item.expiry_date).includes("منتهي") ? (
+                        isExpired(item.expiry_date) ? (
                           onMoveProduct ? (
-                            <Tooltip title="نقل المنتج من الرفوف لتسوية المخزون">
+                            <Tooltip title={tExpiry("moveProductTooltip")}>
                               <IconButton
                                 size="small"
                                 color="error"
@@ -204,7 +218,7 @@ const ExpiryProductsDialog: React.FC<ExpiryProductsDialogProps> = ({
                               </IconButton>
                             </Tooltip>
                           ) : (
-                            <Tooltip title="لا يمكن بيع منتج منتهي الصلاحية">
+                            <Tooltip title={tExpiry("cannotSellExpiredTooltip")}>
                               <span>
                                 <IconButton
                                   size="small"
@@ -239,7 +253,7 @@ const ExpiryProductsDialog: React.FC<ExpiryProductsDialogProps> = ({
 
       <DialogActions sx={{ px: 3, py: 2 }}>
         <Button onClick={onClose} variant="outlined">
-          إغلاق
+          {tCommon("close")}
         </Button>
       </DialogActions>
     </Dialog>

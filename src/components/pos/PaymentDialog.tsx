@@ -1,7 +1,9 @@
 // src/components/pos/PaymentDialog.tsx
 import { useEffect, useMemo, useState } from "react";
 import { Banknote, Loader2, Plus, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
+import { useLanguage } from "@/context/LanguageContext";
 import {
   Dialog,
   DialogContent,
@@ -27,12 +29,7 @@ import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 import type { Payment } from "@/services/saleService";
 import { DEFAULT_PAYMENT_METHOD } from "@/lib/pos";
 
-const METHODS: { value: Payment["method"]; label: string }[] = [
-  { value: "cash", label: "نقدي" },
-  { value: "bankak", label: "بنكك" },
-  { value: "fawry", label: "فوري" },
-  { value: "ocash", label: "أوكاش" },
-];
+const METHOD_VALUES: Payment["method"][] = ["cash", "bankak", "fawry", "ocash"];
 
 type DraftLine = { id: string; method: Payment["method"]; amount: string };
 
@@ -79,7 +76,19 @@ export function PaymentDialog({
   mode = "create",
 }: PaymentDialogProps) {
   const formatCurrency = useFormatCurrency();
+  const { direction } = useLanguage();
+  const { t } = useTranslation("pos");
+  const { t: tCommon } = useTranslation("common");
+  const { t: tPayment } = useTranslation("paymentDialog");
   const due = Math.max(0, total);
+
+  const METHOD_LABELS: Record<Payment["method"], string> = {
+    cash: tPayment("methodCash"),
+    bankak: tPayment("methodBankak"),
+    fawry: tPayment("methodFawry"),
+    ocash: tPayment("methodOcash"),
+  };
+  const METHODS = METHOD_VALUES.map((value) => ({ value, label: METHOD_LABELS[value] }));
 
   const [lines, setLines] = useState<DraftLine[]>([]);
 
@@ -113,18 +122,18 @@ export function PaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !isSubmitting && onOpenChange(next)}>
-      <DialogContent dir="rtl" className="sm:max-w-md">
+      <DialogContent dir={direction} className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>الدفع{ticketLabel ? ` — تذكرة #${ticketLabel}` : ""}</DialogTitle>
+          <DialogTitle>{ticketLabel ? tPayment("titleWithTicket", { label: ticketLabel }) : t("payment")}</DialogTitle>
           <DialogDescription>
             {mode === "addPayment"
-              ? "سجّل دفعة واحدة أو أكثر لهذه الفاتورة"
-              : "سجّل دفعة واحدة أو أكثر لإنشاء عملية البيع"}
+              ? tPayment("addPaymentDescription")
+              : tPayment("createSaleDescription")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="rounded-xl bg-muted/40 px-4 py-3 text-center">
-          <p className="text-xs text-muted-foreground">الإجمالي المستحق</p>
+          <p className="text-xs text-muted-foreground">{tPayment("totalDue")}</p>
           <p className="text-3xl font-bold tabular-nums text-foreground">{formatCurrency(due)}</p>
         </div>
 
@@ -163,7 +172,7 @@ export function PaymentDialog({
                   onFocus={(e) => e.target.select()}
                   onChange={(e) => updateLine(row.id, { amount: e.target.value })}
                   className="flex-1 text-end tabular-nums"
-                  placeholder={row.method === "cash" ? "المبلغ المستلم" : "المبلغ"}
+                  placeholder={row.method === "cash" ? tPayment("cashAmountPlaceholder") : t("amount")}
                 />
                 {lines.length > 1 && (
                   <Button
@@ -180,7 +189,7 @@ export function PaymentDialog({
               </div>
               {row.method === "cash" && row.change > 0 && (
                 <p className="ps-1 text-xs text-green-600 dark:text-green-400">
-                  الباقي لهذه الدفعة: {formatCurrency(row.change)}
+                  {tPayment("changeForPayment", { amount: formatCurrency(row.change) })}
                 </p>
               )}
             </div>
@@ -195,7 +204,7 @@ export function PaymentDialog({
             className="gap-1.5 text-muted-foreground"
           >
             <Plus className="size-3.5" />
-            إضافة طريقة دفع أخرى
+            {tPayment("addAnotherPaymentMethod")}
           </Button>
         </div>
 
@@ -203,25 +212,25 @@ export function PaymentDialog({
 
         <div className="space-y-1.5 text-sm">
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">المدفوع الآن</span>
+            <span className="text-muted-foreground">{tPayment("paidNow")}</span>
             <span className="font-medium tabular-nums">{formatCurrency(totalApplied)}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">المتبقي</span>
+            <span className="text-muted-foreground">{tPayment("remaining")}</span>
             <span
               className={cn(
                 "font-medium tabular-nums",
                 remaining > 0 ? "text-destructive" : "text-green-600 dark:text-green-400"
               )}
             >
-              {remaining > 0 ? formatCurrency(remaining) : "مسدد بالكامل"}
+              {remaining > 0 ? formatCurrency(remaining) : tPayment("fullyPaid")}
             </span>
           </div>
           {totalChange > 0 && (
             <div className="flex items-center justify-between rounded-lg bg-green-500/10 px-3 py-2">
               <span className="inline-flex items-center gap-1.5 font-medium text-green-700 dark:text-green-400">
                 <Banknote className="size-4" />
-                الباقي للعميل
+                {tPayment("changeForCustomer")}
               </span>
               <span className="text-lg font-bold tabular-nums text-green-700 dark:text-green-400">
                 {formatCurrency(totalChange)}
@@ -232,7 +241,7 @@ export function PaymentDialog({
 
         <DialogFooter>
           <Button type="button" variant="outline" disabled={isSubmitting} onClick={() => onOpenChange(false)}>
-            إلغاء
+            {tCommon("cancel")}
           </Button>
           <Button
             type="button"
@@ -243,11 +252,11 @@ export function PaymentDialog({
             {isSubmitting && <Loader2 className="size-4 animate-spin" />}
             {mode === "addPayment"
               ? remaining > 0
-                ? "تسجيل دفعة جزئية"
-                : "تسجيل الدفعة"
+                ? tPayment("recordPartialPayment")
+                : tPayment("recordPayment")
               : remaining > 0
-                ? "إنشاء بدفعة جزئية"
-                : "إنشاء عملية البيع"}
+                ? tPayment("createWithPartialPayment")
+                : tPayment("createSale")}
           </Button>
         </DialogFooter>
       </DialogContent>

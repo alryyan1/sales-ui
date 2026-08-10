@@ -1,0 +1,13 @@
+{
+  "saleCompletedTitle": "Sale completed successfully",
+  "invoiceNumberLabel": "Invoice #{{number}}",
+  "orderNumberLabel": "Order #{{number}}",
+  "idLabel": "ID #{{id}}",
+  "totalLabel": "Total",
+  "paidLabel": "Paid",
+  "customerOwes": "Customer owes: {{amount}}",
+  "thermalReceipt": "Thermal Receipt",
+  "invoiceA4": "A4 Invoice",
+  "reExportToFinance": "Re-export to Financial System",
+  "exportToFinance": "Export to Financial System"
+}

@@ -1,0 +1,21 @@
+{
+  "methodCash": "نقدي",
+  "methodBankak": "بنكك",
+  "methodFawry": "فوري",
+  "methodOcash": "أوكاش",
+  "titleWithTicket": "الدفع — تذكرة #{{label}}",
+  "addPaymentDescription": "سجّل دفعة واحدة أو أكثر لهذه الفاتورة",
+  "createSaleDescription": "سجّل دفعة واحدة أو أكثر لإنشاء عملية البيع",
+  "totalDue": "الإجمالي المستحق",
+  "cashAmountPlaceholder": "المبلغ المستلم",
+  "changeForPayment": "الباقي لهذه الدفعة: {{amount}}",
+  "addAnotherPaymentMethod": "إضافة طريقة دفع أخرى",
+  "paidNow": "المدفوع الآن",
+  "remaining": "المتبقي",
+  "fullyPaid": "مسدد بالكامل",
+  "changeForCustomer": "الباقي للعميل",
+  "recordPartialPayment": "تسجيل دفعة جزئية",
+  "recordPayment": "تسجيل الدفعة",
+  "createWithPartialPayment": "إنشاء بدفعة جزئية",
+  "createSale": "إنشاء عملية البيع"
+}

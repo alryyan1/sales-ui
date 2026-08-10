@@ -45,5 +45,6 @@
   "errorUpdatingData": "Error updating data",
   "errorDeletingData": "Error deleting data",
   "apply": "Apply",
-  "all": "All"
-} 
+  "all": "All",
+  "userAccount": "User Account"
+}

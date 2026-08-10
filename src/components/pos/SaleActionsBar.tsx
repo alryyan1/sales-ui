@@ -1,6 +1,7 @@
 // src/components/pos/SaleActionsBar.tsx
 import { useEffect, useState } from "react";
 import { Bell, CalendarDays, FileText, Landmark, Loader2, MessageCircle, Printer, Tag, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,8 @@ function ReminderButton({
   onSetReminder: (days: number) => void;
   onRemoveReminder: () => void;
 }) {
+  const { t: tCommon } = useTranslation("common");
+  const { t: tSaleActionsBar } = useTranslation("saleActionsBar");
   const [open, setOpen] = useState(false);
   const [days, setDays] = useState("3");
 
@@ -33,12 +36,12 @@ function ReminderButton({
           className={cn("gap-1.5", reminderDate && "border-amber-400 text-amber-600 dark:text-amber-400")}
         >
           <Bell className="size-3.5" fill={reminderDate ? "currentColor" : "none"} />
-          تذكير
+          {tSaleActionsBar("reminder")}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-56 space-y-2.5">
         <p className="text-xs font-medium text-foreground">
-          {reminderDate ? `تذكير بتاريخ ${reminderDate}` : "تعيين تذكير دفع"}
+          {reminderDate ? tSaleActionsBar("reminderSetForDate", { date: reminderDate }) : tSaleActionsBar("setPaymentReminder")}
         </p>
         <Input
           type="number"
@@ -47,7 +50,7 @@ function ReminderButton({
           value={days}
           disabled={reminderLoading}
           onChange={(e) => setDays(e.target.value)}
-          placeholder="عدد الأيام"
+          placeholder={tSaleActionsBar("numberOfDaysPlaceholder")}
         />
         <div className="flex gap-2">
           {reminderDate && (
@@ -62,7 +65,7 @@ function ReminderButton({
                 setOpen(false);
               }}
             >
-              إلغاء
+              {tCommon("cancel")}
             </Button>
           )}
           <Button
@@ -75,7 +78,7 @@ function ReminderButton({
               setOpen(false);
             }}
           >
-            {reminderLoading ? <Loader2 className="size-3.5 animate-spin" /> : "حفظ"}
+            {reminderLoading ? <Loader2 className="size-3.5 animate-spin" /> : tCommon("save")}
           </Button>
         </div>
       </PopoverContent>
@@ -160,11 +163,14 @@ export function SaleActionsBar({
   onChangeSaleDate,
   isChangingSaleDate,
 }: SaleActionsBarProps) {
+  const { t: tSaleActionsBar } = useTranslation("saleActionsBar");
   if (!sale) return null;
 
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-2 border-b bg-muted/20 px-4 py-2">
-      <span className="shrink-0 text-xs font-medium text-muted-foreground">إجراءات الفاتورة #{sale.id}</span>
+      <span className="shrink-0 text-xs font-medium text-muted-foreground">
+        {tSaleActionsBar("saleActionsHash", { id: sale.id })}
+      </span>
 
       <SaleDateEditor saleDate={sale.sale_date} isSaving={isChangingSaleDate} onChange={onChangeSaleDate} />
 
@@ -177,7 +183,7 @@ export function SaleActionsBar({
         className="gap-1.5"
       >
         {printingKind === "thermal" ? <Loader2 className="size-3.5 animate-spin" /> : <Printer className="size-3.5" />}
-        طباعة حراري
+        {tSaleActionsBar("printThermalButton")}
       </Button>
 
       <Button
@@ -201,7 +207,7 @@ export function SaleActionsBar({
         className="gap-1.5 text-green-700 dark:text-green-400"
       >
         {whatsAppLoading ? <Loader2 className="size-3.5 animate-spin" /> : <MessageCircle className="size-3.5" />}
-        واتساب
+        {tSaleActionsBar("whatsapp")}
       </Button>
 
       <Button
@@ -213,7 +219,7 @@ export function SaleActionsBar({
         className="gap-1.5"
       >
         {isExportingToFinance ? <Loader2 className="size-3.5 animate-spin" /> : <Landmark className="size-3.5" />}
-        {sale.finance_exported_at ? "إعادة التصدير" : "تصدير لنظام الماليه"}
+        {sale.finance_exported_at ? tSaleActionsBar("reExport") : tSaleActionsBar("exportToFinanceSystem")}
       </Button>
 
       <Button
@@ -225,7 +231,7 @@ export function SaleActionsBar({
         className="gap-1.5"
       >
         {isTogglingQuote ? <Loader2 className="size-3.5 animate-spin" /> : <Tag className="size-3.5" />}
-        {sale.is_quote ? "تحويل لفاتورة" : "تحويل لتسعيرة"}
+        {sale.is_quote ? tSaleActionsBar("convertToInvoice") : tSaleActionsBar("convertToQuote")}
       </Button>
 
       <ReminderButton
@@ -245,7 +251,7 @@ export function SaleActionsBar({
           className="gap-1.5 text-destructive hover:text-destructive"
         >
           {isDeletingSale ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
-          حذف الفاتورة
+          {tSaleActionsBar("deleteInvoiceButton")}
         </Button>
       )}
     </div>

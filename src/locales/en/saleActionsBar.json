@@ -1,0 +1,14 @@
+{
+  "reminder": "Reminder",
+  "reminderSetForDate": "Reminder set for {{date}}",
+  "setPaymentReminder": "Set payment reminder",
+  "numberOfDaysPlaceholder": "Number of days",
+  "saleActionsHash": "Invoice #{{id}} Actions",
+  "printThermalButton": "Print Thermal",
+  "whatsapp": "WhatsApp",
+  "reExport": "Re-export",
+  "exportToFinanceSystem": "Export to Finance System",
+  "convertToInvoice": "Convert to Invoice",
+  "convertToQuote": "Convert to Quote",
+  "deleteInvoiceButton": "Delete Invoice"
+}

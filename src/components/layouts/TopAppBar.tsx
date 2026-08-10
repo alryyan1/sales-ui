@@ -7,6 +7,7 @@ import {
   Bell,
   DollarSign,
   FileWarning,
+  Languages,
   Loader2,
   Menu as MenuIcon,
   Search,
@@ -29,6 +30,7 @@ import { cn } from "@/lib/utils";
 
 import { useAuth } from "@/context/AuthContext";
 import { useSettings } from "@/context/SettingsContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { useAuthorization } from "@/hooks/useAuthorization";
 import { DRAWER_WIDTH } from "./types";
 import UserMenu from "./UserMenu";
@@ -51,6 +53,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ onDrawerToggle, isSidebarCollapse
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { language, setLanguage } = useLanguage();
   const { getSetting, updateSettings } = useSettings();
   const { hasPermission } = useAuthorization();
   const canEditDollarRate = hasPermission("تعديل سعر الدولار");
@@ -183,7 +186,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ onDrawerToggle, isSidebarCollapse
   return (
     <>
       <header
-        className="fixed inset-x-0 top-0 z-40 flex h-16 w-full items-center gap-2 border-b border-border/10 bg-background/80 px-4 backdrop-blur-md transition-[width,margin] duration-300 ease-out sm:w-[var(--appbar-w)] sm:mr-[var(--appbar-mr)]"
+        className="fixed inset-x-0 top-0 z-40 flex h-16 w-full items-center gap-2 border-b border-border/10 bg-background/80 px-4 backdrop-blur-md transition-[width,margin] duration-300 ease-out sm:w-[var(--appbar-w)] sm:ms-[var(--appbar-mr)]"
         style={
           {
             "--appbar-w": `calc(100% - ${isSidebarCollapsed ? COLLAPSED_DRAWER_WIDTH : DRAWER_WIDTH}px)`,
@@ -430,6 +433,22 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ onDrawerToggle, isSidebarCollapse
               </div>
             </TooltipTrigger>
             <TooltipContent>تذكيرات الدفع</TooltipContent>
+          </Tooltip>
+
+          {/* Language switcher */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-9"
+                aria-label={language === "ar" ? "Switch to English" : "التبديل إلى العربية"}
+                onClick={() => setLanguage(language === "ar" ? "en" : "ar")}
+              >
+                <Languages className="size-[18px]" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{language === "ar" ? "English" : "العربية"}</TooltipContent>
           </Tooltip>
 
           {user && <UserMenu user={user} />}

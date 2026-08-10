@@ -1,0 +1,13 @@
+{
+  "saleCompletedTitle": "تم إتمام البيع بنجاح",
+  "invoiceNumberLabel": "فاتورة رقم {{number}}",
+  "orderNumberLabel": "طلب رقم #{{number}}",
+  "idLabel": "معرّف #{{id}}",
+  "totalLabel": "الإجمالي",
+  "paidLabel": "المدفوع",
+  "customerOwes": "متبقٍ على العميل: {{amount}}",
+  "thermalReceipt": "إيصال حراري",
+  "invoiceA4": "فاتورة A4",
+  "reExportToFinance": "إعادة التصدير إلى النظام المالي",
+  "exportToFinance": "تصدير إلى النظام المالي"
+}

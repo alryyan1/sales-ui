@@ -1,0 +1,9 @@
+{
+  "walkInCustomer": "Walk-in Customer",
+  "searchByNameOrPhone": "Search by name or phone...",
+  "walkInCustomerNoRegistration": "Walk-in customer (no registration)",
+  "createNewCustomer": "Create new customer...",
+  "searchResults": "Search Results",
+  "searching": "Searching...",
+  "noMatchingCustomers": "No matching customers"
+}

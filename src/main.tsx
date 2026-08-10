@@ -17,15 +17,18 @@ import "./index.css"; // استيراد CSS العام (اختياري)
 import router from "./router";
 import { SettingsProvider } from "./context/SettingsContext";
 import { ThemeProvider as TailwindTheme, useTheme as useTailwindTheme } from "./context/ThemeContext";
+import { LanguageProvider, useLanguage } from "./context/LanguageContext";
+import "./i18n";
 import { ThemeProvider } from "@mui/material";
 import { useMemo } from "react";
 
-// Bridges the app's light/dark ThemeContext into the MUI theme, so MUI
-// components (tables, dialogs, admin pages) follow the same mode instead
-// of always rendering with the light palette.
+// Bridges the app's light/dark ThemeContext and language/direction into the
+// MUI theme, so MUI components (tables, dialogs, admin pages) follow the
+// same mode and direction instead of always rendering light/RTL.
 function MuiThemeBridge({ children }: { children: React.ReactNode }) {
   const { resolvedTheme } = useTailwindTheme();
-  const muiTheme = useMemo(() => getTheme(resolvedTheme), [resolvedTheme]);
+  const { direction } = useLanguage();
+  const muiTheme = useMemo(() => getTheme(resolvedTheme, direction), [resolvedTheme, direction]);
   return <ThemeProvider theme={muiTheme}>{children}</ThemeProvider>;
 }
 
@@ -57,18 +60,20 @@ if (!rootElement) {
 ReactDOM.createRoot(rootElement).render(
   // <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <SettingsProvider>
-        <TailwindTheme defaultTheme="system" storageKey="app-ui-theme">
-          <CacheProvider value={cacheRtl}>
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <MuiThemeBridge>
-                <CssBaseline />
-                <RouterProvider router={router} />
-              </MuiThemeBridge>
-            </LocalizationProvider>
-          </CacheProvider>
-        </TailwindTheme>
-      </SettingsProvider>
+      <LanguageProvider>
+        <SettingsProvider>
+          <TailwindTheme defaultTheme="system" storageKey="app-ui-theme">
+            <CacheProvider value={cacheRtl}>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <MuiThemeBridge>
+                  <CssBaseline />
+                  <RouterProvider router={router} />
+                </MuiThemeBridge>
+              </LocalizationProvider>
+            </CacheProvider>
+          </TailwindTheme>
+        </SettingsProvider>
+      </LanguageProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   // </React.StrictMode>

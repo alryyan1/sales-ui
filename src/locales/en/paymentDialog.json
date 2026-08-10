@@ -1,0 +1,21 @@
+{
+  "methodCash": "Cash",
+  "methodBankak": "Bankak",
+  "methodFawry": "Fawry",
+  "methodOcash": "Ocash",
+  "titleWithTicket": "Payment — Ticket #{{label}}",
+  "addPaymentDescription": "Record one or more payments for this invoice",
+  "createSaleDescription": "Record one or more payments to create the sale",
+  "totalDue": "Total Due",
+  "cashAmountPlaceholder": "Amount received",
+  "changeForPayment": "Change for this payment: {{amount}}",
+  "addAnotherPaymentMethod": "Add another payment method",
+  "paidNow": "Paid Now",
+  "remaining": "Remaining",
+  "fullyPaid": "Fully Paid",
+  "changeForCustomer": "Change for customer",
+  "recordPartialPayment": "Record Partial Payment",
+  "recordPayment": "Record Payment",
+  "createWithPartialPayment": "Create with Partial Payment",
+  "createSale": "Create Sale"
+}

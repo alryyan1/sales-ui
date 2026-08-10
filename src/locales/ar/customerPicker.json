@@ -1,0 +1,9 @@
+{
+  "walkInCustomer": "عميل نقدي",
+  "searchByNameOrPhone": "ابحث بالاسم أو الهاتف...",
+  "walkInCustomerNoRegistration": "عميل نقدي (بدون تسجيل)",
+  "createNewCustomer": "إنشاء عميل جديد...",
+  "searchResults": "نتائج البحث",
+  "searching": "جاري البحث...",
+  "noMatchingCustomers": "لا يوجد عملاء مطابقون"
+}

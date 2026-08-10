@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { FileText, Loader2, Plus, ShieldCheck, Users, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { useAuthorization } from "@/hooks/useAuthorization";
 import { useSettings } from "@/context/SettingsContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { useCurrentShift } from "@/hooks/useShifts";
 import apiClient from "@/lib/axios";
 
@@ -76,6 +78,9 @@ const PosPage: React.FC = () => {
   const { user } = useAuth();
   const { hasPermission } = useAuthorization();
   const { getSetting } = useSettings();
+  const { direction } = useLanguage();
+  const { t } = useTranslation("pos");
+  const { t: tCommon } = useTranslation("common");
   const queryClient = useQueryClient();
 
   const canPayment = hasPermission("سداد");
@@ -255,7 +260,7 @@ const PosPage: React.FC = () => {
       if (!activeTicket) return;
       const currentQty = activeTicket.items.find((i) => i.product.id === product.id)?.quantity ?? 0;
       if (currentQty >= stockOf(product)) {
-        toast.error(`الكمية المتوفرة من "${product.name}" غير كافية`);
+        toast.error(t("insufficientStockFor", { name: product.name }));
         playErrorSound();
         return;
       }
@@ -284,7 +289,7 @@ const PosPage: React.FC = () => {
     (item: DraftCartItem, quantity: number) => {
       if (quantity < 1) return;
       if (quantity > stockOf(item.product)) {
-        toast.error(`الكمية المتوفرة من "${item.product.name}" غير كافية`);
+        toast.error(t("insufficientStockFor", { name: item.product.name }));
         playErrorSound();
         return;
       }
@@ -317,11 +322,11 @@ const PosPage: React.FC = () => {
   const handleApplyDiscount = useCallback(
     (type: DiscountType, amount: number) => {
       if (!Number.isFinite(amount) || amount < 0 || (type === "percentage" && amount > 100)) {
-        toast.error("قيمة خصم غير صحيحة");
+        toast.error(t("invalidDiscountValue"));
         return;
       }
       updateActiveTicket((ticket) => ({ ...ticket, discountType: type, discountAmount: amount }));
-      toast.success("تم تطبيق الخصم");
+      toast.success(t("discountApplied"));
     },
     [updateActiveTicket]
   );
@@ -414,7 +419,7 @@ const PosPage: React.FC = () => {
         setPdfUrl(window.URL.createObjectURL(blob));
         setPdfDialogOpen(true);
       } catch {
-        toast.error("فشل تحميل الفاتورة");
+        toast.error(t("failedToLoadSale"));
       } finally {
         setPrintingKind(null);
       }
@@ -438,9 +443,9 @@ const PosPage: React.FC = () => {
     try {
       const updated = await saleService.exportToFinance(activeSale.id);
       applyActiveSaleUpdate(updated);
-      toast.success("تم إرسال القيد إلى النظام المالي");
+      toast.success(t("journalEntrySent"));
     } catch (err) {
-      toast.error("فشل التصدير إلى النظام المالي", {
+      toast.error(t("journalExportFailed"), {
         description: saleService.getErrorMessage(err),
       });
     } finally {
@@ -455,9 +460,9 @@ const PosPage: React.FC = () => {
       const updated = await saleService.toggleQuote(activeSale.id);
       applyActiveSaleUpdate(updated);
       queryClient.invalidateQueries({ queryKey: shiftSalesQueryKey });
-      toast.success(updated.is_quote ? "تم التحويل لوضع التسعيرة" : "تم التحويل لفاتورة عادية");
+      toast.success(updated.is_quote ? t("convertedToQuote") : t("convertedToInvoice"));
     } catch (err) {
-      toast.error("فشل تغيير وضع التسعيرة", { description: saleService.getErrorMessage(err) });
+      toast.error(t("quoteModeChangeFailed"), { description: saleService.getErrorMessage(err) });
     } finally {
       setIsTogglingQuote(false);
     }
@@ -475,7 +480,7 @@ const PosPage: React.FC = () => {
       }
     }
     if (!phone) {
-      toast.error("لا يوجد رقم هاتف للعميل");
+      toast.error(t("noClientPhone"));
       return;
     }
 
@@ -485,17 +490,17 @@ const PosPage: React.FC = () => {
       const clientName = activeSale.client_name || activeSale.client?.name || "";
       const filename = `invoice_${activeSale.id}.pdf`;
 
-      toast.loading("جاري تحميل الفاتورة...", { id: toastId });
+      toast.loading(t("loadingInvoice"), { id: toastId });
       const pdfResponse = await apiClient.get(`/sales/${activeSale.id}/a4-invoice-pdf/view`, {
         responseType: "blob",
       });
       const pdfBlob = new Blob([pdfResponse.data], { type: "application/pdf" });
 
-      toast.loading("جاري رفع الفاتورة إلى Firebase...", { id: toastId });
+      toast.loading(t("uploadingToFirebase"), { id: toastId });
       const firebaseCollectionName = getSetting("firebase_collection_name", "none") as string;
       const downloadUrl = await uploadFileToFirebase(pdfBlob, `invoices/${firebaseCollectionName}/${filename}`);
 
-      toast.loading("جاري إرسال الواتساب...", { id: toastId });
+      toast.loading(t("sendingWhatsapp"), { id: toastId });
       await apiClient.post("/admin/whatsapp-cloud/send-template", {
         to: phone,
         template_name: "invoice_ar",
@@ -506,9 +511,9 @@ const PosPage: React.FC = () => {
         ],
       });
 
-      toast.success("تم إرسال الفاتورة عبر واتساب بنجاح", { id: toastId, duration: 4000 });
+      toast.success(t("invoiceSentViaWhatsapp"), { id: toastId, duration: 4000 });
     } catch (err) {
-      toast.error("فشل إرسال الفاتورة عبر واتساب", { id: toastId, description: saleService.getErrorMessage(err) });
+      toast.error(t("invoiceWhatsappSendFailed"), { id: toastId, description: saleService.getErrorMessage(err) });
     } finally {
       setWhatsAppLoading(false);
     }
@@ -517,19 +522,19 @@ const PosPage: React.FC = () => {
   const handleConfirmDeleteSale = useCallback(async () => {
     if (!saleToDelete) return;
     if ((saleToDelete.payments?.length ?? 0) > 0) {
-      toast.error("لا يمكن حذف الفاتورة لوجود مدفوعات مرتبطة بها");
+      toast.error(t("cannotDeleteSaleHasPayments"));
       setSaleToDelete(null);
       return;
     }
     setIsDeletingSale(true);
     try {
       await saleService.deleteSale(saleToDelete.id);
-      toast.success("تم حذف الفاتورة بنجاح");
+      toast.success(t("saleDeletedSuccessfully"));
       if (editingSale?.id === saleToDelete.id) clearEditing();
       else if (completedSale?.id === saleToDelete.id) setCompletedSale(null);
       queryClient.invalidateQueries({ queryKey: shiftSalesQueryKey });
     } catch (err) {
-      toast.error("فشل حذف الفاتورة", { description: saleService.getErrorMessage(err) });
+      toast.error(t("saleDeleteFailed"), { description: saleService.getErrorMessage(err) });
     } finally {
       setIsDeletingSale(false);
       setSaleToDelete(null);
@@ -555,9 +560,9 @@ const PosPage: React.FC = () => {
       try {
         const r = await saleReminderService.setReminder(activeSale.id, days);
         setReminderDate(r.remind_at);
-        toast.success(`تم تعيين التذكير بعد ${days} أيام`);
+        toast.success(t("reminderSetAfterDays", { days }));
       } catch {
-        toast.error("فشل في تعيين التذكير");
+        toast.error(t("reminderSetFailed"));
       } finally {
         setReminderLoading(false);
       }
@@ -571,9 +576,9 @@ const PosPage: React.FC = () => {
     try {
       await saleReminderService.removeReminder(activeSale.id);
       setReminderDate(null);
-      toast.success("تم إلغاء التذكير");
+      toast.success(t("reminderCancelled"));
     } catch {
-      toast.error("فشل في إلغاء التذكير");
+      toast.error(t("reminderCancelFailed"));
     } finally {
       setReminderLoading(false);
     }
@@ -587,9 +592,9 @@ const PosPage: React.FC = () => {
         const updated = await saleService.updateSale(activeSale.id, { sale_date: date });
         applyActiveSaleUpdate(updated);
         queryClient.invalidateQueries({ queryKey: shiftSalesQueryKey });
-        toast.success("تم تحديث تاريخ الفاتورة");
+        toast.success(t("saleDateUpdated"));
       } catch (err) {
-        toast.error("فشل تحديث تاريخ الفاتورة", { description: saleService.getErrorMessage(err) });
+        toast.error(t("saleDateUpdateFailed"), { description: saleService.getErrorMessage(err) });
       } finally {
         setIsChangingSaleDate(false);
       }
@@ -618,7 +623,7 @@ const PosPage: React.FC = () => {
       setShiftReportDialogOpen(true);
       setShiftSummaryOpen(false);
     } catch (err) {
-      toast.error("فشل تحميل تقرير الوردية", { description: saleService.getErrorMessage(err) });
+      toast.error(t("shiftReportLoadFailed"), { description: saleService.getErrorMessage(err) });
     } finally {
       setShiftReportLoading(false);
     }
@@ -638,9 +643,9 @@ const PosPage: React.FC = () => {
     try {
       await apiClient.post("/shifts/open");
       await queryClient.invalidateQueries({ queryKey: ["shifts", "current"] });
-      toast.success("تم فتح الوردية");
+      toast.success(t("shiftOpened"));
     } catch (err) {
-      toast.error("فشل فتح الوردية", { description: saleService.getErrorMessage(err) });
+      toast.error(t("shiftOpenFailed"), { description: saleService.getErrorMessage(err) });
     } finally {
       setShiftActionBusy(false);
     }
@@ -651,9 +656,9 @@ const PosPage: React.FC = () => {
     try {
       await apiClient.post("/shifts/close");
       await queryClient.invalidateQueries({ queryKey: ["shifts", "current"] });
-      toast.success("تم إغلاق الوردية");
+      toast.success(t("shiftClosed"));
     } catch (err) {
-      toast.error("فشل إغلاق الوردية", { description: saleService.getErrorMessage(err) });
+      toast.error(t("shiftCloseFailed"), { description: saleService.getErrorMessage(err) });
     } finally {
       setShiftActionBusy(false);
     }
@@ -674,7 +679,7 @@ const PosPage: React.FC = () => {
               ? item.product
               : ({
                   id: item.product_id,
-                  name: item.product_name ?? "منتج غير معروف",
+                  name: item.product_name ?? t("unknownProduct"),
                   scientific_name: "",
                   sku: item.product_sku ?? null,
                   description: null,
@@ -707,7 +712,7 @@ const PosPage: React.FC = () => {
         setSelectedLineId(null);
         setPastSalesOpen(false);
       } catch (err) {
-        toast.error("تعذر تحميل الفاتورة للتعديل", { description: saleService.getErrorMessage(err) });
+        toast.error(t("failedToLoadSaleForEdit"), { description: saleService.getErrorMessage(err) });
       } finally {
         setLoadingSale(false);
         setLoadingSaleId(null);
@@ -784,7 +789,7 @@ const PosPage: React.FC = () => {
       }
 
       if (itemOperations.length === 0) {
-        if (!opts?.silent) toast.success("لا توجد تغييرات للحفظ");
+        if (!opts?.silent) toast.success(t("noChangesToSave"));
         return editingSale;
       }
 
@@ -803,7 +808,7 @@ const PosPage: React.FC = () => {
             ? item.product
             : ({
                 id: item.product_id,
-                name: item.product_name ?? "منتج غير معروف",
+                name: item.product_name ?? t("unknownProduct"),
                 scientific_name: "",
                 sku: item.product_sku ?? null,
                 description: null,
@@ -832,10 +837,10 @@ const PosPage: React.FC = () => {
       setActiveTicketId(updatedTicket.id);
       setSelectedLineId(null);
       queryClient.invalidateQueries({ queryKey: shiftSalesQueryKey });
-      if (!opts?.silent) toast.success("تم حفظ التعديلات بنجاح");
+      if (!opts?.silent) toast.success(t("editsSavedSuccessfully"));
       return updatedSale;
     } catch (err) {
-      toast.error("فشل حفظ التعديلات", { description: saleService.getErrorMessage(err) });
+      toast.error(t("editsSaveFailed"), { description: saleService.getErrorMessage(err) });
       return null;
     } finally {
       setSavingSale(false);
@@ -856,7 +861,7 @@ const PosPage: React.FC = () => {
         setEditingSale(updatedSale);
         setPaymentOpen(false);
         queryClient.invalidateQueries({ queryKey: shiftSalesQueryKey });
-        toast.success("تم تسجيل الدفعة بنجاح");
+        toast.success(t("paymentRecordedSuccessfully"));
       } catch (err) {
         const message = saleService.getErrorMessage(err);
         setCreateSaleError(message);
@@ -877,9 +882,9 @@ const PosPage: React.FC = () => {
         const updatedSale = await saleService.getSaleForPOS(editingSaleId);
         setEditingSale(updatedSale);
         queryClient.invalidateQueries({ queryKey: shiftSalesQueryKey });
-        toast.success("تم حذف الدفعة");
+        toast.success(t("paymentRemoved"));
       } catch (err) {
-        toast.error("فشل حذف الدفعة", { description: saleService.getErrorMessage(err) });
+        toast.error(t("paymentRemovalFailed"), { description: saleService.getErrorMessage(err) });
       } finally {
         setDeletingPaymentId(null);
       }
@@ -997,20 +1002,20 @@ const PosPage: React.FC = () => {
 
   if (posMode === "shift" && !currentShiftQuery.data) {
     return (
-      <div dir="rtl" className="flex h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-center">
+      <div dir={direction} className="flex h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-center">
         <div className="flex size-16 items-center justify-center rounded-full bg-muted">
           <ShieldCheck className="size-8 text-muted-foreground" />
         </div>
         <div>
-          <p className="text-lg font-semibold text-foreground">لا توجد وردية مفتوحة</p>
+          <p className="text-lg font-semibold text-foreground">{t("noOpenShift")}</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {canOpenShift ? "افتح وردية جديدة للبدء في البيع" : "تواصل مع المسؤول لفتح وردية عمل"}
+            {canOpenShift ? t("openShiftToStart") : t("contactAdminToOpenShift")}
           </p>
         </div>
         {canOpenShift && (
           <Button size="lg" disabled={shiftActionBusy} onClick={handleOpenShift} className="gap-2">
             {shiftActionBusy && <Loader2 className="size-4 animate-spin" />}
-            فتح وردية جديدة
+            {t("openNewShift")}
           </Button>
         )}
       </div>
@@ -1026,47 +1031,49 @@ const PosPage: React.FC = () => {
   const paymentTotal = editingDueAmount ?? activeTotal;
 
   return (
-    <div dir="rtl" className="flex h-screen flex-col overflow-hidden bg-background">
+    <div dir={direction} className="flex h-screen flex-col overflow-hidden bg-background">
       {/* Header */}
       <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-card px-4">
-        <span className="text-sm font-semibold text-foreground">نقطة البيع</span>
+        <span className="text-sm font-semibold text-foreground">{t("title")}</span>
         <Separator orientation="vertical" className="h-5" />
         <span className="text-xs text-muted-foreground">
-          {posMode === "shift" && currentShiftQuery.data ? `وردية #${currentShiftQuery.data.id} · ` : ""}
+          {posMode === "shift" && currentShiftQuery.data
+            ? t("shiftHashPrefix", { id: currentShiftQuery.data.id })
+            : ""}
           {user?.name}
         </span>
         <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-          {now.toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit" })}
+          {now.toLocaleTimeString(direction === "rtl" ? "ar" : "en-US", { hour: "2-digit", minute: "2-digit" })}
         </span>
 
         <Separator orientation="vertical" className="h-5 shrink-0" />
 
         {/* Held tickets — switch between or hold multiple simultaneous draft carts */}
         <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
-          {tickets.map((t) => (
-            <div key={t.id} className="group relative shrink-0">
+          {tickets.map((ticket) => (
+            <div key={ticket.id} className="group relative shrink-0">
               <button
                 type="button"
                 onClick={() => {
-                  setActiveTicketId(t.id);
+                  setActiveTicketId(ticket.id);
                   setSelectedLineId(null);
                 }}
                 className={cn(
                   "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
-                  t.id === activeTicketId
+                  ticket.id === activeTicketId
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-border text-muted-foreground hover:bg-accent"
                 )}
               >
-                تذكرة {t.label}
-                {t.items.length > 0 && <span className="tabular-nums">({t.items.length})</span>}
-                {t.client != null && <Users className="size-3" />}
+                {t("ticketLabel", { label: ticket.label })}
+                {ticket.items.length > 0 && <span className="tabular-nums">({ticket.items.length})</span>}
+                {ticket.client != null && <Users className="size-3" />}
               </button>
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setTicketToDelete(t);
+                  setTicketToDelete(ticket);
                 }}
                 className="absolute -end-1.5 -top-1.5 hidden size-4 items-center justify-center rounded-full bg-destructive text-white group-hover:flex"
               >
@@ -1082,23 +1089,23 @@ const PosPage: React.FC = () => {
             disabled={isEditingSale}
           >
             <Plus className="size-3.5" />
-            تذكرة جديدة
+            {t("newTicket")}
           </Button>
         </div>
 
         <div className="ms-auto flex shrink-0 items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => setPastSalesOpen(true)} disabled={loadingSale || isEditingSale}>
-            المبيعات السابقة
+            {t("previousSales")}
           </Button>
           {editingSale && (
             <>
-              <span className="text-xs text-foreground">تعديل فاتورة #{editingSale.id}</span>
+              <span className="text-xs text-foreground">{t("editingSaleHash", { id: editingSale.id })}</span>
               <Button variant="secondary" size="sm" disabled={savingSale} onClick={saveEditingSale} className="gap-1">
                 {savingSale ? <Loader2 className="size-3 animate-spin" /> : null}
-                حفظ التعديلات
+                {t("saveEdits")}
               </Button>
               <Button variant="outline" size="sm" disabled={loadingSale || savingSale} onClick={clearEditing}>
-                إلغاء التعديل
+                {t("cancelEdit")}
               </Button>
             </>
           )}
@@ -1107,12 +1114,12 @@ const PosPage: React.FC = () => {
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-1.5">
                   <FileText className="size-3.5" />
-                  ملخص وردية #{currentShiftQuery.data.id}
+                  {t("shiftSummaryHash", { id: currentShiftQuery.data.id })}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-[520px] p-0" dir="rtl">
+              <PopoverContent align="end" className="w-[520px] p-0" dir={direction}>
                 <div className="border-b px-3 py-2">
-                  <p className="text-sm font-semibold text-foreground">وردية #{currentShiftQuery.data.id}</p>
+                  <p className="text-sm font-semibold text-foreground">{t("shiftHash", { id: currentShiftQuery.data.id })}</p>
                 </div>
                 <ShiftFinancialTable shiftId={currentShiftQuery.data.id} />
                 <div className="border-t p-2">
@@ -1122,7 +1129,7 @@ const PosPage: React.FC = () => {
                     onClick={handleShiftReportPdf}
                   >
                     {shiftReportLoading ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />}
-                    تقرير الوردية PDF
+                    {t("shiftReportPdf")}
                   </Button>
                 </div>
               </PopoverContent>
@@ -1137,7 +1144,7 @@ const PosPage: React.FC = () => {
           />
           {posMode === "shift" && canCloseShift && (
             <Button variant="outline" size="sm" disabled={shiftActionBusy} onClick={handleCloseShift}>
-              إغلاق الوردية
+              {t("closeShift")}
             </Button>
           )}
           <ThemeColorPicker selectedId={themeColorId} onSelect={handleSelectThemeColor} />
@@ -1217,12 +1224,12 @@ const PosPage: React.FC = () => {
 
       {/* Shortcut hints */}
       <div className="hidden shrink-0 items-center gap-4 border-t bg-muted/30 px-4 py-1.5 text-[11px] text-muted-foreground md:flex">
-        <span className="flex items-center gap-1"><kbd className="rounded border bg-background px-1 py-0.5 font-mono">/</kbd> بحث</span>
-        <span className="flex items-center gap-1"><kbd className="rounded border bg-background px-1 py-0.5 font-mono">F4</kbd> العميل</span>
-        <span className="flex items-center gap-1"><kbd className="rounded border bg-background px-1 py-0.5 font-mono">F8</kbd> الدفع</span>
-        <span className="flex items-center gap-1"><kbd className="rounded border bg-background px-1 py-0.5 font-mono">F10</kbd> دفع سريع نقدًا</span>
-        <span className="flex items-center gap-1"><kbd className="rounded border bg-background px-1 py-0.5 font-mono">Delete</kbd> حذف الصنف المحدد</span>
-        <span className="flex items-center gap-1"><kbd className="rounded border bg-background px-1 py-0.5 font-mono">+/-</kbd> تعديل الكمية</span>
+        <span className="flex items-center gap-1"><kbd className="rounded border bg-background px-1 py-0.5 font-mono">/</kbd> {t("kbdSearch")}</span>
+        <span className="flex items-center gap-1"><kbd className="rounded border bg-background px-1 py-0.5 font-mono">F4</kbd> {t("kbdClient")}</span>
+        <span className="flex items-center gap-1"><kbd className="rounded border bg-background px-1 py-0.5 font-mono">F8</kbd> {t("kbdPayment")}</span>
+        <span className="flex items-center gap-1"><kbd className="rounded border bg-background px-1 py-0.5 font-mono">F10</kbd> {t("kbdQuickCash")}</span>
+        <span className="flex items-center gap-1"><kbd className="rounded border bg-background px-1 py-0.5 font-mono">Delete</kbd> {t("kbdDeleteItem")}</span>
+        <span className="flex items-center gap-1"><kbd className="rounded border bg-background px-1 py-0.5 font-mono">+/-</kbd> {t("kbdAdjustQty")}</span>
       </div>
 
       {/* Payment / create sale */}
@@ -1253,17 +1260,17 @@ const PosPage: React.FC = () => {
 
       {/* Clear cart confirmation */}
       <AlertDialog open={confirmClearOpen} onOpenChange={setConfirmClearOpen}>
-        <AlertDialogContent dir="rtl">
+        <AlertDialogContent dir={direction}>
           <AlertDialogHeader>
-            <AlertDialogTitle>إفراغ السلة؟</AlertDialogTitle>
-            <AlertDialogDescription>سيتم حذف جميع الأصناف من هذه التذكرة.</AlertDialogDescription>
+            <AlertDialogTitle>{t("clearCartTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("clearCartDescription")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <Button type="button" variant="outline" onClick={() => setConfirmClearOpen(false)}>
-              إلغاء
+              {tCommon("cancel")}
             </Button>
             <Button type="button" variant="destructive" onClick={handleClearCart}>
-              إفراغ السلة
+              {t("clearCartAction")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1271,17 +1278,17 @@ const PosPage: React.FC = () => {
 
       {/* Delete ticket confirmation */}
       <AlertDialog open={!!ticketToDelete} onOpenChange={(o) => !o && setTicketToDelete(null)}>
-        <AlertDialogContent dir="rtl">
+        <AlertDialogContent dir={direction}>
           <AlertDialogHeader>
-            <AlertDialogTitle>حذف تذكرة {ticketToDelete?.label}؟</AlertDialogTitle>
-            <AlertDialogDescription>لا يمكن التراجع عن هذا الإجراء.</AlertDialogDescription>
+            <AlertDialogTitle>{t("deleteTicketTitle", { label: ticketToDelete?.label })}</AlertDialogTitle>
+            <AlertDialogDescription>{t("actionCannotBeUndone")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <Button type="button" variant="outline" onClick={() => setTicketToDelete(null)}>
-              إلغاء
+              {tCommon("cancel")}
             </Button>
             <Button type="button" variant="destructive" onClick={handleDeleteTicket}>
-              حذف
+              {tCommon("delete")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1289,18 +1296,18 @@ const PosPage: React.FC = () => {
 
       {/* Delete sale confirmation */}
       <AlertDialog open={!!saleToDelete} onOpenChange={(o) => !o && setSaleToDelete(null)}>
-        <AlertDialogContent dir="rtl">
+        <AlertDialogContent dir={direction}>
           <AlertDialogHeader>
-            <AlertDialogTitle>حذف الفاتورة #{saleToDelete?.id}؟</AlertDialogTitle>
-            <AlertDialogDescription>لا يمكن التراجع عن هذا الإجراء. لا يمكن حذف فاتورة بها مدفوعات.</AlertDialogDescription>
+            <AlertDialogTitle>{t("deleteSaleTitle", { id: saleToDelete?.id })}</AlertDialogTitle>
+            <AlertDialogDescription>{t("deleteSaleWithPaymentsWarning")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <Button type="button" variant="outline" onClick={() => setSaleToDelete(null)}>
-              إلغاء
+              {tCommon("cancel")}
             </Button>
             <Button type="button" variant="destructive" disabled={isDeletingSale} onClick={handleConfirmDeleteSale}>
               {isDeletingSale ? <Loader2 className="size-4 animate-spin" /> : null}
-              حذف
+              {tCommon("delete")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1314,7 +1321,7 @@ const PosPage: React.FC = () => {
 
       {/* Receipt PDF */}
       {pdfUrl && (
-        <PdfViewerDialog isOpen={pdfDialogOpen} onClose={handleClosePdfDialog} pdfUrl={pdfUrl} title="فاتورة البيع" />
+        <PdfViewerDialog isOpen={pdfDialogOpen} onClose={handleClosePdfDialog} pdfUrl={pdfUrl} title={t("saleInvoiceTitle")} />
       )}
 
       {/* Shift report PDF */}
@@ -1323,7 +1330,7 @@ const PosPage: React.FC = () => {
           isOpen={shiftReportDialogOpen}
           onClose={handleCloseShiftReportDialog}
           pdfUrl={shiftReportUrl}
-          title={currentShiftQuery.data ? `تقرير الوردية #${currentShiftQuery.data.id}` : "تقرير الوردية"}
+          title={currentShiftQuery.data ? t("shiftHash", { id: currentShiftQuery.data.id }) : t("shiftReportTitle")}
         />
       )}
     </div>

@@ -1,0 +1,12 @@
+{
+  "title": "تذكيرات الدفع المستحقة",
+  "reminderSentViaWhatsapp": "تم إرسال رسالة التذكير عبر واتساب",
+  "whatsappSendFailed": "فشل إرسال رسالة الواتساب",
+  "dismissReminderFailed": "فشل في رفض التذكير",
+  "remainingAmountHeader": "المبلغ المتبقي",
+  "reminderDateHeader": "تاريخ التذكير",
+  "sendWhatsappReminderTooltip": "إرسال تذكير واتساب",
+  "whatsappReminderButton": "تذكير واتساب",
+  "dismissReminderTooltip": "رفض التذكير",
+  "cancelReminderButton": "الغاء التذكير"
+}

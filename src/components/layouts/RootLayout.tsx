@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { Box, Drawer, useTheme, alpha, Toolbar } from "@mui/material";
+import { useLanguage } from "@/context/LanguageContext";
 import { Loader2 } from "lucide-react";
 import { Toaster } from "sonner";
 import { useAuth } from "@/context/AuthContext";
@@ -20,6 +21,7 @@ const FULL_BLEED_ROUTES = ["/sales/pos"];
 const RootLayout: React.FC = () => {
   const { isLoading, user, roles, permissions } = useAuth();
   const theme = useTheme();
+  const { direction } = useLanguage();
   const location = useLocation();
   const isFullBleed = FULL_BLEED_ROUTES.includes(location.pathname);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -75,7 +77,7 @@ const RootLayout: React.FC = () => {
         >
           <Drawer
             variant="temporary"
-            anchor="right"
+            anchor={direction === "rtl" ? "right" : "left"}
             open={mobileOpen}
             onClose={handleDrawerToggle}
             ModalProps={{
@@ -86,7 +88,7 @@ const RootLayout: React.FC = () => {
               "& .MuiDrawer-paper": {
                 boxSizing: "border-box",
                 width: DRAWER_WIDTH,
-                borderLeft: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                borderInlineEnd: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
               },
             }}
           >
@@ -100,13 +102,13 @@ const RootLayout: React.FC = () => {
           </Drawer>
           <Drawer
             variant="permanent"
-            anchor="right"
+            anchor={direction === "rtl" ? "right" : "left"}
             sx={{
               display: { xs: "none", sm: "block" },
               "& .MuiDrawer-paper": {
                 boxSizing: "border-box",
                 width: isSidebarCollapsed ? COLLAPSED_DRAWER_WIDTH : DRAWER_WIDTH,
-                borderLeft: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                borderInlineEnd: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
                 overflowX: "hidden",
               },
             }}

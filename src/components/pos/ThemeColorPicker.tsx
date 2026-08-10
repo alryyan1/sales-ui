@@ -1,9 +1,11 @@
 // src/components/pos/ThemeColorPicker.tsx
 import { Check, Palette } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 import { POS_THEME_COLORS, type PosThemeColor } from "@/lib/posTheme";
 
 interface ThemeColorPickerProps {
@@ -12,15 +14,17 @@ interface ThemeColorPickerProps {
 }
 
 export function ThemeColorPicker({ selectedId, onSelect }: ThemeColorPickerProps) {
+  const { t: tThemeColorPicker } = useTranslation("themeColorPicker");
+  const { direction } = useLanguage();
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" size="icon" className="size-9 shrink-0" aria-label="لون الواجهة">
+        <Button type="button" variant="outline" size="icon" className="size-9 shrink-0" aria-label={tThemeColorPicker("themeColor")}>
           <Palette className="size-4" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-56" dir="rtl">
-        <p className="mb-2 text-xs font-medium text-muted-foreground">لون الواجهة</p>
+      <PopoverContent align="end" className="w-56" dir={direction}>
+        <p className="mb-2 text-xs font-medium text-muted-foreground">{tThemeColorPicker("themeColor")}</p>
         <div className="grid grid-cols-6 gap-2">
           {POS_THEME_COLORS.map((color) => (
             <button

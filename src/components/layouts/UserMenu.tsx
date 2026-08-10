@@ -1,6 +1,7 @@
 // src/components/layouts/UserMenu.tsx
 import React from "react";
 import { Link as RouterLink } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { LogOut, Settings as SettingsIcon, UserCircle } from "lucide-react";
 import {
   DropdownMenu,
@@ -20,6 +21,8 @@ interface UserMenuProps {
 
 const UserMenu: React.FC<UserMenuProps> = ({ user }) => {
   const { handleLogout } = useAuth();
+  const { t } = useTranslation("navigation");
+  const { t: tCommon } = useTranslation("common");
 
   const initials = user.name
     ? user.name.substring(0, 2).toUpperCase()
@@ -30,7 +33,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ user }) => {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          aria-label="حساب المستخدم"
+          aria-label={tCommon("userAccount")}
           className="flex size-9 items-center justify-center rounded-full transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Avatar className="size-9">
@@ -48,19 +51,19 @@ const UserMenu: React.FC<UserMenuProps> = ({ user }) => {
         <DropdownMenuItem asChild>
           <RouterLink to="/profile">
             <UserCircle />
-            الملف الشخصي
+            {t("profile")}
           </RouterLink>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <RouterLink to="/admin/settings">
             <SettingsIcon />
-            الإعدادات
+            {t("settings")}
           </RouterLink>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={() => handleLogout()}>
           <LogOut />
-          تسجيل الخروج
+          {t("logout")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

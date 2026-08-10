@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AlertCircle, Package, ScanLine } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import {
   Command,
@@ -51,6 +52,9 @@ export function ProductSearchPanel({
   onAddProduct,
 }: ProductSearchPanelProps) {
   const formatCurrency = useFormatCurrency();
+  const { t } = useTranslation("pos");
+  const { t: tCommon } = useTranslation("common");
+  const { t: tProductSearch } = useTranslation("productSearchPanel");
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [lookupBusy, setLookupBusy] = useState(false);
@@ -134,10 +138,10 @@ export function ProductSearchPanel({
           handleAdd(match);
           setSearch("");
         } else {
-          toast.error("لم يتم العثور على منتج بهذا الرمز/الباركود");
+          toast.error(tProductSearch("productNotFoundBySku"));
         }
       } catch {
-        toast.error("تعذر البحث عن المنتج");
+        toast.error(tProductSearch("productSearchFailed"));
       } finally {
         setLookupBusy(false);
       }
@@ -155,7 +159,7 @@ export function ProductSearchPanel({
           onValueChange={setSearch}
           onKeyDown={handleInputKeyDown}
           disabled={disabled}
-          placeholder="ابحث بالاسم أو الرمز، أو امسح الباركود... ( / )"
+          placeholder={tProductSearch("searchOrScanPlaceholder")}
           className="h-9"
         />
       </div>
@@ -172,7 +176,7 @@ export function ProductSearchPanel({
                 : "bg-muted text-muted-foreground hover:bg-accent"
             )}
           >
-            الكل
+            {tCommon("all")}
           </button>
           {categories.map((c) => (
             <button
@@ -197,9 +201,9 @@ export function ProductSearchPanel({
           <Alert variant="destructive" className="m-2">
             <AlertCircle className="size-4" />
             <AlertDescription className="flex items-center justify-between gap-3">
-              <span>تعذر تحميل المنتجات</span>
+              <span>{t("failedToLoadProducts")}</span>
               <Button size="sm" variant="outline" onClick={() => productsQuery.refetch()}>
-                إعادة المحاولة
+                {tCommon("retry")}
               </Button>
             </AlertDescription>
           </Alert>
@@ -218,7 +222,7 @@ export function ProductSearchPanel({
           </div>
         ) : visibleProducts.length === 0 ? (
           <CommandEmpty className="py-12 text-sm text-muted-foreground">
-            لا توجد منتجات مطابقة
+            {tProductSearch("noMatchingProducts")}
           </CommandEmpty>
         ) : (
           visibleProducts.map((product) => {
@@ -262,14 +266,16 @@ export function ProductSearchPanel({
 
                 {outOfStock ? (
                   <Badge variant="destructive" className="shrink-0">
-                    نفذ المخزون
+                    {tProductSearch("outOfStockBadge")}
                   </Badge>
                 ) : lowStock ? (
                   <Badge variant="warning" className="shrink-0">
-                    {stock} متبقي
+                    {tProductSearch("stockRemaining", { count: stock })}
                   </Badge>
                 ) : (
-                  <span className="shrink-0 text-xs text-muted-foreground">{stock} متوفر</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {tProductSearch("stockAvailable", { count: stock })}
+                  </span>
                 )}
 
                 <span className="w-25 shrink-0 text-end text-sm font-semibold tabular-nums text-foreground">

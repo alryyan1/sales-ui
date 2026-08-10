@@ -1,0 +1,14 @@
+{
+  "nearExpiringTitle": "Products Near Expiry",
+  "expiredTitle": "Expired Products",
+  "expiredSinceDays": "Expired {{days}} days ago",
+  "expiresToday": "Expires today",
+  "expiresTomorrow": "Expires tomorrow",
+  "daysRemaining": "{{days}} days remaining",
+  "noProducts": "No products found",
+  "barcodeHeader": "Barcode",
+  "statusHeader": "Status",
+  "actionHeader": "Action",
+  "moveProductTooltip": "Move product off the shelf to adjust stock",
+  "cannotSellExpiredTooltip": "An expired product cannot be sold"
+}

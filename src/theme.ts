@@ -1,6 +1,6 @@
 // src/theme.ts
 import { createTheme, type PaletteMode } from "@mui/material/styles";
-import { arEG } from "@mui/material/locale";
+import { arEG, enUS } from "@mui/material/locale";
 import createCache from "@emotion/cache";
 import { prefixer } from "stylis";
 
@@ -14,10 +14,10 @@ export const cacheRtl = createCache({
   stylisPlugins: [prefixer],
 });
 
-export function getTheme(mode: PaletteMode) {
+export function getTheme(mode: PaletteMode, direction: "rtl" | "ltr" = "rtl") {
   return createTheme(
     {
-      direction: "rtl",
+      direction,
       typography: {
         fontFamily: '"Tajawal", "Arial", sans-serif',
         h1: { fontWeight: 700 },
@@ -70,10 +70,10 @@ export function getTheme(mode: PaletteMode) {
         MuiCssBaseline: {
           styleOverrides: {
             html: {
-              direction: "rtl",
+              direction,
             },
             body: {
-              direction: "rtl",
+              direction,
               fontFamily: '"Tajawal", "Arial", sans-serif',
             },
           },
@@ -138,7 +138,7 @@ export function getTheme(mode: PaletteMode) {
         },
       },
     },
-    arEG
+    direction === "rtl" ? arEG : enUS
   );
 }
 

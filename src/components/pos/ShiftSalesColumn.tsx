@@ -1,5 +1,6 @@
 // src/components/pos/ShiftSalesColumn.tsx
 import { Landmark, Loader2, RotateCcw, Tag, Users, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/utils";
 import type { Sale } from "@/services/saleService";
@@ -27,10 +28,12 @@ export function ShiftSalesColumn({
   deletingSaleId = null,
   loadingSaleId = null,
 }: ShiftSalesColumnProps) {
+  const { t } = useTranslation("shiftSalesColumn");
+
   return (
     <div className="flex w-24 shrink-0 flex-col gap-2 overflow-y-auto border-e bg-muted/10 p-2">
       <span className="flex items-center justify-center gap-1 px-0.5 text-center text-[11px] font-medium text-muted-foreground">
-        مبيعات الوردية
+        {t("shiftSales")}
         {isFetching && !isLoading && <Loader2 className="size-3 animate-spin" />}
       </span>
 
@@ -39,7 +42,7 @@ export function ShiftSalesColumn({
           <Loader2 className="size-5 animate-spin text-muted-foreground" />
         </div>
       ) : sales.length === 0 ? (
-        <p className="px-1 text-center text-[11px] text-muted-foreground">لا توجد مبيعات</p>
+        <p className="px-1 text-center text-[11px] text-muted-foreground">{t("noSales")}</p>
       ) : (
         sales.map((sale) => {
           const isActive = activeSaleId === sale.id;
@@ -80,7 +83,7 @@ export function ShiftSalesColumn({
                 {isReturned && <RotateCcw className="absolute bottom-1 end-1 size-3 text-destructive" />}
                 {isExportedToFinance && (
                   <Landmark className="absolute  top-1 size-3 text-emerald-600 dark:text-emerald-400">
-                    <title>تم تصديرها إلى النظام المالي</title>
+                    <title>{t("exportedToFinanceTooltip")}</title>
                   </Landmark>
                 )}
                 <span className="tabular-nums">{sale.number}</span>
@@ -108,7 +111,7 @@ export function ShiftSalesColumn({
                     onDeleteSale?.(sale);
                   }}
                   className="absolute -start-1.5 top-1/2 hidden size-4 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-destructive text-white group-hover:flex disabled:pointer-events-none disabled:opacity-50"
-                  aria-label="حذف الفاتورة"
+                  aria-label={t("deleteSaleAriaLabel")}
                 >
                   {isDeleting ? <Loader2 className="size-2.5 animate-spin" /> : <X className="size-2.5" />}
                 </button>
