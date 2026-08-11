@@ -1,7 +1,9 @@
 // src/pages/admin/SettingsPage.tsx
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { useSettings } from "@/context/SettingsContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { AppSettings } from "@/services/settingService";
 import { toast } from "sonner";
 
@@ -32,18 +34,20 @@ import {
 type SettingsFormValues = Partial<AppSettings>;
 
 const TABS = [
-  { value: "company", label: "الشركة", icon: Building2 },
-  { value: "business", label: "قواعد العمل", icon: ShieldCheck },
-  { value: "sales", label: "سلوك المبيعات", icon: Tag },
-  { value: "pos", label: "نقاط البيع", icon: ShoppingCart },
-  { value: "purchases", label: "المشتريات", icon: Receipt },
-  { value: "pdf", label: "شعار الفواتير", icon: FileImage },
+  { value: "company", labelKey: "tabs.company", icon: Building2 },
+  { value: "business", labelKey: "tabs.business", icon: ShieldCheck },
+  { value: "sales", labelKey: "tabs.sales", icon: Tag },
+  { value: "pos", labelKey: "tabs.pos", icon: ShoppingCart },
+  { value: "purchases", labelKey: "tabs.purchases", icon: Receipt },
+  { value: "pdf", labelKey: "tabs.pdf", icon: FileImage },
 ] as const;
 
 // --- Component ---
 const SettingsPage: React.FC = () => {
   const { settings, isLoadingSettings, updateSettings, fetchSettings } =
     useSettings();
+  const { direction } = useLanguage();
+  const { t } = useTranslation("adminSettings");
   const [serverError, setServerError] = useState<string | null>(null);
 
   const form = useForm<SettingsFormValues>({
@@ -156,10 +160,10 @@ const SettingsPage: React.FC = () => {
 
     try {
       await updateSettings(dataToSubmit);
-      toast.success("تم تحديث الإعدادات بنجاح");
+      toast.success(t("saveSuccess"));
     } catch (err) {
       console.error("Failed to update settings:", err);
-      setServerError("حدث خطأ أثناء تحديث الإعدادات");
+      setServerError(t("saveError"));
     }
   };
 
@@ -172,15 +176,15 @@ const SettingsPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background" dir={direction}>
       <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
         {/* Page Header */}
         <div className="mb-8 border-b pb-5">
           <h1 className="text-xl font-semibold tracking-tight text-foreground">
-            إعدادات النظام
+            {t("pageTitle")}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            تحكم في جميع خصائص وإعدادات التطبيق من مكان واحد
+            {t("pageDescription")}
           </p>
         </div>
 
@@ -198,14 +202,14 @@ const SettingsPage: React.FC = () => {
           >
             {/* Vertical section nav */}
             <TabsList className="h-auto w-full flex-none flex-row flex-wrap justify-start gap-1 bg-transparent p-0 lg:w-56 lg:flex-col lg:items-stretch lg:border-e lg:pe-6">
-              {TABS.map(({ value, label, icon: Icon }) => (
+              {TABS.map(({ value, labelKey, icon: Icon }) => (
                 <TabsTrigger
                   key={value}
                   value={value}
                   className="w-full flex-none justify-start gap-2.5 rounded-lg border-none px-3 py-2 text-sm font-medium text-muted-foreground shadow-none data-[state=active]:bg-accent data-[state=active]:text-foreground data-[state=active]:shadow-none dark:data-[state=active]:bg-accent dark:data-[state=active]:border-none"
                 >
                   <Icon className="size-4" />
-                  {label}
+                  {t(labelKey)}
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -236,7 +240,7 @@ const SettingsPage: React.FC = () => {
               <div className="sticky bottom-4 z-10 flex items-center justify-end gap-3 rounded-xl border bg-background/95 p-3 shadow-lg backdrop-blur">
                 {isDirty && (
                   <span className="text-xs text-muted-foreground">
-                    لديك تغييرات غير محفوظة
+                    {t("unsavedChanges")}
                   </span>
                 )}
                 <Button
@@ -250,7 +254,7 @@ const SettingsPage: React.FC = () => {
                   ) : (
                     <Save className="size-4" />
                   )}
-                  حفظ التغييرات
+                  {t("saveChanges")}
                 </Button>
               </div>
             </div>

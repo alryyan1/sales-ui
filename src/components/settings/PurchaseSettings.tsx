@@ -1,4 +1,5 @@
 import { Controller, Control } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -18,29 +19,30 @@ interface PurchaseSettingsProps {
 }
 
 export const PurchaseSettings = ({ control }: PurchaseSettingsProps) => {
+  const { t } = useTranslation("adminSettings");
   return (
     <SettingsSection
-      title="إعدادات المشتريات"
-      description="تحكم في العملة الافتراضية وحقول أصناف فواتير الشراء."
+      title={t("purchases.title")}
+      description={t("purchases.description")}
     >
-      <SettingsGroup title="العملة الافتراضية للمشتريات">
+      <SettingsGroup title={t("purchases.defaultCurrencyGroupTitle")}>
         <Controller
           name="default_purchase_currency"
           control={control}
           render={({ field }) => (
             <div className="space-y-2">
-              <Label htmlFor="default_purchase_currency">العملة الافتراضية</Label>
+              <Label htmlFor="default_purchase_currency">{t("purchases.defaultCurrencyLabel")}</Label>
               <Select value={field.value ?? "SDG"} onValueChange={field.onChange}>
                 <SelectTrigger id="default_purchase_currency" className="w-[220px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="SDG">SDG — جنيه سوداني</SelectItem>
-                  <SelectItem value="USD">USD — دولار أمريكي</SelectItem>
+                  <SelectItem value="SDG">{t("purchases.currencySdg")}</SelectItem>
+                  <SelectItem value="USD">{t("purchases.currencyUsd")}</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                سيتم استخدام هذه العملة كقيمة افتراضية عند إنشاء فاتورة شراء جديدة.
+                {t("purchases.defaultCurrencyHelp")}
               </p>
             </div>
           )}
@@ -49,14 +51,14 @@ export const PurchaseSettings = ({ control }: PurchaseSettingsProps) => {
 
       <Separator />
 
-      <SettingsGroup title="حقول أصناف المشتريات">
+      <SettingsGroup title={t("purchases.itemFieldsGroupTitle")}>
         <Controller
           name="purchase_use_batch_number"
           control={control}
           render={({ field }) => (
             <SwitchField
-              label="استخدام رقم الباتش (Batch Number)"
-              description="عند التفعيل، يظهر عمود رقم الباتش في جدول أصناف المشتريات ويمكن إدخاله لكل صنف."
+              label={t("purchases.useBatchNumberLabel")}
+              description={t("purchases.useBatchNumberDescription")}
               checked={Boolean(field.value)}
               onCheckedChange={field.onChange}
             />
@@ -67,8 +69,8 @@ export const PurchaseSettings = ({ control }: PurchaseSettingsProps) => {
           control={control}
           render={({ field }) => (
             <SwitchField
-              label="استخدام تاريخ الانتهاء (Expiry Date)"
-              description="عند التفعيل، يظهر عمود تاريخ الانتهاء في جدول أصناف المشتريات ويمكن تحديده لكل صنف."
+              label={t("purchases.useExpiryDateLabel")}
+              description={t("purchases.useExpiryDateDescription")}
               checked={Boolean(field.value)}
               onCheckedChange={field.onChange}
             />

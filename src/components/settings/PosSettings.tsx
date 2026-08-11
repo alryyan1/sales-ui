@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Controller, Control } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { Plus, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,13 +12,13 @@ import { SwitchField } from "./shared/SwitchField";
 import { AppSettings } from "@/services/settingService";
 import { PAYMENT_METHODS, PaymentMethod, parseActivePaymentMethods } from "@/lib/paymentMethods";
 
-const PAYMENT_METHOD_LABELS_AR: Record<PaymentMethod, string> = {
-  cash: "نقدي",
-  bankak: "بنكك",
-  fawry: "فوري",
-  ocash: "أوكاش",
-  bank_transfer: "تحويل بنكي",
-  card: "بطاقة",
+const PAYMENT_METHOD_LABEL_KEYS: Record<PaymentMethod, string> = {
+  cash: "methodCash",
+  bankak: "methodBankak",
+  fawry: "methodFawry",
+  ocash: "methodOcash",
+  bank_transfer: "methodBankTransfer",
+  card: "methodCard",
 };
 
 interface PosSettingsProps {
@@ -38,6 +39,7 @@ function WhatsappNumbersField({
   value: string | null | undefined;
   onChange: (value: string) => void;
 }) {
+  const { t } = useTranslation("adminSettings");
   const numbers = useMemo(() => parseNumbers(value), [value]);
   const [draft, setDraft] = useState("");
 
@@ -57,7 +59,7 @@ function WhatsappNumbersField({
 
   return (
     <div className="space-y-2">
-      <Label htmlFor="whatsapp_shift_closure_numbers">أرقام استلام تقرير إغلاق الوردية</Label>
+      <Label htmlFor="whatsapp_shift_closure_numbers">{t("pos.whatsappNumbersLabel")}</Label>
 
       {numbers.length > 0 && (
         <div className="flex flex-wrap gap-2">
@@ -72,7 +74,7 @@ function WhatsappNumbersField({
                 type="button"
                 onClick={() => removeNumber(number)}
                 className="text-muted-foreground transition-colors hover:text-destructive"
-                aria-label={`إزالة ${number}`}
+                aria-label={t("pos.whatsappNumberRemove", { number })}
               >
                 <X className="size-3" />
               </button>
@@ -92,18 +94,18 @@ function WhatsappNumbersField({
               addNumber();
             }
           }}
-          placeholder="مثال: 249991961111"
+          placeholder={t("pos.whatsappNumberPlaceholder")}
           dir="ltr"
           className="text-left"
         />
         <Button type="button" variant="outline" onClick={addNumber} disabled={!draft.trim()} className="gap-1.5 shrink-0">
           <Plus className="size-4" />
-          إضافة
+          {t("pos.whatsappNumberAdd")}
         </Button>
       </div>
 
       <p className="text-xs text-muted-foreground">
-        اكتب رقم الهاتف ثم اضغط "إضافة" أو Enter لإضافته إلى القائمة. يجب أن يتضمن الرمز الدولي بدون +
+        {t("pos.whatsappNumbersHelp")}
       </p>
     </div>
   );
@@ -116,6 +118,8 @@ function ActivePaymentMethodsField({
   value: string | null | undefined;
   onChange: (value: string) => void;
 }) {
+  const { t } = useTranslation("adminSettings");
+  const { t: tPayment } = useTranslation("paymentDialog");
   const activeMethods = parseActivePaymentMethods(value);
 
   const toggleMethod = (method: PaymentMethod, checked: boolean) => {
@@ -131,32 +135,33 @@ function ActivePaymentMethodsField({
       {PAYMENT_METHODS.map((method) => (
         <SwitchField
           key={method}
-          label={PAYMENT_METHOD_LABELS_AR[method]}
+          label={tPayment(PAYMENT_METHOD_LABEL_KEYS[method])}
           checked={activeMethods.includes(method)}
           onCheckedChange={(checked) => toggleMethod(method, checked)}
         />
       ))}
       <p className="pt-1 text-xs text-muted-foreground">
-        يجب أن تبقى طريقة دفع واحدة على الأقل مفعّلة.
+        {t("pos.paymentMethodsHelp")}
       </p>
     </div>
   );
 }
 
 export const PosSettings = ({ control }: PosSettingsProps) => {
+  const { t } = useTranslation("adminSettings");
   return (
     <SettingsSection
-      title="إعدادات نقاط البيع (POS)"
-      description="تحكم في سلوك شاشة نقطة البيع وإشعاراتها."
+      title={t("pos.title")}
+      description={t("pos.description")}
     >
-      <SettingsGroup title="ظهور المنتجات (Product Visibility)">
+      <SettingsGroup title={t("pos.visibilityGroupTitle")}>
         <Controller
           name="pos_show_expired_products"
           control={control}
           render={({ field }) => (
             <SwitchField
-              label="عرض المنتجات المنتهية الصلاحية"
-              description="عند التفعيل، ستظهر المنتجات منتهية الصلاحية في نتائج بحث نقطة البيع."
+              label={t("pos.showExpiredLabel")}
+              description={t("pos.showExpiredDescription")}
               checked={Boolean(field.value)}
               onCheckedChange={field.onChange}
             />
@@ -167,8 +172,8 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
           control={control}
           render={({ field }) => (
             <SwitchField
-              label="عرض المنتجات التي نفد مخزونها"
-              description="عند التفعيل، ستظهر المنتجات التي رصيدها صفراً أو أقل في نتائج بحث نقطة البيع."
+              label={t("pos.showOutOfStockLabel")}
+              description={t("pos.showOutOfStockDescription")}
               checked={Boolean(field.value)}
               onCheckedChange={field.onChange}
             />
@@ -178,7 +183,7 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
 
       <Separator />
 
-      <SettingsGroup title="طرق الدفع في نقطة البيع (Payment Methods)">
+      <SettingsGroup title={t("pos.paymentMethodsGroupTitle")}>
         <Controller
           name="pos_active_payment_methods"
           control={control}
@@ -190,14 +195,14 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
 
       <Separator />
 
-      <SettingsGroup title="سعر صرف الدولار (USD Conversion)">
+      <SettingsGroup title={t("pos.usdGroupTitle")}>
         <Controller
           name="usd_conversion_enabled"
           control={control}
           render={({ field }) => (
             <SwitchField
-              label="تفعيل تحويل أسعار الدولار"
-              description='عند التعطيل، يُخفى زر سعر الصرف من الشريط العلوي، وتُعرض/تُباع المنتجات المسعّرة بالدولار بقيمتها كما هي بدون ضرب في سعر الصرف.'
+              label={t("pos.usdEnabledLabel")}
+              description={t("pos.usdEnabledDescription")}
               checked={field.value ?? true}
               onCheckedChange={field.onChange}
             />
@@ -207,7 +212,7 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
 
       <Separator />
 
-      <SettingsGroup title="إشعارات الواتساب (WhatsApp Notifications)">
+      <SettingsGroup title={t("pos.whatsappGroupTitle")}>
         <Controller
           name="whatsapp_shift_closure_numbers"
           control={control}
@@ -219,25 +224,25 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
 
       <Separator />
 
-      <SettingsGroup title="إعدادات Firebase (Firebase Settings)">
+      <SettingsGroup title={t("pos.firebaseGroupTitle")}>
         <Controller
           name="firebase_collection_name"
           control={control}
           render={({ field }) => (
             <div className="space-y-2">
               <Label htmlFor="firebase_collection_name">
-                اسم مجموعة Firebase (Collection Name)
+                {t("pos.firebaseCollectionLabel")}
               </Label>
               <Input
                 id="firebase_collection_name"
                 {...field}
                 value={field.value || "none"}
-                placeholder="مثال: none"
+                placeholder={t("pos.firebaseCollectionPlaceholder")}
                 dir="ltr"
                 className="text-left"
               />
               <p className="text-xs text-muted-foreground">
-                اسم المجموعة (Collection) في Firestore حيث يتم تخزين المنتجات والورديات.
+                {t("pos.firebaseCollectionHelp")}
               </p>
             </div>
           )}

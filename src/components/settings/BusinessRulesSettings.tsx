@@ -1,4 +1,5 @@
 import { Controller, Control } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -23,12 +24,13 @@ const CURRENCY_OPTIONS = (Object.keys(CURRENCY_LABELS) as Array<keyof typeof CUR
 );
 
 export const BusinessRulesSettings = ({ control }: BusinessRulesSettingsProps) => {
+  const { t } = useTranslation("adminSettings");
   return (
     <SettingsSection
-      title="الإعدادات المحلية وقواعد العمل"
-      description="قواعد تحكم في سلوك جدول المنتجات ونموذج إضافته."
+      title={t("businessRules.title")}
+      description={t("businessRules.description")}
     >
-      <SettingsGroup title="العملة">
+      <SettingsGroup title={t("businessRules.currencyGroupTitle")}>
         <Controller
           name="currency_code"
           control={control}
@@ -36,7 +38,7 @@ export const BusinessRulesSettings = ({ control }: BusinessRulesSettingsProps) =
             const decimals = CURRENCY_DECIMALS[field.value ?? "SDG"] ?? 0;
             return (
               <div className="space-y-2">
-                <Label htmlFor="currency_code">عملة النظام</Label>
+                <Label htmlFor="currency_code">{t("businessRules.currencyLabel")}</Label>
                 <Select value={field.value ?? "SDG"} onValueChange={field.onChange}>
                   <SelectTrigger id="currency_code" className="w-[220px]">
                     <SelectValue />
@@ -50,8 +52,9 @@ export const BusinessRulesSettings = ({ control }: BusinessRulesSettingsProps) =
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  تحدد هذه العملة عدد الخانات العشرية المعروضة لكل المبالغ المالية في النظام —{" "}
-                  {decimals === 0 ? "بدون خانات عشرية" : `${decimals} خانة عشرية`}.
+                  {decimals === 0
+                    ? t("businessRules.currencyHelpNoDecimals")
+                    : t("businessRules.currencyHelpWithDecimals", { count: decimals })}
                 </p>
               </div>
             );
@@ -63,7 +66,7 @@ export const BusinessRulesSettings = ({ control }: BusinessRulesSettingsProps) =
 
       <div>
         <h3 className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-          عرض جدول المنتجات
+          {t("businessRules.productDisplayGroupTitle")}
         </h3>
         <div className="mt-3 space-y-1">
           <Controller
@@ -71,8 +74,8 @@ export const BusinessRulesSettings = ({ control }: BusinessRulesSettingsProps) =
             control={control}
             render={({ field }) => (
               <SwitchField
-                label="تلوين صفوف المنتجات المنتهية أو الناقصة"
-                description="عند التفعيل، تُلوَّن صفوف المنتجات المنتهية الصلاحية (أحمر) والنافدة من المخزون (برتقالي)"
+                label={t("businessRules.rowColorHighlightLabel")}
+                description={t("businessRules.rowColorHighlightDescription")}
                 checked={!!field.value}
                 onCheckedChange={field.onChange}
               />
@@ -84,8 +87,8 @@ export const BusinessRulesSettings = ({ control }: BusinessRulesSettingsProps) =
             control={control}
             render={({ field }) => (
               <SwitchField
-                label='إظهار حقل الاسم العلمي في نموذج المنتج'
-                description='عند التعطيل، يُخفى حقل "الاسم العلمي" كلياً من نموذج الإضافة والتعديل'
+                label={t("businessRules.scientificNameVisibleLabel")}
+                description={t("businessRules.scientificNameVisibleDescription")}
                 checked={!!field.value}
                 onCheckedChange={field.onChange}
               />
@@ -97,8 +100,8 @@ export const BusinessRulesSettings = ({ control }: BusinessRulesSettingsProps) =
             control={control}
             render={({ field }) => (
               <SwitchField
-                label="جعل الاسم العلمي إلزامياً"
-                description="عند التفعيل، لا يمكن حفظ المنتج بدون إدخال الاسم العلمي"
+                label={t("businessRules.scientificNameRequiredLabel")}
+                description={t("businessRules.scientificNameRequiredDescription")}
                 checked={!!field.value}
                 onCheckedChange={field.onChange}
               />

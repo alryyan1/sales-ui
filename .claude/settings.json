@@ -42,7 +42,8 @@
       "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('src/locales/en/products.json','utf8'\\)\\); JSON.parse\\(require\\('fs'\\).readFileSync\\('src/locales/ar/products.json','utf8'\\)\\); console.log\\('OK'\\)\")",
       "Bash(tasklist)",
       "Bash(php -l app/Http/Controllers/Api/PurchaseController.php)",
-      "Bash(php -l app/Http/Controllers/Api/SettingController.php)"
+      "Bash(php -l app/Http/Controllers/Api/SettingController.php)",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('src/locales/ar/adminSettings.json','utf8'\\)\\); JSON.parse\\(require\\('fs'\\).readFileSync\\('src/locales/en/adminSettings.json','utf8'\\)\\); console.log\\('OK'\\)\")"
     ],
     "additionalDirectories": [
       "C:\\xampp\\htdocs\\sales-api\\app\\Http\\Controllers\\Api",

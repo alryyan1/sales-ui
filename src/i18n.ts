@@ -48,6 +48,7 @@ import purchaseLedgerDialogAr from './locales/ar/purchaseLedgerDialog.json';
 import inventoryCountAr from './locales/ar/inventoryCount.json';
 import inventoryCountManageAr from './locales/ar/inventoryCountManage.json';
 import transitOrdersAr from './locales/ar/transitOrders.json';
+import adminSettingsAr from './locales/ar/adminSettings.json';
 
 // English imports
 import commonEN from './locales/en/common.json';
@@ -95,6 +96,7 @@ import purchaseLedgerDialogEN from './locales/en/purchaseLedgerDialog.json';
 import inventoryCountEN from './locales/en/inventoryCount.json';
 import inventoryCountManageEN from './locales/en/inventoryCountManage.json';
 import transitOrdersEN from './locales/en/transitOrders.json';
+import adminSettingsEN from './locales/en/adminSettings.json';
 
 
 // ... استيراد ملفات أخرى
@@ -153,6 +155,7 @@ const resources = {
     ,inventoryCount:inventoryCountAr
     ,inventoryCountManage:inventoryCountManageAr
     ,transitOrders:transitOrdersAr
+    ,adminSettings:adminSettingsAr
 
     // ... namespaces أخرى
   },
@@ -202,6 +205,7 @@ const resources = {
     ,inventoryCount: inventoryCountEN
     ,inventoryCountManage: inventoryCountManageEN
     ,transitOrders: transitOrdersEN
+    ,adminSettings: adminSettingsEN
   }
   // يمكنك إضافة لغات أخرى هنا بنفس الهيكل
 };
@@ -254,6 +258,7 @@ export const namespaces = [
     ,'inventoryCount'
     ,'inventoryCountManage'
     ,'transitOrders'
+    ,'adminSettings'
     // ... أسماء namespaces أخرى
 ];
 

@@ -1,6 +1,7 @@
 // src/components/settings/PdfReportBrandingSettings.tsx
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { ImageIcon, Loader2, Save, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ function ImageUploadTile({
   uploading: boolean;
   onUpload: (file: File) => void;
 }) {
+  const { t } = useTranslation("adminSettings");
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
@@ -53,7 +55,7 @@ function ImageUploadTile({
         )}
         <span className="flex items-center gap-1 text-xs text-muted-foreground">
           <Upload className="size-3" />
-          {preview ? "تغيير" : "رفع"}
+          {preview ? t("pdf.uploadChange") : t("pdf.uploadNew")}
         </span>
         <input
           ref={inputRef}
@@ -72,6 +74,7 @@ function ImageUploadTile({
 }
 
 export const PdfReportBrandingSettings: React.FC = () => {
+  const { t } = useTranslation("adminSettings");
   const { settings, fetchSettings } = useSettings();
 
   const [logoPosition, setLogoPosition] = useState<LogoPosition>("right");
@@ -113,9 +116,9 @@ export const PdfReportBrandingSettings: React.FC = () => {
     try {
       const updated = await pdfReportSettingService.update(INVOICE_REPORT_KEY, { show_stamp: checked });
       setInvoiceReportSetting(updated);
-      toast.success("تم الحفظ");
+      toast.success(t("pdf.toggleSaveSuccess"));
     } catch {
-      toast.error("فشل الحفظ");
+      toast.error(t("pdf.toggleSaveError"));
     } finally {
       setSavingStampToggle(false);
     }
@@ -126,9 +129,9 @@ export const PdfReportBrandingSettings: React.FC = () => {
     try {
       const updated = await pdfReportSettingService.update(INVOICE_REPORT_KEY, { show_signature: checked });
       setInvoiceReportSetting(updated);
-      toast.success("تم الحفظ");
+      toast.success(t("pdf.toggleSaveSuccess"));
     } catch {
-      toast.error("فشل الحفظ");
+      toast.error(t("pdf.toggleSaveError"));
     } finally {
       setSavingSignatureToggle(false);
     }
@@ -140,9 +143,9 @@ export const PdfReportBrandingSettings: React.FC = () => {
       const updated = await settingService.uploadLogo(file);
       setLogoPreview(updated.company_logo_url ?? null);
       await fetchSettings();
-      toast.success("تم رفع الشعار بنجاح");
+      toast.success(t("pdf.logoUploadSuccess"));
     } catch {
-      toast.error("فشل رفع الشعار");
+      toast.error(t("pdf.logoUploadError"));
     } finally {
       setLogoUploading(false);
     }
@@ -154,9 +157,9 @@ export const PdfReportBrandingSettings: React.FC = () => {
       const updated = await settingService.uploadStamp(file);
       setStampPreview(updated.company_stamp_url ?? null);
       await fetchSettings();
-      toast.success("تم رفع الختم بنجاح");
+      toast.success(t("pdf.stampUploadSuccess"));
     } catch {
-      toast.error("فشل رفع الختم");
+      toast.error(t("pdf.stampUploadError"));
     } finally {
       setStampUploading(false);
     }
@@ -168,9 +171,9 @@ export const PdfReportBrandingSettings: React.FC = () => {
       const updated = await settingService.uploadSignature(file);
       setSignaturePreview(updated.company_signature_url ?? null);
       await fetchSettings();
-      toast.success("تم رفع التوقيع بنجاح");
+      toast.success(t("pdf.signatureUploadSuccess"));
     } catch {
-      toast.error("فشل رفع التوقيع");
+      toast.error(t("pdf.signatureUploadError"));
     } finally {
       setSignatureUploading(false);
     }
@@ -186,9 +189,9 @@ export const PdfReportBrandingSettings: React.FC = () => {
         logo_height: logoHeight,
       });
       await fetchSettings();
-      toast.success("تم حفظ الإعدادات");
+      toast.success(t("pdf.saveSuccess"));
     } catch {
-      toast.error("فشل حفظ الإعدادات");
+      toast.error(t("pdf.saveError"));
     } finally {
       setSaving(false);
     }
@@ -196,34 +199,34 @@ export const PdfReportBrandingSettings: React.FC = () => {
 
   return (
     <SettingsSection
-      title="شعار الفواتير"
-      description="ارفع شعار الشركة وختمها وتوقيعها، وحدد مكان ظهور الشعار في الفواتير والتقارير المطبوعة."
+      title={t("pdf.title")}
+      description={t("pdf.description")}
     >
-      <SettingsGroup title="شعار الشركة">
+      <SettingsGroup title={t("pdf.logoGroupTitle")}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
           <ImageUploadTile
-            label="صورة الشعار"
+            label={t("pdf.logoImageLabel")}
             preview={logoPreview}
             uploading={logoUploading}
             onUpload={handleLogoUpload}
           />
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-muted-foreground">مكان الشعار</Label>
+            <Label className="text-xs font-medium text-muted-foreground">{t("pdf.logoPositionLabel")}</Label>
             <SegmentedControl
               value={logoPosition}
               onChange={(v) => setLogoPosition(v as LogoPosition)}
               options={[
-                { value: "right", label: "يمين" },
-                { value: "left", label: "يسار" },
-                { value: "both", label: "الجانبين" },
+                { value: "right", label: t("pdf.positionRight") },
+                { value: "left", label: t("pdf.positionLeft") },
+                { value: "both", label: t("pdf.positionBoth") },
               ]}
             />
 
             <div className="flex items-end gap-3 pt-1">
               <div className="space-y-1">
                 <Label htmlFor="logo_width" className="text-xs font-medium text-muted-foreground">
-                  العرض (مم)
+                  {t("pdf.logoWidthLabel")}
                 </Label>
                 <Input
                   id="logo_width"
@@ -238,7 +241,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
               </div>
               <div className="space-y-1">
                 <Label htmlFor="logo_height" className="text-xs font-medium text-muted-foreground">
-                  الارتفاع (مم)
+                  {t("pdf.logoHeightLabel")}
                 </Label>
                 <Input
                   id="logo_height"
@@ -262,7 +265,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
               className="mt-2 min-w-[100px]"
             >
               {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
-              حفظ
+              {t("pdf.save")}
             </Button>
           </div>
         </div>
@@ -270,34 +273,34 @@ export const PdfReportBrandingSettings: React.FC = () => {
 
       <Separator />
 
-      <SettingsGroup title="ختم وتوقيع الشركة">
+      <SettingsGroup title={t("pdf.stampSignatureGroupTitle")}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
           <ImageUploadTile
-            label="ختم الشركة"
+            label={t("pdf.stampImageLabel")}
             preview={stampPreview}
             uploading={stampUploading}
             onUpload={handleStampUpload}
           />
           <ImageUploadTile
-            label="توقيع الشركة"
+            label={t("pdf.signatureImageLabel")}
             preview={signaturePreview}
             uploading={signatureUploading}
             onUpload={handleSignatureUpload}
           />
         </div>
         <p className="text-xs text-muted-foreground">
-          تظهر صورتا الختم والتوقيع في الفواتير والتقارير التي تدعم هذه العناصر.
+          {t("pdf.stampSignatureHelp")}
         </p>
 
         <div className="mt-2 space-y-1">
           <SwitchField
-            label="إظهار الختم في فاتورة البيع (A4)"
+            label={t("pdf.showStampLabel")}
             checked={invoiceReportSetting?.show_stamp ?? true}
             onCheckedChange={handleToggleStamp}
             className={savingStampToggle ? "pointer-events-none opacity-60" : undefined}
           />
           <SwitchField
-            label="إظهار التوقيع في فاتورة البيع (A4)"
+            label={t("pdf.showSignatureLabel")}
             checked={invoiceReportSetting?.show_signature ?? true}
             onCheckedChange={handleToggleSignature}
             className={savingSignatureToggle ? "pointer-events-none opacity-60" : undefined}

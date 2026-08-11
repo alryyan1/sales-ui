@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Controller, Control } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Loader2, User, UserCheck, UserX, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ function DefaultCustomerField({
   value: number | null | undefined;
   onChange: (value: number | null) => void;
 }) {
+  const { t } = useTranslation("adminSettings");
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -80,7 +82,7 @@ function DefaultCustomerField({
               <span className="truncate text-sm">
                 {value
                   ? selectedQuery.data?.name ?? "..."
-                  : "بدون عميل افتراضي"}
+                  : t("sales.defaultCustomerNone")}
               </span>
             </Button>
           </PopoverTrigger>
@@ -89,7 +91,7 @@ function DefaultCustomerField({
               <CommandInput
                 value={search}
                 onValueChange={setSearch}
-                placeholder="ابحث بالاسم أو الهاتف..."
+                placeholder={t("sales.defaultCustomerSearchPlaceholder")}
               />
               <CommandList>
                 <CommandGroup>
@@ -101,18 +103,18 @@ function DefaultCustomerField({
                     }}
                   >
                     <UserX className="size-4 text-muted-foreground" />
-                    بدون عميل افتراضي
+                    {t("sales.defaultCustomerNone")}
                   </CommandItem>
                 </CommandGroup>
                 {debouncedSearch && (
-                  <CommandGroup heading="نتائج البحث">
+                  <CommandGroup heading={t("sales.defaultCustomerSearchResults")}>
                     {resultsQuery.isLoading ? (
                       <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
                         <Loader2 className="size-4 animate-spin" />
-                        جاري البحث...
+                        {t("sales.defaultCustomerSearching")}
                       </div>
                     ) : results.length === 0 ? (
-                      <CommandEmpty>لا يوجد عملاء مطابقون</CommandEmpty>
+                      <CommandEmpty>{t("sales.defaultCustomerNoResults")}</CommandEmpty>
                     ) : (
                       results.map((c) => (
                         <CommandItem
@@ -148,33 +150,34 @@ function DefaultCustomerField({
             size="icon"
             className="size-9 shrink-0 text-muted-foreground hover:text-destructive"
             onClick={() => onChange(null)}
-            aria-label="إزالة العميل الافتراضي"
+            aria-label={t("sales.defaultCustomerRemove")}
           >
             <X className="size-4" />
           </Button>
         )}
       </div>
       <p className="text-xs text-muted-foreground">
-        العميل الذي يتم اختياره تلقائياً عند فتح عملية بيع جديدة.
+        {t("sales.defaultCustomerHelp")}
       </p>
     </div>
   );
 }
 
 export const SalesBehaviorSettings = ({ control }: SalesBehaviorSettingsProps) => {
+  const { t } = useTranslation("adminSettings");
   return (
     <SettingsSection
-      title="سلوك المبيعات"
-      description="قواعد تتحكم في المخزون والعميل والصلاحيات أثناء إنشاء وتعديل فواتير البيع."
+      title={t("sales.title")}
+      description={t("sales.description")}
     >
-      <SettingsGroup title="المخزون">
+      <SettingsGroup title={t("sales.stockGroupTitle")}>
         <Controller
           name="sales_allow_zero_stock"
           control={control}
           render={({ field }) => (
             <SwitchField
-              label="السماح ببيع منتجات رصيدها صفر"
-              description="عند التعطيل، لا يمكن إضافة منتج رصيده صفر إلى فاتورة بيع."
+              label={t("sales.allowZeroStockLabel")}
+              description={t("sales.allowZeroStockDescription")}
               checked={Boolean(field.value)}
               onCheckedChange={field.onChange}
             />
@@ -185,8 +188,8 @@ export const SalesBehaviorSettings = ({ control }: SalesBehaviorSettingsProps) =
           control={control}
           render={({ field }) => (
             <SwitchField
-              label="السماح بالرصيد السالب"
-              description="عند التفعيل، يمكن أن يتجاوز البيع الكمية المتوفرة فعلياً في المخزون."
+              label={t("sales.allowNegativeStockLabel")}
+              description={t("sales.allowNegativeStockDescription")}
               checked={Boolean(field.value)}
               onCheckedChange={field.onChange}
             />
@@ -196,14 +199,14 @@ export const SalesBehaviorSettings = ({ control }: SalesBehaviorSettingsProps) =
 
       <Separator />
 
-      <SettingsGroup title="العميل">
+      <SettingsGroup title={t("sales.customerGroupTitle")}>
         <Controller
           name="sales_require_customer"
           control={control}
           render={({ field }) => (
             <SwitchField
-              label="إلزامية اختيار عميل للبيع"
-              description="عند التفعيل، لا يمكن إتمام عملية بيع دون تحديد عميل مسجل."
+              label={t("sales.requireCustomerLabel")}
+              description={t("sales.requireCustomerDescription")}
               checked={Boolean(field.value)}
               onCheckedChange={field.onChange}
             />
@@ -222,14 +225,14 @@ export const SalesBehaviorSettings = ({ control }: SalesBehaviorSettingsProps) =
 
       <Separator />
 
-      <SettingsGroup title="الصلاحيات">
+      <SettingsGroup title={t("sales.permissionsGroupTitle")}>
         <Controller
           name="sales_allow_price_edit"
           control={control}
           render={({ field }) => (
             <SwitchField
-              label="السماح بتعديل سعر البيع"
-              description="عند التعطيل، يُقفل حقل سعر البيع في الفاتورة على السعر الافتراضي للمنتج."
+              label={t("sales.allowPriceEditLabel")}
+              description={t("sales.allowPriceEditDescription")}
               checked={Boolean(field.value)}
               onCheckedChange={field.onChange}
             />
@@ -240,8 +243,8 @@ export const SalesBehaviorSettings = ({ control }: SalesBehaviorSettingsProps) =
           control={control}
           render={({ field }) => (
             <SwitchField
-              label="السماح بتعديل تاريخ الفاتورة"
-              description="عند التعطيل، تُسجَّل كل فاتورة بتاريخ ووقت الإنشاء الفعلي دون إمكانية تغييره."
+              label={t("sales.allowInvoiceDateEditLabel")}
+              description={t("sales.allowInvoiceDateEditDescription")}
               checked={Boolean(field.value)}
               onCheckedChange={field.onChange}
             />
