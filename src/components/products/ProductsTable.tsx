@@ -47,6 +47,7 @@ import { Unit } from "@/services/UnitService";
 import { ProductFormData } from "@/services/productService";
 
 import { formatNumber, formatCurrency } from "@/constants";
+import { getLocalizedName } from "@/lib/utils";
 import { useSettings } from "@/context/SettingsContext";
 
 // Interface for Product with potentially loaded batches
@@ -247,7 +248,7 @@ const ProductRow: React.FC<ProductRowProps> = ({
   onFieldNext,
   isFavorite = false,
 }) => {
-  const { t } = useTranslation("products");
+  const { t, i18n } = useTranslation("products");
   const { t: tCommon } = useTranslation("common");
   const stockQty = Number(
     product.current_stock_quantity ?? product.stock_quantity ?? 0,
@@ -661,7 +662,8 @@ const InlineCreateRow: React.FC<{
             onChange={(e) => handleChange("category_id", e.target.value)}
             renderValue={(selected) => {
               if (!selected) return <em style={{ color: "#aaa" }}>Category</em>;
-              return categories.find((c) => c.id === selected)?.name;
+              const cat = categories.find((c) => c.id === selected);
+              return cat ? getLocalizedName(cat, i18n.language) : "";
             }}
           >
             <MenuItem value="" disabled>
@@ -669,7 +671,7 @@ const InlineCreateRow: React.FC<{
             </MenuItem>
             {categories.map((c) => (
               <MenuItem key={c.id} value={c.id}>
-                {c.name}
+                {getLocalizedName(c, i18n.language)}
               </MenuItem>
             ))}
           </Select>
@@ -683,7 +685,8 @@ const InlineCreateRow: React.FC<{
             onChange={(e) => handleChange("sellable_unit_id", e.target.value)}
             renderValue={(selected) => {
               if (!selected) return <em style={{ color: "#aaa" }}>Unit</em>;
-              return sellableUnits.find((u) => u.id === selected)?.name;
+              const unit = sellableUnits.find((u) => u.id === selected);
+              return unit ? getLocalizedName(unit, i18n.language) : "";
             }}
           >
             <MenuItem value="" disabled>
@@ -691,7 +694,7 @@ const InlineCreateRow: React.FC<{
             </MenuItem>
             {sellableUnits.map((u) => (
               <MenuItem key={u.id} value={u.id}>
-                {u.name}
+                {getLocalizedName(u, i18n.language)}
               </MenuItem>
             ))}
           </Select>
@@ -705,7 +708,8 @@ const InlineCreateRow: React.FC<{
             onChange={(e) => handleChange("stocking_unit_id", e.target.value)}
             renderValue={(selected) => {
               if (!selected) return <em style={{ color: "#aaa" }}>Pkg</em>;
-              return stockingUnits.find((u) => u.id === selected)?.name;
+              const unit = stockingUnits.find((u) => u.id === selected);
+              return unit ? getLocalizedName(unit, i18n.language) : "";
             }}
           >
             <MenuItem value="" disabled>
@@ -713,7 +717,7 @@ const InlineCreateRow: React.FC<{
             </MenuItem>
             {stockingUnits.map((u) => (
               <MenuItem key={u.id} value={u.id}>
-                {u.name}
+                {getLocalizedName(u, i18n.language)}
               </MenuItem>
             ))}
           </Select>

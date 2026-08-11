@@ -63,6 +63,8 @@ interface PaymentDialogProps {
   onConfirm: (paymentLines: Array<{ method: Payment["method"]; amount: number }>) => void;
   /** "create" (default) creates a new sale from the ticket; "addPayment" records a payment against a sale that already exists. */
   mode?: "create" | "addPayment";
+  /** Whether the ticket/sale has a client attached. In "create" mode this gates a fully-unpaid ("pay later") sale, since an untracked walk-in can't owe a balance. */
+  hasClient?: boolean;
 }
 
 export function PaymentDialog({
@@ -74,6 +76,7 @@ export function PaymentDialog({
   error,
   onConfirm,
   mode = "create",
+  hasClient = false,
 }: PaymentDialogProps) {
   const formatCurrency = useFormatCurrency();
   const { direction } = useLanguage();
@@ -119,8 +122,13 @@ export function PaymentDialog({
     setLines((prev) => [...prev, { id: crypto.randomUUID(), method: nextMethod, amount: "0" }]);
   };
 
+  // A fully-unpaid sale ("pay later") is only allowed when creating a sale for a known client,
+  // so the resulting balance is trackable as a receivable rather than an orphaned debt.
+  const payLaterAllowed = mode === "create" && hasClient;
+  const canSubmit = totalApplied > 0 || (payLaterAllowed && totalApplied === 0);
+
   const handleConfirm = () => {
-    if (totalApplied <= 0) return;
+    if (!canSubmit) return;
     const newLines = rows.filter((r) => r.applied > 0).map((r) => ({ method: r.method, amount: r.applied }));
     onConfirm(newLines);
   };
@@ -152,6 +160,12 @@ export function PaymentDialog({
         {error && (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {mode === "create" && !hasClient && totalApplied <= 0 && (
+          <Alert>
+            <AlertDescription>{tPayment("selectClientForCreditHint")}</AlertDescription>
           </Alert>
         )}
 
@@ -257,7 +271,7 @@ export function PaymentDialog({
           </Button>
           <Button
             type="submit"
-            disabled={isSubmitting || totalApplied <= 0}
+            disabled={isSubmitting || !canSubmit}
             className="min-w-32 gap-2"
           >
             {isSubmitting && <Loader2 className="size-4 animate-spin" />}
@@ -265,9 +279,11 @@ export function PaymentDialog({
               ? remaining > 0
                 ? tPayment("recordPartialPayment")
                 : tPayment("recordPayment")
-              : remaining > 0
-                ? tPayment("createWithPartialPayment")
-                : tPayment("createSale")}
+              : totalApplied <= 0
+                ? tPayment("createOnCredit")
+                : remaining > 0
+                  ? tPayment("createWithPartialPayment")
+                  : tPayment("createSale")}
           </Button>
         </DialogFooter>
       </form>

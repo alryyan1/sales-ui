@@ -11,6 +11,12 @@
   "totalCostOfSalesDesc": "Cost of goods sold",
   "totalExpenses": "Total Expenses",
   "totalExpensesDesc": "Expenses for the selected period",
+  "totalSalesReturn": "Total Sales Returns",
+  "totalSalesReturnDesc": "Value of returns recorded for the selected period",
+  "totalDiscount": "Total Discounts",
+  "totalDiscountDesc": "Discounts granted on invoices for the selected period",
+  "totalPurchases": "Total Purchases",
+  "totalPurchasesDesc": "Purchases made for the selected period",
   "profit": "Profit",
   "profitDesc": "Payments − Expenses − Cost",
   "viewAll": "View All",
@@ -21,5 +27,8 @@
   "outOfStockDesc": "Products whose stock has reached zero",
   "outOfStockEmpty": "No out of stock products currently",
   "productColumn": "Product",
-  "currentStockColumn": "Current Stock"
+  "currentStockColumn": "Current Stock",
+  "revenueByPaymentMethodTitle": "Revenue by Payment Method",
+  "revenueByPaymentMethodDesc": "Payments collected for the selected period, by method",
+  "revenueByPaymentMethodEmpty": "No payments collected for the selected period"
 }

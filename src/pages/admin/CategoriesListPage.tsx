@@ -9,6 +9,7 @@ import React, {
 
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 // shadcn/ui & Lucide Icons
 import { Button } from "@/components/ui/button";
@@ -40,10 +41,11 @@ import { Alert } from "@mui/material";
 import categoryService, { Category } from "@/services/CategoryService";
 import CategoryFormModal from "@/components/admin/users/categories/CategoryFormModal";
 import { PaginatedResponse } from "@/services/clientService";
+import { getLocalizedName } from "@/lib/utils";
 // import { Pagination } from '@/components/ui/pagination'; // shadcn pagination
 
 const CategoriesListPage: React.FC = () => {
-  // Removed useTranslation
+  const { t, i18n } = useTranslation("categories");
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -109,11 +111,11 @@ const CategoriesListPage: React.FC = () => {
       ); // allFlat=true
       setAllCategoriesFlat(data as Category[]); // Cast
     } catch (err) {
-      toast.error("خطأ", { description: categoryService.getErrorMessage(err) });
+      toast.error(t("errorTitle"), { description: categoryService.getErrorMessage(err) });
     } finally {
       setLoadingFlatCategories(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchCategories(currentPage, debouncedSearchTerm);
@@ -151,7 +153,7 @@ const CategoriesListPage: React.FC = () => {
     setIsDeleting(true);
     try {
       await categoryService.deleteCategory(categoryToDeleteId);
-      toast.success("نجاح", { description: "تم حذف القسم بنجاح" });
+      toast.success(t("successTitle"), { description: t("deleteSuccess") });
       closeConfirmDialog();
       // Refetch and update all flat list
       fetchAllFlatCategories();
@@ -165,7 +167,7 @@ const CategoriesListPage: React.FC = () => {
         fetchCategories(currentPage, debouncedSearchTerm);
       }
     } catch (err) {
-      toast.error("خطأ", { description: categoryService.getErrorMessage(err) });
+      toast.error(t("errorTitle"), { description: categoryService.getErrorMessage(err) });
       closeConfirmDialog();
     } finally {
       setIsDeleting(false);
@@ -175,16 +177,15 @@ const CategoriesListPage: React.FC = () => {
   return (
     <div className="p-4 md:p-6 lg:p-8 dark:bg-gray-950 min-h-screen pb-10">
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-        <h1 className="text-2xl md:text-3xl font-semibold">إدارة الأقسام</h1>{" "}
-        {/* Add key */}
+        <h1 className="text-2xl md:text-3xl font-semibold">{t("manageTitle")}</h1>
         <Button onClick={() => openModal()} disabled={loadingFlatCategories}>
-          <Plus className="me-2 h-4 w-4" /> إضافة قسم
+          <Plus className="me-2 h-4 w-4" /> {t("addCategory")}
         </Button>
       </div>
       <div className="mb-4 max-w-sm flex items-center border rounded px-2">
         <Search className="h-4 w-4 text-muted-foreground mr-2" />
         <Input
-          placeholder="البحث في الأقسام..."
+          placeholder={t("searchPlaceholder")}
           value={searchTerm}
           onChange={handleSearchChange}
           className="flex-1"
@@ -205,14 +206,13 @@ const CategoriesListPage: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-center">اسم القسم</TableHead>
-                    <TableHead className="text-center">القسم الرئيسي</TableHead>
-                    <TableHead className="text-center">افتراضي</TableHead>
+                    <TableHead className="text-center">{t("tableName")}</TableHead>
+                    <TableHead className="text-center">{t("tableParent")}</TableHead>
+                    <TableHead className="text-center">{t("tableDefault")}</TableHead>
                     <TableHead className="text-center">
-                      عدد المنتجات
-                    </TableHead>{" "}
-                    {/* Add key */}
-                    <TableHead className="text-center">إجراءات</TableHead>
+                      {t("productsCount")}
+                    </TableHead>
+                    <TableHead className="text-center">{t("tableActions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -222,19 +222,24 @@ const CategoriesListPage: React.FC = () => {
                         colSpan={5}
                         className="text-center text-muted-foreground"
                       >
-                        لا توجد نتائج
+                        {t("noCategories")}
                       </TableCell>
                     </TableRow>
                   )}
                   {categoriesResponse.data.map((category) => (
                     <TableRow key={category.id}>
                       <TableCell className="font-medium text-center">
-                        {category.name}
+                        {getLocalizedName(category, i18n.language)}
                       </TableCell>
                       <TableCell className="text-center">
-                        {allCategoriesFlat.find(
-                          (c) => c.id === category.parent_id,
-                        )?.name || "---"}
+                        {(() => {
+                          const parent = allCategoriesFlat.find(
+                            (c) => c.id === category.parent_id,
+                          );
+                          return parent
+                            ? getLocalizedName(parent, i18n.language)
+                            : t("noParentDash");
+                        })()}
                       </TableCell>
                       <TableCell className="text-center">
                         {category.is_default && (
@@ -272,14 +277,19 @@ const CategoriesListPage: React.FC = () => {
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
               >
-                السابق
+                {t("previous")}
               </Button>
-              <span className="mx-4">{`صفحة ${currentPage} من ${categoriesResponse.last_page}`}</span>
+              <span className="mx-4">
+                {t("pageIndicator", {
+                  current: currentPage,
+                  total: categoriesResponse.last_page,
+                })}
+              </span>
               <Button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === categoriesResponse.last_page}
               >
-                التالي
+                {t("next")}
               </Button>
             </div>
           )}
@@ -297,10 +307,10 @@ const CategoriesListPage: React.FC = () => {
         open={isConfirmOpen}
         onClose={closeConfirmDialog}
         onConfirm={handleDeleteConfirm}
-        title="تأكيد الحذف"
-        message="هل أنت متأكد أنك تريد حذف هذا القسم؟"
-        confirmText="حذف"
-        cancelText="إلغاء"
+        title={t("confirmDeleteTitle")}
+        message={t("deleteConfirm")}
+        confirmText={t("deleteButton")}
+        cancelText={t("cancelButton")}
         isLoading={isDeleting}
       />
     </div>

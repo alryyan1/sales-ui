@@ -172,7 +172,7 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
+    <Dialog open={open} onOpenChange={(val) => !val && onClose()} modal={false}>
       <DialogContent className="max-w-2xl" dir={direction}>
         <DialogHeader>
           <DialogTitle>{tEdit("title")}</DialogTitle>
@@ -198,6 +198,7 @@ export const EditPurchaseDialog: React.FC<EditPurchaseDialogProps> = ({
                         setSupplierPopoverOpen(open);
                         if (!open) setSupplierSearchInput(""); // Reset search on close
                       }}
+                      modal
                     >
                       <PopoverTrigger asChild>
                         <FormControl>

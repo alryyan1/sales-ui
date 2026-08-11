@@ -3,6 +3,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -21,19 +22,24 @@ import {
   type GridPaginationModel,
   type GridRenderCellParams,
 } from "@mui/x-data-grid";
-import { arSD } from "@mui/x-data-grid/locales";
+import { arSD, enUS } from "@mui/x-data-grid/locales";
 
 // Services and Types
 import { useAuthorization } from "@/hooks/useAuthorization";
+import { useLanguage } from "@/context/LanguageContext";
 import { User } from "@/services/authService";
 import userService from "@/services/userService";
 
 // Custom Components
 import UserFormModal from "./UserFormModal";
 
-const gridLocaleText = arSD.components.MuiDataGrid.defaultProps.localeText;
+const arGridLocaleText = arSD.components.MuiDataGrid.defaultProps.localeText;
+const enGridLocaleText = enUS.components.MuiDataGrid.defaultProps.localeText;
 
 const UsersListPage: React.FC = () => {
+  const { t } = useTranslation("users");
+  const { language, direction } = useLanguage();
+  const gridLocaleText = language === "ar" ? arGridLocaleText : enGridLocaleText;
   const [searchParams, setSearchParams] = useSearchParams();
   const { user: currentUser } = useAuthorization();
 
@@ -130,7 +136,7 @@ const UsersListPage: React.FC = () => {
   const handleSaveSuccess = () => {
     closeModal();
     refetch();
-    toast.success(editingUser ? "تم التحديث بنجاح" : "تم الإنشاء بنجاح");
+    toast.success(editingUser ? t("updateSuccess") : t("createSuccess"));
   };
 
   const handleRoleFilterChange = (e: SelectChangeEvent) => {
@@ -142,7 +148,7 @@ const UsersListPage: React.FC = () => {
     () => [
       {
         field: "name",
-        headerName: "المستخدم",
+        headerName: t("columnUser"),
         flex: 1.4,
         minWidth: 200,
         align: "center",
@@ -154,8 +160,7 @@ const UsersListPage: React.FC = () => {
               {params.row.name}
               {isSelf && (
                 <Typography component="span" variant="caption" color="text.secondary">
-                  {" "}
-                  (أنت)
+                  {t("selfIndicator")}
                 </Typography>
               )}
             </Typography>
@@ -164,7 +169,7 @@ const UsersListPage: React.FC = () => {
       },
       {
         field: "username",
-        headerName: "اسم الدخول",
+        headerName: t("columnUsername"),
         flex: 0.9,
         minWidth: 130,
         align: "center",
@@ -177,7 +182,7 @@ const UsersListPage: React.FC = () => {
       },
       {
         field: "roles",
-        headerName: "الأدوار",
+        headerName: t("columnRoles"),
         flex: 1.3,
         minWidth: 170,
         sortable: false,
@@ -188,14 +193,14 @@ const UsersListPage: React.FC = () => {
           const hasAdmin = roleNames.includes("admin") || roleNames.includes("ادمن");
           return (
             <Typography variant="body2" fontWeight={hasAdmin ? 700 : 400}>
-              {roleNames.length > 0 ? roleNames.join("، ") : "—"}
+              {roleNames.length > 0 ? roleNames.join("، ") : t("dash")}
             </Typography>
           );
         },
       },
       {
         field: "warehouse",
-        headerName: "المستودع",
+        headerName: t("columnWarehouse"),
         flex: 1,
         minWidth: 140,
         sortable: false,
@@ -203,13 +208,13 @@ const UsersListPage: React.FC = () => {
         headerAlign: "center",
         renderCell: (params: GridRenderCellParams<User>) => (
           <Typography variant="body2" color={params.row.warehouse ? "text.primary" : "text.disabled"}>
-            {params.row.warehouse ? params.row.warehouse.name : "—"}
+            {params.row.warehouse ? params.row.warehouse.name : t("dash")}
           </Typography>
         ),
       },
       {
         field: "actions",
-        headerName: "إجراء",
+        headerName: t("columnAction"),
         width: 100,
         sortable: false,
         filterable: false,
@@ -218,18 +223,18 @@ const UsersListPage: React.FC = () => {
         headerAlign: "center",
         renderCell: (params: GridRenderCellParams<User>) => (
           <Button size="small" onClick={() => openModal(params.row)}>
-            تعديل
+            {t("editButton")}
           </Button>
         ),
       },
     ],
-    [currentUser?.id]
+    [currentUser?.id, t]
   );
 
   const totalUsers = usersResponse?.total ?? 0;
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1400, mx: "auto" }} dir="rtl">
+    <Box sx={{ p: 3, maxWidth: 1400, mx: "auto" }} dir={direction}>
       {/* ── Page Header ── */}
       <Box
         sx={{
@@ -243,15 +248,15 @@ const UsersListPage: React.FC = () => {
       >
         <Box>
           <Typography variant="h6" fontWeight={700} lineHeight={1.2}>
-            إدارة المستخدمين
+            {t("manageTitle")}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            {totalUsers} مستخدم — {availableRoles.length} دور متاح
+            {t("statsSummary", { total: totalUsers, roles: availableRoles.length })}
           </Typography>
         </Box>
 
         <Button variant="contained" size="small" onClick={() => openModal()}>
-          مستخدم جديد
+          {t("newUser")}
         </Button>
       </Box>
 
@@ -259,7 +264,7 @@ const UsersListPage: React.FC = () => {
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, mb: 2 }}>
         <TextField
           size="small"
-          placeholder="ابحث بالاسم أو اسم الدخول..."
+          placeholder={t("searchPlaceholder")}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           sx={{ flex: 1, minWidth: 220, maxWidth: 340 }}
@@ -267,7 +272,7 @@ const UsersListPage: React.FC = () => {
             endAdornment: searchTerm ? (
               <InputAdornment position="end">
                 <Button size="small" onClick={() => setSearchTerm("")}>
-                  مسح
+                  {t("clearButton")}
                 </Button>
               </InputAdornment>
             ) : undefined,
@@ -275,11 +280,11 @@ const UsersListPage: React.FC = () => {
         />
 
         <FormControl size="small" sx={{ minWidth: 180 }}>
-          <InputLabel>تصفية بالدور</InputLabel>
-          <Select label="تصفية بالدور" value={roleFilter} onChange={handleRoleFilterChange}>
+          <InputLabel>{t("filterByRoleLabel")}</InputLabel>
+          <Select label={t("filterByRoleLabel")} value={roleFilter} onChange={handleRoleFilterChange}>
             <MenuItem value="">
               <Typography variant="body2" color="text.secondary">
-                كل الأدوار
+                {t("allRoles")}
               </Typography>
             </MenuItem>
             {availableRoles.map((role) => (
@@ -294,7 +299,7 @@ const UsersListPage: React.FC = () => {
       {/* ── Error ── */}
       {isError && (
         <Alert severity="error" icon={false} sx={{ mb: 1.5, borderRadius: 2 }}>
-          {error instanceof Error ? error.message : "حدث خطأ غير متوقع أثناء الاتصال بالخادم."}
+          {error instanceof Error ? error.message : t("genericError")}
         </Alert>
       )}
 
@@ -327,10 +332,10 @@ const UsersListPage: React.FC = () => {
                 }}
               >
                 <Typography variant="body2" color="text.secondary" fontWeight={600}>
-                  لا توجد نتائج مطابقة
+                  {t("noResultsTitle")}
                 </Typography>
                 <Typography variant="caption" color="text.disabled">
-                  حاول ضبط مصطلحات البحث أو الفلتر
+                  {t("noResultsHint")}
                 </Typography>
               </Box>
             ),

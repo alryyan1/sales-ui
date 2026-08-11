@@ -60,7 +60,7 @@ import productService, {
 } from "../../services/productService";
 import categoryService, { Category } from "@/services/CategoryService";
 import unitService, { Unit } from "@/services/UnitService";
-import { generateRandomSKU } from "@/lib/utils";
+import { generateRandomSKU, getLocalizedName } from "@/lib/utils";
 import CategoryFormModal from "@/components/admin/users/categories/CategoryFormModal";
 import UnitFormModal from "@/components/admin/users/units/UnitFormModal";
 import { ProductImage } from "./ProductImage";
@@ -146,7 +146,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
 }) => {
   const isEditMode = Boolean(productToEdit);
 
-  const { direction } = useLanguage();
+  const { direction, language } = useLanguage();
   const { t } = useTranslation("products");
   const { t: tForm } = useTranslation("productFormModal");
   const { t: tCommon } = useTranslation("common");
@@ -662,7 +662,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         size="small"
                         options={categories}
                         loading={loadingCategories}
-                        getOptionLabel={(option) => option.name || ""}
+                        getOptionLabel={(option) => getLocalizedName(option, language)}
                         isOptionEqualToValue={(option, value) => option.id === value.id}
                         value={categories.find((cat) => String(cat.id) === field.value) || null}
                         onChange={(_, newValue) => field.onChange(newValue ? String(newValue.id) : "")}
@@ -720,7 +720,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         size="small"
                         options={units}
                         loading={loadingUnits}
-                        getOptionLabel={(option) => option.name || ""}
+                        getOptionLabel={(option) => getLocalizedName(option, language)}
                         isOptionEqualToValue={(option, value) => option.id === value.id}
                         value={units.find((u) => String(u.id) === field.value) || null}
                         onChange={(_, newValue) => field.onChange(newValue ? String(newValue.id) : "")}
@@ -753,7 +753,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         size="small"
                         options={units}
                         loading={loadingUnits}
-                        getOptionLabel={(option) => option.name || ""}
+                        getOptionLabel={(option) => getLocalizedName(option, language)}
                         isOptionEqualToValue={(option, value) => option.id === value.id}
                         value={units.find((u) => String(u.id) === field.value) || null}
                         onChange={(_, newValue) => field.onChange(newValue ? String(newValue.id) : "")}

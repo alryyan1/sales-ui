@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AlertCircle, Package, ScanLine } from "lucide-react";
+import { AlertCircle, ScanLine } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -16,10 +16,12 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, getLocalizedName } from "@/lib/utils";
 import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 
 import productService, { Product } from "@/services/productService";
+import categoryService, { Category } from "@/services/CategoryService";
+import { ProductImage } from "@/components/products/ProductImage";
 import { PRODUCT_SEARCH_INPUT_ID, resolveUnitPrice, stockOf } from "@/lib/pos";
 
 interface ProductSearchPanelProps {
@@ -52,33 +54,31 @@ export function ProductSearchPanel({
   onAddProduct,
 }: ProductSearchPanelProps) {
   const formatCurrency = useFormatCurrency();
-  const { t } = useTranslation("pos");
+  const { t, i18n } = useTranslation("pos");
   const { t: tCommon } = useTranslation("common");
   const { t: tProductSearch } = useTranslation("productSearchPanel");
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [lookupBusy, setLookupBusy] = useState(false);
+  // cmdk keeps the highlighted row "sticky" after the mouse leaves it (by design, it tracks
+  // what Enter would activate). Controlling it ourselves lets us clear the highlight once the
+  // cursor leaves the list entirely, instead of leaving a stale row highlighted.
+  const [highlightedProductId, setHighlightedProductId] = useState("");
   const trimmedSearch = search.trim();
 
   useEffect(() => {
     setCategoryId(null);
   }, [trimmedSearch]);
 
-  // One-time broad fetch to derive the category chip list; independent of the live search.
-  const categoriesSourceQuery = useQuery({
-    queryKey: ["pos-categories-source", warehouseId ?? null],
-    queryFn: () =>
-      productService.getProducts(1, "", "name", "asc", 200, undefined, undefined, undefined, undefined, warehouseId ?? undefined),
+  // Full category list, same source as the Products page filter — independent of which
+  // products currently match the search, so a category with no visible results still shows.
+  const categoriesQuery = useQuery({
+    queryKey: ["pos-categories-source"],
+    queryFn: () => categoryService.getCategories(1, 9999, "", false, true),
     staleTime: 10 * 60 * 1000,
   });
 
-  const categories = useMemo(() => {
-    const map = new Map<number, string>();
-    categoriesSourceQuery.data?.data.forEach((p) => {
-      if (p.category) map.set(p.category.id, p.category.name);
-    });
-    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [categoriesSourceQuery.data]);
+  const categories = (categoriesQuery.data as Category[] | undefined) ?? [];
 
   const productsQuery = useQuery({
     queryKey: ["pos-products", trimmedSearch, categoryId, warehouseId ?? null],
@@ -150,7 +150,12 @@ export function ProductSearchPanel({
   };
 
   return (
-    <Command shouldFilter={false} className="flex h-full flex-col rounded-none bg-transparent">
+    <Command
+      shouldFilter={false}
+      className="flex h-full flex-col rounded-none bg-transparent"
+      value={highlightedProductId}
+      onValueChange={setHighlightedProductId}
+    >
       <div className="flex items-center gap-2 border-b px-3 py-2">
         <ScanLine className="size-4 shrink-0 text-muted-foreground" />
         <CommandInput
@@ -162,8 +167,7 @@ export function ProductSearchPanel({
           placeholder={tProductSearch("searchOrScanPlaceholder")}
           className="h-9"
         />
-      </div>
-
+        
       {categories.length > 0 && (
         <div className="flex items-center gap-1.5 overflow-x-auto border-b px-3 py-2">
           <button
@@ -190,13 +194,18 @@ export function ProductSearchPanel({
                   : "bg-muted text-muted-foreground hover:bg-accent"
               )}
             >
-              {c.name}
+              {getLocalizedName(c, i18n.language)}
             </button>
           ))}
         </div>
       )}
+      </div>
 
-      <CommandList className="max-h-none flex-1 overflow-y-auto p-2">
+
+      <CommandList
+        className="max-h-none flex-1 overflow-y-auto p-2"
+        onMouseLeave={() => setHighlightedProductId("")}
+      >
         {productsQuery.isError ? (
           <Alert variant="destructive" className="m-2">
             <AlertCircle className="size-4" />
@@ -233,6 +242,7 @@ export function ProductSearchPanel({
             const lowStock = !outOfStock && product.stock_alert_level != null && stock <= product.stock_alert_level;
             const price = resolveUnitPrice(product, usdFactor);
             const isAdded = cartQty > 0;
+            const zeroPrice = price <= 0;
             return (
               <CommandItem
                 key={product.id}
@@ -240,24 +250,26 @@ export function ProductSearchPanel({
                 onSelect={() => handleAdd(product)}
                 className={cn(
                   "flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 data-[selected=true]:ring-1 data-[selected=true]:ring-primary/40",
-                  isAdded && "border border-emerald-500/30 bg-emerald-50 dark:border-emerald-400/30 dark:bg-emerald-950/20"
+                  isAdded && "border border-emerald-500/30 bg-emerald-50 dark:border-emerald-400/30 dark:bg-emerald-950/20",
+                  zeroPrice && "opacity-50"
                 )}
               >
-                <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted">
-                  {product.image_url ? (
-                    <img
-                      src={product.image_url}
-                      alt=""
-                      className="size-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <Package className="size-4 text-muted-foreground" />
-                  )}
-                </div>
+                <ProductImage
+                  imageUrl={product.image_url}
+                  productName={product.name}
+                  size={40}
+                  variant="rounded"
+                />
 
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-foreground">{product.name}</p>
+                  <p
+                    className={cn(
+                      "truncate text-sm font-medium",
+                      zeroPrice ? "text-muted-foreground" : "text-foreground"
+                    )}
+                  >
+                    {product.name}
+                  </p>
                   <p className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
                     {product.sku && <span className="font-mono">{product.sku}</span>}
                     {product.category?.name && <span>· {product.category.name}</span>}
@@ -278,7 +290,12 @@ export function ProductSearchPanel({
                   </span>
                 )}
 
-                <span className="w-25 shrink-0 text-end text-sm font-semibold tabular-nums text-foreground">
+                <span
+                  className={cn(
+                    "w-25 shrink-0 text-end text-sm font-semibold tabular-nums",
+                    zeroPrice ? "text-muted-foreground" : "text-foreground"
+                  )}
+                >
                   {formatCurrency(price)}
                 </span>
               </CommandItem>

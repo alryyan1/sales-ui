@@ -5,6 +5,7 @@ import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useProducts } from "../hooks/useProducts";
 import { useLanguage } from "@/context/LanguageContext";
+import { getLocalizedName } from "@/lib/utils";
 
 // MUI Components
 import Box from "@mui/material/Box";
@@ -68,7 +69,7 @@ import { Button } from "@mui/material";
 
 const ProductsPage: React.FC = () => {
   const { direction } = useLanguage();
-  const { t } = useTranslation("products");
+  const { t, i18n } = useTranslation("products");
   // --- State ---
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
@@ -824,7 +825,7 @@ ${t("copyLabelPrice")} ${product.last_sale_price_per_sellable_unit ? formatCurre
                   </MenuItem>
                   {categories.map((category) => (
                     <MenuItem key={category.id} value={category.id}>
-                      {category.name}
+                      {getLocalizedName(category, i18n.language)}
                     </MenuItem>
                   ))}
                 </Select>

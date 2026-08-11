@@ -49,6 +49,8 @@ import inventoryCountAr from './locales/ar/inventoryCount.json';
 import inventoryCountManageAr from './locales/ar/inventoryCountManage.json';
 import transitOrdersAr from './locales/ar/transitOrders.json';
 import adminSettingsAr from './locales/ar/adminSettings.json';
+import backupAr from './locales/ar/backup.json';
+import whatsappTestAr from './locales/ar/whatsappTest.json';
 
 // English imports
 import commonEN from './locales/en/common.json';
@@ -97,6 +99,8 @@ import inventoryCountEN from './locales/en/inventoryCount.json';
 import inventoryCountManageEN from './locales/en/inventoryCountManage.json';
 import transitOrdersEN from './locales/en/transitOrders.json';
 import adminSettingsEN from './locales/en/adminSettings.json';
+import backupEN from './locales/en/backup.json';
+import whatsappTestEN from './locales/en/whatsappTest.json';
 
 
 // ... استيراد ملفات أخرى
@@ -156,6 +160,8 @@ const resources = {
     ,inventoryCountManage:inventoryCountManageAr
     ,transitOrders:transitOrdersAr
     ,adminSettings:adminSettingsAr
+    ,backup:backupAr
+    ,whatsappTest:whatsappTestAr
 
     // ... namespaces أخرى
   },
@@ -206,6 +212,8 @@ const resources = {
     ,inventoryCountManage: inventoryCountManageEN
     ,transitOrders: transitOrdersEN
     ,adminSettings: adminSettingsEN
+    ,backup: backupEN
+    ,whatsappTest: whatsappTestEN
   }
   // يمكنك إضافة لغات أخرى هنا بنفس الهيكل
 };
@@ -259,6 +267,8 @@ export const namespaces = [
     ,'inventoryCountManage'
     ,'transitOrders'
     ,'adminSettings'
+    ,'backup'
+    ,'whatsappTest'
     // ... أسماء namespaces أخرى
 ];
 

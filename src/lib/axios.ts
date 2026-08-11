@@ -12,10 +12,41 @@ export const apiClient = axios.create({
   },
 });
 
+// --- Global HTTP activity tracker ---
+// Counts requests currently in flight on this shared client, so any part of the UI can show
+// a "something is loading" indicator without each caller having to track its own state.
+let pendingRequestCount = 0;
+const httpActivityListeners = new Set<() => void>();
+
+function notifyHttpActivityListeners() {
+  httpActivityListeners.forEach((listener) => listener());
+}
+
+export function subscribeHttpActivity(listener: () => void): () => void {
+  httpActivityListeners.add(listener);
+  return () => httpActivityListeners.delete(listener);
+}
+
+export function getHttpActivitySnapshot(): boolean {
+  return pendingRequestCount > 0;
+}
+
+function incrementPendingRequests() {
+  pendingRequestCount += 1;
+  notifyHttpActivityListeners();
+}
+
+function decrementPendingRequests() {
+  pendingRequestCount = Math.max(0, pendingRequestCount - 1);
+  notifyHttpActivityListeners();
+}
+
 // --- Axios Request Interceptor ---
 // This function will run before every request is sent
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
+    incrementPendingRequests();
+
     // 1. Get the token from wherever you store it (e.g., localStorage)
     const token = localStorage.getItem("authToken"); // Use a consistent key
 
@@ -56,8 +87,12 @@ apiClient.interceptors.request.use(
 
 // --- Response Interceptor ---
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    decrementPendingRequests();
+    return response;
+  },
   (error) => {
+    decrementPendingRequests();
     if (error.response && error.response.status === 401) {
       // Redirect to login page only if not already there
       if (!window.location.pathname.includes("/login")) {

@@ -44,6 +44,7 @@
   "productsColumn": "Products",
   "notesColumn": "Notes",
   "actionsColumn": "Actions",
+  "viewDetailsButton": "View details",
   "approveButton": "Approve",
   "rejectButton": "Reject",
   "importAllProductsMenuItem": "Import All Products",

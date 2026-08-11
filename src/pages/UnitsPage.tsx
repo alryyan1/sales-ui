@@ -26,9 +26,12 @@ import { Edit, Trash2, Plus, Star } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import unitService, { Unit } from "../services/UnitService";
 import UnitFormModal from "../components/units/UnitFormModal";
+import { useLanguage } from "@/context/LanguageContext";
+import { getLocalizedName } from "@/lib/utils";
 
 const UnitsPage: React.FC = () => {
   const queryClient = useQueryClient();
+  const { language } = useLanguage();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "stocking" | "sellable">(
     "all",
@@ -164,7 +167,7 @@ const UnitsPage: React.FC = () => {
                       <Typography
                         fontWeight={unit.is_default ? "bold" : "normal"}
                       >
-                        {unit.name}
+                        {getLocalizedName(unit, language)}
                       </Typography>
                     </TableCell>
                     <TableCell>

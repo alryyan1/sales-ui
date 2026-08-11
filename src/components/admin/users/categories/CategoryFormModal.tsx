@@ -24,10 +24,13 @@ import {
 } from "@mui/material";
 import { Loader2, AlertCircle } from "lucide-react";
 import categoryService, { Category } from "@/services/CategoryService";
+import { useLanguage } from "@/context/LanguageContext";
+import { getLocalizedName } from "@/lib/utils";
 
 // --- Form Types ---
 type CategoryFormValues = {
   name: string;
+  name_en?: string | null;
   description?: string | null;
   parent_id?: number | null;
   is_default?: boolean;
@@ -53,10 +56,12 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
 }) => {
   const isEditMode = Boolean(categoryToEdit);
   const [serverError, setServerError] = useState<string | null>(null);
+  const { language } = useLanguage();
 
   const form = useForm<CategoryFormValues>({
     defaultValues: {
       name: "",
+      name_en: "",
       description: "",
       parent_id: null,
       is_default: false,
@@ -76,6 +81,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
       if (isEditMode && categoryToEdit) {
         reset({
           name: categoryToEdit.name || "",
+          name_en: categoryToEdit.name_en || "",
           description: categoryToEdit.description || "",
           parent_id: categoryToEdit.parent_id || null,
           is_default: categoryToEdit.is_default || false,
@@ -205,6 +211,24 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
               )}
             />
 
+            {/* English Name Field */}
+            <Controller
+              control={control}
+              name="name_en"
+              render={({ field, fieldState }) => (
+                <TextField
+                  {...field}
+                  label="الاسم بالإنجليزية (English Name)"
+                  fullWidth
+                  size="small"
+                  disabled={isSubmitting}
+                  value={field.value ?? ""}
+                  error={!!fieldState.error}
+                  helperText={fieldState.error?.message || ""}
+                />
+              )}
+            />
+
             {/* Parent Category Field */}
             <Controller
               control={control}
@@ -239,7 +263,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
                       )
                       .map((cat) => (
                         <MenuItem key={cat.id} value={String(cat.id)}>
-                          {cat.name}
+                          {getLocalizedName(cat, language)}
                         </MenuItem>
                       ))}
                   </Select>

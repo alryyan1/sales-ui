@@ -19,5 +19,7 @@
   "recordPartialPayment": "تسجيل دفعة جزئية",
   "recordPayment": "تسجيل الدفعة",
   "createWithPartialPayment": "إنشاء بدفعة جزئية",
-  "createSale": "إنشاء عملية البيع"
+  "createSale": "إنشاء عملية البيع",
+  "createOnCredit": "إنشاء عملية البيع (الدفع لاحقًا)",
+  "selectClientForCreditHint": "اختر عميلاً في التذكرة لإنشاء عملية البيع بالآجل (الدفع لاحقًا)."
 }

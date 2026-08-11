@@ -215,6 +215,7 @@
   "batchUpdateFailed": "Failed to update batch selection",
 
   "insufficientStockFor": "Available quantity for \"{{name}}\" is not enough",
+  "zeroPriceProduct": "\"{{name}}\" has no sell price set and cannot be added",
   "invalidDiscountValue": "Invalid discount value",
   "discountApplied": "Discount applied",
   "failedToLoadSale": "Failed to load sale",
@@ -248,6 +249,8 @@
   "editsSavedSuccessfully": "Edits saved successfully",
   "editsSaveFailed": "Failed to save edits",
   "paymentRecordedSuccessfully": "Payment recorded successfully",
+  "noWarehouseAssigned": "No warehouse assigned",
+  "noWarehouseAssignedError": "You are not assigned to a warehouse. Contact an administrator before completing sales.",
   "noOpenShift": "No open shift",
   "openShiftToStart": "Open a new shift to start selling",
   "contactAdminToOpenShift": "Contact your administrator to open a shift",

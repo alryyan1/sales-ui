@@ -1,16 +1,23 @@
-import React, { useState, useCallback, useEffect, useRef } from "react";
-import {
-  Box,
-  TextField,
-  Autocomplete,
-  IconButton,
-  Tooltip,
-  InputAdornment,
-  Typography,
-} from "@mui/material";
-import { Save, X, Search } from "lucide-react";
+// src/components/inventory/InlineCreateInventoryCountItem.tsx
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Check, ChevronsUpDown, Save, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+
 import { Product } from "@/services/productService";
 import { ProductImage } from "@/components/products/ProductImage";
 
@@ -21,220 +28,208 @@ interface InlineCreateInventoryCountItemProps {
   availableProducts: Product[];
 }
 
-const InlineCreateInventoryCountItem: React.FC<
-  InlineCreateInventoryCountItemProps
-> = ({ onSave, onCancel, isLoading, availableProducts }) => {
+const InlineCreateInventoryCountItem: React.FC<InlineCreateInventoryCountItemProps> = ({
+  onSave,
+  onCancel,
+  isLoading,
+  availableProducts,
+}) => {
   const { t } = useTranslation("inventory");
   const { t: tManage } = useTranslation("inventoryCountManage");
   const { t: tCommon } = useTranslation("common");
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [productInputValue, setProductInputValue] = useState("");
+
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [productPopoverOpen, setProductPopoverOpen] = useState(false);
+  const [productSearch, setProductSearch] = useState("");
   const [actualQuantity, setActualQuantity] = useState<string>("");
 
-  // Refs for focusing
-  const productInputRef = useRef<HTMLInputElement>(null);
+  const productTriggerRef = useRef<HTMLButtonElement>(null);
   const quantityInputRef = useRef<HTMLInputElement>(null);
 
-  // Focus product input on mount
+  // Open the product picker on mount — Radix auto-focuses the first focusable element
+  // inside (the search input) once the popover opens, so it's ready to type/scan right away.
   useEffect(() => {
-    setTimeout(() => {
-      productInputRef.current?.focus();
-    }, 100);
+    setTimeout(() => setProductPopoverOpen(true), 100);
   }, []);
 
-  const handleProductSelect = useCallback((product: any | null) => {
+  const filteredProducts = React.useMemo(() => {
+    const q = productSearch.trim().toLowerCase();
+    if (!q) return availableProducts;
+    return availableProducts.filter(
+      (p) => p.name.toLowerCase().includes(q) || (p.sku && p.sku.toLowerCase().includes(q))
+    );
+  }, [availableProducts, productSearch]);
+
+  const handleProductSelect = useCallback((product: Product | null) => {
     setSelectedProduct(product);
+    setProductPopoverOpen(false);
+    setProductSearch("");
     if (product) {
-      setProductInputValue(product.name);
       setTimeout(() => {
         quantityInputRef.current?.focus();
         quantityInputRef.current?.select();
       }, 100);
-    } else {
-      setProductInputValue("");
     }
   }, []);
 
   const handleSave = useCallback(() => {
     if (!selectedProduct) {
       toast.error(tCommon("error"), { description: tManage("selectProductFirstError") });
-      productInputRef.current?.focus();
+      setProductPopoverOpen(true);
       return;
     }
 
     const qty = actualQuantity ? Number(actualQuantity) : undefined;
-    if (
-      actualQuantity &&
-      (isNaN(Number(actualQuantity)) || Number(actualQuantity) < 0)
-    ) {
+    if (actualQuantity && (isNaN(Number(actualQuantity)) || Number(actualQuantity) < 0)) {
       toast.error(tCommon("error"), { description: tManage("quantityMustBePositiveError") });
       quantityInputRef.current?.focus();
       return;
     }
 
-    onSave({
-      product_id: selectedProduct.id,
-      actual_quantity: qty,
-    });
+    onSave({ product_id: selectedProduct.id, actual_quantity: qty });
 
-    // Reset form for next entry
+    // Reset form and reopen the product picker so the next SKU can be scanned/typed
+    // immediately — closes the loop for rapid, repeated add-one-item-at-a-time entry.
     setSelectedProduct(null);
-    setProductInputValue("");
+    setProductSearch("");
     setActualQuantity("");
-    setTimeout(() => {
-      productInputRef.current?.focus();
-    }, 100);
-  }, [selectedProduct, actualQuantity, onSave]);
-
-  const handleKeywords = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleSave();
-    } else if (e.key === "Escape") {
-      onCancel();
-    }
-  };
+    setTimeout(() => setProductPopoverOpen(true), 100);
+  }, [selectedProduct, actualQuantity, onSave, tCommon, tManage]);
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        gap: 1,
-        p: 2,
-        bgcolor: "action.hover",
-        borderRadius: 1,
-        mb: 2,
-        direction: "ltr", // Align LTR for consistency with inputs
-      }}
-    >
-      {/* Product Selector */}
-      <Box sx={{ flex: 1, minWidth: 200 }}>
-        <Autocomplete
-          options={availableProducts}
-          getOptionLabel={(option: any) =>
-            option.sku ? `${option.name} (${option.sku})` : (option.name ?? "")
-          }
-          inputValue={
-            selectedProduct
-              ? selectedProduct.sku
-                ? `${selectedProduct.name} (${selectedProduct.sku})`
-                : (selectedProduct.name ?? "")
-              : productInputValue
-          }
-          onInputChange={(_, value) => setProductInputValue(value)}
-          filterOptions={(options, { inputValue }) => {
-            const q = (inputValue || "").trim().toLowerCase();
-            if (!q) return options;
-            return options.filter(
-              (option: any) =>
-                (option.name && option.name.toLowerCase().includes(q)) ||
-                (option.sku && option.sku.toLowerCase().includes(q)) ||
-                (option.barcode &&
-                  String(option.barcode).toLowerCase().includes(q)),
-            );
-          }}
-          value={selectedProduct}
-          onChange={(_, newValue) => handleProductSelect(newValue)}
-          noOptionsText={t("noResultsFound")}
-          autoHighlight
-          freeSolo // Allows typing to search
-          size="small"
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              placeholder={tManage("productNameOrBarcodePlaceholder")}
-              inputRef={productInputRef}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  // Try to autoselect if exact match or single result
-                  const q = productInputValue.trim().toLowerCase();
+    <div dir="ltr" className="flex items-center gap-2 rounded-lg border border-dashed bg-muted/30 p-3">
+      {/* Product picker */}
+      <div className="min-w-0 flex-1">
+        <Popover open={productPopoverOpen} onOpenChange={setProductPopoverOpen} modal>
+          <PopoverTrigger asChild>
+            <Button
+              ref={productTriggerRef}
+              type="button"
+              variant="outline"
+              role="combobox"
+              className="w-full justify-between font-normal"
+              onKeyDown={(e) => e.key === "Escape" && onCancel()}
+            >
+              <span className="flex min-w-0 items-center gap-2 truncate">
+                <Search className="size-3.5 shrink-0 text-muted-foreground" />
+                <span className="truncate text-left">
+                  {selectedProduct
+                    ? `${selectedProduct.name}${selectedProduct.sku ? ` (${selectedProduct.sku})` : ""}`
+                    : tManage("productNameOrBarcodePlaceholder")}
+                </span>
+              </span>
+              <ChevronsUpDown className="ms-2 size-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+            <Command shouldFilter={false}>
+              <CommandInput
+                placeholder={tManage("productNameOrBarcodePlaceholder")}
+                value={productSearch}
+                onValueChange={setProductSearch}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  const q = productSearch.trim().toLowerCase();
                   if (!q) return;
-
-                  // Exact SKU match logic similar to reference component
-                  const match = availableProducts.find(
-                    (p: any) =>
-                      (p.sku && String(p.sku).toLowerCase() === q) ||
-                      (p.barcode && String(p.barcode).toLowerCase() === q),
-                  );
-
-                  if (match) {
+                  // Prioritize an exact SKU match regardless of what's highlighted. Stopping
+                  // propagation matters here: without it, this Enter keypress also bubbles to
+                  // cmdk's own handling, which can select whatever is highlighted right after
+                  // we've just selected the correct exact match, clobbering it.
+                  const exact = availableProducts.find((p) => p.sku && p.sku.toLowerCase() === q);
+                  if (exact) {
                     e.preventDefault();
-                    handleProductSelect(match);
+                    e.stopPropagation();
+                    handleProductSelect(exact);
                   }
-                } else if (e.key === "Escape") {
-                  onCancel();
-                }
-              }}
-              InputProps={{
-                ...params.InputProps,
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search size={16} />
-                  </InputAdornment>
-                ),
-              }}
-            />
-          )}
-          renderOption={(props, option: any) => {
-            const { ...otherProps } = props;
-            return (
-              <li key={option.id} {...otherProps}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                  <ProductImage
-                    imageUrl={option.image_url}
-                    productName={option.name}
-                    size={30}
-                  />
-                  <Box sx={{ display: "flex", flexDirection: "column" }}>
-                    <Typography variant="body2">{option.name}</Typography>
-                    {(option.sku || option.barcode) && (
-                      <Typography variant="caption" color="text.secondary">
-                        {option.sku || option.barcode}
-                      </Typography>
-                    )}
-                  </Box>
-                </Box>
-              </li>
-            );
-          }}
-        />
-      </Box>
+                }}
+              />
+              <CommandList>
+                <CommandEmpty>{t("noResultsFound")}</CommandEmpty>
+                <CommandGroup>
+                  {filteredProducts.map((product) => (
+                    <CommandItem
+                      key={product.id}
+                      value={String(product.id)}
+                      onSelect={() => handleProductSelect(product)}
+                      className="gap-2"
+                    >
+                      <Check
+                        className={cn(
+                          "size-4 shrink-0",
+                          selectedProduct?.id === product.id ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      <ProductImage imageUrl={product.image_url} productName={product.name} size={28} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm">{product.name}</p>
+                        {product.sku && (
+                          <p className="truncate text-xs text-muted-foreground">{product.sku}</p>
+                        )}
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>
 
-      {/* Quantity Input */}
-      <TextField
-        size="small"
-        placeholder={t("quantityLabel")}
+      {/* Quantity */}
+      <Input
         type="number"
+        min={0}
+        step={0.01}
+        placeholder={t("quantityLabel")}
         value={actualQuantity}
         onChange={(e) => setActualQuantity(e.target.value)}
-        inputRef={quantityInputRef}
-        onKeyDown={handleKeywords}
         onFocus={(e) => e.target.select()}
-        inputProps={{ min: 0, step: 0.01 }}
-        sx={{ width: 120 }}
+        ref={quantityInputRef}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            handleSave();
+          } else if (e.key === "Escape") {
+            onCancel();
+          }
+        }}
+        className="w-28 shrink-0"
       />
 
       {/* Actions */}
-      <Box sx={{ display: "flex", gap: 0.5 }}>
-        <Tooltip title={tCommon("save")}>
-          <IconButton
-            size="small"
-            onClick={handleSave}
-            disabled={isLoading || !selectedProduct}
-            color="primary"
-          >
-            <Save size={18} />
-          </IconButton>
+      <div className="flex shrink-0 items-center gap-1">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              size="icon"
+              variant="default"
+              className="size-8"
+              onClick={handleSave}
+              disabled={isLoading || !selectedProduct}
+            >
+              <Save className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{tCommon("save")}</TooltipContent>
         </Tooltip>
-
-        <Tooltip title={tCommon("cancel")}>
-          <IconButton size="small" onClick={onCancel} disabled={isLoading}>
-            <X size={18} />
-          </IconButton>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="size-8"
+              onClick={onCancel}
+              disabled={isLoading}
+            >
+              <X className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{tCommon("cancel")}</TooltipContent>
         </Tooltip>
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 };
 

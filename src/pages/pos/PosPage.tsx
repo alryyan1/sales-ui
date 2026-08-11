@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { FileText, Loader2, Plus, RotateCcw, ShieldCheck, Users, X } from "lucide-react";
+import { FileText, Loader2, Plus, RotateCcw, ShieldCheck, Users, Warehouse, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -25,6 +25,7 @@ import { useAuthorization } from "@/hooks/useAuthorization";
 import { useSettings } from "@/context/SettingsContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useCurrentShift } from "@/hooks/useShifts";
+import { useHttpActivity } from "@/hooks/useHttpActivity";
 import apiClient from "@/lib/axios";
 
 import saleService, { Sale, Payment } from "@/services/saleService";
@@ -90,6 +91,8 @@ const PosPage: React.FC = () => {
   const canOpenShift = hasPermission("فتح ورديه");
   const canCloseShift = hasPermission("اغلاق ورديه");
   const canDeleteSale = hasPermission("حذف فاتورة");
+  const hasWarehouse = user?.warehouse_id != null;
+  const isHttpBusy = useHttpActivity();
 
   const posMode = (getSetting("pos_mode", "shift") as "shift" | "days") ?? "shift";
   const showOutOfStock = Boolean(getSetting("pos_show_out_of_stock_products", false));
@@ -283,13 +286,18 @@ const PosPage: React.FC = () => {
   const handleAddProduct = useCallback(
     (product: Product) => {
       if (!activeTicket) return;
+      const unitPrice = resolveUnitPrice(product, usdFactor);
+      if (unitPrice <= 0) {
+        toast.error(t("zeroPriceProduct", { name: product.name }));
+        playErrorSound();
+        return;
+      }
       const currentQty = activeTicket.items.find((i) => i.product.id === product.id)?.quantity ?? 0;
       if (currentQty >= stockOf(product)) {
         toast.error(t("insufficientStockFor", { name: product.name }));
         playErrorSound();
         return;
       }
-      const unitPrice = resolveUnitPrice(product, usdFactor);
       updateActiveTicket((ticket) => {
         const idx = ticket.items.findIndex((i) => i.product.id === product.id);
         if (idx >= 0) {
@@ -392,6 +400,10 @@ const PosPage: React.FC = () => {
   const handleCompleteSale = useCallback(
     (paymentLines: Array<{ method: Payment["method"]; amount: number }>) => {
       if (!activeTicket || activeTicket.items.length === 0) return;
+      if (!hasWarehouse) {
+        toast.error(t("noWarehouseAssignedError"));
+        return;
+      }
       setIsCreatingSale(true);
       setCreateSaleError(null);
 
@@ -423,7 +435,7 @@ const PosPage: React.FC = () => {
         })
         .finally(() => setIsCreatingSale(false));
     },
-    [activeTicket, tickets, shiftId, ensureAtLeastOneTicket, queryClient, shiftSalesQueryKey]
+    [activeTicket, tickets, shiftId, ensureAtLeastOneTicket, queryClient, shiftSalesQueryKey, hasWarehouse, t]
   );
 
   const handleStartNewSaleAfterSuccess = useCallback(() => {
@@ -930,9 +942,13 @@ const PosPage: React.FC = () => {
       return;
     }
     if (!activeTicket || activeTicket.items.length === 0) return;
+    if (!hasWarehouse) {
+      toast.error(t("noWarehouseAssignedError"));
+      return;
+    }
     setCreateSaleError(null);
     setPaymentOpen(true);
-  }, [isCreatingSale, savingSale, isEditingSale, editingSaleId, saveEditingSale, activeTicket]);
+  }, [isCreatingSale, savingSale, isEditingSale, editingSaleId, saveEditingSale, activeTicket, hasWarehouse, t]);
 
   const handleQuickCashPay = useCallback(async () => {
     if (isCreatingSale || savingSale) return;
@@ -1071,6 +1087,17 @@ const PosPage: React.FC = () => {
               ? t("shiftHashPrefix", { id: currentShiftQuery.data.id })
               : ""}
             {user?.name}
+          </span>
+          <span
+            className={cn(
+              "flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
+              hasWarehouse
+                ? "bg-muted text-muted-foreground"
+                : "bg-destructive/10 text-destructive"
+            )}
+          >
+            <Warehouse className="size-3" />
+            {user?.warehouse?.name ?? t("noWarehouseAssigned")}
           </span>
           <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
             {now.toLocaleTimeString(direction === "rtl" ? "ar" : "en-US", { hour: "2-digit", minute: "2-digit" })}
@@ -1251,7 +1278,7 @@ const PosPage: React.FC = () => {
             canDiscount={canDiscount}
             onApplyDiscount={handleApplyDiscount}
             onRemoveDiscount={handleRemoveDiscount}
-            canPayment={canPayment}
+            canPayment={canPayment && (isEditingSale || hasWarehouse)}
             onOpenPayment={handleOpenPayment}
             onQuickCashPay={handleQuickCashPay}
             isCreatingSale={isCreatingSale || savingSale}
@@ -1287,6 +1314,7 @@ const PosPage: React.FC = () => {
         error={createSaleError}
         mode={isEditingSale ? "addPayment" : "create"}
         onConfirm={isEditingSale ? handleAddPaymentToEditingSale : handleCompleteSale}
+        hasClient={!!activeTicket?.client}
       />
 
       {/* Success / receipt */}
@@ -1392,6 +1420,15 @@ const PosPage: React.FC = () => {
           pdfUrl={shiftReportUrl}
           title={currentShiftQuery.data ? t("shiftHash", { id: currentShiftQuery.data.id }) : t("shiftReportTitle")}
         />
+      )}
+
+      {/* Global HTTP activity indicator — any request on the shared apiClient, from anywhere on this page */}
+      {isHttpBusy && (
+        <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center">
+          <div className="flex items-center gap-2 rounded-full border bg-background/95 px-4 py-2 shadow-lg">
+            <Loader2 className="size-5 animate-spin text-primary" />
+          </div>
+        </div>
       )}
     </div>
   );

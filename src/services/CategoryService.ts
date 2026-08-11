@@ -10,10 +10,12 @@ import { PaginatedResponse } from "./clientService"; // Assuming shared type
 export interface Category {
   id: number;
   name: string;
+  name_en?: string | null;
   description: string | null;
   parent_id: number | null;
   is_default: boolean;
   parent_name?: string; // If included by resource when loaded
+  parent_name_en?: string | null; // If included by resource when loaded
   products_count?: number; // If included by resource withCount
   children_count?: number; // If included by resource withCount
   // children?: Category[]; // For recursive display if needed
@@ -22,6 +24,7 @@ export interface Category {
 
 export interface CategoryFormData {
   name: string;
+  name_en?: string | null;
   description?: string | null;
   parent_id?: number | null;
   is_default?: boolean;

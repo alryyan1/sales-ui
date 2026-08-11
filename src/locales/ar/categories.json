@@ -23,5 +23,18 @@
   "errorSelfParent": "لا يمكن أن يكون التصنيف أبًا لنفسه.",
   "errorHasProducts": "لا يمكن حذف التصنيف. هناك منتجات معينة له.",
   "errorHasSubcategories": "لا يمكن حذف التصنيف. لديه تصنيفات فرعية.",
-  "searchPlaceholder":"البحث"
+  "searchPlaceholder": "البحث في الأقسام...",
+  "tableName": "اسم القسم",
+  "tableParent": "القسم الرئيسي",
+  "tableDefault": "افتراضي",
+  "tableActions": "إجراءات",
+  "noParentDash": "---",
+  "previous": "السابق",
+  "next": "التالي",
+  "pageIndicator": "صفحة {{current}} من {{total}}",
+  "confirmDeleteTitle": "تأكيد الحذف",
+  "cancelButton": "إلغاء",
+  "deleteButton": "حذف",
+  "errorTitle": "خطأ",
+  "successTitle": "نجاح"
 }

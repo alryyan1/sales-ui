@@ -409,17 +409,34 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ onDrawerToggle, isSidebarCollapse
           </Tooltip>
 
           {/* Warehouse */}
-          {user?.warehouse && (
-            <Badge
-              variant="secondary"
-              className="h-7 cursor-pointer gap-1 bg-primary/10 text-primary hover:bg-primary/20"
-              onClick={() =>
-                user.warehouse && navigate(`/admin/warehouses/${user.warehouse.id}/products`)
-              }
-            >
-              <Warehouse className="size-3.5" />
-              {user.warehouse.name}
-            </Badge>
+          {user && (
+            user.warehouse ? (
+              <Badge
+                variant="secondary"
+                className="h-7 cursor-pointer gap-1 bg-primary/10 text-primary hover:bg-primary/20"
+                onClick={() =>
+                  user.warehouse && navigate(`/admin/warehouses/${user.warehouse.id}/products`)
+                }
+              >
+                <Warehouse className="size-3.5" />
+                {user.warehouse.name}
+              </Badge>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge
+                    variant="destructive"
+                    className="h-7 animate-pulse gap-1"
+                  >
+                    <AlertTriangle className="size-3.5" />
+                    لا يوجد مستودع
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  لم يتم تعيين مستودع لهذا المستخدم. لن تتمكن من إتمام عمليات البيع حتى يقوم المسؤول بتعيين مستودع.
+                </TooltipContent>
+              </Tooltip>
+            )
           )}
 
           {/* Due reminders */}

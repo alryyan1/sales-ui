@@ -5,6 +5,7 @@ import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import dayjs from "dayjs";
 
 // MUI Components
 import {
@@ -41,11 +42,12 @@ import stockAdjustmentService, {
 import productService, { Product } from "../../services/productService";
 import { PurchaseItem } from "../../services/purchaseService";
 import apiClient from "@/lib/axios";
-import dayjs from "dayjs";
 import { useAuth } from "@/context/AuthContext";
-import { warehouseService, Warehouse } from "@/services/warehouseService"; // Import warehouse service
+import { warehouseService, Warehouse } from "@/services/warehouseService";
 import { ProductImage } from "@/components/products/ProductImage";
 import { useLanguage } from "@/context/LanguageContext";
+
+const TOTAL_STOCK_OPTION_ID = "__total__";
 
 function createAdjustmentFormSchema(t: (key: string) => string) {
   return z.object({
@@ -53,10 +55,7 @@ function createAdjustmentFormSchema(t: (key: string) => string) {
     product_id: z
       .number({ required_error: t("productRequired") })
       .positive({ message: t("validProductRequired") }),
-    selected_product_name: z.string().optional(),
     purchase_item_id: z.number().positive().nullable().optional(),
-    selected_batch_info: z.string().nullable().optional(),
-    // We will split quantity handling into: adjustmentType ('add' | 'subtract') and numerical value
     quantity_value: z.coerce
       .number({
         required_error: t("fieldRequired"),
@@ -77,6 +76,12 @@ interface StockAdjustmentFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaveSuccess: (updatedProduct?: Product) => void;
+}
+
+// A pseudo-option representing "adjust the product's total stock" rather than a specific batch.
+interface BatchOption {
+  id: number | typeof TOTAL_STOCK_OPTION_ID;
+  label: string;
 }
 
 // --- Component ---
@@ -121,6 +126,9 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
   const [productSearchInput, setProductSearchInput] = useState("");
   const [debouncedProductSearch, setDebouncedProductSearch] = useState("");
   const productDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const productRequestIdRef = useRef(0);
+  const highlightedProductRef = useRef<Product | null>(null);
+  const quantityInputRef = useRef<HTMLInputElement>(null);
 
   // --- RHF Setup ---
   const form = useForm<AdjustmentFormValues>({
@@ -128,12 +136,10 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
     defaultValues: {
       warehouse_id: user?.warehouse_id || undefined,
       product_id: undefined,
-      selected_product_name: "",
       purchase_item_id: null,
-      selected_batch_info: null,
       quantity_value: undefined,
       adjustment_type: "add",
-      reason: "",
+      reason: "adjustment",
       notes: "",
     },
   });
@@ -150,8 +156,10 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
 
   const selectedWarehouseId = watch("warehouse_id");
   const selectedProductId = watch("product_id");
+  const adjustmentType = watch("adjustment_type");
+  const quantityValue = watch("quantity_value");
 
-  // --- Fetch Warehouses ---
+  // --- Fetch Warehouses (defaulting to "Main Warehouse" if the user has none assigned) ---
   useEffect(() => {
     if (isOpen) {
       setLoadingWarehouses(true);
@@ -159,32 +167,47 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
         .getAll()
         .then((data) => {
           setWarehouses(data);
-          if (user?.warehouse_id && !selectedWarehouseId) {
-            setValue("warehouse_id", user.warehouse_id);
+          if (!user?.warehouse_id && data.length > 0) {
+            const mainWarehouse =
+              data.find((w) => w.name.trim().toLowerCase() === "main warehouse") ?? data[0];
+            setValue("warehouse_id", mainWarehouse.id);
           }
         })
-        .catch((err: any) => console.error("Failed to load warehouses", err))
+        .catch((err: unknown) => console.error("Failed to load warehouses", err))
         .finally(() => setLoadingWarehouses(false));
     }
-  }, [isOpen, user?.warehouse_id, setValue, selectedWarehouseId]);
+  }, [isOpen, user?.warehouse_id, setValue]);
 
-  // --- Fetch Products directly from API ---
-  const fetchProducts = useCallback(async (search: string) => {
-    setLoadingProducts(true);
-    try {
-      const response = await productService.getProductsForAutocomplete(
-        search,
-        50,
-        selectedWarehouseId ?? undefined
-      );
-      setProducts(response);
-    } catch (error) {
-      console.error("Error searching products", error);
-      setProducts([]);
-    } finally {
-      setLoadingProducts(false);
-    }
-  }, [selectedWarehouseId]);
+  // --- Fetch Products ---
+  // Intentionally does NOT filter by warehouse stock — stock adjustments need to find any
+  // product, including one being stocked into this warehouse for the first time.
+  // selectedWarehouseId is only passed as stockWarehouseId to annotate the returned stock
+  // quantity, it doesn't filter the result set.
+  const fetchProducts = useCallback(
+    async (search: string) => {
+      const requestId = ++productRequestIdRef.current;
+      setLoadingProducts(true);
+      try {
+        const response = await productService.getProductsForAutocomplete(
+          search,
+          50,
+          undefined,
+          selectedWarehouseId ?? undefined
+        );
+        // Discard results from a stale/out-of-order request — only the most recently
+        // issued fetch is allowed to update the visible list and loading state.
+        if (requestId !== productRequestIdRef.current) return;
+        setProducts(response);
+      } catch (error) {
+        if (requestId !== productRequestIdRef.current) return;
+        console.error("Error searching products", error);
+        setProducts([]);
+      } finally {
+        if (requestId === productRequestIdRef.current) setLoadingProducts(false);
+      }
+    },
+    [selectedWarehouseId]
+  );
 
   useEffect(() => {
     if (productDebounceRef.current) clearTimeout(productDebounceRef.current);
@@ -211,37 +234,25 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
       if (!productId || !warehouseId) {
         setAvailableBatches([]);
         setValue("purchase_item_id", null);
-        setValue("selected_batch_info", null);
         return;
       }
       setLoadingBatches(true);
       try {
-        // We probably need a backend endpoint that filters by warehouse?
-        // standard endpoint: `/products/${productId}/available-batches`
-        // Does it accept warehouse_id param? If not, we might need to filter client side if the API returns warehouse info.
-        // Assuming we update the API or use a param.
-        // Let's pass `warehouse_id` as query param if the backend supports it.
-        // If the backend `StockAdjustmentController` checks the batch warehouse, we should only show valid ones.
-
         const response = await apiClient.get<{ data: PurchaseItem[] }>(
           `/products/${productId}/available-batches`,
           {
             params: { warehouse_id: warehouseId },
           }
         );
-        // If API doesn't support filtering, we must filter client side if `purchase.warehouse_id` is present.
-        // Assuming data structure has it.
         let batches = response.data.data ?? response.data;
 
         // Client-side filter fallback (if backend sends all batches and they have purchase relation loaded)
-        // Ideally backend does this.
         batches = batches.filter((batch) => {
-          // @ts-ignore - checking if property exists
-          if (batch.purchase && batch.purchase.warehouse_id) {
-            // @ts-ignore
-            return Number(batch.purchase.warehouse_id) === Number(warehouseId);
+          const purchase = (batch as unknown as { purchase?: { warehouse_id?: number } })
+            .purchase;
+          if (purchase?.warehouse_id) {
+            return Number(purchase.warehouse_id) === Number(warehouseId);
           }
-          // If we can't verify, we might show it but backend will validte.
           return true;
         });
 
@@ -267,9 +278,10 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
         warehouse_id: user?.warehouse_id || undefined,
         quantity_value: undefined,
         adjustment_type: "add",
-        reason: "",
+        reason: "adjustment",
         notes: "",
         product_id: undefined,
+        purchase_item_id: null,
       });
       setServerError(null);
       setProducts([]);
@@ -277,6 +289,15 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
       setProductSearchInput("");
     }
   }, [isOpen, reset, user?.warehouse_id]);
+
+  // Moves focus to the quantity field right after a product is selected — the delay lets
+  // the Autocomplete finish closing/updating before we steal focus from it.
+  const focusQuantityField = () => {
+    setTimeout(() => {
+      quantityInputRef.current?.focus();
+      quantityInputRef.current?.select();
+    }, 50);
+  };
 
   // --- Form Submission ---
   const onSubmit: SubmitHandler<AdjustmentFormValues> = async (data) => {
@@ -312,7 +333,6 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
       setServerError(generalError);
       if (apiErrors) {
         Object.entries(apiErrors).forEach(([field, messages]) => {
-          // Map backend field names if they differ
           setError(field as keyof AdjustmentFormValues, {
             type: "server",
             message: Array.isArray(messages) ? messages[0] : messages,
@@ -321,6 +341,13 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
       }
     }
   };
+
+  const signedPreview =
+    typeof quantityValue === "number" && !Number.isNaN(quantityValue)
+      ? adjustmentType === "add"
+        ? quantityValue
+        : -quantityValue
+      : null;
 
   if (!isOpen) return null;
 
@@ -348,9 +375,15 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
                   <InputLabel>{t("warehouseLabel")}</InputLabel>
                   <Select
                     {...field}
+                    value={field.value ?? ""}
                     label={t("warehouseLabel")}
                     disabled={isSubmitting || loadingWarehouses}
-                    onChange={(e) => field.onChange(Number(e.target.value))}
+                    onChange={(e) => {
+                      const warehouseId = Number(e.target.value);
+                      field.onChange(warehouseId);
+                      setValue("product_id", undefined as unknown as number);
+                      setValue("purchase_item_id", null);
+                    }}
                   >
                     {warehouses.map((wh) => (
                       <MenuItem key={wh.id} value={wh.id}>
@@ -371,39 +404,100 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
               name="product_id"
               render={({ field, fieldState }) => (
                 <Autocomplete
-                  disabled={!selectedWarehouseId}
                   options={products}
                   getOptionLabel={(option) =>
                     `${option.name}${option.sku ? ` (${option.sku})` : ""}`
                   }
                   loading={loadingProducts}
-                  onInputChange={(_, newInputValue) => {
-                    setProductSearchInput(newInputValue);
-                  }}
-                  onChange={(_, newValue) => {
-                    if (newValue) {
-                      field.onChange(newValue.id);
-                      setValue(
-                        "selected_product_name",
-                        `${newValue.name} (${newValue.sku || t("noSkuLabel")})`
-                      );
-                    } else {
-                      field.onChange(undefined);
-                      setValue("selected_product_name", "");
+                  onInputChange={(_, newInputValue, reason) => {
+                    // Only genuine typing should trigger a new search — MUI also fires this
+                    // when it resets the input text to the selected option's label ("reset")
+                    // or when the field is cleared ("clear"); reacting to those re-triggers a
+                    // fetch whose response then resets the input again, looping forever.
+                    if (reason === "input" || reason === "clear") {
+                      setProductSearchInput(newInputValue);
                     }
                   }}
+                  onChange={(_, newValue) => {
+                    field.onChange(newValue ? newValue.id : undefined);
+                    setValue("purchase_item_id", null);
+                    if (newValue) focusQuantityField();
+                  }}
                   value={products.find((p) => p.id === field.value) || null}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  autoHighlight
+                  onHighlightChange={(_, option) => {
+                    highlightedProductRef.current = option;
+                  }}
+                  // Attached on Autocomplete itself (not nested inside renderInput's
+                  // TextField) — MUI wires its own Enter/arrow-key handling onto the actual
+                  // <input> via params.inputProps, which takes precedence over a handler
+                  // nested that deep, so a top-level TextField onKeyDown never fires.
+                  onKeyDown={async (e) => {
+                    if (e.key !== "Enter") return;
+
+                    const term = productSearchInput.trim();
+                    if (!term) return;
+
+                    // Always prioritize an exact SKU match over whatever autoHighlight has
+                    // highlighted, so typing/scanning a full SKU reliably selects that exact
+                    // product instead of submitting the form or picking the wrong option.
+                    const exactMatch = products.find(
+                      (p) =>
+                        p.sku != null &&
+                        String(p.sku).trim().toLowerCase() === term.toLowerCase()
+                    );
+                    if (exactMatch) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      field.onChange(exactMatch.id);
+                      setValue("purchase_item_id", null);
+                      focusQuantityField();
+                      return;
+                    }
+
+                    // No exact SKU match among currently loaded options — if something is
+                    // highlighted (typically from a name search), let native Enter select it.
+                    if (highlightedProductRef.current) return;
+
+                    // Otherwise (e.g. scanned faster than the debounce/options could load),
+                    // force an immediate lookup for an exact SKU match.
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setLoadingProducts(true);
+                    try {
+                      const results = await productService.getProductsForAutocomplete(
+                        term,
+                        5,
+                        undefined,
+                        selectedWarehouseId ?? undefined
+                      );
+                      const match = results.find(
+                        (p) =>
+                          p.sku != null &&
+                          String(p.sku).trim().toLowerCase() === term.toLowerCase()
+                      );
+                      setProducts(results);
+                      if (match) {
+                        field.onChange(match.id);
+                        setValue("purchase_item_id", null);
+                        focusQuantityField();
+                      } else if (results.length === 0) {
+                        toast.error(t("noResultsFound"));
+                      }
+                    } catch (error) {
+                      console.error("Error searching products", error);
+                    } finally {
+                      setLoadingProducts(false);
+                    }
+                  }}
                   renderInput={(params) => (
                     <TextField
                       {...params}
                       label={t("productLabel")}
                       placeholder={t("searchProductPlaceholderShort")}
                       error={!!fieldState.error}
-                      helperText={
-                        !selectedWarehouseId
-                          ? t("selectWarehouseFirstHint")
-                          : fieldState.error?.message || ""
-                      }
+                      helperText={fieldState.error?.message || ""}
                       InputProps={{
                         ...params.InputProps,
                         endAdornment: (
@@ -460,93 +554,59 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
             <Controller
               control={control}
               name="purchase_item_id"
-              render={({ field }) => (
-                <Autocomplete
-                  options={[
-                    {
-                      id: null,
-                      label: t("totalStockAdjustmentFallback"),
-                      isTotal: true,
-                    },
-                    ...availableBatches.map((batch) => ({
-                      id: batch.id,
-                      label: `${
-                        batch.batch_number || `ID: ${batch.id}`
-                      } (${t("expiryColonPrefix", {
+              render={({ field }) => {
+                const options: BatchOption[] = [
+                  { id: TOTAL_STOCK_OPTION_ID, label: t("totalStockAdjustmentFallback") },
+                  ...availableBatches.map((batch) => ({
+                    id: batch.id,
+                    label: `${batch.batch_number || `ID: ${batch.id}`} (${t(
+                      "expiryColonPrefix",
+                      {
                         date: batch.expiry_date
                           ? dayjs(batch.expiry_date).format("YYYY-MM-DD")
                           : "N/A",
-                      })})`,
-                      batch,
-                    })),
-                  ]}
-                  getOptionLabel={(option) => option.label}
-                  loading={loadingBatches}
-                  disabled={
-                    !selectedProductId ||
-                    loadingBatches ||
-                    availableBatches.length === 0
-                  }
-                  onChange={(_, newValue) => {
-                    if (newValue) {
-                      if (newValue.isTotal) {
-                        field.onChange(null);
-                        setValue(
-                          "selected_batch_info",
-                          t("totalStockAdjustmentFallback")
-                        );
-                      } else {
-                        field.onChange(newValue.id);
-                        setValue("selected_batch_info", newValue.label);
                       }
-                    } else {
-                      field.onChange(null);
-                      setValue("selected_batch_info", null);
+                    )})`,
+                  })),
+                ];
+                const currentValue =
+                  options.find((o) => o.id === (field.value ?? TOTAL_STOCK_OPTION_ID)) ?? null;
+
+                return (
+                  <Autocomplete
+                    options={options}
+                    getOptionLabel={(option) => option.label}
+                    loading={loadingBatches}
+                    disabled={
+                      !selectedProductId ||
+                      loadingBatches ||
+                      availableBatches.length === 0
                     }
-                  }}
-                  value={
-                    field.value === null
-                      ? {
-                          id: null,
-                          label: t("totalStockAdjustmentFallback"),
-                          isTotal: true,
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    onChange={(_, newValue) => {
+                      field.onChange(
+                        !newValue || newValue.id === TOTAL_STOCK_OPTION_ID
+                          ? null
+                          : (newValue.id as number)
+                      );
+                    }}
+                    value={currentValue}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label={t("selectBatchLabel")}
+                        placeholder={
+                          loadingBatches
+                            ? tCommon("loading")
+                            : t("selectBatchOrLeaveEmpty")
                         }
-                      : availableBatches.find((b) => b.id === field.value)
-                      ? {
-                          id: field.value,
-                          label: (() => {
-                            const batch = availableBatches.find(
-                              (b) => b.id === field.value
-                            );
-                            return `${
-                              batch?.batch_number || `ID: ${batch?.id}`
-                            } (${t("expiryColonPrefix", {
-                              date: batch?.expiry_date
-                                ? dayjs(batch.expiry_date).format("YYYY-MM-DD")
-                                : "N/A",
-                            })})`;
-                          })(),
-                          batch: availableBatches.find(
-                            (b) => b.id === field.value
-                          ),
-                        }
-                      : null
-                  }
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label={t("selectBatchLabel")}
-                      placeholder={
-                        loadingBatches
-                          ? tCommon("loading")
-                          : t("selectBatchOrLeaveEmpty")
-                      }
-                      helperText={t("selectBatchHelperText")}
-                    />
-                  )}
-                  noOptionsText={t("noBatchesForProductWarehouse")}
-                />
-              )}
+                        helperText={t("selectBatchHelperText")}
+                      />
+                    )}
+                    noOptionsText={t("noBatchesForProductWarehouse")}
+                  />
+                );
+              }}
             />
 
             {/* Quantity Change Section */}
@@ -577,13 +637,24 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
                 )}
               />
 
-              {/* Abslute Quantity Value */}
+              {/* Absolute Quantity Value */}
               <Controller
                 control={control}
                 name="quantity_value"
                 render={({ field, fieldState }) => (
                   <TextField
                     {...field}
+                    inputRef={quantityInputRef}
+                    value={field.value ?? ""}
+                    onChange={(e) =>
+                      field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleSubmit(onSubmit)();
+                      }
+                    }}
                     type="number"
                     label={t("quantityLabel")}
                     placeholder={t("quantityExamplePlaceholder")}
@@ -595,6 +666,19 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
                 )}
               />
             </Box>
+            {signedPreview !== null && (
+              <Typography
+                variant="caption"
+                sx={{
+                  fontWeight: 600,
+                  mt: -2,
+                  color: signedPreview >= 0 ? "success.main" : "error.main",
+                }}
+              >
+                {signedPreview > 0 ? "+" : ""}
+                {signedPreview}
+              </Typography>
+            )}
 
             {/* Reason Select */}
             <Controller
@@ -624,6 +708,7 @@ const StockAdjustmentFormModal: React.FC<StockAdjustmentFormModalProps> = ({
               render={({ field }) => (
                 <TextField
                   {...field}
+                  value={field.value ?? ""}
                   label={t("notesLabel")}
                   placeholder={t("notesPlaceholderShort")}
                   multiline

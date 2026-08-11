@@ -12,6 +12,7 @@ import {
   Stack,
 } from "@mui/material";
 import { Send, MessageSquare, LayoutTemplate } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import apiClient from "@/lib/axios";
 import { toast } from "sonner";
 
@@ -38,6 +39,7 @@ function CustomTabPanel(props: TabPanelProps) {
 }
 
 const WhatsAppTestPage: React.FC = () => {
+  const { t } = useTranslation("whatsappTest");
   const [tabValue, setTabValue] = useState(0);
   const [loading, setLoading] = useState(false);
 
@@ -57,7 +59,7 @@ const WhatsAppTestPage: React.FC = () => {
 
   const handleSendText = async () => {
     if (!textPhone || !textMessage) {
-      toast.warning("Please fill phone number and message.");
+      toast.warning(t("fillPhoneAndMessage"));
       return;
     }
 
@@ -69,16 +71,16 @@ const WhatsAppTestPage: React.FC = () => {
       });
 
       if (response.data.success) {
-        toast.success("Text message sent successfully!");
+        toast.success(t("textSentSuccess"));
         setTextMessage("");
       } else {
-        toast.error("Failed to send message: " + response.data.error);
+        toast.error(t("sendTextFailed", { error: response.data.error }));
       }
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message ||
         error.response?.data?.error ||
-        "Error sending message";
+        t("sendTextError");
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -87,7 +89,7 @@ const WhatsAppTestPage: React.FC = () => {
 
   const handleSendTemplate = async () => {
     if (!templatePhone || !templateName) {
-      toast.warning("Please fill phone number and template name.");
+      toast.warning(t("fillPhoneAndTemplate"));
       return;
     }
 
@@ -97,7 +99,7 @@ const WhatsAppTestPage: React.FC = () => {
         parsedComponents = JSON.parse(componentsJson);
       }
     } catch (_e) {
-      toast.error("Invalid JSON in components field.");
+      toast.error(t("invalidJson"));
       return;
     }
 
@@ -114,15 +116,15 @@ const WhatsAppTestPage: React.FC = () => {
       );
 
       if (response.data.success) {
-        toast.success("Template message sent successfully!");
+        toast.success(t("templateSentSuccess"));
       } else {
-        toast.error("Failed to send template: " + response.data.error);
+        toast.error(t("sendTemplateFailed", { error: response.data.error }));
       }
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message ||
         error.response?.data?.error ||
-        "Error sending template";
+        t("sendTemplateError");
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -134,7 +136,7 @@ const WhatsAppTestPage: React.FC = () => {
       <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 2 }}>
         <MessageSquare size={32} color="#10B981" />
         <Typography variant="h4" sx={{ fontWeight: "bold", color: "#1F2937" }}>
-          WhatsApp Cloud API Testing
+          {t("pageTitle")}
         </Typography>
       </Box>
 
@@ -148,12 +150,12 @@ const WhatsAppTestPage: React.FC = () => {
             <Tab
               icon={<MessageSquare size={18} style={{ marginRight: 8 }} />}
               iconPosition="start"
-              label="Text Message"
+              label={t("textMessageTab")}
             />
             <Tab
               icon={<LayoutTemplate size={18} style={{ marginRight: 8 }} />}
               iconPosition="start"
-              label="Template Message"
+              label={t("templateMessageTab")}
             />
           </Tabs>
         </Box>
@@ -163,16 +165,16 @@ const WhatsAppTestPage: React.FC = () => {
           <Stack spacing={3}>
             <TextField
               fullWidth
-              label="Phone Number (e.g., 249123456789)"
+              label={t("phoneNumberLabel")}
               variant="outlined"
               value={textPhone}
               onChange={(e) => setTextPhone(e.target.value)}
-              placeholder="Include country code without +"
+              placeholder={t("phoneNumberPlaceholder")}
             />
 
             <TextField
               fullWidth
-              label="Message Text"
+              label={t("messageTextLabel")}
               variant="outlined"
               multiline
               rows={4}
@@ -196,7 +198,7 @@ const WhatsAppTestPage: React.FC = () => {
                 disabled={loading}
                 sx={{ px: 4, py: 1.5 }}
               >
-                Send Text Message
+                {t("sendTextButton")}
               </Button>
             </Box>
           </Stack>
@@ -207,36 +209,36 @@ const WhatsAppTestPage: React.FC = () => {
           <Stack spacing={3}>
             <TextField
               fullWidth
-              label="Phone Number (e.g., 249123456789)"
+              label={t("phoneNumberLabel")}
               variant="outlined"
               value={templatePhone}
               onChange={(e) => setTemplatePhone(e.target.value)}
-              placeholder="Include country code without +"
+              placeholder={t("phoneNumberPlaceholder")}
             />
 
             <Stack direction={{ xs: "column", sm: "row" }} spacing={3}>
               <TextField
                 fullWidth
-                label="Template Name"
+                label={t("templateNameLabel")}
                 variant="outlined"
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
-                placeholder="e.g., hello_world"
+                placeholder={t("templateNamePlaceholder")}
               />
 
               <TextField
                 fullWidth
-                label="Language Code"
+                label={t("languageCodeLabel")}
                 variant="outlined"
                 value={languageCode}
                 onChange={(e) => setLanguageCode(e.target.value)}
-                placeholder="e.g., en_US, ar"
+                placeholder={t("languageCodePlaceholder")}
               />
             </Stack>
 
             <Box>
               <Alert severity="info" sx={{ mb: 2 }}>
-                Provide the components array in valid JSON format. Example:
+                {t("componentsInfo")}
                 <br />
                 <code>
                   {`[
@@ -251,7 +253,7 @@ const WhatsAppTestPage: React.FC = () => {
               </Alert>
               <TextField
                 fullWidth
-                label="Components (JSON)"
+                label={t("componentsLabel")}
                 variant="outlined"
                 multiline
                 rows={6}
@@ -280,7 +282,7 @@ const WhatsAppTestPage: React.FC = () => {
                 disabled={loading}
                 sx={{ px: 4, py: 1.5 }}
               >
-                Send Template Message
+                {t("sendTemplateButton")}
               </Button>
             </Box>
           </Stack>

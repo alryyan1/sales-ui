@@ -1,6 +1,6 @@
 // src/components/pos/CartPanel.tsx
 import { useEffect, useState } from "react";
-import { Loader2, Minus, Percent, Plus, Receipt, Tag, Trash2, X } from "lucide-react";
+import { Loader2, Minus, Percent, Plus, Receipt, Tag, Trash2, Users, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -278,10 +278,11 @@ export function CartPanel({
     : { subtotal: 0, discountAmount: 0, total: 0 };
   const payAmount = dueAmount ?? total;
   const hasPayments = (payments?.length ?? 0) > 0;
+  const client = ticket?.client ?? null;
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between rounded-lg border-b bg-primary px-4 py-3">
+    <div className={cn("flex h-full flex-col", client && "bg-blue-50/60 dark:bg-blue-950/20")}>
+      <div className="flex items-center justify-between border-b bg-primary px-4 py-3">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-primary-foreground">
           <Receipt className="size-4 text-primary-foreground/70" />
           {tCartPanel("cartTitle")}
@@ -305,6 +306,14 @@ export function CartPanel({
           </Button>
         )}
       </div>
+
+      {client && (
+        <div className="flex items-center gap-2 border-b border-blue-200 bg-blue-100/80 px-4 py-2 text-sm dark:border-blue-900 dark:bg-blue-900/30">
+          <Users className="size-4 shrink-0 text-blue-700 dark:text-blue-300" />
+          <span className="text-blue-800 dark:text-blue-200">{t("client")}:</span>
+          <span className="truncate font-medium text-blue-900 dark:text-blue-100">{client.name}</span>
+        </div>
+      )}
 
       <div className="flex-1 space-y-1 overflow-y-auto p-2">
         {items.length === 0 ? (

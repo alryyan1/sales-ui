@@ -1,6 +1,7 @@
 // src/pages/admin/RolesListPage.tsx
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
   AlertCircle,
@@ -46,6 +47,7 @@ function RoleListItem({
   selected: boolean;
   onSelect: () => void;
 }) {
+  const { t } = useTranslation("roles");
   const protectedRole = isSystemRole(role.name);
   const permissionCount = role.permissions_count ?? 0;
   const usersCount = role.users_count ?? 0;
@@ -90,8 +92,10 @@ function RoleListItem({
             noPermissions ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"
           )}
         >
-          {noPermissions ? "بدون صلاحيات" : `${permissionCount} صلاحية`}
-          {usersCount > 0 && ` · ${usersCount} مستخدم`}
+          {noPermissions
+            ? t("noPermissionsShort")
+            : t("permissionsCountShort", { count: permissionCount })}
+          {usersCount > 0 && t("usersCountShort", { count: usersCount })}
         </p>
       </div>
 
@@ -106,24 +110,26 @@ function RoleListItem({
 }
 
 function EmptyDetailState({ onCreate }: { onCreate: () => void }) {
+  const { t } = useTranslation("roles");
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
       <ShieldQuestion className="size-8 text-muted-foreground" />
       <div>
-        <p className="text-sm font-medium text-foreground">اختر دورًا لعرض صلاحياته</p>
+        <p className="text-sm font-medium text-foreground">{t("selectRolePrompt")}</p>
         <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-          حدد دورًا من القائمة لمراجعة أو تعديل الصلاحيات الممنوحة له، أو أنشئ دورًا جديدًا.
+          {t("selectRoleHint")}
         </p>
       </div>
       <Button size="sm" variant="outline" onClick={onCreate} className="gap-1.5">
         <Plus className="size-4" />
-        دور جديد
+        {t("newRole")}
       </Button>
     </div>
   );
 }
 
 const RolesListPage: React.FC = () => {
+  const { t } = useTranslation("roles");
   const queryClient = useQueryClient();
   const isDesktop = useMediaQuery("(min-width: 1024px)");
 
@@ -161,7 +167,7 @@ const RolesListPage: React.FC = () => {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => roleService.deleteRole(id),
     onSuccess: () => {
-      toast.success("تم حذف الدور بنجاح");
+      toast.success(t("deleteSuccess"));
       if (roleToDelete && selectedRole?.id === roleToDelete.id) {
         setSelectedRole(null);
       }
@@ -174,7 +180,7 @@ const RolesListPage: React.FC = () => {
       }
     },
     onError: (err) => {
-      toast.error("تعذر حذف الدور", { description: roleService.getErrorMessage(err) });
+      toast.error(t("deleteErrorTitle"), { description: roleService.getErrorMessage(err) });
     },
   });
 
@@ -200,7 +206,7 @@ const RolesListPage: React.FC = () => {
 
   const handleSaved = (kind: "create" | "update", role: RoleWithPermissions) => {
     queryClient.invalidateQueries({ queryKey: ["admin-roles"] });
-    toast.success(kind === "create" ? "تم إنشاء الدور بنجاح" : "تم تحديث الدور بنجاح");
+    toast.success(kind === "create" ? t("createSuccess") : t("updateSuccess"));
     setIsCreating(false);
     setSelectedRole(role);
   };
@@ -238,10 +244,10 @@ const RolesListPage: React.FC = () => {
         {/* Page header */}
         <div className="mb-6 border-b pb-5">
           <h1 className="text-xl font-semibold tracking-tight text-foreground">
-            الأدوار والصلاحيات
+            {t("pageTitle")}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            حدد الصلاحيات المتاحة لكل دور وتحكم في وصول المستخدمين داخل النظام
+            {t("pageDescription")}
           </p>
         </div>
 
@@ -250,14 +256,16 @@ const RolesListPage: React.FC = () => {
           <div className="flex min-h-0 flex-col rounded-xl border bg-card">
             <div className="flex items-center justify-between gap-2 border-b p-3">
               <div>
-                <p className="text-sm font-semibold text-foreground">الأدوار</p>
+                <p className="text-sm font-semibold text-foreground">{t("rolesListTitle")}</p>
                 <p className="text-xs text-muted-foreground">
-                  {rolesQuery.isError ? "—" : rolesQuery.data?.total ?? roles.length} دور
+                  {rolesQuery.isError
+                    ? "—"
+                    : t("totalRoles", { count: rolesQuery.data?.total ?? roles.length })}
                 </p>
               </div>
               <Button size="sm" onClick={openCreatePanel} className="gap-1.5">
                 <Plus className="size-4" />
-                دور جديد
+                {t("newRole")}
               </Button>
             </div>
 
@@ -267,7 +275,7 @@ const RolesListPage: React.FC = () => {
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="ابحث باسم الدور..."
+                  placeholder={t("searchByName")}
                   className="pr-9"
                 />
                 {search && (
@@ -275,7 +283,7 @@ const RolesListPage: React.FC = () => {
                     type="button"
                     onClick={() => setSearch("")}
                     className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    aria-label="مسح البحث"
+                    aria-label={t("clearSearch")}
                   >
                     <X className="size-4" />
                   </button>
@@ -287,11 +295,11 @@ const RolesListPage: React.FC = () => {
               {rolesQuery.isError && (
                 <Alert variant="destructive" className="m-1">
                   <AlertCircle className="size-4" />
-                  <AlertTitle>تعذر تحميل الأدوار</AlertTitle>
+                  <AlertTitle>{t("loadFailed")}</AlertTitle>
                   <AlertDescription className="flex flex-col items-start gap-2">
                     <span>{roleService.getErrorMessage(rolesQuery.error)}</span>
                     <Button size="sm" variant="outline" onClick={() => rolesQuery.refetch()}>
-                      إعادة المحاولة
+                      {t("retryButton")}
                     </Button>
                   </AlertDescription>
                 </Alert>
@@ -312,14 +320,14 @@ const RolesListPage: React.FC = () => {
                 <div className="flex flex-col items-center justify-center gap-3 px-4 py-12 text-center">
                   <ShieldQuestion className="size-8 text-muted-foreground" />
                   <div>
-                    <p className="text-sm font-medium text-foreground">لا توجد أدوار بعد</p>
+                    <p className="text-sm font-medium text-foreground">{t("noRolesYet")}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      أنشئ أول دور لتتمكن من تعيين صلاحيات محددة لمستخدمي النظام
+                      {t("noRolesYetHint")}
                     </p>
                   </div>
                   <Button size="sm" onClick={openCreatePanel} className="gap-1.5">
                     <Plus className="size-4" />
-                    إنشاء أول دور
+                    {t("createFirstRole")}
                   </Button>
                 </div>
               )}
@@ -327,10 +335,10 @@ const RolesListPage: React.FC = () => {
               {isSearchEmpty && (
                 <div className="flex flex-col items-center justify-center gap-1 px-4 py-10 text-center">
                   <p className="text-sm text-muted-foreground">
-                    لا توجد نتائج مطابقة لـ "{search}"
+                    {t("noSearchResults", { search })}
                   </p>
                   <Button variant="link" size="sm" onClick={() => setSearch("")}>
-                    مسح البحث
+                    {t("clearSearch")}
                   </Button>
                 </div>
               )}
@@ -357,7 +365,7 @@ const RolesListPage: React.FC = () => {
                   className="gap-1"
                 >
                   <ChevronRight className="size-4" />
-                  السابق
+                  {t("previous")}
                 </Button>
                 <span className="text-xs text-muted-foreground">
                   {rolesQuery.data.current_page} / {rolesQuery.data.last_page}
@@ -369,7 +377,7 @@ const RolesListPage: React.FC = () => {
                   onClick={() => setPage((p) => p + 1)}
                   className="gap-1"
                 >
-                  التالي
+                  {t("next")}
                   <ChevronLeft className="size-4" />
                 </Button>
               </div>
@@ -400,7 +408,7 @@ const RolesListPage: React.FC = () => {
           <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-lg">
             <SheetHeader className="sr-only">
               <SheetTitle>
-                {panelMode === "create" ? "دور جديد" : selectedRole?.name ?? "الدور"}
+                {panelMode === "create" ? t("newRole") : selectedRole?.name ?? t("roleFallback")}
               </SheetTitle>
             </SheetHeader>
             {panelProps && <RolePermissionsPanel {...panelProps} />}
@@ -417,11 +425,13 @@ const RolesListPage: React.FC = () => {
       >
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
-            <AlertDialogTitle>حذف الدور "{roleToDelete?.name}"؟</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("deleteRoleTitle", { name: roleToDelete?.name })}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {roleToDelete?.users_count
-                ? `هذا الدور مُسند حاليًا إلى ${roleToDelete.users_count} مستخدم. سيفقد هؤلاء المستخدمون الصلاحيات المرتبطة به فور الحذف. هذا الإجراء لا يمكن التراجع عنه.`
-                : "هذا الإجراء لا يمكن التراجع عنه."}
+                ? t("deleteRoleWithUsersWarning", { count: roleToDelete.users_count })
+                : t("actionCannotBeUndone")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -431,7 +441,7 @@ const RolesListPage: React.FC = () => {
               disabled={deleteMutation.isPending}
               onClick={() => setRoleToDelete(null)}
             >
-              إلغاء
+              {t("cancelButton")}
             </Button>
             <Button
               type="button"
@@ -441,7 +451,7 @@ const RolesListPage: React.FC = () => {
               className="gap-2"
             >
               {deleteMutation.isPending && <Loader2 className="size-4 animate-spin" />}
-              حذف نهائي
+              {t("deletePermanently")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

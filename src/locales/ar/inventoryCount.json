@@ -44,6 +44,7 @@
   "productsColumn": "المنتجات",
   "notesColumn": "الملاحظات",
   "actionsColumn": "إجراءات",
+  "viewDetailsButton": "عرض التفاصيل",
   "approveButton": "اعتماد",
   "rejectButton": "رفض",
   "importAllProductsMenuItem": "استيراد كل المنتجات",

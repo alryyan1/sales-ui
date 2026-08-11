@@ -1,6 +1,7 @@
 // src/pages/admin/ExpensesPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
@@ -69,18 +70,19 @@ import ExpenseFormModal from "@/components/admin/expenses/ExpenseFormModal";
 
 const PER_PAGE = 10;
 
-const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  cash: "نقدي",
-  bankak: "بنكك",
-  fawry: "فوري",
-  ocash: "أوكاش",
-  bank_transfer: "تحويل بنكي",
-  card: "بطاقة",
-};
-
 const ExpensesPage: React.FC = () => {
+  const { t } = useTranslation("expenses");
   const queryClient = useQueryClient();
   const formatCurrency = useFormatCurrency();
+
+  const PAYMENT_METHOD_LABELS: Record<string, string> = {
+    cash: t("paymentCash"),
+    bankak: t("paymentBankak"),
+    fawry: t("paymentFawry"),
+    ocash: t("paymentOcash"),
+    bank_transfer: t("paymentBankTransfer"),
+    card: t("paymentCard"),
+  };
 
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
@@ -93,8 +95,8 @@ const ExpensesPage: React.FC = () => {
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(searchTerm), 400);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 400);
+    return () => clearTimeout(timer);
   }, [searchTerm]);
 
   const dateFrom = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined;
@@ -128,7 +130,7 @@ const ExpensesPage: React.FC = () => {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => expenseService.deleteExpense(id),
     onSuccess: () => {
-      toast.success("تم حذف المصروف بنجاح");
+      toast.success(t("deleteSuccessToast"));
       const isLastRowOnPage = expensesQuery.data?.data.length === 1 && page > 1;
       setExpenseToDelete(null);
       if (isLastRowOnPage) {
@@ -138,7 +140,7 @@ const ExpensesPage: React.FC = () => {
       }
     },
     onError: (err) => {
-      toast.error("تعذر حذف المصروف", { description: expenseService.getErrorMessage(err) });
+      toast.error(t("deleteErrorTitle"), { description: expenseService.getErrorMessage(err) });
     },
   });
 
@@ -159,7 +161,7 @@ const ExpensesPage: React.FC = () => {
     closeModal();
     queryClient.invalidateQueries({ queryKey: ["admin-expenses"] });
     queryClient.invalidateQueries({ queryKey: ["expense-categories-flat"] });
-    toast.success(wasEdit ? "تم تحديث المصروف بنجاح" : "تم إضافة المصروف بنجاح");
+    toast.success(wasEdit ? t("updateSuccessToast") : t("createSuccessToast"));
   };
   const confirmDelete = () => {
     if (expenseToDelete) deleteMutation.mutate(expenseToDelete.id);
@@ -188,14 +190,14 @@ const ExpensesPage: React.FC = () => {
         {/* Page header */}
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b pb-5">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">المصروفات</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">{t("pageTitle")}</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              سجّل مصروفات المنشأة وتتبعها حسب القسم وطريقة الدفع
+              {t("pageDescription")}
             </p>
           </div>
           <Button onClick={openCreateModal} className="gap-2">
             <Plus className="size-4" />
-            إضافة مصروف
+            {t("add")}
           </Button>
         </div>
 
@@ -206,7 +208,7 @@ const ExpensesPage: React.FC = () => {
             <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="ابحث بعنوان المصروف..."
+              placeholder={t("search")}
               className="pr-9"
             />
             {searchTerm && (
@@ -214,7 +216,7 @@ const ExpensesPage: React.FC = () => {
                 type="button"
                 onClick={() => setSearchTerm("")}
                 className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                aria-label="مسح البحث"
+                aria-label={t("clearSearch")}
               >
                 <X className="size-4" />
               </button>
@@ -223,10 +225,10 @@ const ExpensesPage: React.FC = () => {
 
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
             <SelectTrigger className="w-44">
-              <SelectValue placeholder="كل الأقسام" />
+              <SelectValue placeholder={t("allCategories")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">كل الأقسام</SelectItem>
+              <SelectItem value="all">{t("allCategories")}</SelectItem>
               {(categoriesQuery.data ?? []).map((c) => (
                 <SelectItem key={c.id} value={String(c.id)}>
                   {c.name}
@@ -240,14 +242,14 @@ const ExpensesPage: React.FC = () => {
           {hasActiveFilters && (
             <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1.5">
               <X className="size-3.5" />
-              مسح الفلاتر
+              {t("clearFilters")}
             </Button>
           )}
 
           {!isInitialLoading && !expensesQuery.isError && (
             <p className="ms-auto text-xs text-muted-foreground">
-              {expensesQuery.data?.total ?? expenses.length} نتيجة
-              {expenses.length > 0 && ` · إجمالي الصفحة ${formatCurrency(pageTotal)}`}
+              {t("resultsCount", { count: expensesQuery.data?.total ?? expenses.length })}
+              {expenses.length > 0 && t("pageTotal", { amount: formatCurrency(pageTotal) })}
             </p>
           )}
         </div>
@@ -256,11 +258,11 @@ const ExpensesPage: React.FC = () => {
         {expensesQuery.isError && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="size-4" />
-            <AlertTitle>تعذر تحميل المصروفات</AlertTitle>
+            <AlertTitle>{t("loadFailed")}</AlertTitle>
             <AlertDescription className="flex items-center justify-between gap-3">
               <span>{expenseService.getErrorMessage(expensesQuery.error)}</span>
               <Button size="sm" variant="outline" onClick={() => expensesQuery.refetch()}>
-                إعادة المحاولة
+                {t("retryButton")}
               </Button>
             </AlertDescription>
           </Alert>
@@ -287,26 +289,26 @@ const ExpensesPage: React.FC = () => {
             <Receipt className="size-10 text-muted-foreground" />
             {hasActiveFilters ? (
               <div>
-                <p className="font-medium text-foreground">لا توجد نتائج مطابقة للفلاتر الحالية</p>
+                <p className="font-medium text-foreground">{t("noFilterResultsTitle")}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  حاول تعديل البحث أو نطاق التاريخ أو القسم المحدد
+                  {t("noFilterResultsHint")}
                 </p>
                 <Button variant="link" size="sm" onClick={clearFilters}>
-                  مسح الفلاتر
+                  {t("clearFilters")}
                 </Button>
               </div>
             ) : (
               <div>
-                <p className="font-medium text-foreground">لا توجد مصروفات بعد</p>
+                <p className="font-medium text-foreground">{t("noResults")}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  سجّل أول مصروف لبدء تتبع نفقات المنشأة
+                  {t("noExpensesYetHint")}
                 </p>
               </div>
             )}
             {!hasActiveFilters && (
               <Button onClick={openCreateModal} className="mt-2 gap-2">
                 <Plus className="size-4" />
-                إضافة أول مصروف
+                {t("addFirstExpense")}
               </Button>
             )}
           </div>
@@ -319,13 +321,13 @@ const ExpensesPage: React.FC = () => {
               <Table>
                 <TableHeader className="bg-muted/40">
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="text-start">التاريخ</TableHead>
-                    <TableHead className="text-start">المصروف</TableHead>
-                    <TableHead className="text-start">القسم</TableHead>
-                    <TableHead className="text-start">طريقة الدفع</TableHead>
-                    <TableHead className="text-end">المبلغ</TableHead>
+                    <TableHead className="text-start">{t("date")}</TableHead>
+                    <TableHead className="text-start">{t("title")}</TableHead>
+                    <TableHead className="text-start">{t("category")}</TableHead>
+                    <TableHead className="text-start">{t("paymentMethod")}</TableHead>
+                    <TableHead className="text-end">{t("amount")}</TableHead>
                     <TableHead className="w-12">
-                      <span className="sr-only">إجراءات</span>
+                      <span className="sr-only">{t("actions")}</span>
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -347,13 +349,13 @@ const ExpensesPage: React.FC = () => {
                         {expense.expense_category_name ? (
                           <Badge variant="secondary">{expense.expense_category_name}</Badge>
                         ) : (
-                          <span className="text-sm text-muted-foreground">—</span>
+                          <span className="text-sm text-muted-foreground">{t("dash")}</span>
                         )}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {expense.payment_method
                           ? PAYMENT_METHOD_LABELS[expense.payment_method] ?? expense.payment_method
-                          : "—"}
+                          : t("dash")}
                       </TableCell>
                       <TableCell className="text-end font-semibold text-foreground">
                         {formatCurrency(expense.amount)}
@@ -364,20 +366,20 @@ const ExpensesPage: React.FC = () => {
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="size-8">
                                 <MoreHorizontal className="size-4" />
-                                <span className="sr-only">إجراءات</span>
+                                <span className="sr-only">{t("actions")}</span>
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start">
                               <DropdownMenuItem onSelect={() => openEditModal(expense)}>
                                 <Pencil className="size-4" />
-                                تعديل
+                                {t("edit")}
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 variant="destructive"
                                 onSelect={() => setExpenseToDelete(expense)}
                               >
                                 <Trash2 className="size-4" />
-                                حذف
+                                {t("delete")}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -472,8 +474,10 @@ const ExpensesPage: React.FC = () => {
       >
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
-            <AlertDialogTitle>حذف المصروف "{expenseToDelete?.title}"؟</AlertDialogTitle>
-            <AlertDialogDescription>هذا الإجراء لا يمكن التراجع عنه.</AlertDialogDescription>
+            <AlertDialogTitle>
+              {t("confirmDeleteTitle", { title: expenseToDelete?.title })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>{t("actionCannotBeUndone")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <Button
@@ -482,7 +486,7 @@ const ExpensesPage: React.FC = () => {
               disabled={deleteMutation.isPending}
               onClick={() => setExpenseToDelete(null)}
             >
-              إلغاء
+              {t("cancelButton")}
             </Button>
             <Button
               type="button"
@@ -492,7 +496,7 @@ const ExpensesPage: React.FC = () => {
               className="gap-2"
             >
               {deleteMutation.isPending && <Loader2 className="size-4 animate-spin" />}
-              حذف نهائي
+              {t("deletePermanently")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

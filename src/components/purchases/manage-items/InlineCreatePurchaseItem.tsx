@@ -239,89 +239,96 @@ const InlineCreatePurchaseItem: React.FC<InlineCreatePurchaseItemProps> = ({
             handleProductSelect(typeof newValue === "string" ? null : newValue)
           }
           inputValue={productInputValue}
-          onInputChange={(_, newInputValue) =>
-            setProductInputValue(newInputValue)
-          }
+          onInputChange={(_, newInputValue, reason) => {
+            // Only genuine typing (or an explicit clear) should update the search text —
+            // MUI also fires this when it resets the input to the selected option's label,
+            // and reacting to that would re-trigger the per-keystroke search below.
+            if (reason === "input" || reason === "clear") {
+              setProductInputValue(newInputValue);
+            }
+          }}
           loading={productLoading}
           isOptionEqualToValue={(option, value) => option.id === value.id}
           autoHighlight
           freeSolo
           size="small"
           onHighlightChange={(_, option) => { highlightedProductRef.current = option; }}
+          // Attached directly on Autocomplete (not nested inside renderInput's TextField) —
+          // MUI wires its own Enter/arrow-key handling onto the actual <input> via
+          // params.inputProps, which can take precedence over a handler nested that deep.
+          // This is the same pattern already used successfully in AddItemDialog.tsx.
+          onKeyDown={async (e) => {
+            if (e.key !== "Enter") return;
+
+            const barcode = productInputRef.current?.value?.trim();
+            if (!barcode) return;
+
+            // Always prioritize an exact SKU match over whatever autoHighlight has
+            // highlighted — autoHighlight highlights the first fuzzy name/SKU match as
+            // soon as any options are loaded, which is frequently NOT the exact product
+            // a barcode scan or a fully-typed SKU refers to. Checking this first (before
+            // deferring to the highlighted option) is what makes "type/scan SKU, press
+            // Enter" reliably select the right product.
+            const exactMatchInOptions = productOptions.find(
+              (p) =>
+                p.sku != null &&
+                String(p.sku).trim().toLowerCase() === barcode.toLowerCase(),
+            );
+
+            if (exactMatchInOptions) {
+              e.preventDefault();
+              e.stopPropagation();
+              handleProductSelect(exactMatchInOptions);
+              return;
+            }
+
+            // No exact SKU match among the currently loaded options — if the user has
+            // an option highlighted (typically from a name search), let the Autocomplete
+            // handle Enter natively so arrow-key selection still works.
+            if (highlightedProductRef.current) return;
+
+            // Otherwise (e.g. scanned faster than the debounce/options could load),
+            // force an immediate lookup for an exact SKU match.
+            e.preventDefault();
+            e.stopPropagation();
+            setProductLoading(true);
+
+            try {
+              const response = await apiClient.get<{ data: Product[] }>(
+                `/products/autocomplete?search=${encodeURIComponent(barcode)}&limit=5`,
+              );
+              const products = response.data.data ?? response.data;
+
+              // Check for exact SKU match in the fresh results
+              const match = products.find(
+                (p) =>
+                  p.sku != null &&
+                  String(p.sku).trim().toLowerCase() ===
+                    barcode.toLowerCase(),
+              );
+
+              if (match) {
+                handleProductSelect(match);
+              } else if (products.length > 0) {
+                // If found but not exact SKU match (maybe partial name), update options to show user
+                setProductOptions(products);
+              } else {
+                toast.error(t("productNotFoundTitle"), {
+                  description: t("noProductWithBarcode", { barcode }),
+                });
+              }
+            } catch (error) {
+              console.error("Error scanning barcode:", error);
+            } finally {
+              setProductLoading(false);
+            }
+          }}
           renderInput={(params) => (
             <TextField
               {...params}
               placeholder={t("productOrBarcodePlaceholder")}
               autoFocus
               inputRef={productInputRef}
-              onKeyDown={async (e) => {
-                if (e.key === "Enter") {
-                  // If the dropdown has a highlighted option, let the Autocomplete
-                  // handle the Enter key natively so arrow-key selection works.
-                  if (highlightedProductRef.current) return;
-
-                  const barcode = productInputRef.current?.value?.trim();
-
-                  if (!barcode) return;
-
-                  // If an option is highlighted by the autocomplete (standard behavior), let it be selected.
-                  // However, if the user scanned a barcode rapidly, the dropdown might not even be open or highlighted yet.
-
-                  // Check if we already have an exact match in the *currently loaded* options
-                  // This saves an API call if options are fresh
-                  const exactMatchInOptions = productOptions.find(
-                    (p) =>
-                      p.sku != null &&
-                      String(p.sku).trim().toLowerCase() ===
-                        barcode.toLowerCase(),
-                  );
-
-                  if (exactMatchInOptions) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleProductSelect(exactMatchInOptions);
-                    return;
-                  }
-
-                  // If no exact match locally, force an immediate API call
-                  // This handles the "scan before debounce" scenario
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setProductLoading(true);
-
-                  try {
-                    // Force exact search or close match from backend
-                    const response = await apiClient.get<{ data: Product[] }>(
-                      `/products/autocomplete?search=${encodeURIComponent(barcode)}&limit=1`,
-                    );
-                    const products = response.data.data ?? response.data;
-
-                    // Check for exact SKU match in the fresh results
-                    const match = products.find(
-                      (p) =>
-                        p.sku != null &&
-                        String(p.sku).trim().toLowerCase() ===
-                          barcode.toLowerCase(),
-                    );
-
-                    if (match) {
-                      handleProductSelect(match);
-                    } else if (products.length > 0) {
-                      // If found but not exact SKU match (maybe partial name), update options to show user
-                      setProductOptions(products);
-                    } else {
-                      // Optional: play error sound or strict notification
-                      toast.error(t("productNotFoundTitle"), {
-                        description: t("noProductWithBarcode", { barcode }),
-                      });
-                    }
-                  } catch (error) {
-                    console.error("Error scanning barcode:", error);
-                  } finally {
-                    setProductLoading(false);
-                  }
-                }
-              }}
               InputProps={{
                 ...params.InputProps,
                 startAdornment: (

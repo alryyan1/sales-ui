@@ -14,9 +14,25 @@
     "emailLabel": "Email",
     "passwordLabel": "Password",
     "confirmPasswordLabel": "Confirm Password",
-    "searchPlaceholder": "Search by name or email...",
+    "searchPlaceholder": "Search by name or username...",
     "noUsers": "No users to display.",
     "selfDeleteError": "You cannot delete your own account.",
     "roleLabel": "Roles",
-    "usersCount": "Users Count"
-} 
+    "usersCount": "Users Count",
+    "newUser": "New User",
+    "selfIndicator": " (You)",
+    "columnUser": "User",
+    "columnUsername": "Username",
+    "columnRoles": "Roles",
+    "columnWarehouse": "Warehouse",
+    "columnAction": "Action",
+    "editButton": "Edit",
+    "clearButton": "Clear",
+    "filterByRoleLabel": "Filter by role",
+    "allRoles": "All roles",
+    "dash": "—",
+    "statsSummary": "{{total}} users — {{roles}} roles available",
+    "genericError": "An unexpected error occurred while connecting to the server.",
+    "noResultsTitle": "No matching results",
+    "noResultsHint": "Try adjusting your search terms or filter"
+}

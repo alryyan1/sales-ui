@@ -3,6 +3,7 @@ import apiClient, { getValidationErrors, getErrorMessage } from "@/lib/axios";
 export interface Unit {
   id: number;
   name: string;
+  name_en?: string | null;
   description?: string;
   is_active: boolean;
   is_default: boolean;
@@ -12,6 +13,7 @@ export interface Unit {
 
 export interface UnitFormData {
   name: string;
+  name_en?: string | null;
   description?: string;
   is_active?: boolean;
   is_default?: boolean;

@@ -19,12 +19,16 @@ import {
   Clock
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import backupService, { Backup, BackupStatistics } from '../../services/backupService';
 import { format } from 'date-fns';
-import { ar } from 'date-fns/locale';
+import { ar, enUS } from 'date-fns/locale';
+import { useLanguage } from '../../context/LanguageContext';
 import ConfirmationDialog from '../../components/common/ConfirmationDialog';
 
 const BackupPage: React.FC = () => {
+  const { t } = useTranslation('backup');
+  const { language } = useLanguage();
   const [backups, setBackups] = useState<Backup[]>([]);
   const [statistics, setStatistics] = useState<BackupStatistics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,7 +62,7 @@ const BackupPage: React.FC = () => {
       setStatistics(statsData);
     } catch (error) {
       console.error('Error loading backup data:', error);
-      toast.error('فشل في تحميل بيانات النسخ الاحتياطية');
+      toast.error(t('loadError'));
     } finally {
       setLoading(false);
     }
@@ -68,7 +72,7 @@ const BackupPage: React.FC = () => {
     try {
       setCreating(true);
       await backupService.createBackup(createForm);
-      toast.success('تم إنشاء النسخة الاحتياطية بنجاح');
+      toast.success(t('createSuccess'));
       setShowCreateDialog(false);
       setCreateForm({ description: '', include_data: true, include_structure: true });
       loadData();
@@ -76,7 +80,7 @@ const BackupPage: React.FC = () => {
       console.error('Error creating backup:', error);
       const msg = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data?.error
         || (error as { response?: { data?: { message?: string } } })?.response?.data?.message
-        || 'فشل في إنشاء النسخة الاحتياطية';
+        || t('createError');
       toast.error(msg);
     } finally {
       setCreating(false);
@@ -95,10 +99,10 @@ const BackupPage: React.FC = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       
-      toast.success('تم بدء تحميل النسخة الاحتياطية');
+      toast.success(t('downloadStarted'));
     } catch (error) {
       console.error('Error downloading backup:', error);
-      toast.error('فشل في تحميل النسخة الاحتياطية');
+      toast.error(t('downloadError'));
     }
   };
 
@@ -107,18 +111,20 @@ const BackupPage: React.FC = () => {
 
     try {
       await backupService.deleteBackup(deleteDialog.backup.filename);
-      toast.success('تم حذف النسخة الاحتياطية بنجاح');
+      toast.success(t('deleteSuccess'));
       setDeleteDialog({ show: false, backup: null });
       loadData();
     } catch (error) {
       console.error('Error deleting backup:', error);
-      toast.error('فشل في حذف النسخة الاحتياطية');
+      toast.error(t('deleteError'));
     }
   };
 
   const formatDate = (dateString: string) => {
     try {
-      return format(new Date(dateString), 'dd/MM/yyyy HH:mm', { locale: ar });
+      return format(new Date(dateString), 'dd/MM/yyyy HH:mm', {
+        locale: language === 'ar' ? ar : enUS,
+      });
     } catch {
       return dateString;
     }
@@ -136,12 +142,12 @@ const BackupPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">النسخ الاحتياطية</h1>
-          <p className="text-muted-foreground">إدارة نسخ قاعدة البيانات الاحتياطية</p>
+          <h1 className="text-3xl font-bold">{t('pageTitle')}</h1>
+          <p className="text-muted-foreground">{t('pageDescription')}</p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
-          إنشاء نسخة احتياطية
+          {t('createBackup')}
         </Button>
       </div>
 
@@ -150,47 +156,47 @@ const BackupPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">إجمالي النسخ</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('statTotalBackups')}</CardTitle>
               <Database className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{statistics.total_backups}</div>
-              <p className="text-xs text-muted-foreground">نسخة احتياطية</p>
+              <p className="text-xs text-muted-foreground">{t('statBackupUnit')}</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">الحجم الإجمالي</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('statTotalSize')}</CardTitle>
               <HardDrive className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{statistics.total_size_formatted}</div>
-              <p className="text-xs text-muted-foreground">إجمالي المساحة</p>
+              <p className="text-xs text-muted-foreground">{t('statTotalSizeUnit')}</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">آخر نسخة</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('statLastBackup')}</CardTitle>
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {statistics.last_backup ? formatDate(statistics.last_backup) : 'لا يوجد'}
+                {statistics.last_backup ? formatDate(statistics.last_backup) : t('statNone')}
               </div>
-              <p className="text-xs text-muted-foreground">آخر نسخة احتياطية</p>
+              <p className="text-xs text-muted-foreground">{t('statLastBackupUnit')}</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">هذا الشهر</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('statThisMonth')}</CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{statistics.backups_this_month}</div>
-              <p className="text-xs text-muted-foreground">نسخة احتياطية</p>
+              <p className="text-xs text-muted-foreground">{t('statBackupUnit')}</p>
             </CardContent>
           </Card>
         </div>
@@ -199,21 +205,21 @@ const BackupPage: React.FC = () => {
       {/* Backups List */}
       <Card>
         <CardHeader>
-          <CardTitle>النسخ الاحتياطية المتاحة</CardTitle>
+          <CardTitle>{t('availableBackupsTitle')}</CardTitle>
           <CardDescription>
-            قائمة بجميع النسخ الاحتياطية المحفوظة
+            {t('availableBackupsDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {backups.length === 0 ? (
             <div className="text-center py-8">
               <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">لا توجد نسخ احتياطية</h3>
+              <h3 className="text-lg font-medium mb-2">{t('noBackupsTitle')}</h3>
               <p className="text-muted-foreground mb-4">
-                قم بإنشاء أول نسخة احتياطية لحماية بياناتك
+                {t('noBackupsDescription')}
               </p>
               <Button onClick={() => setShowCreateDialog(true)}>
-                إنشاء نسخة احتياطية
+                {t('createBackup')}
               </Button>
             </div>
           ) : (
@@ -236,12 +242,12 @@ const BackupPage: React.FC = () => {
                         </Badge>
                         {backup.include_data && (
                           <Badge variant="secondary" className="text-xs">
-                            بيانات
+                            {t('badgeData')}
                           </Badge>
                         )}
                         {backup.include_structure && (
                           <Badge variant="secondary" className="text-xs">
-                            هيكل
+                            {t('badgeStructure')}
                           </Badge>
                         )}
                       </div>
@@ -255,7 +261,7 @@ const BackupPage: React.FC = () => {
                       className="flex items-center gap-1"
                     >
                       <Download className="h-4 w-4" />
-                      تحميل
+                      {t('download')}
                     </Button>
                     <Button
                       variant="outline"
@@ -264,7 +270,7 @@ const BackupPage: React.FC = () => {
                       className="flex items-center gap-1 text-destructive hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />
-                      حذف
+                      {t('delete')}
                     </Button>
                   </div>
                 </div>
@@ -278,39 +284,39 @@ const BackupPage: React.FC = () => {
       {showCreateDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-background p-6 rounded-lg w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">إنشاء نسخة احتياطية</h2>
+            <h2 className="text-xl font-bold mb-4">{t('createDialogTitle')}</h2>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="description">الوصف (اختياري)</Label>
+                <Label htmlFor="description">{t('descriptionLabel')}</Label>
                 <Input
                   id="description"
                   value={createForm.description}
                   onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
-                  placeholder="وصف النسخة الاحتياطية"
+                  placeholder={t('descriptionPlaceholder')}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <div className="flex items-center space-x-2 space-x-reverse">
                   <Checkbox
                     id="include_data"
                     checked={createForm.include_data}
-                    onCheckedChange={(checked) => 
+                    onCheckedChange={(checked) =>
                       setCreateForm({ ...createForm, include_data: checked as boolean })
                     }
                   />
-                  <Label htmlFor="include_data">تضمين البيانات</Label>
+                  <Label htmlFor="include_data">{t('includeDataLabel')}</Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2 space-x-reverse">
                   <Checkbox
                     id="include_structure"
                     checked={createForm.include_structure}
-                    onCheckedChange={(checked) => 
+                    onCheckedChange={(checked) =>
                       setCreateForm({ ...createForm, include_structure: checked as boolean })
                     }
                   />
-                  <Label htmlFor="include_structure">تضمين هيكل الجداول</Label>
+                  <Label htmlFor="include_structure">{t('includeStructureLabel')}</Label>
                 </div>
               </div>
 
@@ -320,13 +326,13 @@ const BackupPage: React.FC = () => {
                   onClick={() => setShowCreateDialog(false)}
                   disabled={creating}
                 >
-                  إلغاء
+                  {t('cancel')}
                 </Button>
                 <Button
                   onClick={handleCreateBackup}
                   disabled={creating || (!createForm.include_data && !createForm.include_structure)}
                 >
-                  {creating ? 'جاري الإنشاء...' : 'إنشاء'}
+                  {creating ? t('creating') : t('create')}
                 </Button>
               </div>
             </div>
@@ -338,11 +344,11 @@ const BackupPage: React.FC = () => {
       <ConfirmationDialog
         open={deleteDialog.show}
         onOpenChange={(open) => setDeleteDialog({ show: open, backup: null })}
-        title="حذف النسخة الاحتياطية"
-        description={`هل أنت متأكد من حذف النسخة الاحتياطية "${deleteDialog.backup?.filename}"؟ لا يمكن التراجع عن هذا الإجراء.`}
+        title={t('deleteDialogTitle')}
+        description={t('deleteDialogDescription', { filename: deleteDialog.backup?.filename })}
         onConfirm={handleDeleteBackup}
-        confirmText="حذف"
-        cancelText="إلغاء"
+        confirmText={t('delete')}
+        cancelText={t('cancel')}
         variant="destructive"
       />
     </div>

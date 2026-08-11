@@ -11,6 +11,12 @@
   "totalCostOfSalesDesc": "تكلفة البضاعة المباعة",
   "totalExpenses": "إجمالي المصروفات",
   "totalExpensesDesc": "مصروفات الفترة المحددة",
+  "totalSalesReturn": "إجمالي مرتجعات المبيعات",
+  "totalSalesReturnDesc": "قيمة المرتجعات المسجلة للفترة المحددة",
+  "totalDiscount": "إجمالي الخصومات",
+  "totalDiscountDesc": "الخصومات الممنوحة على الفواتير للفترة المحددة",
+  "totalPurchases": "إجمالي المشتريات",
+  "totalPurchasesDesc": "المشتريات للفترة المحددة",
   "profit": "الأرباح",
   "profitDesc": "المدفوعات − المصروفات − التكلفة",
   "viewAll": "عرض الكل",
@@ -21,5 +27,8 @@
   "outOfStockDesc": "المنتجات التي وصل مخزونها إلى صفر",
   "outOfStockEmpty": "لا توجد منتجات نافذة المخزون حالياً",
   "productColumn": "المنتج",
-  "currentStockColumn": "المخزون الحالي"
+  "currentStockColumn": "المخزون الحالي",
+  "revenueByPaymentMethodTitle": "الإيرادات حسب طريقة الدفع",
+  "revenueByPaymentMethodDesc": "المدفوعات المحصلة للفترة المحددة، حسب الطريقة",
+  "revenueByPaymentMethodEmpty": "لا توجد مدفوعات محصلة للفترة المحددة"
 }

@@ -24,6 +24,7 @@ import unitService, { Unit, UnitFormData } from "@/services/UnitService";
 // --- Form Types ---
 type UnitFormValues = {
   name: string;
+  name_en?: string;
   description?: string;
   is_active: boolean;
   is_default: boolean;
@@ -47,9 +48,10 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
   const [serverError, setServerError] = useState<string | null>(null);
 
   const form = useForm<UnitFormValues>({
-    defaultValues: { 
-      name: "", 
-      description: "", 
+    defaultValues: {
+      name: "",
+      name_en: "",
+      description: "",
       is_active: true,
       is_default: false
     },
@@ -68,6 +70,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
       if (isEditMode && unitToEdit) {
         reset({
           name: unitToEdit.name || "",
+          name_en: unitToEdit.name_en || "",
           description: unitToEdit.description || "",
           is_active: unitToEdit.is_active,
           is_default: unitToEdit.is_default,
@@ -75,6 +78,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
       } else {
         reset({
           name: "",
+          name_en: "",
           description: "",
           is_active: true,
           is_default: false,
@@ -94,6 +98,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
     }
     const dataToSend: UnitFormData = {
       name: data.name.trim(),
+      name_en: data.name_en?.trim() || undefined,
       description: data.description?.trim() || undefined,
       is_active: data.is_active,
       is_default: data.is_default,
@@ -205,6 +210,24 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
                   error={!!fieldState.error}
                   helperText={fieldState.error?.message || ""}
                   autoFocus
+                />
+              )}
+            />
+
+            {/* English Name Field */}
+            <Controller
+              control={control}
+              name="name_en"
+              render={({ field, fieldState }) => (
+                <TextField
+                  {...field}
+                  label="الاسم بالإنجليزية (English Name)"
+                  fullWidth
+                  size="small"
+                  disabled={isSubmitting}
+                  value={field.value ?? ""}
+                  error={!!fieldState.error}
+                  helperText={fieldState.error?.message || ""}
                 />
               )}
             />

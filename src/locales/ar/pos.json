@@ -215,6 +215,7 @@
   "batchUpdateFailed": "فشل في تحديث اختيار الدفعة",
 
   "insufficientStockFor": "الكمية المتوفرة من \"{{name}}\" غير كافية",
+  "zeroPriceProduct": "لا يوجد سعر بيع محدد لـ \"{{name}}\" ولا يمكن إضافته",
   "invalidDiscountValue": "قيمة خصم غير صحيحة",
   "discountApplied": "تم تطبيق الخصم",
   "failedToLoadSale": "فشل تحميل الفاتورة",
@@ -248,6 +249,8 @@
   "editsSavedSuccessfully": "تم حفظ التعديلات بنجاح",
   "editsSaveFailed": "فشل حفظ التعديلات",
   "paymentRecordedSuccessfully": "تم تسجيل الدفعة بنجاح",
+  "noWarehouseAssigned": "لا يوجد مستودع معيّن",
+  "noWarehouseAssignedError": "لم يتم تعيين مستودع لك. تواصل مع المسؤول قبل إتمام عمليات البيع.",
   "noOpenShift": "لا توجد وردية مفتوحة",
   "openShiftToStart": "افتح وردية جديدة للبدء في البيع",
   "contactAdminToOpenShift": "تواصل مع المسؤول لفتح وردية عمل",

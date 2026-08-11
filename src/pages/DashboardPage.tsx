@@ -16,8 +16,11 @@ import {
   LucideIcon,
   PackageMinus,
   PackageX,
+  Percent,
   Receipt,
   RefreshCw,
+  RotateCcw,
+  ShoppingCart,
   TrendingUp,
   Wallet,
 } from "lucide-react";
@@ -28,6 +31,11 @@ import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 import { cn } from "@/lib/utils";
 import productService, { type Product } from "@/services/productService";
 
+interface RevenueByPaymentMethod {
+  method: string;
+  amount: number;
+}
+
 interface ProfitSummaryData {
   start_date: string;
   end_date: string;
@@ -36,7 +44,78 @@ interface ProfitSummaryData {
   expenses_amount: number;
   cost_of_sales_amount: number;
   profit: number;
+  sales_return_amount: number;
+  discount_amount: number;
+  total_purchases_amount: number;
+  revenue_by_payment_method: RevenueByPaymentMethod[];
 }
+
+const PAYMENT_METHOD_LABEL_KEYS: Record<string, string> = {
+  cash: "paymentMethodCash",
+  bankak: "paymentMethodBankak",
+  fawry: "paymentMethodFawry",
+  ocash: "paymentMethodOcash",
+  bank: "paymentMethodBank",
+  bank_transfer: "paymentMethodBankTransfer",
+  card: "paymentMethodCard",
+  visa: "paymentMethodVisa",
+};
+
+const RevenueByPaymentMethodCard: React.FC<{
+  title: string;
+  description: string;
+  emptyLabel: string;
+  data: RevenueByPaymentMethod[];
+  loading: boolean;
+}> = ({ title, description, emptyLabel, data, loading }) => {
+  const { t } = useTranslation("reports");
+  const formatCurrency = useFormatCurrency();
+  const total = data.reduce((sum, r) => sum + r.amount, 0);
+
+  return (
+    <Card className="min-w-0">
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="space-y-2">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </div>
+        ) : data.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 text-center text-sm text-muted-foreground">
+            <Wallet className="mb-2 h-8 w-8 text-muted-foreground/50" />
+            {emptyLabel}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {data.map((row) => {
+              const pct = total > 0 ? (row.amount / total) * 100 : 0;
+              const labelKey = PAYMENT_METHOD_LABEL_KEYS[row.method];
+              const label = labelKey ? t(labelKey) : row.method;
+              return (
+                <div key={row.method}>
+                  <div className="mb-1 flex items-center justify-between gap-2 text-sm">
+                    <span className="font-medium text-foreground">{label}</span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {formatCurrency(row.amount)} · {pct.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
 const StatCard: React.FC<{
   title: string;
@@ -46,7 +125,7 @@ const StatCard: React.FC<{
   loading?: boolean;
   emphasize?: boolean;
 }> = ({ title, value, description, icon: Icon, loading, emphasize }) => (
-  <Card>
+  <Card className="h-full">
     <CardHeader>
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -58,7 +137,7 @@ const StatCard: React.FC<{
         </div>
       </div>
     </CardHeader>
-    <CardContent className="pt-3">
+    <CardContent className="mt-auto pt-3">
       {loading ? (
         <Skeleton className="h-9 w-32" />
       ) : (
@@ -209,6 +288,18 @@ const DashboardPage: React.FC = () => {
     fetchOutOfStock();
   }, [fetchOutOfStock]);
 
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchData();
+        fetchLowStock();
+        fetchOutOfStock();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [fetchData, fetchLowStock, fetchOutOfStock]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -241,7 +332,7 @@ const DashboardPage: React.FC = () => {
         </Alert>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         <StatCard
           title={t("totalRevenue")}
           value={formatCurrency(data?.total_sales_amount ?? 0)}
@@ -271,12 +362,43 @@ const DashboardPage: React.FC = () => {
           loading={loading}
         />
         <StatCard
+          title={t("totalSalesReturn")}
+          value={formatCurrency(data?.sales_return_amount ?? 0)}
+          description={t("totalSalesReturnDesc")}
+          icon={RotateCcw}
+          loading={loading}
+        />
+        <StatCard
+          title={t("totalDiscount")}
+          value={formatCurrency(data?.discount_amount ?? 0)}
+          description={t("totalDiscountDesc")}
+          icon={Percent}
+          loading={loading}
+        />
+        <StatCard
+          title={t("totalPurchases")}
+          value={formatCurrency(data?.total_purchases_amount ?? 0)}
+          description={t("totalPurchasesDesc")}
+          icon={ShoppingCart}
+          loading={loading}
+        />
+        <StatCard
           title={t("profit")}
           value={formatCurrency(data?.profit ?? 0)}
           description={t("profitDesc")}
           icon={TrendingUp}
           loading={loading}
           emphasize
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <RevenueByPaymentMethodCard
+          title={t("revenueByPaymentMethodTitle")}
+          description={t("revenueByPaymentMethodDesc")}
+          emptyLabel={t("revenueByPaymentMethodEmpty")}
+          data={data?.revenue_by_payment_method ?? []}
+          loading={loading}
         />
       </div>
 

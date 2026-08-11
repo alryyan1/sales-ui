@@ -23,5 +23,18 @@
   "errorSelfParent": "Category cannot be its own parent.",
   "errorHasProducts": "Cannot delete category. There are products assigned to it.",
   "errorHasSubcategories": "Cannot delete category. It has subcategories.",
-  "searchPlaceholder": "Search"
-} 
+  "searchPlaceholder": "Search categories...",
+  "tableName": "Category Name",
+  "tableParent": "Parent Category",
+  "tableDefault": "Default",
+  "tableActions": "Actions",
+  "noParentDash": "---",
+  "previous": "Previous",
+  "next": "Next",
+  "pageIndicator": "Page {{current}} of {{total}}",
+  "confirmDeleteTitle": "Confirm Delete",
+  "cancelButton": "Cancel",
+  "deleteButton": "Delete",
+  "errorTitle": "Error",
+  "successTitle": "Success"
+}

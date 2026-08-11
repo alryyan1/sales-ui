@@ -1,6 +1,15 @@
 // src/components/admin/users/UserFormModal.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
+import {
+  UserRound,
+  KeyRound,
+  ShieldCheck,
+  PanelLeft,
+  Eye,
+  EyeOff,
+  Settings2,
+} from "lucide-react";
 
 import {
   Dialog,
@@ -15,6 +24,8 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -65,8 +76,13 @@ function isAdminRoleName(name: string) {
   return name === "admin" || name === "ادمن";
 }
 
-function getPasswordStrength(password: string): { label: string; className: string } {
-  if (!password) return { label: "", className: "" };
+function getPasswordStrength(password: string): {
+  label: string;
+  textClass: string;
+  barClass: string;
+  percent: number;
+} {
+  if (!password) return { label: "", textClass: "", barClass: "", percent: 0 };
   let score = 0;
   if (password.length >= 8) score++;
   if (password.length >= 12) score++;
@@ -74,11 +90,34 @@ function getPasswordStrength(password: string): { label: string; className: stri
   if (/[0-9]/.test(password)) score++;
   if (/[^A-Za-z0-9]/.test(password)) score++;
 
-  if (score <= 1) return { label: "ضعيفة جداً", className: "text-destructive" };
-  if (score === 2) return { label: "ضعيفة", className: "text-amber-600 dark:text-amber-500" };
-  if (score === 3) return { label: "متوسطة", className: "text-blue-600 dark:text-blue-400" };
-  if (score === 4) return { label: "جيدة", className: "text-blue-600 dark:text-blue-400" };
-  return { label: "قوية", className: "text-green-600 dark:text-green-500" };
+  const percent = (score / 5) * 100;
+  if (score <= 1)
+    return {
+      label: "ضعيفة جداً",
+      textClass: "text-destructive",
+      barClass: "[&>[data-slot=progress-indicator]]:bg-destructive",
+      percent,
+    };
+  if (score === 2)
+    return {
+      label: "ضعيفة",
+      textClass: "text-amber-600 dark:text-amber-500",
+      barClass: "[&>[data-slot=progress-indicator]]:bg-amber-500",
+      percent,
+    };
+  if (score === 3 || score === 4)
+    return {
+      label: score === 3 ? "متوسطة" : "جيدة",
+      textClass: "text-blue-600 dark:text-blue-400",
+      barClass: "[&>[data-slot=progress-indicator]]:bg-blue-500",
+      percent,
+    };
+  return {
+    label: "قوية",
+    textClass: "text-green-600 dark:text-green-500",
+    barClass: "[&>[data-slot=progress-indicator]]:bg-green-500",
+    percent,
+  };
 }
 
 const UserFormModal: React.FC<UserFormModalProps> = ({
@@ -98,6 +137,8 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
 
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
+
+  const [navPermissionsOpen, setNavPermissionsOpen] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -127,8 +168,11 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
     reset,
     setError,
     control,
+    watch,
     formState: { isSubmitting },
   } = form;
+
+  const nameValue = watch("name");
 
   useEffect(() => {
     if (!isOpen) return;
@@ -136,6 +180,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
     setShowPassword(false);
     setShowConfirmPassword(false);
     setPasswordValue("");
+    setNavPermissionsOpen(false);
 
     if (isEditMode && userToEdit) {
       const navs = userToEdit.allowed_navs;
@@ -237,14 +282,32 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
 
   const pwStrength = getPasswordStrength(passwordValue);
 
+  const navSummaryLabel = useMemo(() => {
+    if (allowedNavs === null) return "كل الصفحات متاحة";
+    if (allowedNavs.length === 0) return "لم يتم تحديد أي صفحة بعد";
+    return `${allowedNavs.length} صفحة محددة`;
+  }, [allowedNavs]);
+
+  const initials = (userToEdit?.name || nameValue || "؟").trim().charAt(0).toUpperCase();
+
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={(open) => !isSubmitting && !open && onClose()}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto" dir="rtl">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? `تعديل: ${userToEdit?.name}` : "إضافة مستخدم جديد"}</DialogTitle>
-          <DialogDescription>
-            {isEditMode ? "تعديل بيانات وصلاحيات المستخدم" : "أدخل بيانات المستخدم الجديد وحدد صلاحياته"}
-          </DialogDescription>
+          <div className="flex items-center gap-3">
+            <Avatar className="size-9">
+              <AvatarFallback className="bg-primary/10 font-semibold text-primary">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <DialogTitle>{isEditMode ? `تعديل: ${userToEdit?.name}` : "إضافة مستخدم جديد"}</DialogTitle>
+              <DialogDescription>
+                {isEditMode ? "تعديل بيانات وصلاحيات المستخدم" : "أدخل بيانات المستخدم الجديد وحدد صلاحياته"}
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
         {serverError && (
@@ -256,8 +319,11 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
         <Form {...form}>
           <form id="user-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {/* ── Basic info ── */}
-            <div className="rounded-lg border p-4 space-y-3">
-              <h3 className="text-sm font-semibold">البيانات الأساسية</h3>
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <UserRound className="size-3.5" />
+                <h3 className="text-xs font-medium uppercase tracking-wide">البيانات الأساسية</h3>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <FormField
                   control={control}
@@ -318,83 +384,98 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
 
             {/* ── Password (create only) ── */}
             {!isEditMode && (
-              <div className="rounded-lg border p-4 space-y-3">
-                <h3 className="text-sm font-semibold">كلمة المرور</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <FormField
-                    control={control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>كلمة المرور</FormLabel>
-                        <div className="flex gap-2">
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <KeyRound className="size-3.5" />
+                    <h3 className="text-xs font-medium uppercase tracking-wide">كلمة المرور</h3>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <FormField
+                      control={control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>كلمة المرور</FormLabel>
                           <FormControl>
-                            <Input
-                              type={showPassword ? "text" : "password"}
-                              placeholder="8 أحرف على الأقل"
-                              {...field}
-                              onChange={(e) => {
-                                field.onChange(e);
-                                setPasswordValue(e.target.value);
-                              }}
-                            />
+                            <div className="relative">
+                              <Input
+                                type={showPassword ? "text" : "password"}
+                                placeholder="8 أحرف على الأقل"
+                                className="pe-9"
+                                {...field}
+                                onChange={(e) => {
+                                  field.onChange(e);
+                                  setPasswordValue(e.target.value);
+                                }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowPassword((v) => !v)}
+                                className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                tabIndex={-1}
+                              >
+                                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                              </button>
+                            </div>
                           </FormControl>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShowPassword((v) => !v)}
-                          >
-                            {showPassword ? "إخفاء" : "إظهار"}
-                          </Button>
-                        </div>
-                        {passwordValue && (
-                          <p className="text-xs text-muted-foreground">
-                            قوة كلمة المرور: <span className={cn("font-medium", pwStrength.className)}>{pwStrength.label}</span>
-                          </p>
-                        )}
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={control}
-                    name="password_confirmation"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>تأكيد كلمة المرور</FormLabel>
-                        <div className="flex gap-2">
+                          {passwordValue && (
+                            <div className="space-y-1">
+                              <Progress value={pwStrength.percent} className={cn("h-1.5", pwStrength.barClass)} />
+                              <p className="text-xs text-muted-foreground">
+                                قوة كلمة المرور: <span className={cn("font-medium", pwStrength.textClass)}>{pwStrength.label}</span>
+                              </p>
+                            </div>
+                          )}
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="password_confirmation"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>تأكيد كلمة المرور</FormLabel>
                           <FormControl>
-                            <Input
-                              type={showConfirmPassword ? "text" : "password"}
-                              placeholder="أعد إدخال كلمة المرور"
-                              {...field}
-                            />
+                            <div className="relative">
+                              <Input
+                                type={showConfirmPassword ? "text" : "password"}
+                                placeholder="أعد إدخال كلمة المرور"
+                                className="pe-9"
+                                {...field}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowConfirmPassword((v) => !v)}
+                                className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                tabIndex={-1}
+                              >
+                                {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                              </button>
+                            </div>
                           </FormControl>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShowConfirmPassword((v) => !v)}
-                          >
-                            {showConfirmPassword ? "إخفاء" : "إظهار"}
-                          </Button>
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
-              </div>
+              </>
             )}
 
+            <Separator />
+
             {/* ── Roles ── */}
-            <div className="rounded-lg border p-4 space-y-3">
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold">الأدوار الوظيفية</h3>
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <ShieldCheck className="size-3.5" />
+                  <h3 className="text-xs font-medium uppercase tracking-wide">الأدوار الوظيفية</h3>
+                </div>
                 <span className="text-xs text-muted-foreground">{availableRoles.length} دور متاح</span>
               </div>
-              <Separator />
               <FormField
                 control={control}
                 name="roles"
@@ -440,12 +521,28 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
               />
             </div>
 
-            {/* ── Navigation permissions ── */}
-            <NavigationPermissionsSection
-              value={allowedNavs}
-              onChange={setAllowedNavs}
-              isSuperadmin={isSuperadmin}
-            />
+            <Separator />
+
+            {/* ── Navigation permissions — summary row, editing happens in its own dialog ── */}
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2 min-w-0">
+                <PanelLeft className="size-3.5 shrink-0 text-muted-foreground" />
+                <div className="min-w-0">
+                  <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">القوائم الجانبية</h3>
+                  <p className="truncate text-xs text-muted-foreground">{navSummaryLabel}</p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 gap-1.5"
+                onClick={() => setNavPermissionsOpen(true)}
+              >
+                <Settings2 className="size-3.5" />
+                تخصيص القوائم الجانبية
+              </Button>
+            </div>
           </form>
         </Form>
 
@@ -459,6 +556,31 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* ── Sidebar navigation customization — its own dialog, on top of the user form ── */}
+    <Dialog open={navPermissionsOpen} onOpenChange={setNavPermissionsOpen}>
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto" dir="rtl">
+        <DialogHeader>
+          <DialogTitle>تخصيص القوائم الجانبية</DialogTitle>
+          <DialogDescription>
+            اختر الصفحات التي تظهر في القائمة الجانبية لهذا المستخدم.
+          </DialogDescription>
+        </DialogHeader>
+
+        <NavigationPermissionsSection
+          value={allowedNavs}
+          onChange={setAllowedNavs}
+          isSuperadmin={isSuperadmin}
+        />
+
+        <DialogFooter>
+          <Button type="button" onClick={() => setNavPermissionsOpen(false)}>
+            تم
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };
 

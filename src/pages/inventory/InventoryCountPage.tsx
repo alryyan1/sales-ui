@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  Eye,
   Loader2,
   MoreHorizontal,
   Pencil,
@@ -468,6 +469,21 @@ const InventoryCountPage: React.FC = () => {
                         </TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-1.5">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-8"
+                                  onClick={() => navigate(`/inventory/counts/${count.id}`)}
+                                >
+                                  <Eye className="size-4" />
+                                  <span className="sr-only">{t("viewDetailsButton")}</span>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{t("viewDetailsButton")}</TooltipContent>
+                            </Tooltip>
+
                             {count.status === "completed" && (
                               <>
                                 <Button

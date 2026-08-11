@@ -106,7 +106,11 @@ export function SalesAdvancedFiltersSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" dir={direction} className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+      <SheetContent
+        side={direction === "rtl" ? "left" : "right"}
+        dir={direction}
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-md"
+      >
         <SheetHeader className="border-b px-5 py-4">
           <SheetTitle className="text-base">{t("advancedFilters")}</SheetTitle>
           <SheetDescription>{t("advancedFiltersDescription")}</SheetDescription>

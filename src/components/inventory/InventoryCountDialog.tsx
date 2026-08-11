@@ -31,6 +31,7 @@ import inventoryCountService, {
 } from "@/services/inventoryCountService";
 import { warehouseService } from "@/services/warehouseService";
 import { useLanguage } from "@/context/LanguageContext";
+import { useAuth } from "@/context/AuthContext";
 
 interface InventoryCountDialogProps {
   open: boolean;
@@ -55,15 +56,18 @@ const InventoryCountDialog: React.FC<InventoryCountDialogProps> = ({
 }) => {
   const isEdit = !!count;
   const { direction } = useLanguage();
+  const { user } = useAuth();
   const { t } = useTranslation("inventoryCount");
   const { t: tCommon } = useTranslation("common");
+
+  const defaultWarehouseId = user?.warehouse_id ? String(user.warehouse_id) : "";
 
   const {
     control,
     handleSubmit,
     reset,
   } = useForm<FormValues>({
-    defaultValues: { warehouse_id: "", count_date: getToday(), notes: "" },
+    defaultValues: { warehouse_id: defaultWarehouseId, count_date: getToday(), notes: "" },
   });
 
   const { data: warehouses } = useQuery({
@@ -96,9 +100,9 @@ const InventoryCountDialog: React.FC<InventoryCountDialogProps> = ({
         notes: count.notes || "",
       });
     } else {
-      reset({ warehouse_id: "", count_date: getToday(), notes: "" });
+      reset({ warehouse_id: defaultWarehouseId, count_date: getToday(), notes: "" });
     }
-  }, [open, count, reset]);
+  }, [open, count, reset, defaultWarehouseId]);
 
   const onSubmit = (data: FormValues) => {
     mutation.mutate({

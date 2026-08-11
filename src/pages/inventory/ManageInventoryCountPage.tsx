@@ -1,59 +1,63 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { useLanguage } from "@/context/LanguageContext";
+import dayjs from "dayjs";
 import {
-  Box,
-  Paper,
-  Typography,
-  Button,
+  ArrowLeft,
+  Activity,
+  AlertTriangle,
+  Check,
+  CheckCheck,
+  Clock,
+  ClipboardList,
+  Loader2,
+  Package,
+  Play,
+  Plus,
+  Save,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
+  TableHeader,
   TableRow,
-  IconButton,
-  Chip,
-  TextField,
-  CircularProgress,
-  InputAdornment,
-  Stack,
-  Divider,
-} from "@mui/material";
+} from "@/components/ui/table";
 import {
-  ArrowBack,
-  Add,
-  Delete,
-  CheckCircle,
-  Cancel,
-  Save,
-  Search,
-  Inventory,
-  Assessment,
-  Warning,
-  ListAlt,
-  PlayArrow,
-  AccessTime,
-  DoneAll,
-} from "@mui/icons-material";
-import inventoryCountService, {
-  InventoryCountItem,
-} from "@/services/inventoryCountService";
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
+
+import { useLanguage } from "@/context/LanguageContext";
+import inventoryCountService, { InventoryCountItem } from "@/services/inventoryCountService";
 import productService from "@/services/productService";
-import dayjs from "dayjs";
 import InlineCreateInventoryCountItem from "@/components/inventory/InlineCreateInventoryCountItem";
 import { ProductImage } from "@/components/products/ProductImage";
 
-const STATUS_COLOR: Record<string, "default" | "info" | "warning" | "success" | "error"> = {
-  draft: "default",
+const STATUS_BADGE: Record<string, "secondary" | "info" | "warning" | "success" | "destructive"> = {
+  draft: "secondary",
   in_progress: "info",
   completed: "warning",
   approved: "success",
-  rejected: "error",
+  rejected: "destructive",
 };
+
+type PendingAction = "approve" | "reject" | null;
 
 const ManageInventoryCountPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -76,7 +80,8 @@ const ManageInventoryCountPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [localQuantities, setLocalQuantities] = useState<Record<number, string>>({});
   const [savingItems, setSavingItems] = useState<Record<number, boolean>>({});
-  const debounceTimers = useRef<Record<number, NodeJS.Timeout>>({});
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
+  const debounceTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
 
   const { data: count, isLoading } = useQuery({
     queryKey: ["inventory-count", id],
@@ -89,12 +94,14 @@ const ManageInventoryCountPage: React.FC = () => {
     queryFn: () => productService.getProducts(1, "", "name", "asc", 1000),
   });
 
+  const invalidateCount = () => queryClient.invalidateQueries({ queryKey: ["inventory-count", id] });
+
   const addItemMutation = useMutation({
     mutationFn: (data: { product_id: number; actual_quantity?: number }) =>
       inventoryCountService.addCountItem(Number(id), data),
     onSuccess: () => {
       toast.success(tManage("productAddedSuccess"));
-      queryClient.invalidateQueries({ queryKey: ["inventory-count", id] });
+      invalidateCount();
     },
     onError: (error) => toast.error(inventoryCountService.getErrorMessage(error)),
   });
@@ -104,7 +111,7 @@ const ManageInventoryCountPage: React.FC = () => {
       inventoryCountService.updateCountItem(Number(id), itemId, { actual_quantity }),
     onSuccess: (_, { itemId }) => {
       setSavingItems((prev) => ({ ...prev, [itemId]: false }));
-      queryClient.invalidateQueries({ queryKey: ["inventory-count", id] });
+      invalidateCount();
     },
     onError: (error, { itemId }) => {
       setSavingItems((prev) => ({ ...prev, [itemId]: false }));
@@ -113,21 +120,20 @@ const ManageInventoryCountPage: React.FC = () => {
   });
 
   const deleteItemMutation = useMutation({
-    mutationFn: (itemId: number) =>
-      inventoryCountService.deleteCountItem(Number(id), itemId),
+    mutationFn: (itemId: number) => inventoryCountService.deleteCountItem(Number(id), itemId),
     onSuccess: () => {
       toast.success(tManage("productDeletedSuccess"));
-      queryClient.invalidateQueries({ queryKey: ["inventory-count", id] });
+      invalidateCount();
     },
     onError: (error) => toast.error(inventoryCountService.getErrorMessage(error)),
   });
 
   const updateStatusMutation = useMutation({
     mutationFn: (status: string) =>
-      inventoryCountService.updateInventoryCount(Number(id), { status } as any),
+      inventoryCountService.updateInventoryCount(Number(id), { status } as never),
     onSuccess: () => {
       toast.success(tManage("statusUpdatedSuccess"));
-      queryClient.invalidateQueries({ queryKey: ["inventory-count", id] });
+      invalidateCount();
     },
     onError: (error) => toast.error(inventoryCountService.getErrorMessage(error)),
   });
@@ -136,19 +142,29 @@ const ManageInventoryCountPage: React.FC = () => {
     mutationFn: () => inventoryCountService.approveCount(Number(id)),
     onSuccess: () => {
       toast.success(tManage("countApprovedSuccess"));
-      queryClient.invalidateQueries({ queryKey: ["inventory-count", id] });
+      setPendingAction(null);
+      invalidateCount();
     },
-    onError: (error) => toast.error(inventoryCountService.getErrorMessage(error)),
+    onError: (error) => {
+      setPendingAction(null);
+      toast.error(inventoryCountService.getErrorMessage(error));
+    },
   });
 
   const rejectMutation = useMutation({
     mutationFn: () => inventoryCountService.rejectCount(Number(id)),
     onSuccess: () => {
       toast.success(tManage("countRejectedSuccess"));
-      queryClient.invalidateQueries({ queryKey: ["inventory-count", id] });
+      setPendingAction(null);
+      invalidateCount();
     },
-    onError: (error) => toast.error(inventoryCountService.getErrorMessage(error)),
+    onError: (error) => {
+      setPendingAction(null);
+      toast.error(inventoryCountService.getErrorMessage(error));
+    },
   });
+
+  const isActing = approveMutation.isPending || rejectMutation.isPending;
 
   const handleQuantityChange = (item: InventoryCountItem, value: string) => {
     setLocalQuantities((prev) => ({ ...prev, [item.id]: value }));
@@ -163,11 +179,18 @@ const ManageInventoryCountPage: React.FC = () => {
   };
 
   useEffect(() => {
-    return () => { Object.values(debounceTimers.current).forEach(clearTimeout); };
+    const timers = debounceTimers.current;
+    return () => {
+      Object.values(timers).forEach(clearTimeout);
+    };
   }, []);
 
-  const getDiffColor = (diff: number) =>
-    diff > 0 ? "success.main" : diff < 0 ? "error.main" : "text.disabled";
+  const getDiffClass = (diff: number) =>
+    diff > 0
+      ? "text-green-600 dark:text-green-500"
+      : diff < 0
+        ? "text-red-600 dark:text-red-500"
+        : "text-muted-foreground";
 
   const summary = useMemo(() => {
     const items = count?.items || [];
@@ -178,240 +201,296 @@ const ManageInventoryCountPage: React.FC = () => {
     };
   }, [count?.items]);
 
-  const canEdit     = count?.status === "draft" || count?.status === "in_progress";
+  const canEdit = count?.status === "draft" || count?.status === "in_progress";
   const canComplete = count?.status === "in_progress" && (count?.items?.length ?? 0) > 0;
-  const canApprove  = count?.status === "completed";
+  const canApprove = count?.status === "completed";
 
-  const availableProducts = products?.data?.filter(
-    (p: any) => !count?.items?.some((i) => i.product_id === p.id)
-  ) || [];
+  const availableProducts = useMemo(
+    () => products?.data?.filter((p) => !count?.items?.some((i) => i.product_id === p.id)) ?? [],
+    [products?.data, count?.items]
+  );
 
   const filteredItems = useMemo(() => {
     if (!count?.items) return [];
-    if (!searchQuery) return count.items;
-    const q = searchQuery.toLowerCase();
-    return count.items.filter((i) =>
-      i.product?.name.toLowerCase().includes(q) ||
-      i.product?.sku?.toLowerCase().includes(q) ||
-      i.product?.sku?.toLowerCase().includes(q)
+    if (!searchQuery.trim()) return count.items;
+    const q = searchQuery.trim().toLowerCase();
+    return count.items.filter(
+      (i) => i.product?.name.toLowerCase().includes(q) || i.product?.sku?.toLowerCase().includes(q)
     );
   }, [count?.items, searchQuery]);
 
-  if (isLoading) return (
-    <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "50vh" }}>
-      <CircularProgress />
-    </Box>
-  );
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
-  if (!count) return (
-    <Box sx={{ p: 4, textAlign: "center" }}>
-      <Typography variant="h6" color="text.secondary">{tManage("countNotFound")}</Typography>
-      <Button variant="outlined" sx={{ mt: 2 }} onClick={() => navigate("/inventory/counts")}>{tManage("backToList")}</Button>
-    </Box>
-  );
+  if (!count) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-16 text-center">
+        <ClipboardList className="size-10 text-muted-foreground" />
+        <p className="text-lg font-medium text-foreground">{tManage("countNotFound")}</p>
+        <Button variant="outline" onClick={() => navigate("/inventory/counts")}>
+          {tManage("backToList")}
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <Box sx={{ p: 2 }} dir={direction}>
+    <div dir={direction} className="min-h-screen bg-background">
+      <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
+        {/* Header */}
+        <div className="mb-6 border-b pb-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="mt-0.5 size-8 shrink-0"
+                onClick={() => navigate("/inventory/counts")}
+              >
+                <ArrowLeft className="size-4" />
+              </Button>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-xl font-semibold tracking-tight text-foreground">
+                    {tManage("countHash", { id: count.id })}
+                  </h1>
+                  <Badge variant={STATUS_BADGE[count.status] ?? "secondary"}>
+                    {STATUS_LABEL[count.status] ?? count.status}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">{count.warehouse?.name}</p>
+              </div>
+            </div>
 
-      {/* ── Compact Header ─────────────────────────────────────────────────── */}
-      <Paper variant="outlined" sx={{ p: 1.5, mb: 2, borderRadius: 2 }}>
-        <Stack direction="row" alignItems="center" gap={1.5} flexWrap="wrap">
-
-          <IconButton size="small" onClick={() => navigate("/inventory/counts")} sx={{ flexShrink: 0 }}>
-            <ArrowBack fontSize="small" />
-          </IconButton>
-
-          <Stack direction="row" alignItems="center" gap={1} sx={{ flexShrink: 0 }}>
-            <Typography variant="subtitle1" fontWeight={700}>{tManage("countHash", { id: count.id })}</Typography>
-            <Chip
-              label={STATUS_LABEL[count.status] ?? count.status}
-              color={STATUS_COLOR[count.status] ?? "default"}
-              size="small"
-              sx={{ fontWeight: 700, fontSize: 11 }}
-            />
-            <Typography variant="caption" color="text.secondary">{count.warehouse?.name}</Typography>
-          </Stack>
-
-          <Divider orientation="vertical" flexItem />
+            <div className="flex flex-wrap items-center gap-2">
+              {canEdit && (
+                <>
+                  <Button size="sm" className="gap-1.5" onClick={() => setShowInlineAdd(true)}>
+                    <Plus className="size-3.5" />
+                    {tCommon("add")}
+                  </Button>
+                  {count.status === "draft" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5"
+                      disabled={updateStatusMutation.isPending}
+                      onClick={() => updateStatusMutation.mutate("in_progress")}
+                    >
+                      {updateStatusMutation.isPending ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <Play className="size-3.5" />
+                      )}
+                      {tManage("startCount")}
+                    </Button>
+                  )}
+                  {canComplete && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5"
+                      disabled={updateStatusMutation.isPending}
+                      onClick={() => updateStatusMutation.mutate("completed")}
+                    >
+                      {updateStatusMutation.isPending ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <Save className="size-3.5" />
+                      )}
+                      {tManage("complete")}
+                    </Button>
+                  )}
+                </>
+              )}
+              {canApprove && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="success"
+                    className="gap-1.5"
+                    onClick={() => setPendingAction("approve")}
+                  >
+                    <Check className="size-3.5" />
+                    {tManage("approve")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-destructive hover:text-destructive"
+                    onClick={() => setPendingAction("reject")}
+                  >
+                    <X className="size-3.5" />
+                    {tManage("reject")}
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
 
           {/* Timestamps */}
-          <Stack direction="row" gap={2} flexWrap="wrap" sx={{ flex: 1, minWidth: 0 }}>
-            <Stack direction="row" alignItems="center" gap={0.5}>
-              <AccessTime sx={{ fontSize: 13, color: "text.disabled" }} />
-              <Typography variant="caption" color="text.secondary">
-                {tManage("createdColon", { date: dayjs(count.created_at).format("YYYY-MM-DD HH:mm") })}
-              </Typography>
-            </Stack>
+          <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Clock className="size-3.5" />
+              {tManage("createdColon", { date: dayjs(count.created_at).format("YYYY-MM-DD HH:mm") })}
+            </span>
             {count.started_at && (
-              <Stack direction="row" alignItems="center" gap={0.5}>
-                <PlayArrow sx={{ fontSize: 13, color: "info.main" }} />
-                <Typography variant="caption" color="info.main">
-                  {tManage("startedColon", { date: dayjs(count.started_at).format("YYYY-MM-DD HH:mm") })}
-                </Typography>
-              </Stack>
+              <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                <Play className="size-3.5" />
+                {tManage("startedColon", { date: dayjs(count.started_at).format("YYYY-MM-DD HH:mm") })}
+              </span>
             )}
             {count.completed_at && (
-              <Stack direction="row" alignItems="center" gap={0.5}>
-                <DoneAll sx={{ fontSize: 13, color: "warning.main" }} />
-                <Typography variant="caption" color="warning.main">
-                  {tManage("completedColon", { date: dayjs(count.completed_at).format("YYYY-MM-DD HH:mm") })}
-                </Typography>
-              </Stack>
+              <span className="flex items-center gap-1 text-amber-600 dark:text-amber-500">
+                <CheckCheck className="size-3.5" />
+                {tManage("completedColon", { date: dayjs(count.completed_at).format("YYYY-MM-DD HH:mm") })}
+              </span>
             )}
             {count.approved_at && (
-              <Stack direction="row" alignItems="center" gap={0.5}>
-                <CheckCircle sx={{ fontSize: 13, color: "success.main" }} />
-                <Typography variant="caption" color="success.main">
-                  {tManage("approvedColon", { date: dayjs(count.approved_at).format("YYYY-MM-DD HH:mm") })}
-                </Typography>
-              </Stack>
+              <span className="flex items-center gap-1 text-green-600 dark:text-green-500">
+                <Check className="size-3.5" />
+                {tManage("approvedColon", { date: dayjs(count.approved_at).format("YYYY-MM-DD HH:mm") })}
+              </span>
             )}
-          </Stack>
+          </div>
+        </div>
 
-          <Divider orientation="vertical" flexItem />
+        {/* Stat cards */}
+        <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="flex items-center gap-3 rounded-xl border bg-card p-4">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
+              <Package className="size-5 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">{tManage("itemUnitLabel")}</p>
+              <p className="text-lg font-semibold leading-tight">{summary.total}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 rounded-xl border bg-card p-4">
+            <div
+              className={cn(
+                "flex size-10 items-center justify-center rounded-lg",
+                summary.diff !== 0 ? "bg-red-50 dark:bg-red-950/40" : "bg-muted"
+              )}
+            >
+              <Activity
+                className={cn("size-5", summary.diff !== 0 ? "text-red-600 dark:text-red-500" : "text-muted-foreground")}
+              />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">{tManage("diffLabel")}</p>
+              <p className={cn("text-lg font-semibold leading-tight", getDiffClass(summary.diff))}>
+                {summary.diff > 0 ? "+" : ""}
+                {summary.diff}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 rounded-xl border bg-card p-4">
+            <div
+              className={cn(
+                "flex size-10 items-center justify-center rounded-lg",
+                summary.withDiff > 0 ? "bg-amber-50 dark:bg-amber-950/40" : "bg-muted"
+              )}
+            >
+              <AlertTriangle
+                className={cn("size-5", summary.withDiff > 0 ? "text-amber-600 dark:text-amber-500" : "text-muted-foreground")}
+              />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">{tManage("withDiffLabel")}</p>
+              <p className="text-lg font-semibold leading-tight">{summary.withDiff}</p>
+            </div>
+          </div>
+        </div>
 
-          {/* Stat pills */}
-          <Stack direction="row" gap={0.75} sx={{ flexShrink: 0 }}>
-            {[
-              { icon: <Inventory sx={{ fontSize: 12 }} />, value: summary.total, label: tManage("itemUnitLabel"), color: "primary.main", bg: "grey.50", border: "divider" },
-              { icon: <Assessment sx={{ fontSize: 12 }} />, value: (summary.diff > 0 ? "+" : "") + summary.diff, label: tManage("diffLabel"), color: getDiffColor(summary.diff), bg: summary.diff !== 0 ? "#fef2f2" : "grey.50", border: summary.diff !== 0 ? "error.light" : "divider" },
-              { icon: <Warning sx={{ fontSize: 12 }} />, value: summary.withDiff, label: tManage("withDiffLabel"), color: summary.withDiff > 0 ? "warning.main" : "text.disabled", bg: summary.withDiff > 0 ? "#fffbeb" : "grey.50", border: summary.withDiff > 0 ? "warning.light" : "divider" },
-            ].map(({ icon, value, label, color, bg, border }, i) => (
-              <Box key={i} sx={{ px: 1.25, py: 0.5, bgcolor: bg, borderRadius: 1.5, border: "1px solid", borderColor: border }}>
-                <Stack direction="row" alignItems="center" gap={0.4}>
-                  <Box sx={{ color }}>{icon}</Box>
-                  <Typography variant="caption" fontWeight={700} color={color}>{value}</Typography>
-                  <Typography variant="caption" color="text.secondary" fontSize={10}>{label}</Typography>
-                </Stack>
-              </Box>
-            ))}
-          </Stack>
+        {/* Inline add */}
+        {showInlineAdd && (
+          <div className="mb-4">
+            <InlineCreateInventoryCountItem
+              onSave={(data) => {
+                addItemMutation.mutate(data);
+                setShowInlineAdd(false);
+              }}
+              onCancel={() => setShowInlineAdd(false)}
+              isLoading={addItemMutation.isPending}
+              availableProducts={availableProducts}
+            />
+          </div>
+        )}
 
-          <Divider orientation="vertical" flexItem />
+        {/* Items table */}
+        <div className="overflow-hidden rounded-xl border">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/40 px-4 py-2.5">
+            <div className="flex items-center gap-2">
+              <ClipboardList className="size-4 text-muted-foreground" />
+              <p className="text-sm font-semibold text-foreground">{tManage("productsListTitle")}</p>
+              <Badge variant="outline">{filteredItems.length}</Badge>
+            </div>
+            <div className="relative w-56 max-w-full">
+              <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={tManage("searchPlaceholder")}
+                className="h-9 ps-9"
+              />
+            </div>
+          </div>
 
-          {/* Actions */}
-          <Stack direction="row" gap={0.75} sx={{ flexShrink: 0 }}>
-            {canEdit && (
-              <>
-                <Button size="small" variant="contained" startIcon={<Add />} onClick={() => setShowInlineAdd(true)} disableElevation sx={{ fontSize: 12 }}>
-                  {tCommon("add")}
-                </Button>
-                {count.status === "draft" && (
-                  <Button size="small" variant="outlined" color="info" startIcon={<PlayArrow />}
-                    onClick={() => updateStatusMutation.mutate("in_progress")}
-                    disabled={updateStatusMutation.isPending} sx={{ fontSize: 12 }}>
-                    {tManage("startCount")}
-                  </Button>
-                )}
-                {canComplete && (
-                  <Button size="small" variant="outlined" color="warning" startIcon={<Save />}
-                    onClick={() => updateStatusMutation.mutate("completed")}
-                    disabled={updateStatusMutation.isPending} sx={{ fontSize: 12 }}>
-                    {tManage("complete")}
-                  </Button>
-                )}
-              </>
-            )}
-            {canApprove && (
-              <>
-                <Button size="small" variant="contained" color="success" startIcon={<CheckCircle />}
-                  onClick={() => { if (window.confirm(tManage("confirmApprove"))) approveMutation.mutate(); }}
-                  disabled={approveMutation.isPending} disableElevation sx={{ fontSize: 12 }}>
-                  {tManage("approve")}
-                </Button>
-                <Button size="small" variant="outlined" color="error" startIcon={<Cancel />}
-                  onClick={() => { if (window.confirm(tManage("confirmReject"))) rejectMutation.mutate(); }}
-                  disabled={rejectMutation.isPending} sx={{ fontSize: 12 }}>
-                  {tManage("reject")}
-                </Button>
-              </>
-            )}
-          </Stack>
-        </Stack>
-      </Paper>
-
-      {/* ── Inline Add ─────────────────────────────────────────────────────── */}
-      {showInlineAdd && (
-        <Paper variant="outlined" sx={{ mb: 2, borderStyle: "dashed" }}>
-          <InlineCreateInventoryCountItem
-            onSave={(data) => { addItemMutation.mutate(data); setShowInlineAdd(false); }}
-            onCancel={() => setShowInlineAdd(false)}
-            isLoading={addItemMutation.isPending}
-            availableProducts={availableProducts}
-          />
-        </Paper>
-      )}
-
-      {/* ── Table ──────────────────────────────────────────────────────────── */}
-      <Paper variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" px={2} py={1.25}
-          borderBottom="1px solid" sx={{ borderColor: "divider" }}>
-          <Stack direction="row" alignItems="center" gap={1}>
-            <ListAlt sx={{ fontSize: 16, color: "text.secondary" }} />
-            <Typography variant="body2" fontWeight={700}>{tManage("productsListTitle")}</Typography>
-            <Chip label={filteredItems.length} size="small" sx={{ height: 18, fontSize: 11, fontWeight: 700 }} />
-          </Stack>
-          <TextField
-            size="small"
-            placeholder={tManage("searchPlaceholder")}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            InputProps={{ startAdornment: <InputAdornment position="start"><Search fontSize="small" color="action" /></InputAdornment> }}
-            sx={{ width: 220 }}
-          />
-        </Stack>
-
-        <TableContainer>
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ bgcolor: "grey.50" }}>
-                <TableCell sx={{ fontWeight: 700, fontSize: 12, width: 40 }}>#</TableCell>
-                <TableCell sx={{ fontWeight: 700, fontSize: 12, width: 48, p: 0.5 }} />
-                <TableCell sx={{ fontWeight: 700, fontSize: 12 }}>{t("productColumn")}</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 700, fontSize: 12, width: 110 }}>{tManage("expectedQuantityColumn")}</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 700, fontSize: 12, width: 150 }}>{tManage("actualQuantityColumn")}</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 700, fontSize: 12, width: 90 }}>{tManage("differenceColumn")}</TableCell>
-                {canEdit && <TableCell sx={{ width: 50 }} />}
+          <Table>
+            <TableHeader className="bg-muted/20">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="w-10">#</TableHead>
+                <TableHead className="w-12" />
+                <TableHead>{t("productColumn")}</TableHead>
+                <TableHead className="w-32 text-center">{tManage("expectedQuantityColumn")}</TableHead>
+                <TableHead className="w-40 text-center">{tManage("actualQuantityColumn")}</TableHead>
+                <TableHead className="w-24 text-center">{tManage("differenceColumn")}</TableHead>
+                {canEdit && <TableHead className="w-12" />}
               </TableRow>
-            </TableHead>
+            </TableHeader>
             <TableBody>
               {filteredItems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 8, color: "text.disabled" }}>
-                    <ListAlt sx={{ fontSize: 40, mb: 1, display: "block", mx: "auto", opacity: 0.3 }} />
+                  <TableCell colSpan={canEdit ? 7 : 6} className="py-12 text-center text-muted-foreground">
+                    <ClipboardList className="mx-auto mb-2 size-8 opacity-30" />
                     {tManage("noMatchingProducts")}
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredItems.map((item, index) => (
-                  <TableRow key={item.id} hover sx={{ "&:last-child td": { borderBottom: 0 } }}>
-                    <TableCell sx={{ fontSize: 12, color: "text.secondary" }}>{index + 1}</TableCell>
-                    <TableCell sx={{ p: 0.5, width: 48 }}>
-                      <ProductImage
-                        imageUrl={item.product?.image_url}
-                        productName={item.product?.name}
-                        size={32}
-                      />
+                  <TableRow key={item.id}>
+                    <TableCell className="text-xs text-muted-foreground">{index + 1}</TableCell>
+                    <TableCell className="p-1">
+                      <ProductImage imageUrl={item.product?.image_url} productName={item.product?.name} size={32} />
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2" fontWeight={500} fontSize={12}>{item.product?.name}</Typography>
-                      {(item.product?.sku) && (
-                        <Typography variant="caption" color="text.secondary" fontSize={10}>
-                          {item.product?.sku}
-                        </Typography>
+                      <p className="text-sm font-medium text-foreground">{item.product?.name}</p>
+                      {item.product?.sku && (
+                        <p className="text-xs text-muted-foreground">{item.product.sku}</p>
                       )}
                     </TableCell>
-                    <TableCell align="center">
-                      <Chip label={item.expected_quantity} size="small" variant="outlined" sx={{ fontSize: 11 }} />
+                    <TableCell className="text-center">
+                      <Badge variant="outline">{item.expected_quantity}</Badge>
                     </TableCell>
-                    <TableCell align="center">
+                    <TableCell className="text-center">
                       {canEdit ? (
-                        <Stack direction="row" alignItems="center" justifyContent="center" gap={0.75}>
-                          <TextField
+                        <div className="flex items-center justify-center gap-1.5">
+                          <Input
                             id={`qty-${index}`}
                             type="number"
-                            size="small"
-                            value={localQuantities[item.id] !== undefined ? localQuantities[item.id] : (item.actual_quantity ?? "")}
+                            min={0}
+                            step={0.01}
+                            value={
+                              localQuantities[item.id] !== undefined
+                                ? localQuantities[item.id]
+                                : (item.actual_quantity ?? "")
+                            }
                             onChange={(e) => handleQuantityChange(item, e.target.value)}
                             onFocus={(e) => e.target.select()}
                             onKeyDown={(e) => {
@@ -420,28 +499,32 @@ const ManageInventoryCountPage: React.FC = () => {
                                 document.getElementById(`qty-${index + 1}`)?.focus();
                               }
                             }}
-                            sx={{ width: 90 }}
-                            slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
                             placeholder="0"
+                            className="h-8 w-24 text-center"
                           />
-                          {savingItems[item.id] && <CircularProgress size={14} />}
-                        </Stack>
+                          {savingItems[item.id] && (
+                            <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
+                          )}
+                        </div>
                       ) : (
-                        <Typography variant="body2" fontSize={12}>{item.actual_quantity ?? "—"}</Typography>
+                        <span className="text-sm">{item.actual_quantity ?? "—"}</span>
                       )}
                     </TableCell>
-                    <TableCell align="center">
-                      <Typography variant="body2" fontWeight={700} fontSize={12} color={getDiffColor(item.difference)}>
-                        {item.difference > 0 ? "+" : ""}{item.difference}
-                      </Typography>
+                    <TableCell className={cn("text-center text-sm font-semibold", getDiffClass(item.difference))}>
+                      {item.difference > 0 ? "+" : ""}
+                      {item.difference}
                     </TableCell>
                     {canEdit && (
-                      <TableCell align="center">
-                        <IconButton size="small" color="error"
+                      <TableCell className="text-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-destructive hover:text-destructive"
+                          disabled={deleteItemMutation.isPending}
                           onClick={() => deleteItemMutation.mutate(item.id)}
-                          disabled={deleteItemMutation.isPending}>
-                          <Delete fontSize="small" />
-                        </IconButton>
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
                       </TableCell>
                     )}
                   </TableRow>
@@ -449,9 +532,43 @@ const ManageInventoryCountPage: React.FC = () => {
               )}
             </TableBody>
           </Table>
-        </TableContainer>
-      </Paper>
-    </Box>
+        </div>
+      </div>
+
+      {/* Approve / reject confirmation */}
+      <AlertDialog
+        open={pendingAction !== null}
+        onOpenChange={(open) => {
+          if (!open && !isActing) setPendingAction(null);
+        }}
+      >
+        <AlertDialogContent dir={direction}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingAction === "approve" ? tManage("approve") : tManage("reject")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingAction === "approve" ? tManage("confirmApprove") : tManage("confirmReject")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button type="button" variant="outline" disabled={isActing} onClick={() => setPendingAction(null)}>
+              {tCommon("cancel")}
+            </Button>
+            <Button
+              type="button"
+              variant={pendingAction === "approve" ? "success" : "destructive"}
+              disabled={isActing}
+              className="gap-2"
+              onClick={() => (pendingAction === "approve" ? approveMutation.mutate() : rejectMutation.mutate())}
+            >
+              {isActing && <Loader2 className="size-4 animate-spin" />}
+              {pendingAction === "approve" ? tManage("approve") : tManage("reject")}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 };
 

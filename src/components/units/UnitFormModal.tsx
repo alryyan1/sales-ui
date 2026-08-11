@@ -29,6 +29,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
 }) => {
   const [formData, setFormData] = useState<UnitFormData>({
     name: "",
+    name_en: "",
     description: "",
     is_active: true,
     is_default: false,
@@ -39,6 +40,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
     if (unit) {
       setFormData({
         name: unit.name,
+        name_en: unit.name_en || "",
         description: unit.description || "",
         is_active: unit.is_active,
         is_default: unit.is_default,
@@ -46,6 +48,7 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
     } else {
       setFormData({
         name: "",
+        name_en: "",
         description: "",
         is_active: true,
         is_default: false,
@@ -111,6 +114,14 @@ const UnitFormModal: React.FC<UnitFormModalProps> = ({
               required
               fullWidth
               autoFocus
+              variant="outlined"
+            />
+
+            <TextField
+              label="الاسم بالإنجليزية (English Name)"
+              value={formData.name_en ?? ""}
+              onChange={(e) => handleChange("name_en", e.target.value)}
+              fullWidth
               variant="outlined"
             />
 

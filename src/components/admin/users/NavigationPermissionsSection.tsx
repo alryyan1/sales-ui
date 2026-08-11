@@ -167,7 +167,7 @@ const NavigationPermissionsSection: React.FC<
           </AlertDescription>
         </Alert>
         {/* Render the normal content below the alert */}
-        <div className="rounded-lg border p-4 space-y-4">
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold">
               تخصيص القائمة الجانبية المسموحة
@@ -307,7 +307,7 @@ const NavigationPermissionsSection: React.FC<
   }
 
   return (
-    <div className="rounded-lg border p-4 space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">صلاحيات الوصول للصفحات</h3>
         <Button

@@ -19,5 +19,7 @@
   "recordPartialPayment": "Record Partial Payment",
   "recordPayment": "Record Payment",
   "createWithPartialPayment": "Create with Partial Payment",
-  "createSale": "Create Sale"
+  "createSale": "Create Sale",
+  "createOnCredit": "Create Sale (Pay Later)",
+  "selectClientForCreditHint": "Select a client on the ticket to create this sale on credit (pay later)."
 }

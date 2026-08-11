@@ -43,7 +43,13 @@
       "Bash(tasklist)",
       "Bash(php -l app/Http/Controllers/Api/PurchaseController.php)",
       "Bash(php -l app/Http/Controllers/Api/SettingController.php)",
-      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('src/locales/ar/adminSettings.json','utf8'\\)\\); JSON.parse\\(require\\('fs'\\).readFileSync\\('src/locales/en/adminSettings.json','utf8'\\)\\); console.log\\('OK'\\)\")"
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('src/locales/ar/adminSettings.json','utf8'\\)\\); JSON.parse\\(require\\('fs'\\).readFileSync\\('src/locales/en/adminSettings.json','utf8'\\)\\); console.log\\('OK'\\)\")",
+      "Bash(echo \"TSC EXIT:$?\")",
+      "Bash(powershell -Command \"\\(Get-Content -Raw 'src/components/inventory/StockAdjustmentsListPage.tsx'\\) -replace 'tCommon\\\\\\(\\\\\"clear\\\\\"\\\\\\) \\\\|\\\\| \\\\\"Clear filters\\\\\"', 'tCommon\\(\\\\\"clear\\\\\"\\)' -replace 'tCommon\\\\\\(\\\\\"clear\\\\\"\\\\\\) \\\\|\\\\| \\\\\"Clear\\\\\"', 'tCommon\\(\\\\\"clear\\\\\"\\)' -replace 'tCommon\\\\\\(\\\\\"retry\\\\\"\\\\\\) \\\\|\\\\| \\\\\"Retry\\\\\"', 'tCommon\\(\\\\\"retry\\\\\"\\)' | Set-Content -NoNewline 'src/components/inventory/StockAdjustmentsListPage.tsx'\")",
+      "Bash(powershell -NoProfile -Command \"Get-ChildItem -Path 'c:\\\\xampp\\\\htdocs\\\\sales-api\\\\database\\\\migrations' -Filter '*categories*'; Get-ChildItem -Path 'c:\\\\xampp\\\\htdocs\\\\sales-api\\\\database\\\\migrations' -Filter '*units*'\")",
+      "Bash(php -l database/seeders/InvoiceImport202608Seeder.php)",
+      "Bash(php -l app/Services/PurchasePdfService.php)",
+      "Bash(curl -s -o /c/xampp/htdocs/sales-ui/scratch_purchase1.pdf -w \"HTTP %{http_code}, size %{size_download} bytes\\\\n\" \"http://127.0.0.1/sales-api/public/purchases/1/export/pdf\")"
     ],
     "additionalDirectories": [
       "C:\\xampp\\htdocs\\sales-api\\app\\Http\\Controllers\\Api",
