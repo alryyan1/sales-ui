@@ -101,6 +101,7 @@
     "defaultCurrencyLabel": "Default Currency",
     "currencySdg": "SDG — Sudanese Pound",
     "currencyUsd": "USD — US Dollar",
+    "currencyOmr": "OMR — Omani Rial",
     "defaultCurrencyHelp": "This currency will be used as the default when creating a new purchase invoice.",
     "itemFieldsGroupTitle": "Purchase Item Fields",
     "useBatchNumberLabel": "Use Batch Number",

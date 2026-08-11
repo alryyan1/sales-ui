@@ -101,6 +101,7 @@
     "defaultCurrencyLabel": "العملة الافتراضية",
     "currencySdg": "SDG — جنيه سوداني",
     "currencyUsd": "USD — دولار أمريكي",
+    "currencyOmr": "OMR — ريال عماني",
     "defaultCurrencyHelp": "سيتم استخدام هذه العملة كقيمة افتراضية عند إنشاء فاتورة شراء جديدة.",
     "itemFieldsGroupTitle": "حقول أصناف المشتريات",
     "useBatchNumberLabel": "استخدام رقم الباتش (Batch Number)",

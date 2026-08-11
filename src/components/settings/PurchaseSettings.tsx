@@ -39,6 +39,7 @@ export const PurchaseSettings = ({ control }: PurchaseSettingsProps) => {
                 <SelectContent>
                   <SelectItem value="SDG">{t("purchases.currencySdg")}</SelectItem>
                   <SelectItem value="USD">{t("purchases.currencyUsd")}</SelectItem>
+                  <SelectItem value="OMR">{t("purchases.currencyOmr")}</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
