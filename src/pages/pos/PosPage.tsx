@@ -67,15 +67,6 @@ function todayStr() {
   return new Date().toLocaleDateString("en-CA");
 }
 
-function draftsStorageKey(userId: number) {
-  return `pos-drafts:${userId}`;
-}
-
-interface StoredDraftsState {
-  tickets: DraftTicket[];
-  activeTicketId: string | null;
-}
-
 const PosPage: React.FC = () => {
   const { user } = useAuth();
   const { hasPermission } = useAuthorization();
@@ -134,7 +125,6 @@ const PosPage: React.FC = () => {
   const [tickets, setTickets] = useState<DraftTicket[]>(() => [createDraftTicket(ticketSeqRef.current)]);
   const [activeTicketId, setActiveTicketId] = useState<string | null>(() => tickets[0]?.id ?? null);
   const [ticketToDelete, setTicketToDelete] = useState<DraftTicket | null>(null);
-  const [hydrated, setHydrated] = useState(false);
 
   const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
@@ -186,41 +176,6 @@ const PosPage: React.FC = () => {
     setThemeColorId(color.id);
     savePosThemeColorId(color.id);
   }, []);
-
-  // ── Restore any drafts left over from a previous session (per-user, this browser only) ──
-  useEffect(() => {
-    if (!user?.id) return;
-    try {
-      const raw = localStorage.getItem(draftsStorageKey(user.id));
-      if (raw) {
-        const parsed = JSON.parse(raw) as Partial<StoredDraftsState>;
-        if (Array.isArray(parsed.tickets) && parsed.tickets.length > 0) {
-          setTickets(parsed.tickets);
-          const restoredActiveId =
-            parsed.activeTicketId && parsed.tickets.some((t) => t.id === parsed.activeTicketId)
-              ? parsed.activeTicketId
-              : parsed.tickets[parsed.tickets.length - 1].id;
-          setActiveTicketId(restoredActiveId);
-          const maxLabel = parsed.tickets.reduce((m, t) => Math.max(m, t.label ?? 0), 0);
-          ticketSeqRef.current = Math.max(ticketSeqRef.current, maxLabel + 1);
-        }
-      }
-    } catch {
-      // Corrupt/unavailable storage — keep the fresh default ticket.
-    }
-    setHydrated(true);
-  }, [user?.id]);
-
-  // ── Persist drafts on every change so a refresh/crash doesn't lose the cart ──
-  useEffect(() => {
-    if (!hydrated || !user?.id) return;
-    try {
-      const state: StoredDraftsState = { tickets, activeTicketId };
-      localStorage.setItem(draftsStorageKey(user.id), JSON.stringify(state));
-    } catch {
-      // Ignore quota/serialization errors — persistence is a safety net, not a hard requirement.
-    }
-  }, [tickets, activeTicketId, hydrated, user?.id]);
 
   const activeTicket = useMemo(
     () => tickets.find((t) => t.id === activeTicketId) ?? null,
