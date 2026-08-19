@@ -34,6 +34,8 @@ import CreateIcon from "@mui/icons-material/Create";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import { Sale, Payment } from "@/services/saleService";
 import { Client } from "@/services/clientService";
+import { useSettings } from "@/context/SettingsContext";
+import { parseActivePaymentMethods } from "@/lib/paymentMethods";
 import dayjs from "dayjs";
 
 export interface ClientOptionType extends Partial<Client> {
@@ -170,6 +172,8 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
   const { t } = useTranslation("pos");
   const { t: tSummary } = useTranslation("saleSummaryPanel");
   const { t: tCommon } = useTranslation("common");
+  const { getSetting } = useSettings();
+  const activePaymentMethods = parseActivePaymentMethods(getSetting("pos_active_payment_methods"));
   const [dateEditing, setDateEditing] = useState(false);
   const [tempDate, setTempDate] = useState("");
   const [bellAnchor, setBellAnchor] = useState<HTMLButtonElement | null>(null);
@@ -179,6 +183,14 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
     setTempDate(selectedSale?.sale_date ?? "");
     setDateEditing(false);
   }, [selectedSale?.id]);
+
+  const activePaymentMethodsKey = activePaymentMethods.join(",");
+  useEffect(() => {
+    if (activePaymentMethods.length > 0 && !activePaymentMethods.includes(newPaymentMethod)) {
+      setNewPaymentMethod(activePaymentMethods[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePaymentMethodsKey, newPaymentMethod]);
   if (!selectedSale) {
     return (
       <Box sx={{ width: { xs: "100%", md: 300 }, flexShrink: 0 }}>
@@ -603,12 +615,11 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                     onChange={(e) => setNewPaymentMethod(e.target.value as Payment["method"])}
                     sx={{ fontSize: "0.75rem" }}
                   >
-                    <MenuItem value="cash" sx={{ fontSize: "0.75rem" }}>{tSummary("paymentMethodCash")}</MenuItem>
-                    <MenuItem value="bankak" sx={{ fontSize: "0.75rem" }}>{tSummary("paymentMethodBankak")}</MenuItem>
-                    <MenuItem value="fawry" sx={{ fontSize: "0.75rem" }}>{tSummary("paymentMethodFawry")}</MenuItem>
-                    <MenuItem value="ocash" sx={{ fontSize: "0.75rem" }}>{tSummary("paymentMethodOcash")}</MenuItem>
-                    <MenuItem value="bank_transfer" sx={{ fontSize: "0.75rem" }}>{tSummary("paymentMethodBankTransfer")}</MenuItem>
-                    <MenuItem value="card" sx={{ fontSize: "0.75rem" }}>{tSummary("paymentMethodCard")}</MenuItem>
+                    {activePaymentMethods.map((method) => (
+                      <MenuItem key={method} value={method} sx={{ fontSize: "0.75rem" }}>
+                        {tSummary(METHOD_LABEL_KEYS[method])}
+                      </MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
                 <TextField

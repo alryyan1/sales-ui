@@ -274,6 +274,7 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
                           <TableHead className="text-start">{t("product")}</TableHead>
                           <TableHead className="text-center">{t("quantity")}</TableHead>
                           <TableHead className="text-end">{t("priceColumn")}</TableHead>
+                          <TableHead className="text-end">{t("costColumn")}</TableHead>
                           <TableHead className="text-end">{t("totalColumn")}</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -292,6 +293,9 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
                             <TableCell className="text-end tabular-nums">
                               {formatCurrency(item.unit_price)}
                             </TableCell>
+                            <TableCell className="text-end tabular-nums text-muted-foreground">
+                              {formatCurrency(item.resolved_cost_price ?? item.cost_price_at_sale)}
+                            </TableCell>
                             <TableCell className="text-end font-medium tabular-nums">
                               {formatCurrency(
                                 Number(item.total_price ?? Number(item.unit_price) * item.quantity)
@@ -301,7 +305,7 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
                         ))}
                         {(sale.items ?? []).length === 0 && (
                           <TableRow>
-                            <TableCell colSpan={4} className="py-6 text-center text-sm text-muted-foreground">
+                            <TableCell colSpan={5} className="py-6 text-center text-sm text-muted-foreground">
                               {t("noItems")}
                             </TableCell>
                           </TableRow>

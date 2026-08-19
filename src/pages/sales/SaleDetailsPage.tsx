@@ -433,6 +433,9 @@ const SaleDetailsPage: React.FC = () => {
                 سعر الوحدة
               </TableCell>
               <TableCell align="right" className="dark:text-gray-300">
+                التكلفة
+              </TableCell>
+              <TableCell align="right" className="dark:text-gray-300">
                 الإجمالي
               </TableCell>
             </TableRow>
@@ -462,6 +465,9 @@ const SaleDetailsPage: React.FC = () => {
                   <TableCell align="right" className="dark:text-gray-100">
                     {formatCurrency(item.unit_price)}
                   </TableCell>
+                  <TableCell align="right" className="dark:text-gray-400">
+                    {formatCurrency(item.resolved_cost_price ?? item.cost_price_at_sale)}
+                  </TableCell>
                   <TableCell align="right" className="dark:text-gray-100">
                     {formatCurrency(
                       Number(item.total_price || item.unit_price) *
@@ -473,7 +479,7 @@ const SaleDetailsPage: React.FC = () => {
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   align="center"
                   className="dark:text-gray-400"
                 >

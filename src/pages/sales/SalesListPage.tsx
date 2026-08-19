@@ -1,14 +1,18 @@
 // src/pages/sales/SalesListPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { format, startOfMonth, startOfWeek, subDays } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import {
   AlertCircle,
+  CheckCircle2,
   Filter,
   FileDown,
+  Landmark,
+  Loader2,
   Plus,
   Receipt,
   RefreshCw,
@@ -27,6 +31,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -57,7 +62,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { webUrl } from "@/constants";
 
 import saleService, { Sale } from "@/services/saleService";
-import { getSaleStatus, translatePaymentMethod, translateSaleStatus } from "@/lib/saleStatus";
+import { getSaleStatus, translateSaleStatus } from "@/lib/saleStatus";
 import { SaleDetailsDrawer } from "@/components/sales/SaleDetailsDrawer";
 import {
   SalesAdvancedFiltersSheet,
@@ -166,18 +171,27 @@ const SalesListPage: React.FC = () => {
 
   const dateRange = useMemo(() => resolveDateRange(datePreset, customRange), [datePreset, customRange]);
 
+  const filterQs = useMemo(() => {
+    const qs = new URLSearchParams();
+    if (debouncedSearch) qs.set("search", debouncedSearch);
+    if (dateRange.start) qs.set("start_date", dateRange.start);
+    if (dateRange.end) qs.set("end_date", dateRange.end);
+    if (advanced.clientId) qs.set("client_id", advanced.clientId);
+    if (advanced.userId) qs.set("user_id", advanced.userId);
+    if (advanced.shiftId) qs.set("shift_id", advanced.shiftId);
+    return qs.toString();
+  }, [debouncedSearch, dateRange, advanced]);
+
   const salesQuery = useQuery({
-    queryKey: ["sales-list", page, perPage, debouncedSearch, dateRange, advanced],
-    queryFn: () => {
-      const qs = new URLSearchParams();
-      if (debouncedSearch) qs.set("search", debouncedSearch);
-      if (dateRange.start) qs.set("start_date", dateRange.start);
-      if (dateRange.end) qs.set("end_date", dateRange.end);
-      if (advanced.clientId) qs.set("client_id", advanced.clientId);
-      if (advanced.userId) qs.set("user_id", advanced.userId);
-      if (advanced.shiftId) qs.set("shift_id", advanced.shiftId);
-      return saleService.getSales(page, qs.toString(), "", "", "", perPage);
-    },
+    queryKey: ["sales-list", page, perPage, filterQs],
+    queryFn: () => saleService.getSales(page, filterQs, "", "", "", perPage),
+    placeholderData: keepPreviousData,
+  });
+
+  // Totals across every sale matching the current filters, not just the visible page.
+  const summaryQuery = useQuery({
+    queryKey: ["sales-summary", filterQs],
+    queryFn: () => saleService.getSalesSummary(filterQs),
     placeholderData: keepPreviousData,
   });
 
@@ -186,6 +200,11 @@ const SalesListPage: React.FC = () => {
   const hasActiveFilters =
     debouncedSearch !== "" || datePreset !== "today" || !!advanced.clientId || !!advanced.userId || !!advanced.shiftId;
   const isEmpty = !isInitialLoading && !salesQuery.isError && sales.length === 0;
+
+  const refetchAll = () => {
+    salesQuery.refetch();
+    summaryQuery.refetch();
+  };
 
   const clearFilters = () => {
     setSearchTerm("");
@@ -219,7 +238,7 @@ const SalesListPage: React.FC = () => {
             <p className="mt-1 text-sm text-muted-foreground">{t("pageSubtitle")}</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={() => salesQuery.refetch()} title={tCommon("refresh")}>
+            <Button variant="outline" size="icon" onClick={refetchAll} title={tCommon("refresh")}>
               <RefreshCw className={cn("size-4", salesQuery.isFetching && "animate-spin")} />
             </Button>
             <Button variant="outline" size="sm" onClick={handleExport} className="gap-1.5">
@@ -351,7 +370,7 @@ const SalesListPage: React.FC = () => {
             <AlertTitle>{t("loadErrorTitle")}</AlertTitle>
             <AlertDescription className="flex items-center justify-between gap-3">
               <span>{t("loadErrorDescription")}</span>
-              <Button size="sm" variant="outline" onClick={() => salesQuery.refetch()}>
+              <Button size="sm" variant="outline" onClick={refetchAll}>
                 {tCommon("retry")}
               </Button>
             </AlertDescription>
@@ -419,13 +438,12 @@ const SalesListPage: React.FC = () => {
                       <TableHead className="text-start">{t("invoiceColumn")}</TableHead>
                       <TableHead className="text-start">{t("date")}</TableHead>
                       <TableHead className="text-start">{t("client")}</TableHead>
-                      <TableHead className="text-center">{t("itemsColumn")}</TableHead>
                       <TableHead className="text-end">{t("totalColumn")}</TableHead>
+                      <TableHead className="text-end">{t("costColumn")}</TableHead>
                       <TableHead className="text-end">{t("paidColumn")}</TableHead>
-                      <TableHead className="text-end">{t("dueColumn")}</TableHead>
-                      <TableHead className="text-start">{t("paymentColumn")}</TableHead>
                       <TableHead className="text-start">{t("status")}</TableHead>
                       <TableHead className="text-start">{t("cashierColumn")}</TableHead>
+                      <TableHead className="text-center">{t("financeColumn")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -433,6 +451,35 @@ const SalesListPage: React.FC = () => {
                       <SaleRow key={sale.id} sale={sale} onOpen={() => openSale(sale.id)} formatCurrency={formatCurrency} />
                     ))}
                   </TableBody>
+                  <TableFooter>
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell colSpan={3} className="text-start text-sm font-semibold text-foreground">
+                        {t("totalsRowLabel")}
+                      </TableCell>
+                      <TableCell className="text-end text-sm font-bold tabular-nums text-foreground">
+                        {summaryQuery.isFetching ? (
+                          <Skeleton className="ms-auto h-4 w-16" />
+                        ) : (
+                          formatCurrency(summaryQuery.data?.total_amount ?? 0)
+                        )}
+                      </TableCell>
+                      <TableCell className="text-end text-sm font-bold tabular-nums text-muted-foreground">
+                        {summaryQuery.isFetching ? (
+                          <Skeleton className="ms-auto h-4 w-16" />
+                        ) : (
+                          formatCurrency(summaryQuery.data?.total_cost ?? 0)
+                        )}
+                      </TableCell>
+                      <TableCell className="text-end text-sm font-bold tabular-nums text-green-600 dark:text-green-400">
+                        {summaryQuery.isFetching ? (
+                          <Skeleton className="ms-auto h-4 w-16" />
+                        ) : (
+                          formatCurrency(summaryQuery.data?.paid_amount ?? 0)
+                        )}
+                      </TableCell>
+                      <TableCell colSpan={3} />
+                    </TableRow>
+                  </TableFooter>
                 </Table>
               </div>
             </div>
@@ -522,7 +569,7 @@ const SalesListPage: React.FC = () => {
         saleId={selectedSaleId}
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
-        onChanged={() => salesQuery.refetch()}
+        onChanged={refetchAll}
       />
 
       <SalesAdvancedFiltersSheet
@@ -547,11 +594,28 @@ function SaleRow({
 }) {
   const { t } = useTranslation("sales");
   const { direction } = useLanguage();
+  const queryClient = useQueryClient();
   const status = getSaleStatus(sale);
   const total = Number(sale.total_amount ?? 0);
+  const cost = Number(sale.total_cost ?? 0);
   const paid = Number(sale.paid_amount ?? 0);
-  const due = Number(sale.due_amount ?? Math.max(0, total - paid));
-  const methods = Array.from(new Set((sale.payments ?? []).map((p) => p.method)));
+  const [isExporting, setIsExporting] = useState(false);
+  const isExported = !!sale.finance_exported_at;
+
+  const handleExportToFinance = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isExported) return;
+    setIsExporting(true);
+    try {
+      await saleService.exportToFinance(sale.id);
+      toast.success(t("journalEntrySent"));
+      queryClient.invalidateQueries({ queryKey: ["sales-list"] });
+    } catch (err) {
+      toast.error(t("journalExportFailed"), { description: saleService.getErrorMessage(err) });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <TableRow className="cursor-pointer hover:bg-muted/40" onClick={onOpen}>
@@ -567,14 +631,22 @@ function SaleRow({
           #{sale.number ?? sale.id}
         </button>
       </TableCell>
-      <TableCell className="text-sm text-muted-foreground">
-        {new Date(sale.created_at).toLocaleString(direction === "rtl" ? "ar" : "en-US", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
+      <TableCell className="text-sm">
+        <div className="font-medium text-foreground">
+          {new Date(sale.sale_date).toLocaleDateString(direction === "rtl" ? "ar" : "en-US", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          })}
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {t("createdAtLabel")}: {new Date(sale.created_at).toLocaleString(direction === "rtl" ? "ar" : "en-US", {
+            day: "2-digit",
+            month: "short",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </div>
       </TableCell>
       <TableCell>
         {sale.client_id ? (
@@ -586,27 +658,41 @@ function SaleRow({
           <span className="text-sm text-muted-foreground">{t("cashClient")}</span>
         )}
       </TableCell>
-      <TableCell className="text-center text-sm text-muted-foreground">{sale.items?.length ?? 0}</TableCell>
       <TableCell className="text-end text-sm font-bold tabular-nums text-foreground">
         {formatCurrency(total)}
       </TableCell>
+      <TableCell className="text-end text-sm tabular-nums text-muted-foreground">
+        {formatCurrency(cost)}
+      </TableCell>
       <TableCell className="text-end text-sm tabular-nums text-green-600 dark:text-green-400">
         {formatCurrency(paid)}
-      </TableCell>
-      <TableCell className={cn("text-end text-sm tabular-nums", due > 0 ? "font-medium text-destructive" : "text-muted-foreground")}>
-        {due > 0 ? formatCurrency(due) : "—"}
-      </TableCell>
-      <TableCell className="text-sm text-muted-foreground">
-        {methods.length === 0
-          ? "—"
-          : methods.length === 1
-          ? translatePaymentMethod(t, methods[0])
-          : t("multiplePaymentMethods")}
       </TableCell>
       <TableCell>
         <Badge variant={status.variant}>{translateSaleStatus(t, status.kind)}</Badge>
       </TableCell>
       <TableCell className="text-sm text-muted-foreground">{sale.user_name ?? "—"}</TableCell>
+      <TableCell className="text-center">
+        <button
+          type="button"
+          onClick={handleExportToFinance}
+          disabled={isExporting || isExported}
+          title={isExported ? t("exportedTooltip") : t("exportFinance")}
+          className={cn(
+            "inline-flex size-7 items-center justify-center rounded-md border transition-colors disabled:cursor-not-allowed",
+            isExported
+              ? "border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-400"
+              : "border-border text-muted-foreground hover:bg-accent disabled:opacity-60"
+          )}
+        >
+          {isExporting ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : isExported ? (
+            <CheckCircle2 className="size-3.5" />
+          ) : (
+            <Landmark className="size-3.5" />
+          )}
+        </button>
+      </TableCell>
     </TableRow>
   );
 }

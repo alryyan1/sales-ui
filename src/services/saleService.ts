@@ -56,6 +56,7 @@ export interface SaleItem {
   unit_price: string | number;
   total_price?: string | number; // Usually calculated by backend/resource
   cost_price_at_sale?: string | number; // Cost per sellable unit at sale time
+  resolved_cost_price?: string | number; // Best-known per-unit cost in local currency (live-resolved for current-month sales with an unreliable stored cost)
   returned_quantity?: number; // Total quantity already returned
   // available_stock from batch was a temporary UI field, not usually part of SaleItem model
   created_at?: string;
@@ -86,6 +87,7 @@ export interface Sale {
   status?: "completed" | "pending" | "draft" | "cancelled";
   total_amount: string | number; // Subtotal minus discount (amount)
   subtotal?: string | number; // Sum of items before discount
+  total_cost?: string | number; // Sum of cost_price_at_sale * quantity (COGS, already converted to local currency)
   paid_amount: string | number; // Sum of payments
   due_amount?: string | number; // Calculated (total_amount - paid_amount)
   discount_amount?: string | number; // Discount stored as amount
@@ -306,6 +308,20 @@ const saleService = {
       console.error("Error fetching sales:", error);
       throw error;
     }
+  },
+
+  /**
+   * Aggregate totals (revenue, paid, cost) for every sale matching the given filters — not
+   * just the current page. `queryParams` should be the same filter query string passed to
+   * getSales (search/start_date/end_date/client_id/user_id/shift_id).
+   */
+  getSalesSummary: async (
+    queryParams?: string
+  ): Promise<{ total_amount: number; paid_amount: number; total_cost: number }> => {
+    const response = await apiClient.get<{ total_amount: number; paid_amount: number; total_cost: number }>(
+      `/sales/summary${queryParams ? `?${queryParams}` : ""}`
+    );
+    return response.data;
   },
 
   /**
