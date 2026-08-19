@@ -179,6 +179,18 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
             />
           )}
         />
+        <Controller
+          name="pos_show_expiry_date_column"
+          control={control}
+          render={({ field }) => (
+            <SwitchField
+              label={t("pos.showExpiryDateColumnLabel")}
+              description={t("pos.showExpiryDateColumnDescription")}
+              checked={field.value ?? true}
+              onCheckedChange={field.onChange}
+            />
+          )}
+        />
       </SettingsGroup>
 
       <Separator />

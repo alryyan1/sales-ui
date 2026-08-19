@@ -40,7 +40,7 @@ function ReminderButton({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-56 space-y-2.5">
-        <p className="text-xs font-medium text-foreground">
+        <p className="text-sm font-medium text-foreground">
           {reminderDate ? tSaleActionsBar("reminderSetForDate", { date: reminderDate }) : tSaleActionsBar("setPaymentReminder")}
         </p>
         <Input
@@ -102,7 +102,7 @@ function SaleDateEditor({
   }, [saleDate]);
 
   return (
-    <label className="flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-input bg-background px-2.5 text-xs text-foreground has-disabled:opacity-60">
+    <label className="flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-input bg-background px-2.5 text-sm text-foreground has-disabled:opacity-60">
       <CalendarDays className="size-3.5 text-muted-foreground" />
       <input
         type="date"
@@ -168,7 +168,7 @@ export function SaleActionsBar({
 
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-2 border-b bg-muted/20 px-4 py-2">
-      <span className="shrink-0 text-xs font-medium text-muted-foreground">
+      <span className="shrink-0 text-sm font-medium text-muted-foreground">
         {tSaleActionsBar("saleActionsHash", { id: sale.id })}
       </span>
 

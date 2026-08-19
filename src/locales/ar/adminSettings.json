@@ -66,7 +66,13 @@
     "allowPriceEditLabel": "السماح بتعديل سعر البيع",
     "allowPriceEditDescription": "عند التعطيل، يُقفل حقل سعر البيع في الفاتورة على السعر الافتراضي للمنتج.",
     "allowInvoiceDateEditLabel": "السماح بتعديل تاريخ الفاتورة",
-    "allowInvoiceDateEditDescription": "عند التعطيل، تُسجَّل كل فاتورة بتاريخ ووقت الإنشاء الفعلي دون إمكانية تغييره."
+    "allowInvoiceDateEditDescription": "عند التعطيل، تُسجَّل كل فاتورة بتاريخ ووقت الإنشاء الفعلي دون إمكانية تغييره.",
+    "a4InvoiceGroupTitle": "فاتورة A4",
+    "a4ShowUnitColumnLabel": "إظهار عمود الوحدة في فاتورة A4",
+    "a4ShowUnitColumnDescription": "عند التعطيل، يُحذف عمود \"الوحده\" من جدول الأصناف في فاتورة A4 المطبوعة، ويُعاد توزيع مساحته على عمود البيان.",
+    "itemsTableGroupTitle": "جدول الأصناف",
+    "showExpiryDateColumnLabel": "إظهار عمود تاريخ الانتهاء في جدول الأصناف",
+    "showExpiryDateColumnDescription": "عند التعطيل، يُخفى عمود تاريخ الانتهاء من جدول أصناف الفاتورة في صفحة المعرض."
   },
 
   "pos": {
@@ -77,6 +83,8 @@
     "showExpiredDescription": "عند التفعيل، ستظهر المنتجات منتهية الصلاحية في نتائج بحث نقطة البيع.",
     "showOutOfStockLabel": "عرض المنتجات التي نفد مخزونها",
     "showOutOfStockDescription": "عند التفعيل، ستظهر المنتجات التي رصيدها صفراً أو أقل في نتائج بحث نقطة البيع.",
+    "showExpiryDateColumnLabel": "إظهار عمود تاريخ الانتهاء في جدول الأصناف",
+    "showExpiryDateColumnDescription": "عند التعطيل، يُخفى عمود تاريخ الانتهاء من جدول أصناف الفاتورة في صفحة المعرض.",
     "paymentMethodsGroupTitle": "طرق الدفع في نقطة البيع (Payment Methods)",
     "paymentMethodsHelp": "يجب أن تبقى طريقة دفع واحدة على الأقل مفعّلة.",
     "usdGroupTitle": "سعر صرف الدولار (USD Conversion)",

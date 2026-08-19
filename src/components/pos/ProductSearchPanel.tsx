@@ -165,7 +165,7 @@ export function ProductSearchPanel({
           onKeyDown={handleInputKeyDown}
           disabled={disabled}
           placeholder={tProductSearch("searchOrScanPlaceholder")}
-          className="h-9"
+          className="h-11 text-base"
         />
         
       {categories.length > 0 && (
@@ -174,7 +174,7 @@ export function ProductSearchPanel({
             type="button"
             onClick={() => setCategoryId(null)}
             className={cn(
-              "shrink-0 rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap transition-colors",
+              "shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
               categoryId === null
                 ? "bg-primary text-primary-foreground"
                 : "bg-muted text-muted-foreground hover:bg-accent"
@@ -188,7 +188,7 @@ export function ProductSearchPanel({
               type="button"
               onClick={() => setCategoryId((prev) => (prev === c.id ? null : c.id))}
               className={cn(
-                "shrink-0 rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap transition-colors",
+                "shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
                 categoryId === c.id
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground hover:bg-accent"
@@ -249,7 +249,7 @@ export function ProductSearchPanel({
                 value={String(product.id)}
                 onSelect={() => handleAdd(product)}
                 className={cn(
-                  "flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 data-[selected=true]:ring-1 data-[selected=true]:ring-primary/40",
+                  "flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-3 data-[selected=true]:ring-1 data-[selected=true]:ring-primary/40",
                   isAdded && "border border-emerald-500/30 bg-emerald-50 dark:border-emerald-400/30 dark:bg-emerald-950/20",
                   zeroPrice && "opacity-50"
                 )}
@@ -257,42 +257,42 @@ export function ProductSearchPanel({
                 <ProductImage
                   imageUrl={product.image_url}
                   productName={product.name}
-                  size={40}
+                  size={44}
                   variant="rounded"
                 />
 
                 <div className="min-w-0 flex-1">
                   <p
                     className={cn(
-                      "truncate text-sm font-medium",
+                      "truncate text-base font-medium",
                       zeroPrice ? "text-muted-foreground" : "text-foreground"
                     )}
                   >
                     {product.name}
                   </p>
-                  <p className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
+                  <p className="flex items-center gap-1.5 truncate text-sm text-muted-foreground">
                     {product.sku && <span className="font-mono">{product.sku}</span>}
                     {product.category?.name && <span>· {product.category.name}</span>}
                   </p>
                 </div>
 
                 {outOfStock ? (
-                  <Badge variant="destructive" className="shrink-0">
+                  <Badge variant="destructive" className="shrink-0 text-sm">
                     {tProductSearch("outOfStockBadge")}
                   </Badge>
                 ) : lowStock ? (
-                  <Badge variant="warning" className="shrink-0">
+                  <Badge variant="warning" className="shrink-0 text-sm">
                     {tProductSearch("stockRemaining", { count: stock })}
                   </Badge>
                 ) : (
-                  <span className="shrink-0 text-xs text-muted-foreground">
+                  <span className="shrink-0 text-sm text-muted-foreground">
                     {tProductSearch("stockAvailable", { count: stock })}
                   </span>
                 )}
 
                 <span
                   className={cn(
-                    "w-25 shrink-0 text-end text-sm font-semibold tabular-nums",
+                    "w-25 shrink-0 text-end text-base font-semibold tabular-nums",
                     zeroPrice ? "text-muted-foreground" : "text-foreground"
                   )}
                 >

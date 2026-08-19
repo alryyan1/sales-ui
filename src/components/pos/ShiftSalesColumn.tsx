@@ -32,7 +32,7 @@ export function ShiftSalesColumn({
 
   return (
     <div className="flex w-24 shrink-0 flex-col gap-2 overflow-y-auto border-e bg-muted/10 p-2">
-      <span className="flex items-center justify-center gap-1 px-0.5 text-center text-[11px] font-medium text-muted-foreground">
+      <span className="flex items-center justify-center gap-1 px-0.5 text-center text-xs font-medium text-muted-foreground">
         {t("shiftSales")}
         {isFetching && !isLoading && <Loader2 className="size-3 animate-spin" />}
       </span>
@@ -42,7 +42,7 @@ export function ShiftSalesColumn({
           <Loader2 className="size-5 animate-spin text-muted-foreground" />
         </div>
       ) : sales.length === 0 ? (
-        <p className="px-1 text-center text-[11px] text-muted-foreground">{t("noSales")}</p>
+        <p className="px-1 text-center text-xs text-muted-foreground">{t("noSales")}</p>
       ) : (
         sales.map((sale) => {
           const isActive = activeSaleId === sale.id;

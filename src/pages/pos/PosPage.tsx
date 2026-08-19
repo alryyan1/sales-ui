@@ -1037,7 +1037,7 @@ const PosPage: React.FC = () => {
         </div>
 
         <div className="flex h-full min-w-0 flex-1 items-center gap-3 px-4">
-          <span className="text-xs text-muted-foreground">
+          <span className="text-sm text-muted-foreground">
             {posMode === "shift" && currentShiftQuery.data
               ? t("shiftHashPrefix", { id: currentShiftQuery.data.id })
               : ""}
@@ -1045,16 +1045,16 @@ const PosPage: React.FC = () => {
           </span>
           <span
             className={cn(
-              "flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
+              "flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-sm font-medium",
               hasWarehouse
                 ? "bg-muted text-muted-foreground"
                 : "bg-destructive/10 text-destructive"
             )}
           >
-            <Warehouse className="size-3" />
+            <Warehouse className="size-3.5" />
             {user?.warehouse?.name ?? t("noWarehouseAssigned")}
           </span>
-          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+          <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
             {now.toLocaleTimeString(direction === "rtl" ? "ar" : "en-US", { hour: "2-digit", minute: "2-digit" })}
           </span>
 
@@ -1071,7 +1071,7 @@ const PosPage: React.FC = () => {
                     setSelectedLineId(null);
                   }}
                   className={cn(
-                    "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
+                    "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors",
                     ticket.id === activeTicketId
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-border text-muted-foreground hover:bg-accent"
@@ -1105,13 +1105,13 @@ const PosPage: React.FC = () => {
             </Button>
           </div>
 
-          <div className="ms-auto flex shrink-0 items-center gap-2">
+          <div className="ms-auto flex min-w-0 shrink items-center gap-1.5 overflow-x-auto lg:gap-2">
             <Button variant="outline" size="sm" onClick={() => setPastSalesOpen(true)} disabled={loadingSale || isEditingSale}>
               {t("previousSales")}
             </Button>
             {editingSale && (
               <>
-                <span className="text-xs text-foreground">{t("editingSaleHash", { id: editingSale.id })}</span>
+                <span className="text-sm text-foreground">{t("editingSaleHash", { id: editingSale.id })}</span>
                 <Button variant="secondary" size="sm" disabled={savingSale} onClick={saveEditingSale} className="gap-1">
                   {savingSale ? <Loader2 className="size-3 animate-spin" /> : null}
                   {t("saveEdits")}
@@ -1129,7 +1129,7 @@ const PosPage: React.FC = () => {
                     {t("shiftSummaryHash", { id: currentShiftQuery.data.id })}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent align="end" className="w-[520px] p-0" dir={direction}>
+                <PopoverContent align="end" className="w-[92vw] max-w-[520px] p-0" dir={direction}>
                   <div className="border-b px-3 py-2">
                     <p className="text-sm font-semibold text-foreground">{t("shiftHash", { id: currentShiftQuery.data.id })}</p>
                   </div>
@@ -1211,7 +1211,7 @@ const PosPage: React.FC = () => {
           deletingSaleId={isDeletingSale ? saleToDelete?.id ?? null : null}
           loadingSaleId={loadingSaleId}
         />
-        <div className="flex-1 overflow-hidden border-e">
+        <div className="min-w-[220px] flex-1 overflow-hidden border-e">
           <ProductSearchPanel
             warehouseId={user?.warehouse_id}
             usdFactor={usdFactor}
@@ -1222,7 +1222,7 @@ const PosPage: React.FC = () => {
             onAddProduct={handleAddProduct}
           />
         </div>
-        <div className="w-[520px] shrink-0 overflow-hidden">
+        <div className="w-[340px] shrink-0 overflow-hidden md:w-[380px] lg:w-[440px] xl:w-[520px]">
           <CartPanel
             ticket={activeTicket}
             selectedLineId={selectedLineId}
@@ -1247,7 +1247,7 @@ const PosPage: React.FC = () => {
       </div>
 
       {/* Shortcut hints */}
-      <div className="hidden shrink-0 items-center gap-4 border-t bg-muted/30 px-4 py-1.5 text-[11px] text-muted-foreground md:flex">
+      <div className="hidden shrink-0 items-center gap-4 border-t bg-muted/30 px-4 py-1.5 text-xs text-muted-foreground md:flex">
         <span className="flex items-center gap-1"><kbd className="rounded border bg-background px-1 py-0.5 font-mono">/</kbd> {t("kbdSearch")}</span>
         <span className="flex items-center gap-1"><kbd className="rounded border bg-background px-1 py-0.5 font-mono">F4</kbd> {t("kbdClient")}</span>
         <span className="flex items-center gap-1"><kbd className="rounded border bg-background px-1 py-0.5 font-mono">F8</kbd> {t("kbdPayment")}</span>

@@ -45,6 +45,8 @@ export interface AppSettings {
   product_scientific_name_required?: boolean;
   pos_show_expired_products?: boolean;
   pos_show_out_of_stock_products?: boolean;
+  /** Whether the expiry date column shows in the sale items table (SaleItemsTable, gallery page). Defaults to true. */
+  pos_show_expiry_date_column?: boolean;
   purchase_use_batch_number?: boolean;
   purchase_use_expiry_date?: boolean;
   default_purchase_currency?: "SDG" | "OMR" | "USD";
@@ -58,6 +60,8 @@ export interface AppSettings {
   sales_default_customer_id?: number | null;
   sales_allow_price_edit?: boolean;
   sales_allow_invoice_date_edit?: boolean;
+  /** Whether the "الوحده" (unit) column shows on the A4 invoice PDF. Defaults to true. */
+  sales_a4_show_unit_column?: boolean;
 }
 
 // Type for the update payload (can be partial)

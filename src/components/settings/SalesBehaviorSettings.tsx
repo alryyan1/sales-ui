@@ -251,6 +251,40 @@ export const SalesBehaviorSettings = ({ control }: SalesBehaviorSettingsProps) =
           )}
         />
       </SettingsGroup>
+
+      <Separator />
+
+      <SettingsGroup title={t("sales.a4InvoiceGroupTitle")}>
+        <Controller
+          name="sales_a4_show_unit_column"
+          control={control}
+          render={({ field }) => (
+            <SwitchField
+              label={t("sales.a4ShowUnitColumnLabel")}
+              description={t("sales.a4ShowUnitColumnDescription")}
+              checked={field.value ?? true}
+              onCheckedChange={field.onChange}
+            />
+          )}
+        />
+      </SettingsGroup>
+
+      <Separator />
+
+      <SettingsGroup title={t("sales.itemsTableGroupTitle")}>
+        <Controller
+          name="pos_show_expiry_date_column"
+          control={control}
+          render={({ field }) => (
+            <SwitchField
+              label={t("sales.showExpiryDateColumnLabel")}
+              description={t("sales.showExpiryDateColumnDescription")}
+              checked={field.value ?? true}
+              onCheckedChange={field.onChange}
+            />
+          )}
+        />
+      </SettingsGroup>
     </SettingsSection>
   );
 };

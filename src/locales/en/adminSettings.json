@@ -66,7 +66,13 @@
     "allowPriceEditLabel": "Allow editing sale price",
     "allowPriceEditDescription": "When disabled, the sale price field in the invoice is locked to the product's default price.",
     "allowInvoiceDateEditLabel": "Allow editing invoice date",
-    "allowInvoiceDateEditDescription": "When disabled, every invoice is recorded with its actual creation date and time, with no way to change it."
+    "allowInvoiceDateEditDescription": "When disabled, every invoice is recorded with its actual creation date and time, with no way to change it.",
+    "a4InvoiceGroupTitle": "A4 Invoice",
+    "a4ShowUnitColumnLabel": "Show unit column on A4 invoice",
+    "a4ShowUnitColumnDescription": "When disabled, the \"Unit\" column is removed from the items table on the printed A4 invoice, and its space is redistributed to the description column.",
+    "itemsTableGroupTitle": "Items Table",
+    "showExpiryDateColumnLabel": "Show expiry date column in items table",
+    "showExpiryDateColumnDescription": "When disabled, the expiry date column is hidden from the sale items table on the gallery page."
   },
 
   "pos": {
@@ -77,6 +83,8 @@
     "showExpiredDescription": "When enabled, expired products will appear in POS search results.",
     "showOutOfStockLabel": "Show out-of-stock products",
     "showOutOfStockDescription": "When enabled, products with zero or negative stock will appear in POS search results.",
+    "showExpiryDateColumnLabel": "Show expiry date column in items table",
+    "showExpiryDateColumnDescription": "When disabled, the expiry date column is hidden from the sale items table on the gallery page.",
     "paymentMethodsGroupTitle": "Payment Methods",
     "paymentMethodsHelp": "At least one payment method must remain active.",
     "usdGroupTitle": "USD Conversion",

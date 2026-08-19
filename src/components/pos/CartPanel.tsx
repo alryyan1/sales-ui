@@ -73,7 +73,7 @@ function DiscountPopover({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+          className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
         >
           <Tag className="size-3" />
           {hasDiscount ? tCartPanel("editDiscount") : tCartPanel("addDiscount")}
@@ -85,7 +85,7 @@ function DiscountPopover({
             type="button"
             onClick={() => setType("percentage")}
             className={cn(
-              "flex-1 rounded-md py-1 text-xs font-medium",
+              "flex-1 rounded-md py-1.5 text-sm font-medium",
               type === "percentage" ? "bg-background shadow-sm" : "text-muted-foreground"
             )}
           >
@@ -95,7 +95,7 @@ function DiscountPopover({
             type="button"
             onClick={() => setType("fixed")}
             className={cn(
-              "flex-1 rounded-md py-1 text-xs font-medium",
+              "flex-1 rounded-md py-1.5 text-sm font-medium",
               type === "fixed" ? "bg-background shadow-sm" : "text-muted-foreground"
             )}
           >
@@ -184,8 +184,8 @@ function CartLine({
       )}
     >
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-foreground">{item.product.name}</p>
-        <p className="truncate text-xs text-muted-foreground">
+        <p className="truncate text-base font-medium text-foreground">{item.product.name}</p>
+        <p className="truncate text-sm text-muted-foreground">
           {item.product.sku && <span className="font-mono">{item.product.sku}</span>}
           {item.product.sku && " · "}
           {formatCurrency(item.unitPrice)} {tCartPanel("perUnitSuffix")}
@@ -197,11 +197,11 @@ function CartLine({
           type="button"
           variant="outline"
           size="icon"
-          className="size-7"
+          className="size-8"
           disabled={disabled || item.quantity <= 1}
           onClick={() => onQuantityChange(item.quantity - 1)}
         >
-          <Minus className="size-3" />
+          <Minus className="size-3.5" />
         </Button>
         <Input
           value={qtyDraft}
@@ -215,21 +215,21 @@ function CartLine({
           onKeyDown={(e) => {
             if (e.key === "Enter") (e.target as HTMLInputElement).blur();
           }}
-          className="h-7 w-12 px-1 text-center tabular-nums"
+          className="h-8 w-14 px-1 text-center text-sm tabular-nums"
         />
         <Button
           type="button"
           variant="outline"
           size="icon"
-          className="size-7"
+          className="size-8"
           disabled={disabled}
           onClick={() => onQuantityChange(item.quantity + 1)}
         >
-          <Plus className="size-3" />
+          <Plus className="size-3.5" />
         </Button>
       </div>
 
-      <span className="w-20 shrink-0 text-end text-sm font-semibold tabular-nums text-foreground">
+      <span className="w-20 shrink-0 text-end text-base font-semibold tabular-nums text-foreground">
         {formatCurrency(lineTotal)}
       </span>
 
@@ -283,11 +283,11 @@ export function CartPanel({
   return (
     <div className={cn("flex h-full flex-col", client && "bg-blue-50/60 dark:bg-blue-950/20")}>
       <div className="flex items-center justify-between border-b bg-primary px-4 py-3">
-        <h2 className="flex items-center gap-2 text-sm font-semibold text-primary-foreground">
+        <h2 className="flex items-center gap-2 text-base font-semibold text-primary-foreground">
           <Receipt className="size-4 text-primary-foreground/70" />
           {tCartPanel("cartTitle")}
           {items.length > 0 && (
-            <span className="rounded-full bg-primary-foreground/15 px-2 py-0.5 text-xs font-medium text-primary-foreground">
+            <span className="rounded-full bg-primary-foreground/15 px-2 py-0.5 text-sm font-medium text-primary-foreground">
               {items.length}
             </span>
           )}
@@ -319,8 +319,8 @@ export function CartPanel({
         {items.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center">
             <Receipt className="size-8 text-muted-foreground/50" />
-            <p className="text-sm font-medium text-foreground">{tCartPanel("cartEmpty")}</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-base font-medium text-foreground">{tCartPanel("cartEmpty")}</p>
+            <p className="text-sm text-muted-foreground">
               {tCartPanel("emptyCartHint")}
             </p>
           </div>
@@ -341,12 +341,12 @@ export function CartPanel({
 
       {items.length > 0 && (
         <div className="space-y-2.5 border-t bg-muted/20 px-4 py-3">
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between text-base">
             <span className="text-muted-foreground">{t("subtotal")}</span>
             <span className="tabular-nums">{formatCurrency(subtotal)}</span>
           </div>
 
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between text-base">
             {canDiscount && ticket ? (
               <DiscountPopover
                 ticket={ticket}
@@ -365,17 +365,17 @@ export function CartPanel({
           <Separator />
 
           <div className="flex items-end justify-between">
-            <span className="text-sm font-medium text-muted-foreground">{tCartPanel("grandTotal")}</span>
+            <span className="text-base font-medium text-muted-foreground">{tCartPanel("grandTotal")}</span>
             <span className="text-3xl font-bold tabular-nums text-primary">{formatCurrency(total)}</span>
           </div>
 
           {dueAmount != null && dueAmount !== total && (
             <>
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">{tCartPanel("alreadyPaid")}</span>
                 <span className="tabular-nums">{formatCurrency(Math.max(0, total - dueAmount))}</span>
               </div>
-              <div className="flex items-center justify-between text-sm font-medium">
+              <div className="flex items-center justify-between text-base font-medium">
                 <span className="text-muted-foreground">{tCartPanel("remainingToPay")}</span>
                 <span
                   className={cn(
@@ -391,11 +391,11 @@ export function CartPanel({
 
           {payments != null && payments.length > 0 && (
             <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground">{t("payments")}</p>
+              <p className="text-sm font-medium text-muted-foreground">{t("payments")}</p>
               {payments.map((p) => (
                 <div
                   key={p.id ?? `${p.method}-${p.amount}-${p.payment_date}`}
-                  className="flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs"
+                  className="flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-sm"
                 >
                   <span className="text-muted-foreground">
                     {PAYMENT_METHOD_LABEL_KEYS[p.method] ? tCartPanel(PAYMENT_METHOD_LABEL_KEYS[p.method]) : p.method}

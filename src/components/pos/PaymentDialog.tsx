@@ -153,7 +153,7 @@ export function PaymentDialog({
         </DialogHeader>
 
         <div className="rounded-xl bg-muted/40 px-4 py-3 text-center">
-          <p className="text-xs text-muted-foreground">{tPayment("totalDue")}</p>
+          <p className="text-sm text-muted-foreground">{tPayment("totalDue")}</p>
           <p className="text-3xl font-bold tabular-nums text-foreground">{formatCurrency(due)}</p>
         </div>
 
@@ -214,7 +214,7 @@ export function PaymentDialog({
                 )}
               </div>
               {row.method === "cash" && row.change > 0 && (
-                <p className="ps-1 text-xs text-green-600 dark:text-green-400">
+                <p className="ps-1 text-sm text-green-600 dark:text-green-400">
                   {tPayment("changeForPayment", { amount: formatCurrency(row.change) })}
                 </p>
               )}
