@@ -628,7 +628,7 @@ function SaleRow({
           }}
           className="font-semibold text-primary hover:underline"
         >
-          #{sale.number ?? sale.id}
+          #{sale.id}
         </button>
       </TableCell>
       <TableCell className="text-sm">
