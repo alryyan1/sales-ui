@@ -1,5 +1,5 @@
 // src/pages/sales/SalesListPage.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { format, startOfMonth, startOfWeek, subDays } from "date-fns";
@@ -62,6 +62,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { webUrl } from "@/constants";
 
 import saleService, { Sale } from "@/services/saleService";
+import { PaginatedResponse } from "@/services/clientService";
 import { getSaleStatus, translateSaleStatus } from "@/lib/saleStatus";
 import { SaleDetailsDrawer } from "@/components/sales/SaleDetailsDrawer";
 import {
@@ -197,6 +198,41 @@ const SalesListPage: React.FC = () => {
 
   const sales = salesQuery.data?.data ?? [];
   const isInitialLoading = salesQuery.isLoading;
+
+  // After each fetch, re-check the visible page's "exported to finance" sales against
+  // Firestore — if an entry was deleted on finance-api's side, clear finance_exported_at
+  // here too so the checkmark disappears instead of staying stuck from stale server data.
+  const queryClient = useQueryClient();
+  const lastVerifiedSignatureRef = useRef<string>("");
+  useEffect(() => {
+    const exportedIds = sales
+      .filter((s) => !!s.finance_exported_at)
+      .map((s) => s.id)
+      .sort((a, b) => a - b);
+
+    if (exportedIds.length === 0) return;
+
+    const signature = exportedIds.join(",");
+    if (signature === lastVerifiedSignatureRef.current) return;
+    lastVerifiedSignatureRef.current = signature;
+
+    saleService.verifyFinanceExports(exportedIds).then((removedIds) => {
+      if (removedIds.length === 0) return;
+      const removedSet = new Set(removedIds);
+      queryClient.setQueryData<PaginatedResponse<Sale> | undefined>(
+        ["sales-list", page, perPage, filterQs],
+        (old) =>
+          old && {
+            ...old,
+            data: old.data.map((s) =>
+              removedSet.has(s.id) ? { ...s, finance_exported_at: null, finance_export_error: null } : s,
+            ),
+          },
+      );
+    }).catch(() => {
+      // Background reconciliation only — a failed check just leaves stale state for next fetch.
+    });
+  }, [sales, page, perPage, filterQs, queryClient]);
   const hasActiveFilters =
     debouncedSearch !== "" || datePreset !== "today" || !!advanced.clientId || !!advanced.userId || !!advanced.shiftId;
   const isEmpty = !isInitialLoading && !salesQuery.isError && sales.length === 0;

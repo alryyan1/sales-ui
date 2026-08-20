@@ -706,6 +706,19 @@ const saleService = {
   },
 
   /**
+   * Checks a batch of sale ids currently shown as exported against Firestore.
+   * Any whose journal entry was deleted on finance-api's side get their
+   * finance_exported_at cleared server-side; returns the ids that were reset.
+   */
+  verifyFinanceExports: async (saleIds: number[]): Promise<number[]> => {
+    const response = await apiClient.post<{ removed: number[] }>(
+      `/sales/verify-finance-exports`,
+      { sale_ids: saleIds },
+    );
+    return response.data.removed;
+  },
+
+  /**
    * Delete a sale (generally not recommended for completed sales).
    */
   deleteSale: async (id: number): Promise<void> => {
