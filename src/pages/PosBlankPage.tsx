@@ -41,7 +41,7 @@ import productService, { Product } from "@/services/productService";
 import { Client } from "@/services/clientService";
 import { useClients } from "@/hooks/useClients";
 import reportService from "@/services/reportService";
-import { formatNumber, url as apiBaseUrl } from "@/constants";
+import { formatNumber, CURRENCY_DECIMALS, url as apiBaseUrl } from "@/constants";
 import { SaleItemsTable } from "@/components/sales/SaleItemsTable";
 import { PosSalesColumn } from "@/components/sales/PosSalesColumn";
 import ExpenseFormModal from "@/components/admin/expenses/ExpenseFormModal";
@@ -128,6 +128,8 @@ const PosBlankPage: React.FC = () => {
   const { language, direction } = useLanguage();
   const { user } = useAuth();
   const { getSetting } = useSettings();
+  const currencyDecimals =
+    CURRENCY_DECIMALS[getSetting("currency_code", "SDG") as string] ?? 0;
   const { hasPermission } = useAuthorization();
   const canPayment = hasPermission('سداد');
   const canCancelPayment = hasPermission('الغاء سداد');
@@ -1992,7 +1994,7 @@ const PosBlankPage: React.FC = () => {
                         {option.last_sale_price_per_sellable_unit != null ? (
                           <Stack direction="row" spacing={0.4} alignItems="center">
                             <Typography variant="caption" color="text.secondary">
-                              {`${t("priceColonLabel")} ${formatNumber(Number(option.last_sale_price_per_sellable_unit))}`}
+                              {`${t("priceColonLabel")} ${formatNumber(Number(option.last_sale_price_per_sellable_unit), currencyDecimals)}`}
                             </Typography>
                             <Typography
                               variant="caption"

@@ -8,6 +8,7 @@ import expenseService from "@/services/expenseService";
 import { usePaymentStats } from "@/hooks/usePaymentStats";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
+import { parseActivePaymentMethods } from "@/lib/paymentMethods";
 
 interface ReportStatsProps {
   filterValues: ReportFilterValues;
@@ -18,6 +19,17 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
   const { getSetting } = useSettings();
   const posMode = getSetting("pos_mode", "shift") as "shift" | "days";
   const currencyDecimals = CURRENCY_DECIMALS[getSetting("currency_code", "SDG")] ?? 0;
+  const activePaymentMethods = parseActivePaymentMethods(
+    getSetting("pos_active_payment_methods"),
+  );
+  // Bank/electronic tile stays visible if bankak, bank_transfer, or card is active,
+  // since those all roll into the "bankak" bucket below.
+  const showMethod = (method: "cash" | "bankak" | "fawry" | "ocash") =>
+    method === "bankak"
+      ? activePaymentMethods.some((m) =>
+          ["bankak", "bank_transfer", "card"].includes(m),
+        )
+      : activePaymentMethods.includes(method);
 
   const { data: reportData, isLoading } = useSalesReport({
     page: 1,
@@ -103,13 +115,13 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
   const items = [
     { label: t("totalSales"), value: stats.totalAmount, sub: t("operationsCountSuffix", { count: stats.totalSales }), color: "text-violet-600" },
     { label: t("totalPaidLabel"), value: stats.totalPaid, color: "text-emerald-600" },
-    { label: t("paymentMethodCash"), value: stats.totalCash, color: "text-green-600" },
-    { label: t("paymentMethodBankElectronic"), value: stats.totalBankak, color: "text-blue-600" },
-    { label: t("paymentMethodFawry"), value: stats.totalFawry, color: "text-orange-500" },
-    { label: t("paymentMethodOcash"), value: stats.totalOcash, color: "text-purple-500" },
+    showMethod("cash") && { label: t("paymentMethodCash"), value: stats.totalCash, color: "text-green-600" },
+    showMethod("bankak") && { label: t("paymentMethodBankElectronic"), value: stats.totalBankak, color: "text-blue-600" },
+    showMethod("fawry") && { label: t("paymentMethodFawry"), value: stats.totalFawry, color: "text-orange-500" },
+    showMethod("ocash") && { label: t("paymentMethodOcash"), value: stats.totalOcash, color: "text-purple-500" },
     { label: t("totalDue"), value: stats.totalDue, color: stats.totalDue > 0 ? "text-red-600" : "text-emerald-600" },
     { label: t("expensesLabel"), value: stats.totalExpenses, color: "text-rose-600" },
-  ];
+  ].filter(Boolean) as { label: string; value: number; sub?: string; color: string }[];
 
   return (
     <div className="flex flex-wrap gap-2 mb-4">

@@ -4,7 +4,7 @@ import { format, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { useSalesReport } from "@/hooks/useSalesReport";
 import { useSettings } from "@/context/SettingsContext";
-import { formatNumber } from "@/constants";
+import { formatNumber, CURRENCY_DECIMALS } from "@/constants";
 import { ReportFilterValues } from "./ReportFilters";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -45,6 +45,8 @@ export const SalesTable: React.FC<SalesTableProps> = ({
   const navigate = useNavigate();
   const { getSetting } = useSettings();
   const posMode = getSetting("pos_mode", "shift") as "shift" | "days";
+  const currencyDecimals =
+    CURRENCY_DECIMALS[getSetting("currency_code", "SDG") as string] ?? 0;
 
   const handleClientClick = (e: React.MouseEvent, clientId: number | null) => {
     e.stopPropagation(); // Prevent row click
@@ -200,7 +202,7 @@ export const SalesTable: React.FC<SalesTableProps> = ({
                         Number(sale.discount_amount) > 0 ? (
                           <div>
                             <span className="text-center text-sm font-semibold text-yellow-600 dark:text-yellow-500">
-                              {formatNumber(sale.discount_amount)}
+                              {formatNumber(sale.discount_amount, currencyDecimals)}
                             </span>
                             <span className="block text-center text-xs text-muted-foreground mt-1">
                               {(sale as any).discount_type === "percentage"
@@ -215,10 +217,10 @@ export const SalesTable: React.FC<SalesTableProps> = ({
                         )}
                       </TableCell>
                       <TableCell className="text-center font-semibold text-base">
-                        {formatNumber(sale.total_amount)}
+                        {formatNumber(sale.total_amount, currencyDecimals)}
                       </TableCell>
                       <TableCell className="text-center font-medium text-green-600 dark:text-green-500">
-                        {formatNumber(sale.paid_amount)}
+                        {formatNumber(sale.paid_amount, currencyDecimals)}
                       </TableCell>
                       <TableCell className="text-center">
                         <span
@@ -228,7 +230,7 @@ export const SalesTable: React.FC<SalesTableProps> = ({
                               : "text-green-600 dark:text-green-500"
                           }`}
                         >
-                          {formatNumber(sale.due_amount || 0)}
+                          {formatNumber(sale.due_amount || 0, currencyDecimals)}
                         </span>
                       </TableCell>
                     </TableRow>

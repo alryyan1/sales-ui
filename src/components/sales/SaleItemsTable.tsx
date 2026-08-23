@@ -23,7 +23,7 @@ import {
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
-import { formatNumber } from "@/constants";
+import { formatNumber, CURRENCY_DECIMALS } from "@/constants";
 import type { SaleItem } from "@/services/saleService";
 import { ProductImage } from "@/components/products/ProductImage";
 import { useSettings } from "@/context/SettingsContext";
@@ -85,6 +85,8 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
 }) => {
   const { getSetting } = useSettings();
   const showExpiryDateColumn = getSetting("pos_show_expiry_date_column", true) as boolean;
+  const currencyDecimals =
+    CURRENCY_DECIMALS[getSetting("currency_code", "SDG") as string] ?? 0;
   const list = useMemo(() => items ?? [], [items]);
   const [editingKey, setEditingKey] = useState<number | string | null>(null);
   const [editingField, setEditingField] = useState<"quantity" | "price" | null>(
@@ -645,7 +647,8 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
             );
           }
 
-          if (!canEdit) return formatNumber(Number(item.unit_price ?? 0), 2);
+          if (!canEdit)
+            return formatNumber(Number(item.unit_price ?? 0), currencyDecimals);
           if (editing) {
             return (
               <Box
@@ -724,7 +727,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                 },
               }}
             >
-              {formatNumber(Number(item.unit_price ?? 0), 2)}
+              {formatNumber(Number(item.unit_price ?? 0), currencyDecimals)}
               <EditOutlinedIcon sx={{ fontSize: 14, opacity: 0.6 }} />
             </Box>
           );
@@ -736,7 +739,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
         {
           id: "total",
           header: "الإجمالي",
-          cell: ({ getValue }) => formatNumber(getValue(), 2),
+          cell: ({ getValue }) => formatNumber(getValue(), currencyDecimals),
           meta: { align: "right" },
         },
       ),
@@ -787,6 +790,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
       canDeleteItems,
       disableQuantityAndPriceEdit,
       showExpiryDateColumn,
+      currencyDecimals,
       editingKey,
       editingField,
       editValue,

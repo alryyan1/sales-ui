@@ -15,9 +15,11 @@ import {
 import { Receipt, ArrowDownRight, ShoppingBag } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "@/context/LanguageContext";
-import { formatNumber } from "@/constants";
+import { formatNumber, CURRENCY_DECIMALS } from "@/constants";
+import { useSettings } from "@/context/SettingsContext";
 import apiClient from "@/lib/axios";
 import { toast } from "sonner";
+import { parseActivePaymentMethods } from "@/lib/paymentMethods";
 
 export interface ShiftStats {
   sales: {
@@ -61,6 +63,28 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
   const { t: tPos } = useTranslation("pos");
   const { direction } = useLanguage();
   const startAlign = direction === "rtl" ? "right" : "left";
+  const { getSetting } = useSettings();
+  const currencyDecimals =
+    CURRENCY_DECIMALS[getSetting("currency_code", "SDG") as string] ?? 0;
+  const activePaymentMethods = parseActivePaymentMethods(
+    getSetting("pos_active_payment_methods"),
+  );
+  // The backend folds bank_transfer/card payments into the "bankak" bucket,
+  // so that column stays visible when any of those methods is active.
+  const showMethodColumn = (method: "cash" | "bankak" | "fawry" | "ocash") =>
+    method === "bankak"
+      ? activePaymentMethods.some((m) =>
+          ["bankak", "bank_transfer", "card"].includes(m),
+        )
+      : activePaymentMethods.includes(method);
+  const paymentColumns = (
+    [
+      { key: "cash", label: tPos("paymentMethodCash") },
+      { key: "bankak", label: tPos("paymentMethodBankElectronic") },
+      { key: "fawry", label: tPos("paymentMethodFawry") },
+      { key: "ocash", label: tPos("paymentMethodOcash") },
+    ] as const
+  ).filter((col) => showMethodColumn(col.key));
   const [stats, setStats] = useState<ShiftStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -179,18 +203,11 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
             <TableCell align={startAlign} sx={{ fontWeight: 600 }}>
               {t("statementLabel")}
             </TableCell>
-            <TableCell align="center" sx={{ fontWeight: 600 }}>
-              {tPos("paymentMethodCash")}
-            </TableCell>
-            <TableCell align="center" sx={{ fontWeight: 600 }}>
-              {tPos("paymentMethodBankElectronic")}
-            </TableCell>
-            <TableCell align="center" sx={{ fontWeight: 600 }}>
-              {tPos("paymentMethodFawry")}
-            </TableCell>
-            <TableCell align="center" sx={{ fontWeight: 600 }}>
-              {tPos("paymentMethodOcash")}
-            </TableCell>
+            {paymentColumns.map((col) => (
+              <TableCell key={col.key} align="center" sx={{ fontWeight: 600 }}>
+                {col.label}
+              </TableCell>
+            ))}
             <TableCell align="center" sx={{ fontWeight: 600 }}>
               {t("totalRowLabel")}
             </TableCell>
@@ -207,20 +224,13 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
             >
               {t("revenueLabel")}
             </TableCell>
-            <TableCell align="center">
-              {formatNumber(stats?.sales?.cash ?? 0)}
-            </TableCell>
-            <TableCell align="center">
-              {formatNumber(stats?.sales?.bankak ?? 0)}
-            </TableCell>
-            <TableCell align="center">
-              {formatNumber(stats?.sales?.fawry ?? 0)}
-            </TableCell>
-            <TableCell align="center">
-              {formatNumber(stats?.sales?.ocash ?? 0)}
-            </TableCell>
+            {paymentColumns.map((col) => (
+              <TableCell key={col.key} align="center">
+                {formatNumber(stats?.sales?.[col.key] ?? 0, currencyDecimals)}
+              </TableCell>
+            ))}
             <TableCell align="center" sx={{ fontWeight: 600 }}>
-              {formatNumber(stats?.sales?.total ?? 0)}
+              {formatNumber(stats?.sales?.total ?? 0, currencyDecimals)}
             </TableCell>
           </TableRow>
 
@@ -234,23 +244,16 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
             >
               {t("expensesLabel")}
             </TableCell>
-            <TableCell align="center">
-              {formatNumber(stats?.expenses?.cash ?? 0)}
-            </TableCell>
-            <TableCell align="center">
-              {formatNumber(stats?.expenses?.bankak ?? 0)}
-            </TableCell>
-            <TableCell align="center">
-              {formatNumber(stats?.expenses?.fawry ?? 0)}
-            </TableCell>
-            <TableCell align="center">
-              {formatNumber(stats?.expenses?.ocash ?? 0)}
-            </TableCell>
+            {paymentColumns.map((col) => (
+              <TableCell key={col.key} align="center">
+                {formatNumber(stats?.expenses?.[col.key] ?? 0, currencyDecimals)}
+              </TableCell>
+            ))}
             <TableCell
               align="center"
               sx={{ fontWeight: 600, color: "error.main" }}
             >
-              {formatNumber(stats?.expenses?.total ?? 0)}
+              {formatNumber(stats?.expenses?.total ?? 0, currencyDecimals)}
             </TableCell>
           </TableRow>
 
@@ -264,23 +267,16 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
             >
               {t("salesReturnsLabel")}
             </TableCell>
-            <TableCell align="center">
-              {formatNumber(stats?.returns?.cash ?? 0)}
-            </TableCell>
-            <TableCell align="center">
-              {formatNumber(stats?.returns?.bankak ?? 0)}
-            </TableCell>
-            <TableCell align="center">
-              {formatNumber(stats?.returns?.fawry ?? 0)}
-            </TableCell>
-            <TableCell align="center">
-              {formatNumber(stats?.returns?.ocash ?? 0)}
-            </TableCell>
+            {paymentColumns.map((col) => (
+              <TableCell key={col.key} align="center">
+                {formatNumber(stats?.returns?.[col.key] ?? 0, currencyDecimals)}
+              </TableCell>
+            ))}
             <TableCell
               align="center"
               sx={{ fontWeight: 600, color: "warning.main" }}
             >
-              {formatNumber(stats?.returns?.total ?? 0)}
+              {formatNumber(stats?.returns?.total ?? 0, currencyDecimals)}
             </TableCell>
           </TableRow>
 
@@ -294,35 +290,20 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
             >
               {t("netLegend")}
             </TableCell>
-            <TableCell
-              align="center"
-              sx={{ fontWeight: 600, color: "primary.main" }}
-            >
-              {formatNumber(stats?.net?.cash ?? 0)}
-            </TableCell>
-            <TableCell
-              align="center"
-              sx={{ fontWeight: 600, color: "primary.main" }}
-            >
-              {formatNumber(stats?.net?.bankak ?? 0)}
-            </TableCell>
-            <TableCell
-              align="center"
-              sx={{ fontWeight: 600, color: "primary.main" }}
-            >
-              {formatNumber(stats?.net?.fawry ?? 0)}
-            </TableCell>
-            <TableCell
-              align="center"
-              sx={{ fontWeight: 600, color: "primary.main" }}
-            >
-              {formatNumber(stats?.net?.ocash ?? 0)}
-            </TableCell>
+            {paymentColumns.map((col) => (
+              <TableCell
+                key={col.key}
+                align="center"
+                sx={{ fontWeight: 600, color: "primary.main" }}
+              >
+                {formatNumber(stats?.net?.[col.key] ?? 0, currencyDecimals)}
+              </TableCell>
+            ))}
             <TableCell
               align="center"
               sx={{ fontWeight: 700, color: "primary.main" }}
             >
-              {formatNumber(stats?.net?.total ?? 0)}
+              {formatNumber(stats?.net?.total ?? 0, currencyDecimals)}
             </TableCell>
           </TableRow>
         </TableBody>

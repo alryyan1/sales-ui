@@ -35,6 +35,7 @@ import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import { Sale, Payment } from "@/services/saleService";
 import { Client } from "@/services/clientService";
 import { useSettings } from "@/context/SettingsContext";
+import { CURRENCY_DECIMALS } from "@/constants";
 import { parseActivePaymentMethods } from "@/lib/paymentMethods";
 import dayjs from "dayjs";
 
@@ -53,7 +54,7 @@ interface SaleSummaryPanelProps {
   setIsClientModalOpen: (open: boolean) => void;
   handleClientChange: (client: Client | null) => void;
   clientSearchLoading: boolean;
-  formatNumber: (n: number) => string;
+  formatNumber: (n: number, decimals?: number) => string;
   discountType: "percentage" | "fixed";
   setDiscountType: (type: "percentage" | "fixed") => void;
   discountValue: string;
@@ -174,6 +175,8 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
   const { t: tCommon } = useTranslation("common");
   const { getSetting } = useSettings();
   const activePaymentMethods = parseActivePaymentMethods(getSetting("pos_active_payment_methods"));
+  const currencyDecimals =
+    CURRENCY_DECIMALS[getSetting("currency_code", "SDG") as string] ?? 0;
   const [dateEditing, setDateEditing] = useState(false);
   const [tempDate, setTempDate] = useState("");
   const [bellAnchor, setBellAnchor] = useState<HTMLButtonElement | null>(null);
@@ -498,17 +501,17 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
 
           {/* ── Financials ── */}
           <Box sx={{ borderRadius: 1, border: "1px solid", borderColor: "grey.200", overflow: "hidden" }}>
-            <FinRow label={t("subtotal")} value={formatNumber(subtotal)} bg="#f8fafc" />
+            <FinRow label={t("subtotal")} value={formatNumber(subtotal, currencyDecimals)} bg="#f8fafc" />
             {discountAmt > 0 && (
-              <FinRow label={t("discount")} value={`− ${formatNumber(discountAmt, 2)}`} color="error.main" bg="#fff5f5" bold />
+              <FinRow label={t("discount")} value={`− ${formatNumber(discountAmt, currencyDecimals)}`} color="error.main" bg="#fff5f5" bold />
             )}
             <Divider />
-            <FinRow label={tSummary("totalLabel")} value={formatNumber(total, 2)} bold color="success.dark" />
+            <FinRow label={tSummary("totalLabel")} value={formatNumber(total, currencyDecimals)} bold color="success.dark" />
             <Divider />
-            <FinRow label={tSummary("paidLabel")} value={formatNumber(paid, 2)} color="success.main" />
+            <FinRow label={tSummary("paidLabel")} value={formatNumber(paid, currencyDecimals)} color="success.main" />
             <FinRow
               label={tSummary("remainingLabel")}
-              value={formatNumber(due, 2)}
+              value={formatNumber(due, currencyDecimals)}
               bold
               color={isFullyPaid ? "success.dark" : "error.dark"}
               bg={isFullyPaid ? "#f0fdf4" : "#fff5f5"}
@@ -581,7 +584,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                     </Stack>
                     <Stack direction="row" alignItems="center" gap={0.25}>
                       <Typography sx={{ fontSize: "0.75rem" }} fontWeight={700} color="success.dark">
-                        {formatNumber(Number(p.amount))}
+                        {formatNumber(Number(p.amount), currencyDecimals)}
                       </Typography>
                       {p.id != null && (
                         <IconButton size="small" color="error" onClick={() => handleDeletePayment(p.id!)} disabled={!canCancelPayment || deletingPaymentId === p.id} sx={{ p: 0.2 }}>
@@ -603,7 +606,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.6}>
                 <Typography sx={{ fontSize: "0.7rem" }} color="primary.dark" fontWeight={700}>{t("addPayment")}</Typography>
                 <Typography sx={{ fontSize: "0.7rem" }} color="error.main" fontWeight={800}>
-                  {tSummary("remainingColon", { amount: formatNumber(due) })}
+                  {tSummary("remainingColon", { amount: formatNumber(due, currencyDecimals) })}
                 </Typography>
               </Stack>
               <Stack direction="row" alignItems="center" gap={0.5}>
