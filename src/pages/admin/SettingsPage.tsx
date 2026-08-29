@@ -58,6 +58,7 @@ const SettingsPage: React.FC = () => {
       firebase_collection_name: "none",
       purchase_use_batch_number: true,
       purchase_use_expiry_date: true,
+      price_priority_source: "product",
     },
   });
 
@@ -101,6 +102,7 @@ const SettingsPage: React.FC = () => {
           settings.purchase_use_batch_number ?? true,
         purchase_use_expiry_date:
           settings.purchase_use_expiry_date ?? true,
+        price_priority_source: settings.price_priority_source || "product",
       });
     }
   }, [settings, reset]);
@@ -120,6 +122,7 @@ const SettingsPage: React.FC = () => {
       pos_show_out_of_stock_products: Boolean(data.pos_show_out_of_stock_products),
       purchase_use_batch_number: Boolean(data.purchase_use_batch_number),
       purchase_use_expiry_date: Boolean(data.purchase_use_expiry_date),
+      price_priority_source: data.price_priority_source || "product",
     };
 
     try {

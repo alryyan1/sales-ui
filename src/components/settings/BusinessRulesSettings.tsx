@@ -184,6 +184,26 @@ export const BusinessRulesSettings = ({
                   )}
                 />
               </Box>
+              <Box sx={{ flex: "1 1 100%" }}>
+                <Controller
+                  name="price_priority_source"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      value={field.value ?? "product"}
+                      select
+                      fullWidth
+                      label="أولوية سعر البيع"
+                      helperText="أي سعر يُستخدم عند عرض/بيع المنتج: سعر المنتج المحدد يدوياً، أم سعر آخر فاتورة مشتريات؟"
+                      sx={textFieldSx}
+                    >
+                      <MenuItem value="product">سعر المنتج الحالي</MenuItem>
+                      <MenuItem value="purchase">آخر فاتورة مشتريات</MenuItem>
+                    </TextField>
+                  )}
+                />
+              </Box>
             </Box>
           </Box>
 

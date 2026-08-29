@@ -50,6 +50,7 @@ export interface AppSettings {
   pos_show_out_of_stock_products?: boolean;
   purchase_use_batch_number?: boolean;
   purchase_use_expiry_date?: boolean;
+  price_priority_source?: "product" | "purchase"; // Which price wins: product's own sale_price, or the latest purchase invoice's sale_price
 }
 
 // Type for the update payload (can be partial)

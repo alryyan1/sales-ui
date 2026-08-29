@@ -98,10 +98,10 @@ const getDisplayPrice = (
     }
     return null;
   }
-  if (product.sale_price != null) return Number(product.sale_price);
   if (product.last_sale_price_per_sellable_unit != null) {
     return Number(product.last_sale_price_per_sellable_unit);
   }
+  if (product.sale_price != null) return Number(product.sale_price);
   return null;
 };
 
