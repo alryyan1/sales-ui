@@ -35,6 +35,8 @@ export interface Product {
   category_id?: number | null; // Optional if not included in resource
   category_name?: string | null; // Optional if included by resource
   has_expiry_date?: boolean;
+  /** Service products aren't stocked — sellable regardless of stock; stock displays as "خدمة" instead of a number. */
+  is_service?: boolean;
   // Optional accessors that might be added by backend ProductResource
   // --- Stock (always in sellable units) ---
   latest_purchase_cost?: string | number | null;
@@ -94,6 +96,7 @@ export interface ProductFormData {
   // unit?: string | null;
   category_id?: number | null;
   has_expiry_date?: boolean;
+  is_service?: boolean;
 }
 
 // Matches Laravel API Resource Collection structure

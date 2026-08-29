@@ -12,5 +12,8 @@ export function resolveUnitPrice(product: Product, usdFactor: number): number {
 }
 
 export function stockOf(product: Product): number {
+  // Services aren't stocked and are always sellable — treat as unlimited so every
+  // stock-availability check/filter that reads stockOf() passes for them automatically.
+  if (product.is_service) return Infinity;
   return product.current_stock_quantity ?? product.stock_quantity ?? 0;
 }

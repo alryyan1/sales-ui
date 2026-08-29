@@ -7,6 +7,7 @@
     "deleteSuccess": "تم حذف المورد بنجاح.",
     "saveSuccess": "تم حفظ بيانات المورد بنجاح.",
     "name": "اسم المنتج ",
+    "serviceStockLabel": "خدمة",
     "scientificName": "الاسم العلمي",
     "scientificNamePlaceholder": "أدخل الاسم العلمي (اختياري)",
     "filterByCategory": "تصفية حسب الفئة",

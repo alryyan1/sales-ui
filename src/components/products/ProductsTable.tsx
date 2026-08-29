@@ -254,15 +254,17 @@ const ProductRow: React.FC<ProductRowProps> = ({
     product.current_stock_quantity ?? product.stock_quantity ?? 0,
   );
   const isLow =
+    !product.is_service &&
     product.stock_alert_level !== null &&
     stockQty <= (product.stock_alert_level as number);
-  const isOutOfStock = stockQty <= 0;
+  const isOutOfStock = !product.is_service && stockQty <= 0;
 
-  const isExpired = product.earliest_expiry_date
+  const { getSetting } = useSettings();
+  const hideExpiryDate = getSetting("hide_expiry_date", false);
+  const isExpired = !hideExpiryDate && product.earliest_expiry_date
     ? new Date(product.earliest_expiry_date) < new Date()
     : false;
 
-  const { getSetting } = useSettings();
   const colorHighlight = getSetting("product_row_color_highlight", false);
   const usdConversionEnabled = Boolean(getSetting("usd_conversion_enabled", true));
 
@@ -406,7 +408,9 @@ const ProductRow: React.FC<ProductRowProps> = ({
       {vis.stock !== false && (
         <TableCell align="center">
           <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center">
-            <Typography variant="body1" fontWeight={600}>{formatNumber(stockQty)}</Typography>
+            <Typography variant="body1" fontWeight={600} color={product.is_service ? "text.secondary" : undefined}>
+              {product.is_service ? t("serviceStockLabel") : formatNumber(stockQty)}
+            </Typography>
             {(isLow || isOutOfStock) && (
               <Tooltip title={isOutOfStock ? t("outOfStockTooltip") : t("lowStockWarning")}>
                 <AlertTriangle style={{ width: 16, height: 16,
@@ -527,6 +531,7 @@ const InlineCreateRow: React.FC<{
   onSave: (data: ProductFormData) => void;
   onCancel: () => void;
   isLoading?: boolean;
+  hideExpiryDate?: boolean;
 }> = ({
   categories,
   stockingUnits,
@@ -534,6 +539,7 @@ const InlineCreateRow: React.FC<{
   onSave,
   onCancel,
   isLoading,
+  hideExpiryDate,
 }) => {
   const [formData, setFormData] = useState<ProductFormData>({
     name: "",
@@ -773,15 +779,17 @@ const InlineCreateRow: React.FC<{
         />
       </TableCell>
       {/* Expiry Date */}
-      <TableCell align="center">
-        <TextField
-          type="date"
-          size="small"
-          value={formData.expire_date || ""}
-          onChange={(e) => handleChange("expire_date", e.target.value)}
-          sx={{ width: 130 }}
-        />
-      </TableCell>
+      {!hideExpiryDate && (
+        <TableCell align="center">
+          <TextField
+            type="date"
+            size="small"
+            value={formData.expire_date || ""}
+            onChange={(e) => handleChange("expire_date", e.target.value)}
+            sx={{ width: 130 }}
+          />
+        </TableCell>
+      )}
       <TableCell align="center">
         <IconButton size="small" onClick={onCancel} disabled={isLoading}>
           <X size={18} color="red" />
@@ -819,7 +827,9 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
   const { t } = useTranslation("products");
   const { getSetting } = useSettings();
   const usdConversionEnabled = Boolean(getSetting("usd_conversion_enabled", true));
-  const vis = vc;
+  const hideExpiryDate = getSetting("hide_expiry_date", false);
+  // Force the expiry column off regardless of the per-user column-visibility toggle.
+  const vis = hideExpiryDate ? { ...vc, expire_date: false } : vc;
   const [copiedSku, setCopiedSku] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isCreatingLoading, setIsCreatingLoading] = useState(false);
@@ -1148,6 +1158,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                   onSave={handleCreateSave}
                   onCancel={() => setIsCreating(false)}
                   isLoading={isCreatingLoading}
+                  hideExpiryDate={hideExpiryDate}
                 />
               )}
 

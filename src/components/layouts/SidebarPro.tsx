@@ -7,6 +7,7 @@ import { LogOut, ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
 import { NavItem } from "./types";
 import { Box, Typography, IconButton } from "@mui/material";
 import { useAuth } from "@/context/AuthContext";
+import { useSettings } from "@/context/SettingsContext";
 
 interface SidebarProProps {
   navItems: NavItem[];
@@ -29,6 +30,17 @@ const SidebarPro: React.FC<SidebarProProps> = ({
   const { handleLogout, user } = useAuth();
   const { t } = useTranslation("navigation");
   const { t: tSidebar } = useTranslation("sidebar");
+  const { getSetting } = useSettings();
+
+  // Resolves a nav item's display label, honoring the admin-configurable
+  // override for the "products" item (see products_nav_label in Settings).
+  const navLabel = (label: string): string => {
+    if (label === "products") {
+      const override = getSetting("products_nav_label");
+      if (override) return override;
+    }
+    return tSidebar(label);
+  };
 
   // Helper to check if a menu item is active
   const isActive = (path: string) => location.pathname === path;
@@ -44,10 +56,20 @@ const SidebarPro: React.FC<SidebarProProps> = ({
     return user.allowed_navs?.includes(route) ?? false;
   };
 
+  const hideExpiryDate = getSetting("hide_expiry_date", false);
+  // Nav items that only make sense when expiry-date tracking is on.
+  const EXPIRY_ONLY_ROUTES = [
+    "/reports/moved-expired-products",
+    "/reports/low-stock-products",
+  ];
+
   // Recursively filter navigation items based on user permissions
   const filterNavItems = (items: NavItem[]): NavItem[] => {
     return items
       .map((item) => {
+        if (hideExpiryDate && EXPIRY_ONLY_ROUTES.includes(item.to)) {
+          return null;
+        }
         // If item has children, filter them first
         if (item.children && item.children.length > 0) {
           const filteredChildren = filterNavItems(item.children);
@@ -79,7 +101,7 @@ const SidebarPro: React.FC<SidebarProProps> = ({
         return (
           <SubMenu
             key={item.label}
-            label={tSidebar(item.label)}
+            label={navLabel(item.label)}
             icon={item.icon ? <item.icon size={18} /> : null}
             active={item.children.some((child) =>
               location.pathname.startsWith(child.to)
@@ -117,7 +139,7 @@ const SidebarPro: React.FC<SidebarProProps> = ({
             },
           }}
         >
-          {tSidebar(item.label)}
+          {navLabel(item.label)}
         </MenuItem>
       );
     });

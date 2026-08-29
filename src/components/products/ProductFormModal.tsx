@@ -32,6 +32,8 @@ import {
   Divider,
   alpha,
   Tooltip,
+  Switch,
+  FormControlLabel,
 } from "@mui/material";
 import {
   Loader2,
@@ -84,6 +86,7 @@ type ProductFormValues = {
   expire_date: string;
   image_url: string;
   description: string;
+  is_service: boolean;
 };
 
 interface ProductFormModalProps {
@@ -159,6 +162,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const { getSetting } = useSettings();
   const scientificNameVisible = getSetting("product_scientific_name_visible", true);
   const scientificNameRequired = getSetting("product_scientific_name_required", false);
+  const hideExpiryDate = getSetting("hide_expiry_date", false);
 
   const [units, setUnits] = useState<Unit[]>([]);
   const [loadingUnits, setLoadingUnits] = useState(true);
@@ -191,6 +195,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       expire_date: "",
       image_url: "",
       description: "",
+      is_service: false,
     },
   });
 
@@ -199,9 +204,12 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     control,
     reset,
     setValue,
+    watch,
     formState: { isSubmitting },
     setError,
   } = form;
+
+  const isService = watch("is_service");
 
   const fetchCategoriesForSelect = useCallback(async () => {
     setLoadingCategories(true);
@@ -321,6 +329,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           expire_date: productToEdit.expire_date ?? "",
           image_url: productToEdit.image_url ?? "",
           description: productToEdit.description ?? "",
+          is_service: productToEdit.is_service ?? false,
         });
       } else {
         reset({
@@ -337,6 +346,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           expire_date: "",
           image_url: "",
           description: "",
+          is_service: false,
         });
       }
       setActiveTab(0);
@@ -372,6 +382,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       sale_price: data.sale_price !== "" ? Number(data.sale_price) : null,
       cost_price: data.cost_price !== "" ? Number(data.cost_price) : null,
       expire_date: data.expire_date || null,
+      is_service: data.is_service,
     };
 
     try {
@@ -694,116 +705,33 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 />
               </Box>
 
-            </Paper>
-
-            <Paper
-              elevation={0}
-              sx={{ p: 1, mb: 1, borderRadius: 2, bgcolor: "background.paper" }}
-            >
-              <SectionHeader
-                icon={<Layers size={18} />}
-                title={tForm("unitsAndStock")}
-                subtitle={tForm("unitsSectionSubtitle")}
+              <Controller
+                control={control}
+                name="is_service"
+                render={({ field }) => (
+                  <FormControlLabel
+                    sx={{ mt: 1 }}
+                    control={
+                      <Switch
+                        checked={field.value}
+                        onChange={(e) => field.onChange(e.target.checked)}
+                        disabled={isSubmitting}
+                        size="small"
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Typography variant="body2" fontWeight={600}>
+                          {tForm("isServiceLabel")}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {tForm("isServiceSubtitle")}
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                )}
               />
-
-              {/* Single row: all 4 fields */}
-              <Box sx={{ display: "flex", gap: 1 }}>
-
-                {/* Stocking Unit */}
-                <Controller
-                  control={control}
-                  name="stocking_unit_id"
-                  render={({ field, fieldState }) => (
-                    <Box sx={{ display: "flex", gap: 0.5, alignItems: "flex-start", flex: 1 }}>
-                      <Autocomplete
-                        fullWidth
-                        size="small"
-                        options={units}
-                        loading={loadingUnits}
-                        getOptionLabel={(option) => getLocalizedName(option, language)}
-                        isOptionEqualToValue={(option, value) => option.id === value.id}
-                        value={units.find((u) => String(u.id) === field.value) || null}
-                        onChange={(_, newValue) => field.onChange(newValue ? String(newValue.id) : "")}
-                        disabled={isSubmitting || loadingUnits}
-                        renderInput={(params) => (
-                          <TextField {...params} label={t("stockingUnit")}
-                            placeholder={loadingUnits ? tCommon("loading") : t("selectStockingUnit")}
-                            error={!!fieldState.error} helperText={fieldState.error?.message} sx={fieldSx} />
-                        )}
-                        noOptionsText={t("noStockingUnit")}
-                      />
-                      <Tooltip title={t("addStockingUnit")}>
-                        <IconButton size="small" onClick={() => setIsStockingUnitModalOpen(true)} disabled={isSubmitting}
-                          sx={{ mt: 0.5, borderRadius: 1.5, color: "primary.main" }}>
-                          <Plus size={15} />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  )}
-                />
-
-                {/* Sellable Unit */}
-                <Controller
-                  control={control}
-                  name="sellable_unit_id"
-                  render={({ field, fieldState }) => (
-                    <Box sx={{ display: "flex", gap: 0.5, alignItems: "flex-start", flex: 1 }}>
-                      <Autocomplete
-                        fullWidth
-                        size="small"
-                        options={units}
-                        loading={loadingUnits}
-                        getOptionLabel={(option) => getLocalizedName(option, language)}
-                        isOptionEqualToValue={(option, value) => option.id === value.id}
-                        value={units.find((u) => String(u.id) === field.value) || null}
-                        onChange={(_, newValue) => field.onChange(newValue ? String(newValue.id) : "")}
-                        disabled={isSubmitting || loadingUnits}
-                        renderInput={(params) => (
-                          <TextField {...params} label={t("sellableUnit")}
-                            placeholder={loadingUnits ? tCommon("loading") : t("selectSellableUnit")}
-                            error={!!fieldState.error} helperText={fieldState.error?.message} sx={fieldSx} />
-                        )}
-                        noOptionsText={t("noSellableUnit")}
-                      />
-                      <Tooltip title={t("addSellableUnit")}>
-                        <IconButton size="small" onClick={() => setIsSellableUnitModalOpen(true)} disabled={isSubmitting}
-                          sx={{ mt: 0.5, borderRadius: 1.5, color: "primary.main" }}>
-                          <Plus size={15} />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  )}
-                />
-
-                {/* Units per stocking unit */}
-                <Controller
-                  control={control}
-                  name="units_per_stocking_unit"
-                  rules={{ required: tForm("fieldRequired"), min: { value: 1, message: tForm("mustBeAtLeastOne") } }}
-                  render={({ field, fieldState }) => (
-                    <TextField {...field} label={`${t("unitsPerStockingUnit")} *`} type="number" size="small"
-                      sx={{ ...fieldSx, flex: 1 }} inputProps={{ min: 1, step: 1 }}
-                      disabled={isSubmitting} onFocus={(e) => e.target.select()}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                      helperText={fieldState.error?.message || tForm("unitsPerStockingUnitExample")} error={!!fieldState.error} />
-                  )}
-                />
-
-                {/* Stock Alert Level */}
-                <Controller
-                  control={control}
-                  name="stock_alert_level"
-                  rules={{ min: { value: 0, message: tForm("cannotBeLessThanZero") } }}
-                  render={({ field, fieldState }) => (
-                    <TextField {...field} label={t("stockAlertLevel")} type="number" size="small"
-                      sx={{ ...fieldSx, flex: 1 }} inputProps={{ min: 0, step: 1 }}
-                      disabled={isSubmitting} onFocus={(e) => e.target.select()}
-                      value={field.value ?? ""}
-                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
-                      helperText={fieldState.error?.message || tForm("optional")} error={!!fieldState.error} />
-                  )}
-                />
-              </Box>
             </Paper>
 
             <Paper
@@ -827,9 +755,9 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       {...field}
                       label={tForm("costPrice")}
                       type="number"
-                      
+                      dir="ltr"
                       size="small"
-                      inputProps={{ min: 0, step: "0.01" }}
+                      inputProps={{ min: 0, step: "0.01", dir: "ltr" }}
                       disabled={isSubmitting}
                       onFocus={(e) => e.target.select()}
                       value={field.value ?? ""}
@@ -850,8 +778,9 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       {...field}
                       label={t("salePrice")}
                       type="number"
+                      dir="ltr"
                       size="small"
-                      inputProps={{ min: 0, step: "0.01" }}
+                      inputProps={{ min: 0, step: "0.01", dir: "ltr" }}
                       disabled={isSubmitting}
                       onFocus={(e) => e.target.select()}
                       value={field.value ?? ""}
@@ -888,26 +817,28 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 />
 
                 {/* Expire Date */}
-                <Controller
-                  control={control}
-                  name="expire_date"
-                  render={({ field, fieldState }) => (
-                    <TextField
-                      {...field}
-                      label={tForm("expiryDate")}
-                      type="date"
-                      
-                      size="small"
-                      disabled={isSubmitting}
-                      InputLabelProps={{ shrink: true }}
-                      value={field.value ?? ""}
-                      onChange={(e) => field.onChange(e.target.value)}
-                      helperText={fieldState.error?.message}
-                      error={!!fieldState.error}
-                      sx={fieldSx}
-                    />
-                  )}
-                />
+                {!hideExpiryDate && (
+                  <Controller
+                    control={control}
+                    name="expire_date"
+                    render={({ field, fieldState }) => (
+                      <TextField
+                        {...field}
+                        label={tForm("expiryDate")}
+                        type="date"
+
+                        size="small"
+                        disabled={isSubmitting}
+                        InputLabelProps={{ shrink: true }}
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.value)}
+                        helperText={fieldState.error?.message}
+                        error={!!fieldState.error}
+                        sx={fieldSx}
+                      />
+                    )}
+                  />
+                )}
               </Box>
               <Controller
                 control={control}
@@ -925,6 +856,116 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   />
                 )}
               />
+            </Paper>
+
+            <Paper
+              elevation={0}
+              sx={{ p: 1, mb: 1, borderRadius: 2, bgcolor: "background.paper" }}
+            >
+              <SectionHeader
+                icon={<Layers size={18} />}
+                title={tForm("unitsAndStock")}
+                subtitle={isService ? tForm("unitsSectionDisabledForService") : tForm("unitsSectionSubtitle")}
+              />
+
+              {/* Single row: all 4 fields — disabled entirely for service products (no stock/units to track) */}
+              <Box sx={{ display: "flex", gap: 1, pointerEvents: isService ? "none" : "auto", opacity: isService ? 0.5 : 1 }}>
+
+                {/* Stocking Unit */}
+                <Controller
+                  control={control}
+                  name="stocking_unit_id"
+                  render={({ field, fieldState }) => (
+                    <Box sx={{ display: "flex", gap: 0.5, alignItems: "flex-start", flex: 1 }}>
+                      <Autocomplete
+                        fullWidth
+                        size="small"
+                        options={units}
+                        loading={loadingUnits}
+                        getOptionLabel={(option) => getLocalizedName(option, language)}
+                        isOptionEqualToValue={(option, value) => option.id === value.id}
+                        value={units.find((u) => String(u.id) === field.value) || null}
+                        onChange={(_, newValue) => field.onChange(newValue ? String(newValue.id) : "")}
+                        disabled={isSubmitting || loadingUnits || isService}
+                        renderInput={(params) => (
+                          <TextField {...params} label={t("stockingUnit")}
+                            placeholder={loadingUnits ? tCommon("loading") : t("selectStockingUnit")}
+                            error={!!fieldState.error} helperText={fieldState.error?.message} sx={fieldSx} />
+                        )}
+                        noOptionsText={t("noStockingUnit")}
+                      />
+                      <Tooltip title={t("addStockingUnit")}>
+                        <IconButton size="small" onClick={() => setIsStockingUnitModalOpen(true)} disabled={isSubmitting || isService}
+                          sx={{ mt: 0.5, borderRadius: 1.5, color: "primary.main" }}>
+                          <Plus size={15} />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  )}
+                />
+
+                {/* Sellable Unit */}
+                <Controller
+                  control={control}
+                  name="sellable_unit_id"
+                  render={({ field, fieldState }) => (
+                    <Box sx={{ display: "flex", gap: 0.5, alignItems: "flex-start", flex: 1 }}>
+                      <Autocomplete
+                        fullWidth
+                        size="small"
+                        options={units}
+                        loading={loadingUnits}
+                        getOptionLabel={(option) => getLocalizedName(option, language)}
+                        isOptionEqualToValue={(option, value) => option.id === value.id}
+                        value={units.find((u) => String(u.id) === field.value) || null}
+                        onChange={(_, newValue) => field.onChange(newValue ? String(newValue.id) : "")}
+                        disabled={isSubmitting || loadingUnits || isService}
+                        renderInput={(params) => (
+                          <TextField {...params} label={t("sellableUnit")}
+                            placeholder={loadingUnits ? tCommon("loading") : t("selectSellableUnit")}
+                            error={!!fieldState.error} helperText={fieldState.error?.message} sx={fieldSx} />
+                        )}
+                        noOptionsText={t("noSellableUnit")}
+                      />
+                      <Tooltip title={t("addSellableUnit")}>
+                        <IconButton size="small" onClick={() => setIsSellableUnitModalOpen(true)} disabled={isSubmitting || isService}
+                          sx={{ mt: 0.5, borderRadius: 1.5, color: "primary.main" }}>
+                          <Plus size={15} />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  )}
+                />
+
+                {/* Units per stocking unit */}
+                <Controller
+                  control={control}
+                  name="units_per_stocking_unit"
+                  rules={isService ? {} : { required: tForm("fieldRequired"), min: { value: 1, message: tForm("mustBeAtLeastOne") } }}
+                  render={({ field, fieldState }) => (
+                    <TextField {...field} label={`${t("unitsPerStockingUnit")} *`} type="number" size="small"
+                      sx={{ ...fieldSx, flex: 1 }} inputProps={{ min: 1, step: 1 }}
+                      disabled={isSubmitting || isService} onFocus={(e) => e.target.select()}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                      helperText={fieldState.error?.message || tForm("unitsPerStockingUnitExample")} error={!!fieldState.error} />
+                  )}
+                />
+
+                {/* Stock Alert Level */}
+                <Controller
+                  control={control}
+                  name="stock_alert_level"
+                  rules={{ min: { value: 0, message: tForm("cannotBeLessThanZero") } }}
+                  render={({ field, fieldState }) => (
+                    <TextField {...field} label={t("stockAlertLevel")} type="number" size="small"
+                      sx={{ ...fieldSx, flex: 1 }} inputProps={{ min: 0, step: 1 }}
+                      disabled={isSubmitting || isService} onFocus={(e) => e.target.select()}
+                      value={field.value ?? ""}
+                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                      helperText={fieldState.error?.message || tForm("optional")} error={!!fieldState.error} />
+                  )}
+                />
+              </Box>
             </Paper>
 
             {/* ── Image Upload Section ── */}

@@ -43,6 +43,10 @@ export interface AppSettings {
   product_row_color_highlight?: boolean;
   product_scientific_name_visible?: boolean;
   product_scientific_name_required?: boolean;
+  /** Overrides the sidebar's "products" nav item label (falls back to the translated "Products" when empty). */
+  products_nav_label?: string | null;
+  /** Master switch — hides every expiry-date field/column/report/badge across the system. */
+  hide_expiry_date?: boolean;
   pos_show_expired_products?: boolean;
   pos_show_out_of_stock_products?: boolean;
   /** Whether the expiry date column shows in the sale items table (SaleItemsTable, gallery page). Defaults to true. */

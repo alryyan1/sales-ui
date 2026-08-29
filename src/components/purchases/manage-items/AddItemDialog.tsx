@@ -61,7 +61,9 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
 }) => {
   const { settings, getSetting } = useSettings();
   const showBatchNumber = getSetting("purchase_use_batch_number", true) ?? true;
-  const showExpiryDate = getSetting("purchase_use_expiry_date", true) ?? true;
+  const showExpiryDate =
+    !getSetting("hide_expiry_date", false) &&
+    (getSetting("purchase_use_expiry_date", true) ?? true);
   const { t } = useTranslation("purchases");
   const { t: tCommon } = useTranslation("common");
 

@@ -6,6 +6,7 @@
     "deleteSuccess": "Supplier deleted successfully.",
     "saveSuccess": "Supplier data saved successfully.",
     "name": "Product Name",
+    "serviceStockLabel": "Service",
     "scientificName": "Scientific Name",
     "scientificNamePlaceholder": "Enter scientific name (optional)",
     "filterByCategory": "Filter by Category",

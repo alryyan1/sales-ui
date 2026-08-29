@@ -128,6 +128,7 @@ const PosBlankPage: React.FC = () => {
   const { language, direction } = useLanguage();
   const { user } = useAuth();
   const { getSetting } = useSettings();
+  const hideExpiryDate = Boolean(getSetting("hide_expiry_date", false));
   const currencyDecimals =
     CURRENCY_DECIMALS[getSetting("currency_code", "SDG") as string] ?? 0;
   const { hasPermission } = useAuthorization();
@@ -328,7 +329,7 @@ const PosBlankPage: React.FC = () => {
           const filtered = raw.filter((p) => {
             // Stock quantity returned from server will be warehouse-specific if warehouse_id was passed
             const stock = p.current_stock_quantity ?? p.stock_quantity ?? 0;
-            if (!isQuoteMode && !showOutOfStock && stock <= 0) return false;
+            if (!p.is_service && !isQuoteMode && !showOutOfStock && stock <= 0) return false;
 
             // Check expiry if available
             if (p.earliest_expiry_date) {
@@ -1962,7 +1963,11 @@ const PosBlankPage: React.FC = () => {
                         >
                           {option.name}
                         </Typography>
-                        {option.current_stock_quantity != null ||
+                        {option.is_service ? (
+                          <Typography variant="caption" color="text.secondary" fontWeight="bold">
+                            خدمة
+                          </Typography>
+                        ) : option.current_stock_quantity != null ||
                           option.stock_quantity != null ? (
                           <Typography
                             variant="caption"
@@ -2014,7 +2019,7 @@ const PosBlankPage: React.FC = () => {
                           </Stack>
                         ) : null}
 
-                        {option.earliest_expiry_date && (
+                        {!hideExpiryDate && option.earliest_expiry_date && (
                           <Typography variant="caption" color="warning.dark">
                             {`${t("expiresColonLabel")} ${option.earliest_expiry_date}`}
                           </Typography>

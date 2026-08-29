@@ -84,7 +84,9 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
   disableQuantityAndPriceEdit = false,
 }) => {
   const { getSetting } = useSettings();
-  const showExpiryDateColumn = getSetting("pos_show_expiry_date_column", true) as boolean;
+  const showExpiryDateColumn =
+    !getSetting("hide_expiry_date", false) &&
+    (getSetting("pos_show_expiry_date_column", true) as boolean);
   const currencyDecimals =
     CURRENCY_DECIMALS[getSetting("currency_code", "SDG") as string] ?? 0;
   const list = useMemo(() => items ?? [], [items]);
@@ -528,8 +530,11 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
             (typeof item.product?.stock_quantity === "number"
               ? item.product.stock_quantity
               : Number(item.product?.stock_quantity));
-          const value =
-            stock != null && !Number.isNaN(stock) ? formatNumber(stock) : "—";
+          const value = item.product?.is_service
+            ? "خدمة"
+            : stock != null && !Number.isNaN(stock)
+              ? formatNumber(stock)
+              : "—";
           const batch = item.batch_number_sold;
           return (
             <Box sx={{ textAlign: "center" }}>

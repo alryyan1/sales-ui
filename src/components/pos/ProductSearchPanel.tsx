@@ -57,6 +57,7 @@ export function ProductSearchPanel({
   const { t, i18n } = useTranslation("pos");
   const { t: tCommon } = useTranslation("common");
   const { t: tProductSearch } = useTranslation("productSearchPanel");
+  const { t: tProducts } = useTranslation("products");
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [lookupBusy, setLookupBusy] = useState(false);
@@ -276,7 +277,11 @@ export function ProductSearchPanel({
                   </p>
                 </div>
 
-                {outOfStock ? (
+                {product.is_service ? (
+                  <Badge variant="secondary" className="shrink-0 text-sm">
+                    {tProducts("serviceStockLabel")}
+                  </Badge>
+                ) : outOfStock ? (
                   <Badge variant="destructive" className="shrink-0 text-sm">
                     {tProductSearch("outOfStockBadge")}
                   </Badge>

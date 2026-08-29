@@ -36,12 +36,17 @@
     "currencyHelpNoDecimals": "تحدد هذه العملة عدد الخانات العشرية المعروضة لكل المبالغ المالية في النظام — بدون خانات عشرية.",
     "currencyHelpWithDecimals": "تحدد هذه العملة عدد الخانات العشرية المعروضة لكل المبالغ المالية في النظام — {{count}} خانة عشرية.",
     "productDisplayGroupTitle": "عرض جدول المنتجات",
+    "productsNavLabelLabel": "اسم عنصر المنتجات في الشريط الجانبي",
+    "productsNavLabelPlaceholder": "مثال: المعدات، الأدوية، المنتجات",
+    "productsNavLabelDescription": "التسمية الظاهرة في القائمة الجانبية بدلاً من \"المنتجات\" الافتراضية. اتركه فارغاً لاستخدام الاسم الافتراضي.",
     "rowColorHighlightLabel": "تلوين صفوف المنتجات المنتهية أو الناقصة",
     "rowColorHighlightDescription": "عند التفعيل، تُلوَّن صفوف المنتجات المنتهية الصلاحية (أحمر) والنافدة من المخزون (برتقالي)",
     "scientificNameVisibleLabel": "إظهار حقل الاسم العلمي في نموذج المنتج",
     "scientificNameVisibleDescription": "عند التعطيل، يُخفى حقل \"الاسم العلمي\" كلياً من نموذج الإضافة والتعديل",
     "scientificNameRequiredLabel": "جعل الاسم العلمي إلزامياً",
-    "scientificNameRequiredDescription": "عند التفعيل، لا يمكن حفظ المنتج بدون إدخال الاسم العلمي"
+    "scientificNameRequiredDescription": "عند التفعيل، لا يمكن حفظ المنتج بدون إدخال الاسم العلمي",
+    "hideExpiryDateLabel": "إخفاء تاريخ الصلاحية من كل النظام",
+    "hideExpiryDateDescription": "عند التفعيل، يُخفى حقل وعمود تاريخ الصلاحية وتنبيهات المنتجات المنتهية من نموذج المنتج، الجداول، نقطة البيع، والتقارير"
   },
 
   "sales": {

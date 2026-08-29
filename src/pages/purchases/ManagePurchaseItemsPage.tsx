@@ -40,7 +40,9 @@ const ManagePurchaseItemsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { getSetting } = useSettings();
   const showBatchNumber = getSetting("purchase_use_batch_number", true) ?? true;
-  const showExpiryDate = getSetting("purchase_use_expiry_date", true) ?? true;
+  const showExpiryDate =
+    !getSetting("hide_expiry_date", false) &&
+    (getSetting("purchase_use_expiry_date", true) ?? true);
 
   // Dialog states
   const [addItemDialogOpen, setAddItemDialogOpen] = useState(false);

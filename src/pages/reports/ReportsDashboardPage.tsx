@@ -30,6 +30,7 @@ import reportService, {
 import { formatCurrency, formatNumber } from "../../constants";
 import { format, isPast, differenceInDays } from "date-fns";
 import { ar } from "date-fns/locale";
+import { useSettings } from "@/context/SettingsContext";
 
 const ReportsDashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -37,6 +38,8 @@ const ReportsDashboardPage: React.FC = () => {
   const [stagnant, setStagnant] = useState<StagnantProduct[]>([]);
   const [expiring, setExpiring] = useState<ExpiringProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const { getSetting } = useSettings();
+  const hideExpiryDate = getSetting("hide_expiry_date", false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -45,7 +48,7 @@ const ReportsDashboardPage: React.FC = () => {
       const [bestSellingData, stagnantData, expiringData] = await Promise.all([
         reportService.getBestSellingProducts(30, 10), // Last 30 days, top 10
         reportService.getStagnantProducts(3, 10), // No sales in 3 months, top 10
-        reportService.getExpiringProducts(6, 15), // Expiring in 6 months, top 15
+        hideExpiryDate ? Promise.resolve([]) : reportService.getExpiringProducts(6, 15), // Expiring in 6 months, top 15
       ]);
       setBestSelling(bestSellingData);
       setStagnant(stagnantData);
@@ -275,6 +278,7 @@ const ReportsDashboardPage: React.FC = () => {
         </Grid>
 
         {/* Expiring Products */}
+        {!hideExpiryDate && (
         <Grid size={{ xs: 12 }}>
           <Card elevation={2} sx={{ borderRadius: 2 }}>
             <CardHeader
@@ -342,6 +346,7 @@ const ReportsDashboardPage: React.FC = () => {
             </TableContainer>
           </Card>
         </Grid>
+        )}
       </Grid>
     </Box>
   );

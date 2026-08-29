@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Package, TrendingUp, TrendingDown, AlertCircle } from "lucide-react";
 import { PurchaseItem } from "@/services/purchaseService";
 import { useTranslation } from "react-i18next";
+import { useSettings } from "@/context/SettingsContext";
 
 interface InventoryImpactDialogProps {
   isOpen: boolean;
@@ -33,6 +34,8 @@ const InventoryImpactDialog: React.FC<InventoryImpactDialogProps> = ({
 }) => {
   const { t } = useTranslation("purchases");
   const { t: tCommon } = useTranslation("common");
+  const { getSetting } = useSettings();
+  const hideExpiryDate = getSetting("hide_expiry_date", false);
 
   // Determine the type of change
   const isAddingStock =
@@ -153,7 +156,7 @@ const InventoryImpactDialog: React.FC<InventoryImpactDialogProps> = ({
                           {t("batchColonValue", { value: item.batch_number })}
                         </div>
                       )}
-                      {item.expiry_date && (
+                      {!hideExpiryDate && item.expiry_date && (
                         <div className="text-xs text-slate-500">
                           {t("expiryColonValue", { value: item.expiry_date })}
                         </div>

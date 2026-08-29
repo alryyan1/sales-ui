@@ -67,6 +67,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ onDrawerToggle, isSidebarCollapse
 
   // USD to SDG factor
   const usdConversionEnabled = Boolean(getSetting("usd_conversion_enabled", true));
+  const hideExpiryDate = Boolean(getSetting("hide_expiry_date", false));
   const usdFactor = getSetting("usd_to_sdg_factor", 1) as number;
   const [localFactor, setLocalFactor] = React.useState(String(usdFactor));
   const [factorPopoverOpen, setFactorPopoverOpen] = React.useState(false);
@@ -221,7 +222,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ onDrawerToggle, isSidebarCollapse
             </Button>
           )}
 
-          {isPosPage && (
+          {isPosPage && !hideExpiryDate && (
             <>
               <div className="relative">
                 <Button

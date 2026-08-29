@@ -1,6 +1,7 @@
 import { Controller, Control } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -68,7 +69,28 @@ export const BusinessRulesSettings = ({ control }: BusinessRulesSettingsProps) =
         <h3 className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
           {t("businessRules.productDisplayGroupTitle")}
         </h3>
-        <div className="mt-3 space-y-1">
+        <div className="mt-3 space-y-4">
+          <Controller
+            name="products_nav_label"
+            control={control}
+            render={({ field }) => (
+              <div className="max-w-sm space-y-2">
+                <Label htmlFor="products_nav_label">
+                  {t("businessRules.productsNavLabelLabel")}
+                </Label>
+                <Input
+                  id="products_nav_label"
+                  {...field}
+                  value={field.value || ""}
+                  placeholder={t("businessRules.productsNavLabelPlaceholder")}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t("businessRules.productsNavLabelDescription")}
+                </p>
+              </div>
+            )}
+          />
+
           <Controller
             name="product_row_color_highlight"
             control={control}
@@ -102,6 +124,19 @@ export const BusinessRulesSettings = ({ control }: BusinessRulesSettingsProps) =
               <SwitchField
                 label={t("businessRules.scientificNameRequiredLabel")}
                 description={t("businessRules.scientificNameRequiredDescription")}
+                checked={!!field.value}
+                onCheckedChange={field.onChange}
+              />
+            )}
+          />
+
+          <Controller
+            name="hide_expiry_date"
+            control={control}
+            render={({ field }) => (
+              <SwitchField
+                label={t("businessRules.hideExpiryDateLabel")}
+                description={t("businessRules.hideExpiryDateDescription")}
                 checked={!!field.value}
                 onCheckedChange={field.onChange}
               />

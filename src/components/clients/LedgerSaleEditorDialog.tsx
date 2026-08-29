@@ -432,7 +432,11 @@ export const LedgerSaleEditorDialog: React.FC<LedgerSaleEditorDialogProps> = ({
                             {[o.sku, o.suggested_sale_price != null && `السعر: ${formatNumber(Number(o.suggested_sale_price))}`].filter(Boolean).join(" · ")}
                           </Typography>
                         </Box>
-                        {(o.current_stock_quantity ?? o.stock_quantity) != null && (
+                        {o.is_service ? (
+                          <Typography variant="caption" fontWeight={700} color="text.secondary">
+                            خدمة
+                          </Typography>
+                        ) : (o.current_stock_quantity ?? o.stock_quantity) != null && (
                           <Typography variant="caption" fontWeight={700}
                             color={(o.current_stock_quantity ?? o.stock_quantity ?? 0) <= 5 ? "error.main" : "success.main"}>
                             {formatNumber(o.current_stock_quantity ?? o.stock_quantity ?? 0)}

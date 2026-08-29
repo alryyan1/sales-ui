@@ -26,6 +26,7 @@ import {
 import { Product } from "../../services/productService";
 import { formatNumber, formatCurrency } from "@/constants";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSettings } from "@/context/SettingsContext";
 import dayjs from "dayjs";
 
 interface PurchaseItem {
@@ -70,6 +71,8 @@ export const PurchaseItemDetailsDialog: React.FC<PurchaseItemDetailsDialogProps>
   const { direction } = useLanguage();
   const { t } = useTranslation("purchases");
   const { t: tCommon } = useTranslation("common");
+  const { getSetting } = useSettings();
+  const hideExpiryDate = getSetting("hide_expiry_date", false);
   if (!product) return null;
 
   // Filter purchase items for this specific product
@@ -182,7 +185,7 @@ export const PurchaseItemDetailsDialog: React.FC<PurchaseItemDetailsDialogProps>
                     <TableCell>{t("quantity")}</TableCell>
                     <TableCell>{t("fields.unitCost")}</TableCell>
                     <TableCell>{t("itemTotal")}</TableCell>
-                    <TableCell>{t("expiryDate")}</TableCell>
+                    {!hideExpiryDate && <TableCell>{t("expiryDate")}</TableCell>}
                     <TableCell>{t("status")}</TableCell>
                   </TableRow>
                 </TableHead>
@@ -226,9 +229,11 @@ export const PurchaseItemDetailsDialog: React.FC<PurchaseItemDetailsDialogProps>
                           {formatCurrency(item.quantity * item.unit_cost)}
                         </Typography>
                       </TableCell>
-                      <TableCell>
-                        {item.expiry_date ? dayjs(item.expiry_date).format("YYYY-MM-DD") : "-"}
-                      </TableCell>
+                      {!hideExpiryDate && (
+                        <TableCell>
+                          {item.expiry_date ? dayjs(item.expiry_date).format("YYYY-MM-DD") : "-"}
+                        </TableCell>
+                      )}
                       <TableCell>
                         <Chip
                           label={

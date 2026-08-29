@@ -36,12 +36,17 @@
     "currencyHelpNoDecimals": "This currency determines the number of decimal places shown for all monetary amounts in the system — no decimal places.",
     "currencyHelpWithDecimals": "This currency determines the number of decimal places shown for all monetary amounts in the system — {{count}} decimal place(s).",
     "productDisplayGroupTitle": "Product Table Display",
+    "productsNavLabelLabel": "Products sidebar item name",
+    "productsNavLabelPlaceholder": "e.g. Equipment, Medicine, Products",
+    "productsNavLabelDescription": "The label shown in the sidebar instead of the default \"Products\". Leave empty to use the default name.",
     "rowColorHighlightLabel": "Highlight expired or low-stock product rows",
     "rowColorHighlightDescription": "When enabled, expired product rows are highlighted red and out-of-stock rows orange",
     "scientificNameVisibleLabel": "Show scientific name field in product form",
     "scientificNameVisibleDescription": "When disabled, the \"scientific name\" field is fully hidden from the add/edit form",
     "scientificNameRequiredLabel": "Make scientific name required",
-    "scientificNameRequiredDescription": "When enabled, a product cannot be saved without entering a scientific name"
+    "scientificNameRequiredDescription": "When enabled, a product cannot be saved without entering a scientific name",
+    "hideExpiryDateLabel": "Hide expiry date from the whole system",
+    "hideExpiryDateDescription": "When enabled, the expiry date field/column and expired-product alerts are hidden from the product form, tables, POS, and reports"
   },
 
   "sales": {
