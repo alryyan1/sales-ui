@@ -129,8 +129,8 @@ const PosBlankPage: React.FC = () => {
   const { user } = useAuth();
   const { getSetting } = useSettings();
   const hideExpiryDate = Boolean(getSetting("hide_expiry_date", false));
-  const currencyDecimals =
-    CURRENCY_DECIMALS[getSetting("currency_code", "SDG") as string] ?? 0;
+  const currencyCode = getSetting("currency_code", "SDG") as string;
+  const currencyDecimals = CURRENCY_DECIMALS[currencyCode] ?? 0;
   const { hasPermission } = useAuthorization();
   const canPayment = hasPermission('سداد');
   const canCancelPayment = hasPermission('الغاء سداد');
@@ -2016,7 +2016,7 @@ const PosBlankPage: React.FC = () => {
                                 color: option.last_purchase_currency === "USD" ? "success.dark" : "info.dark",
                               }}
                             >
-                              {option.last_purchase_currency ?? "SDG"}
+                              {currencyCode === "OMR" ? "OMR" : (option.last_purchase_currency ?? currencyCode)}
                             </Typography>
                           </Stack>
                         ) : null}

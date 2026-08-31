@@ -519,7 +519,7 @@ const SupplierLedgerPage: React.FC = () => {
                                 {/* Debit — purchase total */}
                                 <TableCell align="left" sx={{ whiteSpace: "nowrap" }}>
                                   {entry.currency === "USD" ? (
-                                    <Stack spacing={0.3}>
+                                    <Stack spacing={0.3} dir="ltr" alignItems="flex-start">
                                       <Stack direction="row" alignItems="center" spacing={0.5}>
                                         <Typography variant="body2" fontWeight={600} color="text.primary">
                                           {formatNumber(Number(entry.debit).toFixed(2))}

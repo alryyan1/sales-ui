@@ -344,6 +344,11 @@ const ExpensesPage: React.FC = () => {
                             {expense.reference}
                           </span>
                         )}
+                        {expense.description && (
+                          <span className="mt-0.5 block max-w-xs truncate text-xs text-muted-foreground" title={expense.description}>
+                            {expense.description}
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {expense.expense_category_name ? (

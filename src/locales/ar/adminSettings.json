@@ -121,12 +121,19 @@
     "useBatchNumberLabel": "استخدام رقم الباتش (Batch Number)",
     "useBatchNumberDescription": "عند التفعيل، يظهر عمود رقم الباتش في جدول أصناف المشتريات ويمكن إدخاله لكل صنف.",
     "useExpiryDateLabel": "استخدام تاريخ الانتهاء (Expiry Date)",
-    "useExpiryDateDescription": "عند التفعيل، يظهر عمود تاريخ الانتهاء في جدول أصناف المشتريات ويمكن تحديده لكل صنف."
+    "useExpiryDateDescription": "عند التفعيل، يظهر عمود تاريخ الانتهاء في جدول أصناف المشتريات ويمكن تحديده لكل صنف.",
+    "pricingGroupTitle": "تسعير المنتج",
+    "syncProductSalePriceLabel": "تحديث سعر المنتج تلقائيًا من آخر فاتورة شراء",
+    "syncProductSalePriceDescription": "عند التفعيل، يُحدَّث سعر بيع المنتج فورًا بسعر البيع المُدخل في كل فاتورة شراء جديدة، وتعرض عمليات البيع هذا السعر المحدَّث. عند الإيقاف (الافتراضي) يبقى السعر المحفوظ على المنتج هو المعتمد دائمًا."
   },
 
   "pdf": {
     "title": "شعار الفواتير",
     "description": "ارفع شعار الشركة وختمها وتوقيعها، وحدد مكان ظهور الشعار في الفواتير والتقارير المطبوعة.",
+    "invoiceTemplateGroupTitle": "قالب فاتورة البيع (A4)",
+    "invoiceTemplateClassic": "الكلاسيكي",
+    "invoiceTemplateModern": "الحديث",
+    "invoiceTemplateHelp": "التصميم الحديث تخطيط إنجليزي عالمي (INVOICE، Bill To، Balance Due...)، بينما الكلاسيكي هو التصميم العربي الحالي.",
     "logoGroupTitle": "شعار الشركة",
     "logoImageLabel": "صورة الشعار",
     "logoPositionLabel": "مكان الشعار",

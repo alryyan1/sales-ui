@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -7,6 +8,14 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Table,
   TableBody,
@@ -18,10 +27,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useFormatCurrency } from "@/hooks/useFormatCurrency";
-import { SupplierPayment } from "@/services/supplierPaymentService";
-import { Wallet, Calendar, User, Plus } from "lucide-react";
+import supplierPaymentService, { SupplierPayment } from "@/services/supplierPaymentService";
+import { Wallet, Calendar, User, Plus, Trash2, Loader2 } from "lucide-react";
 import PaymentFormModal from "./PaymentFormModal";
 import { useSettings } from "@/context/SettingsContext";
+import { useAuthorization } from "@/hooks/useAuthorization";
 import { formatNumber } from "@/constants";
 
 interface PurchasePaymentsDialogProps {
@@ -47,8 +57,12 @@ export const PurchasePaymentsDialog: React.FC<PurchasePaymentsDialogProps> = ({
 }) => {
   const formatCurrency = useFormatCurrency();
   const { getSetting } = useSettings();
+  const { hasPermission } = useAuthorization();
+  const canCancelPayment = hasPermission("الغاء سداد");
   const usdFactor = getSetting("usd_to_sdg_factor", 1) as number;
   const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
+  const [confirmDeletePayment, setConfirmDeletePayment] = useState<SupplierPayment | null>(null);
+  const [deletingPaymentId, setDeletingPaymentId] = useState<number | null>(null);
 
   const isUSD = currency === "USD";
   const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
@@ -69,6 +83,21 @@ export const PurchasePaymentsDialog: React.FC<PurchasePaymentsDialogProps> = ({
   const handleAddPaymentSuccess = () => {
     setIsAddPaymentOpen(false);
     onSuccess();
+  };
+
+  const handleConfirmDeletePayment = async () => {
+    if (!confirmDeletePayment) return;
+    setDeletingPaymentId(confirmDeletePayment.id);
+    try {
+      await supplierPaymentService.deletePayment(confirmDeletePayment.id);
+      toast.success("تم إلغاء السداد بنجاح");
+      onSuccess();
+    } catch {
+      toast.error("فشل إلغاء السداد");
+    } finally {
+      setDeletingPaymentId(null);
+      setConfirmDeletePayment(null);
+    }
   };
 
   return (
@@ -128,12 +157,13 @@ export const PurchasePaymentsDialog: React.FC<PurchasePaymentsDialogProps> = ({
                   <TableHead className="text-right">طريقة الدفع</TableHead>
                   <TableHead className="text-right">المرجع</TableHead>
                   <TableHead className="text-right">بواسطة</TableHead>
+                  {canCancelPayment && <TableHead className="text-right">إجراءات</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {payments.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-32 text-center text-slate-500">
+                    <TableCell colSpan={canCancelPayment ? 6 : 5} className="h-32 text-center text-slate-500">
                       لا توجد مدفوعات مسجلة لهذه الفاتورة بعد.
                     </TableCell>
                   </TableRow>
@@ -163,6 +193,24 @@ export const PurchasePaymentsDialog: React.FC<PurchasePaymentsDialogProps> = ({
                           {typeof payment.user === 'string' ? payment.user : payment.user?.name || "-"}
                         </div>
                       </TableCell>
+                      {canCancelPayment && (
+                        <TableCell>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            disabled={deletingPaymentId === payment.id}
+                            onClick={() => setConfirmDeletePayment(payment)}
+                          >
+                            {deletingPaymentId === payment.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))
                 )}
@@ -180,6 +228,31 @@ export const PurchasePaymentsDialog: React.FC<PurchasePaymentsDialogProps> = ({
         paymentToEdit={null}
         purchaseId={purchaseId}
       />
+
+      <AlertDialog open={!!confirmDeletePayment} onOpenChange={(open) => !open && setConfirmDeletePayment(null)}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>إلغاء السداد؟</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmDeletePayment &&
+                `سيتم حذف دفعة بمبلغ ${formatCurrency(confirmDeletePayment.amount)} نهائيًا. هذا الإجراء لا يمكن التراجع عنه.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button type="button" variant="outline" onClick={() => setConfirmDeletePayment(null)}>
+              تراجع
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmDeletePayment}
+              disabled={deletingPaymentId !== null}
+            >
+              {deletingPaymentId !== null ? <Loader2 className="h-4 w-4 animate-spin" /> : "حذف"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

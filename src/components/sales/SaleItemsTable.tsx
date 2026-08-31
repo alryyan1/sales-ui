@@ -89,7 +89,12 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
     (getSetting("pos_show_expiry_date_column", true) as boolean);
   const currencyDecimals =
     CURRENCY_DECIMALS[getSetting("currency_code", "SDG") as string] ?? 0;
-  const list = useMemo(() => items ?? [], [items]);
+  // Most recently added item first (highest id on top), so the first item added to the
+  // sale ends up at the bottom of the table.
+  const list = useMemo(
+    () => [...(items ?? [])].sort((a, b) => (b.id ?? Infinity) - (a.id ?? Infinity)),
+    [items],
+  );
   const [editingKey, setEditingKey] = useState<number | string | null>(null);
   const [editingField, setEditingField] = useState<"quantity" | "price" | null>(
     null,
@@ -168,7 +173,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
       const key = getItemKey(item);
       if (editingKey !== key || editingField !== "quantity") return;
       const raw = editValue.trim();
-      const num = raw === "" ? NaN : Number(raw);
+      const num = raw === "" ? NaN : Math.round(Number(raw));
       if (!Number.isFinite(num) || num <= 0) {
         setEditValue(String(item.quantity));
         setEditingKey(null);
@@ -228,7 +233,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
 
         // 1. Commit current value
         const raw = editValue.trim();
-        const num = raw === "" ? NaN : Number(raw);
+        const num = raw === "" ? NaN : Math.round(Number(raw));
         if (Number.isFinite(num) && num > 0) {
           // Only update if changed
           const current = Number(item.quantity);
@@ -451,8 +456,8 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                   // onFocus={(e) => e.target.select()}
                   onKeyDown={(e) => handleQuantityKeyDown(e, item)}
                   inputProps={{
-                    min: 0.01,
-                    step: 0.01,
+                    min: 1,
+                    step: 1,
                     "aria-label": "الكمية",
                   }}
                   sx={{

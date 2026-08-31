@@ -78,6 +78,23 @@ export const PurchaseSettings = ({ control }: PurchaseSettingsProps) => {
           )}
         />
       </SettingsGroup>
+
+      <Separator />
+
+      <SettingsGroup title={t("purchases.pricingGroupTitle")}>
+        <Controller
+          name="purchase_sync_product_sale_price"
+          control={control}
+          render={({ field }) => (
+            <SwitchField
+              label={t("purchases.syncProductSalePriceLabel")}
+              description={t("purchases.syncProductSalePriceDescription")}
+              checked={Boolean(field.value)}
+              onCheckedChange={field.onChange}
+            />
+          )}
+        />
+      </SettingsGroup>
     </SettingsSection>
   );
 };

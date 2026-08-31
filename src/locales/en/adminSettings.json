@@ -121,12 +121,19 @@
     "useBatchNumberLabel": "Use Batch Number",
     "useBatchNumberDescription": "When enabled, a batch number column appears in the purchase items table and can be entered for each item.",
     "useExpiryDateLabel": "Use Expiry Date",
-    "useExpiryDateDescription": "When enabled, an expiry date column appears in the purchase items table and can be set for each item."
+    "useExpiryDateDescription": "When enabled, an expiry date column appears in the purchase items table and can be set for each item.",
+    "pricingGroupTitle": "Product Pricing",
+    "syncProductSalePriceLabel": "Auto-update product price from the latest purchase invoice",
+    "syncProductSalePriceDescription": "When enabled, the product's sale price is immediately overwritten by the sale price entered on each new purchase invoice, and sales show that updated price. When off (default), the price stored on the product always takes priority."
   },
 
   "pdf": {
     "title": "Invoice Branding",
     "description": "Upload the company logo, stamp, and signature, and choose where the logo appears on printed invoices and reports.",
+    "invoiceTemplateGroupTitle": "Sale Invoice (A4) Template",
+    "invoiceTemplateClassic": "Classic",
+    "invoiceTemplateModern": "Modern",
+    "invoiceTemplateHelp": "The modern template is an international-style English layout (INVOICE, Bill To, Balance Due...), while classic is the current Arabic-first design.",
     "logoGroupTitle": "Company Logo",
     "logoImageLabel": "Logo Image",
     "logoPositionLabel": "Logo Position",

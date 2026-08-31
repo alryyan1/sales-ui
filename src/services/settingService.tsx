@@ -27,6 +27,7 @@ export interface AppSettings {
   invoice_branding_type?: "logo" | "header";
   logo_position?: "left" | "right" | "both";
   stamp_position?: "left" | "center" | "right";
+  invoice_template?: "classic" | "modern";
   logo_height?: number;
   logo_width?: number;
   pdf_font?: string;
@@ -55,6 +56,7 @@ export interface AppSettings {
   pos_show_expiry_date_column?: boolean;
   purchase_use_batch_number?: boolean;
   purchase_use_expiry_date?: boolean;
+  purchase_sync_product_sale_price?: boolean;
   default_purchase_currency?: "SDG" | "OMR" | "USD";
   /** Drives decimal-place display everywhere money amounts are shown — see CURRENCY_DECIMALS in constants.ts. */
   currency_code?: "SDG" | "OMR" | "USD";

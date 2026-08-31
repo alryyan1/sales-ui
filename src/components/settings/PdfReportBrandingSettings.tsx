@@ -22,6 +22,7 @@ const INVOICE_REPORT_KEY = "invoice";
 
 type LogoPosition = "left" | "right" | "both";
 type StampPosition = "left" | "center" | "right";
+type InvoiceTemplate = "classic" | "modern";
 
 function ImageUploadTile({
   label,
@@ -78,6 +79,9 @@ export const PdfReportBrandingSettings: React.FC = () => {
   const { t } = useTranslation("adminSettings");
   const { settings, fetchSettings } = useSettings();
 
+  const [invoiceTemplate, setInvoiceTemplate] = useState<InvoiceTemplate>("classic");
+  const [savingInvoiceTemplate, setSavingInvoiceTemplate] = useState(false);
+
   const [logoPosition, setLogoPosition] = useState<LogoPosition>("right");
   const [logoWidth, setLogoWidth] = useState(60);
   const [logoHeight, setLogoHeight] = useState(60);
@@ -99,6 +103,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
 
   useEffect(() => {
     if (!settings) return;
+    setInvoiceTemplate((settings.invoice_template as InvoiceTemplate) ?? "classic");
     setLogoPosition((settings.logo_position as LogoPosition) ?? "right");
     setLogoWidth(settings.logo_width ?? 60);
     setLogoHeight(settings.logo_height ?? 60);
@@ -201,6 +206,20 @@ export const PdfReportBrandingSettings: React.FC = () => {
     }
   };
 
+  const handleSaveInvoiceTemplate = async (templateValue: InvoiceTemplate) => {
+    setInvoiceTemplate(templateValue);
+    setSavingInvoiceTemplate(true);
+    try {
+      await settingService.updateSettings({ invoice_template: templateValue });
+      await fetchSettings();
+      toast.success(t("pdf.saveSuccess"));
+    } catch {
+      toast.error(t("pdf.saveError"));
+    } finally {
+      setSavingInvoiceTemplate(false);
+    }
+  };
+
   const handleSaveStampPosition = async (position: StampPosition) => {
     setStampPosition(position);
     setSavingStampPosition(true);
@@ -220,6 +239,23 @@ export const PdfReportBrandingSettings: React.FC = () => {
       title={t("pdf.title")}
       description={t("pdf.description")}
     >
+      <SettingsGroup title={t("pdf.invoiceTemplateGroupTitle")}>
+        <div className="space-y-1.5">
+          <SegmentedControl
+            value={invoiceTemplate}
+            onChange={(v) => handleSaveInvoiceTemplate(v as InvoiceTemplate)}
+            options={[
+              { value: "classic", label: t("pdf.invoiceTemplateClassic") },
+              { value: "modern", label: t("pdf.invoiceTemplateModern") },
+            ]}
+            className={savingInvoiceTemplate ? "pointer-events-none opacity-60" : undefined}
+          />
+          <p className="text-xs text-muted-foreground">{t("pdf.invoiceTemplateHelp")}</p>
+        </div>
+      </SettingsGroup>
+
+      <Separator />
+
       <SettingsGroup title={t("pdf.logoGroupTitle")}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
           <ImageUploadTile

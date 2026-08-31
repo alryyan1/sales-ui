@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import {
@@ -40,6 +41,7 @@ type ExpenseFormFields = {
   amount: string;
   payment_method: string;
   expense_category_id: string;
+  description: string;
 };
 
 const PAYMENT_METHODS = [
@@ -80,6 +82,7 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
       amount: "",
       payment_method: "cash",
       expense_category_id: "",
+      description: "",
     },
   });
 
@@ -116,9 +119,10 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
         expense_category_id: expenseToEdit.expense_category_id
           ? String(expenseToEdit.expense_category_id)
           : "",
+        description: expenseToEdit.description ?? "",
       });
     } else {
-      reset({ title: "", amount: "", payment_method: "cash", expense_category_id: "" });
+      reset({ title: "", amount: "", payment_method: "cash", expense_category_id: "", description: "" });
     }
   }, [isOpen, isEditMode, expenseToEdit, reset]);
 
@@ -132,7 +136,7 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
       expense_category_id: data.expense_category_id ? Number(data.expense_category_id) : null,
       payment_method: data.payment_method || null,
       reference: null,
-      description: null,
+      description: data.description.trim() ? data.description.trim() : null,
       shift_id: shiftId ?? null,
     };
     try {
@@ -308,6 +312,23 @@ const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
                       ))}
                     </SelectContent>
                   </Select>
+                )}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="expense-description">البيان</Label>
+              <Controller
+                control={control}
+                name="description"
+                render={({ field }) => (
+                  <Textarea
+                    id="expense-description"
+                    placeholder="تفاصيل إضافية عن المصروف (اختياري)"
+                    rows={3}
+                    disabled={isSubmitting}
+                    {...field}
+                  />
                 )}
               />
             </div>
