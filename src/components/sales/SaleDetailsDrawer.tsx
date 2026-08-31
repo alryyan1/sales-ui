@@ -45,6 +45,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { PdfViewerDialog } from "@/components/common/PdfViewerDialog";
 import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 import { useAuthorization } from "@/hooks/useAuthorization";
@@ -99,13 +105,15 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
   const paid = Number(sale?.paid_amount ?? 0);
   const due = Number(sale?.due_amount ?? Math.max(0, total - paid));
 
-  const handlePrint = async (kind: "thermal" | "a4") => {
+  const handlePrint = async (kind: "thermal" | "a4", currency: "local" | "usd" = "local") => {
     if (!sale) return;
     setPrintingKind(kind);
     try {
       const path =
         kind === "thermal" ? `/sales/${sale.id}/thermal-invoice-pdf` : `/sales/${sale.id}/a4-invoice-pdf/view`;
-      const response = await apiClient.get(`${path}?t=${Date.now()}`, { responseType: "blob" });
+      const params = new URLSearchParams({ t: String(Date.now()) });
+      if (kind === "a4" && currency === "usd") params.set("currency", "usd");
+      const response = await apiClient.get(`${path}?${params.toString()}`, { responseType: "blob" });
       const blob = new Blob([response.data], { type: "application/pdf" });
       setPdfUrl(window.URL.createObjectURL(blob));
       setPdfDialogOpen(true);
@@ -396,21 +404,32 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
                 )}
                 {t("thermalReceiptTitle")}
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={!!printingKind}
-                onClick={() => handlePrint("a4")}
-                className="gap-1.5"
-              >
-                {printingKind === "a4" ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <Printer className="size-3.5" />
-                )}
-                {t("a4InvoiceButton")}
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={!!printingKind}
+                    className="gap-1.5"
+                  >
+                    {printingKind === "a4" ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <Printer className="size-3.5" />
+                    )}
+                    {t("a4InvoiceButton")}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem onClick={() => handlePrint("a4", "local")}>
+                    {t("a4InvoiceLocalOption")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handlePrint("a4", "usd")}>
+                    {t("a4InvoiceUsdOption")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button
                 type="button"
                 variant="outline"

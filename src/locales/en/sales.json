@@ -286,6 +286,8 @@
       "noItems": "No items",
       "subtotalLabel": "Subtotal",
       "a4InvoiceButton": "A4 Invoice",
+      "a4InvoiceLocalOption": "Invoice (local currency)",
+      "a4InvoiceUsdOption": "Invoice (USD prices)",
       "reExportFinance": "Re-export",
       "exportFinance": "Export to Finance",
       "refund": "Refund",

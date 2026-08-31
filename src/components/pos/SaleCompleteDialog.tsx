@@ -12,6 +12,12 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 
 import { Sale } from "@/services/saleService";
@@ -20,7 +26,7 @@ interface SaleCompleteDialogProps {
   open: boolean;
   sale: Sale | null;
   onNewSale: () => void;
-  onPrint: (kind: "thermal" | "a4") => void;
+  onPrint: (kind: "thermal" | "a4", currency?: "local" | "usd") => void;
   printingKind?: "thermal" | "a4" | null;
   onExportToFinance?: () => void;
   isExportingToFinance?: boolean;
@@ -111,20 +117,31 @@ export function SaleCompleteDialog({
             )}
             {tSaleComplete("thermalReceipt")}
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="flex-1 gap-1.5"
-            disabled={!!printingKind}
-            onClick={() => onPrint("a4")}
-          >
-            {printingKind === "a4" ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Printer className="size-4" />
-            )}
-            {tSaleComplete("invoiceA4")}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 gap-1.5"
+                disabled={!!printingKind}
+              >
+                {printingKind === "a4" ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Printer className="size-4" />
+                )}
+                {tSaleComplete("invoiceA4")}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center">
+              <DropdownMenuItem onClick={() => onPrint("a4", "local")}>
+                {tSaleComplete("a4InvoiceLocalOption")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onPrint("a4", "usd")}>
+                {tSaleComplete("a4InvoiceUsdOption")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {onExportToFinance && (

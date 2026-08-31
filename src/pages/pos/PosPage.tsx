@@ -399,14 +399,16 @@ const PosPage: React.FC = () => {
   }, []);
 
   const handlePrint = useCallback(
-    async (kind: "thermal" | "a4") => {
+    async (kind: "thermal" | "a4", currency: "local" | "usd" = "local") => {
       const saleId = activeSale?.id;
       if (!saleId) return;
       setPrintingKind(kind);
       try {
         const path =
           kind === "thermal" ? `/sales/${saleId}/thermal-invoice-pdf` : `/sales/${saleId}/a4-invoice-pdf/view`;
-        const response = await apiClient.get(`${path}?t=${Date.now()}`, { responseType: "blob" });
+        const params = new URLSearchParams({ t: String(Date.now()) });
+        if (kind === "a4" && currency === "usd") params.set("currency", "usd");
+        const response = await apiClient.get(`${path}?${params.toString()}`, { responseType: "blob" });
         const blob = new Blob([response.data], { type: "application/pdf" });
         setPdfUrl(window.URL.createObjectURL(blob));
         setPdfDialogOpen(true);
@@ -1179,7 +1181,7 @@ const PosPage: React.FC = () => {
       <SaleActionsBar
         sale={activeSale}
         onPrintThermal={() => handlePrint("thermal")}
-        onPrintA4={() => handlePrint("a4")}
+        onPrintA4={(currency) => handlePrint("a4", currency)}
         printingKind={printingKind}
         onSendWhatsApp={handleSendWhatsApp}
         whatsAppLoading={whatsAppLoading}

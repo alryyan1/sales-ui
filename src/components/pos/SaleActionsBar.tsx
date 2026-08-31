@@ -6,6 +6,12 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 import type { Sale } from "@/services/saleService";
@@ -123,7 +129,7 @@ function SaleDateEditor({
 interface SaleActionsBarProps {
   sale: Sale | null;
   onPrintThermal: () => void;
-  onPrintA4: () => void;
+  onPrintA4: (currency: "local" | "usd") => void;
   printingKind: "thermal" | "a4" | null;
   onSendWhatsApp: () => void;
   whatsAppLoading: boolean;
@@ -186,17 +192,28 @@ export function SaleActionsBar({
         {tSaleActionsBar("printThermalButton")}
       </Button>
 
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled={printingKind !== null || !sale.client_id}
-        onClick={onPrintA4}
-        className="gap-1.5"
-      >
-        {printingKind === "a4" ? <Loader2 className="size-3.5 animate-spin" /> : <FileText className="size-3.5" />}
-        A4 PDF
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={printingKind !== null || !sale.client_id}
+            className="gap-1.5"
+          >
+            {printingKind === "a4" ? <Loader2 className="size-3.5 animate-spin" /> : <FileText className="size-3.5" />}
+            A4 PDF
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuItem onClick={() => onPrintA4("local")}>
+            {tSaleActionsBar("a4InvoiceLocalOption")}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onPrintA4("usd")}>
+            {tSaleActionsBar("a4InvoiceUsdOption")}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <Button
         type="button"

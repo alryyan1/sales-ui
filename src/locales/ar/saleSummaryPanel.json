@@ -20,6 +20,8 @@
   "remainingColon": "المتبقي: {{amount}}",
   "methodLabel": "طريقة",
   "printLabel": "طباعة",
+  "a4InvoiceLocalOption": "فاتورة بالجنيه",
+  "a4InvoiceUsdOption": "فاتورة بالدولار",
   "whatsappLabel": "واتساب",
   "fullyPaidLabel": "✓ تم التسديد",
   "fullPaymentLabel": "تسديد كامل",

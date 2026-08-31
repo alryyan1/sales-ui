@@ -5,6 +5,8 @@
   "numberOfDaysPlaceholder": "عدد الأيام",
   "saleActionsHash": "إجراءات الفاتورة #{{id}}",
   "printThermalButton": "طباعة حراري",
+  "a4InvoiceLocalOption": "فاتورة بالجنيه",
+  "a4InvoiceUsdOption": "فاتورة بالدولار",
   "whatsapp": "واتساب",
   "reExport": "إعادة التصدير",
   "exportToFinanceSystem": "تصدير لنظام الماليه",

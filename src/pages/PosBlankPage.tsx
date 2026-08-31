@@ -1227,12 +1227,14 @@ const PosBlankPage: React.FC = () => {
     }
   }, [thermalPdfUrl]);
 
-  const handlePrintA4Invoice = useCallback(async () => {
+  const handlePrintA4Invoice = useCallback(async (currency: "local" | "usd" = "local") => {
     if (!selectedSale?.id) return;
     setA4PdfLoading(true);
     try {
+      const params = new URLSearchParams({ t: String(Date.now()) });
+      if (currency === "usd") params.set("currency", "usd");
       const response = await apiClient.get(
-        `/sales/${selectedSale.id}/a4-invoice-pdf/view?t=${Date.now()}`,
+        `/sales/${selectedSale.id}/a4-invoice-pdf/view?${params.toString()}`,
         {
           responseType: "blob",
         },

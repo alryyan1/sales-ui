@@ -8,6 +8,8 @@
   "customerOwes": "متبقٍ على العميل: {{amount}}",
   "thermalReceipt": "إيصال حراري",
   "invoiceA4": "فاتورة A4",
+  "a4InvoiceLocalOption": "فاتورة بالجنيه",
+  "a4InvoiceUsdOption": "فاتورة بالدولار",
   "reExportToFinance": "إعادة التصدير إلى النظام المالي",
   "exportToFinance": "تصدير إلى النظام المالي"
 }

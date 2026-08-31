@@ -20,6 +20,8 @@
   "remainingColon": "Remaining: {{amount}}",
   "methodLabel": "Method",
   "printLabel": "Print",
+  "a4InvoiceLocalOption": "Invoice (local currency)",
+  "a4InvoiceUsdOption": "Invoice (USD prices)",
   "whatsappLabel": "WhatsApp",
   "fullyPaidLabel": "✓ Fully Paid",
   "fullPaymentLabel": "Full Payment",

@@ -5,6 +5,8 @@
   "numberOfDaysPlaceholder": "Number of days",
   "saleActionsHash": "Invoice #{{id}} Actions",
   "printThermalButton": "Print Thermal",
+  "a4InvoiceLocalOption": "Invoice (local currency)",
+  "a4InvoiceUsdOption": "Invoice (USD prices)",
   "whatsapp": "WhatsApp",
   "reExport": "Re-export",
   "exportToFinanceSystem": "Export to Finance System",

@@ -8,6 +8,8 @@
   "customerOwes": "Customer owes: {{amount}}",
   "thermalReceipt": "Thermal Receipt",
   "invoiceA4": "A4 Invoice",
+  "a4InvoiceLocalOption": "Invoice (local currency)",
+  "a4InvoiceUsdOption": "Invoice (USD prices)",
   "reExportToFinance": "Re-export to Financial System",
   "exportToFinance": "Export to Financial System"
 }

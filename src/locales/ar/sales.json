@@ -270,6 +270,8 @@
       "noItems": "لا توجد أصناف",
       "subtotalLabel": "المجموع الفرعي",
       "a4InvoiceButton": "فاتورة A4",
+      "a4InvoiceLocalOption": "فاتورة بالجنيه",
+      "a4InvoiceUsdOption": "فاتورة بالدولار",
       "reExportFinance": "إعادة التصدير",
       "exportFinance": "تصدير مالي",
       "refund": "مرتجع",

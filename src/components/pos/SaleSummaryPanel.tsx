@@ -19,6 +19,7 @@ import {
   Chip,
   Popover,
   Tooltip,
+  Menu,
 } from "@mui/material";
 import { Bell } from "lucide-react";
 import AddIcon from "@mui/icons-material/Add";
@@ -73,7 +74,7 @@ interface SaleSummaryPanelProps {
   thermalPdfLoading: boolean;
   handlePrintThermalInvoice: () => void;
   a4PdfLoading: boolean;
-  handlePrintA4Invoice: () => void;
+  handlePrintA4Invoice: (currency: "local" | "usd") => void;
   fullPaymentLoading: boolean;
   handleFullPayment: () => void;
   canPayment?: boolean;
@@ -181,6 +182,7 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
   const [tempDate, setTempDate] = useState("");
   const [bellAnchor, setBellAnchor] = useState<HTMLButtonElement | null>(null);
   const [daysInput, setDaysInput] = useState("3");
+  const [a4MenuAnchor, setA4MenuAnchor] = useState<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     setTempDate(selectedSale?.sale_date ?? "");
@@ -673,11 +675,33 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                 fullWidth variant="outlined" size="small"
                 disabled={a4PdfLoading || !selectedSale?.client_id}
                 startIcon={<PictureAsPdfIcon sx={{ fontSize: "0.85rem !important" }} />}
-                onClick={handlePrintA4Invoice}
+                onClick={(e) => setA4MenuAnchor(e.currentTarget)}
                 sx={{ textTransform: "none", fontSize: "0.7rem", fontWeight: 600, py: 0.5 }}
               >
                 {a4PdfLoading ? "..." : "A4 PDF"}
               </Button>
+              <Menu
+                anchorEl={a4MenuAnchor}
+                open={Boolean(a4MenuAnchor)}
+                onClose={() => setA4MenuAnchor(null)}
+              >
+                <MenuItem
+                  onClick={() => {
+                    setA4MenuAnchor(null);
+                    handlePrintA4Invoice("local");
+                  }}
+                >
+                  {tSummary("a4InvoiceLocalOption")}
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    setA4MenuAnchor(null);
+                    handlePrintA4Invoice("usd");
+                  }}
+                >
+                  {tSummary("a4InvoiceUsdOption")}
+                </MenuItem>
+              </Menu>
               <Button
                 fullWidth variant="outlined" size="small"
                 disabled={whatsAppLoading || !selectedSale?.client_id}
