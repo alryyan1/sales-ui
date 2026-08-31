@@ -90,6 +90,8 @@ const PosPage: React.FC = () => {
   const showExpired = Boolean(getSetting("pos_show_expired_products", false));
   const usdConversionEnabled = Boolean(getSetting("usd_conversion_enabled", true));
   const usdFactor = usdConversionEnabled ? Number(getSetting("usd_to_sdg_factor", 1) ?? 1) : 1;
+  const currencyCode = getSetting("currency_code", "SDG");
+  const showA4CurrencyOptions = currencyCode === "SDG" && usdConversionEnabled;
   const defaultPaymentMethod = resolveDefaultActiveMethod(
     parseActivePaymentMethods(getSetting("pos_active_payment_methods")),
     DEFAULT_PAYMENT_METHOD
@@ -1182,6 +1184,7 @@ const PosPage: React.FC = () => {
         sale={activeSale}
         onPrintThermal={() => handlePrint("thermal")}
         onPrintA4={(currency) => handlePrint("a4", currency)}
+        showA4CurrencyOptions={showA4CurrencyOptions}
         printingKind={printingKind}
         onSendWhatsApp={handleSendWhatsApp}
         whatsAppLoading={whatsAppLoading}
@@ -1280,6 +1283,7 @@ const PosPage: React.FC = () => {
         sale={completedSale}
         onNewSale={handleStartNewSaleAfterSuccess}
         onPrint={handlePrint}
+        showA4CurrencyOptions={showA4CurrencyOptions}
         printingKind={printingKind}
         onExportToFinance={handleExportToFinance}
         isExportingToFinance={isExportingToFinance}

@@ -21,6 +21,7 @@ import { useSettings } from "@/context/SettingsContext";
 const INVOICE_REPORT_KEY = "invoice";
 
 type LogoPosition = "left" | "right" | "both";
+type StampPosition = "left" | "center" | "right";
 
 function ImageUploadTile({
   label,
@@ -86,6 +87,8 @@ export const PdfReportBrandingSettings: React.FC = () => {
 
   const [stampPreview, setStampPreview] = useState<string | null>(null);
   const [stampUploading, setStampUploading] = useState(false);
+  const [stampPosition, setStampPosition] = useState<StampPosition>("right");
+  const [savingStampPosition, setSavingStampPosition] = useState(false);
 
   const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
   const [signatureUploading, setSignatureUploading] = useState(false);
@@ -99,6 +102,7 @@ export const PdfReportBrandingSettings: React.FC = () => {
     setLogoPosition((settings.logo_position as LogoPosition) ?? "right");
     setLogoWidth(settings.logo_width ?? 60);
     setLogoHeight(settings.logo_height ?? 60);
+    setStampPosition((settings.stamp_position as StampPosition) ?? "right");
     if (settings.company_logo_url) setLogoPreview(settings.company_logo_url);
     if (settings.company_stamp_url) setStampPreview(settings.company_stamp_url);
     if (settings.company_signature_url) setSignaturePreview(settings.company_signature_url);
@@ -197,6 +201,20 @@ export const PdfReportBrandingSettings: React.FC = () => {
     }
   };
 
+  const handleSaveStampPosition = async (position: StampPosition) => {
+    setStampPosition(position);
+    setSavingStampPosition(true);
+    try {
+      await settingService.updateSettings({ stamp_position: position });
+      await fetchSettings();
+      toast.success(t("pdf.saveSuccess"));
+    } catch {
+      toast.error(t("pdf.saveError"));
+    } finally {
+      setSavingStampPosition(false);
+    }
+  };
+
   return (
     <SettingsSection
       title={t("pdf.title")}
@@ -291,6 +309,20 @@ export const PdfReportBrandingSettings: React.FC = () => {
         <p className="text-xs text-muted-foreground">
           {t("pdf.stampSignatureHelp")}
         </p>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium text-muted-foreground">{t("pdf.stampPositionLabel")}</Label>
+          <SegmentedControl
+            value={stampPosition}
+            onChange={(v) => handleSaveStampPosition(v as StampPosition)}
+            options={[
+              { value: "right", label: t("pdf.positionRight") },
+              { value: "center", label: t("pdf.positionCenter") },
+              { value: "left", label: t("pdf.positionLeft") },
+            ]}
+            className={savingStampPosition ? "pointer-events-none opacity-60" : undefined}
+          />
+        </div>
 
         <div className="mt-2 space-y-1">
           <SwitchField

@@ -55,6 +55,7 @@ import { PdfViewerDialog } from "@/components/common/PdfViewerDialog";
 import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 import { useAuthorization } from "@/hooks/useAuthorization";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSettings } from "@/context/SettingsContext";
 import apiClient from "@/lib/axios";
 import { getSaleStatus, translatePaymentMethod, translateSaleStatus } from "@/lib/saleStatus";
 
@@ -73,10 +74,14 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
   const formatCurrency = useFormatCurrency();
   const { hasPermission } = useAuthorization();
   const { direction } = useLanguage();
+  const { getSetting } = useSettings();
   const { t } = useTranslation("sales");
   const { t: tCommon } = useTranslation("common");
   const canDelete = hasPermission("حذف فاتورة");
   const canReturn = hasPermission("view-sales-returns");
+  const currencyCode = getSetting("currency_code", "SDG");
+  const usdConversionEnabled = Boolean(getSetting("usd_conversion_enabled", true));
+  const showA4CurrencyOptions = currencyCode === "SDG" && usdConversionEnabled;
 
   const [printingKind, setPrintingKind] = useState<"thermal" | "a4" | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -404,32 +409,50 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
                 )}
                 {t("thermalReceiptTitle")}
               </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={!!printingKind}
-                    className="gap-1.5"
-                  >
-                    {printingKind === "a4" ? (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <Printer className="size-3.5" />
-                    )}
-                    {t("a4InvoiceButton")}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuItem onClick={() => handlePrint("a4", "local")}>
-                    {t("a4InvoiceLocalOption")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handlePrint("a4", "usd")}>
-                    {t("a4InvoiceUsdOption")}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {showA4CurrencyOptions ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={!!printingKind}
+                      className="gap-1.5"
+                    >
+                      {printingKind === "a4" ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <Printer className="size-3.5" />
+                      )}
+                      {t("a4InvoiceButton")}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem onClick={() => handlePrint("a4", "local")}>
+                      {t("a4InvoiceLocalOption")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handlePrint("a4", "usd")}>
+                      {t("a4InvoiceUsdOption")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!!printingKind}
+                  onClick={() => handlePrint("a4")}
+                  className="gap-1.5"
+                >
+                  {printingKind === "a4" ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Printer className="size-3.5" />
+                  )}
+                  {t("a4InvoiceButton")}
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="outline"

@@ -24,6 +24,7 @@
     "phone2": "رقم الهاتف 2",
     "email": "البريد الإلكتروني",
     "taxNumber": "الرقم الضريبي",
+    "accountNumber": "رقم الحساب",
     "address": "العنوان",
     "addressPlaceholder": "تفاصيل العنوان للظهور في الفواتير"
   },
@@ -132,6 +133,7 @@
     "positionRight": "يمين",
     "positionLeft": "يسار",
     "positionBoth": "الجانبين",
+    "positionCenter": "الوسط",
     "logoWidthLabel": "العرض (مم)",
     "logoHeightLabel": "الارتفاع (مم)",
     "save": "حفظ",
@@ -149,6 +151,7 @@
     "signatureUploadSuccess": "تم رفع التوقيع بنجاح",
     "signatureUploadError": "فشل رفع التوقيع",
     "stampSignatureHelp": "تظهر صورتا الختم والتوقيع في الفواتير والتقارير التي تدعم هذه العناصر.",
+    "stampPositionLabel": "مكان الختم أفقيًا",
     "showStampLabel": "إظهار الختم في فاتورة البيع (A4)",
     "showSignatureLabel": "إظهار التوقيع في فاتورة البيع (A4)",
     "toggleSaveSuccess": "تم الحفظ",

@@ -176,8 +176,10 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
   const { t: tCommon } = useTranslation("common");
   const { getSetting } = useSettings();
   const activePaymentMethods = parseActivePaymentMethods(getSetting("pos_active_payment_methods"));
-  const currencyDecimals =
-    CURRENCY_DECIMALS[getSetting("currency_code", "SDG") as string] ?? 0;
+  const currencyCode = getSetting("currency_code", "SDG") as string;
+  const currencyDecimals = CURRENCY_DECIMALS[currencyCode] ?? 0;
+  const usdConversionEnabled = Boolean(getSetting("usd_conversion_enabled", true));
+  const showA4CurrencyOptions = currencyCode === "SDG" && usdConversionEnabled;
   const [dateEditing, setDateEditing] = useState(false);
   const [tempDate, setTempDate] = useState("");
   const [bellAnchor, setBellAnchor] = useState<HTMLButtonElement | null>(null);
@@ -675,33 +677,37 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                 fullWidth variant="outlined" size="small"
                 disabled={a4PdfLoading || !selectedSale?.client_id}
                 startIcon={<PictureAsPdfIcon sx={{ fontSize: "0.85rem !important" }} />}
-                onClick={(e) => setA4MenuAnchor(e.currentTarget)}
+                onClick={(e) =>
+                  showA4CurrencyOptions ? setA4MenuAnchor(e.currentTarget) : handlePrintA4Invoice("local")
+                }
                 sx={{ textTransform: "none", fontSize: "0.7rem", fontWeight: 600, py: 0.5 }}
               >
                 {a4PdfLoading ? "..." : "A4 PDF"}
               </Button>
-              <Menu
-                anchorEl={a4MenuAnchor}
-                open={Boolean(a4MenuAnchor)}
-                onClose={() => setA4MenuAnchor(null)}
-              >
-                <MenuItem
-                  onClick={() => {
-                    setA4MenuAnchor(null);
-                    handlePrintA4Invoice("local");
-                  }}
+              {showA4CurrencyOptions && (
+                <Menu
+                  anchorEl={a4MenuAnchor}
+                  open={Boolean(a4MenuAnchor)}
+                  onClose={() => setA4MenuAnchor(null)}
                 >
-                  {tSummary("a4InvoiceLocalOption")}
-                </MenuItem>
-                <MenuItem
-                  onClick={() => {
-                    setA4MenuAnchor(null);
-                    handlePrintA4Invoice("usd");
-                  }}
-                >
-                  {tSummary("a4InvoiceUsdOption")}
-                </MenuItem>
-              </Menu>
+                  <MenuItem
+                    onClick={() => {
+                      setA4MenuAnchor(null);
+                      handlePrintA4Invoice("local");
+                    }}
+                  >
+                    {tSummary("a4InvoiceLocalOption")}
+                  </MenuItem>
+                  <MenuItem
+                    onClick={() => {
+                      setA4MenuAnchor(null);
+                      handlePrintA4Invoice("usd");
+                    }}
+                  >
+                    {tSummary("a4InvoiceUsdOption")}
+                  </MenuItem>
+                </Menu>
+              )}
               <Button
                 fullWidth variant="outlined" size="small"
                 disabled={whatsAppLoading || !selectedSale?.client_id}

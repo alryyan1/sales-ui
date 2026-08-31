@@ -130,6 +130,7 @@ interface SaleActionsBarProps {
   sale: Sale | null;
   onPrintThermal: () => void;
   onPrintA4: (currency: "local" | "usd") => void;
+  showA4CurrencyOptions: boolean;
   printingKind: "thermal" | "a4" | null;
   onSendWhatsApp: () => void;
   whatsAppLoading: boolean;
@@ -152,6 +153,7 @@ export function SaleActionsBar({
   sale,
   onPrintThermal,
   onPrintA4,
+  showA4CurrencyOptions,
   printingKind,
   onSendWhatsApp,
   whatsAppLoading,
@@ -192,28 +194,42 @@ export function SaleActionsBar({
         {tSaleActionsBar("printThermalButton")}
       </Button>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={printingKind !== null || !sale.client_id}
-            className="gap-1.5"
-          >
-            {printingKind === "a4" ? <Loader2 className="size-3.5 animate-spin" /> : <FileText className="size-3.5" />}
-            A4 PDF
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          <DropdownMenuItem onClick={() => onPrintA4("local")}>
-            {tSaleActionsBar("a4InvoiceLocalOption")}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onPrintA4("usd")}>
-            {tSaleActionsBar("a4InvoiceUsdOption")}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {showA4CurrencyOptions ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={printingKind !== null || !sale.client_id}
+              className="gap-1.5"
+            >
+              {printingKind === "a4" ? <Loader2 className="size-3.5 animate-spin" /> : <FileText className="size-3.5" />}
+              A4 PDF
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => onPrintA4("local")}>
+              {tSaleActionsBar("a4InvoiceLocalOption")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onPrintA4("usd")}>
+              {tSaleActionsBar("a4InvoiceUsdOption")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={printingKind !== null || !sale.client_id}
+          onClick={() => onPrintA4("local")}
+          className="gap-1.5"
+        >
+          {printingKind === "a4" ? <Loader2 className="size-3.5 animate-spin" /> : <FileText className="size-3.5" />}
+          A4 PDF
+        </Button>
+      )}
 
       <Button
         type="button"

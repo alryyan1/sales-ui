@@ -24,6 +24,7 @@
     "phone2": "Phone Number 2",
     "email": "Email",
     "taxNumber": "Tax Number",
+    "accountNumber": "Account Number",
     "address": "Address",
     "addressPlaceholder": "Address details to appear on invoices"
   },
@@ -132,6 +133,7 @@
     "positionRight": "Right",
     "positionLeft": "Left",
     "positionBoth": "Both Sides",
+    "positionCenter": "Center",
     "logoWidthLabel": "Width (mm)",
     "logoHeightLabel": "Height (mm)",
     "save": "Save",
@@ -149,6 +151,7 @@
     "signatureUploadSuccess": "Signature uploaded successfully",
     "signatureUploadError": "Failed to upload signature",
     "stampSignatureHelp": "The stamp and signature images appear on invoices and reports that support these elements.",
+    "stampPositionLabel": "Stamp horizontal position",
     "showStampLabel": "Show stamp on sale invoice (A4)",
     "showSignatureLabel": "Show signature on sale invoice (A4)",
     "toggleSaveSuccess": "Saved",

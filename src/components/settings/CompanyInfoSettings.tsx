@@ -120,6 +120,26 @@ export const CompanyInfoSettings = ({ control }: CompanyInfoSettingsProps) => {
           />
         </div>
 
+        {/* Account Number */}
+        <div className="w-full space-y-2 sm:w-[calc(50%-12px)]">
+          <Controller
+            name="account_number"
+            control={control}
+            render={({ field }) => (
+              <>
+                <Label htmlFor="account_number">{t("companyInfo.accountNumber")}</Label>
+                <Input
+                  id="account_number"
+                  {...field}
+                  value={field.value || ""}
+                  dir="ltr"
+                  className="text-left"
+                />
+              </>
+            )}
+          />
+        </div>
+
         {/* Address */}
         <div className="w-full space-y-2">
           <Controller

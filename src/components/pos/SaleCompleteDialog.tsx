@@ -27,6 +27,7 @@ interface SaleCompleteDialogProps {
   sale: Sale | null;
   onNewSale: () => void;
   onPrint: (kind: "thermal" | "a4", currency?: "local" | "usd") => void;
+  showA4CurrencyOptions: boolean;
   printingKind?: "thermal" | "a4" | null;
   onExportToFinance?: () => void;
   isExportingToFinance?: boolean;
@@ -37,6 +38,7 @@ export function SaleCompleteDialog({
   sale,
   onNewSale,
   onPrint,
+  showA4CurrencyOptions,
   printingKind,
   onExportToFinance,
   isExportingToFinance = false,
@@ -117,31 +119,48 @@ export function SaleCompleteDialog({
             )}
             {tSaleComplete("thermalReceipt")}
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1 gap-1.5"
-                disabled={!!printingKind}
-              >
-                {printingKind === "a4" ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Printer className="size-4" />
-                )}
-                {tSaleComplete("invoiceA4")}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="center">
-              <DropdownMenuItem onClick={() => onPrint("a4", "local")}>
-                {tSaleComplete("a4InvoiceLocalOption")}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onPrint("a4", "usd")}>
-                {tSaleComplete("a4InvoiceUsdOption")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {showA4CurrencyOptions ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 gap-1.5"
+                  disabled={!!printingKind}
+                >
+                  {printingKind === "a4" ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Printer className="size-4" />
+                  )}
+                  {tSaleComplete("invoiceA4")}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center">
+                <DropdownMenuItem onClick={() => onPrint("a4", "local")}>
+                  {tSaleComplete("a4InvoiceLocalOption")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onPrint("a4", "usd")}>
+                  {tSaleComplete("a4InvoiceUsdOption")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1 gap-1.5"
+              disabled={!!printingKind}
+              onClick={() => onPrint("a4", "local")}
+            >
+              {printingKind === "a4" ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Printer className="size-4" />
+              )}
+              {tSaleComplete("invoiceA4")}
+            </Button>
+          )}
         </div>
 
         {onExportToFinance && (

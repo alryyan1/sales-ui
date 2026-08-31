@@ -20,11 +20,13 @@ export interface AppSettings {
   // UI preferences
   sidebar_layout?: boolean;
   tax_number?: string;
+  account_number?: string;
   company_header_url?: string | null;
   company_stamp_url?: string | null;
   company_signature_url?: string | null;
   invoice_branding_type?: "logo" | "header";
   logo_position?: "left" | "right" | "both";
+  stamp_position?: "left" | "center" | "right";
   logo_height?: number;
   logo_width?: number;
   pdf_font?: string;
