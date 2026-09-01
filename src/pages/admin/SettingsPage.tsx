@@ -63,8 +63,9 @@ const SettingsPage: React.FC = () => {
       default_profit_rate: 20.0,
       tax_number: "",
       account_number: "",
-      products_nav_label: "",
+      business_type: "equipment",
       hide_expiry_date: false,
+      show_pos_page: true,
       pos_mode: "shift",
       pos_filter_sales_by_user: false,
       pos_active_payment_methods: "cash,bankak,fawry,ocash,bank_transfer,card",
@@ -103,8 +104,9 @@ const SettingsPage: React.FC = () => {
         default_profit_rate: settings.default_profit_rate ?? 20.0,
         tax_number: settings.tax_number || "",
         account_number: settings.account_number || "",
-        products_nav_label: settings.products_nav_label || "",
+        business_type: settings.business_type || "equipment",
         hide_expiry_date: settings.hide_expiry_date ?? false,
+        show_pos_page: settings.show_pos_page ?? true,
         pos_mode: settings.pos_mode || "shift",
         pos_filter_sales_by_user: settings.pos_filter_sales_by_user || false,
         pos_active_payment_methods:
@@ -166,6 +168,7 @@ const SettingsPage: React.FC = () => {
       sales_allow_price_edit: Boolean(data.sales_allow_price_edit),
       sales_allow_invoice_date_edit: Boolean(data.sales_allow_invoice_date_edit),
       hide_expiry_date: Boolean(data.hide_expiry_date),
+      show_pos_page: Boolean(data.show_pos_page),
     };
 
     try {

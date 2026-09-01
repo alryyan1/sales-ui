@@ -204,7 +204,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
       const raw = editValue.trim();
       const num = raw === "" ? NaN : Number(raw);
       if (!Number.isFinite(num) || num < 0) {
-        setEditValue(String(item.unit_price ?? 0));
+        setEditValue(String(Number(item.unit_price ?? 0)));
         setEditingKey(null);
         setEditingField(null);
         return;
@@ -291,7 +291,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
       if (!onPriceChange || item.id == null) return;
       setEditingKey(getItemKey(item));
       setEditingField("price");
-      setEditValue(String(item.unit_price ?? 0));
+      setEditValue(String(Number(item.unit_price ?? 0)));
     },
     [onPriceChange],
   );

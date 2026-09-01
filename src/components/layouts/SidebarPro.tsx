@@ -32,12 +32,15 @@ const SidebarPro: React.FC<SidebarProProps> = ({
   const { t: tSidebar } = useTranslation("sidebar");
   const { getSetting } = useSettings();
 
-  // Resolves a nav item's display label, honoring the admin-configurable
-  // override for the "products" item (see products_nav_label in Settings).
+  // Resolves a nav item's display label. The "products" and "gallery" items
+  // are relabeled based on the admin-configurable business_type (see Settings):
+  // 'equipment' keeps the default translations ("المعدات"/"المعرض"), while
+  // 'pharmacy' swaps them for "المنتجات"/"نقطة البيع".
+  const businessType = getSetting("business_type", "equipment");
   const navLabel = (label: string): string => {
-    if (label === "products") {
-      const override = getSetting("products_nav_label");
-      if (override) return override;
+    if (businessType === "pharmacy") {
+      if (label === "products") return tSidebar("productsPharmacyLabel");
+      if (label === "gallery") return tSidebar("galleryPharmacyLabel");
     }
     return tSidebar(label);
   };
@@ -63,11 +66,16 @@ const SidebarPro: React.FC<SidebarProProps> = ({
     "/reports/low-stock-products",
   ];
 
+  const showPosPage = getSetting("show_pos_page", true);
+
   // Recursively filter navigation items based on user permissions
   const filterNavItems = (items: NavItem[]): NavItem[] => {
     return items
       .map((item) => {
         if (hideExpiryDate && EXPIRY_ONLY_ROUTES.includes(item.to)) {
+          return null;
+        }
+        if (!showPosPage && item.to === "/sales/pos") {
           return null;
         }
         // If item has children, filter them first

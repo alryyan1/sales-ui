@@ -8,6 +8,8 @@
   "clients": "العملاء",
   "inventory": "المخزون",
   "products": "المعدات",
+  "productsPharmacyLabel": "المنتجات",
+  "galleryPharmacyLabel": "نقطة البيع",
   "inventoryAdjustments": "تعديلات المخزون",
   "inventoryTransfers": "تحويل المخزون",
   "inventoryCounts": "جرد المخزون",

@@ -47,7 +47,8 @@ export interface AppSettings {
   product_scientific_name_visible?: boolean;
   product_scientific_name_required?: boolean;
   /** Overrides the sidebar's "products" nav item label (falls back to the translated "Products" when empty). */
-  products_nav_label?: string | null;
+  business_type?: "equipment" | "pharmacy";
+  show_pos_page?: boolean;
   /** Master switch — hides every expiry-date field/column/report/badge across the system. */
   hide_expiry_date?: boolean;
   pos_show_expired_products?: boolean;

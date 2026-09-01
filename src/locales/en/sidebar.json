@@ -8,6 +8,8 @@
   "clients": "Clients",
   "inventory": "Inventory",
   "products": "Products",
+  "productsPharmacyLabel": "Products",
+  "galleryPharmacyLabel": "Point of Sale",
   "inventoryAdjustments": "Stock Adjustments",
   "inventoryTransfers": "Stock Transfers",
   "inventoryCounts": "Inventory Counts",

@@ -1,7 +1,6 @@
 import { Controller, Control } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -71,21 +70,22 @@ export const BusinessRulesSettings = ({ control }: BusinessRulesSettingsProps) =
         </h3>
         <div className="mt-3 space-y-4">
           <Controller
-            name="products_nav_label"
+            name="business_type"
             control={control}
             render={({ field }) => (
               <div className="max-w-sm space-y-2">
-                <Label htmlFor="products_nav_label">
-                  {t("businessRules.productsNavLabelLabel")}
-                </Label>
-                <Input
-                  id="products_nav_label"
-                  {...field}
-                  value={field.value || ""}
-                  placeholder={t("businessRules.productsNavLabelPlaceholder")}
-                />
+                <Label htmlFor="business_type">{t("businessRules.businessTypeLabel")}</Label>
+                <Select value={field.value ?? "equipment"} onValueChange={field.onChange}>
+                  <SelectTrigger id="business_type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="equipment">{t("businessRules.businessTypeEquipment")}</SelectItem>
+                    <SelectItem value="pharmacy">{t("businessRules.businessTypePharmacy")}</SelectItem>
+                  </SelectContent>
+                </Select>
                 <p className="text-xs text-muted-foreground">
-                  {t("businessRules.productsNavLabelDescription")}
+                  {t("businessRules.businessTypeDescription")}
                 </p>
               </div>
             )}

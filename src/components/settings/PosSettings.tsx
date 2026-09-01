@@ -154,6 +154,23 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
       title={t("pos.title")}
       description={t("pos.description")}
     >
+      <SettingsGroup title={t("pos.pageVisibilityGroupTitle")}>
+        <Controller
+          name="show_pos_page"
+          control={control}
+          render={({ field }) => (
+            <SwitchField
+              label={t("pos.showPosPageLabel")}
+              description={t("pos.showPosPageDescription")}
+              checked={field.value ?? true}
+              onCheckedChange={field.onChange}
+            />
+          )}
+        />
+      </SettingsGroup>
+
+      <Separator />
+
       <SettingsGroup title={t("pos.visibilityGroupTitle")}>
         <Controller
           name="pos_show_expired_products"
