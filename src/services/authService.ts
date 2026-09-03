@@ -56,8 +56,25 @@ export interface AuthResponse {
   permissions?: string[];
 }
 const AUTH_TOKEN_KEY = "authToken"; // Consistent key for localStorage
+const DEVICE_ID_KEY = "salesDeviceId"; // Persists per-browser, shared by every tab
 
 const authService = {
+  // --- Get (or create) this browser's device id ---
+  // Sent on login/logout so the backend can enforce "only one user logged in
+  // per device at a time" (see DeviceSession on the backend). Stored in
+  // localStorage so it's stable across tabs/reloads of the same browser.
+  getDeviceId: (): string => {
+    let deviceId = localStorage.getItem(DEVICE_ID_KEY);
+    if (!deviceId) {
+      deviceId =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      localStorage.setItem(DEVICE_ID_KEY, deviceId);
+    }
+    return deviceId;
+  },
+
   // --- Store Token ---
   storeToken: (token: string): void => {
     localStorage.setItem(AUTH_TOKEN_KEY, token);
@@ -131,10 +148,10 @@ const authService = {
   // --- Login ---
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     try {
-      const response = await apiClient.post<AuthResponse>(
-        "/login",
-        credentials
-      );
+      const response = await apiClient.post<AuthResponse>("/login", {
+        ...credentials,
+        device_id: authService.getDeviceId(),
+      });
       if (response.data.access_token) {
         authService.storeToken(response.data.access_token); // Store the token
       }
@@ -167,7 +184,7 @@ const authService = {
     try {
       // Send request to invalidate token on backend
       // The interceptor will add the current token to the request header
-      await apiClient.post("/logout");
+      await apiClient.post("/logout", { device_id: authService.getDeviceId() });
     } catch (error) {
       // Log error, but proceed with client-side cleanup regardless
       console.error("Logout API error:", error);
