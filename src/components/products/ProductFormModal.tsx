@@ -70,6 +70,7 @@ import apiClient from "@/lib/axios";
 
 import { formatNumber, formatCurrency } from "@/constants";
 import { useSettings } from "@/context/SettingsContext";
+import { useAuthorization } from "@/hooks/useAuthorization";
 
 // --- Component Props & Types ---
 type ProductFormValues = {
@@ -158,6 +159,10 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [serverError, setServerError] = useState<string | null>(null);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+
+  const { hasPermission } = useAuthorization();
+  const canSaveProduct = hasPermission(isEditMode ? "تعديل منتج" : "اضافة منتج");
+  const canDeleteProduct = hasPermission("حذف منتج");
 
   const { getSetting } = useSettings();
   const scientificNameVisible = getSetting("product_scientific_name_visible", true);
@@ -442,6 +447,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
   const handleDelete = async () => {
     if (!productToEdit) return;
+    if (!canDeleteProduct) return;
     if (!window.confirm(tForm("deleteConfirmMessage"))) return;
     try {
       await productService.deleteProduct(productToEdit.id);
@@ -1078,7 +1084,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 {tForm("requiredFieldsNotePrefix")} <span style={{ color: "red" }}>*</span> {tForm("requiredFieldsNoteSuffix")}
               </Typography>
               <Box sx={{ display: "flex", gap: 1.5 }}>
-                {isEditMode && (
+                {isEditMode && canDeleteProduct && (
                   <Button
                     type="button"
                     onClick={handleDelete}
@@ -1101,19 +1107,21 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 >
                   {tCommon("cancel")}
                 </Button>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  disabled={isSubmitting}
-                  startIcon={
-                    isSubmitting
-                      ? <Loader2 size={16} className="animate-spin" />
-                      : <Save size={16} />
-                  }
-                  sx={{ borderRadius: 2, px: 3, fontWeight: 700 }}
-                >
-                  {isEditMode ? tCommon("update") : tCommon("save")}
-                </Button>
+                {canSaveProduct && (
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={isSubmitting}
+                    startIcon={
+                      isSubmitting
+                        ? <Loader2 size={16} className="animate-spin" />
+                        : <Save size={16} />
+                    }
+                    sx={{ borderRadius: 2, px: 3, fontWeight: 700 }}
+                  >
+                    {isEditMode ? tCommon("update") : tCommon("save")}
+                  </Button>
+                )}
               </Box>
             </DialogActions>
           </Box>

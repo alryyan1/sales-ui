@@ -48,6 +48,7 @@ import inventoryCountService, { InventoryCountItem } from "@/services/inventoryC
 import productService from "@/services/productService";
 import InlineCreateInventoryCountItem from "@/components/inventory/InlineCreateInventoryCountItem";
 import { ProductImage } from "@/components/products/ProductImage";
+import { useAuthorization } from "@/hooks/useAuthorization";
 
 const STATUS_BADGE: Record<string, "secondary" | "info" | "warning" | "success" | "destructive"> = {
   draft: "secondary",
@@ -67,6 +68,8 @@ const ManageInventoryCountPage: React.FC = () => {
   const { t } = useTranslation("inventory");
   const { t: tManage } = useTranslation("inventoryCountManage");
   const { t: tCommon } = useTranslation("common");
+  const { hasPermission } = useAuthorization();
+  const canManageCounts = hasPermission("جرد المخزون");
 
   const STATUS_LABEL: Record<string, string> = {
     draft: tManage("statusDraft"),
@@ -201,9 +204,9 @@ const ManageInventoryCountPage: React.FC = () => {
     };
   }, [count?.items]);
 
-  const canEdit = count?.status === "draft" || count?.status === "in_progress";
-  const canComplete = count?.status === "in_progress" && (count?.items?.length ?? 0) > 0;
-  const canApprove = count?.status === "completed";
+  const canEdit = canManageCounts && (count?.status === "draft" || count?.status === "in_progress");
+  const canComplete = canManageCounts && count?.status === "in_progress" && (count?.items?.length ?? 0) > 0;
+  const canApprove = canManageCounts && count?.status === "completed";
 
   const availableProducts = useMemo(
     () => products?.data?.filter((p) => !count?.items?.some((i) => i.product_id === p.id)) ?? [],

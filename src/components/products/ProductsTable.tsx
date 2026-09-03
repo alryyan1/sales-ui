@@ -130,26 +130,31 @@ const InlineEditCell: React.FC<{
   onNext?: () => void;
   onSave: (value: number | null) => Promise<void>;
 }> = ({ value, highlight = false, forceOpen = false, onOpen, onNext, onSave }) => {
+  const [editing, setEditing] = useState(false);
   const [input, setInput] = useState(value != null ? String(value) : "");
   const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Keep local input in sync with the server value, unless the user is actively typing in it
+  // Keep local input in sync with the server value while the cell isn't being edited
   useEffect(() => {
-    if (document.activeElement !== inputRef.current) {
+    if (!editing) {
       setInput(value != null ? String(value) : "");
     }
-  }, [value]);
+  }, [value, editing]);
 
-  // Move focus here when asked to from outside (e.g. Enter pressed in the previous row)
+  // Open for editing when asked to from outside (e.g. Enter pressed in the previous row)
   useEffect(() => {
     if (forceOpen) {
+      setEditing(true);
+      onOpen?.();
       setTimeout(() => inputRef.current?.select(), 0);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [forceOpen]);
 
   const commit = (andNext = false) => {
     const parsed = input.trim() === "" ? null : parseFloat(input);
+    setEditing(false);
     if (andNext) onNext?.();           // move instantly, don't await
     if (parsed === value || (parsed == null && value == null)) return;
     setSaving(true);
@@ -158,19 +163,48 @@ const InlineEditCell: React.FC<{
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") { e.preventDefault(); commit(true); }
-    if (e.key === "Escape") { setInput(value != null ? String(value) : ""); inputRef.current?.blur(); }
+    if (e.key === "Escape") { setInput(value != null ? String(value) : ""); setEditing(false); }
   };
+
+  if (!editing) {
+    return (
+      <Typography
+        component="span"
+        variant="body2"
+        onClick={(e) => {
+          e.stopPropagation();
+          setEditing(true);
+          onOpen?.();
+          setTimeout(() => inputRef.current?.select(), 0);
+        }}
+        sx={{
+          display: "inline-block",
+          minWidth: 56,
+          cursor: "pointer",
+          borderRadius: 1,
+          px: 0.75,
+          py: 0.4,
+          fontSize: "0.8rem",
+          fontWeight: highlight ? 700 : 400,
+          color: highlight ? "primary.main" : "text.primary",
+          "&:hover": { bgcolor: "action.hover" },
+        }}
+      >
+        {value != null ? formatNumber(value) : "---"}
+      </Typography>
+    );
+  }
 
   return (
     <TextField
       inputRef={inputRef}
       value={input}
       onChange={(e) => setInput(e.target.value)}
-      onFocus={() => onOpen?.()}
       onBlur={() => commit(false)}
       onKeyDown={handleKeyDown}
       type="number"
       size="small"
+      autoFocus
       placeholder="---"
       slotProps={{
         htmlInput: { step: "0.01" },
@@ -344,12 +378,27 @@ const ProductRow: React.FC<ProductRowProps> = ({
         className={animationClass}
       >
       <TableCell align="center" sx={{ width: 48, p: 0.5 }}>
-        <ProductImage
-          imageUrl={product.image_url}
-          productName={product.name}
-          size={36}
-          variant="rounded"
-        />
+        {product.image_url ? (
+          <ProductImage
+            imageUrl={product.image_url}
+            productName={product.name}
+            size={36}
+            variant="rounded"
+          />
+        ) : (
+          <Tooltip title={copiedSku === (product.sku || String(product.id)) ? t("copiedLabel") : t("copySku")}>
+            <IconButton
+              size="small"
+              onClick={(e) => { e.stopPropagation(); copyToClipboard(product.sku || String(product.id)); }}
+              disabled={isLoading}
+              sx={{ width: 36, height: 36 }}
+            >
+              {copiedSku === (product.sku || String(product.id))
+                ? <Check style={{ width: 18, height: 18, color: "var(--mui-palette-success-main)" }} />
+                : <Copy style={{ width: 18, height: 18 }} />}
+            </IconButton>
+          </Tooltip>
+        )}
       </TableCell>
       <TableCell align="center">{product.id}</TableCell>
       {vis.sku !== false && (
@@ -373,6 +422,20 @@ const ProductRow: React.FC<ProductRowProps> = ({
         <TableCell align="center">
           <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center">
             <Typography variant="body2" fontWeight={600}>{product.name}</Typography>
+            {product.image_url && (
+              <Tooltip title={copiedSku === (product.sku || String(product.id)) ? t("copiedLabel") : t("copySku")}>
+                <IconButton
+                  size="small"
+                  onClick={(e) => { e.stopPropagation(); copyToClipboard(product.sku || String(product.id)); }}
+                  disabled={isLoading}
+                  sx={{ width: 20, height: 20, p: 0, opacity: 0.4, "&:hover": { opacity: 1 } }}
+                >
+                  {copiedSku === (product.sku || String(product.id))
+                    ? <Check style={{ width: 14, height: 14, color: "var(--mui-palette-success-main)" }} />
+                    : <Copy style={{ width: 14, height: 14 }} />}
+                </IconButton>
+              </Tooltip>
+            )}
             <Tooltip title={t("printBarcode")}>
               <IconButton
                 size="small"

@@ -78,6 +78,7 @@ import inventoryCountService, {
 import { warehouseService } from "@/services/warehouseService";
 import InventoryCountDialog from "@/components/inventory/InventoryCountDialog";
 import { useLanguage } from "@/context/LanguageContext";
+import { useAuthorization } from "@/hooks/useAuthorization";
 
 const PER_PAGE = 15;
 
@@ -95,6 +96,8 @@ const InventoryCountPage: React.FC = () => {
   const { direction } = useLanguage();
   const { t } = useTranslation("inventoryCount");
   const { t: tCommon } = useTranslation("common");
+  const { hasPermission } = useAuthorization();
+  const canManageCounts = hasPermission("جرد المخزون");
 
   const STATUS_CONFIG: Record<Status, { label: string; badge: "secondary" | "info" | "warning" | "success" | "destructive" }> = {
     draft: { label: t("status_draft"), badge: "secondary" },
@@ -283,10 +286,12 @@ const InventoryCountPage: React.FC = () => {
               {t("pageSubtitle")}
             </p>
           </div>
-          <Button onClick={openCreateDialog} className="gap-2">
-            <Plus className="size-4" />
-            {t("newCountButton")}
-          </Button>
+          {canManageCounts && (
+            <Button onClick={openCreateDialog} className="gap-2">
+              <Plus className="size-4" />
+              {t("newCountButton")}
+            </Button>
+          )}
         </div>
 
         {/* Status filter */}
@@ -397,7 +402,7 @@ const InventoryCountPage: React.FC = () => {
                 </p>
               </div>
             )}
-            {!hasActiveFilters && (
+            {!hasActiveFilters && canManageCounts && (
               <Button onClick={openCreateDialog} className="mt-2 gap-2">
                 <Plus className="size-4" />
                 {t("createFirstCountButton")}
@@ -484,7 +489,7 @@ const InventoryCountPage: React.FC = () => {
                               <TooltipContent>{t("viewDetailsButton")}</TooltipContent>
                             </Tooltip>
 
-                            {count.status === "completed" && (
+                            {count.status === "completed" && canManageCounts && (
                               <>
                                 <Button
                                   size="xs"
@@ -507,7 +512,7 @@ const InventoryCountPage: React.FC = () => {
                               </>
                             )}
 
-                            {hasSecondaryActions && (
+                            {hasSecondaryActions && canManageCounts && (
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button variant="ghost" size="icon" className="size-8">

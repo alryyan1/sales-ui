@@ -24,9 +24,12 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { useAuthorization } from "@/hooks/useAuthorization";
 
 export default function StockTransfersPage() {
   const { t } = useTranslation("inventory");
+  const { hasPermission } = useAuthorization();
+  const canTransferStock = hasPermission("تحويل مخزون");
   const [transfers, setTransfers] = useState<StockTransfer[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -62,7 +65,9 @@ export default function StockTransfersPage() {
             <p className="text-xs text-muted-foreground">{t("transfersPageSubtitle")}</p>
           </div>
         </div>
-        <CreateStockTransferDialog onSuccess={() => { setPage(1); loadTransfers(); }} />
+        {canTransferStock && (
+          <CreateStockTransferDialog onSuccess={() => { setPage(1); loadTransfers(); }} />
+        )}
       </div>
 
       <Card className="shadow-sm">

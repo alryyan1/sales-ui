@@ -14,7 +14,7 @@ const PermissionGuard: React.FC<PermissionGuardProps> = ({
   requiredPermission,
   children,
 }) => {
-  const { hasPermission, isLoggedIn } = useAuthorization();
+  const { hasPermission, hasNavPageAccess, isLoggedIn } = useAuthorization();
   const { isLoading } = useAuth();
 
   // 1. Show loading state while auth is being checked
@@ -31,8 +31,10 @@ const PermissionGuard: React.FC<PermissionGuardProps> = ({
     return <Navigate to="/login" replace />;
   }
 
-  // 3. Check Permissions
-  if (!hasPermission(requiredPermission)) {
+  // 3. Check Permissions — either the classic Spatie permission, or the
+  // per-user page list configured from Users → "صلاحيات الوصول للصفحات"
+  // (see PERMISSION_NAV_ROUTES in useAuthorization.ts for the mapping).
+  if (!hasPermission(requiredPermission) && !hasNavPageAccess(requiredPermission)) {
     // Show a discrete toast message
     // Using a ref or checking if toast is active might be better to prevent duplicates,
     // but for now, simple toast.error is standard.

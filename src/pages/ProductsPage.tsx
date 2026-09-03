@@ -64,12 +64,15 @@ import PackageFormModal from "../components/products/PackageFormModal";
 import packageService, { Package } from "../services/packageService";
 import { toast } from "sonner";
 import { Button } from "@mui/material";
+import { useAuthorization } from "@/hooks/useAuthorization";
 
 // Product type is now used directly from productService
 
 const ProductsPage: React.FC = () => {
   const { direction } = useLanguage();
   const { t, i18n } = useTranslation("products");
+  const { hasPermission } = useAuthorization();
+  const canAddProduct = hasPermission("اضافة منتج");
   // --- State ---
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
@@ -733,28 +736,30 @@ ${t("copyLabelPrice")} ${product.last_sale_price_per_sellable_unit ? formatCurre
             </Box>
 
             {/* Add Product */}
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-              }}
-            >
-              <Tooltip title={activeTab === 0 ? t("addProduct") : t("addNewPackageTooltip")}>
-                <IconButton
-                  onClick={activeTab === 0 ? () => openModal() : () => openPackageModal()}
-                  color="primary"
-                  sx={{
-                    bgcolor: "primary.main",
-                    color: "primary.contrastText",
-                    "&:hover": { bgcolor: "primary.dark" },
-                  }}
-                >
-                  <Plus className="h-5 w-5" />
-                </IconButton>
-              </Tooltip>
-              <Typography variant="caption">{t("addLabel")}</Typography>
-            </Box>
+            {(activeTab !== 0 || canAddProduct) && (
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                }}
+              >
+                <Tooltip title={activeTab === 0 ? t("addProduct") : t("addNewPackageTooltip")}>
+                  <IconButton
+                    onClick={activeTab === 0 ? () => openModal() : () => openPackageModal()}
+                    color="primary"
+                    sx={{
+                      bgcolor: "primary.main",
+                      color: "primary.contrastText",
+                      "&:hover": { bgcolor: "primary.dark" },
+                    }}
+                  >
+                    <Plus className="h-5 w-5" />
+                  </IconButton>
+                </Tooltip>
+                <Typography variant="caption">{t("addLabel")}</Typography>
+              </Box>
+            )}
 
             {/* Manage Categories */}
             <Box

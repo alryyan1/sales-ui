@@ -10,7 +10,10 @@ import type { Permission } from "@/services/roleService";
 const GROUP_RULES: { id: string; label: string; test: RegExp }[] = [
   { id: "shifts", label: "إدارة الورديات", test: /وردي/ },
   { id: "financial", label: "العمليات المالية", test: /سداد|دولار|سعر/ },
-  { id: "sales", label: "المبيعات والفواتير", test: /فاتورة|تخفيض|بيع|منتج/ },
+  // Checked before "inventory" so a permission matching both (e.g. "حذف منتج مضاف
+  // في عمليه بيع") lands here, since it's a sales-flow action, not product/stock CRUD.
+  { id: "sales", label: "المبيعات والفواتير", test: /فاتورة|تخفيض|بيع/ },
+  { id: "inventory", label: "المخزون", test: /منتج|جرد|تحويل/ },
 ];
 
 const OTHER_GROUP = { id: "other", label: "أخرى" };
@@ -33,7 +36,7 @@ export function groupPermissions(permissions: Permission[]): PermissionGroup[] {
     buckets.get(target.id)!.permissions.push(permission);
   }
 
-  // Keep declaration order (shifts, financial, sales, other) rather than first-seen order.
+  // Keep declaration order (shifts, financial, sales, inventory, other) rather than first-seen order.
   const order = [...GROUP_RULES.map((r) => r.id), OTHER_GROUP.id];
   return order
     .map((id) => buckets.get(id))
