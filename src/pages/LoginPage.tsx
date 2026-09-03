@@ -126,7 +126,7 @@ const LoginPage: React.FC = () => {
             <Label htmlFor="username" className="text-sm font-medium">
               {t("usernameLabel")}
             </Label>
-            <div className="relative">
+            <div className="relative" dir="ltr">
               <User
                 size={15}
                 className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground"
@@ -134,8 +134,9 @@ const LoginPage: React.FC = () => {
               <Input
                 id="username"
                 type="text"
+                dir="ltr"
                 placeholder={t("usernamePlaceholder")}
-                className="ps-9 h-11"
+                className="ps-9 h-11 text-left"
                 disabled={isSubmitting}
                 {...register("username")}
                 aria-invalid={!!errors.username}
@@ -151,7 +152,7 @@ const LoginPage: React.FC = () => {
             <Label htmlFor="password" className="text-sm font-medium">
               {t("passwordLabel")}
             </Label>
-            <div className="relative">
+            <div className="relative" dir="ltr">
               <Lock
                 size={15}
                 className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground"
@@ -159,8 +160,9 @@ const LoginPage: React.FC = () => {
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
+                dir="ltr"
                 placeholder="••••••••"
-                className="ps-9 pe-10 h-11"
+                className="ps-9 pe-10 h-11 text-left"
                 disabled={isSubmitting}
                 {...register("password")}
                 aria-invalid={!!errors.password}

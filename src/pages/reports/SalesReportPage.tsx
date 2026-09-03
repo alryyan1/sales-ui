@@ -1,15 +1,14 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ArrowLeft, ArrowRight, FileText } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import apiClient from "@/lib/axios";
 import { useLanguage } from "@/context/LanguageContext";
 import { useSettings } from "@/context/SettingsContext";
 import { webUrl } from "@/constants";
-import { useQuery } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useClients } from "@/hooks/useClients";
 import { useProducts } from "@/hooks/useProducts";
 import { useShifts } from "@/hooks/useShifts";
@@ -23,7 +22,26 @@ const SalesReportPage: React.FC = () => {
   const { t } = useTranslation("reports");
   const { direction } = useLanguage();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // Refetch the report data whenever the user returns to this browser tab
+  // (global refetchOnWindowFocus is disabled in main.tsx).
+  useEffect(() => {
+    const refetchReport = () => {
+      if (document.visibilityState !== "visible") return;
+      queryClient.invalidateQueries({ queryKey: ["sales-report"] });
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+      queryClient.invalidateQueries({ queryKey: ["payment-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["expenses-report"] });
+    };
+    document.addEventListener("visibilitychange", refetchReport);
+    window.addEventListener("focus", refetchReport);
+    return () => {
+      document.removeEventListener("visibilitychange", refetchReport);
+      window.removeEventListener("focus", refetchReport);
+    };
+  }, [queryClient]);
 
   const [selectedSaleId, setSelectedSaleId] = useState<number | null>(null);
   const [saleDialogOpen, setSaleDialogOpen] = useState(false);
@@ -56,16 +74,7 @@ const SalesReportPage: React.FC = () => {
 
   const { data: shifts = [], isLoading: loadingShifts } = useShifts();
 
-  const { data: usersData, isLoading: loadingUsers } = useQuery({
-    queryKey: ["users-list-filters"],
-    queryFn: async () => {
-      const res = await apiClient.get<{ data: { id: number; name: string }[] }>("/users/list");
-      return res.data?.data ?? [];
-    },
-  });
-  const users = usersData ?? [];
-
-  const loadingFilters = loadingClients || loadingProducts || loadingShifts || loadingUsers;
+  const loadingFilters = loadingClients || loadingProducts || loadingShifts;
 
   const onFilterSubmit = (data: ReportFilterValues) => {
     const newParams = new URLSearchParams();
@@ -136,7 +145,6 @@ const SalesReportPage: React.FC = () => {
               onFilterSubmit={onFilterSubmit}
               onClearFilters={clearFilters}
               clients={clients}
-              users={users}
               products={products}
               shifts={shifts}
               loadingFilters={loadingFilters}

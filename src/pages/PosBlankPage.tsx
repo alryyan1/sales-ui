@@ -10,7 +10,6 @@ import {
   Typography,
   Button,
   CircularProgress,
-  Autocomplete,
   TextField,
   IconButton,
   Select,
@@ -22,7 +21,7 @@ import {
   Tooltip,
   Chip,
 } from "@mui/material";
-import { CloudUploadIcon, FileText, SearchIcon } from "lucide-react";
+import { CloudUploadIcon, FileText } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
@@ -41,7 +40,7 @@ import productService, { Product } from "@/services/productService";
 import { Client } from "@/services/clientService";
 import { useClients } from "@/hooks/useClients";
 import reportService from "@/services/reportService";
-import { formatNumber, CURRENCY_DECIMALS, url as apiBaseUrl } from "@/constants";
+import { formatNumber } from "@/constants";
 import { SaleItemsTable } from "@/components/sales/SaleItemsTable";
 import { PosSalesColumn } from "@/components/sales/PosSalesColumn";
 import ExpenseFormModal from "@/components/admin/expenses/ExpenseFormModal";
@@ -63,6 +62,7 @@ import { useSettings } from "@/context/SettingsContext";
 import ClientFormModal from "@/components/clients/ClientFormModal";
 import { Package } from "@/services/packageService";
 import { SaleSummaryPanel } from "@/components/pos/SaleSummaryPanel";
+import { PosHeaderProductSearch } from "@/components/pos/PosHeaderProductSearch";
 import { DueRemindersDialog } from "@/components/pos/DueRemindersDialog";
 import saleReminderService, { DueReminder } from "@/services/saleReminderService";
 import axios from "axios";
@@ -128,9 +128,6 @@ const PosBlankPage: React.FC = () => {
   const { language, direction } = useLanguage();
   const { user } = useAuth();
   const { getSetting } = useSettings();
-  const hideExpiryDate = Boolean(getSetting("hide_expiry_date", false));
-  const currencyCode = getSetting("currency_code", "SDG") as string;
-  const currencyDecimals = CURRENCY_DECIMALS[currencyCode] ?? 0;
   const { hasPermission } = useAuthorization();
   const canPayment = hasPermission('سداد');
   const canCancelPayment = hasPermission('الغاء سداد');
@@ -164,16 +161,13 @@ const PosBlankPage: React.FC = () => {
   const [productSearchLoading, setProductSearchLoading] = useState(false);
   const [productInputValue, setProductInputValue] = useState("");
   const productInputRef = useRef<HTMLInputElement | null>(null);
-  const [saleSearchInput, setSaleSearchInput] = useState("");
-  const [saleSearchLoading, setSaleSearchLoading] = useState(false);
   const [addProductLoading, setAddProductLoading] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [fullPaymentLoading, setFullPaymentLoading] = useState(false);
   const [deletingPaymentId, setDeletingPaymentId] = useState<number | null>(
     null,
   );
   const [newPaymentMethod, setNewPaymentMethod] =
-    useState<Payment["method"]>("cash");
+    useState<Payment["method"]>("bankak");
   const [newPaymentAmount, setNewPaymentAmount] = useState("");
   const [addPaymentLoading, setAddPaymentLoading] = useState(false);
   const [removeAllItemsLoading, setRemoveAllItemsLoading] = useState(false);
@@ -411,6 +405,17 @@ const PosBlankPage: React.FC = () => {
     return () =>
       window.removeEventListener("add-package-to-sale", handleAddPackage);
   }, [handleAddPackageToSale]);
+
+  // Listen for "search sale by id" results from TopAppBar
+  useEffect(() => {
+    const handleSelectSale = (e: Event) => {
+      const customEvent = e as CustomEvent<Sale>;
+      setSelectedSale(customEvent.detail);
+    };
+    window.addEventListener("pos-select-sale", handleSelectSale);
+    return () =>
+      window.removeEventListener("pos-select-sale", handleSelectSale);
+  }, []);
 
   const handleClientChange = useCallback(
     async (client: Client | null) => {
@@ -743,7 +748,6 @@ const PosBlankPage: React.FC = () => {
           );
         }
         toast.success(t("productAddedToast"));
-        setSelectedProduct(null);
         setProductInputValue("");
         setTimeout(() => productInputRef.current?.focus(), 0);
       } catch (err) {
@@ -806,24 +810,6 @@ const PosBlankPage: React.FC = () => {
       setShiftLoading(false);
     }
   }, []);
-
-  const handleSearchSaleById = useCallback(async () => {
-    const id = Number(saleSearchInput.trim());
-    if (!id || !Number.isFinite(id)) {
-      toast.error(t("enterValidInvoiceNumberToast"));
-      return;
-    }
-    setSaleSearchLoading(true);
-    try {
-      const sale = await saleService.getSale(id);
-      setSelectedSale(sale);
-      setSaleSearchInput("");
-    } catch {
-      toast.error(t("noInvoiceWithThisNumber"));
-    } finally {
-      setSaleSearchLoading(false);
-    }
-  }, [saleSearchInput]);
 
   const handleCloseShift = useCallback(async () => {
     try {
@@ -1836,207 +1822,18 @@ const PosBlankPage: React.FC = () => {
             {t("salesReturnButton")}
           </Button>
 
-          {/* Sale ID search */}
-          <Box sx={{ width: 140 }}>
-            <TextField
-              size="small"
-              placeholder={t("searchByNumberPlaceholder")}
-              value={saleSearchInput}
-              onChange={(e) => setSaleSearchInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearchSaleById()}
-              disabled={saleSearchLoading}
-              InputProps={{
-                startAdornment: saleSearchLoading ? (
-                  <CircularProgress size={16} sx={{ mr: 1 }} />
-                ) : (
-                  <SearchIcon
-                    size={16}
-                    style={{ marginRight: 8, opacity: 0.5 }}
-                  />
-                ),
-              }}
-              sx={{ bgcolor: "background.paper", borderRadius: 1 }}
-            />
-          </Box>
-
           {/* Product search – in header */}
-          <Box sx={{ flex: 1, minWidth: 160, maxWidth: 380 }}>
-            <Autocomplete
-              freeSolo
-              value={selectedProduct}
-              inputValue={productInputValue}
-              onInputChange={(_, value) => setProductInputValue(value)}
-              onChange={(_, newValue: string | Product | null) => {
-                if (typeof newValue === "string") {
-                  // This handles the "Enter" key on free text (barcode interaction)
-                  handleAddProductByBarcode(newValue);
-                } else if (newValue && typeof newValue === "object") {
-                  // This handles selecting an option from the list
-                  handleAddProductToSale(newValue);
-                  setSelectedProduct(null);
-                }
-              }}
-              options={productOptions}
-              getOptionLabel={(opt) => {
-                if (typeof opt === "string") return opt;
-                const option = opt as Product;
-                return option?.name
-                  ? `${option.name}${option.sale_price ? ` (${option.sale_price})` : ""}`
-                  : "";
-              }}
-              loading={productSearchLoading}
-              disabled={!selectedSale || addProductLoading}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  inputRef={(el) => {
-                    (
-                      productInputRef as React.MutableRefObject<HTMLInputElement | null>
-                    ).current = el;
-                    const prev = (
-                      params as { inputRef?: React.Ref<HTMLInputElement> }
-                    ).inputRef;
-                    if (typeof prev === "function") prev(el);
-                    else if (prev && typeof prev === "object")
-                      (
-                        prev as React.MutableRefObject<HTMLInputElement | null>
-                      ).current = el;
-                  }}
-                  placeholder={t("searchProductOrBarcodePlaceholder")}
-                  size="small"
-                  InputProps={{
-                    ...params.InputProps,
-                    endAdornment: (
-                      <>
-                        {addProductLoading ? (
-                          <CircularProgress size={20} sx={{ mr: 1 }} />
-                        ) : null}
-                        {params.InputProps.endAdornment}
-                      </>
-                    ),
-                  }}
-                  helperText={
-                    productInputValue.length > 0
-                      ? (() => {
-                        const showExpired = getSetting("pos_show_expired_products", false);
-                        const showOutOfStock = getSetting("pos_show_out_of_stock_products", false);
-                        if (!showExpired && !showOutOfStock) return t("hiddenExpiredAndOutOfStockHelper");
-                        if (!showExpired) return t("hiddenExpiredHelper");
-                        if (!showOutOfStock) return t("hiddenOutOfStockHelper");
-                        return undefined;
-                      })()
-                      : undefined
-                  }
-                />
-              )}
-              renderOption={(props, opt) => {
-                if (typeof opt === "string")
-                  return (
-                    <li {...props} key={opt}>
-                      {opt}
-                    </li>
-                  );
-                const option = opt as Product;
-                return (
-                  <li {...props} key={option.id}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 0.25,
-                        width: "100%",
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <Typography
-                          variant="body2"
-                          fontWeight="medium"
-                          sx={{
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                            maxWidth: "70%",
-                          }}
-                        >
-                          {option.name}
-                        </Typography>
-                        {option.is_service ? (
-                          <Typography variant="caption" color="text.secondary" fontWeight="bold">
-                            خدمة
-                          </Typography>
-                        ) : option.current_stock_quantity != null ||
-                          option.stock_quantity != null ? (
-                          <Typography
-                            variant="caption"
-                            color={
-                              (option.current_stock_quantity ??
-                                option.stock_quantity ??
-                                0) <= 5
-                                ? "error.main"
-                                : "success.main"
-                            }
-                            fontWeight="bold"
-                          >
-                            {`${t("quantityColonLabel")} ${formatNumber(
-                              option.current_stock_quantity ??
-                              option.stock_quantity ??
-                              0,
-                            )}`}
-                          </Typography>
-                        ) : null}
-                      </Box>
-
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        {option.last_sale_price_per_sellable_unit != null ? (
-                          <Stack direction="row" spacing={0.4} alignItems="center">
-                            <Typography variant="caption" color="text.secondary">
-                              {`${t("priceColonLabel")} ${formatNumber(Number(option.last_sale_price_per_sellable_unit), currencyDecimals)}`}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              sx={{
-                                fontWeight: 700,
-                                fontSize: "0.6rem",
-                                px: 0.5,
-                                py: 0.1,
-                                borderRadius: 0.75,
-                                lineHeight: 1.6,
-                                bgcolor: option.last_purchase_currency === "USD" ? "success.light" : "info.light",
-                                color: option.last_purchase_currency === "USD" ? "success.dark" : "info.dark",
-                              }}
-                            >
-                              {currencyCode === "OMR" ? "OMR" : (option.last_purchase_currency ?? currencyCode)}
-                            </Typography>
-                          </Stack>
-                        ) : null}
-
-                        {!hideExpiryDate && option.earliest_expiry_date && (
-                          <Typography variant="caption" color="warning.dark">
-                            {`${t("expiresColonLabel")} ${option.earliest_expiry_date}`}
-                          </Typography>
-                        )}
-                      </Box>
-                    </Box>
-                  </li>
-                );
-              }}
-              noOptionsText={
-                productInputValue.trim() ? t("noResultsText") : t("typeToSearchShort")
-              }
-              sx={{ width: "100%" }}
-            />
-          </Box>
+          <PosHeaderProductSearch
+            inputValue={productInputValue}
+            onInputValueChange={setProductInputValue}
+            options={productOptions}
+            loading={productSearchLoading}
+            disabled={!selectedSale || addProductLoading}
+            addLoading={addProductLoading}
+            onAddByBarcode={handleAddProductByBarcode}
+            onSelectProduct={handleAddProductToSale}
+            inputRef={productInputRef}
+          />
 
           {/* Quote mode toggle */}
           {selectedSale && (

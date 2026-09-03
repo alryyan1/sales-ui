@@ -8,7 +8,11 @@ import {
   Info,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { navItems } from "@/components/layouts/navItems";
+import {
+  adminNavItems,
+  navItems,
+  reportNavItems,
+} from "@/components/layouts/navItems";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -75,6 +79,19 @@ const NavigationPermissionsSection: React.FC<
           });
         });
       }
+    });
+
+    // Reports and Administration live in the user menu (not the sidebar) but
+    // their routes still need to be assignable here.
+    [...reportNavItems, ...adminNavItems].forEach((item) => {
+      const category = item.category || "غير مصنف";
+      if (!categories[category]) {
+        categories[category] = [];
+      }
+      categories[category].push({
+        route: item.to,
+        label: t(item.label),
+      });
     });
 
     return Object.entries(categories).map(([category, items]) => ({

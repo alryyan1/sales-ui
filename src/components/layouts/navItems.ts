@@ -3,7 +3,6 @@ import {
   Box as BoxIcon,
   ShoppingCart,
   CircleDollarSign,
-  Settings,
   BarChart3,
 } from "lucide-react";
 import { NavItem } from "./types";
@@ -125,150 +124,133 @@ export const navItems: NavItem[] = [
     ],
   },
 
-  // Reports Group
+];
+
+// Reports and Administration were moved out of the sidebar and are surfaced as
+// sub-menus in the user menu (see UserMenu.tsx), next to Settings. `label` holds
+// a key within the "sidebar" i18next namespace.
+export const reportNavItems: NavItem[] = [
   {
-    to: "#",
-    label: "reportsGroup",
-    icon: BarChart3,
+    to: "/reports/sales",
+    label: "salesReport",
     permission: null,
     category: "التقارير",
-    children: [
-
-      {
-        to: "/reports/sales",
-        label: "salesReport",
-        permission: null,
-        category: "التقارير",
-      },
-
-      {
-        to: "/reports/purchases",
-        label: "purchaseReport",
-        permission: null,
-        category: "التقارير",
-      },
-
-      {
-        to: "/reports/inventory-log",
-        label: "inventoryLogReport",
-        permission: null,
-        category: "التقارير",
-      },
-
-      {
-        to: "/reports/daily-income",
-        label: "dailyIncomeReport",
-        permission: null,
-        category: "التقارير",
-      },
-      {
-        to: "/reports/monthly-expenses",
-        label: "monthlyExpensesReport",
-        permission: null,
-        category: "التقارير",
-      },
-      {
-        to: "/reports/profit-overview",
-        label: "profitOverview",
-        permission: null,
-        category: "التقارير",
-      },
-
-      {
-        to: "/reports/best-selling-products",
-        label: "bestSellingProducts",
-        permission: null,
-        category: "التقارير",
-      },
-      {
-        to: "/reports/stagnant-products",
-        label: "stagnantProducts",
-        permission: null,
-        category: "التقارير",
-      },
-      {
-        to: "/reports/low-stock-products",
-        label: "lowStockProducts",
-        permission: null,
-        category: "التقارير",
-      },
-      {
-        to: "/reports/shortages",
-        label: "shortages",
-        permission: null,
-        category: "التقارير",
-      },
-      {
-        to: "/reports/moved-expired-products",
-        label: "movedExpiredProducts",
-        permission: null,
-        category: "التقارير",
-      },
-      {
-        to: "/reports/monthly-shifts",
-        label: "monthlyShiftsReport",
-        permission: null,
-        category: "التقارير",
-      },
-      {
-        to: "/reports/templates",
-        label: "reportTemplates",
-        permission: null,
-        category: "التقارير",
-      },
-    ],
   },
-
-  // Admin Group
   {
-    to: "#",
-    label: "adminGroup",
-    icon: Settings,
+    to: "/reports/purchases",
+    label: "purchaseReport",
+    permission: null,
+    category: "التقارير",
+  },
+  {
+    to: "/reports/inventory-log",
+    label: "inventoryLogReport",
+    permission: null,
+    category: "التقارير",
+  },
+  {
+    to: "/reports/daily-income",
+    label: "dailyIncomeReport",
+    permission: null,
+    category: "التقارير",
+  },
+  {
+    to: "/reports/monthly-expenses",
+    label: "monthlyExpensesReport",
+    permission: null,
+    category: "التقارير",
+  },
+  {
+    to: "/reports/profit-overview",
+    label: "profitOverview",
+    permission: null,
+    category: "التقارير",
+  },
+  {
+    to: "/reports/best-selling-products",
+    label: "bestSellingProducts",
+    permission: null,
+    category: "التقارير",
+  },
+  {
+    to: "/reports/stagnant-products",
+    label: "stagnantProducts",
+    permission: null,
+    category: "التقارير",
+  },
+  {
+    to: "/reports/low-stock-products",
+    label: "lowStockProducts",
+    permission: null,
+    category: "التقارير",
+  },
+  {
+    to: "/reports/shortages",
+    label: "shortages",
+    permission: null,
+    category: "التقارير",
+  },
+  {
+    to: "/reports/moved-expired-products",
+    label: "movedExpiredProducts",
+    permission: null,
+    category: "التقارير",
+  },
+  {
+    to: "/reports/monthly-shifts",
+    label: "monthlyShiftsReport",
+    permission: null,
+    category: "التقارير",
+  },
+  {
+    to: "/reports/templates",
+    label: "reportTemplates",
+    permission: null,
+    category: "التقارير",
+  },
+];
+
+export const adminNavItems: NavItem[] = [
+  {
+    to: "/admin/users",
+    label: "users",
     permission: null,
     category: "الإدارة",
-    children: [
-      {
-        to: "/admin/users",
-        label: "users",
-        permission: null,
-        category: "الإدارة",
-      },
-      {
-        to: "/admin/roles",
-        label: "roles",
-        permission: null,
-        category: "الإدارة",
-      },
-      {
-        to: "/admin/expenses",
-        label: "expenses",
-        permission: null,
-        category: "الإدارة",
-      },
-      {
-        to: "/admin/settings",
-        label: "settings",
-        permission: null,
-        category: "الإدارة",
-      },
-      {
-        to: "/admin/backups",
-        label: "backups",
-        permission: null,
-        category: "الإدارة",
-      },
-      {
-        to: "/admin/warehouses",
-        label: "warehouses",
-        permission: null,
-        category: "الإدارة",
-      },
-      {
-        to: "/admin/whatsapp-test",
-        label: "whatsappTest",
-        permission: null,
-        category: "الإدارة",
-      },
-    ],
+  },
+  {
+    to: "/admin/roles",
+    label: "roles",
+    permission: null,
+    category: "الإدارة",
+  },
+  {
+    to: "/admin/expenses",
+    label: "expenses",
+    permission: null,
+    category: "الإدارة",
+  },
+  {
+    to: "/admin/settings",
+    label: "settings",
+    permission: null,
+    category: "الإدارة",
+  },
+  {
+    to: "/admin/backups",
+    label: "backups",
+    permission: null,
+    category: "الإدارة",
+  },
+  {
+    to: "/admin/warehouses",
+    label: "warehouses",
+    permission: null,
+    category: "الإدارة",
+  },
+  {
+    to: "/admin/whatsapp-test",
+    label: "whatsappTest",
+    permission: null,
+    category: "الإدارة",
   },
 ];

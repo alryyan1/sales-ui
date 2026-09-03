@@ -194,7 +194,9 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
   const activePaymentMethodsKey = activePaymentMethods.join(",");
   useEffect(() => {
     if (activePaymentMethods.length > 0 && !activePaymentMethods.includes(newPaymentMethod)) {
-      setNewPaymentMethod(activePaymentMethods[0]);
+      setNewPaymentMethod(
+        activePaymentMethods.includes("bankak") ? "bankak" : activePaymentMethods[0],
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activePaymentMethodsKey, newPaymentMethod]);

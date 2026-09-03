@@ -138,7 +138,6 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({
                   <TableHead className="text-center">{t("dateColumn")}</TableHead>
                   <TableHead className="text-center">{t("paymentMethodColumn")}</TableHead>
                   <TableHead className="text-center">{t("amountColumn")}</TableHead>
-                  <TableHead className="text-center">{t("referenceColumn")}</TableHead>
                   <TableHead className="text-center">{t("clientLabel")}</TableHead>
                   <TableHead className="text-center">{t("userColumn")}</TableHead>
                   <TableHead className="text-center">{t("saleBalanceColumn")}</TableHead>
@@ -174,10 +173,6 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({
 
                       <TableCell className="text-center font-bold text-base tabular-nums">
                         {formatNumber(payment.amount, currencyDecimals)}
-                      </TableCell>
-
-                      <TableCell className="text-center text-xs text-muted-foreground font-mono">
-                        {payment.reference_number || "—"}
                       </TableCell>
 
                       <TableCell className="text-center">

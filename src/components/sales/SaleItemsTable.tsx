@@ -23,6 +23,8 @@ import {
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import { toast } from "sonner";
 import { formatNumber, CURRENCY_DECIMALS } from "@/constants";
 import type { SaleItem } from "@/services/saleService";
 import { ProductImage } from "@/components/products/ProductImage";
@@ -371,20 +373,47 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
             const scientificName = item.product?.scientific_name;
             const returnedQty = item.returned_quantity ?? 0;
             const isFullyReturned = returnedQty > 0 && returnedQty >= (item.quantity ?? 0);
+            const sku = item.product?.sku ?? item.product_sku ?? null;
+            const hasImage = Boolean(item.product?.image_url);
             return (
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, minWidth: 0 }}>
-                <ProductImage
-                  imageUrl={item.product?.image_url}
-                  productName={name}
-                  size={32}
-                  variant="rounded"
-                />
+                {!hasImage && sku ? (
+                  <Tooltip title={`نسخ الباركود: ${sku}`} arrow>
+                    <IconButton
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigator.clipboard
+                          .writeText(sku)
+                          .then(() => toast.success("تم نسخ الباركود"))
+                          .catch(() => toast.error("تعذّر نسخ الباركود"));
+                      }}
+                      sx={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 1,
+                        border: "1px dashed",
+                        borderColor: "divider",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <ContentCopyIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Tooltip>
+                ) : (
+                  <ProductImage
+                    imageUrl={item.product?.image_url}
+                    productName={name}
+                    size={32}
+                    variant="rounded"
+                  />
+                )}
                 <Tooltip title={scientificName ? `${name} (${scientificName})` : name} arrow>
                   <Typography
                     component="span"
                     dir="auto"
                     sx={{
-                      maxWidth: "200px",
+                      maxWidth: { xs: 200, sm: 320, md: 440 },
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",

@@ -75,8 +75,18 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
   });
 
   const stats = useMemo(() => {
+    const methodLabels: Record<string, string> = {
+      cash: t("paymentMethodCash"),
+      bankak: t("paymentMethodBankak"),
+      fawry: t("paymentMethodFawry"),
+      ocash: t("paymentMethodOcash"),
+      bank: t("paymentMethodBank"),
+      bank_transfer: t("paymentMethodBankTransfer"),
+      card: t("paymentMethodCard"),
+    };
     const data = reportData?.data || [];
     const byMethod = paymentStats?.by_method ?? {};
+    const returnsByMethod = paymentStats?.returns_by_method ?? {};
     const expenses = expensesData?.data || [];
 
     const totalCash = byMethod["cash"] ?? 0;
@@ -86,6 +96,14 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
       (byMethod["bankak"] ?? 0) + (byMethod["bank_transfer"] ?? 0) + (byMethod["card"] ?? 0);
     const totalFawry = byMethod["fawry"] ?? 0;
     const totalOcash = byMethod["ocash"] ?? 0;
+
+    const returnsBreakdown = Object.entries(returnsByMethod)
+      .filter(([, amount]) => Number(amount) > 0)
+      .map(([method, amount]) => ({
+        method,
+        label: methodLabels[method] ?? method,
+        amount: Number(amount),
+      }));
 
     return {
       totalSales: reportData?.total || data.length,
@@ -97,8 +115,10 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
       totalFawry,
       totalOcash,
       totalExpenses: expenses.reduce((s, e) => s + Number(e.amount), 0),
+      totalReturns: paymentStats?.returns_total ?? 0,
+      returnsBreakdown,
     };
-  }, [reportData, paymentStats, expensesData]);
+  }, [reportData, paymentStats, expensesData, t]);
 
   const loading = isLoading || isLoadingPayments || isLoadingExpenses;
 
@@ -121,6 +141,16 @@ export const ReportStats: React.FC<ReportStatsProps> = ({ filterValues }) => {
     showMethod("ocash") && { label: t("paymentMethodOcash"), value: stats.totalOcash, color: "text-purple-500" },
     { label: t("totalDue"), value: stats.totalDue, color: stats.totalDue > 0 ? "text-red-600" : "text-emerald-600" },
     { label: t("expensesLabel"), value: stats.totalExpenses, color: "text-rose-600" },
+    stats.totalReturns > 0 && {
+      label: t("totalReturns"),
+      value: stats.totalReturns,
+      color: "text-rose-600",
+    },
+    ...stats.returnsBreakdown.map((r) => ({
+      label: t("returnViaMethod", { method: r.label }),
+      value: r.amount,
+      color: "text-rose-500",
+    })),
   ].filter(Boolean) as { label: string; value: number; sub?: string; color: string }[];
 
   return (

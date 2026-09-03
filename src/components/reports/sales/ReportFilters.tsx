@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery } from "@tanstack/react-query";
 import * as z from "zod";
+import apiClient from "@/lib/axios";
 import {
   Box,
   Button,
@@ -42,7 +44,6 @@ interface ReportFiltersProps {
   onFilterSubmit: (data: ReportFilterValues) => void;
   onClearFilters: () => void;
   clients: any[];
-  users: any[];
   products: any[];
   shifts: any[];
   loadingFilters: boolean;
@@ -54,7 +55,6 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
   onFilterSubmit,
   onClearFilters,
   clients,
-  users,
   products,
   shifts,
   loadingFilters,
@@ -69,16 +69,49 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
     defaultValues: initialValues,
   });
 
-  const { control, handleSubmit, reset } = form;
+  const { control, handleSubmit, reset, watch, setValue } = form;
+
+  const selectedShiftId = watch("shiftId");
+  const dateInputsDisabled = posMode === "shift" && !!selectedShiftId;
+  const scopedShiftId = posMode === "shift" ? selectedShiftId : null;
+
+  // Users list — scoped to the selected shift so only users who recorded a
+  // payment in that shift are offered.
+  const { data: users = [], isLoading: loadingUsers } = useQuery({
+    queryKey: ["users-list-filters", scopedShiftId ?? null],
+    queryFn: async () => {
+      const res = await apiClient.get<{ data: { id: number; name: string }[] }>(
+        "/users/list",
+        { params: scopedShiftId ? { shift_id: scopedShiftId } : {} },
+      );
+      return res.data?.data ?? [];
+    },
+  });
 
   useEffect(() => {
     reset(initialValues);
   }, [initialValues, reset]);
 
+  // Drop a selected user that is no longer valid for the current shift scope.
+  useEffect(() => {
+    const currentUserId = form.getValues("userId");
+    if (
+      currentUserId &&
+      !loadingUsers &&
+      !users.some((u) => String(u.id) === currentUserId)
+    ) {
+      setValue("userId", null);
+    }
+  }, [users, loadingUsers, form, setValue]);
+
   const handleSubmitFilters = (data: ReportFilterValues) => {
     const toSubmit = { ...data };
     if (posMode === "days") {
       toSubmit.shiftId = null;
+    } else if (toSubmit.shiftId) {
+      // A shift already defines its own date range — don't also constrain by dates.
+      toSubmit.startDate = null;
+      toSubmit.endDate = null;
     }
     onFilterSubmit(toSubmit);
   };
@@ -120,6 +153,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
                 size="small"
                 type="date"
                 label={t("startDateLabel")}
+                disabled={dateInputsDisabled}
                 InputLabelProps={{ shrink: true }}
                 error={!!fieldState.error}
                 helperText={fieldState.error?.message}
@@ -138,12 +172,46 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
                 size="small"
                 type="date"
                 label={t("endDateLabel")}
+                disabled={dateInputsDisabled}
                 InputLabelProps={{ shrink: true }}
                 error={!!fieldState.error}
                 helperText={fieldState.error?.message}
               />
             )}
           />
+   {/* Shift Select */}
+          {posMode === "shift" && (
+            <Box sx={{ minWidth: 320 }}>
+              <Controller
+                control={control}
+                name="shiftId"
+                render={({ field }) => (
+                  <Autocomplete
+                    options={shifts}
+                    getOptionLabel={(option) =>
+                      option.name
+                        ? `${option.name} ${
+                            option.shift_date ? `(${option.shift_date})` : ""
+                          }`
+                        : `${t("shiftNumberFallback", { id: option.id })} ${
+                            option.shift_date ? `(${option.shift_date})` : ""
+                          }`
+                    }
+                    value={
+                      shifts.find((s) => String(s.id) === field.value) || null
+                    }
+                    onChange={(_, newValue) => {
+                      field.onChange(newValue ? String(newValue.id) : null);
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} label={t("shiftLabel")} size="small" />
+                    )}
+                    loading={loadingFilters}
+                  />
+                )}
+              />
+            </Box>
+          )}
 
           {/* Client Select */}
           <Box sx={{ minWidth: 200 }}>
@@ -187,46 +255,16 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
                   renderInput={(params) => (
                     <TextField {...params} label={t("user")} size="small" />
                   )}
-                  loading={loadingFilters}
+                  loading={loadingFilters || loadingUsers}
+                  noOptionsText={
+                    scopedShiftId ? t("noUsersForShift") : undefined
+                  }
                 />
               )}
             />
           </Box>
 
-          {/* Shift Select */}
-          {posMode === "shift" && (
-            <Box sx={{ minWidth: 200 }}>
-              <Controller
-                control={control}
-                name="shiftId"
-                render={({ field }) => (
-                  <Autocomplete
-                    options={shifts}
-                    getOptionLabel={(option) =>
-                      option.name
-                        ? `${option.name} ${
-                            option.shift_date ? `(${option.shift_date})` : ""
-                          }`
-                        : `${t("shiftNumberFallback", { id: option.id })} ${
-                            option.shift_date ? `(${option.shift_date})` : ""
-                          }`
-                    }
-                    value={
-                      shifts.find((s) => String(s.id) === field.value) || null
-                    }
-                    onChange={(_, newValue) => {
-                      field.onChange(newValue ? String(newValue.id) : null);
-                    }}
-                    renderInput={(params) => (
-                      <TextField {...params} label={t("shiftLabel")} size="small" />
-                    )}
-                    loading={loadingFilters}
-                  />
-                )}
-              />
-            </Box>
-          )}
-
+       
           {/* Filter Actions */}
           <Stack direction="row" gap={1} spacing={1} sx={{ minWidth: 200 }}>
             <Button

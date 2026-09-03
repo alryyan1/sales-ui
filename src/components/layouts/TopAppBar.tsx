@@ -2,6 +2,7 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import {
   AlertTriangle,
   Bell,
@@ -37,6 +38,7 @@ import UserMenu from "./UserMenu";
 import { KeyboardShortcutsDialog } from "../common/KeyboardShortcutsDialog";
 import { DueRemindersDialog } from "../pos/DueRemindersDialog";
 import saleReminderService, { DueReminder } from "@/services/saleReminderService";
+import saleService from "@/services/saleService";
 import packageService, { Package } from "@/services/packageService";
 import { db } from "@/firebase";
 import { collection, limit, onSnapshot, query } from "firebase/firestore";
@@ -52,6 +54,7 @@ interface TopAppBarProps {
 const TopAppBar: React.FC<TopAppBarProps> = ({ onDrawerToggle, isSidebarCollapsed }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation("pos");
   const { user } = useAuth();
   const { language, setLanguage } = useLanguage();
   const { getSetting, updateSettings } = useSettings();
@@ -72,6 +75,28 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ onDrawerToggle, isSidebarCollapse
   const [localFactor, setLocalFactor] = React.useState(String(usdFactor));
   const [factorPopoverOpen, setFactorPopoverOpen] = React.useState(false);
   const [isUpdatingFactor, setIsUpdatingFactor] = React.useState(false);
+
+  // Sale-by-id search (POS page only)
+  const [saleSearchInput, setSaleSearchInput] = React.useState("");
+  const [saleSearchLoading, setSaleSearchLoading] = React.useState(false);
+
+  const handleSearchSaleById = async () => {
+    const id = Number(saleSearchInput.trim());
+    if (!id || !Number.isFinite(id)) {
+      toast.error(t("enterValidInvoiceNumberToast"));
+      return;
+    }
+    setSaleSearchLoading(true);
+    try {
+      const sale = await saleService.getSale(id);
+      window.dispatchEvent(new CustomEvent("pos-select-sale", { detail: sale }));
+      setSaleSearchInput("");
+    } catch {
+      toast.error(t("noInvoiceWithThisNumber"));
+    } finally {
+      setSaleSearchLoading(false);
+    }
+  };
 
   // Package search (POS page only)
   const [packageOptions, setPackageOptions] = React.useState<Package[]>([]);
@@ -269,6 +294,24 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ onDrawerToggle, isSidebarCollapse
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Sale-by-id search */}
+          {isPosPage && (
+            <div className="relative w-36">
+              <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={saleSearchInput}
+                onChange={(e) => setSaleSearchInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearchSaleById()}
+                disabled={saleSearchLoading}
+                placeholder={t("searchByNumberPlaceholder")}
+                className="h-9 bg-background/50 ps-8 pe-8"
+              />
+              {saleSearchLoading && (
+                <Loader2 className="absolute end-2.5 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+              )}
+            </div>
+          )}
+
           {/* Package search */}
           {isPosPage && (
             <Popover open={packagePopoverOpen} onOpenChange={setPackagePopoverOpen}>

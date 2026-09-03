@@ -3,6 +3,10 @@ import apiClient from "@/lib/axios";
 export interface PaymentStats {
   total: number;
   by_method: Record<string, number>;
+  /** Total of sale returns (refunds) over the window. */
+  returns_total: number;
+  /** Refunded amount broken down by the payment method used for the refund. */
+  returns_by_method: Record<string, number>;
 }
 
 export interface PaymentRecord {
