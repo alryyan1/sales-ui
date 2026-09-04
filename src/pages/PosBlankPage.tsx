@@ -478,6 +478,10 @@ const PosBlankPage: React.FC = () => {
 
   const handleAddPayment = useCallback(async () => {
     if (!selectedSale) return;
+    if (selectedSale.user_id != null && selectedSale.user_id !== user?.id) {
+      toast.error(t("onlySaleCreatorCanPay"));
+      return;
+    }
     const due =
       selectedSale.due_amount != null
         ? Number(selectedSale.due_amount)
@@ -521,7 +525,7 @@ const PosBlankPage: React.FC = () => {
     } finally {
       setAddPaymentLoading(false);
     }
-  }, [selectedSale, newPaymentMethod, newPaymentAmount]);
+  }, [selectedSale, newPaymentMethod, newPaymentAmount, user?.id]);
 
   // Page-level: plus key adds payment when add-payment is available (skip when focus is in input/textarea/select)
   useEffect(() => {
@@ -632,6 +636,10 @@ const PosBlankPage: React.FC = () => {
 
   const handleFullPayment = useCallback(async () => {
     if (!selectedSale) return;
+    if (selectedSale.user_id != null && selectedSale.user_id !== user?.id) {
+      toast.error(t("onlySaleCreatorCanPay"));
+      return;
+    }
     const due =
       selectedSale.due_amount != null
         ? Number(selectedSale.due_amount)
@@ -671,7 +679,7 @@ const PosBlankPage: React.FC = () => {
     } finally {
       setFullPaymentLoading(false);
     }
-  }, [selectedSale, newPaymentMethod]);
+  }, [selectedSale, newPaymentMethod, user?.id]);
 
   const handleQuantityChange = useCallback(
     async (item: SaleItem, newQuantity: number) => {
@@ -730,6 +738,11 @@ const PosBlankPage: React.FC = () => {
         return;
       }
 
+      if (selectedSale.user_id != null && selectedSale.user_id !== user?.id) {
+        toast.error(t("onlySaleCreatorCanAddItems"));
+        return;
+      }
+
       const total = Number(selectedSale.total_amount ?? 0);
       const paid = Number(selectedSale.paid_amount ?? 0);
       if (total > 0 && total === paid) {
@@ -764,7 +777,7 @@ const PosBlankPage: React.FC = () => {
         setAddProductLoading(false);
       }
     },
-    [selectedSale, getSetting],
+    [selectedSale, getSetting, user?.id],
   );
 
   const handleAddProductByBarcode = useCallback(
@@ -1836,7 +1849,11 @@ const PosBlankPage: React.FC = () => {
             onInputValueChange={setProductInputValue}
             options={productOptions}
             loading={productSearchLoading}
-            disabled={!selectedSale || addProductLoading}
+            disabled={
+              !selectedSale ||
+              addProductLoading ||
+              (selectedSale.user_id != null && selectedSale.user_id !== user?.id)
+            }
             addLoading={addProductLoading}
             onAddByBarcode={handleAddProductByBarcode}
             onSelectProduct={handleAddProductToSale}

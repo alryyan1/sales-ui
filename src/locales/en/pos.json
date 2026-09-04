@@ -298,6 +298,8 @@
   "itemsUpdateFailedCount": "Failed to update {{count}} items",
   "priceUpdatedToast": "Price updated",
   "cannotAddProductsFullyPaid": "Cannot add products to a fully paid sale",
+  "onlySaleCreatorCanAddItems": "Only the user who created this sale can add items to it",
+  "onlySaleCreatorCanPay": "Only the user who created this sale can add payments to it",
   "productAddedToast": "Product added",
   "productNotFoundByBarcode": "No product found with this barcode",
   "enterValidInvoiceNumberToast": "Enter a valid invoice number",

@@ -12,6 +12,13 @@ import {
   Divider,
   IconButton,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  List,
+  ListItem,
+  ListItemText,
+  Button,
 } from "@mui/material";
 import {
   CalendarDays,
@@ -19,6 +26,7 @@ import {
   BarChart2,
   ArrowLeft,
   ArrowRight,
+  Users,
 } from "lucide-react";
 import { format } from "date-fns";
 import { arSA, enUS } from "date-fns/locale";
@@ -93,6 +101,35 @@ const MonthlyShiftsReportPage: React.FC = () => {
     "none",
   );
   const [uploadingShiftId, setUploadingShiftId] = useState<number | null>(null);
+
+  // Users who recorded payments in a given shift (per-cashier breakdown dialog)
+  const [paymentUsersShift, setPaymentUsersShift] = useState<ShiftSummary | null>(null);
+  const [paymentUsers, setPaymentUsers] = useState<{ id: number; name: string }[]>([]);
+  const [paymentUsersLoading, setPaymentUsersLoading] = useState(false);
+  // The specific user/shift combo currently shown in the financial-table dialog
+  const [userFinancialTarget, setUserFinancialTarget] = useState<{
+    shiftId: number;
+    userId: number;
+    userName: string;
+  } | null>(null);
+
+  const handleOpenPaymentUsers = async (
+    e: React.MouseEvent,
+    shift: ShiftSummary,
+  ) => {
+    e.stopPropagation();
+    setPaymentUsersShift(shift);
+    setPaymentUsers([]);
+    setPaymentUsersLoading(true);
+    try {
+      const res = await apiClient.get(`/shifts/${shift.id}/payment-users`);
+      setPaymentUsers(res.data?.data ?? []);
+    } catch {
+      toast.error(t("failedToFetchShiftUsers"));
+    } finally {
+      setPaymentUsersLoading(false);
+    }
+  };
 
   const handleUploadToFirebase = async (
     e: React.MouseEvent,
@@ -480,12 +517,16 @@ const MonthlyShiftsReportPage: React.FC = () => {
                                 <Typography fontWeight={600} variant="body2">
                                   {tPos("shiftHash", { id: shift.id })}
                                 </Typography>
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
+                               
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  startIcon={<Users size={14} />}
+                                  onClick={(e) => handleOpenPaymentUsers(e, shift)}
+                                  sx={{ fontSize: "0.7rem", py: 0.25, textTransform: "none" }}
                                 >
-                                  — {shift.user_name}
-                                </Typography>
+                                  {t("paymentUsersButtonLabel")}
+                                </Button>
                               </Stack>
                               <Stack
                                 direction="row"
@@ -552,6 +593,74 @@ const MonthlyShiftsReportPage: React.FC = () => {
           })}
         </Stack>
       )}
+
+      {/* Users who recorded payments in the selected shift */}
+      <Dialog
+        open={!!paymentUsersShift}
+        onClose={() => setPaymentUsersShift(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>
+          {t("usersWhoPaidTitle", { id: paymentUsersShift?.id })}
+        </DialogTitle>
+        <DialogContent>
+          {paymentUsersLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : paymentUsers.length === 0 ? (
+            <Typography color="text.secondary" textAlign="center" sx={{ py: 2 }}>
+              {t("noPaymentUsersFound")}
+            </Typography>
+          ) : (
+            <List>
+              {paymentUsers.map((u) => (
+                <ListItem
+                  key={u.id}
+                  secondaryAction={
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => {
+                        if (!paymentUsersShift) return;
+                        setUserFinancialTarget({
+                          shiftId: paymentUsersShift.id,
+                          userId: u.id,
+                          userName: u.name,
+                        });
+                        setPaymentUsersShift(null);
+                      }}
+                    >
+                      {t("viewLabel")}
+                    </Button>
+                  }
+                >
+                  <ListItemText primary={u.name} />
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Financial breakdown for a single user within the shift */}
+      <Dialog
+        open={!!userFinancialTarget}
+        onClose={() => setUserFinancialTarget(null)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>{userFinancialTarget?.userName}</DialogTitle>
+        <DialogContent sx={{ p: 0 }}>
+          {userFinancialTarget && (
+            <ShiftFinancialTable
+              shiftId={userFinancialTarget.shiftId}
+              userId={userFinancialTarget.userId}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };

@@ -294,6 +294,11 @@
     "openShiftChipLabel": "Open",
     "uploadToFirebaseTooltip": "Upload to Firebase",
     "preparingShiftReportsHashToast": "⏳ Preparing shift #{{id}} reports...",
+    "paymentUsersButtonLabel": "Shift Collectors",
+    "usersWhoPaidTitle": "Users in shift #{{id}}",
+    "noPaymentUsersFound": "No users recorded payments in this shift",
+    "failedToFetchShiftUsers": "Failed to fetch shift users",
+    "viewLabel": "View",
 
     "salesReturnsLabel": "Sales Returns",
     "soldItemsLabel": "Sold Items",

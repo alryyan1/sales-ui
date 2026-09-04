@@ -1,47 +1,25 @@
 // src/components/admin/users/UserFormModal.tsx
 import React, { useEffect, useMemo, useState } from "react";
-import { useForm, SubmitHandler } from "react-hook-form";
 import {
-  UserRound,
-  KeyRound,
-  ShieldCheck,
-  PanelLeft,
-  Eye,
-  EyeOff,
-  Settings2,
-} from "lucide-react";
-
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
+  Alert,
+  App as AntApp,
+  Avatar,
+  Button,
+  Checkbox,
+  ConfigProvider,
+  Divider,
   Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { cn } from "@/lib/utils";
+  Input,
+  Modal,
+  Progress,
+  Select,
+  Typography,
+  theme as antdTheme,
+} from "antd";
+import arEG from "antd/locale/ar_EG";
+import { KeyRound, PanelLeft, Settings2, ShieldCheck, UserRound } from "lucide-react";
+
+import { useTheme } from "@/context/ThemeContext";
 
 // Services and Types
 import userService, { Role } from "@/services/userService";
@@ -50,6 +28,8 @@ import { warehouseService, Warehouse } from "@/services/warehouseService";
 
 // Custom Components
 import NavigationPermissionsSection from "./NavigationPermissionsSection";
+
+const { Text } = Typography;
 
 // --- Props ---
 interface UserFormModalProps {
@@ -67,10 +47,7 @@ type UserFormValues = {
   password_confirmation: string;
   roles: string[];
   warehouse_id: number | null;
-  allowed_navs: string[];
 };
-
-const NO_WAREHOUSE = "__none__";
 
 function isAdminRoleName(name: string) {
   return name === "admin" || name === "ادمن";
@@ -78,11 +55,10 @@ function isAdminRoleName(name: string) {
 
 function getPasswordStrength(password: string): {
   label: string;
-  textClass: string;
-  barClass: string;
+  color: string;
   percent: number;
 } {
-  if (!password) return { label: "", textClass: "", barClass: "", percent: 0 };
+  if (!password) return { label: "", color: "", percent: 0 };
   let score = 0;
   if (password.length >= 8) score++;
   if (password.length >= 12) score++;
@@ -91,34 +67,28 @@ function getPasswordStrength(password: string): {
   if (/[^A-Za-z0-9]/.test(password)) score++;
 
   const percent = (score / 5) * 100;
-  if (score <= 1)
-    return {
-      label: "ضعيفة جداً",
-      textClass: "text-destructive",
-      barClass: "[&>[data-slot=progress-indicator]]:bg-destructive",
-      percent,
-    };
-  if (score === 2)
-    return {
-      label: "ضعيفة",
-      textClass: "text-amber-600 dark:text-amber-500",
-      barClass: "[&>[data-slot=progress-indicator]]:bg-amber-500",
-      percent,
-    };
-  if (score === 3 || score === 4)
-    return {
-      label: score === 3 ? "متوسطة" : "جيدة",
-      textClass: "text-blue-600 dark:text-blue-400",
-      barClass: "[&>[data-slot=progress-indicator]]:bg-blue-500",
-      percent,
-    };
-  return {
-    label: "قوية",
-    textClass: "text-green-600 dark:text-green-500",
-    barClass: "[&>[data-slot=progress-indicator]]:bg-green-500",
-    percent,
-  };
+  if (score <= 1) return { label: "ضعيفة جداً", color: "#ff4d4f", percent };
+  if (score === 2) return { label: "ضعيفة", color: "#faad14", percent };
+  if (score === 3) return { label: "متوسطة", color: "#1677ff", percent };
+  if (score === 4) return { label: "جيدة", color: "#1677ff", percent };
+  return { label: "قوية", color: "#52c41a", percent };
 }
+
+const SectionLabel: React.FC<{ icon: React.ReactNode; children: React.ReactNode; extra?: React.ReactNode }> = ({
+  icon,
+  children,
+  extra,
+}) => (
+  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "rgba(0,0,0,0.45)" }}>
+      {icon}
+      <Text type="secondary" style={{ fontSize: 12, fontWeight: 500, letterSpacing: 0.4 }}>
+        {children}
+      </Text>
+    </span>
+    {extra}
+  </div>
+);
 
 const UserFormModal: React.FC<UserFormModalProps> = ({
   isOpen,
@@ -127,18 +97,23 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
   onSaveSuccess,
   availableRoles,
 }) => {
+  const { resolvedTheme } = useTheme();
+  const [form] = Form.useForm<UserFormValues>();
+
   const isEditMode = Boolean(userToEdit);
   const isSuperadmin = userToEdit?.username === "superadmin";
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  const [passwordValue, setPasswordValue] = useState("");
 
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
 
   const [navPermissionsOpen, setNavPermissionsOpen] = useState(false);
+  const [allowedNavs, setAllowedNavs] = useState<string[] | null>(null);
+
+  const passwordValue = Form.useWatch("password", form) ?? "";
+  const nameValue = Form.useWatch("name", form) ?? "";
 
   useEffect(() => {
     if (!isOpen) return;
@@ -150,100 +125,33 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
       .finally(() => setLoadingWarehouses(false));
   }, [isOpen]);
 
-  const [allowedNavs, setAllowedNavs] = useState<string[] | null>(null);
-
-  const form = useForm<UserFormValues>({
-    defaultValues: {
-      name: "",
-      username: "",
-      password: "",
-      password_confirmation: "",
-      roles: [],
-      warehouse_id: null,
-      allowed_navs: [],
-    },
-  });
-  const {
-    handleSubmit,
-    reset,
-    setError,
-    control,
-    watch,
-    formState: { isSubmitting },
-  } = form;
-
-  const nameValue = watch("name");
-
   useEffect(() => {
     if (!isOpen) return;
     setServerError(null);
-    setShowPassword(false);
-    setShowConfirmPassword(false);
-    setPasswordValue("");
     setNavPermissionsOpen(false);
 
     if (isEditMode && userToEdit) {
       const navs = userToEdit.allowed_navs;
       const normalizedNavs = navs === null ? null : Array.isArray(navs) ? navs : [];
       setAllowedNavs(normalizedNavs);
-      reset({
+      form.setFieldsValue({
         name: userToEdit.name || "",
         username: userToEdit.username || "",
         password: "",
         password_confirmation: "",
         roles: userToEdit.roles || [],
         warehouse_id: userToEdit.warehouse_id || null,
-        allowed_navs: normalizedNavs || [],
       });
     } else {
       setAllowedNavs([]);
-      reset({
-        name: "",
-        username: "",
-        password: "",
-        password_confirmation: "",
-        roles: [],
-        warehouse_id: null,
-        allowed_navs: [],
-      });
+      form.resetFields();
     }
-  }, [isOpen, isEditMode, userToEdit, reset]);
+  }, [isOpen, isEditMode, userToEdit, form]);
 
-  const onSubmit: SubmitHandler<UserFormValues> = async (data) => {
+  const onFinish = async (data: UserFormValues) => {
     setServerError(null);
-
-    if (!data.name?.trim()) {
-      setError("name", { type: "manual", message: "هذا الحقل مطلوب" });
-      return;
-    }
-    if (!data.username?.trim()) {
-      setError("username", { type: "manual", message: "هذا الحقل مطلوب" });
-      return;
-    }
-    if (!isEditMode) {
-      if (!data.password || data.password.length < 8) {
-        setError("password", {
-          type: "manual",
-          message: "كلمة المرور يجب أن تكون 8 أحرف على الأقل",
-        });
-        return;
-      }
-      if (data.password !== data.password_confirmation) {
-        setError("password_confirmation", {
-          type: "manual",
-          message: "كلمات المرور غير متطابقة",
-        });
-        return;
-      }
-    }
-    if (!data.roles || data.roles.length === 0) {
-      setError("roles", {
-        type: "manual",
-        message: "يجب اختيار دور واحد على الأقل",
-      });
-      return;
-    }
-
+    setSubmitting(true);
+    const warehouseId = data.warehouse_id ?? null;
     try {
       let savedUser: User;
       if (isEditMode && userToEdit) {
@@ -251,12 +159,13 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
           name: data.name,
           username: data.username,
           roles: data.roles,
-          warehouse_id: data.warehouse_id,
+          warehouse_id: warehouseId,
           allowed_navs: allowedNavs,
         });
       } else {
         savedUser = await userService.createUser({
           ...data,
+          warehouse_id: warehouseId,
           allowed_navs: allowedNavs,
         });
       }
@@ -268,15 +177,16 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
       const apiErrors = userService.getValidationErrors(err);
 
       if (apiErrors) {
-        Object.entries(apiErrors).forEach(([field, messages]) => {
-          if (["name", "username", "password", "roles"].includes(field)) {
-            setError(field as keyof UserFormValues, { type: "server", message: messages[0] });
-          }
-        });
+        const fields = Object.entries(apiErrors)
+          .filter(([field]) => ["name", "username", "password", "roles"].includes(field))
+          .map(([field, messages]) => ({ name: field as keyof UserFormValues, errors: [messages[0]] }));
+        if (fields.length) form.setFields(fields);
         setServerError("يرجى التحقق من الحقول المُشار إليها وتصحيحها");
       } else {
         setServerError(generalError);
       }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -291,296 +201,211 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
   const initials = (userToEdit?.name || nameValue || "؟").trim().charAt(0).toUpperCase();
 
   return (
-    <>
-    <Dialog open={isOpen} onOpenChange={(open) => !isSubmitting && !open && onClose()}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto" dir="rtl">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <Avatar className="size-9">
-              <AvatarFallback className="bg-primary/10 font-semibold text-primary">
+    <ConfigProvider
+      direction="rtl"
+      locale={arEG}
+      theme={{ algorithm: resolvedTheme === "dark" ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm }}
+    >
+      <AntApp>
+        <Modal
+          open={isOpen}
+          onCancel={() => !submitting && onClose()}
+          width={860}
+          maskClosable={!submitting}
+          title={
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <Avatar style={{ backgroundColor: "#e6f4ff", color: "#1677ff", fontWeight: 600 }}>
                 {initials}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <DialogTitle>{isEditMode ? `تعديل: ${userToEdit?.name}` : "إضافة مستخدم جديد"}</DialogTitle>
-              <DialogDescription>
-                {isEditMode ? "تعديل بيانات وصلاحيات المستخدم" : "أدخل بيانات المستخدم الجديد وحدد صلاحياته"}
-              </DialogDescription>
+              </Avatar>
+              <div>
+                <div style={{ fontWeight: 600 }}>
+                  {isEditMode ? `تعديل: ${userToEdit?.name}` : "إضافة مستخدم جديد"}
+                </div>
+                <Text type="secondary" style={{ fontSize: 12, fontWeight: 400 }}>
+                  {isEditMode
+                    ? "تعديل بيانات وصلاحيات المستخدم"
+                    : "أدخل بيانات المستخدم الجديد وحدد صلاحياته"}
+                </Text>
+              </div>
             </div>
-          </div>
-        </DialogHeader>
+          }
+          styles={{ body: { maxHeight: "70vh", overflowY: "auto", paddingTop: 12 } }}
+          okText={isEditMode ? "حفظ التعديلات" : "إنشاء المستخدم"}
+          cancelText="إلغاء"
+          confirmLoading={submitting}
+          onOk={() => form.submit()}
+        >
+          {serverError && (
+            <Alert type="error" showIcon message={serverError} style={{ marginBottom: 16 }} />
+          )}
 
-        {serverError && (
-          <Alert variant="destructive">
-            <AlertDescription>{serverError}</AlertDescription>
-          </Alert>
-        )}
-
-        <Form {...form}>
-          <form id="user-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <Form<UserFormValues>
+            form={form}
+            layout="vertical"
+            onFinish={onFinish}
+            initialValues={{
+              name: "",
+              username: "",
+              password: "",
+              password_confirmation: "",
+              roles: [],
+              warehouse_id: null,
+            }}
+          >
             {/* ── Basic info ── */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <UserRound className="size-3.5" />
-                <h3 className="text-xs font-medium uppercase tracking-wide">البيانات الأساسية</h3>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <FormField
-                  control={control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>الاسم الكامل</FormLabel>
-                      <FormControl>
-                        <Input placeholder="أدخل الاسم الكامل" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+            <SectionLabel icon={<UserRound size={14} />}>البيانات الأساسية</SectionLabel>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+              <Form.Item
+                name="name"
+                label="الاسم الكامل"
+                rules={[{ required: true, message: "هذا الحقل مطلوب" }]}
+              >
+                <Input placeholder="أدخل الاسم الكامل" />
+              </Form.Item>
+              <Form.Item
+                name="username"
+                label="اسم المستخدم"
+                rules={[{ required: true, message: "هذا الحقل مطلوب" }]}
+              >
+                <Input placeholder="username" dir="ltr" style={{ fontFamily: "monospace" }} />
+              </Form.Item>
+              <Form.Item name="warehouse_id" label="المستودع الرئيسي">
+                <Select
+                  allowClear
+                  loading={loadingWarehouses}
+                  placeholder={loadingWarehouses ? "جاري التحميل..." : "— غير محدد (افتراضي)"}
+                  options={warehouses.map((w) => ({ value: w.id, label: w.name }))}
                 />
-                <FormField
-                  control={control}
-                  name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>اسم المستخدم</FormLabel>
-                      <FormControl>
-                        <Input placeholder="username" dir="ltr" className="font-mono" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={control}
-                  name="warehouse_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>المستودع الرئيسي</FormLabel>
-                      <Select
-                        value={field.value ? String(field.value) : NO_WAREHOUSE}
-                        onValueChange={(v) => field.onChange(v === NO_WAREHOUSE ? null : Number(v))}
-                        disabled={loadingWarehouses}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={loadingWarehouses ? "جاري التحميل..." : "غير محدد"} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value={NO_WAREHOUSE}>— غير محدد (افتراضي)</SelectItem>
-                          {warehouses.map((w) => (
-                            <SelectItem key={w.id} value={String(w.id)}>
-                              {w.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-              </div>
+              </Form.Item>
             </div>
 
             {/* ── Password (create only) ── */}
             {!isEditMode && (
               <>
-                <Separator />
-                <div className="space-y-2">
-                  <div className="flex items-center gap-1.5 text-muted-foreground">
-                    <KeyRound className="size-3.5" />
-                    <h3 className="text-xs font-medium uppercase tracking-wide">كلمة المرور</h3>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <FormField
-                      control={control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>كلمة المرور</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Input
-                                type={showPassword ? "text" : "password"}
-                                placeholder="8 أحرف على الأقل"
-                                className="pe-9"
-                                {...field}
-                                onChange={(e) => {
-                                  field.onChange(e);
-                                  setPasswordValue(e.target.value);
-                                }}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setShowPassword((v) => !v)}
-                                className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                                tabIndex={-1}
-                              >
-                                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                              </button>
-                            </div>
-                          </FormControl>
-                          {passwordValue && (
-                            <div className="space-y-1">
-                              <Progress value={pwStrength.percent} className={cn("h-1.5", pwStrength.barClass)} />
-                              <p className="text-xs text-muted-foreground">
-                                قوة كلمة المرور: <span className={cn("font-medium", pwStrength.textClass)}>{pwStrength.label}</span>
-                              </p>
-                            </div>
-                          )}
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={control}
-                      name="password_confirmation"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>تأكيد كلمة المرور</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Input
-                                type={showConfirmPassword ? "text" : "password"}
-                                placeholder="أعد إدخال كلمة المرور"
-                                className="pe-9"
-                                {...field}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setShowConfirmPassword((v) => !v)}
-                                className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                                tabIndex={-1}
-                              >
-                                {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                              </button>
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                <Divider style={{ margin: "4px 0 16px" }} />
+                <SectionLabel icon={<KeyRound size={14} />}>كلمة المرور</SectionLabel>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+                  <Form.Item
+                    name="password"
+                    label="كلمة المرور"
+                    rules={[
+                      { required: true, message: "كلمة المرور مطلوبة" },
+                      { min: 8, message: "كلمة المرور يجب أن تكون 8 أحرف على الأقل" },
+                    ]}
+                    extra={
+                      passwordValue ? (
+                        <div style={{ marginTop: 6 }}>
+                          <Progress
+                            percent={pwStrength.percent}
+                            showInfo={false}
+                            strokeColor={pwStrength.color}
+                            size="small"
+                          />
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            قوة كلمة المرور:{" "}
+                            <span style={{ color: pwStrength.color, fontWeight: 500 }}>{pwStrength.label}</span>
+                          </Text>
+                        </div>
+                      ) : undefined
+                    }
+                  >
+                    <Input.Password placeholder="8 أحرف على الأقل" />
+                  </Form.Item>
+                  <Form.Item
+                    name="password_confirmation"
+                    label="تأكيد كلمة المرور"
+                    dependencies={["password"]}
+                    rules={[
+                      { required: true, message: "يرجى تأكيد كلمة المرور" },
+                      ({ getFieldValue }) => ({
+                        validator(_, value) {
+                          if (!value || getFieldValue("password") === value) return Promise.resolve();
+                          return Promise.reject(new Error("كلمات المرور غير متطابقة"));
+                        },
+                      }),
+                    ]}
+                  >
+                    <Input.Password placeholder="أعد إدخال كلمة المرور" />
+                  </Form.Item>
                 </div>
               </>
             )}
 
-            <Separator />
+            <Divider style={{ margin: "4px 0 16px" }} />
 
             {/* ── Roles ── */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <ShieldCheck className="size-3.5" />
-                  <h3 className="text-xs font-medium uppercase tracking-wide">الأدوار الوظيفية</h3>
-                </div>
-                <span className="text-xs text-muted-foreground">{availableRoles.length} دور متاح</span>
-              </div>
-              <FormField
-                control={control}
-                name="roles"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {availableRoles.map((role) => {
-                        const isAdminRole = isAdminRoleName(role.name);
-                        const isDisabled = isAdminRole && isSuperadmin;
-                        const checked = field.value?.includes(role.name) ?? false;
-                        return (
-                          <div key={role.id} className="flex items-center gap-2">
-                            <Checkbox
-                              id={`role-${role.id}`}
-                              checked={checked}
-                              disabled={isDisabled}
-                              onCheckedChange={(c) => {
-                                const current = field.value || [];
-                                field.onChange(
-                                  c
-                                    ? [...current, role.name]
-                                    : current.filter((r) => r !== role.name)
-                                );
-                              }}
-                            />
-                            <FormLabel
-                              htmlFor={`role-${role.id}`}
-                              className={cn(
-                                "cursor-pointer font-normal",
-                                isAdminRole && "font-semibold",
-                                isDisabled && "cursor-not-allowed opacity-60"
-                              )}
-                            >
-                              {role.name}
-                            </FormLabel>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            <SectionLabel
+              icon={<ShieldCheck size={14} />}
+              extra={
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  {availableRoles.length} دور متاح
+                </Text>
+              }
+            >
+              الأدوار الوظيفية
+            </SectionLabel>
+            <Form.Item
+              name="roles"
+              rules={[{ required: true, message: "يجب اختيار دور واحد على الأقل" }]}
+            >
+              <Checkbox.Group
+                style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 8 }}
+                options={availableRoles.map((role) => ({
+                  label: role.name,
+                  value: role.name,
+                  disabled: isAdminRoleName(role.name) && isSuperadmin,
+                }))}
               />
-            </div>
+            </Form.Item>
 
-            <Separator />
+            <Divider style={{ margin: "4px 0 16px" }} />
 
-            {/* ── Navigation permissions — summary row, editing happens in its own dialog ── */}
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2 min-w-0">
-                <PanelLeft className="size-3.5 shrink-0 text-muted-foreground" />
-                <div className="min-w-0">
-                  <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">القوائم الجانبية</h3>
-                  <p className="truncate text-xs text-muted-foreground">{navSummaryLabel}</p>
+            {/* ── Navigation permissions — summary row, editing in its own dialog ── */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                <PanelLeft size={14} style={{ flexShrink: 0, color: "rgba(0,0,0,0.45)" }} />
+                <div style={{ minWidth: 0 }}>
+                  <Text type="secondary" style={{ fontSize: 12, fontWeight: 500, display: "block" }}>
+                    القوائم الجانبية
+                  </Text>
+                  <Text type="secondary" style={{ fontSize: 12 }} ellipsis>
+                    {navSummaryLabel}
+                  </Text>
                 </div>
               </div>
               <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0 gap-1.5"
+                icon={<Settings2 size={14} />}
                 onClick={() => setNavPermissionsOpen(true)}
+                style={{ flexShrink: 0 }}
               >
-                <Settings2 className="size-3.5" />
                 تخصيص القوائم الجانبية
               </Button>
             </div>
-          </form>
-        </Form>
+          </Form>
+        </Modal>
 
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-            إلغاء
-          </Button>
-          <Button type="submit" form="user-form" disabled={isSubmitting}>
-            {isSubmitting ? "جاري الحفظ..." : isEditMode ? "حفظ التعديلات" : "إنشاء المستخدم"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-
-    {/* ── Sidebar navigation customization — its own dialog, on top of the user form ── */}
-    <Dialog open={navPermissionsOpen} onOpenChange={setNavPermissionsOpen}>
-      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto" dir="rtl">
-        <DialogHeader>
-          <DialogTitle>تخصيص القوائم الجانبية</DialogTitle>
-          <DialogDescription>
+        {/* ── Sidebar navigation customization — its own dialog, on top of the user form ── */}
+        <Modal
+          open={navPermissionsOpen}
+          onCancel={() => setNavPermissionsOpen(false)}
+          onOk={() => setNavPermissionsOpen(false)}
+          okText="تم"
+          cancelButtonProps={{ style: { display: "none" } }}
+          width={680}
+          title="تخصيص القوائم الجانبية"
+          styles={{ body: { maxHeight: "65vh", overflowY: "auto" } }}
+        >
+          <Text type="secondary" style={{ display: "block", marginBottom: 12 }}>
             اختر الصفحات التي تظهر في القائمة الجانبية لهذا المستخدم.
-          </DialogDescription>
-        </DialogHeader>
-
-        <NavigationPermissionsSection
-          value={allowedNavs}
-          onChange={setAllowedNavs}
-          isSuperadmin={isSuperadmin}
-        />
-
-        <DialogFooter>
-          <Button type="button" onClick={() => setNavPermissionsOpen(false)}>
-            تم
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-    </>
+          </Text>
+          <NavigationPermissionsSection
+            value={allowedNavs}
+            onChange={setAllowedNavs}
+            isSuperadmin={isSuperadmin}
+          />
+        </Modal>
+      </AntApp>
+    </ConfigProvider>
   );
 };
 

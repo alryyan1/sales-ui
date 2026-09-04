@@ -242,6 +242,8 @@
       "financeColumn": "المالية",
       "createdAtLabel": "الإنشاء",
       "totalsRowLabel": "المجموع الكلي",
+      "totalReturnsRowLabel": "إجمالي مردودات المبيعات",
+      "netRowLabel": "الصافي",
       "columnsLabel": "الأعمدة",
       "toggleColumnsTooltip": "إظهار / إخفاء الأعمدة",
       "visibleColumnsTitle": "الأعمدة الظاهرة",

@@ -294,6 +294,11 @@
     "openShiftChipLabel": "مفتوحة",
     "uploadToFirebaseTooltip": "رفع إلى Firebase",
     "preparingShiftReportsHashToast": "⏳ جاري تحضير تقارير الوردية #{{id}}...",
+    "paymentUsersButtonLabel": "المتحصلون في الوردية",
+    "usersWhoPaidTitle": "المستخدمون في الوردية #{{id}}",
+    "noPaymentUsersFound": "لا يوجد مستخدمون سجّلوا دفعات في هذه الوردية",
+    "failedToFetchShiftUsers": "فشل في جلب مستخدمي الوردية",
+    "viewLabel": "عرض",
 
     "salesReturnsLabel": "مردودات المبيعات",
     "soldItemsLabel": "الأصناف المباعة",

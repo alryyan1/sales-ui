@@ -50,7 +50,12 @@ import saleService, { Sale, SaleItem } from "@/services/saleService";
 import { formatNumber } from "@/constants";
 import { toast } from "sonner";
 import { PastSalesSearchDialog } from "./PastSalesSearchDialog";
-import type { PaymentMethod } from "@/lib/paymentMethods";
+import { useSettings } from "@/context/SettingsContext";
+import {
+  parseActivePaymentMethods,
+  resolveDefaultActiveMethod,
+  type PaymentMethod,
+} from "@/lib/paymentMethods";
 
 interface SalesReturnDialogProps {
   open: boolean;
@@ -65,14 +70,14 @@ interface ReturnRow {
   returnQuantity: number;
 }
 
-const PAYMENT_METHOD_OPTIONS: { value: PaymentMethod; label: string }[] = [
-  { value: "cash", label: "نقدي" },
-  { value: "bankak", label: "بنكك" },
-  { value: "fawry", label: "فوري" },
-  { value: "ocash", label: "أوكاش" },
-  { value: "bank_transfer", label: "تحويل بنكي" },
-  { value: "card", label: "بطاقة" },
-];
+const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  cash: "نقدي",
+  bankak: "بنكك",
+  fawry: "فوري",
+  ocash: "أوكاش",
+  bank_transfer: "تحويل بنكي",
+  card: "بطاقة",
+};
 
 const RETURN_REASONS = [
   "خطأ تقني / في السيستم",
@@ -101,6 +106,13 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [pastSalesDialogOpen, setPastSalesDialogOpen] = useState(false);
 
+  const { getSetting } = useSettings();
+  const activePaymentMethods = parseActivePaymentMethods(getSetting("pos_active_payment_methods"));
+  const paymentMethodOptions = activePaymentMethods.map((value) => ({
+    value,
+    label: PAYMENT_METHOD_LABELS[value],
+  }));
+
   useEffect(() => {
     if (!open) {
       setSaleIdInput("");
@@ -109,9 +121,16 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
       setRows({});
       setPhoneNumber("");
       setReason("");
-      setPaymentMethod("cash");
+      setPaymentMethod(resolveDefaultActiveMethod(activePaymentMethods, "cash"));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Keep the selection valid if the active-methods setting narrows while the dialog is open.
+  useEffect(() => {
+    setPaymentMethod((prev) => resolveDefaultActiveMethod(activePaymentMethods, prev));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePaymentMethods.join(",")]);
 
   const returnableItems = useMemo(
     () => (fetchedSale?.items ?? []).filter((i) => availableQty(i) > 0),
@@ -666,7 +685,7 @@ export const SalesReturnDialog: React.FC<SalesReturnDialogProps> = ({
                         </InputAdornment>
                       }
                     >
-                      {PAYMENT_METHOD_OPTIONS.map((opt) => (
+                      {paymentMethodOptions.map((opt) => (
                         <MenuItem key={opt.value} value={opt.value}>
                           {opt.label}
                         </MenuItem>

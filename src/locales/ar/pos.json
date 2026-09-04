@@ -298,6 +298,8 @@
   "itemsUpdateFailedCount": "فشل تحديث {{count}} صنف",
   "priceUpdatedToast": "تم تحديث السعر",
   "cannotAddProductsFullyPaid": "لا يمكن إضافة منتجات لعملية بيع مدفوعة بالكامل",
+  "onlySaleCreatorCanAddItems": "لا يمكن إضافة أصناف إلا من قبل من أنشأ عملية البيع",
+  "onlySaleCreatorCanPay": "لا يمكن إضافة دفعة إلا من قبل من أنشأ عملية البيع",
   "productAddedToast": "تمت إضافة المنتج",
   "productNotFoundByBarcode": "لم يتم العثور على منتج بهذا الباركود",
   "enterValidInvoiceNumberToast": "أدخل رقم فاتورة صحيح",

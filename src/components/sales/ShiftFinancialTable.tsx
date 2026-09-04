@@ -54,10 +54,14 @@ export interface ShiftStats {
 
 interface ShiftFinancialTableProps {
   shiftId: number;
+  /** Scope the stats breakdown to just this user's payments/expenses/returns
+   *  within the shift, instead of the whole shift's totals. */
+  userId?: number;
 }
 
 export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
   shiftId,
+  userId,
 }) => {
   const { t } = useTranslation("reports");
   const { t: tPos } = useTranslation("pos");
@@ -129,7 +133,8 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
 
     try {
       setLoader(true);
-      const res = await apiClient.get(`${endpoint}?shift_id=${shiftId}`, {
+      const res = await apiClient.get(endpoint, {
+        params: { shift_id: shiftId, ...(userId ? { user_id: userId } : {}) },
         responseType: "blob",
       });
       const blob = new Blob([res.data], { type: "application/pdf" });
@@ -154,7 +159,9 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
       setLoading(true);
       setError(null);
       try {
-        const res = await apiClient.get(`/shifts/${shiftId}`);
+        const res = await apiClient.get(`/shifts/${shiftId}`, {
+          params: userId ? { user_id: userId } : undefined,
+        });
         if (isMounted && res.data?.data?.stats) {
           setStats(res.data.data.stats);
         }
@@ -170,7 +177,7 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [shiftId, t]);
+  }, [shiftId, userId, t]);
 
   if (loading) {
     return (
@@ -323,7 +330,7 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
           onClick={() => handleDownloadPdf("cost")}
           sx={{ fontWeight: 600 }}
         >
-          {downloadingCost ? tPos("loadingEllipsis") : `${t("expensesLabel")} PDF`}
+          {downloadingCost ? tPos("loadingEllipsis") : `${t("expensesLabel")} `}
         </Button>
 
         <Button
@@ -334,7 +341,7 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
           onClick={() => handleDownloadPdf("returns")}
           sx={{ fontWeight: 600 }}
         >
-          {downloadingReturns ? tPos("loadingEllipsis") : `${t("salesReturnsLabel")} PDF`}
+          {downloadingReturns ? tPos("loadingEllipsis") : `${t("salesReturnsLabel")} `}
         </Button>
 
         <Button
@@ -345,7 +352,7 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
           onClick={() => handleDownloadPdf("items")}
           sx={{ fontWeight: 600 }}
         >
-          {downloadingItems ? tPos("loadingEllipsis") : `${t("soldItemsLabel")} PDF`}
+          {downloadingItems ? tPos("loadingEllipsis") : `${t("soldItemsLabel")} `}
         </Button>
 
         <Button
@@ -356,7 +363,7 @@ export const ShiftFinancialTable: React.FC<ShiftFinancialTableProps> = ({
           onClick={() => handleDownloadPdf("inventory_effects")}
           sx={{ fontWeight: 600 }}
         >
-          {downloadingInventoryEffects ? tPos("loadingEllipsis") : `${t("inventoryEffectLabel")} PDF`}
+          {downloadingInventoryEffects ? tPos("loadingEllipsis") : `${t("inventoryEffectLabel")} `}
         </Button>
       </Stack>
     </TableContainer>

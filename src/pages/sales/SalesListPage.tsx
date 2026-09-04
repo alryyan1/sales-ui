@@ -40,6 +40,7 @@ import {
   Loader2,
   Plus,
   RefreshCw,
+  RotateCcw,
   Search,
   User,
 } from "lucide-react";
@@ -54,9 +55,10 @@ import { webUrl } from "@/constants";
 import apiClient from "@/lib/axios";
 
 import saleService, { Sale } from "@/services/saleService";
+import saleReturnService, { SaleReturn } from "@/services/saleReturnService";
 import clientService, { PaginatedResponse } from "@/services/clientService";
 import { getSaleStatus, translateSaleStatus, type SaleStatusInfo } from "@/lib/saleStatus";
-import { SaleDetailsDrawer } from "@/components/sales/SaleDetailsDrawer";
+import { SaleDetailsDialog } from "@/components/sales/SaleDetailsDialog";
 
 interface SalesAdvancedFilterValues {
   clientId: string;
@@ -69,6 +71,19 @@ const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
 
 const PER_PAGE_OPTIONS = [25, 50, 100];
+const RETURNS_PER_PAGE = 10;
+
+const RETURN_METHOD_COLORS: Record<string, string> = {
+  cash: "green",
+  bankak: "blue",
+  fawry: "gold",
+  ocash: "default",
+  bank_transfer: "blue",
+  card: "geekblue",
+};
+
+const saleReturnTotal = (r: SaleReturn) =>
+  r.items?.reduce((acc, item) => acc + Number(item.price) * Number(item.quantity), 0) ?? 0;
 
 type DatePreset = "today" | "yesterday" | "week" | "month" | "custom" | "all";
 
@@ -98,7 +113,6 @@ const COLUMN_KEYS = [
   "total",
   "cost",
   "paid",
-  "returned",
   "status",
   "finance",
 ] as const;
@@ -111,7 +125,6 @@ const COLUMN_LABEL_KEYS: Record<ColumnKey, string> = {
   total: "totalColumn",
   cost: "costColumn",
   paid: "paidColumn",
-  returned: "returnedColumn",
   status: "status",
   finance: "financeColumn",
 };
@@ -179,6 +192,7 @@ const SalesListPage: React.FC = () => {
   });
   const [page, setPage] = useState(Number(searchParams.get("page") || "1"));
   const [perPage, setPerPage] = useState(25);
+  const [returnsPage, setReturnsPage] = useState(1);
 
   const [clientSearch, setClientSearch] = useState("");
   const [debouncedClientSearch, setDebouncedClientSearch] = useState("");
@@ -218,6 +232,7 @@ const SalesListPage: React.FC = () => {
 
   useEffect(() => {
     setPage(1);
+    setReturnsPage(1);
   }, [debouncedSearch, datePreset, customRange, advanced]);
 
   // Keep the URL shareable/refreshable.
@@ -263,6 +278,24 @@ const SalesListPage: React.FC = () => {
   });
 
   const sales = salesQuery.data?.data ?? [];
+
+  // Sale returns matching the same shift/date/cashier filters as the sales list — the
+  // search/client filters don't apply here since a return isn't tied to those directly.
+  const saleReturnsQuery = useQuery({
+    queryKey: ["sales-list-returns", returnsPage, advanced.shiftId, advanced.userId, dateRange.start, dateRange.end],
+    queryFn: () =>
+      saleReturnService.getSaleReturns({
+        page: returnsPage,
+        per_page: RETURNS_PER_PAGE,
+        shift_id: advanced.shiftId ? Number(advanced.shiftId) : null,
+        user_id: advanced.userId ? Number(advanced.userId) : null,
+        start_date: dateRange.start,
+        end_date: dateRange.end,
+      }),
+    placeholderData: keepPreviousData,
+  });
+  const saleReturns = saleReturnsQuery.data?.data ?? [];
+  const saleReturnsMeta = saleReturnsQuery.data?.meta ?? {};
 
   // Inline advanced-filter option sources.
   const usersQuery = useQuery({
@@ -334,6 +367,7 @@ const SalesListPage: React.FC = () => {
   const refetchAll = () => {
     salesQuery.refetch();
     summaryQuery.refetch();
+    saleReturnsQuery.refetch();
   };
 
   const clearFilters = () => {
@@ -369,33 +403,156 @@ const SalesListPage: React.FC = () => {
 
   const locale = language === "ar" ? "ar" : "en-US";
 
+  const RETURN_METHOD_LABELS: Record<string, string> = {
+    cash: t("paymentMethodCash"),
+    bankak: t("paymentMethodBankak"),
+    fawry: t("paymentMethodFawry"),
+    ocash: t("paymentMethodOcash"),
+    bank_transfer: t("paymentMethodBankTransfer"),
+    card: t("paymentMethodCard"),
+  };
+
+  const returnColumns: TableProps<SaleReturn>["columns"] = [
+    {
+      title: t("date"),
+      dataIndex: "created_at",
+      key: "date",
+      width: 110,
+      render: (value: string | null) =>
+        value ? (
+          <Tooltip
+            title={new Date(value).toLocaleString(locale, {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          >
+            <Text style={{ fontSize: 12 }}>
+              {new Date(value).toLocaleDateString(locale, { day: "2-digit", month: "short" })}
+            </Text>
+          </Tooltip>
+        ) : (
+          "—"
+        ),
+    },
+    {
+      title: t("invoiceHashColumn"),
+      dataIndex: "sale_id",
+      key: "sale_id",
+      width: 90,
+      render: (saleId: number | null) =>
+        saleId != null ? (
+          <Button
+            type="link"
+            size="small"
+            style={{ padding: 0, fontWeight: 600 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              openSale(saleId);
+            }}
+          >
+            #{saleId}
+          </Button>
+        ) : (
+          "—"
+        ),
+    },
+    {
+      title: t("phoneNumberColumn"),
+      dataIndex: "phone_number",
+      key: "phone_number",
+      width: 130,
+      render: (phone: string | null) => <span dir="ltr">{phone ?? "—"}</span>,
+    },
+    {
+      title: t("cashierColumn"),
+      key: "user",
+      width: 130,
+      render: (_v, r) => <Text type="secondary">{r.user?.name ?? "—"}</Text>,
+    },
+    {
+      title: t("reasonColumn"),
+      dataIndex: "reason",
+      key: "reason",
+      ellipsis: true,
+      render: (reason: string | null) => reason ?? "—",
+    },
+    {
+      title: t("returnMethodColumn"),
+      dataIndex: "returned_payment_method",
+      key: "method",
+      align: "center",
+      width: 130,
+      render: (method: string) => (
+        <Tag color={RETURN_METHOD_COLORS[method] ?? "default"}>
+          {RETURN_METHOD_LABELS[method] ?? method ?? "—"}
+        </Tag>
+      ),
+    },
+    {
+      title: t("itemsColumnShort"),
+      key: "items",
+      align: "center",
+      width: 70,
+      render: (_v, r) => <Tag>{r.items?.length ?? 0}</Tag>,
+    },
+    {
+      title: t("totalColumn"),
+      key: "total",
+      align: "right",
+      width: 120,
+      render: (_v, r) => (
+        <Text strong type="danger">
+          {formatCurrency(saleReturnTotal(r))}
+        </Text>
+      ),
+    },
+  ];
+
   const columns: TableProps<Sale>["columns"] = [
     {
       title: t("invoiceColumn"),
       dataIndex: "id",
       key: "id",
-      width: 90,
-      render: (id: number) => (
-        <Button
-          type="link"
-          size="small"
-          style={{ padding: 0, fontWeight: 600 }}
-          onClick={(e) => {
-            e.stopPropagation();
-            openSale(id);
-          }}
-        >
-          #{id}
-        </Button>
+      width: 100,
+      render: (id: number, sale) => (
+        <Space size={4}>
+          <Button
+            type="link"
+            size="small"
+            style={{ padding: 0, fontWeight: 600 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              openSale(id);
+            }}
+          >
+            #{id}
+          </Button>
+          {sale.is_returned && (
+            <Tooltip title={t("hasReturns")}>
+              <RotateCcw size={13} style={{ color: "#dc2626" }} />
+            </Tooltip>
+          )}
+        </Space>
       ),
     },
     {
       title: t("date"),
       dataIndex: "sale_date",
       key: "date",
-      width: 170,
+      width: 120,
       render: (_v, sale) => (
-        <Space direction="vertical" size={0}>
+        <Tooltip
+          title={`${t("createdAtLabel")}: ${new Date(sale.created_at).toLocaleString(locale, {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}`}
+        >
           <Text style={{ fontWeight: 500 }}>
             {new Date(sale.sale_date).toLocaleDateString(locale, {
               day: "2-digit",
@@ -403,16 +560,7 @@ const SalesListPage: React.FC = () => {
               year: "numeric",
             })}
           </Text>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            {t("createdAtLabel")}:{" "}
-            {new Date(sale.created_at).toLocaleString(locale, {
-              day: "2-digit",
-              month: "short",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </Text>
-        </Space>
+        </Tooltip>
       ),
     },
     {
@@ -436,7 +584,7 @@ const SalesListPage: React.FC = () => {
       dataIndex: "user_name",
       key: "cashier",
       width: 130,
-      render: (name: string | null) => <Text type="secondary">{name ?? "—"}</Text>,
+      render: (name: string | null) => <Text >{name ?? "—"}</Text>,
     },
     {
       title: t("totalColumn"),
@@ -452,7 +600,7 @@ const SalesListPage: React.FC = () => {
       key: "cost",
       align: "right",
       width: 120,
-      render: (v) => <Text type="secondary">{formatCurrency(Number(v ?? 0))}</Text>,
+      render: (v) => <Text >{formatCurrency(Number(v ?? 0))}</Text>,
     },
     {
       title: t("paidColumn"),
@@ -461,23 +609,8 @@ const SalesListPage: React.FC = () => {
       align: "right",
       width: 120,
       render: (v) => (
-        <span style={{ color: "#16a34a" }}>{formatCurrency(Number(v ?? 0))}</span>
+        <span style={{ color: "#16a34a" ,fontWeight: 700}}>{formatCurrency(Number(v ?? 0))}</span>
       ),
-    },
-    {
-      title: t("returnedColumn"),
-      dataIndex: "total_returned_amount",
-      key: "returned",
-      align: "right",
-      width: 120,
-      render: (v) => {
-        const amount = Number(v ?? 0);
-        return amount > 0 ? (
-          <span style={{ color: "#dc2626" }}>{formatCurrency(amount)}</span>
-        ) : (
-          <Text type="secondary">—</Text>
-        );
-      },
     },
     {
       title: t("status"),
@@ -524,7 +657,7 @@ const SalesListPage: React.FC = () => {
       description={
         <Space direction="vertical" size={8}>
           <Text style={{ fontWeight: 500 }}>{t("emptyTitle")}</Text>
-          <Text type="secondary">
+          <Text >
             {hasActiveFilters ? t("emptyDescriptionFiltered") : t("emptyDescriptionNoFilter")}
           </Text>
           <Space wrap>
@@ -612,7 +745,10 @@ const SalesListPage: React.FC = () => {
               <Select<DatePreset>
                 value={datePreset}
                 style={{ width: 160 }}
-                onChange={(v) => setDatePreset(v)}
+                onChange={(v) => {
+                  setDatePreset(v);
+                  setAdvanced((p) => ({ ...p, shiftId: "" }));
+                }}
                 options={(Object.keys(DATE_PRESET_KEYS) as DatePreset[]).map((p) => ({
                   value: p,
                   label: t(DATE_PRESET_KEYS[p]),
@@ -732,7 +868,13 @@ const SalesListPage: React.FC = () => {
                 loading={salesQuery.isLoading}
                 scroll={{ x: 1100 }}
                 locale={{ emptyText: emptyNode }}
-                onRow={(sale) => ({ onClick: () => openSale(sale.id), style: { cursor: "pointer" } })}
+                onRow={(sale) => ({
+                  onClick: () => openSale(sale.id),
+                  style: {
+                    cursor: "pointer",
+                    backgroundColor: sale.is_returned ? "rgba(220, 38, 38, 0.06)" : undefined,
+                  },
+                })}
                 pagination={{
                   current: page,
                   pageSize: perPage,
@@ -779,10 +921,65 @@ const SalesListPage: React.FC = () => {
                                 {formatCurrency(summaryQuery.data?.paid_amount ?? 0)}
                               </span>
                             );
-                          } else if (key === "returned") {
+                          }
+                          return (
+                            <Table.Summary.Cell
+                              key={key}
+                              index={i}
+                              align={(col.align as "left" | "right" | "center") ?? "left"}
+                            >
+                              {content}
+                            </Table.Summary.Cell>
+                          );
+                        })}
+                      </Table.Summary.Row>
+
+                      {/* Returns (under the paid column) — shows what's being subtracted to reach net, below. */}
+                      <Table.Summary.Row>
+                        {displayedColumns.map((col, i) => {
+                          const key = col.key as ColumnKey;
+                          let content: React.ReactNode = null;
+                          if (i === 0) {
+                            content = <Text type="secondary">{t("totalReturnsRowLabel")}</Text>;
+                          } else if (key === "paid") {
                             content = (
                               <span style={{ color: "#dc2626", fontWeight: 700 }}>
                                 {formatCurrency(summaryQuery.data?.returned_amount ?? 0)}
+                              </span>
+                            );
+                          }
+                          return (
+                            <Table.Summary.Cell
+                              key={key}
+                              index={i}
+                              align={(col.align as "left" | "right" | "center") ?? "left"}
+                            >
+                              {content}
+                            </Table.Summary.Cell>
+                          );
+                        })}
+                      </Table.Summary.Row>
+
+                      {/* Total cost (under the cost column) and net — paid minus returns — parallel to the paid column. */}
+                      <Table.Summary.Row>
+                        {displayedColumns.map((col, i) => {
+                          const key = col.key as ColumnKey;
+                          let content: React.ReactNode = null;
+                          if (i === 0) {
+                            content = <Text strong>{t("netRowLabel")}</Text>;
+                          } else if (key === "cost") {
+                            content = (
+                              <Text type="secondary" strong>
+                                {formatCurrency(summaryQuery.data?.total_cost ?? 0)}
+                              </Text>
+                            );
+                          } else if (key === "paid") {
+                            const net =
+                              (summaryQuery.data?.paid_amount ?? 0) -
+                              (summaryQuery.data?.returned_amount ?? 0);
+                            content = (
+                              <span style={{ color: "#2563eb", fontWeight: 700 }}>
+                                {formatCurrency(net)}
                               </span>
                             );
                           }
@@ -803,9 +1000,56 @@ const SalesListPage: React.FC = () => {
               />
             </Card>
           )}
+
+          {/* Sales returns — a dedicated table for the same shift/date/cashier filters. */}
+          {!salesQuery.isError && (
+            <Card
+              size="small"
+              title={t("returnsListLabel")}
+              styles={{ body: { padding: 0 } }}
+            >
+              <Table<SaleReturn>
+                rowKey="id"
+                size="small"
+                columns={returnColumns}
+                dataSource={saleReturns}
+                loading={saleReturnsQuery.isLoading}
+                scroll={{ x: 900 }}
+                locale={{ emptyText: t("noReturnsMatchFilters") }}
+                onRow={(r) => ({
+                  onClick: () => r.sale_id && openSale(r.sale_id),
+                  style: { cursor: r.sale_id ? "pointer" : "default" },
+                })}
+                pagination={{
+                  current: saleReturnsMeta.current_page ?? returnsPage,
+                  pageSize: RETURNS_PER_PAGE,
+                  total: saleReturnsMeta.total ?? saleReturns.length,
+                  showSizeChanger: false,
+                  showTotal: (total) => t("returnsCountLabel") + `: ${total}`,
+                }}
+                onChange={(pagination) => setReturnsPage(pagination.current ?? 1)}
+                summary={() =>
+                  saleReturns.length === 0 ? null : (
+                    <Table.Summary fixed>
+                      <Table.Summary.Row>
+                        <Table.Summary.Cell index={0} colSpan={returnColumns.length - 1}>
+                          <Text strong>{t("totalReturnsRowLabel")}</Text>
+                        </Table.Summary.Cell>
+                        <Table.Summary.Cell index={1} align="right">
+                          <span style={{ color: "#dc2626", fontWeight: 700 }}>
+                            {formatCurrency(summaryQuery.data?.returned_amount ?? 0)}
+                          </span>
+                        </Table.Summary.Cell>
+                      </Table.Summary.Row>
+                    </Table.Summary>
+                  )
+                }
+              />
+            </Card>
+          )}
         </div>
 
-        <SaleDetailsDrawer
+        <SaleDetailsDialog
           saleId={selectedSaleId}
           open={drawerOpen}
           onOpenChange={setDrawerOpen}

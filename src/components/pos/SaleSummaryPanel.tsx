@@ -38,6 +38,7 @@ import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { Sale, Payment } from "@/services/saleService";
 import { Client } from "@/services/clientService";
+import { useAuth } from "@/context/AuthContext";
 import { useSettings } from "@/context/SettingsContext";
 import { CURRENCY_DECIMALS } from "@/constants";
 import { parseActivePaymentMethods } from "@/lib/paymentMethods";
@@ -183,6 +184,14 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
   const { t } = useTranslation("pos");
   const { t: tSummary } = useTranslation("saleSummaryPanel");
   const { t: tCommon } = useTranslation("common");
+  const { user } = useAuth();
+  // Only the cashier who created the sale may delete its payments, even if
+  // they otherwise hold the "cancel payment" permission.
+  const isSaleOwner =
+    !!user?.id && !!selectedSale?.user_id && selectedSale.user_id === user.id;
+  const canDeleteThisSalePayment = canCancelPayment && isSaleOwner;
+  const canPayThisSale = canPayment && isSaleOwner;
+  const notSaleOwnerPaymentTooltip = !isSaleOwner ? tSummary("onlySaleCreatorCanPay") : "";
   const { getSetting } = useSettings();
   const activePaymentMethods = parseActivePaymentMethods(getSetting("pos_active_payment_methods"));
   const currencyCode = getSetting("currency_code", "SDG") as string;
@@ -673,11 +682,15 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                         {formatNumber(Number(p.amount), currencyDecimals)}
                       </Typography>
                       {p.id != null && (
-                        <IconButton size="small" color="error" onClick={() => handleDeletePayment(p.id!)} disabled={!canCancelPayment || deletingPaymentId === p.id} sx={{ p: 0.2 }}>
-                          {deletingPaymentId === p.id
-                            ? <CircularProgress size={12} color="inherit" />
-                            : <DeleteOutlineIcon sx={{ fontSize: 14 }} />}
-                        </IconButton>
+                        <Tooltip title={!isSaleOwner ? tSummary("onlySaleCreatorCanDeletePayment") : ""}>
+                          <span>
+                            <IconButton size="small" color="error" onClick={() => handleDeletePayment(p.id!)} disabled={!canDeleteThisSalePayment || deletingPaymentId === p.id} sx={{ p: 0.2 }}>
+                              {deletingPaymentId === p.id
+                                ? <CircularProgress size={12} color="inherit" />
+                                : <DeleteOutlineIcon sx={{ fontSize: 14 }} />}
+                            </IconButton>
+                          </span>
+                        </Tooltip>
                       )}
                     </Stack>
                   </Stack>
@@ -724,14 +737,18 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                     if (e.key === "Enter" || e.key === "+") { e.preventDefault(); handleAddPayment(); }
                   }}
                 />
-                <IconButton
-                  size="small"
-                  onClick={handleAddPayment}
-                  disabled={!canPayment || addPaymentLoading || !newPaymentAmount.trim()}
-                  sx={{ bgcolor: "primary.main", color: "white", "&:hover": { bgcolor: "primary.dark" }, "&.Mui-disabled": { bgcolor: "grey.200" }, width: 30, height: 30, borderRadius: 1 }}
-                >
-                  {addPaymentLoading ? <CircularProgress size={14} color="inherit" /> : <AddIcon sx={{ fontSize: 18 }} />}
-                </IconButton>
+                <Tooltip title={notSaleOwnerPaymentTooltip}>
+                  <span>
+                    <IconButton
+                      size="small"
+                      onClick={handleAddPayment}
+                      disabled={!canPayThisSale || addPaymentLoading || !newPaymentAmount.trim()}
+                      sx={{ bgcolor: "primary.main", color: "white", "&:hover": { bgcolor: "primary.dark" }, "&.Mui-disabled": { bgcolor: "grey.200" }, width: 30, height: 30, borderRadius: 1 }}
+                    >
+                      {addPaymentLoading ? <CircularProgress size={14} color="inherit" /> : <AddIcon sx={{ fontSize: 18 }} />}
+                    </IconButton>
+                  </span>
+                </Tooltip>
               </Stack>
             </Box>
           )}
@@ -801,20 +818,24 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
               </Button>
             </Stack>
 
-            <Button
-              fullWidth variant="contained" size="small"
-              disabled={!canPayment || fullPaymentLoading || isFullyPaid}
-              onClick={handleFullPayment}
-              sx={{
-                textTransform: "none", fontWeight: 700, fontSize: "0.8rem", py: 0.75,
-                bgcolor: isFullyPaid ? "success.main" : "primary.main",
-                "&:hover": { bgcolor: isFullyPaid ? "success.dark" : "primary.dark" },
-              }}
-            >
-              {fullPaymentLoading
-                ? <CircularProgress size={16} color="inherit" />
-                : isFullyPaid ? tSummary("fullyPaidLabel") : tSummary("fullPaymentLabel")}
-            </Button>
+            <Tooltip title={isFullyPaid ? "" : notSaleOwnerPaymentTooltip}>
+              <span style={{ display: "block" }}>
+                <Button
+                  fullWidth variant="contained" size="small"
+                  disabled={!canPayThisSale || fullPaymentLoading || isFullyPaid}
+                  onClick={handleFullPayment}
+                  sx={{
+                    textTransform: "none", fontWeight: 700, fontSize: "0.8rem", py: 0.75,
+                    bgcolor: isFullyPaid ? "success.main" : "primary.main",
+                    "&:hover": { bgcolor: isFullyPaid ? "success.dark" : "primary.dark" },
+                  }}
+                >
+                  {fullPaymentLoading
+                    ? <CircularProgress size={16} color="inherit" />
+                    : isFullyPaid ? tSummary("fullyPaidLabel") : tSummary("fullPaymentLabel")}
+                </Button>
+              </span>
+            </Tooltip>
           </Box>
         </Box>
       </Paper>

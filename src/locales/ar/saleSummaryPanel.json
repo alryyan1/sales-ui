@@ -30,5 +30,7 @@
   "paymentMethodFawry": "فوري",
   "paymentMethodOcash": "أوكاش",
   "paymentMethodBankTransfer": "تحويل بنكي",
-  "paymentMethodCard": "بطاقة"
+  "paymentMethodCard": "بطاقة",
+  "onlySaleCreatorCanDeletePayment": "لا يمكن حذف الدفعة إلا من قبل من أنشأ عملية البيع",
+  "onlySaleCreatorCanPay": "لا يمكن إضافة دفعة إلا من قبل من أنشأ عملية البيع"
 }

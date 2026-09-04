@@ -258,6 +258,8 @@
       "financeColumn": "Finance",
       "createdAtLabel": "Created",
       "totalsRowLabel": "Grand Total",
+      "totalReturnsRowLabel": "Total Sales Returns",
+      "netRowLabel": "Net",
       "columnsLabel": "Columns",
       "toggleColumnsTooltip": "Show / hide columns",
       "visibleColumnsTitle": "Visible columns",

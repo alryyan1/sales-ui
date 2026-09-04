@@ -30,5 +30,7 @@
   "paymentMethodFawry": "Fawry",
   "paymentMethodOcash": "O Cash",
   "paymentMethodBankTransfer": "Bank Transfer",
-  "paymentMethodCard": "Card"
+  "paymentMethodCard": "Card",
+  "onlySaleCreatorCanDeletePayment": "Only the user who created this sale can delete its payments",
+  "onlySaleCreatorCanPay": "Only the user who created this sale can add payments to it"
 }
